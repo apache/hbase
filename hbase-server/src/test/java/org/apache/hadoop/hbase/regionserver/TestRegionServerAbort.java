@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -146,6 +148,16 @@ public class TestRegionServerAbort {
     // should have triggered an abort due to FileNotFoundException
 
     // verify that the regionserver is stopped
+    List<HRegion> regions = null;
+    do {
+      regions = cluster.findRegionsForTable(tableName);
+      if (regions != null && regions.size() > 0) {
+        break;
+      }
+      LOG.warn("Waiting on regions for {} to online");
+      Threads.sleep(100);
+    } while(true);
+
     HRegion firstRegion = cluster.findRegionsForTable(tableName).get(0);
     assertNotNull(firstRegion);
     assertNotNull(firstRegion.getRegionServerServices());
