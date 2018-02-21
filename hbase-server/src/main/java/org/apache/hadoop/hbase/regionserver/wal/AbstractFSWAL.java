@@ -661,9 +661,26 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
+  protected final void logRollAndSetupWalProps(Path oldPath, Path newPath, long oldFileLen) {
+    int oldNumEntries = this.numEntries.getAndSet(0);
+    String newPathString = newPath != null ? CommonFSUtils.getPath(newPath) : null;
+    if (oldPath != null) {
+      this.walFile2Props.put(oldPath,
+        new WalProps(this.sequenceIdAccounting.resetHighest(), oldFileLen));
+      this.totalLogSize.addAndGet(oldFileLen);
+      LOG.info("Rolled WAL {} with entries={}, filesize={}; new WAL {}",
+        CommonFSUtils.getPath(oldPath), oldNumEntries, StringUtils.byteDesc(oldFileLen),
+        newPathString);
+    } else {
+      LOG.info("New WAL {}", newPathString);
+    }
+  }
+
   /**
+   * <p>
    * Cleans up current writer closing it and then puts in place the passed in
    * <code>nextWriter</code>.
+   * </p>
    * <p>
    * <ul>
    * <li>In the case of creating a new WAL, oldPath will be null.</li>
@@ -672,26 +689,17 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * <li>In the case of closing out this FSHLog with no further use newPath and nextWriter will be
    * null.</li>
    * </ul>
+   * </p>
    * @param oldPath may be null
    * @param newPath may be null
    * @param nextWriter may be null
    * @return the passed in <code>newPath</code>
    * @throws IOException if there is a problem flushing or closing the underlying FS
    */
+  @VisibleForTesting
   Path replaceWriter(Path oldPath, Path newPath, W nextWriter) throws IOException {
     try (TraceScope scope = TraceUtil.createTrace("FSHFile.replaceWriter")) {
-      long oldFileLen = doReplaceWriter(oldPath, newPath, nextWriter);
-      int oldNumEntries = this.numEntries.getAndSet(0);
-      final String newPathString = (null == newPath ? null : CommonFSUtils.getPath(newPath));
-      if (oldPath != null) {
-        this.walFile2Props.put(oldPath,
-          new WalProps(this.sequenceIdAccounting.resetHighest(), oldFileLen));
-        this.totalLogSize.addAndGet(oldFileLen);
-        LOG.info("Rolled WAL " + CommonFSUtils.getPath(oldPath) + " with entries=" + oldNumEntries +
-          ", filesize=" + StringUtils.byteDesc(oldFileLen) + "; new WAL " + newPathString);
-      } else {
-        LOG.info("New WAL " + newPathString);
-      }
+      doReplaceWriter(oldPath, newPath, nextWriter);
       return newPath;
     }
   }
@@ -1021,10 +1029,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected abstract W createWriterInstance(Path path)
       throws IOException, CommonFSUtils.StreamLacksCapabilityException;
 
-  /**
-   * @return old wal file size
-   */
-  protected abstract long doReplaceWriter(Path oldPath, Path newPath, W nextWriter)
+  protected abstract void doReplaceWriter(Path oldPath, Path newPath, W nextWriter)
       throws IOException;
 
   protected abstract void doShutdown() throws IOException;

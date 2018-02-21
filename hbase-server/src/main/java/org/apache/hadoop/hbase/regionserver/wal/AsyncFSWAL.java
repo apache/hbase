@@ -631,11 +631,29 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
+  private long closeWriter() {
+    AsyncWriter oldWriter = this.writer;
+    if (oldWriter != null) {
+      long fileLength = oldWriter.getLength();
+      closeExecutor.execute(() -> {
+        try {
+          oldWriter.close();
+        } catch (IOException e) {
+          LOG.warn("close old writer failed", e);
+        }
+      });
+      return fileLength;
+    } else {
+      return 0L;
+    }
+  }
+
   @Override
-  protected long doReplaceWriter(Path oldPath, Path newPath, AsyncWriter nextWriter)
+  protected void doReplaceWriter(Path oldPath, Path newPath, AsyncWriter nextWriter)
       throws IOException {
     waitForSafePoint();
-    final AsyncWriter oldWriter = this.writer;
+    long oldFileLen = closeWriter();
+    logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
     this.writer = nextWriter;
     if (nextWriter != null && nextWriter instanceof AsyncProtobufLogWriter) {
       this.fsOut = ((AsyncProtobufLogWriter) nextWriter).getOutput();
@@ -654,13 +672,12 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     } finally {
       consumeLock.unlock();
     }
-    return executeClose(closeExecutor, oldWriter);
   }
 
   @Override
   protected void doShutdown() throws IOException {
     waitForSafePoint();
-    executeClose(closeExecutor, writer);
+    closeWriter();
     closeExecutor.shutdown();
     try {
       if (!closeExecutor.awaitTermination(waitOnShutdownInSeconds, TimeUnit.SECONDS)) {
@@ -696,23 +713,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     if (!(consumeExecutor instanceof EventLoop)) {
       consumeExecutor.shutdown();
     }
-  }
-
-  private static long executeClose(ExecutorService closeExecutor, AsyncWriter writer) {
-    long fileLength;
-    if (writer != null) {
-      fileLength = writer.getLength();
-      closeExecutor.execute(() -> {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          LOG.warn("close old writer failed", e);
-        }
-      });
-    } else {
-      fileLength = 0L;
-    }
-    return fileLength;
   }
 
   @Override
