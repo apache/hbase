@@ -199,8 +199,11 @@ public class TestQuotaStatusRPCs {
 
   @Test
   public void testQuotaStatusFromMaster() throws Exception {
-    final long sizeLimit = 1024L * 10L; // 10KB
-    final long tableSize = 1024L * 5; // 5KB
+    final long sizeLimit = 1024L * 25L; // 25KB
+    // As of 2.0.0-beta-2, this 1KB of "Cells" actually results in about 15KB on disk (HFiles)
+    // This is skewed a bit since we're writing such little data, so the test needs to keep
+    // this in mind; else, the quota will be in violation before the test expects it to be.
+    final long tableSize = 1024L * 1; // 1KB
     final long nsLimit = Long.MAX_VALUE;
     final int numRegions = 10;
     final TableName tn = helper.createTableWithRegions(numRegions);
@@ -244,6 +247,12 @@ public class TestQuotaStatusRPCs {
         return snapshot.getLimit() == nsLimit && snapshot.getUsage() > 0;
       }
     });
+
+    // Sanity check: the below assertions will fail if we somehow write too much data
+    // and force the table to move into violation before we write the second bit of data.
+    SpaceQuotaSnapshot snapshot = QuotaTableUtil.getCurrentSnapshot(conn, tn);
+    assertTrue("QuotaSnapshot for " + tn + " should be non-null and not in violation",
+        snapshot != null && !snapshot.getQuotaStatus().isInViolation());
 
     try {
       helper.writeData(tn, tableSize * 2L);
