@@ -49,6 +49,7 @@ public class MetricsRegionServer {
   private RegionServerTableMetrics tableMetrics;
   private final MetricsTable metricsTable;
   private final MetricsUserAggregate userAggregate;
+  private MetricsRegionServerQuotaSource quotaSource;
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
@@ -71,6 +72,7 @@ public class MetricsRegionServer {
 
     serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
     serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
+    quotaSource = CompatibilitySingletonFactory.getInstance(MetricsRegionServerQuotaSource.class);
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -276,5 +278,19 @@ public class MetricsRegionServer {
       tableMetrics.updateTableWriteQueryMeter(tn);
     }
     this.serverWriteQueryMeter.mark();
+  }
+
+  /**
+   * @see MetricsRegionServerQuotaSource#incrementNumRegionSizeReportsSent(long)
+   */
+  public void incrementNumRegionSizeReportsSent(long numReportsSent) {
+    quotaSource.incrementNumRegionSizeReportsSent(numReportsSent);
+  }
+
+  /**
+   * @see MetricsRegionServerQuotaSource#incrementRegionSizeReportingChoreTime(long)
+   */
+  public void incrementRegionSizeReportingChoreTime(long time) {
+    quotaSource.incrementRegionSizeReportingChoreTime(time);
   }
 }
