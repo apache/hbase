@@ -950,28 +950,29 @@ public class HRegionFileSystem {
   public static HRegionFileSystem createRegionOnFileSystem(final Configuration conf,
       final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, regionInfo);
-    Path regionDir = regionFs.getRegionDir();
 
-    if (fs.exists(regionDir)) {
-      LOG.warn("Trying to create a region that already exists on disk: " + regionDir);
-      throw new IOException("The specified region already exists on disk: " + regionDir);
-    }
-
-    // Create the region directory
-    if (!createDirOnFileSystem(fs, conf, regionDir)) {
-      LOG.warn("Unable to create the region directory: " + regionDir);
-      throw new IOException("Unable to create region directory: " + regionDir);
-    }
-
-    // Write HRI to a file in case we need to recover hbase:meta
-    // Only primary replicas should write region info
+    // We only create a .regioninfo and the region directory if this is the default region replica
     if (regionInfo.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+      Path regionDir = regionFs.getRegionDir();
+      if (fs.exists(regionDir)) {
+        LOG.warn("Trying to create a region that already exists on disk: " + regionDir);
+        throw new IOException("The specified region already exists on disk: " + regionDir);
+      }
+
+      // Create the region directory
+      if (!createDirOnFileSystem(fs, conf, regionDir)) {
+        LOG.warn("Unable to create the region directory: " + regionDir);
+        throw new IOException("Unable to create region directory: " + regionDir);
+      }
+
+      // Write HRI to a file in case we need to recover hbase:meta
       regionFs.writeRegionInfoOnFilesystem(false);
+      return regionFs;
     } else {
       if (LOG.isDebugEnabled())
         LOG.debug("Skipping creation of .regioninfo file for " + regionInfo);
     }
-    return regionFs;
+    return null;
   }
 
   /**
