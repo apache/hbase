@@ -682,7 +682,8 @@ public class MergeTableRegionsProcedure
     for (int i = 0; i < regionsToMerge.length; ++i) {
       for (int j = 0; j < regionReplication; ++j) {
         final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(regionsToMerge[i], j);
-        procs[procsIdx++] = env.getAssignmentManager().createUnassignProcedure(hri,null,true);
+        procs[procsIdx++] = env.getAssignmentManager().
+            createUnassignProcedure(hri, null, true, !RegionReplicaUtil.isDefaultReplica(hri));
       }
     }
     return procs;

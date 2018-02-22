@@ -733,11 +733,17 @@ public class AssignmentManager implements ServerListener {
 
   UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo,
       final ServerName destinationServer, final boolean force) {
+    return createUnassignProcedure(regionInfo, destinationServer, force, false);
+  }
+
+  UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo,
+      final ServerName destinationServer, final boolean force,
+      final boolean removeAfterUnassigning) {
     // If destinationServer is null, figure it.
     ServerName sn = destinationServer != null? destinationServer:
-      getRegionStates().getRegionState(regionInfo).getServerName();
+        getRegionStates().getRegionState(regionInfo).getServerName();
     assert sn != null;
-    UnassignProcedure proc = new UnassignProcedure(regionInfo, sn, force);
+    UnassignProcedure proc = new UnassignProcedure(regionInfo, sn, force, removeAfterUnassigning);
     proc.setOwner(getProcedureEnvironment().getRequestUser().getShortName());
     return proc;
   }
