@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -97,7 +98,8 @@ public class TestRegionOpen {
     assertEquals(2, exec.getCompletedTaskCount());
   }
 
-  @Test(timeout = 60000)
+  @Ignore // Needs rewrite since HBASE-19391 which returns null out of createRegionOnFileSystem
+  @Test
   public void testNonExistentRegionReplica() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] FAMILYNAME = Bytes.toBytes("fam");
