@@ -20,8 +20,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class holds information relevant for tracking the progress of a
@@ -34,10 +32,9 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class CompactionProgress {
-  private static final Logger LOG = LoggerFactory.getLogger(CompactionProgress.class);
 
   /** the total compacting key values in currently running compaction */
-  private long totalCompactingKVs;
+  public long totalCompactingKVs;
   /** the completed count of key values in currently running compaction */
   public long currentCompactedKVs = 0;
   /** the total size of data processed by the currently running compaction, in bytes */
@@ -54,7 +51,7 @@ public class CompactionProgress {
    * @return float
    */
   public float getProgressPct() {
-    return (float)currentCompactedKVs / getTotalCompactingKVs();
+    return (float)currentCompactedKVs / totalCompactingKVs;
   }
 
   /**
@@ -75,12 +72,7 @@ public class CompactionProgress {
   /**
    * @return the total compacting key values in currently running compaction
    */
-  public long getTotalCompactingKVs() {
-    if (totalCompactingKVs < currentCompactedKVs) {
-      LOG.warn("totalCompactingKVs={} less than currentCompactedKVs={}",
-          totalCompactingKVs, currentCompactedKVs);
-      return currentCompactedKVs;
-    }
+  public long getTotalCompactingKvs() {
     return totalCompactingKVs;
   }
 
@@ -100,7 +92,7 @@ public class CompactionProgress {
 
   @Override
   public String toString() {
-    return String.format("%d/%d (%.2f%%)", currentCompactedKVs, getTotalCompactingKVs(),
+    return String.format("%d/%d (%.2f%%)", currentCompactedKVs, totalCompactingKVs,
       100 * getProgressPct());
   }
 }
