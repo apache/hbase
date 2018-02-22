@@ -906,12 +906,11 @@ public class HRegionFileSystem {
 
       // Write HRI to a file in case we need to recover hbase:meta
       regionFs.writeRegionInfoOnFilesystem(false);
-      return regionFs;
     } else {
       if (LOG.isDebugEnabled())
         LOG.debug("Skipping creation of .regioninfo file for " + regionInfo);
     }
-    return null;
+    return regionFs;
   }
 
   /**
