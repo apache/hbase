@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -100,13 +101,14 @@ public class TestClientClusterStatus {
 
   @Test
   public void testNone() throws Exception {
-    ClusterStatus status0
-      = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.allOf(Option.class)));
-    ClusterStatus status1
-      = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.noneOf(Option.class)));
-    Assert.assertEquals(status0, status1);
-    checkPbObjectNotNull(status0);
-    checkPbObjectNotNull(status1);
+    ClusterMetrics status0 = ADMIN.getClusterMetrics(EnumSet.allOf(Option.class));
+    ClusterMetrics status1 = ADMIN.getClusterMetrics(EnumSet.noneOf(Option.class));
+    // Do a rough compare. More specific compares can fail because all regions not deployed yet
+    // or more requests than expected.
+    Assert.assertEquals(status0.getLiveServerMetrics().size(),
+        status1.getLiveServerMetrics().size());
+    checkPbObjectNotNull(new ClusterStatus(status0));
+    checkPbObjectNotNull(new ClusterStatus(status1));
   }
 
   @Test
