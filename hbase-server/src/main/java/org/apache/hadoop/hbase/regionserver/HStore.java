@@ -180,8 +180,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   private ScanInfo scanInfo;
 
+  // All access must be synchronized.
   // TODO: ideally, this should be part of storeFileManager, as we keep passing this to it.
-  final List<HStoreFile> filesCompacting = Lists.newArrayList();
+  private final List<HStoreFile> filesCompacting = Lists.newArrayList();
 
   // All access must be synchronized.
   private final Set<ChangedReadersObserver> changedReaderObservers =
