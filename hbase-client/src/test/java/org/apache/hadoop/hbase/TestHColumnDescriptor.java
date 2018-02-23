@@ -49,7 +49,8 @@ public class TestHColumnDescriptor {
     hcd.setKeepDeletedCells(KeepDeletedCells.TRUE);
     hcd.setInMemory(!HColumnDescriptor.DEFAULT_IN_MEMORY);
     boolean inmemory = hcd.isInMemory();
-    hcd.setScope(v);
+    // Valid values for replication scope are 0 or 1.
+    hcd.setScope(0);
     hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
     hcd.setBloomFilterType(BloomType.ROW);
     hcd.setCompressionType(Algorithm.SNAPPY);
@@ -112,5 +113,11 @@ public class TestHColumnDescriptor {
      */
 
     BuilderStyleTest.assertClassesAreBuilderStyle(HColumnDescriptor.class);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testInvalidReplicationScope() {
+    HColumnDescriptor column = new HColumnDescriptor("f1");
+    column.setScope(5);
   }
 }
