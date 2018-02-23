@@ -24,8 +24,9 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.regex.Pattern;
-import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -340,27 +341,5 @@ public class TestTableDescriptorBuilder {
             .setPriority(42)
             .build();
     assertEquals(42, htd.getPriority());
-  }
-
-  @Test
-  public void testSerialReplicationScope() {
-    HColumnDescriptor hcdWithScope = new HColumnDescriptor(Bytes.toBytes("cf0"));
-    hcdWithScope.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
-    HColumnDescriptor hcdWithoutScope = new HColumnDescriptor(Bytes.toBytes("cf1"));
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(hcdWithoutScope)
-            .build();
-    assertFalse(htd.hasSerialReplicationScope());
-
-    htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(hcdWithScope)
-            .build();
-    assertTrue(htd.hasSerialReplicationScope());
-
-    htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(hcdWithScope)
-            .addColumnFamily(hcdWithoutScope)
-            .build();
-    assertTrue(htd.hasSerialReplicationScope());
   }
 }

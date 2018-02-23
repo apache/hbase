@@ -1658,19 +1658,6 @@ possible configurations would overwhelm and obscure the important.
         default of 10 will rarely need to be changed.
     </description>
   </property>
-  <property>
-    <name>hbase.serial.replication.waitingMs</name>
-    <value>10000</value>
-    <description>
-      By default, in replication we can not make sure the order of operations in slave cluster is
-      same as the order in master. If set REPLICATION_SCOPE to 2, we will push edits by the order
-      of written. This configuration is to set how long (in ms) we will wait before next checking if
-      a log can NOT be pushed because there are some logs written before it that have yet to be
-      pushed. A larger waiting will decrease the number of queries on hbase:meta but will enlarge
-      the delay of replication. This feature relies on zk-less assignment, so users must set
-      hbase.assignment.usezk to false to support it.
-    </description>
-  </property>
   <!-- Static Web User Filter properties. -->
   <property>
     <name>hbase.http.staticuser.user</name>

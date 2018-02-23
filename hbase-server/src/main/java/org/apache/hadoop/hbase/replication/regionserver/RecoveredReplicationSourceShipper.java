@@ -74,8 +74,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
       try {
         WALEntryBatch entryBatch = entryReader.take();
         shipEdits(entryBatch);
-        if (entryBatch.getWalEntries().isEmpty()
-            && entryBatch.getLastSeqIds().isEmpty()) {
+        if (entryBatch.getWalEntries().isEmpty()) {
           LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
               + source.getPeerClusterZnode());
           source.getSourceMetrics().incrCompletedRecoveryQueue();

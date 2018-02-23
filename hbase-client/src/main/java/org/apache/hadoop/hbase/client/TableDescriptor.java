@@ -232,12 +232,6 @@ public interface TableDescriptor {
   boolean hasRegionMemStoreReplication();
 
   /**
-   * @return true if there are at least one cf whose replication scope is
-   * serial.
-   */
-  boolean hasSerialReplicationScope();
-
-  /**
    * Check if the compaction enable flag of the table is true. If flag is false
    * then no minor/major compactions will be done in real.
    *
@@ -285,8 +279,7 @@ public interface TableDescriptor {
     boolean hasDisabled = false;
 
     for (ColumnFamilyDescriptor cf : getColumnFamilies()) {
-      if (cf.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL
-          && cf.getScope() != HConstants.REPLICATION_SCOPE_SERIAL) {
+      if (cf.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL) {
         hasDisabled = true;
       } else {
         hasEnabled = true;

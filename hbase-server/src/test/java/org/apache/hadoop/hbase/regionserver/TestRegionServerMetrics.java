@@ -348,7 +348,7 @@ public class TestRegionServerMetrics {
     TEST_UTIL.getAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertGauge("storeCount", TABLES_ON_MASTER? 1: 7);
+    assertGauge("storeCount", TABLES_ON_MASTER? 1: 4);
     assertGauge("storeFileCount", 1);
   }
 

@@ -20,31 +20,23 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
 /**
  * This thread reads entries from a queue and ships them. Entries are placed onto the queue by
@@ -78,17 +70,6 @@ public class ReplicationSourceShipper extends Thread {
   protected final long sleepForRetries;
   // Maximum number of retries before taking bold actions
   protected final int maxRetriesMultiplier;
-
-  // Use guava cache to set ttl for each key
-  private final LoadingCache<String, Boolean> canSkipWaitingSet = CacheBuilder.newBuilder()
-      .expireAfterAccess(1, TimeUnit.DAYS).build(
-      new CacheLoader<String, Boolean>() {
-        @Override
-        public Boolean load(String key) throws Exception {
-          return false;
-        }
-      }
-  );
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId,
       PriorityBlockingQueue<Path> queue, ReplicationSourceInterface source) {
@@ -125,9 +106,6 @@ public class ReplicationSourceShipper extends Thread {
 
       try {
         WALEntryBatch entryBatch = entryReader.take();
-        for (Map.Entry<String, Long> entry : entryBatch.getLastSeqIds().entrySet()) {
-          waitingUntilCanPush(entry);
-        }
         shipEdits(entryBatch);
       } catch (InterruptedException e) {
         LOG.trace("Interrupted while waiting for next replication entry batch", e);
@@ -150,8 +128,6 @@ public class ReplicationSourceShipper extends Thread {
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
       if (lastLoggedPosition != lastReadPosition) {
-        // Save positions to meta table before zk.
-        updateSerialRepPositions(entryBatch.getLastSeqIds());
         updateLogPosition(lastReadPosition);
         // if there was nothing to ship and it's not an error
         // set "ageOfLastShippedOp" to <now> to indicate that we're current
@@ -197,9 +173,6 @@ public class ReplicationSourceShipper extends Thread {
           for (int i = 0; i < size; i++) {
             cleanUpHFileRefs(entries.get(i).getEdit());
           }
-
-          // Save positions to meta table before zk.
-          updateSerialRepPositions(entryBatch.getLastSeqIds());
           //Log and clean up WAL logs
           updateLogPosition(lastReadPosition);
         }
@@ -222,33 +195,6 @@ public class ReplicationSourceShipper extends Thread {
           sleepMultiplier++;
         }
       }
-    }
-  }
-
-  private void waitingUntilCanPush(Map.Entry<String, Long> entry) {
-    String key = entry.getKey();
-    long seq = entry.getValue();
-    boolean deleteKey = false;
-    if (seq <= 0) {
-      // There is a REGION_CLOSE marker, we can not continue skipping after this entry.
-      deleteKey = true;
-      seq = -seq;
-    }
-
-    if (!canSkipWaitingSet.getUnchecked(key)) {
-      try {
-        source.getSourceManager().waitUntilCanBePushed(Bytes.toBytes(key), seq, source.getPeerId());
-      } catch (IOException e) {
-        LOG.error("waitUntilCanBePushed fail", e);
-        throw new RuntimeException("waitUntilCanBePushed fail");
-      } catch (InterruptedException e) {
-        LOG.warn("waitUntilCanBePushed interrupted", e);
-        Thread.currentThread().interrupt();
-      }
-      canSkipWaitingSet.put(key, true);
-    }
-    if (deleteKey) {
-      canSkipWaitingSet.invalidate(key);
     }
   }
 
@@ -280,16 +226,6 @@ public class ReplicationSourceShipper extends Thread {
     source.getSourceManager().logPositionAndCleanOldLogs(currentPath, source.getPeerClusterZnode(),
       lastReadPosition, false, false);
     lastLoggedPosition = lastReadPosition;
-  }
-
-  private void updateSerialRepPositions(Map<String, Long> lastPositionsForSerialScope) {
-    try {
-      MetaTableAccessor.updateReplicationPositions(source.getSourceManager().getConnection(),
-        source.getPeerId(), lastPositionsForSerialScope);
-    } catch (IOException e) {
-      LOG.error("updateReplicationPositions fail", e);
-      throw new RuntimeException("updateReplicationPositions fail");
-    }
   }
 
   public void startup(UncaughtExceptionHandler handler) {

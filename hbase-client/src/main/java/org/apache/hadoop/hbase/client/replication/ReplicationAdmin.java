@@ -78,10 +78,8 @@ public class ReplicationAdmin implements Closeable {
   // only Global for now, can add other type
   // such as, 1) no global replication, or 2) the table is replicated to this cluster, etc.
   public static final String REPLICATIONTYPE = "replicationType";
-  public static final String REPLICATIONGLOBAL =
-      Integer.toString(HConstants.REPLICATION_SCOPE_GLOBAL);
-  public static final String REPLICATIONSERIAL =
-      Integer.toString(HConstants.REPLICATION_SCOPE_SERIAL);
+  public static final String REPLICATIONGLOBAL = Integer
+      .toString(HConstants.REPLICATION_SCOPE_GLOBAL);
 
   private final Connection connection;
   private Admin admin;
@@ -356,9 +354,7 @@ public class ReplicationAdmin implements Closeable {
                 HashMap<String, String> replicationEntry = new HashMap<>();
                 replicationEntry.put(TNAME, table);
                 replicationEntry.put(CFNAME, cf);
-                replicationEntry.put(REPLICATIONTYPE,
-                  scope == HConstants.REPLICATION_SCOPE_GLOBAL ? REPLICATIONGLOBAL
-                      : REPLICATIONSERIAL);
+                replicationEntry.put(REPLICATIONTYPE, REPLICATIONGLOBAL);
                 replicationColFams.add(replicationEntry);
               });
       });

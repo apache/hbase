@@ -21,14 +21,11 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,7 +33,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -45,7 +41,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
@@ -135,7 +131,7 @@ public class ReplicationSourceWALReader extends Thread {
             continue;
           }
           WALEntryBatch batch = readWALEntries(entryStream);
-          if (batch != null && (!batch.getLastSeqIds().isEmpty() || batch.getNbEntries() > 0)) {
+          if (batch != null && batch.getNbEntries() > 0) {
             if (LOG.isTraceEnabled()) {
               LOG.trace(String.format("Read %s WAL entries eligible for replication",
                 batch.getNbEntries()));
@@ -171,10 +167,6 @@ public class ReplicationSourceWALReader extends Thread {
         batch = new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
       }
       Entry entry = entryStream.next();
-      if (updateSerialReplPos(batch, entry)) {
-        batch.lastWalPosition = entryStream.getPosition();
-        break;
-      }
       entry = filterEntry(entry);
       if (entry != null) {
         WALEdit edit = entry.getEdit();
@@ -244,33 +236,6 @@ public class ReplicationSourceWALReader extends Thread {
       source.getSourceMetrics().incrLogEditsFiltered();
     }
     return filtered;
-  }
-
-  /**
-   * @return true if we should stop reading because we're at REGION_CLOSE
-   */
-  private boolean updateSerialReplPos(WALEntryBatch batch, Entry entry) throws IOException {
-    if (entry.hasSerialReplicationScope()) {
-      String key = Bytes.toString(entry.getKey().getEncodedRegionName());
-      batch.setLastPosition(key, entry.getKey().getSequenceId());
-      if (!entry.getEdit().getCells().isEmpty()) {
-        WALProtos.RegionEventDescriptor maybeEvent =
-            WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
-        if (maybeEvent != null && maybeEvent
-            .getEventType() == WALProtos.RegionEventDescriptor.EventType.REGION_CLOSE) {
-          // In serially replication, if we move a region to another RS and move it back, we may
-          // read logs crossing two sections. We should break at REGION_CLOSE and push the first
-          // section first in case of missing the middle section belonging to the other RS.
-          // In a worker thread, if we can push the first log of a region, we can push all logs
-          // in the same region without waiting until we read a close marker because next time
-          // we read logs in this region, it must be a new section and not adjacent with this
-          // region. Mark it negative.
-          batch.setLastPosition(key, -entry.getKey().getSequenceId());
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   /**
@@ -407,8 +372,6 @@ public class ReplicationSourceWALReader extends Thread {
     private int nbHFiles = 0;
     // heap size of data we need to replicate
     private long heapSize = 0;
-    // save the last sequenceid for each region if the table has serial-replication scope
-    private Map<String, Long> lastSeqIds = new HashMap<>();
 
     /**
      * @param walEntries
@@ -477,13 +440,6 @@ public class ReplicationSourceWALReader extends Thread {
       return heapSize;
     }
 
-    /**
-     * @return the last sequenceid for each region if the table has serial-replication scope
-     */
-    public Map<String, Long> getLastSeqIds() {
-      return lastSeqIds;
-    }
-
     private void incrementNbRowKeys(int increment) {
       nbRowKeys += increment;
     }
@@ -494,10 +450,6 @@ public class ReplicationSourceWALReader extends Thread {
 
     private void incrementHeapSize(long increment) {
       heapSize += increment;
-    }
-
-    private void setLastPosition(String region, Long sequenceId) {
-      getLastSeqIds().put(region, sequenceId);
     }
   }
 }

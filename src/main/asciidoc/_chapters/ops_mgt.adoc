@@ -1367,11 +1367,9 @@ If a slave cluster does run out of room, or is inaccessible for other reasons, i
 .Consistency Across Replicated Clusters
 [WARNING]
 ====
-How your application builds on top of the HBase API matters when replication is in play. HBase's replication system provides at-least-once delivery of client edits for an enabled column family to each configured destination cluster. In the event of failure to reach a given destination, the replication system will retry sending edits in a way that might repeat a given message. HBase provides two ways of replication, one is the original replication and the other is serial replication. In the previous way of replication, there is not a guaranteed order of delivery for client edits. In the event of a RegionServer failing, recovery of the replication queue happens independent of recovery of the individual regions that server was previously handling. This means that it is possible for the not-yet-replicated edits to be serviced by a RegionServer that is currently slower to replicate than the one that handles edits from after the failure.
+How your application builds on top of the HBase API matters when replication is in play. HBase's replication system provides at-least-once delivery of client edits for an enabled column family to each configured destination cluster. In the event of failure to reach a given destination, the replication system will retry sending edits in a way that might repeat a given message. Further more, there is not a guaranteed order of delivery for client edits. In the event of a RegionServer failing, recovery of the replication queue happens independent of recovery of the individual regions that server was previously handling. This means that it is possible for the not-yet-replicated edits to be serviced by a RegionServer that is currently slower to replicate than the one that handles edits from after the failure.
 
 The combination of these two properties (at-least-once delivery and the lack of message ordering) means that some destination clusters may end up in a different state if your application makes use of operations that are not idempotent, e.g. Increments.
-
-To solve the problem, HBase now supports serial replication, which sends edits to destination cluster as the order of requests from client.
 ====
 
 .Terminology Changes
@@ -1412,9 +1410,6 @@ Instead of SQL statements, entire WALEdits (consisting of multiple cell inserts 
 LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
 ----
 
-.Serial Replication Configuration
-See <<Serial Replication,Serial Replication>>
-
 .Cluster Management Commands
 add_peer <ID> <CLUSTER_KEY>::
   Adds a replication relationship between two clusters. +
@@ -1435,40 +1430,6 @@ enable_table_replication <TABLE_NAME>::
   Enable the table replication switch for all its column families. If the table is not found in the destination cluster then it will create one with the same name and column families.
 disable_table_replication <TABLE_NAME>::
   Disable the table replication switch for all its column families.
-
-=== Serial Replication
-
-Note: this feature is introduced in HBase 1.5
-
-.Function of serial replication
-
-Serial replication supports to push logs to the destination cluster in the same order as logs reach to the source cluster.
-
-.Why need serial replication?
-In replication of HBase, we push mutations to destination cluster by reading WAL in each region server. We have a queue for WAL files so we can read them in order of creation time. However, when region-move or RS failure occurs in source cluster, the hlog entries that are not pushed before region-move or RS-failure will be pushed by original RS(for region move) or another RS which takes over the remained hlog of dead RS(for RS failure), and the new entries for the same region(s) will be pushed by the RS which now serves the region(s), but they push the hlog entries of a same region concurrently without coordination.
-
-This treatment can possibly lead to data inconsistency between source and destination clusters:
-
-1. there are put and then delete written to source cluster.
-
-2. due to region-move / RS-failure, they are pushed by different replication-source threads to peer cluster.
-
-3. if delete is pushed to peer cluster before put, and flush and major-compact occurs in peer cluster before put is pushed to peer cluster, the delete is collected and the put remains in peer cluster, but in source cluster the put is masked by the delete, hence data inconsistency between source and destination clusters.
-
-
-.Serial replication configuration
-
-. Set REPLICATION_SCOPE=>2 on the column family which is to be replicated serially when creating tables.
-
- REPLICATION_SCOPE is a column family level attribute. Its value can be 0, 1 or 2. Value 0 means replication is disabled, 1 means replication is enabled but which not guarantee log order, and 2 means serial replication is enabled.
-
-. This feature relies on zk-less assignment, and conflicts with distributed log replay, so users must set hbase.assignment.usezk=false and hbase.master.distributed.log.replay=false to support this feature.(Note that distributed log replay is deprecated and has already been purged from 2.0)
-
-.Limitations in serial replication
-
-Now we read and push logs in one RS to one peer in one thread, so if one log has not been pushed, all logs after it will be blocked. One wal file may contain wal edits from different tables, if one of the tables(or its CF) which REPLICATION_SCOPE is 2, and it is blocked, then all edits will be blocked, although other tables do not need serial replication. If you want to prevent this, then you need to split these tables/cfs into different peers.
-
-More details about serial replication can be found in link:https://issues.apache.org/jira/browse/HBASE-9465[HBASE-9465].
 
 === Verifying Replicated Data
 

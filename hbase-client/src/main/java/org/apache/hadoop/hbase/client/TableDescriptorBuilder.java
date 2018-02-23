@@ -32,20 +32,19 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
-import java.util.stream.Stream;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * @since 2.0.0
@@ -1052,16 +1051,6 @@ public class TableDescriptorBuilder {
     @Override
     public ColumnFamilyDescriptor[] getColumnFamilies() {
       return families.values().toArray(new ColumnFamilyDescriptor[families.size()]);
-    }
-
-    /**
-     * Return true if there are at least one cf whose replication scope is
-     * serial.
-     */
-    @Override
-    public boolean hasSerialReplicationScope() {
-      return Stream.of(getColumnFamilies())
-              .anyMatch(column -> column.getScope() == HConstants.REPLICATION_SCOPE_SERIAL);
     }
 
     /**
