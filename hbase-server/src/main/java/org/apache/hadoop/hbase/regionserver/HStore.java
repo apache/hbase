@@ -170,8 +170,9 @@ public class HStore implements Store {
 
   private ScanInfo scanInfo;
 
+  // All access must be synchronized.
   // TODO: ideally, this should be part of storeFileManager, as we keep passing this to it.
-  final List<StoreFile> filesCompacting = Lists.newArrayList();
+  private final List<StoreFile> filesCompacting = Lists.newArrayList();
 
   // All access must be synchronized.
   private final Set<ChangedReadersObserver> changedReaderObservers =
