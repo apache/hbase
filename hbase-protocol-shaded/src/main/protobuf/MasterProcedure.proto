@@ -330,6 +330,7 @@ message UnassignRegionStateData {
   // server we will send the unassign rpc too.
   optional ServerName hosting_server = 5;
   optional bool force = 4 [default = false];
+  optional bool remove_after_unassigning = 6 [default = false];
 }
 
 enum MoveRegionState {

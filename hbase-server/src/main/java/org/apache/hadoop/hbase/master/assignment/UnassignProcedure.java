@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UnassignRegionStateData;
@@ -86,22 +88,34 @@ public class UnassignProcedure extends RegionTransitionProcedure {
   //       ...and keep unassign for 'disable' case?
   private boolean force;
 
+  /**
+   * Whether deleting the region from in-memory states after unassigning the region.
+   */
+  private boolean removeAfterUnassigning;
+
   public UnassignProcedure() {
     // Required by the Procedure framework to create the procedure on replay
     super();
   }
 
-  public UnassignProcedure(final RegionInfo regionInfo,  final ServerName hostingServer,
-                           final boolean force) {
-    this(regionInfo, hostingServer, null, force);
+  public UnassignProcedure(final RegionInfo regionInfo, final ServerName hostingServer,
+      final boolean force, final boolean removeAfterUnassigning) {
+    this(regionInfo, hostingServer, null, force, removeAfterUnassigning);
   }
 
   public UnassignProcedure(final RegionInfo regionInfo,
       final ServerName hostingServer, final ServerName destinationServer, final boolean force) {
+    this(regionInfo, hostingServer, destinationServer, force, false);
+  }
+
+  public UnassignProcedure(final RegionInfo regionInfo, final ServerName hostingServer,
+      final ServerName destinationServer, final boolean force,
+      final boolean removeAfterUnassigning) {
     super(regionInfo);
     this.hostingServer = hostingServer;
     this.destinationServer = destinationServer;
     this.force = force;
+    this.removeAfterUnassigning = removeAfterUnassigning;
 
     // we don't need REGION_TRANSITION_QUEUE, we jump directly to sending the request
     setTransitionState(RegionTransitionState.REGION_TRANSITION_DISPATCH);
@@ -136,6 +150,9 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     if (force) {
       state.setForce(true);
     }
+    if (removeAfterUnassigning) {
+      state.setRemoveAfterUnassigning(true);
+    }
     serializer.serialize(state.build());
   }
 
@@ -151,6 +168,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     if (state.hasDestinationServer()) {
       this.destinationServer = ProtobufUtil.toServerName(state.getDestinationServer());
     }
+    removeAfterUnassigning = state.getRemoveAfterUnassigning();
   }
 
   @Override
@@ -190,7 +208,20 @@ public class UnassignProcedure extends RegionTransitionProcedure {
   @Override
   protected void finishTransition(final MasterProcedureEnv env, final RegionStateNode regionNode)
       throws IOException {
-    env.getAssignmentManager().markRegionAsClosed(regionNode);
+    AssignmentManager am = env.getAssignmentManager();
+    RegionInfo regionInfo = getRegionInfo();
+
+    if (!removeAfterUnassigning) {
+      am.markRegionAsClosed(regionNode);
+    } else {
+      // Remove from in-memory states
+      am.getRegionStates().deleteRegion(regionInfo);
+      env.getMasterServices().getServerManager().removeRegion(regionInfo);
+      FavoredNodesManager fnm = env.getMasterServices().getFavoredNodesManager();
+      if (fnm != null) {
+        fnm.deleteFavoredNodesForRegions(Lists.newArrayList(regionInfo));
+      }
+    }
   }
 
   @Override
