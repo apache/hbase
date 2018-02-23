@@ -413,7 +413,7 @@ public abstract class Segment {
 
   @Override
   public String toString() {
-    String res = "Type=" + this.getClass().getSimpleName() + ", ";
+    String res = "type=" + this.getClass().getSimpleName() + ", ";
     res += "empty=" + (isEmpty()? "yes": "no") + ", ";
     res += "cellCount=" + getCellsCount() + ", ";
     res += "cellSize=" + keySize() + ", ";

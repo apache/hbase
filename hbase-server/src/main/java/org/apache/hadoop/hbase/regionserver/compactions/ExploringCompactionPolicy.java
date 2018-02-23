@@ -118,9 +118,9 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
           + " files of size "+ smallestSize + " because the store might be stuck");
       return new ArrayList<>(smallest);
     }
-    LOG.debug("Exploring compaction algorithm has selected " + bestSelection.size()
-        + " files of size " + bestSize + " starting at candidate #" + bestStart +
-        " after considering " + opts + " permutations with " + optsInRatio + " in ratio");
+    LOG.debug("Exploring compaction algorithm has selected {}  files of size {} starting at " +
+      "candidate #{} after considering {} permutations with {} in ratio", bestSelection.size(),
+      bestSize, bestSize, opts, optsInRatio);
     return new ArrayList<>(bestSelection);
   }
 

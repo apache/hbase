@@ -90,7 +90,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
     if (speed >= 1E15) { // large enough to say it is unlimited
       return "unlimited";
     } else {
-      return String.format("%.2f MB/sec", speed / 1024 / 1024);
+      return String.format("%.2f MB/second", speed / 1024 / 1024);
     }
   }
 

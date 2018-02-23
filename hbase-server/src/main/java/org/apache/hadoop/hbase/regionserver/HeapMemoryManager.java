@@ -207,10 +207,10 @@ public class HeapMemoryManager {
   }
 
   public void start(ChoreService service) {
-      LOG.info("Starting HeapMemoryTuner chore.");
-      this.heapMemTunerChore = new HeapMemoryTunerChore();
-      service.scheduleChore(heapMemTunerChore);
-      if (tunerOn) {
+    LOG.info("Starting, tuneOn={}", this.tunerOn);
+    this.heapMemTunerChore = new HeapMemoryTunerChore();
+    service.scheduleChore(heapMemTunerChore);
+    if (tunerOn) {
       // Register HeapMemoryTuner as a memstore flush listener
       memStoreFlusher.registerFlushRequestListener(heapMemTunerChore);
     }
@@ -218,7 +218,7 @@ public class HeapMemoryManager {
 
   public void stop() {
     // The thread is Daemon. Just interrupting the ongoing process.
-    LOG.info("Stopping HeapMemoryTuner chore.");
+    LOG.info("Stopping");
     this.heapMemTunerChore.cancel(true);
   }
 

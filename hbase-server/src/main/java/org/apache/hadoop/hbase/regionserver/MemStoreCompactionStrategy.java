@@ -85,13 +85,12 @@ public abstract class MemStoreCompactionStrategy {
     int numOfSegments = versionedList.getNumOfSegments();
     if (numOfSegments > pipelineThreshold) {
       // to avoid too many segments, merge now
-      LOG.debug("{} in-memory compaction of {}; merging {} segments",
-          strategy, cfName, numOfSegments);
+      LOG.debug("{} {}; merging {} segments", strategy, cfName, numOfSegments);
       return getMergingAction();
     }
 
     // just flatten a segment
-    LOG.debug("{} in-memory compaction of {}; flattening a segment", strategy, cfName);
+    LOG.debug("{} {}; flattening a segment", strategy, cfName);
     return getFlattenAction();
   }
 

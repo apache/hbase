@@ -106,7 +106,7 @@ public class NettyRpcServer extends RpcServer {
         });
     try {
       serverChannel = bootstrap.bind(this.bindAddress).sync().channel();
-      LOG.info("NettyRpcServer bind to address=" + serverChannel.localAddress());
+      LOG.info("Bind to {}", serverChannel.localAddress());
     } catch (InterruptedException e) {
       throw new InterruptedIOException(e.getMessage());
     }
@@ -140,7 +140,7 @@ public class NettyRpcServer extends RpcServer {
     if (!running) {
       return;
     }
-    LOG.info("Stopping server on " + this.bindAddress.getPort());
+    LOG.info("Stopping server on " + this.serverChannel.localAddress());
     if (authTokenSecretMgr != null) {
       authTokenSecretMgr.stop();
       authTokenSecretMgr = null;

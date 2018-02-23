@@ -731,15 +731,15 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public String toString() {
     return MoreObjects.toStringHelper(this)
       .add("blockCount", getBlockCount())
-      .add("currentSize", getCurrentSize())
-      .add("freeSize", getFreeSize())
-      .add("maxSize", getMaxSize())
-      .add("heapSize", heapSize())
-      .add("minSize", minSize())
+      .add("currentSize", StringUtils.byteDesc(getCurrentSize()))
+      .add("freeSize", StringUtils.byteDesc(getFreeSize()))
+      .add("maxSize", StringUtils.byteDesc(getMaxSize()))
+      .add("heapSize", StringUtils.byteDesc(heapSize()))
+      .add("minSize", StringUtils.byteDesc(minSize()))
       .add("minFactor", minFactor)
-      .add("multiSize", multiSize())
+      .add("multiSize", StringUtils.byteDesc(multiSize()))
       .add("multiFactor", multiFactor)
-      .add("singleSize", singleSize())
+      .add("singleSize", StringUtils.byteDesc(singleSize()))
       .add("singleFactor", singleFactor)
       .toString();
   }

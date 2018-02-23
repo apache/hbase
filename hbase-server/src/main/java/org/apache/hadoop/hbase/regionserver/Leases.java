@@ -144,10 +144,9 @@ public class Leases extends HasThread {
    * without any cancellation calls.
    */
   public void close() {
-    LOG.info(Thread.currentThread().getName() + " closing leases");
     this.stopRequested = true;
     leases.clear();
-    LOG.info(Thread.currentThread().getName() + " closed leases");
+    LOG.info("Closed leases");
   }
 
   /**

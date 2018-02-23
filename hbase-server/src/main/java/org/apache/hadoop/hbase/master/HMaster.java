@@ -3543,7 +3543,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public boolean recoverMeta() throws IOException {
     ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
-    LOG.info("Running RecoverMetaProcedure to ensure proper hbase:meta deploy.");
     procedureExecutor.submitProcedure(new RecoverMetaProcedure(null, true, latch));
     latch.await();
     LOG.info("hbase:meta deployed at=" +

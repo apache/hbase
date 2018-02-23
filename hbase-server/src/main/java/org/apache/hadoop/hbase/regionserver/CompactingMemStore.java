@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -144,8 +145,8 @@ public class CompactingMemStore extends AbstractMemStore {
           IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
     }
     inmemoryFlushSize = (long) (inmemoryFlushSize * factor);
-    LOG.info("Setting in-memory flush size threshold to " + inmemoryFlushSize
-        + " and immutable segments index to be of type " + indexType);
+    LOG.info("Setting in-memory flush size threshold to {} and immutable segments index to type={}",
+        StringUtils.byteDesc(inmemoryFlushSize), indexType);
   }
 
   /**

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,14 +150,14 @@ public class CompactionConfiguration {
   @Override
   public String toString() {
     return String.format(
-      "size [%d, %d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
+      "size [%s, %s, %s); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
       + " major period %d, major jitter %f, min locality to compact %f;"
       + " tiered compaction: max_age %d, incoming window min %d,"
       + " compaction policy for tiered window %s, single output for minor %b,"
       + " compaction window factory %s",
-      minCompactSize,
-      maxCompactSize,
-      offPeakMaxCompactSize,
+      StringUtils.byteDesc(minCompactSize),
+      StringUtils.byteDesc(maxCompactSize),
+      StringUtils.byteDesc(offPeakMaxCompactSize),
       minFilesToCompact,
       maxFilesToCompact,
       compactionRatio,
