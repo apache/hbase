@@ -329,7 +329,7 @@ public class TestRegionMergeTransactionOnCluster {
       } catch (ExecutionException ie) {
         System.out.println(ie);
         assertTrue("Exception should mention regions not online",
-          StringUtils.stringifyException(ie.getCause()).contains("regions not online")
+            StringUtils.stringifyException(ie.getCause()).contains("regions that are not online")
             && ie.getCause() instanceof MergeRegionException);
       }
 
