@@ -447,7 +447,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     static final long HEAP_SIZE = ClassSize.align(
-        (long)ClassSize.OBJECT + 5 * Bytes.SIZEOF_BOOLEAN);
+        ClassSize.OBJECT + 5 * Bytes.SIZEOF_BOOLEAN);
   }
 
   /**
@@ -7890,7 +7890,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      (long)ClassSize.OBJECT +
+      ClassSize.OBJECT +
       ClassSize.ARRAY +
       50 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +

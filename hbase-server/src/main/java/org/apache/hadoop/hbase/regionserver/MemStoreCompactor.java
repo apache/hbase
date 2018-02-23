@@ -48,7 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class MemStoreCompactor {
 
   public static final long DEEP_OVERHEAD = ClassSize
-      .align((long)ClassSize.OBJECT + 4 * ClassSize.REFERENCE
+      .align(ClassSize.OBJECT + 4 * ClassSize.REFERENCE
           // compactingMemStore, versionedList, isInterrupted, strategy (the reference)
           // "action" is an enum and thus it is a class with static final constants,
           // so counting only the size of the reference to it and not the size of the internals

@@ -51,7 +51,7 @@ public class ScanInfo {
   private final long preadMaxBytes;
   private final boolean newVersionBehavior;
 
-  public static final long FIXED_OVERHEAD = ClassSize.align((long)ClassSize.OBJECT
+  public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
       + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
       + (4 * Bytes.SIZEOF_LONG) + (4 * Bytes.SIZEOF_BOOLEAN));
 

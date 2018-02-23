@@ -1783,7 +1783,7 @@ public final class PrivateCellUtil {
         FirstOnRowCell.FIXED_HEAPSIZE
       + Bytes.SIZEOF_BYTE // flength
       + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
-      + (long)ClassSize.REFERENCE * 2; // fArray, qArray
+      + ClassSize.REFERENCE * 2; // fArray, qArray
     private final byte[] fArray;
     private final int foffset;
     private final byte flength;
@@ -1944,7 +1944,7 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowColCell extends LastOnRowCell {
-    private static final long FIXED_OVERHEAD = (long)LastOnRowCell.FIXED_OVERHEAD
+    private static final long FIXED_OVERHEAD = LastOnRowCell.FIXED_OVERHEAD
         + ClassSize.REFERENCE * 2 // fArray and qArray
         + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
         + Bytes.SIZEOF_BYTE; // flength

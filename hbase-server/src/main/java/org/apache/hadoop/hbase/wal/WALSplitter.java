@@ -980,7 +980,7 @@ public class WALSplitter {
       internify(entry);
       entryBuffer.add(entry);
       long incrHeap = entry.getEdit().heapSize() +
-        ClassSize.align(2L * ClassSize.REFERENCE) + // WALKey pointers
+        ClassSize.align(2 * ClassSize.REFERENCE) + // WALKey pointers
         0; // TODO linkedlist entry
       heapInBuffer += incrHeap;
       return incrHeap;

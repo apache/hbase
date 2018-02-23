@@ -57,7 +57,7 @@ public class CompactionPipeline {
   private static final Logger LOG = LoggerFactory.getLogger(CompactionPipeline.class);
 
   public final static long FIXED_OVERHEAD = ClassSize
-      .align((long)ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + Bytes.SIZEOF_LONG);
+      .align(ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + Bytes.SIZEOF_LONG);
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD + (2 * ClassSize.LINKEDLIST);
 
   private final RegionServicesForStores region;
