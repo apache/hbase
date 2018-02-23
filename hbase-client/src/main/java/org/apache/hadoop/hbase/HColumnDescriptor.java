@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
@@ -570,6 +571,14 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public HColumnDescriptor setValue(byte[] key, byte[] value) {
     if (Bytes.compareTo(Bytes.toBytes(HConstants.VERSIONS), key) == 0) {
       cachedMaxVersions = UNINITIALIZED;
+    } else if (Bytes.compareTo(REPLICATION_SCOPE_BYTES, key) == 0) {
+      // as bytes are encoded from string, we have to decode value as string
+      int scopeType = Integer.valueOf(Bytes.toString(value));
+      if (scopeType != WALProtos.ScopeType.REPLICATION_SCOPE_GLOBAL_VALUE &&
+          scopeType != WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL_VALUE) {
+        throw new IllegalArgumentException("Invalid value '" + scopeType +
+            "' for REPLICATION_SCOPE.");
+      }
     }
     values.put(new ImmutableBytesWritable(key),
       new ImmutableBytesWritable(value));
