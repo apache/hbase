@@ -92,7 +92,8 @@ public class MemStoreCompactor {
     // get a snapshot of the list of the segments from the pipeline,
     // this local copy of the list is marked with specific version
     versionedList = compactingMemStore.getImmutableSegments();
-    LOG.debug("Starting In-Memory Compaction of {}",
+    LOG.debug("Starting on {}/{}",
+        compactingMemStore.getStore().getHRegion().getRegionInfo().getEncodedName(),
         compactingMemStore.getStore().getColumnFamilyName());
     HStore store = compactingMemStore.getStore();
     RegionCoprocessorHost cpHost = store.getCoprocessorHost();

@@ -292,7 +292,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
             this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
     }
-    LOG.info("Memstore class name is {}", className);
+    LOG.debug("Memstore type={}", className);
     this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family

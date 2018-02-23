@@ -550,7 +550,7 @@ public class CacheConfig {
     }
     if (blockCacheDisabled) return null;
     int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
-    LOG.info("Allocating On heap LruBlockCache size=" +
+    LOG.info("Allocating onheap LruBlockCache size=" +
       StringUtils.byteDesc(cacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
     ONHEAP_CACHE_INSTANCE = new LruBlockCache(cacheSize, blockSize, true, c);
     return ONHEAP_CACHE_INSTANCE;

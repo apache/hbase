@@ -132,7 +132,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     }
     this.statsThreadPeriod =
         this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
-    LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);
+    LOG.debug("Replication stats-in-log period={} seconds",  this.statsThreadPeriod);
     this.replicationLoad = new ReplicationLoad();
   }
 

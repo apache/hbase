@@ -41,17 +41,17 @@ public class RegionServerProcedureManagerHost extends
 
   public void initialize(RegionServerServices rss) throws KeeperException {
     for (RegionServerProcedureManager proc : procedures) {
-      LOG.debug("Procedure " + proc.getProcedureSignature() + " is initializing");
+      LOG.debug("Procedure {} initializing", proc.getProcedureSignature());
       proc.initialize(rss);
-      LOG.debug("Procedure " + proc.getProcedureSignature() + " is initialized");
+      LOG.debug("Procedure {} initialized", proc.getProcedureSignature());
     }
   }
 
   public void start() {
     for (RegionServerProcedureManager proc : procedures) {
-      LOG.debug("Procedure " + proc.getProcedureSignature() + " is starting");
+      LOG.debug("Procedure {} starting", proc.getProcedureSignature());
       proc.start();
-      LOG.debug("Procedure " + proc.getProcedureSignature() + " is started");
+      LOG.debug("Procedure {} started", proc.getProcedureSignature());
     }
   }
 

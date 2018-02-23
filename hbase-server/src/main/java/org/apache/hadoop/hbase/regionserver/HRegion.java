@@ -955,8 +955,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       nextSeqid++;
     }
 
-    LOG.info("Onlined " + this.getRegionInfo().getShortNameToLog() +
-      "; next sequenceid=" + nextSeqid);
+    LOG.info("Opened {}; next sequenceid={}", this.getRegionInfo().getShortNameToLog(), nextSeqid);
 
     // A region can be reopened if failed a split; reset flags
     this.closing.set(false);

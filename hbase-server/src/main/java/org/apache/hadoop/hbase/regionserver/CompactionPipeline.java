@@ -125,7 +125,7 @@ public class CompactionPipeline {
         return false;
       }
       suffix = versionedList.getStoreSegments();
-      LOG.debug("Swapping pipeline suffix; before={}, new segement={}",
+      LOG.debug("Swapping pipeline suffix; before={}, new segment={}",
           versionedList.getStoreSegments().size(), segment);
       swapSuffix(suffix, segment, closeSuffix);
       readOnlyCopy = new LinkedList<>(pipeline);

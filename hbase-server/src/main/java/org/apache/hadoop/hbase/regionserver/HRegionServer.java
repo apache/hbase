@@ -1140,9 +1140,7 @@ public class HRegionServer extends HasThread implements
     if (this.zooKeeper != null) {
       this.zooKeeper.close();
     }
-    LOG.info("stopping server " + this.serverName + "; zookeeper connection closed.");
-
-    LOG.info(Thread.currentThread().getName() + " exiting");
+    LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
   }
 
   private boolean containsMetaTableRegions() {

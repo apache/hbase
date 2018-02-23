@@ -138,63 +138,63 @@ public class Action {
   }
 
   protected void killMaster(ServerName server) throws IOException {
-    LOG.info("Killing master:" + server);
+    LOG.info("Killing master " + server);
     cluster.killMaster(server);
     cluster.waitForMasterToStop(server, killMasterTimeout);
-    LOG.info("Killed master server:" + server);
+    LOG.info("Killed master " + server);
   }
 
   protected void startMaster(ServerName server) throws IOException {
-    LOG.info("Starting master:" + server.getHostname());
+    LOG.info("Starting master " + server.getHostname());
     cluster.startMaster(server.getHostname(), server.getPort());
     cluster.waitForActiveAndReadyMaster(startMasterTimeout);
-    LOG.info("Started master: " + server);
+    LOG.info("Started master " + server.getHostname());
   }
 
   protected void killRs(ServerName server) throws IOException {
-    LOG.info("Killing region server:" + server);
+    LOG.info("Killing regionserver " + server);
     cluster.killRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
-    LOG.info("Killed region server:" + server + ". Reported num of rs:"
+    LOG.info("Killed regionserver " + server + ". Reported num of rs:"
         + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startRs(ServerName server) throws IOException {
-    LOG.info("Starting region server:" + server.getHostname());
+    LOG.info("Starting regionserver " + server.getAddress());
     cluster.startRegionServer(server.getHostname(), server.getPort());
     cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
-    LOG.info("Started region server:" + server + ". Reported num of rs:"
+    LOG.info("Started regionserver " + server.getAddress() + ". Reported num of rs:"
       + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void killZKNode(ServerName server) throws IOException {
-    LOG.info("Killing zookeeper node:" + server);
+    LOG.info("Killing zookeeper node " + server);
     cluster.killZkNode(server);
     cluster.waitForZkNodeToStop(server, killZkNodeTimeout);
-    LOG.info("Killed zookeeper node:" + server + ". Reported num of rs:"
+    LOG.info("Killed zookeeper node " + server + ". Reported num of rs:"
       + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startZKNode(ServerName server) throws IOException {
-    LOG.info("Starting zookeeper node:" + server.getHostname());
+    LOG.info("Starting zookeeper node " + server.getHostname());
     cluster.startZkNode(server.getHostname(), server.getPort());
     cluster.waitForZkNodeToStart(server, startZkNodeTimeout);
-    LOG.info("Started zookeeper node:" + server);
+    LOG.info("Started zookeeper node " + server);
   }
 
   protected void killDataNode(ServerName server) throws IOException {
-    LOG.info("Killing datanode:" + server);
+    LOG.info("Killing datanode " + server);
     cluster.killDataNode(server);
     cluster.waitForDataNodeToStop(server, killDataNodeTimeout);
-    LOG.info("Killed datanode:" + server + ". Reported num of rs:"
+    LOG.info("Killed datanode " + server + ". Reported num of rs:"
       + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startDataNode(ServerName server) throws IOException {
-    LOG.info("Starting datanode:" + server.getHostname());
+    LOG.info("Starting datanode " + server.getHostname());
     cluster.startDataNode(server);
     cluster.waitForDataNodeToStart(server, startDataNodeTimeout);
-    LOG.info("Started datanode:" + server);
+    LOG.info("Started datanode " + server);
   }
 
   protected void unbalanceRegions(ClusterMetrics clusterStatus,
