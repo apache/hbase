@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,8 +52,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
-import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -146,7 +144,7 @@ public class MergeTableRegionsProcedure
     }
 
     if (!RegionInfo.areAdjacent(regionToMergeA, regionToMergeB)) {
-      String msg = "Unable to merge not adjacent regions " + regionToMergeA.getShortNameToLog() +
+      String msg = "Unable to merge non-adjacent regions " + regionToMergeA.getShortNameToLog() +
           ", " + regionToMergeB.getShortNameToLog() + " where forcible = " + forcible;
       LOG.warn(msg);
       if (!forcible) {
@@ -194,7 +192,7 @@ public class MergeTableRegionsProcedure
   private static long getMergedRegionIdTimestamp(final RegionInfo regionToMergeA,
       final RegionInfo regionToMergeB) {
     long rid = EnvironmentEdgeManager.currentTime();
-    // Regionid is timestamp. Merged region's id can't be less than that of
+    // Region Id is a timestamp. Merged region's id can't be less than that of
     // merging regions else will insert at wrong location in hbase:meta (See HBASE-710).
     if (rid < regionToMergeA.getRegionId() || rid < regionToMergeB.getRegionId()) {
       LOG.warn("Clock skew; merging regions id are " + regionToMergeA.getRegionId()
@@ -205,8 +203,8 @@ public class MergeTableRegionsProcedure
   }
 
   @Override
-  protected Flow executeFromState(final MasterProcedureEnv env, final MergeTableRegionsState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+  protected Flow executeFromState(final MasterProcedureEnv env,
+      final MergeTableRegionsState state) {
     LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
@@ -260,7 +258,7 @@ public class MergeTableRegionsProcedure
         RegionInfo.getShortNameToLog(regionsToMerge) + " in the table " + getTableName() +
            " (in state=" + state + ")";
       if (!isRollbackSupported(state)) {
-        // We reach a state that cannot be rolled back. We just need to keep retry.
+        // We reach a state that cannot be rolled back. We just need to keep retrying.
         LOG.warn(msg, e);
       } else {
         LOG.error(msg, e);
@@ -277,9 +275,8 @@ public class MergeTableRegionsProcedure
    * See HBASE-19851 for details.
    */
   @Override
-  protected void rollbackState(
-      final MasterProcedureEnv env,
-      final MergeTableRegionsState state) throws IOException, InterruptedException {
+  protected void rollbackState(final MasterProcedureEnv env, final MergeTableRegionsState state)
+      throws IOException {
     if (isTraceEnabled()) {
       LOG.trace(this + " rollback state=" + state);
     }
@@ -323,7 +320,7 @@ public class MergeTableRegionsProcedure
   }
 
   /*
-   * Check whether we are in the state that can be rollback
+   * Check whether we are in the state that can be rolled back
    */
   @Override
   protected boolean isRollbackSupported(final MergeTableRegionsState state) {
@@ -332,7 +329,7 @@ public class MergeTableRegionsProcedure
       case MERGE_TABLE_REGIONS_OPEN_MERGED_REGION:
       case MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION:
       case MERGE_TABLE_REGIONS_UPDATE_META:
-        // It is not safe to rollback if we reach to these states.
+        // It is not safe to rollback in these states.
         return false;
       default:
         break;
@@ -456,7 +453,7 @@ public class MergeTableRegionsProcedure
    */
   private boolean prepareMergeRegion(final MasterProcedureEnv env) throws IOException {
     // Note: the following logic assumes that we only have 2 regions to merge.  In the future,
-    // if we want to extend to more than 2 regions, the code needs to modify a little bit.
+    // if we want to extend to more than 2 regions, the code needs to be modified a little bit.
     //
     CatalogJanitor catalogJanitor = env.getMasterServices().getCatalogJanitor();
     boolean regionAHasMergeQualifier = !catalogJanitor.cleanMergeQualifier(regionsToMerge[0]);
@@ -481,7 +478,7 @@ public class MergeTableRegionsProcedure
 
     if (!regionStateA.isOpened() || !regionStateB.isOpened()) {
       throw new MergeRegionException(
-        "Unable to merge regions not online " + regionStateA + ", " + regionStateB);
+        "Unable to merge regions that are not online " + regionStateA + ", " + regionStateB);
     }
 
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
@@ -494,7 +491,7 @@ public class MergeTableRegionsProcedure
 
 
     // Ask the remote regionserver if regions are mergeable. If we get an IOE, report it
-    // along w/ the failure so can see why we are not mergeable at this time.
+    // along with the failure, so we can see why regions are not mergeable at this time.
     IOException mergeableCheckIOE = null;
     boolean mergeable = false;
     RegionState current = regionStateA;
@@ -565,7 +562,7 @@ public class MergeTableRegionsProcedure
    * Set the region states to MERGING state
    * @param env MasterProcedureEnv
    */
-  public void setRegionStateToMerging(final MasterProcedureEnv env) throws IOException {
+  public void setRegionStateToMerging(final MasterProcedureEnv env) {
     // Set State.MERGING to regions to be merged
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
     regionStates.getRegionStateNode(regionsToMerge[0]).setState(State.MERGING);
@@ -573,7 +570,7 @@ public class MergeTableRegionsProcedure
   }
 
   /**
-   * Create merged region
+   * Create a merged region
    * @param env MasterProcedureEnv
    */
   private void createMergedRegion(final MasterProcedureEnv env) throws IOException {
@@ -597,7 +594,7 @@ public class MergeTableRegionsProcedure
   }
 
   /**
-   * Create reference file(s) of merging regions under the merges directory
+   * Create reference file(s) of merging regions under the merged directory
    * @param env MasterProcedureEnv
    * @param regionFs region file system
    * @param mergedDir the temp directory of merged region
@@ -626,7 +623,7 @@ public class MergeTableRegionsProcedure
   }
 
   /**
-   * Clean up merged region
+   * Clean up a merged region
    * @param env MasterProcedureEnv
    */
   private void cleanupMergedRegion(final MasterProcedureEnv env) throws IOException {
@@ -698,14 +695,14 @@ public class MergeTableRegionsProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       @MetaMutationAnnotation
-      final List<Mutation> metaEntries = new ArrayList<Mutation>();
+      final List<Mutation> metaEntries = new ArrayList<>();
       cpHost.preMergeRegionsCommit(regionsToMerge, metaEntries, getUser());
       try {
         for (Mutation p : metaEntries) {
           RegionInfo.parseRegionName(p.getRow());
         }
       } catch (IOException e) {
-        LOG.error("Row key of mutation from coprocessor is not parsable as region name."
+        LOG.error("Row key of mutation from coprocessor is not parsable as region name. "
           + "Mutations from coprocessor should only be for hbase:meta table.", e);
         throw e;
       }
@@ -715,8 +712,7 @@ public class MergeTableRegionsProcedure
   /**
    * Add merged region to META and delete original regions.
    */
-  private void updateMetaForMergedRegions(final MasterProcedureEnv env)
-  throws IOException, ProcedureYieldException {
+  private void updateMetaForMergedRegions(final MasterProcedureEnv env) throws IOException {
     final ServerName serverName = getServerName(env);
     env.getAssignmentManager().markRegionAsMerged(mergedRegion, serverName,
       regionsToMerge[0], regionsToMerge[1]);
@@ -797,7 +793,7 @@ public class MergeTableRegionsProcedure
   @Override
   protected boolean abort(MasterProcedureEnv env) {
     // Abort means rollback. We can't rollback all steps. HBASE-18018 added abort to all
-    // Procedures. Here is a Procedure that has a PONR and cannot be aborted wants it enters this
+    // Procedures. Here is a Procedure that has a PONR and cannot be aborted once it enters this
     // range of steps; what do we do for these should an operator want to cancel them? HBASE-20022.
     return isRollbackSupported(getCurrentState())? super.abort(env): false;
   }
