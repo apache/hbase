@@ -199,15 +199,7 @@ public class RegionStateStore {
         .setValue(Bytes.toBytes(state.name()))
         .build());
     LOG.info(info.toString());
-
-    final boolean serialReplication = hasSerialReplicationScope(regionInfo.getTable());
-    if (serialReplication && state == State.OPEN) {
-      Put barrierPut = MetaTableAccessor.makeBarrierPut(regionInfo.getEncodedNameAsBytes(),
-          openSeqNum, regionInfo.getTable().getName());
-      updateRegionLocation(regionInfo, state, put, barrierPut);
-    } else {
-      updateRegionLocation(regionInfo, state, put);
-    }
+    updateRegionLocation(regionInfo, state, put);
   }
 
   protected void updateRegionLocation(final RegionInfo regionInfo, final State state,
@@ -238,7 +230,7 @@ public class RegionStateStore {
       final RegionInfo hriB, final ServerName serverName)  throws IOException {
     final TableDescriptor htd = getTableDescriptor(parent.getTable());
     MetaTableAccessor.splitRegion(master.getConnection(), parent, hriA, hriB, serverName,
-        getRegionReplication(htd), hasSerialReplicationScope(htd));
+        getRegionReplication(htd));
   }
 
   // ============================================================================================
@@ -248,8 +240,7 @@ public class RegionStateStore {
       final RegionInfo hriB, final ServerName serverName)  throws IOException {
     final TableDescriptor htd = getTableDescriptor(parent.getTable());
     MetaTableAccessor.mergeRegions(master.getConnection(), parent, hriA, hriB, serverName,
-        getRegionReplication(htd), EnvironmentEdgeManager.currentTime(),
-        hasSerialReplicationScope(htd));
+        getRegionReplication(htd), EnvironmentEdgeManager.currentTime());
   }
 
   // ============================================================================================
@@ -266,14 +257,6 @@ public class RegionStateStore {
   // ==========================================================================
   //  Table Descriptors helpers
   // ==========================================================================
-  private boolean hasSerialReplicationScope(final TableName tableName) throws IOException {
-    return hasSerialReplicationScope(getTableDescriptor(tableName));
-  }
-
-  private boolean hasSerialReplicationScope(final TableDescriptor htd) {
-    return (htd != null)? htd.hasSerialReplicationScope(): false;
-  }
-
   private int getRegionReplication(final TableDescriptor htd) {
     return (htd != null) ? htd.getRegionReplication() : 1;
   }

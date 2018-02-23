@@ -159,36 +159,6 @@ public class FSTableDescriptors implements TableDescriptors {
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
                     .build())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
-                    .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
-                            HConstants.DEFAULT_HBASE_META_VERSIONS))
-                    .setInMemory(true)
-                    .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
-                            HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-                    .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-                    .setBloomFilterType(BloomType.NONE)
-                    .build())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_POSITION_FAMILY)
-                    .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
-                            HConstants.DEFAULT_HBASE_META_VERSIONS))
-                    .setInMemory(true)
-                    .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
-                            HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-                    .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-                    .setBloomFilterType(BloomType.NONE)
-                    .build())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_META_FAMILY)
-                    .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
-                            HConstants.DEFAULT_HBASE_META_VERSIONS))
-                    .setInMemory(true)
-                    .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
-                            HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-                    .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-                    .setBloomFilterType(BloomType.NONE)
-                    .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.TABLE_FAMILY)
                     .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
                         HConstants.DEFAULT_HBASE_META_VERSIONS))

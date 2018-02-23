@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.client.Connection;
@@ -71,9 +71,8 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * Read/write operations on region and assignment information store in
@@ -123,33 +122,13 @@ public class MetaTableAccessor {
    *                             region is the result of a merge
    * info:mergeB              => contains a serialized HRI for the second parent region if the
    *                             region is the result of a merge
+   *
    * The actual layout of meta should be encapsulated inside MetaTableAccessor methods,
    * and should not leak out of it (through Result objects, etc)
-   *
-   * For replication serially, there are three column families "rep_barrier", "rep_position" and
-   * "rep_meta" whose row key is encodedRegionName.
-   * rep_barrier:{seqid}      => in each time a RS opens a region, it saves the open sequence
-   *                                  id in this region
-   * rep_position:{peerid}    => to save the max sequence id we have pushed for each peer
-   * rep_meta:_TABLENAME_     => a special cell to save this region's table name, will used when
-   *                             we clean old data
-   * rep_meta:_DAUGHTER_      => a special cell to present this region is split or merged, in this
-   *                             cell the value is merged encoded name or two split encoded names
-   *                             separated by ","
-   * rep_meta:_PARENT_        => a special cell to present this region's parent region(s), in this
-   *                             cell the value is encoded name of one or two parent regions
-   *                             separated by ","
    */
 
   private static final Logger LOG = LoggerFactory.getLogger(MetaTableAccessor.class);
   private static final Logger METALOG = LoggerFactory.getLogger("org.apache.hadoop.hbase.META");
-
-  // Save its daughter/parent region(s) when split/merge
-  private static final byte[] daughterNameCq = Bytes.toBytes("_DAUGHTER_");
-  private static final byte[] parentNameCq = Bytes.toBytes("_PARENT_");
-
-  // Save its table name because we only know region's encoded name
-  private static final byte[] tableNameCq = Bytes.toBytes("_TABLENAME_");
 
   static final byte [] META_REGION_PREFIX;
   static {
@@ -1352,56 +1331,6 @@ public class MetaTableAccessor {
     return delete;
   }
 
-  public static Put makeBarrierPut(byte[] encodedRegionName, long seq, byte[] tableName)
-      throws IOException {
-    byte[] seqBytes = Bytes.toBytes(seq);
-    Put put = new Put(encodedRegionName);
-    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-            .setRow(put.getRow())
-            .setFamily(HConstants.REPLICATION_BARRIER_FAMILY)
-            .setQualifier(seqBytes)
-            .setTimestamp(put.getTimeStamp())
-            .setType(Type.Put)
-            .setValue(seqBytes)
-            .build())
-       .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-            .setRow(put.getRow())
-            .setFamily(HConstants.REPLICATION_META_FAMILY)
-            .setQualifier(tableNameCq)
-            .setTimestamp(put.getTimeStamp())
-            .setType(Cell.Type.Put)
-            .setValue(tableName)
-            .build());
-    return put;
-  }
-
-
-  public static Put makeDaughterPut(byte[] encodedRegionName, byte[] value) throws IOException {
-    Put put = new Put(encodedRegionName);
-    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-            .setRow(put.getRow())
-            .setFamily(HConstants.REPLICATION_META_FAMILY)
-            .setQualifier(daughterNameCq)
-            .setTimestamp(put.getTimeStamp())
-            .setType(Type.Put)
-            .setValue(value)
-            .build());
-    return put;
-  }
-
-  public static Put makeParentPut(byte[] encodedRegionName, byte[] value) throws IOException {
-    Put put = new Put(encodedRegionName);
-    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-            .setRow(put.getRow())
-            .setFamily(HConstants.REPLICATION_META_FAMILY)
-            .setQualifier(parentNameCq)
-            .setTimestamp(put.getTimeStamp())
-            .setType(Type.Put)
-            .setValue(value)
-            .build());
-    return put;
-  }
-
   /**
    * Adds split daughters to the Put
    */
@@ -1431,26 +1360,25 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Put the passed <code>puts</code> to the <code>hbase:meta</code> table.
-   * Non-atomic for multi puts.
+   * Put the passed <code>p</code> to the <code>hbase:meta</code> table.
    * @param connection connection we're using
-   * @param puts Put to add to hbase:meta
+   * @param p Put to add to hbase:meta
    * @throws IOException
    */
-  public static void putToMetaTable(final Connection connection, final Put... puts)
+  static void putToMetaTable(final Connection connection, final Put p)
     throws IOException {
-    put(getMetaHTable(connection), Arrays.asList(puts));
+    put(getMetaHTable(connection), p);
   }
 
   /**
    * @param t Table to use (will be closed when done).
-   * @param puts puts to make
+   * @param p put to make
    * @throws IOException
    */
-  private static void put(final Table t, final List<Put> puts) throws IOException {
+  private static void put(final Table t, final Put p) throws IOException {
     try {
-      debugLogMutations(puts);
-      t.put(puts);
+      debugLogMutation(p);
+      t.put(p);
     } finally {
       t.close();
     }
@@ -1567,7 +1495,7 @@ public class MetaTableAccessor {
    * Adds daughter region infos to hbase:meta row for the specified region. Note that this does not
    * add its daughter's as different rows, but adds information about the daughters in the same row
    * as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, RegionInfo, RegionInfo, ServerName,int,boolean)}
+   * {@link #splitRegion(Connection, RegionInfo, RegionInfo, RegionInfo, ServerName,int)}
    * if you want to do that.
    * @param connection connection we're using
    * @param regionInfo RegionInfo of parent region
@@ -1575,7 +1503,7 @@ public class MetaTableAccessor {
    * @param splitB second split daughter of the parent regionInfo
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addSpiltsToParent(Connection connection, RegionInfo regionInfo,
+  public static void addSplitsToParent(Connection connection, RegionInfo regionInfo,
       RegionInfo splitA, RegionInfo splitB) throws IOException {
     Table meta = getMetaHTable(connection);
     try {
@@ -1590,7 +1518,11 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Adds a hbase:meta row for the specified new region. Initial state of new region is CLOSED.
+   * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
+   * does not add its daughter's as different rows, but adds information about the daughters
+   * in the same row as the parent. Use
+   * {@link #splitRegion(Connection, RegionInfo, RegionInfo, RegionInfo, ServerName, int)}
+   * if you want to do that.
    * @param connection connection we're using
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
@@ -1651,12 +1583,11 @@ public class MetaTableAccessor {
    * @param regionB
    * @param sn the location of the region
    * @param masterSystemTime
-   * @param saveBarrier true if need save replication barrier in meta, used for serial replication
    * @throws IOException
    */
   public static void mergeRegions(final Connection connection, RegionInfo mergedRegion,
       RegionInfo regionA, RegionInfo regionB, ServerName sn, int regionReplication,
-      long masterSystemTime, boolean saveBarrier)
+      long masterSystemTime)
           throws IOException {
     Table meta = getMetaHTable(connection);
     try {
@@ -1707,20 +1638,7 @@ public class MetaTableAccessor {
 
       byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
         + HConstants.DELIMITER);
-      Mutation[] mutations;
-      if (saveBarrier) {
-        Put putBarrierA = makeDaughterPut(regionA.getEncodedNameAsBytes(),
-            mergedRegion.getEncodedNameAsBytes());
-        Put putBarrierB = makeDaughterPut(regionB.getEncodedNameAsBytes(),
-            mergedRegion.getEncodedNameAsBytes());
-        Put putDaughter = makeParentPut(mergedRegion.getEncodedNameAsBytes(), Bytes.toBytes(
-            regionA.getEncodedName() + "," + regionB.getEncodedName()));
-        mutations = new Mutation[] { putOfMerged, deleteA, deleteB,
-            putBarrierA, putBarrierB, putDaughter};
-      } else {
-        mutations = new Mutation[] { putOfMerged, deleteA, deleteB };
-      }
-      multiMutate(connection, meta, tableRow, mutations);
+      multiMutate(connection, meta, tableRow, putOfMerged, deleteA, deleteB);
     } finally {
       meta.close();
     }
@@ -1736,11 +1654,9 @@ public class MetaTableAccessor {
    * @param splitA Split daughter region A
    * @param splitB Split daughter region A
    * @param sn the location of the region
-   * @param saveBarrier true if need save replication barrier in meta, used for serial replication
    */
-  public static void splitRegion(final Connection connection, RegionInfo parent,
-      RegionInfo splitA, RegionInfo splitB, ServerName sn, int regionReplication,
-      boolean saveBarrier) throws IOException {
+  public static void splitRegion(final Connection connection, RegionInfo parent, RegionInfo splitA,
+      RegionInfo splitB, ServerName sn, int regionReplication) throws IOException {
     Table meta = getMetaHTable(connection);
     try {
       //Put for parent
@@ -1771,21 +1687,8 @@ public class MetaTableAccessor {
         addEmptyLocation(putB, i);
       }
 
-      Mutation[] mutations;
-      if (saveBarrier) {
-        Put parentPut = makeDaughterPut(parent.getEncodedNameAsBytes(),
-            Bytes.toBytes(splitA.getEncodedName() + "," + splitB.getEncodedName()));
-        Put daughterPutA = makeParentPut(splitA.getEncodedNameAsBytes(),
-            parent.getEncodedNameAsBytes());
-        Put daughterPutB = makeParentPut(splitB.getEncodedNameAsBytes(),
-            parent.getEncodedNameAsBytes());
-
-        mutations = new Mutation[]{putParent, putA, putB, parentPut, daughterPutA, daughterPutB};
-      } else {
-        mutations = new Mutation[]{putParent, putA, putB};
-      }
       byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
-      multiMutate(connection, meta, tableRow, mutations);
+      multiMutate(connection, meta, tableRow, putParent, putA, putB);
     } finally {
       meta.close();
     }
@@ -1918,32 +1821,6 @@ public class MetaTableAccessor {
     throws IOException {
     updateLocation(connection, regionInfo, sn, openSeqNum, masterSystemTime);
   }
-
-  /**
-   * Updates the progress of pushing entries to peer cluster. Skip entry if value is -1.
-   * @param connection connection we're using
-   * @param peerId the peerId to push
-   * @param positions map that saving positions for each region
-   * @throws IOException
-   */
-  public static void updateReplicationPositions(Connection connection, String peerId,
-      Map<String, Long> positions) throws IOException {
-    List<Put> puts = new ArrayList<>(positions.entrySet().size());
-    for (Map.Entry<String, Long> entry : positions.entrySet()) {
-      Put put = new Put(Bytes.toBytes(entry.getKey()));
-      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-          .setRow(put.getRow())
-          .setFamily(HConstants.REPLICATION_POSITION_FAMILY)
-          .setQualifier(Bytes.toBytes(peerId))
-          .setTimestamp(put.getTimeStamp())
-          .setType(Cell.Type.Put)
-          .setValue(Bytes.toBytes(Math.abs(entry.getValue())))
-          .build());
-      puts.add(put);
-    }
-    getMetaHTable(connection).put(puts);
-  }
-
 
   /**
    * Updates the location of the specified region to be the specified server.
@@ -2162,130 +2039,5 @@ public class MetaTableAccessor {
               .setType(Type.Put)
               .setValue(Bytes.toBytes(openSeqNum))
               .build());
-  }
-
-  /**
-   * Get replication position for a peer in a region.
-   * @param connection connection we're using
-   * @return the position of this peer, -1 if no position in meta.
-   */
-  public static long getReplicationPositionForOnePeer(Connection connection,
-      byte[] encodedRegionName, String peerId) throws IOException {
-    Get get = new Get(encodedRegionName);
-    get.addColumn(HConstants.REPLICATION_POSITION_FAMILY, Bytes.toBytes(peerId));
-    Result r = get(getMetaHTable(connection), get);
-    if (r.isEmpty()) {
-      return -1;
-    }
-    Cell cell = r.rawCells()[0];
-    return Bytes.toLong(cell.getValueArray(),cell.getValueOffset(),cell.getValueLength());
-  }
-
-  /**
-   * Get replication positions for all peers in a region.
-   * @param connection connection we're using
-   * @param encodedRegionName region's encoded name
-   * @return the map of positions for each peer
-   */
-  public static Map<String, Long> getReplicationPositionForAllPeer(Connection connection,
-      byte[] encodedRegionName) throws IOException {
-    Get get = new Get(encodedRegionName);
-    get.addFamily(HConstants.REPLICATION_POSITION_FAMILY);
-    Result r = get(getMetaHTable(connection), get);
-    Map<String, Long> map = new HashMap<>((int) (r.size() / 0.75 + 1));
-    for (Cell c : r.listCells()) {
-      map.put(
-          Bytes.toString(c.getQualifierArray(), c.getQualifierOffset(), c.getQualifierLength()),
-          Bytes.toLong(c.getValueArray(), c.getValueOffset(), c.getValueLength()));
-    }
-    return map;
-  }
-
-  /**
-   * Get replication barriers for all peers in a region.
-   * @param encodedRegionName region's encoded name
-   * @return a list of barrier sequence numbers.
-   * @throws IOException
-   */
-  public static List<Long> getReplicationBarriers(Connection connection, byte[] encodedRegionName)
-      throws IOException {
-    Get get = new Get(encodedRegionName);
-    get.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
-    Result r = get(getMetaHTable(connection), get);
-    List<Long> list = new ArrayList<>();
-    if (!r.isEmpty()) {
-      for (Cell cell : r.rawCells()) {
-        list.add(Bytes.toLong(cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength()));
-      }
-    }
-    return list;
-  }
-
-  /**
-   * Get all barriers in all regions.
-   * @return a map of barrier lists in all regions
-   * @throws IOException
-   */
-  public static Map<String, List<Long>> getAllBarriers(Connection connection) throws IOException {
-    Map<String, List<Long>> map = new HashMap<>();
-    Scan scan = new Scan();
-    scan.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
-    try (Table t = getMetaHTable(connection);
-        ResultScanner scanner = t.getScanner(scan)) {
-      Result result;
-      while ((result = scanner.next()) != null) {
-        String key = Bytes.toString(result.getRow());
-        List<Long> list = new ArrayList<>(result.rawCells().length);
-        for (Cell cell : result.rawCells()) {
-          list.add(Bytes.toLong(cell.getQualifierArray(), cell.getQualifierOffset(),
-              cell.getQualifierLength()));
-        }
-        map.put(key, list);
-      }
-    }
-    return map;
-  }
-
-  private static String getSerialReplicationColumnValue(Connection connection,
-      byte[] encodedRegionName, byte[] columnQualifier) throws IOException {
-    Get get = new Get(encodedRegionName);
-    get.addColumn(HConstants.REPLICATION_META_FAMILY, columnQualifier);
-    Result result = get(getMetaHTable(connection), get);
-    if (!result.isEmpty()) {
-      Cell c = result.rawCells()[0];
-      return Bytes.toString(c.getValueArray(), c.getValueOffset(), c.getValueLength());
-    }
-    return null;
-  }
-
-  /**
-   * Get daughter region(s) for a region, only used in serial replication.
-   * @param connection connection we're using
-   * @param encodedName region's encoded name
-   */
-  public static String getSerialReplicationDaughterRegion(Connection connection, byte[] encodedName)
-      throws IOException {
-    return getSerialReplicationColumnValue(connection, encodedName, daughterNameCq);
-  }
-
-  /**
-   * Get parent region(s) for a region, only used in serial replication.
-   * @param connection connection we're using
-   * @param encodedName region's encoded name
-   */
-  public static String getSerialReplicationParentRegion(Connection connection, byte[] encodedName)
-      throws IOException {
-    return getSerialReplicationColumnValue(connection, encodedName, parentNameCq);
-  }
-
-  /**
-   * Get the table name for a region, only used in serial replication.
-   * @param connection connection we're using
-   * @param encodedName region's encoded name
-   */
-  public static String getSerialReplicationTableName(Connection connection, byte[] encodedName)
-      throws IOException {
-    return getSerialReplicationColumnValue(connection, encodedName, tableNameCq);
   }
 }

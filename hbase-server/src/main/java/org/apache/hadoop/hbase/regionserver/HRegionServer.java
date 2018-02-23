@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
@@ -3169,54 +3168,34 @@ public class HRegionServer extends HasThread implements
    * @return true if closed the region successfully.
    * @throws IOException
   */
- protected boolean closeAndOfflineRegionForSplitOrMerge(
-     final List<String> regionEncodedName) throws IOException {
-   for (int i = 0; i < regionEncodedName.size(); ++i) {
-     HRegion regionToClose = this.getRegion(regionEncodedName.get(i));
-     if (regionToClose != null) {
-       Map<byte[], List<HStoreFile>> hstoreFiles = null;
-       Exception exceptionToThrow = null;
-       try{
-         hstoreFiles = regionToClose.close(false);
-       } catch (Exception e) {
-         exceptionToThrow = e;
-       }
-       if (exceptionToThrow == null && hstoreFiles == null) {
-         // The region was closed by someone else
-         exceptionToThrow =
-             new IOException("Failed to close region: already closed by another thread");
-       }
-
-       if (exceptionToThrow != null) {
-         if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
-         throw new IOException(exceptionToThrow);
-       }
-       if (regionToClose.getTableDescriptor().hasSerialReplicationScope()) {
-         // For serial replication, we need add a final barrier on this region. But the splitting
-         // or merging may be reverted, so we should make sure if we reopen this region, the open
-         // barrier is same as this final barrier
-         long seq = regionToClose.getMaxFlushedSeqId();
-         if (seq == HConstants.NO_SEQNUM) {
-           // No edits in WAL for this region; get the sequence number when the region was opened.
-           seq = regionToClose.getOpenSeqNum();
-           if (seq == HConstants.NO_SEQNUM) {
-             // This region has no data
-             seq = 0;
-           }
-         } else {
-           seq++;
-         }
-         Put finalBarrier = MetaTableAccessor.makeBarrierPut(
-           Bytes.toBytes(regionEncodedName.get(i)),
-           seq,
-           regionToClose.getTableDescriptor().getTableName().getName());
-         MetaTableAccessor.putToMetaTable(getConnection(), finalBarrier);
-       }
-       // Offline the region
-       this.removeRegion(regionToClose, null);
-     }
-   }
-   return true;
+  protected boolean closeAndOfflineRegionForSplitOrMerge(final List<String> regionEncodedName)
+      throws IOException {
+    for (int i = 0; i < regionEncodedName.size(); ++i) {
+      HRegion regionToClose = this.getRegion(regionEncodedName.get(i));
+      if (regionToClose != null) {
+        Map<byte[], List<HStoreFile>> hstoreFiles = null;
+        Exception exceptionToThrow = null;
+        try {
+          hstoreFiles = regionToClose.close(false);
+        } catch (Exception e) {
+          exceptionToThrow = e;
+        }
+        if (exceptionToThrow == null && hstoreFiles == null) {
+          // The region was closed by someone else
+          exceptionToThrow =
+            new IOException("Failed to close region: already closed by another thread");
+        }
+        if (exceptionToThrow != null) {
+          if (exceptionToThrow instanceof IOException) {
+            throw (IOException) exceptionToThrow;
+          }
+          throw new IOException(exceptionToThrow);
+        }
+        // Offline the region
+        this.removeRegion(regionToClose, null);
+      }
+    }
+    return true;
   }
 
    /**
