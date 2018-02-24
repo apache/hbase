@@ -751,7 +751,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize
-      .align((long)ClassSize.OBJECT + (5 * ClassSize.REFERENCE) + ClassSize.ATOMIC_INTEGER
+      .align(ClassSize.OBJECT + (5 * ClassSize.REFERENCE) + ClassSize.ATOMIC_INTEGER
           + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
 
   /**

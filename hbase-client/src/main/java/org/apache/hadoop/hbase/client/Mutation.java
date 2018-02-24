@@ -66,7 +66,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     HeapSize {
   public static final long MUTATION_OVERHEAD = ClassSize.align(
       // This
-      (long)ClassSize.OBJECT +
+      ClassSize.OBJECT +
       // row + OperationWithAttributes.attributes
       2 * ClassSize.REFERENCE +
       // Timestamp
@@ -791,10 +791,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
   private static final class CellWrapper implements ExtendedCell {
     private static final long FIXED_OVERHEAD = ClassSize.align(
-          (long)ClassSize.OBJECT              // object header
+      ClassSize.OBJECT              // object header
         + KeyValue.TIMESTAMP_SIZE       // timestamp
         + Bytes.SIZEOF_LONG             // sequence id
-        + 1L * ClassSize.REFERENCE);     // references to cell
+        + 1 * ClassSize.REFERENCE);     // references to cell
     private final Cell cell;
     private long sequenceId;
     private long timestamp;

@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class IndividualBytesFieldCell implements ExtendedCell {
 
   private static final long FIXED_OVERHEAD = ClassSize.align(  // do alignment(padding gap)
-        (long)ClassSize.OBJECT              // object header
+        ClassSize.OBJECT              // object header
       + KeyValue.TIMESTAMP_TYPE_SIZE  // timestamp and type
       + Bytes.SIZEOF_LONG             // sequence id
       + 5 * ClassSize.REFERENCE);     // references to all byte arrays: row, family, qualifier, value, tags
