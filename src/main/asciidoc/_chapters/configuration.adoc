@@ -111,10 +111,6 @@ This section lists required services and some required system configuration.
 |yes
 |yes
 
-|1.1
-|yes
-|Running with JDK 8 will work but is not well tested.
-
 |===
 
 NOTE: HBase will neither build nor compile with Java 6.
