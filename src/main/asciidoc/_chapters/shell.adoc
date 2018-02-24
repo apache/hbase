@@ -377,7 +377,7 @@ This will continue for all split points up to the last. The last region will be 
 
 [source]
 ----
-hbase>create 't1','f',SPLITS => ['10','20',30']
+hbase>create 't1','f',SPLITS => ['10','20','30']
 ----
 
 In the above example, the table 't1' will be created with column family 'f', pre-split to four regions. Note the first region will contain all keys from '\x00' up to '\x30' (as '\x31' is the ASCII code for '1').
