@@ -90,6 +90,40 @@ class MemStoreFlusher implements FlushRequester {
   private FlushType flushType;
 
   /**
+   * Singleton instance of this class inserted into flush queue.
+   */
+  private static final WakeupFlushThread WAKEUPFLUSH_INSTANCE = new WakeupFlushThread();
+
+  /**
+   * Marker class used as a token inserted into flush queue that ensures the flusher does not sleep.
+   * Create a single instance only.
+   */
+  private static final class WakeupFlushThread implements FlushQueueEntry {
+    private WakeupFlushThread() {}
+
+    @Override
+    public long getDelay(TimeUnit unit) {
+      return 0;
+    }
+
+    @Override
+    public int compareTo(Delayed o) {
+      return -1;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj == this;
+    }
+
+    @Override
+    public int hashCode() {
+      return 42;
+    }
+  }
+
+
+  /**
    * @param conf
    * @param server
    */
@@ -147,17 +181,18 @@ class MemStoreFlusher implements FlushRequester {
 
     boolean flushedOne = false;
     while (!flushedOne) {
-      // Find the biggest region that doesn't have too many storefiles
-      // (might be null!)
-      HRegion bestFlushableRegion = getBiggestMemStoreRegion(regionsBySize, excludedRegions, true);
+      // Find the biggest region that doesn't have too many storefiles (might be null!)
+      HRegion bestFlushableRegion =
+          getBiggestMemStoreRegion(regionsBySize, excludedRegions, true);
       // Find the biggest region, total, even if it might have too many flushes.
-      HRegion bestAnyRegion = getBiggestMemStoreRegion(
-          regionsBySize, excludedRegions, false);
+      HRegion bestAnyRegion = getBiggestMemStoreRegion(regionsBySize, excludedRegions, false);
       // Find the biggest region that is a secondary region
-      HRegion bestRegionReplica = getBiggestMemStoreOfRegionReplica(regionsBySize,
-        excludedRegions);
-
-      if (bestAnyRegion == null && bestRegionReplica == null) {
+      HRegion bestRegionReplica = getBiggestMemStoreOfRegionReplica(regionsBySize, excludedRegions);
+      if (bestAnyRegion == null) {
+        // If bestAnyRegion is null, assign replica. It may be null too. Next step is check for null
+        bestAnyRegion = bestRegionReplica;
+      }
+      if (bestAnyRegion == null) {
         LOG.error("Above memory mark but there are no flushable regions!");
         return false;
       }
@@ -169,19 +204,20 @@ class MemStoreFlusher implements FlushRequester {
         case ABOVE_OFFHEAP_HIGHER_MARK:
         case ABOVE_OFFHEAP_LOWER_MARK:
           bestAnyRegionSize = bestAnyRegion.getMemStoreOffHeapSize();
-          bestFlushableRegionSize = bestFlushableRegion.getMemStoreOffHeapSize();
+          bestFlushableRegionSize = getMemStoreOffHeapSize(bestFlushableRegion);
           break;
+
         case ABOVE_ONHEAP_HIGHER_MARK:
         case ABOVE_ONHEAP_LOWER_MARK:
           bestAnyRegionSize = bestAnyRegion.getMemStoreHeapSize();
-          bestFlushableRegionSize = bestFlushableRegion.getMemStoreHeapSize();
+          bestFlushableRegionSize = getMemStoreHeapSize(bestFlushableRegion);
           break;
+
         default:
           bestAnyRegionSize = bestAnyRegion.getMemStoreDataSize();
-          bestFlushableRegionSize = bestFlushableRegion.getMemStoreDataSize();
+          bestFlushableRegionSize = getMemStoreDataSize(bestFlushableRegion);
       }
-      if (bestFlushableRegion != null &&
-          bestAnyRegionSize > 2 * bestFlushableRegionSize) {
+      if (bestAnyRegionSize > 2 * bestFlushableRegionSize) {
         // Even if it's not supposed to be flushed, pick a region if it's more than twice
         // as big as the best flushable one - otherwise when we're under pressure we make
         // lots of little flushes and cause lots of compactions, etc, which just makes
@@ -211,21 +247,22 @@ class MemStoreFlusher implements FlushRequester {
         case ABOVE_OFFHEAP_HIGHER_MARK:
         case ABOVE_OFFHEAP_LOWER_MARK:
           regionToFlushSize = regionToFlush.getMemStoreOffHeapSize();
-          bestRegionReplicaSize = bestRegionReplica.getMemStoreOffHeapSize();
+          bestRegionReplicaSize = getMemStoreOffHeapSize(bestRegionReplica);
           break;
+
         case ABOVE_ONHEAP_HIGHER_MARK:
         case ABOVE_ONHEAP_LOWER_MARK:
           regionToFlushSize = regionToFlush.getMemStoreHeapSize();
-          bestRegionReplicaSize = bestRegionReplica.getMemStoreHeapSize();
+          bestRegionReplicaSize = getMemStoreHeapSize(bestRegionReplica);
           break;
+
         default:
           regionToFlushSize = regionToFlush.getMemStoreDataSize();
-          bestRegionReplicaSize = bestRegionReplica.getMemStoreDataSize();
+          bestRegionReplicaSize = getMemStoreDataSize(bestRegionReplica);
       }
 
       Preconditions.checkState(
-        (regionToFlush != null && regionToFlushSize > 0) ||
-        (bestRegionReplica != null && bestRegionReplicaSize > 0));
+        (regionToFlush != null && regionToFlushSize > 0) || bestRegionReplicaSize > 0);
 
       if (regionToFlush == null ||
           (bestRegionReplica != null &&
@@ -266,6 +303,27 @@ class MemStoreFlusher implements FlushRequester {
     return true;
   }
 
+  /**
+   * @return Return memstore offheap size or null if <code>r</code> is null
+   */
+  private static long getMemStoreOffHeapSize(HRegion r) {
+    return r == null? 0: r.getMemStoreOffHeapSize();
+  }
+
+  /**
+   * @return Return memstore heap size or null if <code>r</code> is null
+   */
+  private static long getMemStoreHeapSize(HRegion r) {
+    return r == null? 0: r.getMemStoreHeapSize();
+  }
+
+  /**
+   * @return Return memstore data size or null if <code>r</code> is null
+   */
+  private static long getMemStoreDataSize(HRegion r) {
+    return r == null? 0: r.getMemStoreDataSize();
+  }
+
   private class FlushHandler extends HasThread {
 
     private FlushHandler(String name) {
@@ -279,7 +337,7 @@ class MemStoreFlusher implements FlushRequester {
         try {
           wakeupPending.set(false); // allow someone to wake us up again
           fqe = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
-          if (fqe == null || fqe instanceof WakeupFlushThread) {
+          if (fqe == null || fqe == WAKEUPFLUSH_INSTANCE) {
             FlushType type = isAboveLowWaterMark();
             if (type != FlushType.NORMAL) {
               LOG.debug("Flush thread woke up because memory above low water="
@@ -332,7 +390,7 @@ class MemStoreFlusher implements FlushRequester {
 
   private void wakeupFlushThread() {
     if (wakeupPending.compareAndSet(false, true)) {
-      flushQueue.add(new WakeupFlushThread());
+      flushQueue.add(WAKEUPFLUSH_INSTANCE);
     }
   }
 
@@ -757,21 +815,6 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   interface FlushQueueEntry extends Delayed {
-  }
-
-  /**
-   * Token to insert into the flush queue that ensures that the flusher does not sleep
-   */
-  static class WakeupFlushThread implements FlushQueueEntry {
-    @Override
-    public long getDelay(TimeUnit unit) {
-      return 0;
-    }
-
-    @Override
-    public int compareTo(Delayed o) {
-      return -1;
-    }
   }
 
   /**

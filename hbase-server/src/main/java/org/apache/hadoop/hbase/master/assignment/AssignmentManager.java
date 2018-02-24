@@ -1298,7 +1298,6 @@ public class AssignmentManager implements ServerListener {
     final Set<ServerName> offlineServersWithOnlineRegions = new HashSet<>();
     int size = regionStates.getRegionStateNodes().size();
     final List<RegionInfo> offlineRegionsToAssign = new ArrayList<>(size);
-    long startTime = System.currentTimeMillis();
     // If deadservers then its a failover, else, we are not sure yet.
     boolean failover = deadServers;
     for (RegionStateNode regionNode: regionStates.getRegionStateNodes()) {

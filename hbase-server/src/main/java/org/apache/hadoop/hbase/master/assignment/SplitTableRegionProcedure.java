@@ -432,6 +432,10 @@ public class SplitTableRegionProcedure
     }
 
     RegionInfo parentHRI = node.getRegionInfo();
+    if (parentHRI == null) {
+      LOG.info("Unsplittable; parent region is null; node={}", node);
+      return false;
+    }
     // Lookup the parent HRI state from the AM, which has the latest updated info.
     // Protect against the case where concurrent SPLIT requests came in and succeeded
     // just before us.
@@ -457,8 +461,7 @@ public class SplitTableRegionProcedure
     // we are always able to split the region
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
       LOG.warn("pid=" + getProcId() + " split switch is off! skip split of " + parentHRI);
-      setFailure(new IOException("Split region " +
-          (parentHRI == null? "null": parentHRI.getRegionNameAsString()) +
+      setFailure(new IOException("Split region " + parentHRI.getRegionNameAsString() +
           " failed due to split switch off"));
       return false;
     }

@@ -336,7 +336,12 @@ public class MajorCompactor {
           "ERROR: Unable to parse command-line arguments " + Arrays.toString(args) + " due to: "
               + parseException);
       printUsage(options);
-
+      return;
+    }
+    if (commandLine == null) {
+      System.out.println("ERROR: Failed parse, empty commandLine; " + Arrays.toString(args));
+      printUsage(options);
+      return;
     }
     String tableName = commandLine.getOptionValue("table");
     String cf = commandLine.getOptionValue("cf", null);
@@ -353,7 +358,7 @@ public class MajorCompactor {
     String quorum =
         commandLine.getOptionValue("zk", configuration.get(HConstants.ZOOKEEPER_QUORUM));
     String rootDir = commandLine.getOptionValue("rootDir", configuration.get(HConstants.HBASE_DIR));
-    long sleep = Long.valueOf(commandLine.getOptionValue("sleep", Long.toString(30000)));
+    long sleep = Long.parseLong(commandLine.getOptionValue("sleep", Long.toString(30000)));
 
     configuration.set(HConstants.HBASE_DIR, rootDir);
     configuration.set(HConstants.ZOOKEEPER_QUORUM, quorum);

@@ -209,7 +209,6 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
 
   @Override
   protected boolean abort(final TEnvironment env) {
-    final TState state = getCurrentState();
     LOG.debug("Abort requested for {}", this);
     if (hasMoreState()) {
       aborted.set(true);

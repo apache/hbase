@@ -43,6 +43,25 @@ public class TestMultiByteBuff {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMultiByteBuff.class);
 
+  /**
+   * Test right answer though we span many sub-buffers.
+   */
+  @Test
+  public void testGetShort() {
+    ByteBuffer bb1 = ByteBuffer.allocate(1);
+    bb1.put((byte)1);
+    ByteBuffer bb2 = ByteBuffer.allocate(1);
+    bb2.put((byte)0);
+    ByteBuffer bb3 = ByteBuffer.allocate(1);
+    bb3.put((byte)2);
+    ByteBuffer bb4 = ByteBuffer.allocate(1);
+    bb4.put((byte)3);
+    MultiByteBuff mbb = new MultiByteBuff(bb1, bb2, bb3, bb4);
+    assertEquals(256, mbb.getShortAfterPosition(0));
+    assertEquals(2, mbb.getShortAfterPosition(1));
+    assertEquals(515, mbb.getShortAfterPosition(2));
+  }
+
   @Test
   public void testWritesAndReads() {
     // Absolute reads

@@ -8111,13 +8111,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
-    justification="Intentional")
   public void startRegionOperation(Operation op) throws IOException {
     switch (op) {
       case GET:  // read operations
       case SCAN:
         checkReadsEnabled();
+        break;
       default:
         break;
     }

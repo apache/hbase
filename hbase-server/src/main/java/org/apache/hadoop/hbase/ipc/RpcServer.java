@@ -114,6 +114,9 @@ public abstract class RpcServer implements RpcServerInterface,
       + Server.class.getName());
   protected SecretManager<TokenIdentifier> secretManager;
   protected final Map<String, String> saslProps;
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+      justification="Start is synchronized so authManager creation is single-threaded")
   protected ServiceAuthorizationManager authManager;
 
   /** This is set to Call object before Handler invokes an RPC and ybdie
