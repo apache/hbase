@@ -195,10 +195,6 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             sh '''#!/usr/bin/env bash
-              # for branch-1.1 we don't do jdk8 findbugs, so do it here
-              if [ "${BRANCH_NAME}" == "branch-1.1" ]; then
-                TESTS+=",findbugs"
-              fi
               rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
@@ -249,11 +245,6 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
       label 'Hadoop'
     }
   }
-          when {
-            not {
-              branch 'branch-1.1*'
-            }
-          }
           environment {
             TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
