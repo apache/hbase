@@ -228,6 +228,7 @@ public class EncodedDataBlock {
    */
   public byte[] encodeData() {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    byte [] baosBytes = null;
     try {
       baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
       DataOutputStream out = new DataOutputStream(baos);
@@ -255,25 +256,17 @@ public class EncodedDataBlock {
         kv.setSequenceId(memstoreTS);
         this.dataBlockEncoder.encode(kv, encodingCtx, out);
       }
-      BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
-      baos.writeTo(stream);
-      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, stream.ourBytes);
+      // Below depends on BAOS internal behavior. toByteArray makes a copy of bytes so far.
+      baos.flush();
+      baosBytes = baos.toByteArray();
+      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, baosBytes);
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in encoding part of algorithm %s. " +
           "Probably it requested more bytes than are available.",
           toString()), e);
     }
-    return baos.toByteArray();
-  }
-
-  private static class BufferGrabbingByteArrayOutputStream extends ByteArrayOutputStream {
-    private byte[] ourBytes;
-
-    @Override
-    public synchronized void write(byte[] b, int off, int len) {
-      this.ourBytes = b;
-    }
+    return baosBytes;
   }
 
   @Override

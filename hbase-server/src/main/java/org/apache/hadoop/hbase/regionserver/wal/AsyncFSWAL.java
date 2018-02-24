@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -651,11 +652,12 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   @Override
   protected void doReplaceWriter(Path oldPath, Path newPath, AsyncWriter nextWriter)
       throws IOException {
+    Preconditions.checkNotNull(nextWriter);
     waitForSafePoint();
     long oldFileLen = closeWriter();
     logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
     this.writer = nextWriter;
-    if (nextWriter != null && nextWriter instanceof AsyncProtobufLogWriter) {
+    if (nextWriter instanceof AsyncProtobufLogWriter) {
       this.fsOut = ((AsyncProtobufLogWriter) nextWriter).getOutput();
     }
     this.fileLengthAtLastSync = nextWriter.getLength();

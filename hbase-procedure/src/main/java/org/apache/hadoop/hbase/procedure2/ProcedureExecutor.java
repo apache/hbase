@@ -206,7 +206,6 @@ public class ProcedureExecutor<TEnvironment> {
 
       final long now = EnvironmentEdgeManager.currentTime();
       final Iterator<Map.Entry<Long, CompletedProcedureRetainer>> it = completed.entrySet().iterator();
-      final boolean debugEnabled = LOG.isDebugEnabled();
       while (it.hasNext() && store.isRunning()) {
         final Map.Entry<Long, CompletedProcedureRetainer> entry = it.next();
         final CompletedProcedureRetainer retainer = entry.getValue();

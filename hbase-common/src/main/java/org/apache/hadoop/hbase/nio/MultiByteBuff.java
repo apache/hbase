@@ -282,7 +282,7 @@ public class MultiByteBuff extends ByteBuff {
       return ByteBufferUtils.toShort(item, offsetInItem);
     }
     if (items.length - 1 == itemIndex) {
-      // means cur item is the last one and we wont be able to read a int. Throw exception
+      // means cur item is the last one and we wont be able to read a short. Throw exception
       throw new BufferUnderflowException();
     }
     ByteBuffer nextItem = items[itemIndex + 1];
@@ -294,7 +294,7 @@ public class MultiByteBuff extends ByteBuff {
     }
     for (int i = 0; i < Bytes.SIZEOF_SHORT - remainingLen; i++) {
       l = (short) (l << 8);
-      l = (short) (l ^ (ByteBufferUtils.toByte(item, i) & 0xFF));
+      l = (short) (l ^ (ByteBufferUtils.toByte(nextItem, i) & 0xFF));
     }
     return l;
   }
