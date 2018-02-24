@@ -52,7 +52,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -133,7 +132,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     runTest();
   }
 
-
   private void createTable(TableName tableName) throws Exception {
     long startTime, endTime;
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -160,6 +158,13 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   }
 
   private void runTest() throws IOException {
+    // Check if backup is enabled
+    if (!BackupManager.isBackupEnabled(getConf())) {
+      LOG.error(BackupRestoreConstants.ENABLE_BACKUP);
+      System.exit(EXIT_FAILURE);
+    }
+
+    LOG.info(BackupRestoreConstants.VERIFY_BACKUP);
 
     try (Connection conn = util.getConnection();
          Admin admin = conn.getAdmin();
@@ -180,12 +185,14 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       // #2 - insert some data to table
       loadData(TABLE_NAME1, rowsInBatch);
       loadData(TABLE_NAME2, rowsInBatch);
-      HTable t1 = (HTable) conn.getTable(TABLE_NAME1);
-      Assert.assertEquals(util.countRows(t1), rowsInBatch * 2);
-      t1.close();
-      HTable t2 = (HTable) conn.getTable(TABLE_NAME2);
-      Assert.assertEquals(util.countRows(t2), rowsInBatch * 2);
-      t2.close();
+
+      try (HTable t1 = (HTable) conn.getTable(TABLE_NAME1)) {
+        Assert.assertEquals(util.countRows(t1), rowsInBatch * 2);
+      }
+      try (HTable t2 = (HTable) conn.getTable(TABLE_NAME2)) {
+        Assert.assertEquals(util.countRows(t2), rowsInBatch * 2);
+      }
+
       // #3 - incremental backup for tables
       tables = Lists.newArrayList(TABLE_NAME1, TABLE_NAME2);
       builder = new BackupRequest.Builder();
@@ -221,6 +228,11 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     }
   }
 
+  /**
+   *
+   * @param backupId pass backup ID to check status of
+   * @return status of backup
+   */
   protected boolean checkSucceeded(String backupId) throws IOException {
     BackupInfo status = getBackupInfo(backupId);
     if (status == null) return false;
@@ -235,6 +247,14 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
   /**
    * Get restore request.
+   *
+   * @param backupRootDir directory where backup is located
+   * @param backupId backup ID
+   * @param check check the backup
+   * @param fromTables table names to restore from
+   * @param toTables new table names to restore to
+   * @param isOverwrite overwrite the table(s)
+   * @return an instance of RestoreRequest
    */
   public RestoreRequest createRestoreRequest(String backupRootDir, String backupId, boolean check,
       TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
@@ -256,8 +276,20 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     LOG.debug("Done initializing/checking cluster");
   }
 
+  /**
+   *
+   * @return status of CLI execution
+   */
   @Override
   public int runTestFromCommandLine() throws Exception {
+     // Check if backup is enabled
+    if (!BackupManager.isBackupEnabled(getConf())) {
+      System.err.println(BackupRestoreConstants.ENABLE_BACKUP);
+      return -1;
+    }
+
+    System.out.println(BackupRestoreConstants.VERIFY_BACKUP);
+
     testBackupRestore();
     return 0;
   }
@@ -302,6 +334,10 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
         .toString());
   }
 
+  /**
+   *
+   * @param args argument list
+   */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
