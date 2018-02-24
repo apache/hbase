@@ -111,10 +111,6 @@ This section lists required services and some required system configuration.
 |yes
 |yes
 
-|1.1
-|yes
-|Running with JDK 8 will work but is not well tested.
-
 |===
 
 NOTE: HBase will neither build nor compile with Java 6.
@@ -206,22 +202,22 @@ Use the following legend to interpret this table:
 * "X" = not supported
 * "NT" = Not tested
 
-[cols="1,1,1,1,1", options="header"]
+[cols="1,1,1,1", options="header"]
 |===
-| | HBase-1.1.x | HBase-1.2.x | HBase-1.3.x | HBase-2.0.x
-|Hadoop-2.0.x-alpha | X | X | X | X
-|Hadoop-2.1.0-beta | X | X | X | X
-|Hadoop-2.2.0 | NT | X  | X | X
-|Hadoop-2.3.x | NT | X  | X | X
-|Hadoop-2.4.x | S | S | S | X
-|Hadoop-2.5.x | S | S | S | X
-|Hadoop-2.6.0 | X | X | X | X
-|Hadoop-2.6.1+ | NT | S | S | S
-|Hadoop-2.7.0 | X | X | X | X
-|Hadoop-2.7.1+ | NT | S | S | S
-|Hadoop-2.8.0 | X | X | X | X
-|Hadoop-2.8.1 | X | X | X | X
-|Hadoop-3.0.0 | NT | NT | NT | NT
+| | HBase-1.2.x | HBase-1.3.x | HBase-2.0.x
+|Hadoop-2.0.x-alpha | X | X | X
+|Hadoop-2.1.0-beta | X | X | X
+|Hadoop-2.2.0 | X  | X | X
+|Hadoop-2.3.x | X  | X | X
+|Hadoop-2.4.x | S | S | X
+|Hadoop-2.5.x | S | S | X
+|Hadoop-2.6.0 | X | X | X
+|Hadoop-2.6.1+ | S | S | S
+|Hadoop-2.7.0 | X | X | X
+|Hadoop-2.7.1+ | S | S | S
+|Hadoop-2.8.0 | X | X | X
+|Hadoop-2.8.1 | X | X | X
+|Hadoop-3.0.0 | NT | NT | NT
 |===
 
 .Hadoop Pre-2.6.1 and JDK 1.8 Kerberos
