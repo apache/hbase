@@ -110,6 +110,13 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
+  @VisibleForTesting
+  public void setConf(Configuration conf, ZKWatcher zk,
+      ReplicationQueueStorage replicationQueueStorage) {
+    super.setConf(conf);
+    this.zkw = zk;
+    this.queueStorage = replicationQueueStorage;
+  }
 
   @Override
   public void stop(String why) {
