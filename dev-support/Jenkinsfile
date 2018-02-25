@@ -255,7 +255,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             }
           }
           environment {
-            TESTS = 'mvninstall,compile,javac,unit,htmlout'
+            TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
             // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
@@ -327,10 +327,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             }
           }
           environment {
-            // Failure in any stage fails the build and consecutive stages are not built.
-            // Findbugs is part of this last yetus stage to prevent findbugs precluding hadoop3
-            // tests.
-            TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
+            TESTS = 'mvninstall,compile,javac,unit,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
             // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
