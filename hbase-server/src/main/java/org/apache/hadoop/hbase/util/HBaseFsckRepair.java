@@ -162,7 +162,7 @@ public class HBaseFsckRepair {
       RegionInfo hri, Collection<ServerName> servers, int numReplicas) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
     Table meta = conn.getTable(TableName.META_TABLE_NAME);
-    Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
+    Put put = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
     if (numReplicas > 1) {
       Random r = new Random();
       ServerName[] serversArr = servers.toArray(new ServerName[servers.size()]);
@@ -172,7 +172,7 @@ public class HBaseFsckRepair {
         // see the additional replicas when it is asked to assign. The
         // final value of these columns will be different and will be updated
         // by the actual regionservers that start hosting the respective replicas
-        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), -1, i);
+        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), i);
       }
     }
     meta.put(put);

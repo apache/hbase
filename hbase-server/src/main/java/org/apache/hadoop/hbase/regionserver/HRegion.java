@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -89,7 +89,6 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -112,6 +111,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
@@ -7053,7 +7053,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("Opening region (readOnly filesystem): " + info);
     }
     if (info.getReplicaId() <= 0) {
-      info = new HRegionInfo((HRegionInfo) info, 1);
+      info = RegionInfoBuilder.newBuilder(info).setReplicaId(1).build();
     }
     HRegion r = HRegion.newHRegion(tableDir, null, fs, conf, info, htd, null);
     r.writestate.setReadOnly(true);

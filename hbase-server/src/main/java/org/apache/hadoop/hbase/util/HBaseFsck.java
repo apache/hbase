@@ -1492,8 +1492,8 @@ public class HBaseFsck extends Configured implements Closeable {
    *
    * @return An array list of puts to do in bulk, null if tables have problems
    */
-  private ArrayList<Put> generatePuts(
-      SortedMap<TableName, TableInfo> tablesInfo) throws IOException {
+  private ArrayList<Put> generatePuts(SortedMap<TableName, TableInfo> tablesInfo)
+      throws IOException {
     ArrayList<Put> puts = new ArrayList<>();
     boolean hasProblems = false;
     for (Entry<TableName, TableInfo> e : tablesInfo.entrySet()) {
@@ -1505,8 +1505,9 @@ public class HBaseFsck extends Configured implements Closeable {
       }
 
       TableInfo ti = e.getValue();
-      puts.add(MetaTableAccessor
-          .makePutFromTableState(new TableState(ti.tableName, TableState.State.ENABLED)));
+      puts.add(MetaTableAccessor.makePutFromTableState(
+        new TableState(ti.tableName, TableState.State.ENABLED),
+        EnvironmentEdgeManager.currentTime()));
       for (Entry<byte[], Collection<HbckInfo>> spl : ti.sc.getStarts().asMap()
           .entrySet()) {
         Collection<HbckInfo> his = spl.getValue();
@@ -1522,7 +1523,7 @@ public class HBaseFsck extends Configured implements Closeable {
         // add the row directly to meta.
         HbckInfo hi = his.iterator().next();
         RegionInfo hri = hi.getHdfsHRI(); // hi.metaEntry;
-        Put p = MetaTableAccessor.makePutFromRegionInfo(hri);
+        Put p = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
         puts.add(p);
       }
     }
@@ -2181,7 +2182,7 @@ public class HBaseFsck extends Configured implements Closeable {
         .setOffline(false)
         .setSplit(false)
         .build();
-    Put p = MetaTableAccessor.makePutFromRegionInfo(hri);
+    Put p = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
     mutations.add(p);
 
     meta.mutateRow(mutations);

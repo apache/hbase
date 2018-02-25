@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -93,65 +94,65 @@ public class TestGetClosestAtOrBefore  {
     HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
         rootdir, this.conf, metaBuilder.build());
     try {
-    // Write rows for three tables 'A', 'B', and 'C'.
-    for (char c = 'A'; c < 'D'; c++) {
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("" + c));
-      final int last = 128;
-      final int interval = 2;
-      for (int i = 0; i <= last; i += interval) {
-        HRegionInfo hri = new HRegionInfo(htd.getTableName(),
-          i == 0? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i),
-          i == last? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i + interval));
+      // Write rows for three tables 'A', 'B', and 'C'.
+      for (char c = 'A'; c < 'D'; c++) {
+        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("" + c));
+        final int last = 128;
+        final int interval = 2;
+        for (int i = 0; i <= last; i += interval) {
+          HRegionInfo hri = new HRegionInfo(htd.getTableName(),
+            i == 0 ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i),
+            i == last ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i + interval));
 
-        Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
-        put.setDurability(Durability.SKIP_WAL);
-        mr.put(put);
+          Put put =
+            MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
+          put.setDurability(Durability.SKIP_WAL);
+          mr.put(put);
+        }
       }
-    }
-    InternalScanner s = mr.getScanner(new Scan());
-    try {
-      List<Cell> keys = new ArrayList<>();
-      while (s.next(keys)) {
-        LOG.info(Objects.toString(keys));
-        keys.clear();
-      }
-    } finally {
-      s.close();
-    }
-    findRow(mr, 'C', 44, 44);
-    findRow(mr, 'C', 45, 44);
-    findRow(mr, 'C', 46, 46);
-    findRow(mr, 'C', 43, 42);
-    mr.flush(true);
-    findRow(mr, 'C', 44, 44);
-    findRow(mr, 'C', 45, 44);
-    findRow(mr, 'C', 46, 46);
-    findRow(mr, 'C', 43, 42);
-    // Now delete 'C' and make sure I don't get entries from 'B'.
-    byte [] firstRowInC = HRegionInfo.createRegionName(
-        TableName.valueOf("" + 'C'),
-        HConstants.EMPTY_BYTE_ARRAY, HConstants.ZEROES, false);
-    Scan scan = new Scan(firstRowInC);
-    s = mr.getScanner(scan);
-    try {
-      List<Cell> keys = new ArrayList<>();
+      InternalScanner s = mr.getScanner(new Scan());
+      try {
+        List<Cell> keys = new ArrayList<>();
         while (s.next(keys)) {
-        mr.delete(new Delete(CellUtil.cloneRow(keys.get(0))));
-        keys.clear();
+          LOG.info(Objects.toString(keys));
+          keys.clear();
+        }
+      } finally {
+        s.close();
       }
-    } finally {
-      s.close();
-    }
-    // Assert we get null back (pass -1).
-    findRow(mr, 'C', 44, -1);
-    findRow(mr, 'C', 45, -1);
-    findRow(mr, 'C', 46, -1);
-    findRow(mr, 'C', 43, -1);
-    mr.flush(true);
-    findRow(mr, 'C', 44, -1);
-    findRow(mr, 'C', 45, -1);
-    findRow(mr, 'C', 46, -1);
-    findRow(mr, 'C', 43, -1);
+      findRow(mr, 'C', 44, 44);
+      findRow(mr, 'C', 45, 44);
+      findRow(mr, 'C', 46, 46);
+      findRow(mr, 'C', 43, 42);
+      mr.flush(true);
+      findRow(mr, 'C', 44, 44);
+      findRow(mr, 'C', 45, 44);
+      findRow(mr, 'C', 46, 46);
+      findRow(mr, 'C', 43, 42);
+      // Now delete 'C' and make sure I don't get entries from 'B'.
+      byte[] firstRowInC = HRegionInfo.createRegionName(TableName.valueOf("" + 'C'),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.ZEROES, false);
+      Scan scan = new Scan(firstRowInC);
+      s = mr.getScanner(scan);
+      try {
+        List<Cell> keys = new ArrayList<>();
+        while (s.next(keys)) {
+          mr.delete(new Delete(CellUtil.cloneRow(keys.get(0))));
+          keys.clear();
+        }
+      } finally {
+        s.close();
+      }
+      // Assert we get null back (pass -1).
+      findRow(mr, 'C', 44, -1);
+      findRow(mr, 'C', 45, -1);
+      findRow(mr, 'C', 46, -1);
+      findRow(mr, 'C', 43, -1);
+      mr.flush(true);
+      findRow(mr, 'C', 44, -1);
+      findRow(mr, 'C', 45, -1);
+      findRow(mr, 'C', 46, -1);
+      findRow(mr, 'C', 43, -1);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(mr);
     }

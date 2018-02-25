@@ -222,9 +222,6 @@ public class AssignmentManager implements ServerListener {
     // Register Server Listener
     master.getServerManager().registerListener(this);
 
-    // Start the RegionStateStore
-    regionStateStore.start();
-
     // Start the Assignment Thread
     startAssignmentThread();
   }
@@ -250,7 +247,6 @@ public class AssignmentManager implements ServerListener {
 
     // Stop the RegionStateStore
     regionStates.clear();
-    regionStateStore.stop();
 
     // Unregister Server Listener
     master.getServerManager().unregisterListener(this);

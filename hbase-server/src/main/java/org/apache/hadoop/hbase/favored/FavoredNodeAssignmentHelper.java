@@ -167,28 +167,26 @@ public class FavoredNodeAssignmentHelper {
   }
 
   /**
-   * Generates and returns a Put containing the region info for the catalog table
-   * and the servers
-   * @param regionInfo
-   * @param favoredNodeList
+   * Generates and returns a Put containing the region info for the catalog table and the servers
    * @return Put object
    */
-  static Put makePutFromRegionInfo(RegionInfo regionInfo, List<ServerName>favoredNodeList)
-  throws IOException {
+  private static Put makePutFromRegionInfo(RegionInfo regionInfo, List<ServerName> favoredNodeList)
+      throws IOException {
     Put put = null;
     if (favoredNodeList != null) {
-      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo);
+      long time = EnvironmentEdgeManager.currentTime();
+      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo, time);
       byte[] favoredNodes = getFavoredNodes(favoredNodeList);
       put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
           .setRow(put.getRow())
           .setFamily(HConstants.CATALOG_FAMILY)
           .setQualifier(FAVOREDNODES_QUALIFIER)
-          .setTimestamp(EnvironmentEdgeManager.currentTime())
+          .setTimestamp(time)
           .setType(Type.Put)
           .setValue(favoredNodes)
           .build());
-      LOG.debug("Create the region " + regionInfo.getRegionNameAsString() +
-                 " with favored nodes " + favoredNodeList);
+      LOG.debug("Create the region {} with favored nodes {}", regionInfo.getRegionNameAsString(),
+        favoredNodeList);
     }
     return put;
   }
