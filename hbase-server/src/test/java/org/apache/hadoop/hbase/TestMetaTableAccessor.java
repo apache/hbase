@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.AfterClass;
@@ -381,31 +382,30 @@ public class TestMetaTableAccessor {
     long seqNum1 = random.nextLong();
     long seqNum100 = random.nextLong();
 
-
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
-    try {
-      MetaTableAccessor.updateRegionLocation(connection, primary, serverName0, seqNum0, -1);
+    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
+      MetaTableAccessor.updateRegionLocation(connection, primary, serverName0, seqNum0,
+        EnvironmentEdgeManager.currentTime());
 
       // assert that the server, startcode and seqNum columns are there for the primary region
       assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
 
       // add replica = 1
-      MetaTableAccessor.updateRegionLocation(connection, replica1, serverName1, seqNum1, -1);
+      MetaTableAccessor.updateRegionLocation(connection, replica1, serverName1, seqNum1,
+        EnvironmentEdgeManager.currentTime());
       // check whether the primary is still there
       assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
       // now check for replica 1
       assertMetaLocation(meta, primary.getRegionName(), serverName1, seqNum1, 1, true);
 
       // add replica = 1
-      MetaTableAccessor.updateRegionLocation(connection, replica100, serverName100, seqNum100, -1);
+      MetaTableAccessor.updateRegionLocation(connection, replica100, serverName100, seqNum100,
+        EnvironmentEdgeManager.currentTime());
       // check whether the primary is still there
       assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
       // check whether the replica 1 is still there
       assertMetaLocation(meta, primary.getRegionName(), serverName1, seqNum1, 1, true);
       // now check for replica 1
       assertMetaLocation(meta, primary.getRegionName(), serverName100, seqNum100, 100, true);
-    } finally {
-      meta.close();
     }
   }
 
@@ -490,9 +490,7 @@ public class TestMetaTableAccessor {
         .setReplicaId(0)
         .build();
 
-
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
-    try {
+    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(parent);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
 
@@ -502,8 +500,6 @@ public class TestMetaTableAccessor {
       assertEmptyMetaLocation(meta, splitA.getRegionName(), 2);
       assertEmptyMetaLocation(meta, splitB.getRegionName(), 1);
       assertEmptyMetaLocation(meta, splitB.getRegionName(), 2);
-    } finally {
-      meta.close();
     }
   }
 
@@ -535,18 +531,14 @@ public class TestMetaTableAccessor {
         .setReplicaId(0)
         .build();
 
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
-    try {
+    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(parentA, parentB);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
 
-      MetaTableAccessor.mergeRegions(connection, merged, parentA, parentB, serverName0, 3,
-          HConstants.LATEST_TIMESTAMP);
+      MetaTableAccessor.mergeRegions(connection, merged, parentA, parentB, serverName0, 3);
 
       assertEmptyMetaLocation(meta, merged.getRegionName(), 1);
       assertEmptyMetaLocation(meta, merged.getRegionName(), 2);
-    } finally {
-      meta.close();
     }
   }
 
@@ -609,8 +601,7 @@ public class TestMetaTableAccessor {
         .build();
 
     ServerName sn = ServerName.valueOf("bar", 0, 0);
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
-    try {
+    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(regionInfo);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 1);
 
@@ -634,8 +625,6 @@ public class TestMetaTableAccessor {
       assertEquals(masterSystemTime, serverCell.getTimestamp());
       assertEquals(masterSystemTime, startCodeCell.getTimestamp());
       assertEquals(masterSystemTime, seqNumCell.getTimestamp());
-    } finally {
-      meta.close();
     }
   }
 
@@ -667,8 +656,7 @@ public class TestMetaTableAccessor {
         .build();
 
     ServerName sn = ServerName.valueOf("bar", 0, 0);
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
-    try {
+    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(regionInfoA, regionInfoB);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 1);
 
@@ -689,9 +677,17 @@ public class TestMetaTableAccessor {
       assertNotNull(serverCell);
       assertEquals(serverNameTime, serverCell.getTimestamp());
 
-      // now merge the regions, effectively deleting the rows for region a and b.
-      MetaTableAccessor.mergeRegions(connection, mergedRegionInfo,
-        regionInfoA, regionInfoB, sn, 1, masterSystemTime);
+      ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+      edge.setValue(masterSystemTime);
+      EnvironmentEdgeManager.injectEdge(edge);
+      try {
+        // now merge the regions, effectively deleting the rows for region a and b.
+        MetaTableAccessor.mergeRegions(connection, mergedRegionInfo, regionInfoA, regionInfoB, sn,
+          1);
+      } finally {
+        EnvironmentEdgeManager.reset();
+      }
+
 
       result = meta.get(get);
       serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
@@ -703,8 +699,6 @@ public class TestMetaTableAccessor {
       assertNull(serverCell);
       assertNull(startCodeCell);
       assertNull(seqNumCell);
-    } finally {
-      meta.close();
     }
   }
 
