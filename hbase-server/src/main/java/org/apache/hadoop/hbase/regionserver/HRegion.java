@@ -947,15 +947,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
-    long nextSeqid = maxSeqId;
-    if (this.writestate.writesEnabled) {
-      nextSeqid = WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(),
-          this.fs.getRegionDir(), nextSeqid, 1);
-    } else {
-      nextSeqid++;
+    long maxSeqIdFromFile =
+      WALSplitter.getMaxRegionSequenceId(fs.getFileSystem(), fs.getRegionDir());
+    long nextSeqId = Math.max(maxSeqId, maxSeqIdFromFile) + 1;
+    if (writestate.writesEnabled) {
+      WALSplitter.writeRegionSequenceIdFile(fs.getFileSystem(), fs.getRegionDir(), nextSeqId);
     }
 
-    LOG.info("Opened {}; next sequenceid={}", this.getRegionInfo().getShortNameToLog(), nextSeqid);
+    LOG.info("Opened {}; next sequenceid={}", this.getRegionInfo().getShortNameToLog(), nextSeqId);
 
     // A region can be reopened if failed a split; reset flags
     this.closing.set(false);
@@ -967,7 +966,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     status.markComplete("Region opened successfully");
-    return nextSeqid;
+    return nextSeqId;
   }
 
   /**
@@ -1103,7 +1102,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // table is still online
     if (this.fs.getFileSystem().exists(this.fs.getRegionDir())) {
       WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(), this.fs.getRegionDir(),
-        mvcc.getReadPoint(), 0);
+        mvcc.getReadPoint());
     }
   }
 
@@ -7014,7 +7013,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Open HRegion.
    * Calls initialize and sets sequenceId.
    * @return Returns <code>this</code>
-   * @throws IOException
    */
   protected HRegion openHRegion(final CancelableProgressable reporter)
   throws IOException {

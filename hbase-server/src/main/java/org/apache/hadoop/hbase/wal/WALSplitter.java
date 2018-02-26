@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +46,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -97,6 +95,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
@@ -622,70 +621,70 @@ public class WALSplitter {
         || file.getName().endsWith(OLD_SEQUENCE_ID_FILE_SUFFIX);
   }
 
-  /**
-   * Create a file with name as region open sequence id
-   * @param fs
-   * @param regiondir
-   * @param newSeqId
-   * @param safetyBumper
-   * @return long new sequence Id value
-   * @throws IOException
-   */
-  public static long writeRegionSequenceIdFile(final FileSystem fs, final Path regiondir,
-      long newSeqId, long safetyBumper) throws IOException {
+  private static FileStatus[] getSequenceIdFiles(FileSystem fs, Path regionDir) throws IOException {
     // TODO: Why are we using a method in here as part of our normal region open where
     // there is no splitting involved? Fix. St.Ack 01/20/2017.
-    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
-    long maxSeqId = 0;
-    FileStatus[] files = null;
-    if (fs.exists(editsdir)) {
-      files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
-        @Override
-        public boolean accept(Path p) {
-          return isSequenceIdFile(p);
-        }
-      });
-      if (files != null) {
-        for (FileStatus status : files) {
-          String fileName = status.getPath().getName();
-          try {
-            long tmpSeqId =
-                Long.parseLong(fileName.substring(0, fileName.length()
-                - SEQUENCE_ID_FILE_SUFFIX_LENGTH));
-            maxSeqId = Math.max(tmpSeqId, maxSeqId);
-          } catch (NumberFormatException ex) {
-            LOG.warn("Invalid SeqId File Name={}", fileName);
-          }
-        }
+    Path editsDir = WALSplitter.getRegionDirRecoveredEditsDir(regionDir);
+    try {
+      FileStatus[] files = fs.listStatus(editsDir, WALSplitter::isSequenceIdFile);
+      return files != null ? files : new FileStatus[0];
+    } catch (FileNotFoundException e) {
+      return new FileStatus[0];
+    }
+  }
+
+  private static long getMaxSequenceId(FileStatus[] files) {
+    long maxSeqId = -1L;
+    for (FileStatus file : files) {
+      String fileName = file.getPath().getName();
+      try {
+        maxSeqId = Math.max(maxSeqId, Long
+          .parseLong(fileName.substring(0, fileName.length() - SEQUENCE_ID_FILE_SUFFIX_LENGTH)));
+      } catch (NumberFormatException ex) {
+        LOG.warn("Invalid SeqId File Name={}", fileName);
       }
     }
-    if (maxSeqId > newSeqId) {
-      newSeqId = maxSeqId;
-    }
-    newSeqId += safetyBumper; // bump up SeqId
+    return maxSeqId;
+  }
 
+  /**
+   * Get the max sequence id which is stored in the region directory. -1 if none.
+   */
+  public static long getMaxRegionSequenceId(FileSystem fs, Path regionDir) throws IOException {
+    return getMaxSequenceId(getSequenceIdFiles(fs, regionDir));
+  }
+
+  /**
+   * Create a file with name as region's max sequence id
+   */
+  public static void writeRegionSequenceIdFile(FileSystem fs, Path regionDir, long newMaxSeqId)
+      throws IOException {
+    FileStatus[] files = getSequenceIdFiles(fs, regionDir);
+    long maxSeqId = getMaxSequenceId(files);
+    if (maxSeqId > newMaxSeqId) {
+      throw new IOException("The new max sequence id " + newMaxSeqId +
+        " is less than the old max sequence id " + maxSeqId);
+    }
     // write a new seqId file
-    Path newSeqIdFile = new Path(editsdir, newSeqId + SEQUENCE_ID_FILE_SUFFIX);
-    if (newSeqId != maxSeqId) {
+    Path newSeqIdFile = new Path(WALSplitter.getRegionDirRecoveredEditsDir(regionDir),
+      newMaxSeqId + SEQUENCE_ID_FILE_SUFFIX);
+    if (newMaxSeqId != maxSeqId) {
       try {
         if (!fs.createNewFile(newSeqIdFile) && !fs.exists(newSeqIdFile)) {
           throw new IOException("Failed to create SeqId file:" + newSeqIdFile);
         }
-        LOG.debug("Wrote file={}, newSeqId={}, maxSeqId={}", newSeqIdFile,
-            newSeqId, maxSeqId);
+        LOG.debug("Wrote file={}, newMaxSeqId={}, maxSeqId={}", newSeqIdFile, newMaxSeqId,
+          maxSeqId);
       } catch (FileAlreadyExistsException ignored) {
         // latest hdfs throws this exception. it's all right if newSeqIdFile already exists
       }
     }
     // remove old ones
-    if (files != null) {
-      for (FileStatus status : files) {
-        if (!newSeqIdFile.equals(status.getPath())) {
-          fs.delete(status.getPath(), false);
-        }
+    for (FileStatus status : files) {
+      if (!newSeqIdFile.equals(status.getPath())) {
+        fs.delete(status.getPath(), false);
       }
     }
-    return newSeqId;
   }
 
   /**
@@ -1820,9 +1819,7 @@ public class WALSplitter {
    * @throws IOException
    */
   public static List<MutationReplay> getMutationsFromWALEntry(WALEntry entry, CellScanner cells,
-      Pair<WALKey, WALEdit> logEntry, Durability durability)
-          throws IOException {
-
+      Pair<WALKey, WALEdit> logEntry, Durability durability) throws IOException {
     if (entry == null) {
       // return an empty array
       return Collections.emptyList();

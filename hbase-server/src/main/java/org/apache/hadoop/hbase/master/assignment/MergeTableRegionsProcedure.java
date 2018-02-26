@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -204,55 +205,55 @@ public class MergeTableRegionsProcedure
   }
 
   @Override
-  protected Flow executeFromState(
-      final MasterProcedureEnv env,
-      final MergeTableRegionsState state)
-  throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(this + " execute state=" + state);
-    }
+  protected Flow executeFromState(final MasterProcedureEnv env, final MergeTableRegionsState state)
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
-      case MERGE_TABLE_REGIONS_PREPARE:
-        if (!prepareMergeRegion(env)) {
-          assert isFailed() : "Merge region should have an exception here";
+        case MERGE_TABLE_REGIONS_PREPARE:
+          if (!prepareMergeRegion(env)) {
+            assert isFailed() : "Merge region should have an exception here";
+            return Flow.NO_MORE_STATE;
+          }
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION);
+          break;
+        case MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION:
+          preMergeRegions(env);
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CLOSE_REGIONS);
+          break;
+        case MERGE_TABLE_REGIONS_CLOSE_REGIONS:
+          addChildProcedure(createUnassignProcedures(env, getRegionReplication(env)));
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CREATE_MERGED_REGION);
+          break;
+        case MERGE_TABLE_REGIONS_CREATE_MERGED_REGION:
+          createMergedRegion(env);
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_WRITE_MAX_SEQUENCE_ID_FILE);
+          break;
+        case MERGE_TABLE_REGIONS_WRITE_MAX_SEQUENCE_ID_FILE:
+          writeMaxSequenceIdFile(env);
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION);
+          break;
+        case MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION:
+          preMergeRegionsCommit(env);
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_UPDATE_META);
+          break;
+        case MERGE_TABLE_REGIONS_UPDATE_META:
+          updateMetaForMergedRegions(env);
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION);
+          break;
+        case MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION:
+          postMergeRegionsCommit(env);
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_OPEN_MERGED_REGION);
+          break;
+        case MERGE_TABLE_REGIONS_OPEN_MERGED_REGION:
+          addChildProcedure(createAssignProcedures(env, getRegionReplication(env)));
+          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_POST_OPERATION);
+          break;
+        case MERGE_TABLE_REGIONS_POST_OPERATION:
+          postCompletedMergeRegions(env);
           return Flow.NO_MORE_STATE;
-        }
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION);
-        break;
-      case MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION:
-        preMergeRegions(env);
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CLOSE_REGIONS);
-        break;
-      case MERGE_TABLE_REGIONS_CLOSE_REGIONS:
-        addChildProcedure(createUnassignProcedures(env, getRegionReplication(env)));
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CREATE_MERGED_REGION);
-        break;
-      case MERGE_TABLE_REGIONS_CREATE_MERGED_REGION:
-        createMergedRegion(env);
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION);
-        break;
-      case MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION:
-        preMergeRegionsCommit(env);
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_UPDATE_META);
-        break;
-      case MERGE_TABLE_REGIONS_UPDATE_META:
-        updateMetaForMergedRegions(env);
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION);
-        break;
-      case MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION:
-        postMergeRegionsCommit(env);
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_OPEN_MERGED_REGION);
-        break;
-      case MERGE_TABLE_REGIONS_OPEN_MERGED_REGION:
-        addChildProcedure(createAssignProcedures(env, getRegionReplication(env)));
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_POST_OPERATION);
-        break;
-      case MERGE_TABLE_REGIONS_POST_OPERATION:
-        postCompletedMergeRegions(env);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
       String msg = "Error trying to merge regions " +
@@ -285,31 +286,32 @@ public class MergeTableRegionsProcedure
 
     try {
       switch (state) {
-      case MERGE_TABLE_REGIONS_POST_OPERATION:
-      case MERGE_TABLE_REGIONS_OPEN_MERGED_REGION:
-      case MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION:
-      case MERGE_TABLE_REGIONS_UPDATE_META:
-        String msg = this + " We are in the " + state + " state."
-            + " It is complicated to rollback the merge operation that region server is working on."
-            + " Rollback is not supported and we should let the merge operation to complete";
-        LOG.warn(msg);
-        // PONR
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
-      case MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION:
-        break;
-      case MERGE_TABLE_REGIONS_CREATE_MERGED_REGION:
-        cleanupMergedRegion(env);
-        break;
-      case MERGE_TABLE_REGIONS_CLOSE_REGIONS:
-        rollbackCloseRegionsForMerge(env);
-        break;
-      case MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION:
-        postRollBackMergeRegions(env);
-        break;
-      case MERGE_TABLE_REGIONS_PREPARE:
-        break;
-      default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
+        case MERGE_TABLE_REGIONS_POST_OPERATION:
+        case MERGE_TABLE_REGIONS_OPEN_MERGED_REGION:
+        case MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION:
+        case MERGE_TABLE_REGIONS_UPDATE_META:
+          String msg = this + " We are in the " + state + " state." +
+            " It is complicated to rollback the merge operation that region server is working on." +
+            " Rollback is not supported and we should let the merge operation to complete";
+          LOG.warn(msg);
+          // PONR
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
+        case MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION:
+          break;
+        case MERGE_TABLE_REGIONS_CREATE_MERGED_REGION:
+        case MERGE_TABLE_REGIONS_WRITE_MAX_SEQUENCE_ID_FILE:
+          cleanupMergedRegion(env);
+          break;
+        case MERGE_TABLE_REGIONS_CLOSE_REGIONS:
+          rollbackCloseRegionsForMerge(env);
+          break;
+        case MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION:
+          postRollBackMergeRegions(env);
+          break;
+        case MERGE_TABLE_REGIONS_PREPARE:
+          break;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (Exception e) {
       // This will be retried. Unless there is a bug in the code,
@@ -326,10 +328,10 @@ public class MergeTableRegionsProcedure
   @Override
   protected boolean isRollbackSupported(final MergeTableRegionsState state) {
     switch (state) {
-    case MERGE_TABLE_REGIONS_POST_OPERATION:
-    case MERGE_TABLE_REGIONS_OPEN_MERGED_REGION:
-    case MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION:
-    case MERGE_TABLE_REGIONS_UPDATE_META:
+      case MERGE_TABLE_REGIONS_POST_OPERATION:
+      case MERGE_TABLE_REGIONS_OPEN_MERGED_REGION:
+      case MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION:
+      case MERGE_TABLE_REGIONS_UPDATE_META:
         // It is not safe to rollback if we reach to these states.
         return false;
       default:
@@ -562,7 +564,6 @@ public class MergeTableRegionsProcedure
   /**
    * Set the region states to MERGING state
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   public void setRegionStateToMerging(final MasterProcedureEnv env) throws IOException {
     // Set State.MERGING to regions to be merged
@@ -572,22 +573,8 @@ public class MergeTableRegionsProcedure
   }
 
   /**
-   * Rollback the region state change
-   * Not used for now, since rollbackCloseRegionsForMerge() will mark regions as OPEN
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   */
-  private void setRegionStateBackToOpen(final MasterProcedureEnv env) throws IOException {
-    // revert region state to Open
-    RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    regionStates.getRegionStateNode(regionsToMerge[0]).setState(State.OPEN);
-    regionStates.getRegionStateNode(regionsToMerge[1]).setState(State.OPEN);
-  }
-
-  /**
    * Create merged region
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void createMergedRegion(final MasterProcedureEnv env) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
@@ -614,7 +601,6 @@ public class MergeTableRegionsProcedure
    * @param env MasterProcedureEnv
    * @param regionFs region file system
    * @param mergedDir the temp directory of merged region
-   * @throws IOException
    */
   private void mergeStoreFiles(
       final MasterProcedureEnv env, final HRegionFileSystem regionFs, final Path mergedDir)
@@ -642,7 +628,6 @@ public class MergeTableRegionsProcedure
   /**
    * Clean up merged region
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void cleanupMergedRegion(final MasterProcedureEnv env) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
@@ -775,6 +760,18 @@ public class MergeTableRegionsProcedure
       // Let them go to the Balancer to find one to use instead.
     }
     return regionLocation;
+  }
+
+  private void writeMaxSequenceIdFile(MasterProcedureEnv env) throws IOException {
+    FileSystem fs = env.getMasterServices().getMasterFileSystem().getFileSystem();
+    long maxSequenceId = -1L;
+    for (RegionInfo region : regionsToMerge) {
+      maxSequenceId =
+        Math.max(maxSequenceId, WALSplitter.getMaxRegionSequenceId(fs, getRegionDir(env, region)));
+    }
+    if (maxSequenceId > 0) {
+      WALSplitter.writeRegionSequenceIdFile(fs, getRegionDir(env, mergedRegion), maxSequenceId);
+    }
   }
 
   /**
