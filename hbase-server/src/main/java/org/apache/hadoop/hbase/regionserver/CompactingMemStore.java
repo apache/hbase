@@ -136,14 +136,10 @@ public class CompactingMemStore extends AbstractMemStore {
       numStores = 1;
     }
     inmemoryFlushSize = memstoreFlushSize / numStores;
-    // multiply by a factor (different factors for different index types)
-    if (indexType == IndexType.ARRAY_MAP) {
-      factor = conf.getDouble(IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
+    // multiply by a factor (the same factor for all index types)
+    factor = conf.getDouble(IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
           IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
-    } else {
-      factor = conf.getDouble(IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
-          IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
-    }
+
     inmemoryFlushSize = (long) (inmemoryFlushSize * factor);
     LOG.info("Setting in-memory flush size threshold to {} and immutable segments index to type={}",
         StringUtils.byteDesc(inmemoryFlushSize), indexType);
