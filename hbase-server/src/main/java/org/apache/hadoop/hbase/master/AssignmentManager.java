@@ -140,6 +140,9 @@ public class AssignmentManager extends ZooKeeperListener {
     = "hbase.assignment.already.intransition.waittime";
   static final int DEFAULT_ALREADY_IN_TRANSITION_WAITTIME = 60000; // 1 minute
 
+  static final String FAILED_OPEN_RETRY_KEY = "hbase.assignment.failed.open.retry.period";
+  static final int FAILED_OPEN_RETRY_DEFAULT = 300000; // 5 minutes
+
   protected final MasterServices server;
 
   private ServerManager serverManager;
@@ -352,6 +355,12 @@ public class AssignmentManager extends ZooKeeperListener {
     this.retryConfig.setMaxSleepTime(conf.getLong("hbase.assignment.retry.sleep.max",
         retryConfig.getSleepInterval()));
     this.backoffPolicy = getBackoffPolicy();
+
+    int failedOpenRetryPeriod = conf.getInt(FAILED_OPEN_RETRY_KEY, FAILED_OPEN_RETRY_DEFAULT);
+    if (failedOpenRetryPeriod > 0) {
+      scheduledThreadPoolExecutor.scheduleWithFixedDelay(new FailedOpenRetryRunnable(),
+        failedOpenRetryPeriod, failedOpenRetryPeriod, TimeUnit.MILLISECONDS);
+    }
   }
 
   /**
@@ -4757,4 +4766,23 @@ public class AssignmentManager extends ZooKeeperListener {
   public static void setTestSkipMergeHandling(boolean skipMergeHandling) {
     TEST_SKIP_MERGE_HANDLING = skipMergeHandling;
   }
+
+  /**
+   * Scheduled task that will attempt to redeploy regions that have transitioned permanently into
+   * FAILED_OPEN state.
+   */
+  class FailedOpenRetryRunnable implements Runnable {
+    @Override
+    public void run() {
+      // Kick regions that have been transitioned into permanent FAILED_OPEN state
+      for (RegionState s: getRegionStates().getAllRegions()) {
+        if (s.isFailedOpen()) {
+          LOG.info("Retrying failed assignment for " + s.toDescriptiveString());
+          // Run the entire unassign protocol for safety's sake
+          unassign(s.getRegion());
+        }
+      }
+    }
+  }
+
 }

@@ -232,6 +232,13 @@ public class RegionStates {
   }
 
   /**
+   * Get all regions and their states
+   */
+  public synchronized Set<RegionState> getAllRegions() {
+    return new HashSet<RegionState>(regionStates.values());
+  }
+
+  /**
    * @return a set of the regions in transition that are sorted by timestamp
    */
   public synchronized SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {

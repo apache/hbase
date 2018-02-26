@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
@@ -121,7 +120,6 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   private volatile Set<String> prevRSGroups;
   private RSGroupSerDe rsGroupSerDe;
   private DefaultServerUpdater defaultServerUpdater;
-  private FailedOpenUpdater failedOpenUpdater;
   private boolean isInit = false;
 
   public RSGroupInfoManagerImpl(MasterServices master) throws IOException {
@@ -139,8 +137,6 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     refresh();
     defaultServerUpdater = new DefaultServerUpdater(this);
     Threads.setDaemonThreadRunning(defaultServerUpdater);
-    failedOpenUpdater = new FailedOpenUpdater(this);
-    Threads.setDaemonThreadRunning(failedOpenUpdater);
     master.getServerManager().registerListener(this);
     isInit = true;
   }
@@ -493,7 +489,6 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   @Override
   public void serverAdded(ServerName serverName) {
     defaultServerUpdater.serverChanged();
-    failedOpenUpdater.serverChanged();
   }
 
   @Override
@@ -553,74 +548,6 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     }
 
     // Called for both server additions and removals
-    public void serverChanged() {
-      synchronized (this) {
-        hasChanged = true;
-        this.notify();
-      }
-    }
-  }
-
-  private static class FailedOpenUpdater extends Thread {
-    private static final Log LOG = LogFactory.getLog(FailedOpenUpdater.class);
-
-    private final RSGroupInfoManagerImpl mgr;
-    private final long waitInterval;
-    private volatile boolean hasChanged = false;
-
-    public FailedOpenUpdater(RSGroupInfoManagerImpl mgr) {
-      this.mgr = mgr;
-      this.waitInterval = mgr.master.getConfiguration().getLong(REASSIGN_WAIT_INTERVAL_KEY,
-        DEFAULT_REASSIGN_WAIT_INTERVAL);
-      setName(FailedOpenUpdater.class.getName()+"-" + mgr.master.getServerName());
-      setDaemon(true);
-    }
-
-    @Override
-    public void run() {
-      while (!mgr.master.isAborted() && !mgr.master.isStopped()) {
-        boolean interrupted = false;
-        try {
-          synchronized (this) {
-            while (!hasChanged) {
-              wait();
-            }
-            hasChanged = false;
-          }
-        } catch (InterruptedException e) {
-          LOG.warn("Interrupted", e);
-          interrupted = true;
-        }
-        if (mgr.master.isAborted() || mgr.master.isStopped() || interrupted) {
-          continue;
-        }
-
-        // First, wait a while in case more servers are about to rejoin the cluster
-        try {
-          Thread.sleep(waitInterval);
-        } catch (InterruptedException e) {
-          LOG.warn("Interrupted", e);
-        }
-        if (mgr.master.isAborted() || mgr.master.isStopped()) {
-          continue;
-        }
-
-        // Kick all regions in FAILED_OPEN state
-        List<HRegionInfo> failedAssignments = Lists.newArrayList();
-        for (RegionState state:
-            mgr.master.getAssignmentManager().getRegionStates().getRegionsInTransition()) {
-          if (state.isFailedOpen()) {
-            failedAssignments.add(state.getRegion());
-          }
-        }
-        for (HRegionInfo region: failedAssignments) {
-          LOG.info("Retrying assignment of " + region);
-          mgr.master.getAssignmentManager().unassign(region);
-        }
-      }
-    }
-
-    // Only called for server additions
     public void serverChanged() {
       synchronized (this) {
         hasChanged = true;
