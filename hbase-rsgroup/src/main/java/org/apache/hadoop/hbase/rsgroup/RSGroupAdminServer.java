@@ -675,8 +675,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   private void checkForDeadOrOnlineServers(Set<Address> servers) throws ConstraintException {
     // This uglyness is because we only have Address, not ServerName.
     Set<Address> onlineServers = new HashSet<>();
-    for(ServerName server: master.getServerManager().getOnlineServers().keySet()) {
-      onlineServers.add(server.getAddress());
+    List<ServerName> drainingServers = master.getServerManager().getDrainingServersList();
+    for (ServerName server : master.getServerManager().getOnlineServers().keySet()) {
+      // Only online but not decommissioned servers are really online
+      if (!drainingServers.contains(server)) {
+        onlineServers.add(server.getAddress());
+      }
     }
 
     Set<Address> deadServers = new HashSet<>();
