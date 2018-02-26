@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -420,9 +421,6 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
   }
 
   protected void syncUp(HBaseTestingUtility ut) throws Exception {
-    ReplicationSyncUp.setConfigure(ut.getConfiguration());
-    String[] arguments = new String[] { null };
-    new ReplicationSyncUp().run(arguments);
+    ToolRunner.run(ut.getConfiguration(), new ReplicationSyncUp(), new String[0]);
   }
-
 }
