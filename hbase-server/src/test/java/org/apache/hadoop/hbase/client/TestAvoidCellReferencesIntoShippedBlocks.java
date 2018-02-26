@@ -400,23 +400,27 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
               scanner = table.getScanner(s1);
               int count = Iterables.size(scanner);
               assertEquals("Count the rows", 2, count);
-              iterator = cache.iterator();
-              List<BlockCacheKey> newCacheList = new ArrayList<>();
-              while (iterator.hasNext()) {
-                CachedBlock next = iterator.next();
-                BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-                newCacheList.add(cacheKey);
-              }
               int newBlockRefCount = 0;
-              for (BlockCacheKey key : cacheList) {
-                if (newCacheList.contains(key)) {
-                  newBlockRefCount++;
+              List<BlockCacheKey> newCacheList = new ArrayList<>();
+              while (true) {
+                newBlockRefCount = 0;
+                newCacheList.clear();
+                iterator = cache.iterator();
+                while (iterator.hasNext()) {
+                  CachedBlock next = iterator.next();
+                  BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+                  newCacheList.add(cacheKey);
+                }
+                for (BlockCacheKey key : cacheList) {
+                  if (newCacheList.contains(key)) {
+                    newBlockRefCount++;
+                  }
+                }
+                if (newBlockRefCount == 6) {
+                  break;
                 }
               }
-
-              assertEquals("old blocks should still be found ", 6, newBlockRefCount);
               latch.countDown();
-
             } catch (IOException e) {
             }
           }
