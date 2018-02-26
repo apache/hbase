@@ -403,7 +403,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         toStartup.add(replicationSource);
       }
     }
-    for (ReplicationSourceInterface replicationSource : oldsources) {
+    for (ReplicationSourceInterface replicationSource : toStartup) {
       replicationSource.startup();
     }
   }
