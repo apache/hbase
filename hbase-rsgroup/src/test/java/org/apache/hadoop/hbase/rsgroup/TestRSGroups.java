@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
@@ -66,7 +65,6 @@ public class TestRSGroups extends TestRSGroupsBase {
       HBaseClassTestRule.forClass(TestRSGroups.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroups.class);
-  private static HMaster master;
   private static boolean INIT = false;
   private static RSGroupAdminEndpoint rsGroupAdminEndpoint;
 
@@ -125,6 +123,11 @@ public class TestRSGroups extends TestRSGroupsBase {
     deleteTableIfNecessary();
     deleteNamespaceIfNecessary();
     deleteGroups();
+
+    for(ServerName sn : admin.listDecommissionedRegionServers()){
+      admin.recommissionRegionServer(sn, null);
+    }
+    assertTrue(admin.listDecommissionedRegionServers().isEmpty());
 
     int missing = NUM_SLAVES_BASE - getNumServers();
     LOG.info("Restoring servers: "+missing);
