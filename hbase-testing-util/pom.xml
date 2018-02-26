@@ -29,17 +29,6 @@
     <artifactId>hbase-testing-util</artifactId>
     <name>Apache HBase - Testing Util</name>
     <description>HBase Testing Utilities.</description>
-    <build>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-site-plugin</artifactId>
-          <configuration>
-            <skip>true</skip>
-          </configuration>
-        </plugin>
-      </plugins>
-    </build>
     <dependencies>
         <!-- Intra-project dependencies -->
         <dependency>

@@ -51,13 +51,6 @@
       </testResource>
     </testResources>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
       <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
         tests (this is needed for upstream projects whose tests need this jar simply for
         compilation) -->

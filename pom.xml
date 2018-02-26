@@ -606,6 +606,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
            <artifactId>maven-javadoc-plugin</artifactId>
+           <version>${maven.javadoc.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -1474,6 +1475,7 @@
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.install.version>2.5.2</maven.install.version>
     <maven.jar.version>3.0.2</maven.jar.version>
+    <maven.javadoc.version>3.0.0</maven.javadoc.version>
     <maven.patch.version>1.2</maven.patch.version>
     <maven.scala.version>2.15.2</maven.scala.version>
     <maven.shade.version>3.0.0</maven.shade.version>
@@ -1544,6 +1546,9 @@
         this parameter by invoking mvn with -Dbuild.id=$BUILD_ID-->
     <build.id>${maven.build.timestamp}</build.id>
     <shell-executable>bash</shell-executable>
+    <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used.
+         property as of javadoc-plugin 3.0.0 -->
+    <doclint>none</doclint>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -2239,14 +2244,6 @@
       <build>
         <pluginManagement>
           <plugins>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-javadoc-plugin</artifactId>
-              <configuration>
-                <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used -->
-                <additionalparam>-Xdoclint:none</additionalparam>
-              </configuration>
-            </plugin>
             <plugin>
               <groupId>org.codehaus.mojo</groupId>
               <artifactId>findbugs-maven-plugin</artifactId>
@@ -3486,7 +3483,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>${maven.javadoc.version}</version>
         <reportSets>
           <!-- Dev API -->
           <reportSet>
