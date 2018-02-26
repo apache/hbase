@@ -50,6 +50,8 @@ public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
 
   private PeerOperationType type;
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+      justification = "Will never change after construction")
   private ServerName targetServer;
 
   private boolean dispatched;
