@@ -321,6 +321,41 @@ SingleColumnValueFilter filter = new SingleColumnValueFilter(
 scan.setFilter(filter);
 ----
 
+[[client.filter.cv.cvf]]
+==== ColumnValueFilter
+
+Introduced in HBase-2.0.0 version as a complementation of SingleColumnValueFilter, ColumnValueFilter
+gets matched cell only, while SingleColumnValueFilter gets the entire row
+(has other columns and values) to which the matched cell belongs. Parameters of constructor of
+ColumnValueFilter are the same as SingleColumnValueFilter.
+[source,java]
+----
+ColumnValueFilter filter = new ColumnValueFilter(
+  cf,
+  column,
+  CompareOperaor.EQUAL,
+  Bytes.toBytes("my value")
+  );
+scan.setFilter(filter);
+----
+
+Note. For simple query like "equals to a family:qualifier:value", we highly recommend to use the
+following way instead of using SingleColumnValueFilter or ColumnValueFilter:
+[source,java]
+----
+Scan scan = new Scan();
+scan.addColumn(Bytes.toBytes("family"), Bytes.toBytes("qualifier"));
+ValueFilter vf = new ValueFilter(CompareOperator.EQUAL,
+  new BinaryComparator(Bytes.toBytes("value")));
+scan.setFilter(vf);
+...
+----
+This scan will restrict to the specified column 'family:qualifier', avoiding scan unrelated
+families and columns, which has better performance, and `ValueFilter` is the condition used to do
+the value filtering.
+
+But if query is much more complicated beyond this book, then please make your good choice case by case.
+
 [[client.filter.cvp]]
 === Column Value Comparators
 
