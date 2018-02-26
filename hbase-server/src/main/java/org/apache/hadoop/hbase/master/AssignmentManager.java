@@ -255,10 +255,10 @@ public class AssignmentManager extends ZooKeeperListener {
   private final RegionStateStore regionStateStore;
 
   /**
-   * For testing only!  Set to true to skip handling of split.
+   * For testing only!  Set to true to skip handling of split and merge.
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_SHOULD_BE_FINAL")
-  public static boolean TEST_SKIP_SPLIT_HANDLING = false;
+  private static boolean TEST_SKIP_SPLIT_HANDLING = false;
+  private static boolean TEST_SKIP_MERGE_HANDLING = false;
 
   /** Listeners that are called on assignment events. */
   private List<AssignmentListener> listeners = new CopyOnWriteArrayList<AssignmentListener>();
@@ -4054,6 +4054,11 @@ public class AssignmentManager extends ZooKeeperListener {
       mergingRegions.put(encodedName,
         new PairOfSameType<HRegionInfo>(a, b));
     } else if (code == TransitionCode.MERGED) {
+
+      if (TEST_SKIP_MERGE_HANDLING) {
+        return "Skipping merge message, TEST_SKIP_MERGE_HANDLING is set for merge parent: " + p;
+      }
+
       mergingRegions.remove(encodedName);
       regionOffline(a, State.MERGED);
       regionOffline(b, State.MERGED);
@@ -4179,6 +4184,11 @@ public class AssignmentManager extends ZooKeeperListener {
       regionStates.updateRegionState(hri_a, State.MERGING);
       regionStates.updateRegionState(hri_b, State.MERGING);
       regionStates.updateRegionState(p, State.MERGING_NEW, sn);
+
+      if (TEST_SKIP_MERGE_HANDLING) {
+        LOG.warn("Skipping merge message, TEST_SKIP_MERGE_HANDLING is set for merge parent: " + p);
+        return true; // return true so that the merging node stays
+      }
 
       if (et != EventType.RS_ZK_REGION_MERGED) {
         this.mergingRegions.put(encodedName,
@@ -4726,5 +4736,21 @@ public class AssignmentManager extends ZooKeeperListener {
     public void run() {
       threadPoolExecutorService.submit(callable);
     }
+  }
+
+  /*
+   * This is only used for unit-testing split failures.
+   */
+  @VisibleForTesting
+  public static void setTestSkipSplitHandling(boolean skipSplitHandling) {
+    TEST_SKIP_SPLIT_HANDLING = skipSplitHandling;
+  }
+
+  /*
+   * This is only used for unit-testing merge failures.
+   */
+  @VisibleForTesting
+  public static void setTestSkipMergeHandling(boolean skipMergeHandling) {
+    TEST_SKIP_MERGE_HANDLING = skipMergeHandling;
   }
 }

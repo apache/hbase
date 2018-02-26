@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -169,6 +170,7 @@ public class RegionStates {
   private final RegionStateStore regionStateStore;
   private final ServerManager serverManager;
   private final MasterServices server;
+  private final boolean useZK; // Is it ZK based assignment?
 
   // The maximum time to keep a log split info in region states map
   static final String LOG_SPLIT_TIME = "hbase.master.maximum.logsplit.keeptime";
@@ -180,6 +182,7 @@ public class RegionStates {
     this.regionStateStore = regionStateStore;
     this.serverManager = serverManager;
     this.server = master;
+    this.useZK = ConfigUtil.useZKForAssignment(server.getConfiguration());
   }
 
   /**
@@ -726,7 +729,7 @@ public class RegionStates {
   public List<HRegionInfo> serverOffline(final ZooKeeperWatcher watcher, final ServerName sn) {
     // Offline all regions on this server not already in transition.
     List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
-    Set<HRegionInfo> regionsToCleanIfNoMetaEntry = new HashSet<HRegionInfo>();
+    Set<HRegionInfo> regionsToClean = new HashSet<HRegionInfo>();
     // Offline regions outside the loop and synchronized block to avoid
     // ConcurrentModificationException and deadlock in case of meta anassigned,
     // but RegionState a blocked.
@@ -773,7 +776,9 @@ public class RegionStates {
               " to be reassigned by ServerCrashProcedure for " + sn);
             rits.add(hri);
           } else if(state.isSplittingNew() || state.isMergingNew()) {
-            regionsToCleanIfNoMetaEntry.add(state.getRegion());
+            LOG.info("Offline/Cleanup region if no meta entry exists, hri: " + hri +
+                " state: " + state);
+            regionsToClean.add(state.getRegion());
           } else {
             LOG.warn("THIS SHOULD NOT HAPPEN: unexpected " + state);
           }
@@ -786,28 +791,41 @@ public class RegionStates {
       regionOffline(hri);
     }
 
-    cleanIfNoMetaEntry(regionsToCleanIfNoMetaEntry);
+    cleanFailedSplitMergeRegions(regionsToClean);
     return rits;
   }
 
   /**
    * This method does an RPC to hbase:meta. Do not call this method with a lock/synchronize held.
+   * In ZK mode we rollback and hence cleanup daughters/merged region. We also cleanup if
+   * meta doesn't have these regions.
+   *
    * @param hris The hris to check if empty in hbase:meta and if so, clean them up.
    */
-  private void cleanIfNoMetaEntry(Set<HRegionInfo> hris) {
-    if (hris.isEmpty()) return;
-    for (HRegionInfo hri: hris) {
+  private void cleanFailedSplitMergeRegions(Set<HRegionInfo> hris) {
+    if (hris.isEmpty()) {
+      return;
+    }
+
+    for (HRegionInfo hri : hris) {
+      // This is RPC to meta table. It is done while we have a synchronize on
+      // regionstates. No progress will be made if meta is not available at this time.
+      // This is a cleanup task. Not critical.
       try {
-        // This is RPC to meta table. It is done while we have a synchronize on
-        // regionstates. No progress will be made if meta is not available at this time.
-        // This is a cleanup task. Not critical.
-        if (MetaTableAccessor.getRegion(server.getConnection(), hri.getEncodedNameAsBytes()) ==
-            null) {
+        Pair<HRegionInfo, ServerName> regionPair =
+            MetaTableAccessor.getRegion(server.getConnection(), hri.getRegionName());
+        if (regionPair == null || useZK) {
           regionOffline(hri);
+
+          // If we use ZK, then we can cleanup entries from meta, since we roll back.
+          if (regionPair != null) {
+            MetaTableAccessor.deleteRegion(this.server.getConnection(), hri);
+          }
+          LOG.debug("Cleaning up HDFS since no meta entry exists, hri: " + hri);
           FSUtils.deleteRegionDir(server.getConfiguration(), hri);
         }
       } catch (IOException e) {
-        LOG.warn("Got exception while deleting " + hri + " directories from file system.", e);
+        LOG.warn("Got exception while cleaning up region " + hri, e);
       }
     }
   }
