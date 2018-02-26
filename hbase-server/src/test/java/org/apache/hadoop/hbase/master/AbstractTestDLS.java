@@ -478,42 +478,6 @@ public abstract class AbstractTestDLS {
     }
   }
 
-  @Test
-  public void testReadWriteSeqIdFiles() throws Exception {
-    LOG.info("testReadWriteSeqIdFiles");
-    startCluster(2);
-    final ZKWatcher zkw = new ZKWatcher(conf, "table-creation", null);
-    Table ht = installTable(zkw, 10);
-    try {
-      FileSystem fs = master.getMasterFileSystem().getFileSystem();
-      Path tableDir =
-          FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf(name.getMethodName()));
-      List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
-      long newSeqId = WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 1L, 1000L);
-      WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 1L, 1000L);
-      assertEquals(newSeqId + 2000,
-        WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 3L, 1000L));
-
-      Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regionDirs.get(0));
-      FileStatus[] files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
-        @Override
-        public boolean accept(Path p) {
-          return WALSplitter.isSequenceIdFile(p);
-        }
-      });
-      // only one seqid file should exist
-      assertEquals(1, files.length);
-
-      // verify all seqId files aren't treated as recovered.edits files
-      NavigableSet<Path> recoveredEdits =
-          WALSplitter.getSplitEditFilesSorted(fs, regionDirs.get(0));
-      assertEquals(0, recoveredEdits.size());
-    } finally {
-      if (ht != null) ht.close();
-      if (zkw != null) zkw.close();
-    }
-  }
-
   private Table installTable(ZKWatcher zkw, int nrs) throws Exception {
     return installTable(zkw, nrs, 0);
   }
