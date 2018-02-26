@@ -1535,7 +1535,6 @@ public class MetaTableAccessor {
       RegionInfo regionA, RegionInfo regionB, ServerName sn, int regionReplication)
       throws IOException {
     try (Table meta = getMetaHTable(connection)) {
-      // use the maximum of what master passed us vs local time.
       long time = EnvironmentEdgeManager.currentTime();
 
       // Put for parent
