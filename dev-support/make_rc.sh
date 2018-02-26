@@ -104,13 +104,13 @@ build_bin
 MAVEN_OPTS="${mvnopts}" ${mvn} deploy -DskipTests -Papache-release -Prelease \
     -Dmaven.repo.local=${output_dir}/repository
 
-# Do sha1 and md5
+# Do sha512 and md5
 cd ${output_dir}
-for i in *.tar.gz; do echo $i; gpg --print-md SHA512 $i > $i.sha ; done
+for i in *.tar.gz; do echo $i; gpg --print-md SHA512 $i > $i.sha512 ; done
 for i in *.tar.gz; do echo $i; gpg --print-md MD5 $i > $i.md5 ; done
 
 echo "Check the content of ${output_dir}.  If good, sign and push to dist.apache.org"
 echo " cd ${output_dir}"
 echo ' for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done'
-echo ' rsync -av ${output_dir}/*.gz ${output_dir}/*.md5 ${output_dir}/*.sha ${output_dir}/*.asc ${APACHE_HBASE_DIST_DEV_DIR}/${hbase_name}/'
+echo ' rsync -av ${output_dir}/*.gz ${output_dir}/*.md5 ${output_dir}/*.sha512 ${output_dir}/*.asc ${APACHE_HBASE_DIST_DEV_DIR}/${hbase_name}/'
 echo "Check the content deployed to maven.  If good, close the repo and record links of temporary staging repo"
