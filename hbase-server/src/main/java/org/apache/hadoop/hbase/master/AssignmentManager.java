@@ -4638,11 +4638,13 @@ public class AssignmentManager extends ZooKeeperListener {
         if (!((HMaster)server).getSplitOrMergeTracker().isSplitOrMergeEnabled(
                 Admin.MasterSwitchType.SPLIT)) {
           errorMsg = "split switch is off!";
+          break;
         }
       } catch (IOException exp) {
         errorMsg = StringUtils.stringifyException(exp);
+        break;
       }
-      break;
+      // Break out only for errors, otherwise fall through
     case SPLIT_PONR:
     case SPLIT:
       errorMsg =
@@ -4667,8 +4669,9 @@ public class AssignmentManager extends ZooKeeperListener {
       if (!((HMaster)server).getSplitOrMergeTracker().isSplitOrMergeEnabled(
               Admin.MasterSwitchType.MERGE)) {
         errorMsg = "merge switch is off!";
+        break;
       }
-      break;
+      // Break out only for errors, otherwise fall through
     case MERGE_PONR:
     case MERGED:
       errorMsg = onRegionMerge(serverName, code, hri,
