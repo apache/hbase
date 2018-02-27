@@ -3790,6 +3790,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     // Shutdown the threadpool executor service
     threadPoolExecutorService.shutdownNow();
+    scheduledThreadPoolExecutor.shutdownNow();
     zkEventWorkers.shutdownNow();
     regionStateStore.stop();
   }
