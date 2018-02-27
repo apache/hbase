@@ -37,7 +37,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerMetrics;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -101,6 +102,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -447,16 +449,16 @@ public class MasterRpcServices extends RSRpcServices
       master.checkServiceStarted();
       ClusterStatusProtos.ServerLoad sl = request.getLoad();
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
-      ServerLoad oldLoad = master.getServerManager().getLoad(serverName);
-      ServerLoad newLoad = new ServerLoad(serverName, sl);
+      ServerMetrics oldLoad = master.getServerManager().getLoad(serverName);
+      ServerMetrics newLoad = ServerMetricsBuilder.toServerMetrics(serverName, sl);
       master.getServerManager().regionServerReport(serverName, newLoad);
       int version = VersionInfoUtil.getCurrentClientVersionNumber();
       master.getAssignmentManager().reportOnlineRegions(serverName,
-        version, newLoad.getRegionsLoad().keySet());
+        version, newLoad.getRegionMetrics().keySet());
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
         master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
-            - (oldLoad != null ? oldLoad.getTotalNumberOfRequests() : 0));
+            - (oldLoad != null ? oldLoad.getRequestCount() : 0));
       }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);

@@ -26,8 +26,10 @@ HMaster master;
 <%import>
         java.util.*;
         org.apache.hadoop.hbase.master.HMaster;
-        org.apache.hadoop.hbase.ServerLoad;
+        org.apache.hadoop.hbase.RegionMetrics;
+        org.apache.hadoop.hbase.ServerMetrics;
         org.apache.hadoop.hbase.ServerName;
+        org.apache.hadoop.hbase.Size;
         org.apache.hadoop.hbase.util.VersionInfo;
         org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
@@ -84,12 +86,12 @@ Arrays.sort(serverNames);
 </tr>
 <%java>
     int totalRegions = 0;
-    int totalRequests = 0;
+    int totalRequestsPerSecond = 0;
     int inconsistentNodeNum = 0;
     String masterVersion = VersionInfo.getVersion();
     for (ServerName serverName: serverNames) {
 
-    ServerLoad sl = master.getServerManager().getLoad(serverName);
+    ServerMetrics sl = master.getServerManager().getLoad(serverName);
     String version = master.getRegionServerVersion(serverName);
     if (!masterVersion.equals(version)) {
         inconsistentNodeNum ++;
@@ -100,12 +102,11 @@ Arrays.sort(serverNames);
     long lastContact = 0;
 
     if (sl != null) {
-        requestsPerSecond = sl.getRequestsPerSecond();
-        numRegionsOnline = sl.getNumberOfRegions();
-        totalRegions += sl.getNumberOfRegions();
-        // Is this correct?  Adding a rate to a measure.
-        totalRequests += sl.getNumberOfRequests();
-        lastContact = (System.currentTimeMillis() - sl.getReportTime())/1000;
+        requestsPerSecond = sl.getRequestCountPerSecond();
+        numRegionsOnline = sl.getRegionMetrics().size();
+        totalRegions += sl.getRegionMetrics().size();
+        totalRequestsPerSecond += sl.getRequestCountPerSecond();
+        lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
     }
     long startcode = serverName.getStartcode();
 </%java>
@@ -128,7 +129,7 @@ Arrays.sort(serverNames);
 <%else>
    <td></td>
 </%if>
-<td><% totalRequests %></td>
+<td><% totalRequestsPerSecond %></td>
 <td><% totalRegions %></td>
 </tr>
 </table>
@@ -149,16 +150,20 @@ Arrays.sort(serverNames);
 <%java>
 for (ServerName serverName: serverNames) {
 
-    ServerLoad sl = master.getServerManager().getLoad(serverName);
+    ServerMetrics sl = master.getServerManager().getLoad(serverName);
     if (sl != null) {
+      long memStoreSizeMB = 0;
+      for (RegionMetrics rl : sl.getRegionMetrics().values()) {
+        memStoreSizeMB += rl.getMemStoreSize().get(Size.Unit.MEGABYTE);
+      }
 </%java>
 <tr>
     <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
-    <td><% TraditionalBinaryPrefix.long2String(sl.getUsedHeapMB()
+    <td><% TraditionalBinaryPrefix.long2String((long) sl.getUsedHeapSize().get(Size.Unit.MEGABYTE)
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-    <td><% TraditionalBinaryPrefix.long2String(sl.getMaxHeapMB()
+    <td><% TraditionalBinaryPrefix.long2String((long) sl.getMaxHeapSize().get(Size.Unit.MEGABYTE)
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-    <td><% TraditionalBinaryPrefix.long2String(sl.getMemStoreSizeMB()
+    <td><% TraditionalBinaryPrefix.long2String(memStoreSizeMB
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
 
 </tr>
@@ -189,15 +194,23 @@ for (ServerName serverName: serverNames) {
 <%java>
 for (ServerName serverName: serverNames) {
 
-ServerLoad sl = master.getServerManager().getLoad(serverName);
+ServerMetrics sl = master.getServerManager().getLoad(serverName);
 if (sl != null) {
+  long readRequestCount = 0;
+  long writeRequestCount = 0;
+  long filteredReadRequestCount = 0;
+  for (RegionMetrics rl : sl.getRegionMetrics().values()) {
+    readRequestCount += rl.getReadRequestCount();
+    writeRequestCount += rl.getWriteRequestCount();
+    filteredReadRequestCount += rl.getFilteredReadRequestCount();
+  }
 </%java>
 <tr>
 <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
-<td><% String.format("%.0f", sl.getRequestsPerSecond()) %></td>
-<td><% sl.getReadRequestsCount() %></td>
-<td><% sl.getFilteredReadRequestsCount() %></td>
-<td><% sl.getWriteRequestsCount() %></td>
+<td><% sl.getRequestCountPerSecond() %></td>
+<td><% readRequestCount %></td>
+<td><% filteredReadRequestCount %></td>
+<td><% writeRequestCount %></td>
 </tr>
 <%java>
         }  else {
@@ -228,20 +241,34 @@ if (sl != null) {
 <%java>
 for (ServerName serverName: serverNames) {
 
-ServerLoad sl = master.getServerManager().getLoad(serverName);
+ServerMetrics sl = master.getServerManager().getLoad(serverName);
 if (sl != null) {
+  long storeCount = 0;
+  long storeFileCount = 0;
+  long storeUncompressedSizeMB = 0;
+  long storeFileSizeMB = 0;
+  long totalStaticIndexSizeKB = 0;
+  long totalStaticBloomSizeKB = 0;
+  for (RegionMetrics rl : sl.getRegionMetrics().values()) {
+    storeCount += rl.getStoreCount();
+    storeFileCount += rl.getStoreFileCount();
+    storeUncompressedSizeMB += rl.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
+    storeFileSizeMB += rl.getStoreFileSize().get(Size.Unit.MEGABYTE);
+    totalStaticIndexSizeKB += rl.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
+    totalStaticBloomSizeKB += rl.getBloomFilterSize().get(Size.Unit.KILOBYTE);
+  }
 </%java>
 <tr>
 <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
-<td><% sl.getStores() %></td>
-<td><% sl.getStorefiles() %></td>
+<td><% storeCount %></td>
+<td><% storeFileCount %></td>
 <td><% TraditionalBinaryPrefix.long2String(
-  sl.getStoreUncompressedSizeMB() * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(sl.getStorefileSizeMB()
+  storeUncompressedSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+<td><% TraditionalBinaryPrefix.long2String(storeFileSizeMB
   * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(sl.getTotalStaticIndexSizeKB()
+<td><% TraditionalBinaryPrefix.long2String(totalStaticIndexSizeKB
   * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(sl.getTotalStaticBloomSizeKB()
+<td><% TraditionalBinaryPrefix.long2String(totalStaticBloomSizeKB
   * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
 </tr>
 <%java>
@@ -270,19 +297,25 @@ if (sl != null) {
 <%java>
 for (ServerName serverName: serverNames) {
 
-ServerLoad sl = master.getServerManager().getLoad(serverName);
+ServerMetrics sl = master.getServerManager().getLoad(serverName);
 if (sl != null) {
+long totalCompactingCells = 0;
+long totalCompactedCells = 0;
+for (RegionMetrics rl : sl.getRegionMetrics().values()) {
+  totalCompactingCells += rl.getCompactingCellCount();
+  totalCompactedCells += rl.getCompactedCellCount();
+}
 String percentDone = "";
-if  (sl.getTotalCompactingKVs() > 0) {
+if  (totalCompactingCells > 0) {
      percentDone = String.format("%.2f", 100 *
-        ((float) sl.getCurrentCompactedKVs() / sl.getTotalCompactingKVs())) + "%";
+        ((float) totalCompactedCells / totalCompactingCells)) + "%";
 }
 </%java>
 <tr>
 <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
-<td><% sl.getTotalCompactingKVs() %></td>
-<td><% sl.getCurrentCompactedKVs() %></td>
-<td><% sl.getTotalCompactingKVs() - sl.getCurrentCompactedKVs() %></td>
+<td><% totalCompactingCells %></td>
+<td><% totalCompactedCells %></td>
+<td><% totalCompactingCells - totalCompactedCells %></td>
 <td><% percentDone %></td>
 </tr>
 <%java>
@@ -300,7 +333,7 @@ if  (sl.getTotalCompactingKVs() > 0) {
 <%def serverNameLink>
         <%args>
         ServerName serverName;
-        ServerLoad serverLoad;
+        ServerMetrics serverLoad;
         </%args>
         <%java>
         int infoPort = master.getRegionServerInfoPort(serverName);

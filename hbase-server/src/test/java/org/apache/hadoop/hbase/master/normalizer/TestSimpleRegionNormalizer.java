@@ -29,8 +29,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -363,15 +364,16 @@ public class TestSimpleRegionNormalizer {
       getRegionServerOfRegion(any())).thenReturn(sn);
 
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
-      RegionLoad regionLoad = Mockito.mock(RegionLoad.class);
-      when(regionLoad.getName()).thenReturn(region.getKey());
-      when(regionLoad.getStorefileSizeMB()).thenReturn(region.getValue());
+      RegionMetrics regionLoad = Mockito.mock(RegionMetrics.class);
+      when(regionLoad.getRegionName()).thenReturn(region.getKey());
+      when(regionLoad.getStoreFileSize())
+        .thenReturn(new Size(region.getValue(), Size.Unit.MEGABYTE));
 
       // this is possibly broken with jdk9, unclear if false positive or not
       // suppress it for now, fix it when we get to running tests on 9
       // see: http://errorprone.info/bugpattern/MockitoCast
       when((Object) masterServices.getServerManager().getLoad(sn).
-        getRegionsLoad().get(region.getKey())).thenReturn(regionLoad);
+        getRegionMetrics().get(region.getKey())).thenReturn(regionLoad);
     }
     try {
       when(masterRpcServices.isSplitOrMergeEnabled(any(),

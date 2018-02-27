@@ -30,7 +30,9 @@ ServerManager serverManager;
     java.util.Set;
     java.util.stream.Collectors;
     org.apache.hadoop.hbase.master.HMaster;
-    org.apache.hadoop.hbase.ServerLoad;
+    org.apache.hadoop.hbase.RegionMetrics;
+    org.apache.hadoop.hbase.ServerMetrics;
+    org.apache.hadoop.hbase.Size;
     org.apache.hadoop.hbase.RSGroupTableAccessor;
     org.apache.hadoop.hbase.master.ServerManager;
     org.apache.hadoop.hbase.net.Address;
@@ -45,7 +47,7 @@ List<RSGroupInfo> groups = RSGroupTableAccessor.getAllRSGroupInfo(master.getConn
 
 <%java>
 RSGroupInfo [] rsGroupInfos = groups.toArray(new RSGroupInfo[groups.size()]);
-Map<Address, ServerLoad> collectServers = Collections.emptyMap();
+Map<Address, ServerMetrics> collectServers = Collections.emptyMap();
 if (master.getServerManager() != null) {
   collectServers =
       master.getServerManager().getOnlineServers().entrySet().stream()
@@ -85,7 +87,7 @@ if (master.getServerManager() != null) {
 <%def rsgroup_baseStats>
 <%args>
     RSGroupInfo [] rsGroupInfos;
-    Map<Address, ServerLoad> collectServers;
+    Map<Address, ServerMetrics> collectServers;
 </%args>
 <table class="table table-striped">
 <tr>
@@ -112,13 +114,13 @@ if (master.getServerManager() != null) {
       int numRegionsOnline = 0;
       Set<Address> servers = rsGroupInfo.getServers();
       for (Address server : servers) {
-        ServerLoad sl = collectServers.get(server);
+        ServerMetrics sl = collectServers.get(server);
         if (sl != null) {
-          requestsPerSecond += sl.getNumberOfRequests();
-          numRegionsOnline += sl.getNumberOfRegions();
+          requestsPerSecond += sl.getRequestCountPerSecond();
+          numRegionsOnline += sl.getRegionMetrics().size();
           //rsgroup total
-          totalRegions += sl.getNumberOfRegions();
-          totalRequests += sl.getNumberOfRequests();
+          totalRegions += sl.getRegionMetrics().size();
+          totalRequests += sl.getRequestCountPerSecond();
           totalOnlineServers++;
           onlineServers++;
         } else {
@@ -157,7 +159,7 @@ if (master.getServerManager() != null) {
 <%def rsgroup_memoryStats>
 <%args>
   RSGroupInfo [] rsGroupInfos;
-  Map<Address, ServerLoad> collectServers;
+  Map<Address, ServerMetrics> collectServers;
 </%args>
 <table class="table table-striped">
 <tr>
@@ -174,11 +176,12 @@ if (master.getServerManager() != null) {
       long maxHeap = 0;
       long memstoreSize = 0;
       for (Address server : rsGroupInfo.getServers()) {
-        ServerLoad sl = collectServers.get(server);
+        ServerMetrics sl = collectServers.get(server);
         if (sl != null) {
-          usedHeap += sl.getUsedHeapMB();
-          maxHeap += sl.getMaxHeapMB();
-          memstoreSize += sl.getMemstoreSizeInMB();
+          usedHeap += (long) sl.getUsedHeapSize().get(Size.Unit.MEGABYTE);
+          maxHeap += (long) sl.getMaxHeapSize().get(Size.Unit.MEGABYTE);
+          memstoreSize += (long) sl.getRegionMetrics().values().stream().mapToDouble(
+            rm -> rm.getMemStoreSize().get(Size.Unit.MEGABYTE)).sum();
         }
       }
 </%java>
@@ -201,7 +204,7 @@ if (master.getServerManager() != null) {
 <%def rsgroup_requestStats>
 <%args>
   RSGroupInfo [] rsGroupInfos;
-  Map<Address, ServerLoad> collectServers;
+  Map<Address, ServerMetrics> collectServers;
 </%args>
 <table class="table table-striped">
 <tr>
@@ -217,11 +220,13 @@ if (master.getServerManager() != null) {
       long readRequests = 0;
       long writeRequests = 0;
       for (Address server : rsGroupInfo.getServers()) {
-        ServerLoad sl = collectServers.get(server);
+        ServerMetrics sl = collectServers.get(server);
         if (sl != null) {
-          requestsPerSecond += sl.getNumberOfRequests();
-          readRequests += sl.getReadRequestsCount();
-          writeRequests += sl.getWriteRequestsCount();
+          for (RegionMetrics rm : sl.getRegionMetrics().values()) {
+            readRequests += rm.getReadRequestCount();
+            writeRequests += rm.getWriteRequestCount();
+          }
+          requestsPerSecond += sl.getRequestCountPerSecond();
         }
       }
 </%java>
@@ -241,7 +246,7 @@ if (master.getServerManager() != null) {
 <%def rsgroup_storeStats>
 <%args>
   RSGroupInfo [] rsGroupInfos;
-  Map<Address, ServerLoad> collectServers;
+  Map<Address, ServerMetrics> collectServers;
 </%args>
 <table class="table table-striped">
 <tr>
@@ -264,14 +269,16 @@ if (master.getServerManager() != null) {
       long bloomSize  = 0;
       int count = 0;
       for (Address server : rsGroupInfo.getServers()) {
-        ServerLoad sl = collectServers.get(server);
+        ServerMetrics sl = collectServers.get(server);
         if (sl != null) {
-          numStores += sl.getStores();
-          numStorefiles += sl.getStorefiles();
-          uncompressedStorefileSize += sl.getStoreUncompressedSizeMB();
-          storefileSize += sl.getStorefileSizeInMB();
-          indexSize += sl.getTotalStaticIndexSizeKB();
-          bloomSize += sl.getTotalStaticBloomSizeKB();
+          for (RegionMetrics rm : sl.getRegionMetrics().values()) {
+            numStores += rm.getStoreCount();
+            numStorefiles += rm.getStoreFileCount();
+            uncompressedStorefileSize += rm.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
+            storefileSize += rm.getStoreFileSize().get(Size.Unit.MEGABYTE);
+            indexSize += rm.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
+            bloomSize += rm.getBloomFilterSize().get(Size.Unit.KILOBYTE);
+          }
           count++;
         }
       }
@@ -298,7 +305,7 @@ if (master.getServerManager() != null) {
 <%def rsgroup_compactStats>
 <%args>
   RSGroupInfo [] rsGroupInfos;
-  Map<Address, ServerLoad> collectServers;
+  Map<Address, ServerMetrics> collectServers;
 </%args>
 <table class="table table-striped">
 <tr>
@@ -312,28 +319,30 @@ if (master.getServerManager() != null) {
     for (RSGroupInfo rsGroupInfo: rsGroupInfos) {
       String rsGroupName = rsGroupInfo.getName();
       int numStores = 0;
-      long totalCompactingKVs = 0;
-      long numCompactedKVs = 0;
+      long totalCompactingCells = 0;
+      long totalCompactedCells = 0;
       long remainingKVs = 0;
       long compactionProgress  = 0;
       for (Address server : rsGroupInfo.getServers()) {
-        ServerLoad sl = collectServers.get(server);
+        ServerMetrics sl = collectServers.get(server);
         if (sl != null) {
-          totalCompactingKVs += sl.getTotalCompactingKVs();
-          numCompactedKVs += sl.getCurrentCompactedKVs();
+          for (RegionMetrics rl : sl.getRegionMetrics().values()) {
+            totalCompactingCells += rl.getCompactingCellCount();
+            totalCompactedCells += rl.getCompactedCellCount();
+          }
         }
       }
-      remainingKVs = totalCompactingKVs - numCompactedKVs;
+      remainingKVs = totalCompactingCells - totalCompactedCells;
       String percentDone = "";
-      if  (totalCompactingKVs > 0) {
+      if  (totalCompactingCells > 0) {
            percentDone = String.format("%.2f", 100 *
-              ((float) numCompactedKVs / totalCompactingKVs)) + "%";
+              ((float) totalCompactedCells / totalCompactingCells)) + "%";
       }
 </%java>
 <tr>
 <td><& rsGroupLink; rsGroupName=rsGroupName; &></td>
-<td><% totalCompactingKVs %></td>
-<td><% numCompactedKVs %></td>
+<td><% totalCompactingCells %></td>
+<td><% totalCompactedCells %></td>
 <td><% remainingKVs %></td>
 <td><% percentDone %></td>
 </tr>

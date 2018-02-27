@@ -33,8 +33,6 @@
   import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
-  import="org.apache.hadoop.hbase.RegionLoad"
-  import="org.apache.hadoop.hbase.ServerLoad"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.TableNotFoundException"
@@ -57,16 +55,20 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
+<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
+<%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
+<%@ page import="org.apache.hadoop.hbase.Size" %>
+<%@ page import="org.apache.hadoop.hbase.RegionMetricsBuilder" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
    * region name.
    */
-  private RegionLoad getEmptyRegionLoad(final RegionInfo regionInfo) {
-    return new RegionLoad(ClusterStatusProtos.RegionLoad.newBuilder().
-      setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
-      setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
-      setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
+  private RegionMetrics getEmptyRegionMetrics(final RegionInfo regionInfo) {
+    return RegionMetricsBuilder.toRegionMetrics(ClusterStatusProtos.RegionLoad.newBuilder().
+            setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
+                    setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
+                    setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
   }
 %>
 <%
@@ -84,7 +86,6 @@
   Table table;
   String tableHeader;
   boolean withReplica = false;
-  ServerName rl = metaTableLocator.getMetaRegionLocation(master.getZooKeeper());
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
   int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
@@ -213,18 +214,18 @@ if ( fqtn != null ) {
       float locality = 0.0f;
 
       if (metaLocation != null) {
-        ServerLoad sl = master.getServerManager().getLoad(metaLocation);
+        ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
         // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
         hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
         if (sl != null) {
-          Map<byte[], RegionLoad> map = sl.getRegionsLoad();
+          Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
           if (map.containsKey(meta.getRegionName())) {
-            RegionLoad load = map.get(meta.getRegionName());
-            readReq = String.format("%,1d", load.getReadRequestsCount());
-            writeReq = String.format("%,1d", load.getWriteRequestsCount());
-            fileSize = StringUtils.byteDesc(load.getStorefileSizeMB()*1024l*1024);
-            fileCount = String.format("%,1d", load.getStorefiles());
-            memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
+            RegionMetrics load = map.get(meta.getRegionName());
+            readReq = String.format("%,1d", load.getReadRequestCount());
+            writeReq = String.format("%,1d", load.getWriteRequestCount());
+            fileSize = StringUtils.byteDesc((long) load.getStoreFileSize().get(Size.Unit.BYTE));
+            fileCount = String.format("%,1d", load.getStoreFileCount());
+            memSize = StringUtils.byteDesc((long) load.getMemStoreSize().get(Size.Unit.BYTE));
             locality = load.getDataLocality();
           }
         }
@@ -389,7 +390,7 @@ if ( fqtn != null ) {
   Map<ServerName, Integer> regDistribution = new TreeMap<>();
   Map<ServerName, Integer> primaryRegDistribution = new TreeMap<>();
   List<HRegionLocation> regions = r.getAllRegionLocations();
-  Map<RegionInfo, RegionLoad> regionsToLoad = new LinkedHashMap<>();
+  Map<RegionInfo, RegionMetrics> regionsToLoad = new LinkedHashMap<>();
   Map<RegionInfo, ServerName> regionsToServer = new LinkedHashMap<>();
   for (HRegionLocation hriEntry : regions) {
     RegionInfo regionInfo = hriEntry.getRegionInfo();
@@ -397,28 +398,27 @@ if ( fqtn != null ) {
     regionsToServer.put(regionInfo, addr);
 
     if (addr != null) {
-      ServerLoad sl = master.getServerManager().getLoad(addr);
+      ServerMetrics sl = master.getServerManager().getLoad(addr);
       if (sl != null) {
-        Map<byte[], RegionLoad> map = sl.getRegionsLoad();
-        RegionLoad regionload = map.get(regionInfo.getRegionName());
-        regionsToLoad.put(regionInfo, regionload);
-        if(regionload != null) {
-          totalReadReq += regionload.getReadRequestsCount();
-          totalWriteReq += regionload.getWriteRequestsCount();
-          totalSize += regionload.getStorefileSizeMB();
-          totalStoreFileCount += regionload.getStorefiles();
-          totalMemSize += regionload.getMemStoreSizeMB();
-          totalStoreFileSizeMB += regionload.getStorefileSizeMB();
+        RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
+        regionsToLoad.put(regionInfo, regionMetrics);
+        if(regionMetrics != null) {
+          totalReadReq += regionMetrics.getReadRequestCount();
+          totalWriteReq += regionMetrics.getWriteRequestCount();
+          totalSize += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
+          totalStoreFileCount += regionMetrics.getStoreFileCount();
+          totalMemSize += regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE);
+          totalStoreFileSizeMB += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
         } else {
-          RegionLoad load0 = getEmptyRegionLoad(regionInfo);
+          RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
           regionsToLoad.put(regionInfo, load0);
         }
       } else{
-        RegionLoad load0 = getEmptyRegionLoad(regionInfo);
+        RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
         regionsToLoad.put(regionInfo, load0);
       }
     } else {
-      RegionLoad load0 = getEmptyRegionLoad(regionInfo);
+      RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
       regionsToLoad.put(regionInfo, load0);
     }
   }
@@ -462,156 +462,92 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 </tr>
 
 <%
-  List<Map.Entry<RegionInfo, RegionLoad>> entryList = new ArrayList<>(regionsToLoad.entrySet());
+  List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
   if(sortKey != null) {
     if (sortKey.equals("readrequest")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<RegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<RegionInfo, RegionLoad> entry1,
-                Map.Entry<RegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue() == null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue() == null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getReadRequestsCount() < entry2.getValue().getReadRequestsCount()) {
-                result = -1;
-              } else if (entry1.getValue().getReadRequestsCount() > entry2.getValue().getReadRequestsCount()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
+      Collections.sort(entryList, (entry1, entry2) -> {
+        if (entry1 == null || entry1.getValue() == null) {
+          return -1;
+        } else if (entry2 == null || entry2.getValue() == null) {
+          return 1;
+        }
+        int result = Long.compare(entry1.getValue().getReadRequestCount(),
+                entry2.getValue().getReadRequestCount());
+        if (reverseOrder) {
+          result = -1 * result;
+        }
+        return result;
+      });
     } else if (sortKey.equals("writerequest")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<RegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<RegionInfo, RegionLoad> entry1,
-                Map.Entry<RegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue() == null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue() == null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getWriteRequestsCount() < entry2.getValue()
-                  .getWriteRequestsCount()) {
-                result = -1;
-              } else if (entry1.getValue().getWriteRequestsCount() > entry2.getValue()
-                  .getWriteRequestsCount()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
+      Collections.sort(entryList, (entry1, entry2) -> {
+        if (entry1 == null || entry1.getValue() == null) {
+          return -1;
+        } else if (entry2 == null || entry2.getValue() == null) {
+          return 1;
+        }
+        int result = Long.compare(entry1.getValue().getWriteRequestCount(),
+                entry2.getValue().getWriteRequestCount());
+        if (reverseOrder) {
+          result = -1 * result;
+        }
+        return result;
+      });
     } else if (sortKey.equals("size")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<RegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<RegionInfo, RegionLoad> entry1,
-                Map.Entry<RegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue() == null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue() == null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getStorefileSizeMB() < entry2.getValue()
-                  .getStorefileSizeMB()) {
-                result = -1;
-              } else if (entry1.getValue().getStorefileSizeMB() > entry2
-                  .getValue().getStorefileSizeMB()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
+      Collections.sort(entryList, (entry1, entry2) -> {
+        if (entry1 == null || entry1.getValue() == null) {
+          return -1;
+        } else if (entry2 == null || entry2.getValue() == null) {
+          return 1;
+        }
+        int result = Double.compare(entry1.getValue().getStoreFileSize().get(),
+                entry2.getValue().getStoreFileSize().get());
+        if (reverseOrder) {
+          result = -1 * result;
+        }
+        return result;
+      });
     } else if (sortKey.equals("filecount")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<RegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<RegionInfo, RegionLoad> entry1,
-                Map.Entry<RegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue() == null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue() == null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getStorefiles() < entry2.getValue()
-                  .getStorefiles()) {
-                result = -1;
-              } else if (entry1.getValue().getStorefiles() > entry2.getValue()
-                  .getStorefiles()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
+      Collections.sort(entryList, (entry1, entry2) -> {
+        if (entry1 == null || entry1.getValue() == null) {
+          return -1;
+        } else if (entry2 == null || entry2.getValue() == null) {
+          return 1;
+        }
+        int result = Integer.compare(entry1.getValue().getStoreCount(),
+                entry2.getValue().getStoreCount());
+        if (reverseOrder) {
+          result = -1 * result;
+        }
+        return result;
+      });
     } else if (sortKey.equals("memstore")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<RegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<RegionInfo, RegionLoad> entry1,
-                Map.Entry<RegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue()==null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue()==null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getMemStoreSizeMB() < entry2.getValue()
-                  .getMemStoreSizeMB()) {
-                result = -1;
-              } else if (entry1.getValue().getMemStoreSizeMB() > entry2
-                  .getValue().getMemStoreSizeMB()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
+      Collections.sort(entryList, (entry1, entry2) -> {
+        if (entry1 == null || entry1.getValue() == null) {
+          return -1;
+        } else if (entry2 == null || entry2.getValue() == null) {
+          return 1;
+        }
+        int result = Double.compare(entry1.getValue().getMemStoreSize().get(),
+                entry2.getValue().getMemStoreSize().get());
+        if (reverseOrder) {
+          result = -1 * result;
+        }
+        return result;
+      });
     } else if (sortKey.equals("locality")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<RegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<RegionInfo, RegionLoad> entry1,
-                Map.Entry<RegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue()==null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue()==null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getDataLocality() < entry2.getValue()
-                  .getDataLocality()) {
-                result = -1;
-              } else if (entry1.getValue().getDataLocality() > entry2
-                  .getValue().getDataLocality()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
+      Collections.sort(entryList, (entry1, entry2) -> {
+        if (entry1 == null || entry1.getValue() == null) {
+          return -1;
+        } else if (entry2 == null || entry2.getValue() == null) {
+          return 1;
+        }
+        int result = Double.compare(entry1.getValue().getDataLocality(),
+                entry2.getValue().getDataLocality());
+        if (reverseOrder) {
+          result = -1 * result;
+        }
+        return result;
+      });
     }
   }
   numRegions = regions.size();
@@ -620,10 +556,10 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   if (numRegionsToRender < 0) {
     numRegionsToRender = numRegions;
   }
-  for (Map.Entry<RegionInfo, RegionLoad> hriEntry : entryList) {
+  for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
     RegionInfo regionInfo = hriEntry.getKey();
     ServerName addr = regionsToServer.get(regionInfo);
-    RegionLoad load = hriEntry.getValue();
+    RegionMetrics load = hriEntry.getValue();
     String readReq = "N/A";
     String writeReq = "N/A";
     String regionSize = "N/A";
@@ -631,16 +567,16 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
     String memSize = "N/A";
     float locality = 0.0f;
     if(load != null) {
-      readReq = String.format("%,1d", load.getReadRequestsCount());
-      writeReq = String.format("%,1d", load.getWriteRequestsCount());
-      regionSize = StringUtils.byteDesc(load.getStorefileSizeMB()*1024l*1024);
-      fileCount = String.format("%,1d", load.getStorefiles());
-      memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
+      readReq = String.format("%,1d", load.getReadRequestCount());
+      writeReq = String.format("%,1d", load.getWriteRequestCount());
+      regionSize = StringUtils.byteDesc((long) load.getStoreFileSize().get(Size.Unit.BYTE));
+      fileCount = String.format("%,1d", load.getStoreFileCount());
+      memSize = StringUtils.byteDesc((long) load.getMemStoreSize().get(Size.Unit.BYTE));
       locality = load.getDataLocality();
     }
 
     if (addr != null) {
-      ServerLoad sl = master.getServerManager().getLoad(addr);
+      ServerMetrics sl = master.getServerManager().getLoad(addr);
       // This port might be wrong if RS actually ended up using something else.
       urlRegionServer =
           "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";

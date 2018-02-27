@@ -124,8 +124,8 @@ public class TestRSGroupsOfflineMode {
       LOG.info("Waiting for region unassignments on failover RS...");
       TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
         @Override public boolean evaluate() throws Exception {
-          return master.getServerManager().getLoad(failoverRS.getServerName())
-              .getRegionsLoad().size() > 0;
+          return !master.getServerManager().getLoad(failoverRS.getServerName())
+              .getRegionMetrics().isEmpty();
         }
       });
     }
