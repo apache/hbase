@@ -208,7 +208,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
         }
       }
     }
-    LOG.info("Start " + this + "; " + regionNode.toShortString() +
+    LOG.info("Starting " + this + "; " + regionNode.toShortString() +
         "; forceNewPlan=" + this.forceNewPlan +
         ", retain=" + retain);
     env.getAssignmentManager().queueAssign(regionNode);
