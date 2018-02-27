@@ -28,6 +28,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.StateMachineProcedureData;
 
 /**
@@ -251,6 +254,16 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
 
   protected TState getCurrentState() {
     return stateCount > 0 ? getState(states[stateCount-1]) : getInitialState();
+  }
+
+  /**
+   * This method is used from test code as it cannot be assumed that state transition will happen
+   * sequentially. Some procedures may skip steps/ states, some may add intermediate steps in
+   * future.
+   */
+  @VisibleForTesting
+  public int getCurrentStateId() {
+    return getStateId(getCurrentState());
   }
 
   /**
