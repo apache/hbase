@@ -27,7 +27,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.client.Admin;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -61,13 +61,12 @@ public class TestRegionLoad {
   private static final TableName TABLE_2 = TableName.valueOf("table_2");
   private static final TableName TABLE_3 = TableName.valueOf("table_3");
   private static final TableName[] tables = new TableName[]{TABLE_1, TABLE_2, TABLE_3};
-  private static final int MSG_INTERVAL = 500; // ms
 
   @BeforeClass
   public static void beforeClass() throws Exception {
     // Make servers report eagerly. This test is about looking at the cluster status reported.
     // Make it so we don't have to wait around too long to see change.
-    UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", MSG_INTERVAL);
+    UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 500);
     UTIL.startMiniCluster(4);
     admin = UTIL.getAdmin();
     admin.setBalancerRunning(false, true);
@@ -118,13 +117,11 @@ public class TestRegionLoad {
       }
       checkRegionsAndRegionLoads(tableRegions, regionLoads);
     }
+    int pause = UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3000);
 
     // Just wait here. If this fixes the test, come back and do a better job.
     // Would have to redo the below so can wait on cluster status changing.
-    // Admin#getClusterMetrics retrieves data from HMaster. Admin#getRegionMetrics, by contrast,
-    // get the data from RS. Hence, it will fail if we do the assert check before RS has done
-    // the report.
-    TimeUnit.MILLISECONDS.sleep(3 * MSG_INTERVAL);
+    Threads.sleep(2 * pause);
 
     // Check RegionLoad matches the regionLoad from ClusterStatus
     ClusterStatus clusterStatus
@@ -136,10 +133,10 @@ public class TestRegionLoad {
           (v1, v2) -> {
             throw new RuntimeException("impossible!!");
           }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
-      LOG.debug("serverName=" + serverName + ", getRegionLoads=" +
+      LOG.info("serverName=" + serverName + ", getRegionLoads=" +
           serverLoad.getRegionsLoad().keySet().stream().map(r -> Bytes.toString(r)).
               collect(Collectors.toList()));
-      LOG.debug("serverName=" + serverName + ", regionLoads=" +
+      LOG.info("serverName=" + serverName + ", regionLoads=" +
           regionLoads.keySet().stream().map(r -> Bytes.toString(r)).
               collect(Collectors.toList()));
       compareRegionLoads(serverLoad.getRegionsLoad(), regionLoads);
