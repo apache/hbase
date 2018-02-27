@@ -254,8 +254,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
     String backupIdIncMultiple2 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdIncMultiple2));
-
-    // #4 Merge backup images with failures
+        // #4 Merge backup images with failures
 
     for (FailurePhase phase : FailurePhase.values()) {
       Configuration conf = conn.getConfiguration();
@@ -294,7 +293,6 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         LOG.debug("Expected :"+ e.getMessage());
       }
     }
-
     // Now merge w/o failures
     Configuration conf = conn.getConfiguration();
     conf.unset(FAILURE_PHASE_KEY);

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup.mapreduce;
 
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -29,7 +30,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupMergeJob;
@@ -40,6 +43,8 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -113,6 +118,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         // Find input directories for table
         Path[] dirPaths = findInputDirectories(fs, backupRoot, tableNames[i], backupIds);
         String dirs = StringUtils.join(dirPaths, ",");
+
         Path bulkOutputPath =
             BackupUtils.getBulkOutputDir(BackupUtils.getFileNameCompatibleString(tableNames[i]),
               getConf(), false);
@@ -243,19 +249,59 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   protected void moveData(FileSystem fs, String backupRoot, Path bulkOutputPath,
           TableName tableName, String mergedBackupId) throws IllegalArgumentException, IOException {
     Path dest =
-        new Path(HBackupFileSystem.getTableBackupDataDir(backupRoot, mergedBackupId, tableName));
+        new Path(HBackupFileSystem.getTableBackupDir(backupRoot, mergedBackupId, tableName));
 
-    // Delete all in dest
-    if (!fs.delete(dest, true)) {
+    // Delete all *data* files in dest
+    if (!deleteData(fs, dest)) {
       throw new IOException("Could not delete " + dest);
     }
 
     FileStatus[] fsts = fs.listStatus(bulkOutputPath);
     for (FileStatus fst : fsts) {
       if (fst.isDirectory()) {
-        fs.rename(fst.getPath().getParent(), dest);
+        String family =  fst.getPath().getName();
+        Path newDst = new Path(dest, family);
+        if (fs.exists(newDst)) {
+          if (!fs.delete(newDst, true)) {
+            throw new IOException("failed to delete :"+ newDst);
+          }
+        }
+        fs.rename(fst.getPath(), dest);
       }
     }
+  }
+
+  /**
+   * Deletes only data files and keeps all META
+   * @param fs file system instance
+   * @param dest destination location
+   * @return true, if success, false - otherwise
+   * @throws FileNotFoundException exception
+   * @throws IOException exception
+   */
+  private boolean deleteData(FileSystem fs, Path dest) throws FileNotFoundException, IOException {
+    RemoteIterator<LocatedFileStatus> it = fs.listFiles(dest, true);
+    List<Path> toDelete = new ArrayList<Path>();
+    while (it.hasNext()) {
+      Path p = it.next().getPath();
+      if (fs.isDirectory(p)) {
+        continue;
+      }
+      // Keep meta
+      String fileName  = p.toString();
+      if (fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0 ||
+          fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0) {
+        continue;
+      }
+      toDelete.add(p);
+    }
+    for (Path p : toDelete) {
+      boolean result = fs.delete(p, false);
+      if (!result) {
+        return false;
+      }
+    }
+    return true;
   }
 
   protected String findMostRecentBackupId(String[] backupIds) {
@@ -291,12 +337,12 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
     for (String backupId : backupIds) {
       Path fileBackupDirPath =
-          new Path(HBackupFileSystem.getTableBackupDataDir(backupRoot, backupId, tableName));
+          new Path(HBackupFileSystem.getTableBackupDir(backupRoot, backupId, tableName));
       if (fs.exists(fileBackupDirPath)) {
         dirs.add(fileBackupDirPath);
       } else {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("File: " + fileBackupDirPath + " does not exist.");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("File: " + fileBackupDirPath + " does not exist.");
         }
       }
     }

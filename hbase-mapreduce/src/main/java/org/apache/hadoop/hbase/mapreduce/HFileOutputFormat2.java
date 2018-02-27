@@ -258,15 +258,19 @@ public class HFileOutputFormat2
         } else {
           tableNameBytes = Bytes.toBytes(writeTableNames);
         }
+        String tableName = Bytes.toString(tableNameBytes);
+        Path tableRelPath = getTableRelativePath(tableNameBytes);
         byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableNameBytes, family);
+
         WriterLength wl = this.writers.get(tableAndFamily);
 
         // If this is a new column family, verify that the directory exists
         if (wl == null) {
           Path writerPath = null;
           if (writeMultipleTables) {
-            writerPath = new Path(outputDir, new Path(Bytes.toString(tableNameBytes), Bytes
+            writerPath = new Path(outputDir,new Path(tableRelPath, Bytes
                     .toString(family)));
+
           }
           else {
             writerPath = new Path(outputDir, Bytes.toString(family));
@@ -289,7 +293,6 @@ public class HFileOutputFormat2
           if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
             HRegionLocation loc = null;
 
-            String tableName = Bytes.toString(tableNameBytes);
             if (tableName != null) {
               try (Connection connection = ConnectionFactory.createConnection(conf);
                      RegionLocator locator =
@@ -341,6 +344,15 @@ public class HFileOutputFormat2
         this.previousRow = rowKey;
       }
 
+      private Path getTableRelativePath(byte[] tableNameBytes) {
+        String tableName = Bytes.toString(tableNameBytes);
+        String[] tableNameParts = tableName.split(":");
+        Path tableRelPath = new Path(tableName.split(":")[0]);
+        if (tableNameParts.length > 1) {
+          tableRelPath = new Path(tableRelPath, tableName.split(":")[1]);
+        }
+        return tableRelPath;
+      }
       private void rollWriters(WriterLength writerLength) throws IOException {
         if (writerLength != null) {
           closeWriter(writerLength);
@@ -376,7 +388,7 @@ public class HFileOutputFormat2
         Path familydir = new Path(outputDir, Bytes.toString(family));
         if (writeMultipleTables) {
           familydir = new Path(outputDir,
-                  new Path(Bytes.toString(tableName), Bytes.toString(family)));
+                  new Path(getTableRelativePath(tableName), Bytes.toString(family)));
         }
         WriterLength wl = new WriterLength();
         Algorithm compression = compressionMap.get(tableAndFamily);
