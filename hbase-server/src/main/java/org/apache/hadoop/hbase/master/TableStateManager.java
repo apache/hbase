@@ -223,7 +223,7 @@ public class TableStateManager {
 
   private void fixTableStates(TableDescriptors tableDescriptors, Connection connection)
       throws IOException {
-    final Map<String, TableDescriptor> allDescriptors = tableDescriptors.getAllDescriptors();
+    final Map<String, TableDescriptor> allDescriptors = tableDescriptors.getAll();
     final Map<String, TableState> states = new HashMap<>();
     // NOTE: Ful hbase:meta table scan!
     MetaTableAccessor.fullScanTables(connection, new MetaTableAccessor.Visitor() {

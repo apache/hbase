@@ -327,11 +327,6 @@ public class MockMasterServices extends MockNoopMasterServices {
         return null;
       }
 
-      @Override public Map<String, TableDescriptor> getAllDescriptors() throws IOException {
-        // noop
-        return null;
-      }
-
       @Override
       public TableDescriptor get(TableName tablename) throws IOException {
         TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tablename);
