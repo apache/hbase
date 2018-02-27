@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 
 /**
@@ -44,7 +45,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
  *
  *  <ol>
  *  <li> Get all regions of a given table
- *  <li> Get avg size S of each region (by total size of store files reported in RegionLoad)
+ *  <li> Get avg size S of each region (by total size of store files reported in RegionMetrics)
  *  <li> Seek every single region one by one. If a region R0 is bigger than S * 2, it is
  *  kindly requested to split. Thereon evaluate the next region R1
  *  <li> Otherwise, if R0 + R1 is smaller than S, R0 and R1 are kindly requested to merge.
@@ -204,12 +205,12 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   private long getRegionSize(RegionInfo hri) {
     ServerName sn = masterServices.getAssignmentManager().getRegionStates().
       getRegionServerOfRegion(hri);
-    RegionLoad regionLoad = masterServices.getServerManager().getLoad(sn).
-      getRegionsLoad().get(hri.getRegionName());
+    RegionMetrics regionLoad = masterServices.getServerManager().getLoad(sn).
+      getRegionMetrics().get(hri.getRegionName());
     if (regionLoad == null) {
       LOG.debug(hri.getRegionNameAsString() + " was not found in RegionsLoad");
       return -1;
     }
-    return regionLoad.getStorefileSizeMB();
+    return (long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE);
   }
 }

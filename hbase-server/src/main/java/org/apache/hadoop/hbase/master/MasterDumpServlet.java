@@ -24,13 +24,10 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
@@ -39,6 +36,7 @@ import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.RSDumpServlet;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MasterDumpServlet extends StateDumpServlet {
@@ -132,8 +130,8 @@ public class MasterDumpServlet extends StateDumpServlet {
       return;
     }
 
-    Map<ServerName, ServerLoad> servers = sm.getOnlineServers();
-    for (Map.Entry<ServerName, ServerLoad> e : servers.entrySet()) {
+    Map<ServerName, ServerMetrics> servers = sm.getOnlineServers();
+    for (Map.Entry<ServerName, ServerMetrics> e : servers.entrySet()) {
       out.println(e.getKey() + ": " + e.getValue());
     }
   }
