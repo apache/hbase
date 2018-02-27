@@ -813,7 +813,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     getChoreService().scheduleChore(balancerChore);
     this.normalizerChore = new RegionNormalizerChore(this);
     getChoreService().scheduleChore(normalizerChore);
-    this.catalogJanitorChore = new CatalogJanitor(this, this);
+    this.catalogJanitorChore = createCatalogJanitor();
     getChoreService().scheduleChore(catalogJanitorChore);
 
     // Do Metrics periodically
@@ -870,6 +870,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
 
     zombieDetector.interrupt();
+  }
+
+  @VisibleForTesting
+  protected CatalogJanitor createCatalogJanitor() {
+    return new CatalogJanitor(this, this);
   }
 
   private void initQuotaManager() throws IOException {
