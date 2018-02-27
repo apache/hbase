@@ -54,8 +54,10 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -377,11 +379,28 @@ public class MasterProcedureTestingUtility {
     //   execute step N - kill before store update
     //   restart executor/store
     //   execute step N - save on store
-    for (int i = 0; i < numSteps; ++i) {
-      LOG.info("Restart " + i + " exec state=" + procExec.getProcedure(procId));
+    // NOTE: currently we make assumption that states/ steps are sequential. There are already
+    // instances of a procedures which skip (don't use) intermediate states/ steps. In future,
+    // intermediate states/ steps can be added with ordinal greater than lastStep. If and when
+    // that happens the states can not be treated as sequential steps and the condition in
+    // following while loop needs to be changed. We can use euqals/ not equals operator to check
+    // if the procedure has reached the user specified state. But there is a possibility that
+    // while loop may not get the control back exaclty when the procedure is in lastStep. Proper
+    // fix would be get all visited states by the procedure and then check if user speccified
+    // state is in that list. Current assumption of sequential proregression of steps/ states is
+    // made at multiple places so we can keep while condition below for simplicity.
+    Procedure proc = procExec.getProcedure(procId);
+    int stepNum = proc instanceof StateMachineProcedure ?
+        ((StateMachineProcedure) proc).getCurrentStateId() : 0;
+    while (stepNum < numSteps) {
+      LOG.info("Restart " + stepNum + " exec state=" + proc);
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
       restartMasterProcedureExecutor(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
+      // Old proc object is stale, need to get the new one after ProcedureExecutor restart
+      proc = procExec.getProcedure(procId);
+      stepNum = proc instanceof StateMachineProcedure ?
+          ((StateMachineProcedure) proc).getCurrentStateId() : stepNum + 1;
     }
 
     assertEquals(expectExecRunning, procExec.isRunning());
