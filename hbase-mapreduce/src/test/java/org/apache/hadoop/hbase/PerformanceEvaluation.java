@@ -527,7 +527,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
       Histogram.class,     // yammer metrics
-      ObjectMapper.class); // jackson-mapper-asl
+      ObjectMapper.class,  // jackson-mapper-asl
+      FilterAllFilter.class // hbase-server tests jar
+      );
 
     TableMapReduceUtil.initCredentials(job);
 
