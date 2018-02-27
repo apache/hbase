@@ -248,7 +248,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * Returns a map from table name to table descriptor for all tables.
    */
   @Override
-  public Map<String, TableDescriptor> getAllDescriptors()
+  public Map<String, TableDescriptor> getAll()
   throws IOException {
     Map<String, TableDescriptor> tds = new TreeMap<>();
 
@@ -279,20 +279,6 @@ public class FSTableDescriptors implements TableDescriptors {
       }
     }
     return tds;
-  }
-
-  /**
-   * Returns a map from table name to table descriptor for all tables.
-   */
-  @Override
-  public Map<String, TableDescriptor> getAll() throws IOException {
-    Map<String, TableDescriptor> htds = new TreeMap<>();
-    Map<String, TableDescriptor> allDescriptors = getAllDescriptors();
-    for (Map.Entry<String, TableDescriptor> entry : allDescriptors
-        .entrySet()) {
-      htds.put(entry.getKey(), entry.getValue());
-    }
-    return htds;
   }
 
   /**

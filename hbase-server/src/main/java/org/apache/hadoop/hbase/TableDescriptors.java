@@ -55,15 +55,6 @@ public interface TableDescriptors {
   throws IOException;
 
   /**
-   * Get Map of all TableDescriptors. Populates the descriptor cache as a
-   * side effect.
-   * @return Map of all descriptors.
-   * @throws IOException
-   */
-  Map<String, TableDescriptor> getAllDescriptors()
-      throws IOException;
-
-  /**
    * Add or update descriptor
    * @param htd Descriptor to set into TableDescriptors
    * @throws IOException
