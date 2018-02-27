@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -30,18 +31,20 @@ import java.util.List;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -50,16 +53,22 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
+import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -93,11 +102,13 @@ public class TestRegionMergeTransactionOnCluster {
 
   private static HMaster master;
   private static Admin admin;
+  static MiniHBaseCluster cluster;
+  static Configuration conf;
 
   static void setupOnce() throws Exception {
     // Start a cluster
     TEST_UTIL.startMiniCluster(NB_SERVERS);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    cluster = TEST_UTIL.getHBaseCluster();
     master = cluster.getMaster();
     master.balanceSwitch(false);
     admin = TEST_UTIL.getHBaseAdmin();
@@ -105,8 +116,9 @@ public class TestRegionMergeTransactionOnCluster {
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
+    conf = TEST_UTIL.getConfiguration();
     // Use ZK for region assignment
-    TEST_UTIL.getConfiguration().setBoolean("hbase.assignment.usezk", true);
+    conf.setBoolean("hbase.assignment.usezk", true);
     setupOnce();
   }
 
@@ -439,5 +451,170 @@ public class TestRegionMergeTransactionOnCluster {
     }
     assertEquals(expectedRegionNum, rowCount);
     scanner.close();
+  }
+
+  /**
+   * A test that intentionally has master fail the processing of the merge message.
+   * Tests that the regionserver merge ephemeral node gets cleaned up if it
+   * crashes and that after we process server shutdown, the parent regions are online and
+   * merged region is cleaned up.
+   */
+  @Test (timeout = 60000)
+  public void testMergeIsRolledBackOnMergeFailure() throws Exception {
+
+    final RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    final ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+
+    final TableName tableName = TableName.valueOf("testMergeIsRolledBackOnMergeFailure");
+    // Create table with 2 regions as its easy for us to merge.
+    createTableAndLoadData(master, tableName, 2, 1);
+    List<HRegion> regions = cluster.getRegions(tableName);
+
+    assertEquals("Table shudn't have more than 2 regions, " + regions, 2, regions.size());
+    final HRegionInfo regionA = regions.get(0).getRegionInfo();
+    final HRegionInfo regionB = regions.get(1).getRegionInfo();
+
+    // Turn off balancer so it doesn't cut in and mess up our placements.
+    admin.setBalancerRunning(false, true);
+    // Turn off the meta scanner so it don't remove parent on us.
+    master.setCatalogJanitorEnabled(false);
+
+    // Start a server and move both the regions to it. We kill this server later.
+    HRegionServer regionServer = cluster.startRegionServer().getRegionServer();
+    moveRegionToServer(regionA, regionServer);
+    moveRegionToServer(regionB, regionServer);
+
+    int serverIndex = cluster.getServerWith(regionA.getRegionName());
+
+    // This helps with server aborts later.
+    TEST_UTIL.compact(tableName, true);
+
+    try {
+      printOutRegions(regionServer, "Initial regions: ");
+
+      // Now, before we merge, set special flag in master, a flag that has
+      // it FAIL the processing of merge.
+      AssignmentManager.setTestSkipMergeHandling(true);
+      admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false);
+
+      // Lets wait until we have a merge region.
+      TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return regionStates.getRegionByStateOfTable(tableName).get(State.MERGING_NEW).size() > 0;
+        }
+      });
+
+      List<HRegionInfo> mergedRegions =
+          regionStates.getRegionByStateOfTable(tableName).get(State.MERGING_NEW);
+      assertEquals("Only one region should be in MERGING_NEW state", 1, mergedRegions.size());
+      final HRegionInfo merge = mergedRegions.get(0);
+
+      // Lets double check if we have the merge Znode with the appr. state.
+      final String path = ZKAssign.getNodeName(zkw, merge.getEncodedName());
+      // Wait till the znode moved to MERGED
+      TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() throws Exception {
+          Stat stats = zkw.getRecoverableZooKeeper().exists(path, false);
+          RegionTransition rt =
+              RegionTransition.parseFrom(ZKAssign.getData(zkw, merge.getEncodedName()));
+          return stats != null && rt.getEventType().equals(EventType.RS_ZK_REGION_MERGED);
+        }
+      });
+
+      // Now crash the server
+      abortServerAndWaitForProcessingToComplete(serverIndex);
+      waitUntilRegionServerDead();
+
+      TEST_UTIL.waitUntilNoRegionsInTransition(waitTime);
+
+      // Lets wait until merge parents are online.
+      TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() {
+          return cluster.getRegions(tableName).size() == 2;
+        }
+      });
+
+      // Check if merge regions is cleaned up.
+      List<HRegionInfo> tableRegions = MetaTableAccessor.getTableRegions(zkw,
+          cluster.getMaster().getConnection(), tableName);
+      assertEquals("Only parent regions should be present, but we have: " + tableRegions,
+          2, tableRegions.size());
+      assertTrue("Merge A not present? " + regionA, tableRegions.contains(regionA));
+      assertTrue("Merge B not present? " + regionB, tableRegions.contains(regionB));
+
+      // Are both merge parents online?
+      assertTrue("region should be online, " + regionA, regionStates.isRegionOnline(regionA));
+      assertTrue("region should be online, " + regionB, regionStates.isRegionOnline(regionB));
+
+      // Have HDFS dirs been cleaned up?
+      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableName);
+      List<Path> regionDirs =
+          FSUtils.getRegionDirs(cluster.getMaster().getFileSystem(), tableDir);
+      assertEquals("Only two region dir should be present, we have, dirs: " + regionDirs,
+          2, regionDirs.size());
+
+      assertTrue("Region dir doesn't belong to region: " + regionA + " dir: " + regionDirs,
+          regionDirs.get(0).getName().endsWith(regionA.getEncodedName())
+              || regionDirs.get(1).getName().endsWith(regionA.getEncodedName()));
+      assertTrue("Region dir doesn't belong to region: " + regionB + " dir: " + regionDirs,
+          regionDirs.get(0).getName().endsWith(regionB.getEncodedName())
+              || regionDirs.get(1).getName().endsWith(regionB.getEncodedName()));
+
+      // The merged Znode should have been cleaned up.
+      Stat stat = zkw.getRecoverableZooKeeper().exists(path, false);
+      assertNull("Merged znode shouldn't exist, but we have stat: " + stat, stat);
+
+    } finally {
+      // Set this flag back.
+      AssignmentManager.setTestSkipMergeHandling(false);
+      admin.setBalancerRunning(true, false);
+      master.setCatalogJanitorEnabled(true);
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  private void moveRegionToServer(final HRegionInfo region, final HRegionServer rs)
+      throws Exception {
+    admin.move(region.getEncodedNameAsBytes(), rs.getServerName().toString().getBytes());
+    TEST_UTIL.waitUntilNoRegionsInTransition(waitTime);
+    TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return rs.getOnlineRegion(region.getRegionName()) != null;
+      }
+    });
+  }
+
+  private void waitUntilRegionServerDead() throws InterruptedException, IOException {
+    // Wait until the master processes the RS shutdown
+    for (int i=0; cluster.getMaster().getClusterStatus().
+        getServers().size() > NB_SERVERS && i<100; i++) {
+      LOG.info("Waiting on server to go down");
+      Thread.sleep(100);
+    }
+    assertFalse("Waited too long for RS to die", cluster.getMaster().getClusterStatus().
+        getServers().size() > NB_SERVERS);
+  }
+
+  private void printOutRegions(final HRegionServer hrs, final String prefix)
+      throws IOException {
+    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
+    for (HRegionInfo region: regions) {
+      LOG.info(prefix + region.getRegionNameAsString());
+    }
+  }
+
+  private void abortServerAndWaitForProcessingToComplete(int serverIndex) throws Exception {
+
+    final HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    cluster.abortRegionServer(serverIndex);
+    TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return master.getServerManager().areDeadServersInProgress();
+      }
+    });
   }
 }
