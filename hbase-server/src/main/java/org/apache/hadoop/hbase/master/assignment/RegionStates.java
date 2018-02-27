@@ -60,6 +60,8 @@ public class RegionStates {
   private static final Logger LOG = LoggerFactory.getLogger(RegionStates.class);
 
   protected static final State[] STATES_EXPECTED_ON_OPEN = new State[] {
+    State.OPEN, // State may already be OPEN if we died after receiving the OPEN from regionserver
+                // but before complete finish of AssignProcedure. HBASE-20100.
     State.OFFLINE, State.CLOSED,      // disable/offline
     State.SPLITTING, State.SPLIT,     // ServerCrashProcedure
     State.OPENING, State.FAILED_OPEN, // already in-progress (retrying)

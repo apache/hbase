@@ -317,6 +317,7 @@ public abstract class RegionTransitionProcedure
 
           case REGION_TRANSITION_FINISH:
             // 3. wait assignment response. completion/failure
+            LOG.debug("Finishing {}; {}", this, regionNode.toShortString());
             finishTransition(env, regionNode);
             am.removeRegionInTransition(regionNode, this);
             return null;
