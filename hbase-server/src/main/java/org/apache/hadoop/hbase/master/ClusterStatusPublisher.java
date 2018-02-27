@@ -134,7 +134,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
   @Override
   protected void chore() {
-    if (!isConnected()) {
+    if (!connected) {
       return;
     }
 
@@ -168,10 +168,6 @@ public class ClusterStatusPublisher extends ScheduledChore {
   protected synchronized void cleanup() {
     connected = false;
     publisher.close();
-  }
-
-  private synchronized boolean isConnected() {
-    return this.connected;
   }
 
   /**

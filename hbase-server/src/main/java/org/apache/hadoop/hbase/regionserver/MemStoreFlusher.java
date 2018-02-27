@@ -90,9 +90,17 @@ class MemStoreFlusher implements FlushRequester {
   private FlushType flushType;
 
   /**
-   * Singleton instance inserted into flush queue used for signaling.
+   * Singleton instance of this class inserted into flush queue.
    */
-  private static final FlushQueueEntry WAKEUPFLUSH_INSTANCE = new FlushQueueEntry() {
+  private static final WakeupFlushThread WAKEUPFLUSH_INSTANCE = new WakeupFlushThread();
+
+  /**
+   * Marker class used as a token inserted into flush queue that ensures the flusher does not sleep.
+   * Create a single instance only.
+   */
+  private static final class WakeupFlushThread implements FlushQueueEntry {
+    private WakeupFlushThread() {}
+
     @Override
     public long getDelay(TimeUnit unit) {
       return 0;
@@ -112,7 +120,7 @@ class MemStoreFlusher implements FlushRequester {
     public int hashCode() {
       return 42;
     }
-  };
+  }
 
 
   /**

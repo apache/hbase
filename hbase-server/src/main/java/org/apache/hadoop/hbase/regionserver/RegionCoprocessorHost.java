@@ -1119,8 +1119,6 @@ public class RegionCoprocessorHost
    * @return true or false to return to client if default processing should be bypassed, or null
    * otherwise
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_BOOLEAN_RETURN_NULL",
-      justification="Null is legit")
   public Boolean preCheckAndPutAfterRowLock(
       final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
       final ByteArrayComparable comparator, final Put put) throws IOException {
@@ -1209,7 +1207,7 @@ public class RegionCoprocessorHost
    * or null otherwise
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_BOOLEAN_RETURN_NULL",
-      justification="Null is legit")
+      justification="TODO: Fix")
   public Boolean preCheckAndDeleteAfterRowLock(final byte[] row, final byte[] family,
       final byte[] qualifier, final CompareOperator op, final ByteArrayComparable comparator,
       final Delete delete) throws IOException {
