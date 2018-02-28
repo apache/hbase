@@ -162,6 +162,18 @@ message ReportProcedureDoneRequest {
 message ReportProcedureDoneResponse {
 }
 
+message FileArchiveNotificationRequest {
+  message FileWithSize {
+    optional TableName table_name = 1;
+    optional string name = 2;
+    optional uint64 size = 3;
+  }
+  repeated FileWithSize archived_files = 1;
+}
+
+message FileArchiveNotificationResponse {
+}
+
 service RegionServerStatusService {
   /** Called when a region server first starts. */
   rpc RegionServerStartup(RegionServerStartupRequest)
@@ -200,4 +212,8 @@ service RegionServerStatusService {
 
   rpc ReportProcedureDone(ReportProcedureDoneRequest)
     returns(ReportProcedureDoneResponse);
+
+  /** Reports files that were moved to the archive directory for space quotas */
+  rpc ReportFileArchival(FileArchiveNotificationRequest)
+    returns(FileArchiveNotificationResponse);
 }

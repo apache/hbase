@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -33,6 +34,11 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 /**
  * A manager for filesystem space quotas in the RegionServer.
@@ -231,6 +237,34 @@ public class RegionServerSpaceQuotaManager {
    */
   public RegionSizeStore getRegionSizeStore() {
     return regionSizeStore;
+  }
+
+  /**
+   * Builds the protobuf message to inform the Master of files being archived.
+   *
+   * @param tn The table the files previously belonged to.
+   * @param archivedFiles The files and their size in bytes that were archived.
+   * @return The protobuf representation
+   */
+  public RegionServerStatusProtos.FileArchiveNotificationRequest buildFileArchiveRequest(
+      TableName tn, Collection<Entry<String,Long>> archivedFiles) {
+    RegionServerStatusProtos.FileArchiveNotificationRequest.Builder builder =
+        RegionServerStatusProtos.FileArchiveNotificationRequest.newBuilder();
+    HBaseProtos.TableName protoTn = ProtobufUtil.toProtoTableName(tn);
+    for (Entry<String,Long> archivedFile : archivedFiles) {
+      RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize fws =
+          RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize.newBuilder()
+              .setName(archivedFile.getKey())
+              .setSize(archivedFile.getValue())
+              .setTableName(protoTn)
+              .build();
+      builder.addArchivedFiles(fws);
+    }
+    final RegionServerStatusProtos.FileArchiveNotificationRequest request = builder.build();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Reporting file archival to Master: " + TextFormat.shortDebugString(request));
+    }
+    return request;
   }
 
   /**

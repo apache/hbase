@@ -3603,4 +3603,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
   }
+
+  public SnapshotQuotaObserverChore getSnapshotQuotaObserverChore() {
+    return this.snapshotQuotaChore;
+  }
 }

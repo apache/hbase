@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.quotas;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,10 +33,15 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.client.SnapshotType;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.SpaceQuotaSnapshotPredicate;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -69,8 +76,15 @@ public class TestLowLatencySpaceQuotas {
     Configuration conf = TEST_UTIL.getConfiguration();
     // The default 1s period for QuotaObserverChore is good.
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
-    // Set the period to read region size from HDFS to be very long
+    // Set the period/delay to read region size from HDFS to be very long
     conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_PERIOD_KEY, 1000 * 120);
+    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_DELAY_KEY, 1000 * 120);
+    // Set the same long period/delay to compute snapshot sizes
+    conf.setInt(SnapshotQuotaObserverChore.SNAPSHOT_QUOTA_CHORE_PERIOD_KEY, 1000 * 120);
+    conf.setInt(SnapshotQuotaObserverChore.SNAPSHOT_QUOTA_CHORE_DELAY_KEY, 1000 * 120);
+    // Clean up the compacted files faster than normal (5s instead of 2mins)
+    conf.setInt("hbase.hfile.compaction.discharger.interval", 5 * 1000);
+
     TEST_UTIL.startMiniCluster(1);
   }
 
@@ -224,5 +238,70 @@ public class TestLowLatencySpaceQuotas {
         return snapshot.getUsage() >= finalTotalSize;
       }
     });
+  }
+
+  @Test
+  public void testSnapshotSizes() throws Exception {
+    TableName tn = helper.createTableWithRegions(1);
+    // Set a quota
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
+        tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    admin.setQuota(settings);
+
+    // Write some data and flush it to disk.
+    final long sizePerBatch = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    helper.writeData(tn, sizePerBatch);
+    admin.flush(tn);
+
+    final String snapshot1 = "snapshot1";
+    admin.snapshot(snapshot1, tn, SnapshotType.SKIPFLUSH);
+
+    // Compute the size of the file for the Region we'll send to archive
+    Region region = Iterables.getOnlyElement(TEST_UTIL.getHBaseCluster().getRegions(tn));
+    List<? extends Store> stores = region.getStores();
+    long summer = 0;
+    for (Store store : stores) {
+      summer += store.getStorefilesSize();
+    }
+    final long storeFileSize = summer;
+
+    // Wait for the table to show the usage
+    TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
+      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        return snapshot.getUsage() == storeFileSize;
+      }
+    });
+
+    // Spoof a "full" computation of snapshot size. Normally the chore handles this, but we want
+    // to test in the absence of this chore.
+    FileArchiverNotifier notifier = TEST_UTIL.getHBaseCluster().getMaster()
+        .getSnapshotQuotaObserverChore().getNotifierForTable(tn);
+    notifier.computeAndStoreSnapshotSizes(Collections.singletonList(snapshot1));
+
+    // Force a major compaction to create a new file and push the old file to the archive
+    TEST_UTIL.compact(tn, true);
+
+    // After moving the old file to archive/, the space of this table should double
+    // We have a new file created by the majc referenced by the table and the snapshot still
+    // referencing the old file.
+    TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
+      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        return snapshot.getUsage() >= 2 * storeFileSize;
+      }
+    });
+
+    try (Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
+      Result r = quotaTable.get(QuotaTableUtil.makeGetForSnapshotSize(tn, snapshot1));
+      assertTrue("Expected a non-null, non-empty Result", r != null && !r.isEmpty());
+      assertTrue(r.advance());
+      assertEquals("The snapshot's size should be the same as the origin store file",
+          storeFileSize, QuotaTableUtil.parseSnapshotSize(r.current()));
+
+      r = quotaTable.get(QuotaTableUtil.createGetNamespaceSnapshotSize(tn.getNamespaceAsString()));
+      assertTrue("Expected a non-null, non-empty Result", r != null && !r.isEmpty());
+      assertTrue(r.advance());
+      assertEquals("The snapshot's size should be the same as the origin store file",
+          storeFileSize, QuotaTableUtil.parseSnapshotSize(r.current()));
+    }
   }
 }
