@@ -483,8 +483,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void logPositionAndCleanOldLogs(Path log, String queueId, long position,
       boolean queueRecovered) {
     String fileName = log.getName();
-    abortWhenFail(
-      () -> this.queueStorage.setWALPosition(server.getServerName(), queueId, fileName, position));
+    abortWhenFail(() -> this.queueStorage.setWALPosition(server.getServerName(), queueId, fileName,
+      position, null));
     cleanOldLogs(fileName, queueId, queueRecovered);
   }
 

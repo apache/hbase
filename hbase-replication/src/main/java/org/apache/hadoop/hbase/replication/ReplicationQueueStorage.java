@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -63,9 +64,19 @@ public interface ReplicationQueueStorage {
    * @param queueId a String that identifies the queue
    * @param fileName name of the WAL
    * @param position the current position in the file
+   * @param lastSeqIds map with {encodedRegionName, sequenceId} pairs for serial replication.
    */
-  void setWALPosition(ServerName serverName, String queueId, String fileName, long position)
-      throws ReplicationException;
+  void setWALPosition(ServerName serverName, String queueId, String fileName, long position,
+      Map<String, Long> lastSeqIds) throws ReplicationException;
+
+  /**
+   * Read the max sequence id of the specific region for a given peer. For serial replication, we
+   * need the max sequenced id to decide whether we can push the next entries.
+   * @param encodedRegionName the encoded region name
+   * @param peerId peer id
+   * @return the max sequence id of the specific region for a given peer.
+   */
+  long getLastSequenceId(String encodedRegionName, String peerId) throws ReplicationException;
 
   /**
    * Get the current position for a specific WAL in a given queue for a given regionserver.
