@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -41,5 +42,10 @@ public class TestZKLessSplitOnCluster extends TestSplitTransactionOnCluster {
   public static void after() throws Exception {
     TestSplitTransactionOnCluster.after();
   }
+  
+  @Override
+  @Test (timeout = 60000)
+  public void testSplitIsRolledBackOnSplitFailure() throws Exception {
+    // TODO: This test will be added later 
+  }
 }
-
