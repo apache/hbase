@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -41,5 +42,11 @@ public class TestZKLessMergeOnCluster extends TestRegionMergeTransactionOnCluste
   @AfterClass
   public static void afterAllTests() throws Exception {
     TestRegionMergeTransactionOnCluster.afterAllTests();
+  }
+  
+  @Test (timeout = 60000)
+  @Override
+  public void testMergeIsRolledBackOnMergeFailure() throws Exception {
+    // TODO: This test will be added later 
   }
 }
