@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -234,7 +233,17 @@ public class FileIOEngine implements IOEngine {
     return fileNum;
   }
 
-  private void refreshFileConnection(int accessFileNum) throws FileNotFoundException {
+  @VisibleForTesting
+  FileChannel[] getFileChannels() {
+    return fileChannels;
+  }
+
+  @VisibleForTesting
+  void refreshFileConnection(int accessFileNum) throws IOException {
+    FileChannel fileChannel = fileChannels[accessFileNum];
+    if (fileChannel != null) {
+      fileChannel.close();
+    }
     rafs[accessFileNum] = new RandomAccessFile(filePaths[accessFileNum], "rw");
     fileChannels[accessFileNum] = rafs[accessFileNum].getChannel();
   }

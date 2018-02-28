@@ -19,10 +19,13 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -128,5 +131,13 @@ public class TestFileIOEngine {
     fileIOEngine.write(ByteBuffer.wrap(data1), offset);
     fileIOEngine.read(ByteBuffer.wrap(data2), offset);
     assertArrayEquals(data1, data2);
+  }
+
+  @Test
+  public void testRefreshFileConnectionClosesConnections() throws IOException {
+    FileChannel fileChannel = fileIOEngine.getFileChannels()[0];
+    assertNotNull(fileChannel);
+    fileIOEngine.refreshFileConnection(0);
+    assertFalse(fileChannel.isOpen());
   }
 }
