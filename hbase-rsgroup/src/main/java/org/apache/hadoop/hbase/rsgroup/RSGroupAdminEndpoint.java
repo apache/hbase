@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -32,6 +31,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -353,6 +353,27 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     }
   }
 
+  boolean rsgroupHasServersOnline(TableDescriptor desc) throws IOException {
+    String groupName =
+        master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
+            .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
+    if (groupName == null) {
+      groupName = RSGroupInfo.DEFAULT_GROUP;
+    }
+    RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
+    if (rsGroupInfo == null) {
+      throw new ConstraintException(
+          "Default RSGroup (" + groupName + ") for this table's " + "namespace does not exist.");
+    }
+
+    for (ServerName onlineServer : master.getServerManager().createDestinationServersList()) {
+      if (rsGroupInfo.getServers().contains(onlineServer.getAddress())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void assignTableToGroup(TableDescriptor desc) throws IOException {
     String groupName =
         master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
@@ -374,6 +395,17 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   /////////////////////////////////////////////////////////////////////////////
   // MasterObserver overrides
   /////////////////////////////////////////////////////////////////////////////
+
+  @Override
+  public void preCreateTableAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableDescriptor desc,
+      final RegionInfo[] regions) throws IOException {
+    if (!desc.getTableName().isSystemTable() && !rsgroupHasServersOnline(desc)) {
+      throw new HBaseIOException("No online servers in the rsgroup, which table " +
+          desc.getTableName().getNameAsString() + " belongs to");
+    }
+  }
 
   // Assign table to default RSGroup.
   @Override
