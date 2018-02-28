@@ -363,6 +363,9 @@ elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter'
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS="org.apache.hadoop.hbase.zookeeper.ZKMainServer"
+  for f in $HBASE_HOME/lib/zkcli/*.jar; do
+    CLASSPATH="${CLASSPATH}:$f";
+  done
 elif [ "$COMMAND" = "backup" ] ; then
   CLASS='org.apache.hadoop.hbase.backup.BackupDriver'
 elif [ "$COMMAND" = "restore" ] ; then

@@ -425,6 +425,7 @@ goto :eof
 
 :zkcli
   set CLASS=org.apache.hadoop.hbase.zookeeper.ZKMainServer
+  set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\lib\zkcli\*
   goto :eof
 
 :mapredcp
