@@ -68,6 +68,7 @@
               <exclude>org.jruby:jruby-complete</exclude>
               <exclude>com.sun.jersey:*</exclude>
               <exclude>com.sun.jersey.contribs:*</exclude>
+              <exclude>jline:jline</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
@@ -103,6 +104,12 @@
       <outputDirectory>lib/ruby</outputDirectory>
       <includes>
         <include>org.jruby:jruby-complete</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/zkcli</outputDirectory>
+      <includes>
+        <include>jline:jline</include>
       </includes>
     </dependencySet>
   </dependencySets>
