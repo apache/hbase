@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -85,6 +87,10 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       "zookeeper.znode.replication.hfile.refs";
   public static final String ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_DEFAULT = "hfile-refs";
 
+  public static final String ZOOKEEPER_ZNODE_REPLICATION_REGIONS_KEY =
+      "zookeeper.znode.replication.regions";
+  public static final String ZOOKEEPER_ZNODE_REPLICATION_REGIONS_DEFAULT = "regions";
+
   /**
    * The name of the znode that contains all replication queues
    */
@@ -95,6 +101,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    */
   private final String hfileRefsZNode;
 
+  private final String regionsZNode;
+
   public ZKReplicationQueueStorage(ZKWatcher zookeeper, Configuration conf) {
     super(zookeeper, conf);
 
@@ -103,6 +111,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_DEFAULT);
     this.queuesZNode = ZNodePaths.joinZNode(replicationZNode, queuesZNodeName);
     this.hfileRefsZNode = ZNodePaths.joinZNode(replicationZNode, hfileRefsZNodeName);
+    this.regionsZNode = ZNodePaths.joinZNode(replicationZNode, conf
+        .get(ZOOKEEPER_ZNODE_REPLICATION_REGIONS_KEY, ZOOKEEPER_ZNODE_REPLICATION_REGIONS_DEFAULT));
   }
 
   private String getRsNode(ServerName serverName) {
@@ -121,6 +131,28 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     return getFileNode(getQueueNode(serverName, queueId), fileName);
   }
 
+  /**
+   * Put all regions under /hbase/replication/regions znode will lead to too many children because
+   * of the huge number of regions in real production environment. So here we use hash of encoded
+   * region name to distribute the znode into multiple znodes. <br>
+   * So the final znode path will be format like this:
+   *
+   * <pre>
+   * /hbase/replication/regions/254/dd04e76a6966d4ffa908ed0586764767-100
+   * </pre>
+   *
+   * The 254 indicate the hash of encoded region name, the 100 indicate the peer id.
+   * @param encodedRegionName the encoded region name.
+   * @param peerId peer id for replication.
+   * @return ZNode path to persist the max sequence id that we've pushed for the given region and
+   *         peer.
+   */
+  private String getSerialReplicationRegionPeerNode(String encodedRegionName, String peerId) {
+    int hash = encodedRegionName.hashCode() & 0x0000FFFF;
+    String hashPath = ZNodePaths.joinZNode(regionsZNode, String.valueOf(hash));
+    return ZNodePaths.joinZNode(hashPath, String.format("%s-%s", encodedRegionName, peerId));
+  }
+
   @Override
   public void removeQueue(ServerName serverName, String queueId) throws ReplicationException {
     try {
@@ -137,8 +169,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     try {
       ZKUtil.createWithParents(zookeeper, getFileNode(serverName, queueId, fileName));
     } catch (KeeperException e) {
-      throw new ReplicationException("Failed to add wal to queue (serverName=" + serverName +
-        ", queueId=" + queueId + ", fileName=" + fileName + ")", e);
+      throw new ReplicationException("Failed to add wal to queue (serverName=" + serverName
+          + ", queueId=" + queueId + ", fileName=" + fileName + ")", e);
     }
   }
 
@@ -157,15 +189,55 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   @Override
-  public void setWALPosition(ServerName serverName, String queueId, String fileName, long position)
-      throws ReplicationException {
+  public void setWALPosition(ServerName serverName, String queueId, String fileName, long position,
+      Map<String, Long> lastSeqIds) throws ReplicationException {
     try {
-      ZKUtil.setData(zookeeper, getFileNode(serverName, queueId, fileName),
-        ZKUtil.positionToByteArray(position));
+      List<ZKUtilOp> listOfOps = new ArrayList<>();
+      listOfOps.add(ZKUtilOp.setData(getFileNode(serverName, queueId, fileName),
+        ZKUtil.positionToByteArray(position)));
+      // Persist the max sequence id(s) of regions for serial replication atomically.
+      if (lastSeqIds != null && lastSeqIds.size() > 0) {
+        for (Entry<String, Long> lastSeqEntry : lastSeqIds.entrySet()) {
+          String peerId = new ReplicationQueueInfo(queueId).getPeerId();
+          String path = getSerialReplicationRegionPeerNode(lastSeqEntry.getKey(), peerId);
+          /*
+           * Make sure the existence of path
+           * /hbase/replication/regions/<hash>/<encoded-region-name>-<peer-id>. As the javadoc in
+           * multiOrSequential() method said, if received a NodeExistsException, all operations will
+           * fail. So create the path here, and in fact, no need to add this operation to listOfOps,
+           * because only need to make sure that update file position and sequence id atomically.
+           */
+          ZKUtil.createWithParents(zookeeper, path);
+          // Persist the max sequence id of region to zookeeper.
+          listOfOps
+              .add(ZKUtilOp.setData(path, ZKUtil.positionToByteArray(lastSeqEntry.getValue())));
+        }
+      }
+      ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
     } catch (KeeperException e) {
-      throw new ReplicationException("Failed to set log position (serverName=" + serverName +
-        ", queueId=" + queueId + ", fileName=" + fileName + ", position=" + position + ")", e);
+      throw new ReplicationException("Failed to set log position (serverName=" + serverName
+          + ", queueId=" + queueId + ", fileName=" + fileName + ", position=" + position + ")", e);
     }
+  }
+
+  @Override
+  public long getLastSequenceId(String encodedRegionName, String peerId)
+      throws ReplicationException {
+    byte[] data;
+    try {
+      data =
+          ZKUtil.getData(zookeeper, getSerialReplicationRegionPeerNode(encodedRegionName, peerId));
+    } catch (KeeperException | InterruptedException e) {
+      throw new ReplicationException("Failed to get the last sequence id(region="
+          + encodedRegionName + ", peerId=" + peerId + ")");
+    }
+    try {
+      return ZKUtil.parseWALPositionFrom(data);
+    } catch (DeserializationException de) {
+      LOG.warn("Failed to parse log position (region=" + encodedRegionName + ", peerId=" + peerId
+          + "), data=" + Bytes.toStringBinary(data));
+    }
+    return HConstants.NO_SEQNUM;
   }
 
   @Override

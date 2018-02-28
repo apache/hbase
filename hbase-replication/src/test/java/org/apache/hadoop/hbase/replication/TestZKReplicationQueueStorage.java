@@ -127,7 +127,7 @@ public class TestZKReplicationQueueStorage {
     List<String> wals1 = STORAGE.getWALsInQueue(serverName1, queue1);
     List<String> wals2 = STORAGE.getWALsInQueue(serverName1, queue2);
     assertEquals(10, wals1.size());
-    assertEquals(10, wals1.size());
+    assertEquals(10, wals2.size());
     for (int i = 0; i < 10; i++) {
       assertThat(wals1, hasItems(getFileName("file1", i)));
       assertThat(wals2, hasItems(getFileName("file2", i)));
@@ -136,8 +136,9 @@ public class TestZKReplicationQueueStorage {
     for (int i = 0; i < 10; i++) {
       assertEquals(0, STORAGE.getWALPosition(serverName1, queue1, getFileName("file1", i)));
       assertEquals(0, STORAGE.getWALPosition(serverName1, queue2, getFileName("file2", i)));
-      STORAGE.setWALPosition(serverName1, queue1, getFileName("file1", i), (i + 1) * 100);
-      STORAGE.setWALPosition(serverName1, queue2, getFileName("file2", i), (i + 1) * 100 + 10);
+      STORAGE.setWALPosition(serverName1, queue1, getFileName("file1", i), (i + 1) * 100, null);
+      STORAGE.setWALPosition(serverName1, queue2, getFileName("file2", i), (i + 1) * 100 + 10,
+        null);
     }
 
     for (int i = 0; i < 10; i++) {

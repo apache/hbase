@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.hamcrest.CoreMatchers.hasItems;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.util.Pair;
@@ -34,6 +37,8 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * White box testing for replication state interfaces. Implementations should extend this class, and
@@ -122,7 +127,7 @@ public abstract class TestReplicationStateBasic {
     assertEquals(0, rqs.getWALsInQueue(server2, "qId1").size());
     assertEquals(5, rqs.getWALsInQueue(server3, "qId5").size());
     assertEquals(0, rqs.getWALPosition(server3, "qId1", "filename0"));
-    rqs.setWALPosition(server3, "qId5", "filename4", 354L);
+    rqs.setWALPosition(server3, "qId5", "filename4", 354L, null);
     assertEquals(354L, rqs.getWALPosition(server3, "qId5", "filename4"));
 
     assertEquals(5, rqs.getWALsInQueue(server3, "qId5").size());
@@ -268,6 +273,47 @@ public abstract class TestReplicationStateBasic {
     // Disconnect peer
     rp.removePeer(ID_ONE);
     assertNumberOfPeers(2);
+  }
+
+  private String getFileName(String base, int i) {
+    return String.format(base + "-%04d", i);
+  }
+
+  @Test
+  public void testPersistLogPositionAndSeqIdAtomically() throws Exception {
+    ServerName serverName1 = ServerName.valueOf("127.0.0.1", 8000, 10000);
+    assertTrue(rqs.getAllQueues(serverName1).isEmpty());
+    String queue1 = "1";
+    String region0 = "region0", region1 = "region1";
+    for (int i = 0; i < 10; i++) {
+      rqs.addWAL(serverName1, queue1, getFileName("file1", i));
+    }
+    List<String> queueIds = rqs.getAllQueues(serverName1);
+    assertEquals(1, queueIds.size());
+    assertThat(queueIds, hasItems("1"));
+
+    List<String> wals1 = rqs.getWALsInQueue(serverName1, queue1);
+    assertEquals(10, wals1.size());
+    for (int i = 0; i < 10; i++) {
+      assertThat(wals1, hasItems(getFileName("file1", i)));
+    }
+
+    for (int i = 0; i < 10; i++) {
+      assertEquals(0, rqs.getWALPosition(serverName1, queue1, getFileName("file1", i)));
+    }
+    assertEquals(HConstants.NO_SEQNUM, rqs.getLastSequenceId(region0, queue1));
+    assertEquals(HConstants.NO_SEQNUM, rqs.getLastSequenceId(region1, queue1));
+
+    for (int i = 0; i < 10; i++) {
+      rqs.setWALPosition(serverName1, queue1, getFileName("file1", i), (i + 1) * 100,
+        ImmutableMap.of(region0, i * 100L, region1, (i + 1) * 100L));
+    }
+
+    for (int i = 0; i < 10; i++) {
+      assertEquals((i + 1) * 100, rqs.getWALPosition(serverName1, queue1, getFileName("file1", i)));
+    }
+    assertEquals(900L, rqs.getLastSequenceId(region0, queue1));
+    assertEquals(1000L, rqs.getLastSequenceId(region1, queue1));
   }
 
   protected void assertConnectedPeerStatus(boolean status, String peerId) throws Exception {
