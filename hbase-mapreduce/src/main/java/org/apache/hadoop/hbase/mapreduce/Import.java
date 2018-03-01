@@ -145,6 +145,8 @@ public class Import extends Configured implements Tool {
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_COMPARETO_USE_OBJECT_EQUALS",
+        justification = "This is wrong, yes, but we should be purging Writables, not fixing them")
     public int compareTo(CellWritableComparable o) {
       return CellComparator.getInstance().compare(this.kv, o.kv);
     }
