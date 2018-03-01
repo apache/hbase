@@ -15,7 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 pipeline {
-  agent any
+  agent {
+    node {
+      label 'ubuntu'
+    }
+  }
   triggers {
     cron('H */6 * * *')  // Run every 6 hours.
   }
@@ -59,14 +63,6 @@ pipeline {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
   stages {
-    stage ('scm checkout') {
-      steps {
-        dir('component') {
-          checkout scm
-        }
-        stash name: 'component', includes: "component/*,component/**/*"
-      }
-    }
     stage ('yetus install') {
       steps {
         sh  '''#!/usr/bin/env bash
@@ -114,14 +110,25 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
         stash name: 'yetus', includes: "yetus-*/*,yetus-*/**/*,tools/personality.sh"
       }
     }
+    stage ('init health results') {
+      steps {
+        // stash with given name for all tests we might run, so that we can unstash all of them even if
+        // we skip some due to e.g. branch-specific JDK or Hadoop support
+        stash name: 'general-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_GENERAL}/doesn't-match"
+        stash name: 'jdk7-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK7}/doesn't-match"
+        stash name: 'hadoop2-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_HADOOP2}/doesn't-match"
+        stash name: 'hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_HADOOP3}/doesn't-match"
+        stash name: 'srctarball-result', allowEmpty: true, includes: "output-srctarball/doesn't-match"
+      }
+    }
     stage ('health checks') {
       parallel {
         stage ('yetus general check') {
-  agent {
-    node {
-      label 'Hadoop'
-    }
-  }
+          agent {
+            node {
+              label 'Hadoop'
+            }
+          }
           environment {
             // TODO does hadoopcheck need to be jdk specific?
             // Should be things that work with multijdk
@@ -134,7 +141,9 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           steps {
             unstash 'yetus'
-            unstash 'component'
+            dir('component') {
+              checkout scm
+            }
             sh '''#!/usr/bin/env bash
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
@@ -156,6 +165,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           post {
             always {
+              stash name: 'general-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               // Has to be relative to WORKSPACE.
               archive "${env.OUTPUT_DIR_RELATIVE}/*"
               archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -172,11 +182,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
         }
         stage ('yetus jdk7 checks') {
-  agent {
-    node {
-      label 'Hadoop'
-    }
-  }
+          agent {
+            node {
+              label 'Hadoop'
+            }
+          }
           when {
             branch 'branch-1*'
           }
@@ -188,7 +198,9 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           steps {
             unstash 'yetus'
-            unstash 'component'
+            dir('component') {
+              checkout scm
+            }
             sh '''#!/usr/bin/env bash
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
@@ -209,6 +221,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           post {
             always {
+              stash name: 'jdk7-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
               // zip surefire reports.
               sh '''#!/bin/bash -e
@@ -240,11 +253,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
         }
         stage ('yetus jdk8 hadoop2 checks') {
-  agent {
-    node {
-      label 'Hadoop'
-    }
-  }
+          agent {
+            node {
+              label 'Hadoop'
+            }
+          }
           environment {
             TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
@@ -255,7 +268,9 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           steps {
             unstash 'yetus'
-            unstash 'component'
+            dir('component') {
+              checkout scm
+            }
             sh '''#!/usr/bin/env bash
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
@@ -276,6 +291,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           post {
             always {
+              stash name: 'hadoop2-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
               // zip surefire reports.
               sh '''#!/bin/bash -e
@@ -307,11 +323,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
         }
         stage ('yetus jdk8 hadoop3 checks') {
-  agent {
-    node {
-      label 'Hadoop'
-    }
-  }
+          agent {
+            node {
+              label 'Hadoop'
+            }
+          }
           when {
             not {
               branch 'branch-1*'
@@ -329,7 +345,9 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           steps {
             unstash 'yetus'
-            unstash 'component'
+            dir('component') {
+              checkout scm
+            }
             sh '''#!/usr/bin/env bash
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
@@ -350,6 +368,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           post {
             always {
+              stash name: 'hadoop3-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               // Not sure how two junit test reports will work. Disabling this for now.
               // junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
               // zip surefire reports.
@@ -397,6 +416,9 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
               rm -rf ".m2-for-src" && mkdir ".m2-for-src"
 '''
+            dir('component') {
+              checkout scm
+            }
             sh '''#!/usr/bin/env bash
               rm -rf "output-srctarball/machine" && mkdir "output-srctarball/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "output-srctarball/machine"
@@ -417,6 +439,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           post {
             always {
+              stash name: 'srctarball-result', includes: "output-srctarball/commentfile"
               archive 'output-srctarball/*'
             }
           }
@@ -428,6 +451,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
     always {
       script {
          try {
+           unstash 'general-result'
+           unstash 'jdk7-result'
+           unstash 'hadoop2-result'
+           unstash 'hadoop3-result'
+           unstash 'srctarball-result'
            sh "printenv"
            def results = ["${env.OUTPUT_DIR_RELATIVE_GENERAL}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK7}/commentfile",
@@ -438,15 +466,15 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
            echo env.BUILD_URL
            echo currentBuild.result
            echo currentBuild.durationString
-           def comment = "Results for branch ${env.BRANCH_NAME}, done in ${currentBuild.durationString}\n"
-           comment += "\t[build ${currentBuild.displayName} on builds.a.o|${env.BUILD_URL}]:\n----\ndetails (if available):\n\n"
+           def comment = "Results for branch ${env.BRANCH_NAME}\n"
+           comment += "\t[build ${currentBuild.displayName} on builds.a.o|${env.BUILD_URL}]: "
            if (currentBuild.result == "SUCCESS") {
-              comment += "(/) *{color:green}+1 overall{color}*\n\n"
+              comment += "(/) *{color:green}+1 overall{color}*\n"
            } else {
               comment += "(x) *{color:red}-1 overall{color}*\n"
               // Ideally get the committer our of the change and @ mention them in the per-jira comment
-              comment += "    Committer, please check your recent inclusion of a patch for this issue.\n\n"
            }
+           comment += "----\ndetails (if available):\n\n"
            echo ""
            echo "[DEBUG] trying to aggregate step-wise results"
            comment += results.collect { fileExists(file: it) ? readFile(file: it) : "" }.join("\n\n")
