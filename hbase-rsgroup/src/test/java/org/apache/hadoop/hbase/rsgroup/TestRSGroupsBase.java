@@ -999,4 +999,47 @@ public abstract class TestRSGroupsBase {
     assertFalse(newGroupServers.contains(targetServer.getAddress()));
     assertEquals(2, newGroupServers.size());
   }
+
+  @Test
+  public void testCreateWhenRsgroupNoOnlineServers() throws Exception {
+    LOG.info("testCreateWhenRsgroupNoOnlineServers");
+
+    // set rsgroup has no online servers and test create table
+    final RSGroupInfo appInfo = addGroup("appInfo", 1);
+    Iterator<Address> iterator = appInfo.getServers().iterator();
+    List<ServerName> serversToDecommission = new ArrayList<>();
+    ServerName targetServer = ServerName.parseServerName(iterator.next().toString());
+    AdminProtos.AdminService.BlockingInterface targetRS =
+        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
+    targetServer = ProtobufUtil.toServerName(
+        targetRS.getServerInfo(null, GetServerInfoRequest.newBuilder().build()).getServerInfo()
+            .getServerName());
+    assertTrue(master.getServerManager().getOnlineServers().containsKey(targetServer));
+    serversToDecommission.add(targetServer);
+    admin.decommissionRegionServers(serversToDecommission, true);
+    assertEquals(1, admin.listDecommissionedRegionServers().size());
+
+    final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
+    admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor("f"));
+    try {
+      admin.createTable(desc);
+      fail("Shouldn't create table successfully!");
+    } catch (Exception e) {
+      LOG.debug("create table error", e);
+    }
+
+    // recommission and test create table
+    admin.recommissionRegionServer(targetServer, null);
+    assertEquals(0, admin.listDecommissionedRegionServers().size());
+    admin.createTable(desc);
+    // wait for created table to be assigned
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        return getTableRegionMap().get(desc.getTableName()) != null;
+      }
+    });
+  }
 }
