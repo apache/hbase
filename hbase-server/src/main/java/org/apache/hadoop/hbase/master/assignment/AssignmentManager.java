@@ -1727,15 +1727,15 @@ public class AssignmentManager implements ServerListener {
     }
 
     // TODO: Optimize balancer. pass a RegionPlan?
-    final HashMap<RegionInfo, ServerName> retainMap = new HashMap<>();
-    final List<RegionInfo> userHRIs = new ArrayList<>(regions.size());
+    final HashMap<RegionInfo, ServerName> retainPlan = new HashMap<>();
+    final List<RegionInfo> userRegionInfos = new ArrayList<>();
     // Regions for system tables requiring reassignment
-    final List<RegionInfo> systemHRIs = new ArrayList<>();
+    final List<RegionInfo> systemRegionInfos = new ArrayList<>();
     for (RegionStateNode regionStateNode: regions.values()) {
       boolean sysTable = regionStateNode.isSystemTable();
-      final List<RegionInfo> hris = sysTable? systemHRIs: userHRIs;
+      final List<RegionInfo> hris = sysTable? systemRegionInfos: userRegionInfos;
       if (regionStateNode.getRegionLocation() != null) {
-        retainMap.put(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation());
+        retainPlan.put(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation());
       } else {
         hris.add(regionStateNode.getRegionInfo());
       }
@@ -1748,38 +1748,42 @@ public class AssignmentManager implements ServerListener {
     for (int i = 0; servers.size() < 1; ++i) {
       // Report every fourth time around this loop; try not to flood log.
       if (i % 4 == 0) {
-        LOG.warn("No servers available; cannot place " + regions.size() + " unassigned regions.");
+        // Log every 4th time; we wait 250ms below so means every second.
+        LOG.warn("No server available; unable to find a location for " + regions.size() +
+            " regions. waiting...");
       }
 
       if (!isRunning()) {
-        LOG.debug("Stopped! Dropping assign of " + regions.size() + " queued regions.");
+        LOG.debug("Aborting assignment-queue with " + regions.size() + " unassigned");
         return;
       }
       Threads.sleep(250);
+      // Refresh server list.
       servers = master.getServerManager().createDestinationServersList();
     }
 
-    if (!systemHRIs.isEmpty()) {
+    if (!systemRegionInfos.isEmpty()) {
       // System table regions requiring reassignment are present, get region servers
-      // not available for system table regions
+      // not available for system table regions. Here we are filtering out any regionservers
+      // that might be running older versions of the RegionServer; we want system tables on any
+      // newer servers that may be present. Newer servers means we are probably doing a rolling
+      // upgrade.
       final List<ServerName> excludeServers = getExcludedServersForSystemTable();
       List<ServerName> serversForSysTables = servers.stream()
           .filter(s -> !excludeServers.contains(s)).collect(Collectors.toList());
       if (serversForSysTables.isEmpty()) {
-        LOG.warn("Filtering old server versions and the excluded produced an empty set; " +
-            "instead considering all candidate servers!");
+        LOG.warn("All servers excluded! Considering all servers!");
       }
-      LOG.debug("Processing assignQueue; systemServersCount=" + serversForSysTables.size() +
-          ", allServersCount=" + servers.size());
-      processAssignmentPlans(regions, null, systemHRIs,
+      LOG.debug("Candidate servers to host system regions=" + serversForSysTables.size() +
+          "; totalServersCount=" + servers.size());
+      processAssignmentPlans(regions, null, systemRegionInfos,
           serversForSysTables.isEmpty()? servers: serversForSysTables);
     }
-
-    processAssignmentPlans(regions, retainMap, userHRIs, servers);
+    processAssignmentPlans(regions, retainPlan, userRegionInfos, servers);
   }
 
   private void processAssignmentPlans(final HashMap<RegionInfo, RegionStateNode> regions,
-      final HashMap<RegionInfo, ServerName> retainMap, final List<RegionInfo> hris,
+      final HashMap<RegionInfo, ServerName> retain, final List<RegionInfo> hris,
       final List<ServerName> servers) {
     boolean isTraceEnabled = LOG.isTraceEnabled();
     if (isTraceEnabled) {
@@ -1788,15 +1792,15 @@ public class AssignmentManager implements ServerListener {
 
     final LoadBalancer balancer = getBalancer();
     // ask the balancer where to place regions
-    if (retainMap != null && !retainMap.isEmpty()) {
+    if (retain != null && !retain.isEmpty()) {
       if (isTraceEnabled) {
-        LOG.trace("retain assign regions=" + retainMap);
+        LOG.trace("Retain assign regions=" + retain);
       }
       try {
-        acceptPlan(regions, balancer.retainAssignment(retainMap, servers));
+        acceptPlan(regions, balancer.retainAssignment(retain, servers));
       } catch (HBaseIOException e) {
         LOG.warn("unable to retain assignment", e);
-        addToPendingAssignment(regions, retainMap.keySet());
+        addToPendingAssignment(regions, retain.keySet());
       }
     }
 
@@ -1805,12 +1809,12 @@ public class AssignmentManager implements ServerListener {
     if (!hris.isEmpty()) {
       Collections.sort(hris, RegionInfo.COMPARATOR);
       if (isTraceEnabled) {
-        LOG.trace("round robin regions=" + hris);
+        LOG.trace("Round-robin regions=" + hris);
       }
       try {
         acceptPlan(regions, balancer.roundRobinAssignment(hris, servers));
       } catch (HBaseIOException e) {
-        LOG.warn("unable to round-robin assignment", e);
+        LOG.warn("Unable to round-robin assignment", e);
         addToPendingAssignment(regions, hris);
       }
     }
@@ -1822,7 +1826,7 @@ public class AssignmentManager implements ServerListener {
     final long st = System.currentTimeMillis();
 
     if (plan == null) {
-      throw new HBaseIOException("unable to compute plans for regions=" + regions.size());
+      throw new HBaseIOException("Unable to compute plans for " + regions.size() + " regions");
     }
 
     if (plan.isEmpty()) return;
@@ -1858,8 +1862,9 @@ public class AssignmentManager implements ServerListener {
   }
 
   /**
-   * Get a list of servers that this region cannot be assigned to.
-   * For system tables, we must assign them to a server with highest version.
+   * Get a list of servers that this region can NOT be assigned to.
+   * For system tables, we must assign them to a server with highest version (rolling upgrade
+   * scenario).
    */
   public List<ServerName> getExcludedServersForSystemTable() {
     // TODO: This should be a cached list kept by the ServerManager rather than calculated on each

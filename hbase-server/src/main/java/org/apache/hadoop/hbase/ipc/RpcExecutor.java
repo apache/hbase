@@ -327,7 +327,7 @@ public abstract class RpcExecutor {
           int failedCount = failedHandlerCount.incrementAndGet();
           if (this.handlerFailureThreshhold >= 0
               && failedCount > handlerCount * this.handlerFailureThreshhold) {
-            String message = "Number of failed RpcServer handler runs exceeded threshhold "
+            String message = "Number of failed RpcServer handler runs exceeded threshold "
                 + this.handlerFailureThreshhold + "; reason: " + StringUtils.stringifyException(e);
             if (abortable != null) {
               abortable.abort(message, e);

@@ -144,7 +144,7 @@ public class TestClientClusterStatus {
     // live servers = nums of regionservers
     // By default, HMaster don't carry any regions so it won't report its load.
     // Hence, it won't be in the server list.
-    Assert.assertEquals(status.getServers().size(), numRs);
+    Assert.assertEquals(status.getServers().size(), numRs + 1/*Master*/);
     Assert.assertTrue(status.getRegionsCount() > 0);
     Assert.assertNotNull(status.getDeadServerNames());
     Assert.assertEquals(1, status.getDeadServersSize());

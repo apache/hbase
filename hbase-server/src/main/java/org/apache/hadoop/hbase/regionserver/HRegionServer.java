@@ -874,22 +874,15 @@ public class HRegionServer extends HasThread implements
       }
     }
 
-    // In case colocated master, wait here till it's active.
-    // So backup masters won't start as regionservers.
-    // This is to avoid showing backup masters as regionservers
-    // in master web UI, or assigning any region to them.
-    waitForMasterActive();
-    if (isStopped() || isAborted()) {
-      return; // No need for further initialization
-    }
-
-    // watch for snapshots and other procedures
-    try {
-      rspmHost = new RegionServerProcedureManagerHost();
-      rspmHost.loadProcedures(conf);
-      rspmHost.initialize(this);
-    } catch (KeeperException e) {
-      this.abort("Failed to reach coordination cluster when creating procedure handler.", e);
+    // Watch for snapshots and other procedures. Check we have not been stopped before proceeding.
+    if (keepLooping()) {
+      try {
+        rspmHost = new RegionServerProcedureManagerHost();
+        rspmHost.loadProcedures(conf);
+        rspmHost.initialize(this);
+      } catch (KeeperException e) {
+        this.abort("Failed setup of RegionServerProcedureManager.", e);
+      }
     }
   }
 
@@ -930,7 +923,10 @@ public class HRegionServer extends HasThread implements
     }
 
     try {
-      if (!isStopped() && !isAborted()) {
+      // If we are backup server instance, wait till we become active master before proceeding.
+      waitForMasterActive();
+
+      if (keepLooping()) {
         ShutdownHook.install(conf, fs, this, Thread.currentThread());
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
@@ -2139,7 +2135,7 @@ public class HRegionServer extends HasThread implements
    */
   public void stop(final String msg, final boolean force, final User user) {
     if (!this.stopped) {
-      LOG.info("***** STOPPING region server '" + this + "' *****");
+      LOG.info("STOPPING server '" + this);
       if (this.rsHost != null) {
         // when forced via abort don't allow CPs to override
         try {
@@ -2571,7 +2567,7 @@ public class HRegionServer extends HasThread implements
    * @return True if we should break loop because cluster is going down or
    * this server has been stopped or hdfs has gone bad.
    */
-  private boolean keepLooping() {
+  protected boolean keepLooping() {
     return !this.stopped && isClusterUp();
   }
 

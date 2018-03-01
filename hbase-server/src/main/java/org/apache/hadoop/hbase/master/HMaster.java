@@ -653,14 +653,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * If configured to put regions on active master,
-   * wait till a backup master becomes active.
-   * Otherwise, loop till the server is stopped or aborted.
+   * Wait here if backup Master. This avoids showing backup masters as regionservers in master
+   * web UI, or assigning any region to them.
    */
   @Override
-  protected void waitForMasterActive(){
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(conf);
-    while (!(tablesOnMaster && activeMaster) && !isStopped() && !isAborted()) {
+  protected void waitForMasterActive() {
+    while (!this.activeMaster && keepLooping()) {
       sleeper.sleep();
     }
   }

@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
  * It then does kill combinations to make sure the distribution is more than just for startup.
  * NOTE: Regions on Master does not work well. See HBASE-19828. Until addressed, disabling this
  * test.
+ * NOTE: System-tables only on Master doesn't work. TODO.
  */
 @Ignore
 @Category({MediumTests.class})
@@ -111,8 +112,8 @@ public class TestRegionsOnMasterOptions {
     checkBalance(0, rsCount);
   }
 
-  @Ignore // Fix this. The Master startup doesn't allow Master reporting as a RegionServer, not
-  // until way late after the Master startup finishes. Needs more work.
+  @Ignore // Needs a bunch of work. We need to assign meta first and do it ahead of all others.
+  // This special handling messes up being able to host system tables only on Master w/o hacks.
   @Test
   public void testSystemTablesOnMaster() throws Exception {
     c.setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
