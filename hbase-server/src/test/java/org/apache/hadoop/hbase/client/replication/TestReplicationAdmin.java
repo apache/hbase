@@ -254,6 +254,62 @@ public class TestReplicationAdmin {
   }
 
   @Test
+  public void testRemovePeerWithNonDAState() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, Bytes.toBytes("family"));
+    ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder();
+
+    String rootDir = "hdfs://srv1:9999/hbase";
+    builder.setClusterKey(KEY_ONE);
+    builder.setRemoteWALDir(rootDir);
+    builder.setReplicateAllUserTables(false);
+    Map<TableName, List<String>> tableCfs = new HashMap<>();
+    tableCfs.put(tableName, new ArrayList<>());
+    builder.setTableCFsMap(tableCfs);
+    hbaseAdmin.addReplicationPeer(ID_ONE, builder.build());
+    assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_ONE));
+
+    // Transit sync replication state to ACTIVE.
+    hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_ONE, SyncReplicationState.ACTIVE);
+    assertEquals(SyncReplicationState.ACTIVE,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_ONE));
+
+    try {
+      hbaseAdmin.removeReplicationPeer(ID_ONE);
+      fail("Can't remove a synchronous replication peer with state=ACTIVE");
+    } catch (IOException e) {
+      // OK
+    }
+
+    // Transit sync replication state to DA
+    hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_ONE,
+      SyncReplicationState.DOWNGRADE_ACTIVE);
+    assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_ONE));
+    // Transit sync replication state to STANDBY
+    hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_ONE, SyncReplicationState.STANDBY);
+    assertEquals(SyncReplicationState.STANDBY,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_ONE));
+
+    try {
+      hbaseAdmin.removeReplicationPeer(ID_ONE);
+      fail("Can't remove a synchronous replication peer with state=STANDBY");
+    } catch (IOException e) {
+      // OK
+    }
+
+    // Transit sync replication state to DA
+    hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_ONE,
+      SyncReplicationState.DOWNGRADE_ACTIVE);
+    assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_ONE));
+
+    hbaseAdmin.removeReplicationPeer(ID_ONE);
+    assertEquals(0, hbaseAdmin.listReplicationPeers().size());
+  }
+
+  @Test
   public void testAddPeerWithState() throws Exception {
     ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
     rpc1.setClusterKey(KEY_ONE);
@@ -1072,5 +1128,12 @@ public class TestReplicationAdmin {
     } catch (Exception e) {
       // OK
     }
+    hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND,
+      SyncReplicationState.DOWNGRADE_ACTIVE);
+    assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
+    hbaseAdmin.removeReplicationPeer(ID_ONE);
+    hbaseAdmin.removeReplicationPeer(ID_SECOND);
+    assertEquals(0, hbaseAdmin.listReplicationPeers().size());
   }
 }

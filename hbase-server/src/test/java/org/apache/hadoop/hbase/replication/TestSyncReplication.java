@@ -109,7 +109,7 @@ public class TestSyncReplication {
     UTIL1.startMiniCluster(3);
     UTIL2.startMiniCluster(3);
     TableDescriptor td =
-        TableDescriptorBuilder.newBuilder(TABLE_NAME).addColumnFamily(ColumnFamilyDescriptorBuilder
+        TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
           .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
     UTIL1.getAdmin().createTable(td);
     UTIL2.getAdmin().createTable(td);
