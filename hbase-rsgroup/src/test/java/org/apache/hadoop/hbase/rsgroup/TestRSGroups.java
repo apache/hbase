@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
@@ -61,7 +60,7 @@ import static org.junit.Assert.fail;
 @Category({MediumTests.class})
 public class TestRSGroups extends TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroups.class);
-  private static HMaster master;
+
   private static boolean init = false;
   private static RSGroupAdminEndpoint RSGroupAdminEndpoint;
 

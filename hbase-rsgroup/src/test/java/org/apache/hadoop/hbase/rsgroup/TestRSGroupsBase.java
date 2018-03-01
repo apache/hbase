@@ -26,9 +26,14 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -58,13 +63,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 public abstract class TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroupsBase.class);
@@ -79,6 +79,7 @@ public abstract class TestRSGroupsBase {
   protected static HBaseAdmin admin;
   protected static HBaseCluster cluster;
   protected static RSGroupAdmin rsGroupAdmin;
+  protected static HMaster master;
 
   public final static long WAIT_TIMEOUT = 60000*5;
   public final static int NUM_SLAVES_BASE = 4; //number of slaves for the smallest cluster
@@ -964,5 +965,67 @@ public abstract class TestRSGroupsBase {
     Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
     assertFalse(newGroupServers.contains(targetServer.getAddress()));
     assertEquals(2, newGroupServers.size());
+  }
+
+  @Test
+  public void testCreateWhenRsgroupNoOnlineServers() throws Exception {
+    LOG.info("testCreateWhenRsgroupNoOnlineServers");
+    String testRSGroupName = "appInfo";
+
+    // make rsgroup has only one server and stop this server
+    final RSGroupInfo appInfo = addGroup(rsGroupAdmin, testRSGroupName, 1);
+    Iterator<Address> iterator = appInfo.getServers().iterator();
+    ServerName targetServer = ServerName.parseServerName(iterator.next().toString());
+    AdminProtos.AdminService.BlockingInterface targetRS =
+        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
+    targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
+        GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
+    assertEquals(1, rsGroupAdmin.getRSGroupInfo(testRSGroupName).getServers().size());
+    assertTrue(master.getServerManager().getOnlineServers().containsKey(targetServer));
+    try {
+      targetRS.stopServer(null,
+          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
+    } catch(Exception e) {
+    }
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return !master.getServerManager().areDeadServersInProgress()
+            && cluster.getClusterStatus().getDeadServerNames().size() > 0;
+      }
+    });
+    assertTrue(!master.getServerManager().getOnlineServers().containsKey(targetServer));
+
+    // test create table when rsgroup has no online servers
+    final TableName tableName = TableName.valueOf(tablePrefix + "_ns", "_testCreate");
+    admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor("f"));
+    try {
+      admin.createTable(desc);
+      fail("Shouldn't create table successfully!");
+    } catch (Exception e) {
+      LOG.debug("create table error", e);
+    }
+
+    // add another online server to rsgroup, and test create table
+    RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+    Set<Address> set = new HashSet<Address>();
+    for(ServerName sn : master.getServerManager().getOnlineServersList()) {
+      if(defaultInfo.getServers().contains(sn.getAddress())) {
+        set.add(sn.getAddress());
+        break;
+      }
+    }
+    rsGroupAdmin.moveServers(set, testRSGroupName);
+    assertEquals(2, rsGroupAdmin.getRSGroupInfo(testRSGroupName).getServers().size());
+    admin.createTable(desc);
+    // wait for created table to be assigned
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        return getTableRegionMap().get(desc.getTableName()) != null;
+      }
+    });
   }
 }
