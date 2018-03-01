@@ -679,7 +679,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return logRollNeeded;
   }
 
-  private long getSequenceOnRingBuffer() {
+  @VisibleForTesting
+  protected long getSequenceOnRingBuffer() {
     return this.disruptor.getRingBuffer().next();
   }
 
@@ -688,7 +689,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return publishSyncOnRingBuffer(sequence);
   }
 
-  private SyncFuture publishSyncOnRingBuffer(long sequence) {
+  @VisibleForTesting
+  protected SyncFuture publishSyncOnRingBuffer(long sequence) {
     // here we use ring buffer sequence as transaction id
     SyncFuture syncFuture = getSyncFuture(sequence);
     try {
