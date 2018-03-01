@@ -1229,16 +1229,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     if (regions == null || regions.isEmpty()) {
       return assignments;
     }
-    if (!this.tablesOnMaster) {
-      // Make sure Master is not in set of possible servers.
-      if (servers != null && !servers.isEmpty()) {
-        servers.remove(this.masterServerName);
-      }
-    }
 
-    int numServers = servers == null? 0: servers.size();
+    int numServers = servers == null ? 0 : servers.size();
     if (numServers == 0) {
-      LOG.warn("Wanted to round-robin assignment but no server(s) to assign to.");
+      LOG.warn("Wanted to do round robin assignment but no servers to assign to");
       return null;
     }
 

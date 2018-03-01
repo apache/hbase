@@ -884,7 +884,7 @@ public class ServerManager {
     if (isClusterShutdown()) {
       this.master.stop("Cluster shutdown");
     }
-    LOG.info("RegionServer count=" + count + "; waited=" + slept + "ms," +
+    LOG.info("Finished waiting on RegionServer count=" + count + "; waited=" + slept + "ms," +
         " expected min=" + minToStart + " server(s), max=" +  getStrForMax(maxToStart) + " server(s),"+
         " master is "+ (this.master.isStopped() ? "stopped.": "running"));
   }

@@ -260,7 +260,9 @@ public class SplitLogManager {
     if (batch.done != batch.installed) {
       batch.isDead = true;
       SplitLogCounters.tot_mgr_log_split_batch_err.increment();
-      String msg = "Error or interrupted while splitting WALs in " + logDirs + "; task=" + batch;
+      LOG.warn("error while splitting logs in " + logDirs + " installed = " + batch.installed
+          + " but only " + batch.done + " done");
+      String msg = "error or interrupted while splitting logs in " + logDirs + " Task = " + batch;
       status.abort(msg);
       throw new IOException(msg);
     }
@@ -474,7 +476,7 @@ public class SplitLogManager {
 
     @Override
     public String toString() {
-      return ("installed=" + installed + ", done=" + done + ", error=" + error);
+      return ("installed = " + installed + " done = " + done + " error = " + error);
     }
   }
 

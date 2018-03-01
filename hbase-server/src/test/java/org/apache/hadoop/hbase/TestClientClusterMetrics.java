@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -150,7 +149,10 @@ public class TestClientClusterMetrics {
     Assert.assertNotNull(metrics);
     // exclude a dead region server
     Assert.assertEquals(SLAVES -1, numRs);
-    Assert.assertEquals(numRs + 1 /*Master*/, metrics.getLiveServerMetrics().size());
+    // live servers = nums of regionservers
+    // By default, HMaster don't carry any regions so it won't report its load.
+    // Hence, it won't be in the server list.
+    Assert.assertEquals(numRs, metrics.getLiveServerMetrics().size());
     Assert.assertTrue(metrics.getRegionCount() > 0);
     Assert.assertNotNull(metrics.getDeadServerNames());
     Assert.assertEquals(1, metrics.getDeadServerNames().size());

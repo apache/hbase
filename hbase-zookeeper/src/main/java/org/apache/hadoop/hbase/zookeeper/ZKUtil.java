@@ -611,13 +611,13 @@ public final class ZKUtil {
       logRetrievedMsg(zkw, znode, data, false);
       return data;
     } catch (KeeperException.NoNodeException e) {
-      LOG.debug(zkw.prefix("failed to get data of " + znode + " " +
-          "; does not exist (not an error)"));
+      LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
+          "because node does not exist (not an error)"));
       return null;
     } catch (KeeperException e) {
-      LOG.debug(zkw.prefix("failed to get data of " + znode + "; " + e.getMessage()));
-      // Rethrow
-      throw e;
+      LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
+      zkw.keeperException(e);
+      return null;
     }
   }
 
