@@ -254,7 +254,7 @@
             %>
                    <tr>
                      <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
-                     <td><%= sl.getRequestCountPerSecond() %></td>
+                     <td><%= String.format("%.0f", sl.getRequestCountPerSecond()) %></td>
                      <td><%= readRequestCount %></td>
                      <td><%= writeRequestCount %></td>
                    </tr>
