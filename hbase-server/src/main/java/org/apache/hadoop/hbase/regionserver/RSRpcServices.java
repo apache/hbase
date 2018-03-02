@@ -691,7 +691,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           region.getTableDescriptor().getTableName(),
         EnvironmentEdgeManager.currentTime() - before);
     }
-    return r;
+    return r == null ? Result.EMPTY_RESULT : r;
   }
 
   /**
@@ -743,7 +743,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           region.getTableDescriptor().getTableName(),
           EnvironmentEdgeManager.currentTime() - before);
     }
-    return r;
+    return r == null ? Result.EMPTY_RESULT : r;
   }
 
   /**
