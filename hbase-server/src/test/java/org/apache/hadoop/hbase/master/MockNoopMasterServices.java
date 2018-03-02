@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.replication.ReplaySyncReplicationWALManager;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
@@ -472,5 +473,10 @@ public class MockNoopMasterServices implements MasterServices {
   public long transitReplicationPeerSyncReplicationState(String peerId,
     SyncReplicationState clusterState) throws ReplicationException, IOException {
     return 0;
+  }
+
+  @Override
+  public ReplaySyncReplicationWALManager getReplaySyncReplicationWALManager() {
+    return null;
   }
 }

@@ -939,6 +939,11 @@ public abstract class FSUtils extends CommonFSUtils {
     }
   }
 
+  public void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
+      throws IOException {
+    recoverFileLease(fs, p, conf, null);
+  }
+
   /**
    * Recover file lease. Used when a file might be suspect
    * to be had been left open by another process.

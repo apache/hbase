@@ -480,3 +480,25 @@ message TransitPeerSyncReplicationStateStateData {
   optional SyncReplicationState fromState = 1;
   required SyncReplicationState toState = 2;
 }
+
+enum RecoverStandbyState {
+  RENAME_SYNC_REPLICATION_WALS_DIR = 1;
+  INIT_WORKERS = 2;
+  DISPATCH_TASKS = 3;
+  REMOVE_SYNC_REPLICATION_WALS_DIR = 4;
+}
+
+message RecoverStandbyStateData {
+  required string peer_id = 1;
+}
+
+message ReplaySyncReplicationWALStateData {
+  required string peer_id = 1;
+  required string wal = 2;
+  optional ServerName target_server = 3;
+}
+
+message ReplaySyncReplicationWALParameter {
+  required string peer_id = 1;
+  required string wal = 2;
+}

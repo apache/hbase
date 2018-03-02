@@ -138,6 +138,7 @@ import org.apache.hadoop.hbase.master.replication.AddPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
+import org.apache.hadoop.hbase.master.replication.ReplaySyncReplicationWALManager;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStateProcedure;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
@@ -341,6 +342,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // manager of replication
   private ReplicationPeerManager replicationPeerManager;
+
+  private ReplaySyncReplicationWALManager replaySyncReplicationWALManager;
 
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
@@ -849,6 +852,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     initializeMemStoreChunkCreator();
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
+    this.replaySyncReplicationWALManager = new ReplaySyncReplicationWALManager(this);
 
     // enable table descriptors cache
     this.tableDescriptors.setCacheOn();
@@ -3757,5 +3761,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public SnapshotQuotaObserverChore getSnapshotQuotaObserverChore() {
     return this.snapshotQuotaChore;
+  }
+
+  @Override
+  public ReplaySyncReplicationWALManager getReplaySyncReplicationWALManager() {
+    return this.replaySyncReplicationWALManager;
   }
 }

@@ -281,7 +281,14 @@ public enum EventType {
    *
    * RS_REFRESH_PEER
    */
-  RS_REFRESH_PEER (84, ExecutorType.RS_REFRESH_PEER);
+  RS_REFRESH_PEER(84, ExecutorType.RS_REFRESH_PEER),
+
+  /**
+   * RS replay sync replication wal.<br>
+   *
+   * RS_REPLAY_SYNC_REPLICATION_WAL
+   */
+  RS_REPLAY_SYNC_REPLICATION_WAL(85, ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL);
 
   private final int code;
   private final ExecutorType executor;

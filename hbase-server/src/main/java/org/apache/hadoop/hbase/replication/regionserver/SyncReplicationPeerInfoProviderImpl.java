@@ -41,6 +41,9 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
 
   @Override
   public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info) {
+    if (info == null) {
+      return Optional.empty();
+    }
     String peerId = mapping.getPeerId(info);
     if (peerId == null) {
       return Optional.empty();
