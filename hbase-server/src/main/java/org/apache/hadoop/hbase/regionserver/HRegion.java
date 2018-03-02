@@ -1996,7 +1996,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private boolean shouldForbidMajorCompaction() {
     if (rsServices != null && rsServices.getReplicationSourceService() != null) {
       return rsServices.getReplicationSourceService().getSyncReplicationPeerInfoProvider()
-          .checkState(getRegionInfo(), ForbidMajorCompactionChecker.get());
+          .checkState(getRegionInfo().getTable(), ForbidMajorCompactionChecker.get());
     }
     return false;
   }

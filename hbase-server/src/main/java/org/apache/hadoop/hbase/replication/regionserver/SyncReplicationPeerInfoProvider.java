@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.Optional;
 import java.util.function.BiPredicate;
-import org.apache.hadoop.hbase.client.RegionInfo;
+
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,17 +32,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface SyncReplicationPeerInfoProvider {
 
   /**
-   * Return the peer id and remote WAL directory if the region is synchronously replicated and the
+   * Return the peer id and remote WAL directory if the table is synchronously replicated and the
    * state is {@link SyncReplicationState#ACTIVE}.
    */
-  Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info);
+  Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(TableName table);
 
   /**
-   * Check whether the give region is contained in a sync replication peer which can pass the state
+   * Check whether the given table is contained in a sync replication peer which can pass the state
    * checker.
    * <p>
    * Will call the checker with current sync replication state and new sync replication state.
    */
-  boolean checkState(RegionInfo info,
+  boolean checkState(TableName table,
       BiPredicate<SyncReplicationState, SyncReplicationState> checker);
 }

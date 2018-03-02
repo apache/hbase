@@ -29,7 +29,8 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationActive.class);
+      HBaseClassTestRule.forClass(TestSyncReplicationActive.class);
+
 
   @Test
   public void testActive() throws Exception {
@@ -37,13 +38,21 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
       SyncReplicationState.STANDBY);
     UTIL1.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.ACTIVE);
+
+    // confirm that peer with state A will reject replication request.
+    verifyReplicationRequestRejection(UTIL1, true);
+    verifyReplicationRequestRejection(UTIL2, false);
+
     UTIL1.getAdmin().disableReplicationPeer(PEER_ID);
     write(UTIL1, 0, 100);
     Thread.sleep(2000);
     // peer is disabled so no data have been replicated
     verifyNotReplicatedThroughRegion(UTIL2, 0, 100);
+
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);
+    // confirm that peer with state DA will reject replication request.
+    verifyReplicationRequestRejection(UTIL2, true);
     // confirm that the data is there after we convert the peer to DA
     verify(UTIL2, 0, 100);
 
@@ -59,6 +68,8 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     // confirm that we can convert to DA even if the remote slave cluster is down
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);
+    // confirm that peer with state DA will reject replication request.
+    verifyReplicationRequestRejection(UTIL2, true);
     write(UTIL2, 200, 300);
   }
 }

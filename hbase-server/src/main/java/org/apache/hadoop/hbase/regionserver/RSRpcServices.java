@@ -121,6 +121,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequestStateChecker;
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -2204,9 +2205,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
+  private void checkShouldRejectReplicationRequest(List<WALEntry> entries) throws IOException {
+    ReplicationSourceService replicationSource = regionServer.getReplicationSourceService();
+    if (replicationSource == null || entries.isEmpty()) {
+      return;
+    }
+    // We can ensure that all entries are for one peer, so only need to check one entry's
+    // table name. if the table hit sync replication at peer side and the peer cluster
+    // is (or is transiting to) state ACTIVE or DOWNGRADE_ACTIVE, we should reject to apply
+    // those entries according to the design doc.
+    TableName table = TableName.valueOf(entries.get(0).getKey().getTableName().toByteArray());
+    if (replicationSource.getSyncReplicationPeerInfoProvider().checkState(table,
+      RejectReplicationRequestStateChecker.get())) {
+      throw new DoNotRetryIOException(
+          "Reject to apply to sink cluster because sync replication state of sink cluster "
+              + "is ACTIVE or DOWNGRADE_ACTIVE, table: " + table);
+    }
+  }
+
   /**
    * Replicate WAL entries on the region server.
-   *
    * @param controller the RPC controller
    * @param request the request
    * @throws ServiceException
@@ -2220,7 +2238,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (regionServer.replicationSinkHandler != null) {
         requestCount.increment();
         List<WALEntry> entries = request.getEntryList();
-        CellScanner cellScanner = ((HBaseRpcController)controller).cellScanner();
+        checkShouldRejectReplicationRequest(entries);
+        CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         regionServer.getRegionServerCoprocessorHost().preReplicateLogEntries();
         regionServer.replicationSinkHandler.replicateLogEntries(entries, cellScanner,
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
@@ -2435,7 +2454,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   private boolean shouldRejectRequestsFromClient(HRegion region) {
     return regionServer.getReplicationSourceService().getSyncReplicationPeerInfoProvider()
-      .checkState(region.getRegionInfo(), RejectRequestsFromClientStateChecker.get());
+      .checkState(region.getRegionInfo().getTable(), RejectRequestsFromClientStateChecker.get());
   }
 
   private void rejectIfInStandByState(HRegion region) throws DoNotRetryIOException {

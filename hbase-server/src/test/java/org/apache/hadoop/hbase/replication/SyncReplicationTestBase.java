@@ -25,11 +25,13 @@ import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -37,9 +39,15 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -181,5 +189,29 @@ public class SyncReplicationTestBase {
   protected final Path getRemoteWALDir(MasterFileSystem mfs, String peerId) {
     Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
     return new Path(remoteWALDir, PEER_ID);
+  }
+
+  protected void verifyReplicationRequestRejection(HBaseTestingUtility utility,
+      boolean expectedRejection) throws Exception {
+    HRegionServer regionServer = utility.getRSForFirstRegionInTable(TABLE_NAME);
+    ClusterConnection connection = regionServer.getClusterConnection();
+    Entry[] entries = new Entry[10];
+    for (int i = 0; i < entries.length; i++) {
+      entries[i] =
+          new Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TABLE_NAME, 0), new WALEdit());
+    }
+    if (!expectedRejection) {
+      ReplicationProtbufUtil.replicateWALEntry(connection.getAdmin(regionServer.getServerName()),
+        entries, null, null, null);
+    } else {
+      try {
+        ReplicationProtbufUtil.replicateWALEntry(connection.getAdmin(regionServer.getServerName()),
+          entries, null, null, null);
+        Assert.fail("Should throw IOException when sync-replication state is in A or DA");
+      } catch (DoNotRetryIOException e) {
+        Assert.assertTrue(e.getMessage().contains("Reject to apply to sink cluster"));
+        Assert.assertTrue(e.getMessage().contains(TABLE_NAME.toString()));
+      }
+    }
   }
 }

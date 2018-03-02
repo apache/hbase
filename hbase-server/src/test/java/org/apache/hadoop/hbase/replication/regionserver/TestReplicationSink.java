@@ -129,8 +129,7 @@ public class TestReplicationSink {
       TestSourceFSConfigurationProvider.class.getCanonicalName());
 
     TEST_UTIL.startMiniCluster(3);
-    SINK =
-      new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()), STOPPABLE);
+    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()), STOPPABLE);
     table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
     table2 = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAME2);
     Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
@@ -419,7 +418,7 @@ public class TestReplicationSink {
     return builder.build();
   }
 
-  private WALEntry.Builder createWALEntryBuilder(TableName table) {
+  public static WALEntry.Builder createWALEntryBuilder(TableName table) {
     WALEntry.Builder builder = WALEntry.newBuilder();
     builder.setAssociatedCellCount(1);
     WALKey.Builder keyBuilder = WALKey.newBuilder();

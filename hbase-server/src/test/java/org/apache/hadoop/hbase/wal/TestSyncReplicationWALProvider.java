@@ -75,8 +75,8 @@ public class TestSyncReplicationWALProvider {
   public static final class InfoProvider implements SyncReplicationPeerInfoProvider {
 
     @Override
-    public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info) {
-      if (info.getTable().equals(TABLE)) {
+    public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(TableName table) {
+      if (table != null && table.equals(TABLE)) {
         return Optional.of(Pair.newPair(PEER_ID, REMOTE_WAL_DIR));
       } else {
         return Optional.empty();
@@ -84,7 +84,7 @@ public class TestSyncReplicationWALProvider {
     }
 
     @Override
-    public boolean checkState(RegionInfo info,
+    public boolean checkState(TableName table,
         BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
       // TODO Implement SyncReplicationPeerInfoProvider.isInState
       return false;

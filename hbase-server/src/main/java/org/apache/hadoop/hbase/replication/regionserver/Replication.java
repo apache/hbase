@@ -275,7 +275,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     List<ReplicationSourceInterface> oldSources = this.replicationManager.getOldSources();
     for (ReplicationSourceInterface source : oldSources) {
       if (source instanceof ReplicationSource) {
-        sourceMetricsList.add(((ReplicationSource) source).getSourceMetrics());
+        sourceMetricsList.add(source.getSourceMetrics());
       }
     }
 

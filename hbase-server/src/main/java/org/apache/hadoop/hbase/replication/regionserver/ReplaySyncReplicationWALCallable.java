@@ -27,8 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -46,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReplaySyncReplicationWALParameter;
 
 /**
@@ -81,14 +80,19 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
       throw initError;
     }
     LOG.info("Received a replay sync replication wal {} event, peerId={}", wal, peerId);
-    try (Reader reader = getReader()) {
-      List<Entry> entries = readWALEntries(reader);
-      while (!entries.isEmpty()) {
-        Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtbufUtil
-            .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
-        HBaseRpcController controller = new HBaseRpcControllerImpl(pair.getSecond());
-        rs.getRSRpcServices().replicateWALEntry(controller, pair.getFirst());
-        entries = readWALEntries(reader);
+    if (rs.getReplicationSinkService() != null) {
+      try (Reader reader = getReader()) {
+        List<Entry> entries = readWALEntries(reader);
+        while (!entries.isEmpty()) {
+          Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtbufUtil
+              .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
+          ReplicateWALEntryRequest request = pair.getFirst();
+          rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(),
+            pair.getSecond(), request.getReplicationClusterId(),
+            request.getSourceBaseNamespaceDirPath(), request.getSourceHFileArchiveDirPath());
+          // Read next entries.
+          entries = readWALEntries(reader);
+        }
       }
     }
     return null;

@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -93,9 +94,8 @@ public class ReplicationSink {
 
   /**
    * Create a sink for replication
-   *
-   * @param conf                conf object
-   * @param stopper             boolean to tell this thread to stop
+   * @param conf conf object
+   * @param stopper boolean to tell this thread to stop
    * @throws IOException thrown when HDFS goes bad or bad file name
    */
   public ReplicationSink(Configuration conf, Stoppable stopper)
@@ -104,16 +104,15 @@ public class ReplicationSink {
     decorateConf();
     this.metrics = new MetricsSink();
     this.walEntrySinkFilter = setupWALEntrySinkFilter();
-    String className =
-        conf.get("hbase.replication.source.fs.conf.provider",
-          DefaultSourceFSConfigurationProvider.class.getCanonicalName());
+    String className = conf.get("hbase.replication.source.fs.conf.provider",
+      DefaultSourceFSConfigurationProvider.class.getCanonicalName());
     try {
       Class<? extends SourceFSConfigurationProvider> c =
           Class.forName(className).asSubclass(SourceFSConfigurationProvider.class);
       this.provider = c.getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new IllegalArgumentException(
-        "Configured source fs configuration provider class " + className + " throws error.", e);
+          "Configured source fs configuration provider class " + className + " throws error.", e);
     }
   }
 
@@ -178,8 +177,7 @@ public class ReplicationSink {
       Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = null;
 
       for (WALEntry entry : entries) {
-        TableName table =
-            TableName.valueOf(entry.getKey().getTableName().toByteArray());
+        TableName table = TableName.valueOf(entry.getKey().getTableName().toByteArray());
         if (this.walEntrySinkFilter != null) {
           if (this.walEntrySinkFilter.filter(table, entry.getKey().getWriteTime())) {
             // Skip Cells in CellScanner associated with this entry.

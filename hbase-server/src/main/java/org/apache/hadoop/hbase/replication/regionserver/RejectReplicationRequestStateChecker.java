@@ -17,31 +17,29 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import java.util.function.BiPredicate;
+
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used to map region to sync replication peer id.
- * <p>
- * TODO: now only support include table options.
+ * Check whether we need to reject the replication request from source cluster.
  */
 @InterfaceAudience.Private
-class SyncReplicationPeerMappingManager {
+public class RejectReplicationRequestStateChecker
+    implements BiPredicate<SyncReplicationState, SyncReplicationState> {
 
-  private final ConcurrentMap<TableName, String> table2PeerId = new ConcurrentHashMap<>();
+  private static final RejectReplicationRequestStateChecker INST =
+      new RejectReplicationRequestStateChecker();
 
-  void add(String peerId, ReplicationPeerConfig peerConfig) {
-    peerConfig.getTableCFsMap().keySet().forEach(tn -> table2PeerId.put(tn, peerId));
+  @Override
+  public boolean test(SyncReplicationState state, SyncReplicationState newState) {
+    return state == SyncReplicationState.ACTIVE || state == SyncReplicationState.DOWNGRADE_ACTIVE
+        || newState == SyncReplicationState.ACTIVE
+        || newState == SyncReplicationState.DOWNGRADE_ACTIVE;
   }
 
-  void remove(String peerId, ReplicationPeerConfig peerConfig) {
-    peerConfig.getTableCFsMap().keySet().forEach(table2PeerId::remove);
-  }
-
-  String getPeerId(TableName tableName) {
-    return table2PeerId.get(tableName);
+  public static RejectReplicationRequestStateChecker get() {
+    return INST;
   }
 }

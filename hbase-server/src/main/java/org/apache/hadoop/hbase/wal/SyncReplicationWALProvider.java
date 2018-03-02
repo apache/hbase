@@ -33,6 +33,7 @@ import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -160,7 +161,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     }
     WAL wal = null;
     Optional<Pair<String, String>> peerIdAndRemoteWALDir =
-      peerInfoProvider.getPeerIdAndRemoteWALDir(region);
+        peerInfoProvider.getPeerIdAndRemoteWALDir(region.getTable());
     if (peerIdAndRemoteWALDir.isPresent()) {
       Pair<String, String> pair = peerIdAndRemoteWALDir.get();
       wal = getWAL(pair.getFirst(), pair.getSecond());
@@ -273,12 +274,12 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
       implements SyncReplicationPeerInfoProvider {
 
     @Override
-    public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info) {
+    public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(TableName table) {
       return Optional.empty();
     }
 
     @Override
-    public boolean checkState(RegionInfo info,
+    public boolean checkState(TableName table,
         BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
       return false;
     }

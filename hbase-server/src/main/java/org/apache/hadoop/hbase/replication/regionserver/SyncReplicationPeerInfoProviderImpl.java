@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.Optional;
 import java.util.function.BiPredicate;
-import org.apache.hadoop.hbase.client.RegionInfo;
+
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
@@ -40,11 +41,11 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
   }
 
   @Override
-  public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info) {
-    if (info == null) {
+  public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(TableName table) {
+    if (table == null) {
       return Optional.empty();
     }
-    String peerId = mapping.getPeerId(info);
+    String peerId = mapping.getPeerId(table);
     if (peerId == null) {
       return Optional.empty();
     }
@@ -65,9 +66,9 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
   }
 
   @Override
-  public boolean checkState(RegionInfo info,
+  public boolean checkState(TableName table,
       BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
-    String peerId = mapping.getPeerId(info);
+    String peerId = mapping.getPeerId(table);
     if (peerId == null) {
       return false;
     }
