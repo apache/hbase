@@ -85,7 +85,7 @@ def addServers(_options, hostOrServers)
   config = HBaseConfiguration.create
   servers = getServerNames(hostOrServers, config)
 
-  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, 'draining_servers', nil)
+  zkw = org.apache.hadoop.hbase.zookeeper.ZKWatcher.new(config, 'draining_servers', nil)
   parentZnode = zkw.znodePaths.drainingZNode
 
   begin
@@ -102,7 +102,7 @@ def removeServers(_options, hostOrServers)
   config = HBaseConfiguration.create
   servers = getServerNames(hostOrServers, config)
 
-  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, 'draining_servers', nil)
+  zkw = org.apache.hadoop.hbase.zookeeper.ZKWatcher.new(config, 'draining_servers', nil)
   parentZnode = zkw.znodePaths.drainingZNode
 
   begin
@@ -119,7 +119,7 @@ end
 def listServers(_options)
   config = HBaseConfiguration.create
 
-  zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(config, 'draining_servers', nil)
+  zkw = org.apache.hadoop.hbase.zookeeper.ZKWatcher.new(config, 'draining_servers', nil)
   parentZnode = zkw.znodePaths.drainingZNode
 
   servers = ZKUtil.listChildrenNoWatch(zkw, parentZnode)
