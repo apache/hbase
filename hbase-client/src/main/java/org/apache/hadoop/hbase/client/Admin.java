@@ -1545,6 +1545,12 @@ public interface Admin extends Abortable, Closeable {
   void updateConfiguration() throws IOException;
 
   /**
+   * @return current master server name
+   * @throws IOException if a remote or network exception occurs
+   */
+  ServerName getMaster() throws IOException;
+
+  /**
    * Get the info port of the current master if one is available.
    * @return master info port
    * @throws IOException

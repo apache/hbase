@@ -4542,9 +4542,24 @@ public class HBaseAdmin implements Admin {
     }
   }
 
+  /**
+   * @return current master server name
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public ServerName getMaster() throws IOException {
+    ConnectionManager.HConnectionImplementation connection =
+        (ConnectionManager.HConnectionImplementation)this.connection;
+    ZooKeeperKeepAliveConnection zkw = connection.getKeepAliveZooKeeperWatcher();
+    try {
+      return MasterAddressTracker.getMasterAddress(zkw);
+    } catch (Exception e) {
+      throw new IOException("Failed to get master address from MasterAddressTracker", e);
+    }
+  }
+
   @Override
   public int getMasterInfoPort() throws IOException {
-    // TODO: Fix!  Reaching into internal implementation!!!!
     ConnectionManager.HConnectionImplementation connection =
         (ConnectionManager.HConnectionImplementation)this.connection;
     ZooKeeperKeepAliveConnection zkw = connection.getKeepAliveZooKeeperWatcher();
