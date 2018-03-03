@@ -343,7 +343,6 @@ In particular:
 Below we describe how the version dimension in HBase currently works.
 See link:https://issues.apache.org/jira/browse/HBASE-2406[HBASE-2406] for discussion of HBase versions. link:https://www.ngdata.com/bending-time-in-hbase/[Bending time in HBase] makes for a good read on the version, or time, dimension in HBase.
 It has more detail on versioning than is provided here.
-
 As of this writing, the limitation _Overwriting values at existing timestamps_ mentioned in the article no longer holds in HBase.
 This section is basically a synopsis of this article by Bruno Dumon.
 
@@ -504,41 +503,7 @@ Otherwise, a delete marker with a timestamp in the future is kept until the majo
 NOTE: This behavior represents a fix for an unexpected change that was introduced in HBase 0.94, and was fixed in link:https://issues.apache.org/jira/browse/HBASE-10118[HBASE-10118].
 The change has been backported to HBase 0.94 and newer branches.
 
-[[new.version.behavior]]
-=== Optional New Version and Delete behavior in HBase-2.0.0
-
-In `hbase-2.0.0`, the operator can specify an alternate version and
-delete treatment by setting the column descriptor property
-`NEW_VERSION_BEHAVIOR` to true (To set a property on a column family
-descriptor, you must first disable the table and then alter the
-column family descriptor; see <<cf.keep.deleted>> for an example
-of editing an attribute on a column family descriptor).
-
-The 'new version behavior', undoes the limitations listed below
-whereby a `Delete` ALWAYS overshadows a `Put` if at the same
-location -- i.e. same row, column family, qualifier and timestamp
--- regardless of which arrived first. Version accounting is also
-changed as deleted versions are considered toward total version count.
-This is done to ensure results are not changed should a major
-compaction intercede. See `HBASE-15968` and linked issues for
-discussion.
-
-Running with this new configuration currently costs; we factor
-the Cell MVCC on every compare so we burn more CPU. The slow
-down will depend. In testing we've seen between 0% and 25%
-degradation.
-
-If replicating, it is advised that you run with the new
-serial replication feature (See `HBASE-9465`; the serial
-replication feature did NOT make it into `hbase-2.0.0` but
-should arrive in a subsequent hbase-2.x release) as now
-the order in which Mutations arrive is a factor.
-
-
 === Current Limitations
-
-The below limitations are addressed in hbase-2.0.0. See
-the section above, <<new.version.behavior>>.
 
 ==== Deletes mask Puts
 
