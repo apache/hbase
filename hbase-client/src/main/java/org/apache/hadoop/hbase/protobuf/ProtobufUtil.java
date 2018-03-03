@@ -337,11 +337,8 @@ public final class ProtobufUtil {
    * @param se ServiceException that wraps IO exception thrown by the server
    * @return Exception wrapped in ServiceException.
    */
-  public static IOException getServiceException(ServiceException e) {
-    Throwable t = e;
-    if (e instanceof ServiceException) {
-      t = e.getCause();
-    }
+  public static IOException getServiceException(ServiceException se) {
+    Throwable t = se.getCause();
     if (ExceptionUtil.isInterrupt(t)) {
       return ExceptionUtil.asInterrupt(t);
     }
