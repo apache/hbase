@@ -263,7 +263,7 @@ echo "Change set saved to patch ${working_dir}/${CURRENT_HBASE_COMMIT}.patch"
 if [ -n "${publish}" ]; then
   echo "Publishing changes to remote repo..."
   if git push origin asf-site; then
-    "changes pushed."
+    echo "changes pushed."
   else
     echo "Failed to push to asf-site. Website not updated."
     exit 1
