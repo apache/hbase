@@ -25,12 +25,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 
-@Ignore // Disabled because flakey. See HBASE-20006.
 @Category({LargeTests.class, ClientTests.class})
 public class TestRestoreSnapshotFromClientWithRegionReplicas extends
     TestRestoreSnapshotFromClient {
