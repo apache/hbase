@@ -157,13 +157,12 @@ public class StoreFileInfo {
 
   /**
    * Create a Store File Info from an HFileLink
-   * @param conf the {@link Configuration} to use
-   * @param fs The current file system to use.
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
    * @param fileStatus The {@link FileStatus} of the file
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final HFileLink link)
-      throws IOException {
+      final HFileLink link) {
     this.fs = fs;
     this.conf = conf;
     // initialPath can be null only if we get a link.
@@ -175,21 +174,37 @@ public class StoreFileInfo {
 
   /**
    * Create a Store File Info from an HFileLink
-   * @param conf
-   * @param fs
-   * @param fileStatus
-   * @param reference
-   * @throws IOException
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference The reference instance
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final Reference reference)
-      throws IOException {
+      final Reference reference) {
     this.fs = fs;
     this.conf = conf;
     this.initialPath = fileStatus.getPath();
     this.createdTimestamp = fileStatus.getModificationTime();
     this.reference = reference;
     this.link = null;
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink and a Reference
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference The reference instance
+   * @param link The link instance
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+      final Reference reference, final HFileLink link) {
+    this.fs = fs;
+    this.conf = conf;
+    this.initialPath = fileStatus.getPath();
+    this.createdTimestamp = fileStatus.getModificationTime();
+    this.reference = reference;
+    this.link = link;
   }
 
   /**
