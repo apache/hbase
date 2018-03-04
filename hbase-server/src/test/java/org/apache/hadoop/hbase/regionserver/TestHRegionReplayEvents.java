@@ -1538,7 +1538,7 @@ public class TestHRegionReplayEvents {
       .addStoreFlushes(StoreFlushDescriptor.newBuilder()
         .setFamilyName(ByteString.copyFrom(families[0]))
         .setStoreHomeDir("/store_home_dir")
-        .addFlushOutput("/foo/baz/bar")
+        .addFlushOutput("/foo/baz/123")
         .build())
       .build());
   }
@@ -1552,8 +1552,8 @@ public class TestHRegionReplayEvents {
       .setEncodedRegionName(
         ByteString.copyFrom(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
       .setFamilyName(ByteString.copyFrom(families[0]))
-      .addCompactionInput("/foo")
-      .addCompactionOutput("/bar")
+      .addCompactionInput("/123")
+      .addCompactionOutput("/456")
       .setStoreHomeDir("/store_home_dir")
       .setRegionName(ByteString.copyFrom(primaryRegion.getRegionInfo().getRegionName()))
       .build()
@@ -1575,7 +1575,7 @@ public class TestHRegionReplayEvents {
       .addStores(StoreDescriptor.newBuilder()
         .setFamilyName(ByteString.copyFrom(families[0]))
         .setStoreHomeDir("/store_home_dir")
-        .addStoreFile("/foo")
+        .addStoreFile("/123")
         .build())
       .build());
   }
@@ -1592,7 +1592,7 @@ public class TestHRegionReplayEvents {
       .addStores(StoreDescriptor.newBuilder()
         .setFamilyName(ByteString.copyFrom(families[0]))
         .setStoreHomeDir("/store_home_dir")
-        .addStoreFile("/foo")
+        .addStoreFile("/123")
         .build())
       .build());
   }
