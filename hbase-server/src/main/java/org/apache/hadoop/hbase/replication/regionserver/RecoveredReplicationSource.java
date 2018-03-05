@@ -194,4 +194,9 @@ public class RecoveredReplicationSource extends ReplicationSource {
   public ServerName getServerWALsBelongTo() {
     return this.replicationQueueInfo.getDeadRegionServers().get(0);
   }
+
+  @Override
+  public boolean isRecovered() {
+    return true;
+  }
 }

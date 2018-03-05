@@ -539,6 +539,14 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
+   * Return true if there are at least one cf whose replication scope is serial.
+   */
+  @Override
+  public boolean hasSerialReplicationScope() {
+    return delegatee.hasSerialReplicationScope();
+  }
+
+  /**
    * Returns the configured replicas per region
    */
   @Override

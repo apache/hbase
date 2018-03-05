@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,13 +19,13 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -128,7 +127,7 @@ public class ReplicationSourceShipper extends Thread {
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
       if (lastLoggedPosition != lastReadPosition) {
-        updateLogPosition(lastReadPosition);
+        updateLogPosition(lastReadPosition, entryBatch.getLastSeqIds());
         // if there was nothing to ship and it's not an error
         // set "ageOfLastShippedOp" to <now> to indicate that we're current
         source.getSourceMetrics().setAgeOfLastShippedOp(EnvironmentEdgeManager.currentTime(),
@@ -168,13 +167,13 @@ public class ReplicationSourceShipper extends Thread {
         }
 
         if (this.lastLoggedPosition != lastReadPosition) {
-          //Clean up hfile references
+          // Clean up hfile references
           int size = entries.size();
           for (int i = 0; i < size; i++) {
             cleanUpHFileRefs(entries.get(i).getEdit());
           }
-          //Log and clean up WAL logs
-          updateLogPosition(lastReadPosition);
+          // Log and clean up WAL logs
+          updateLogPosition(lastReadPosition, entryBatch.getLastSeqIds());
         }
 
         source.postShipEdits(entries, currentSize);
@@ -222,9 +221,9 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  protected void updateLogPosition(long lastReadPosition) {
+  private void updateLogPosition(long lastReadPosition, Map<String, Long> lastSeqIds) {
     source.getSourceManager().logPositionAndCleanOldLogs(currentPath, source.getQueueId(),
-      lastReadPosition, false);
+      lastReadPosition, lastSeqIds, source.isRecovered());
     lastLoggedPosition = lastReadPosition;
   }
 

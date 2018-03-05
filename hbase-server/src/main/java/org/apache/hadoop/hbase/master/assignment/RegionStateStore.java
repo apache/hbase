@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
@@ -36,11 +34,13 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -163,6 +163,11 @@ public class RegionStateStore {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
           "Open region should be on a server");
       MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
+      // only update replication barrier for default replica
+      if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID &&
+        hasSerialReplicationScope(regionInfo.getTable())) {
+        MetaTableAccessor.addReplicationBarrier(put, openSeqNum);
+      }
       info.append(", openSeqNum=").append(openSeqNum);
       info.append(", regionLocation=").append(regionLocation);
     } else if (regionLocation != null && !regionLocation.equals(lastHost)) {
@@ -205,24 +210,41 @@ public class RegionStateStore {
     }
   }
 
+  private long getOpenSeqNumForParentRegion(RegionInfo region) throws IOException {
+    MasterFileSystem mfs = master.getMasterFileSystem();
+    long maxSeqId =
+        WALSplitter.getMaxRegionSequenceId(mfs.getFileSystem(), mfs.getRegionDir(region));
+    return maxSeqId > 0 ? maxSeqId + 1 : HConstants.NO_SEQNUM;
+  }
+
   // ============================================================================================
   //  Update Region Splitting State helpers
   // ============================================================================================
-  public void splitRegion(final RegionInfo parent, final RegionInfo hriA,
-      final RegionInfo hriB, final ServerName serverName)  throws IOException {
-    final TableDescriptor htd = getTableDescriptor(parent.getTable());
-    MetaTableAccessor.splitRegion(master.getConnection(), parent, hriA, hriB, serverName,
-        getRegionReplication(htd));
+  public void splitRegion(RegionInfo parent, RegionInfo hriA, RegionInfo hriB,
+      ServerName serverName) throws IOException {
+    TableDescriptor htd = getTableDescriptor(parent.getTable());
+    long parentOpenSeqNum = HConstants.NO_SEQNUM;
+    if (htd.hasSerialReplicationScope()) {
+      parentOpenSeqNum = getOpenSeqNumForParentRegion(parent);
+    }
+    MetaTableAccessor.splitRegion(master.getConnection(), parent, parentOpenSeqNum, hriA, hriB,
+      serverName, getRegionReplication(htd));
   }
 
   // ============================================================================================
   //  Update Region Merging State helpers
   // ============================================================================================
-  public void mergeRegions(final RegionInfo parent, final RegionInfo hriA, final RegionInfo hriB,
-      final ServerName serverName) throws IOException {
-    final TableDescriptor htd = getTableDescriptor(parent.getTable());
-    MetaTableAccessor.mergeRegions(master.getConnection(), parent, hriA, hriB, serverName,
-      getRegionReplication(htd));
+  public void mergeRegions(RegionInfo child, RegionInfo hriA, RegionInfo hriB,
+      ServerName serverName) throws IOException {
+    TableDescriptor htd = getTableDescriptor(child.getTable());
+    long regionAOpenSeqNum = -1L;
+    long regionBOpenSeqNum = -1L;
+    if (htd.hasSerialReplicationScope()) {
+      regionAOpenSeqNum = getOpenSeqNumForParentRegion(hriA);
+      regionBOpenSeqNum = getOpenSeqNumForParentRegion(hriB);
+    }
+    MetaTableAccessor.mergeRegions(master.getConnection(), child, hriA, regionAOpenSeqNum, hriB,
+      regionBOpenSeqNum, serverName, getRegionReplication(htd));
   }
 
   // ============================================================================================
@@ -239,11 +261,19 @@ public class RegionStateStore {
   // ==========================================================================
   //  Table Descriptors helpers
   // ==========================================================================
-  private int getRegionReplication(final TableDescriptor htd) {
-    return (htd != null) ? htd.getRegionReplication() : 1;
+  private boolean hasSerialReplicationScope(TableName tableName) throws IOException {
+    return hasSerialReplicationScope(getTableDescriptor(tableName));
   }
 
-  private TableDescriptor getTableDescriptor(final TableName tableName) throws IOException {
+  private boolean hasSerialReplicationScope(TableDescriptor htd) {
+    return htd != null ? htd.hasSerialReplicationScope() : false;
+  }
+
+  private int getRegionReplication(TableDescriptor htd) {
+    return htd != null ? htd.getRegionReplication() : 1;
+  }
+
+  private TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     return master.getTableDescriptors().get(tableName);
   }
 

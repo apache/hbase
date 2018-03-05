@@ -1128,6 +1128,15 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Return true if there are at least one cf whose replication scope is serial.
+     */
+    @Override
+    public boolean hasSerialReplicationScope() {
+      return families.values().stream()
+        .anyMatch(column -> column.getScope() == HConstants.REPLICATION_SCOPE_SERIAL);
+    }
+
+    /**
      * Returns the configured replicas per region
      */
     @Override

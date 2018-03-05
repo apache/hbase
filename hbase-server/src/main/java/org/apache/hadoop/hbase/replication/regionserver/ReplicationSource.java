@@ -607,4 +607,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public ServerName getServerWALsBelongTo() {
     return server.getServerName();
   }
+
+  Server getServer() {
+    return server;
+  }
+
+  ReplicationQueueStorage getQueueStorage() {
+    return queueStorage;
+  }
 }
