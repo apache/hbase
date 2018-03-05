@@ -289,9 +289,9 @@ if (sl != null) {
 <table class="table table-striped">
 <tr>
     <th>ServerName</th>
-    <th>Num. Compacting KVs</th>
-    <th>Num. Compacted KVs</th>
-    <th>Remaining KVs</th>
+    <th>Num. Compacting Cells</th>
+    <th>Num. Compacted Cells</th>
+    <th>Remaining Cells</th>
     <th>Compaction Progress</th>
 </tr>
 <%java>
