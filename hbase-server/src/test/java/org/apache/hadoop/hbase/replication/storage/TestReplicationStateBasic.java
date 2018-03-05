@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication;
+package org.apache.hadoop.hbase.replication.storage;
 
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.junit.Assert.assertEquals;
@@ -30,7 +30,13 @@ import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
+import org.apache.hadoop.hbase.replication.ReplicationPeers;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.zookeeper.KeeperException;
@@ -222,18 +228,19 @@ public abstract class TestReplicationStateBasic {
 
     try {
       rp.getPeerStorage().setPeerState("bogus", true);
-      fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
+      fail("Should have thrown an ReplicationException when passed a non-exist bogus peerId");
     } catch (ReplicationException e) {
     }
     try {
       rp.getPeerStorage().setPeerState("bogus", false);
-      fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
+      fail("Should have thrown an ReplicationException when passed a non-exist bogus peerId");
     } catch (ReplicationException e) {
     }
 
     try {
       assertFalse(rp.addPeer("bogus"));
-      fail("Should have thrown an ReplicationException when passed a bogus peerId");
+      fail("Should have thrown an ReplicationException when creating a bogus peerId "
+          + "with null peer config");
     } catch (ReplicationException e) {
     }
 

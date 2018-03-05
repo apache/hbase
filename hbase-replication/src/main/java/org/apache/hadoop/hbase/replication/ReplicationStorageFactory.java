@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -29,6 +30,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ReplicationStorageFactory {
 
+  public static final String REPLICATION_PEER_STORAGE_IMPL = "hbase.replication.peer.storage.impl";
+  public static final String DEFAULT_REPLICATION_PEER_STORAGE_IMPL =
+      ZKReplicationPeerStorage.class.getName();
+
+  public static final String REPLICATION_QUEUE_STORAGE_IMPL =
+      "hbase.replication.queue.storage.impl";
+  public static final String DEFAULT_REPLICATION_QUEUE_STORAGE_IMPL =
+      ZKReplicationQueueStorage.class.getName();
+
   private ReplicationStorageFactory() {
   }
 
@@ -36,7 +46,10 @@ public final class ReplicationStorageFactory {
    * Create a new {@link ReplicationPeerStorage}.
    */
   public static ReplicationPeerStorage getReplicationPeerStorage(ZKWatcher zk, Configuration conf) {
-    return new ZKReplicationPeerStorage(zk, conf);
+    String peerStorageClass =
+        conf.get(REPLICATION_PEER_STORAGE_IMPL, DEFAULT_REPLICATION_PEER_STORAGE_IMPL);
+    return ReflectionUtils.instantiateWithCustomCtor(peerStorageClass,
+      new Class[] { ZKWatcher.class, Configuration.class }, new Object[] { zk, conf });
   }
 
   /**
@@ -44,6 +57,9 @@ public final class ReplicationStorageFactory {
    */
   public static ReplicationQueueStorage getReplicationQueueStorage(ZKWatcher zk,
       Configuration conf) {
-    return new ZKReplicationQueueStorage(zk, conf);
+    String queueStorageClass =
+        conf.get(REPLICATION_QUEUE_STORAGE_IMPL, DEFAULT_REPLICATION_QUEUE_STORAGE_IMPL);
+    return ReflectionUtils.instantiateWithCustomCtor(queueStorageClass,
+      new Class[] { ZKWatcher.class, Configuration.class }, new Object[] { zk, conf });
   }
 }
