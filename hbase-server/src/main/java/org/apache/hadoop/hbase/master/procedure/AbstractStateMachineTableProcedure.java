@@ -24,11 +24,8 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -120,8 +117,6 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   }
 
   protected final Path getRegionDir(MasterProcedureEnv env, RegionInfo region) throws IOException {
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), getTableName());
-    return new Path(tableDir, ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
+    return env.getMasterServices().getMasterFileSystem().getRegionDir(region);
   }
 }

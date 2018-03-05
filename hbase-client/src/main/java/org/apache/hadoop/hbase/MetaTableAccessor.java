@@ -34,6 +34,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.client.Connection;
@@ -56,6 +58,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -137,7 +140,7 @@ public class MetaTableAccessor {
   private static final Logger LOG = LoggerFactory.getLogger(MetaTableAccessor.class);
   private static final Logger METALOG = LoggerFactory.getLogger("org.apache.hadoop.hbase.META");
 
-  static final byte [] META_REGION_PREFIX;
+  private static final byte[] META_REGION_PREFIX;
   static {
     // Copy the prefix from FIRST_META_REGIONINFO into META_REGION_PREFIX.
     // FIRST_META_REGIONINFO == 'hbase:meta,,1'.  META_REGION_PREFIX == 'hbase:meta,'
@@ -147,6 +150,11 @@ public class MetaTableAccessor {
       META_REGION_PREFIX, 0, len);
   }
 
+  private static final byte[] REPLICATION_PARENT_QUALIFIER = Bytes.toBytes("parent");
+
+  private static final String REPLICATION_PARENT_SEPARATOR = "|";
+
+  private static final String REPLICATION_PARENT_SEPARATOR_REGEX = "\\|";
   /**
    * Lists all of the table regions currently in META.
    * Deprecated, keep there until some test use this.
@@ -838,7 +846,7 @@ public class MetaTableAccessor {
 
   /**
    * Returns the column qualifier for serialized region state
-   * @return HConstants.TABLE_STATE_QUALIFIER
+   * @return HConstants.STATE_QUALIFIER
    */
   private static byte[] getRegionStateColumn() {
     return HConstants.STATE_QUALIFIER;
@@ -1269,7 +1277,6 @@ public class MetaTableAccessor {
   ////////////////////////
   // Editing operations //
   ////////////////////////
-
   /**
    * Generates and returns a Put containing the region into for the catalog table
    */
@@ -1441,7 +1448,7 @@ public class MetaTableAccessor {
    * Adds daughter region infos to hbase:meta row for the specified region. Note that this does not
    * add its daughter's as different rows, but adds information about the daughters in the same row
    * as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, RegionInfo, RegionInfo, ServerName,int)}
+   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)}
    * if you want to do that.
    * @param connection connection we're using
    * @param regionInfo RegionInfo of parent region
@@ -1467,7 +1474,7 @@ public class MetaTableAccessor {
    * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
    * does not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, RegionInfo, RegionInfo, ServerName, int)}
+   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)}
    * if you want to do that.
    * @param connection connection we're using
    * @param regionInfo region information
@@ -1522,20 +1529,37 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Merge the two regions into one in an atomic operation. Deletes the two
-   * merging regions in hbase:meta and adds the merged region with the information of
-   * two merging regions.
+   * Merge the two regions into one in an atomic operation. Deletes the two merging regions in
+   * hbase:meta and adds the merged region with the information of two merging regions.
    * @param connection connection we're using
    * @param mergedRegion the merged region
    * @param regionA merge parent region A
+   * @param regionAOpenSeqNum the next open sequence id for region A, used by serial replication. -1
+   *          if not necessary.
    * @param regionB merge parent region B
+   * @param regionBOpenSeqNum the next open sequence id for region B, used by serial replication. -1
+   *          if not necessary.
    * @param sn the location of the region
    */
-  public static void mergeRegions(final Connection connection, RegionInfo mergedRegion,
-      RegionInfo regionA, RegionInfo regionB, ServerName sn, int regionReplication)
-      throws IOException {
+  public static void mergeRegions(Connection connection, RegionInfo mergedRegion,
+      RegionInfo regionA, long regionAOpenSeqNum, RegionInfo regionB, long regionBOpenSeqNum,
+      ServerName sn, int regionReplication) throws IOException {
     try (Table meta = getMetaHTable(connection)) {
       long time = EnvironmentEdgeManager.currentTime();
+      List<Mutation> mutations = new ArrayList<>();
+
+      List<RegionInfo> replicationParents = new ArrayList<>(2);
+      // Deletes for merging regions
+      mutations.add(makeDeleteFromRegionInfo(regionA, time));
+      if (regionAOpenSeqNum > 0) {
+        mutations.add(makePutForReplicationBarrier(regionA, regionAOpenSeqNum, time));
+        replicationParents.add(regionA);
+      }
+      mutations.add(makeDeleteFromRegionInfo(regionB, time));
+      if (regionBOpenSeqNum > 0) {
+        mutations.add(makePutForReplicationBarrier(regionB, regionBOpenSeqNum, time));
+        replicationParents.add(regionB);
+      }
 
       // Put for parent
       Put putOfMerged = makePutFromRegionInfo(mergedRegion, time);
@@ -1555,18 +1579,13 @@ public class MetaTableAccessor {
               .setType(Type.Put)
               .setValue(RegionInfo.toByteArray(regionB))
               .build());
-
       // Set initial state to CLOSED
       // NOTE: If initial state is not set to CLOSED then merged region gets added with the
       // default OFFLINE state. If Master gets restarted after this step, start up sequence of
       // master tries to assign this offline region. This is followed by re-assignments of the
       // merged region from resumed {@link MergeTableRegionsProcedure}
       addRegionStateToPut(putOfMerged, RegionState.State.CLOSED);
-
-      // Deletes for merging regions
-      Delete deleteA = makeDeleteFromRegionInfo(regionA, time);
-      Delete deleteB = makeDeleteFromRegionInfo(regionB, time);
-
+      mutations.add(putOfMerged);
       // The merged is a new region, openSeqNum = 1 is fine. ServerName may be null
       // if crash after merge happened but before we got to here.. means in-memory
       // locations of offlined merged, now-closed, regions is lost. Should be ok. We
@@ -1580,26 +1599,30 @@ public class MetaTableAccessor {
       for (int i = 1; i < regionReplication; i++) {
         addEmptyLocation(putOfMerged, i);
       }
-
-      byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
-        + HConstants.DELIMITER);
-      multiMutate(connection, meta, tableRow, putOfMerged, deleteA, deleteB);
+      // add parent reference for serial replication
+      if (!replicationParents.isEmpty()) {
+        addReplicationParent(putOfMerged, replicationParents);
+      }
+      byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString() + HConstants.DELIMITER);
+      multiMutate(connection, meta, tableRow, mutations);
     }
   }
 
   /**
-   * Splits the region into two in an atomic operation. Offlines the parent
-   * region with the information that it is split into two, and also adds
-   * the daughter regions. Does not add the location information to the daughter
-   * regions since they are not open yet.
+   * Splits the region into two in an atomic operation. Offlines the parent region with the
+   * information that it is split into two, and also adds the daughter regions. Does not add the
+   * location information to the daughter regions since they are not open yet.
    * @param connection connection we're using
    * @param parent the parent region which is split
+   * @param parentOpenSeqNum the next open sequence id for parent region, used by serial
+   *          replication. -1 if not necessary.
    * @param splitA Split daughter region A
    * @param splitB Split daughter region B
    * @param sn the location of the region
    */
-  public static void splitRegion(final Connection connection, RegionInfo parent, RegionInfo splitA,
-      RegionInfo splitB, ServerName sn, int regionReplication) throws IOException {
+  public static void splitRegion(Connection connection, RegionInfo parent, long parentOpenSeqNum,
+      RegionInfo splitA, RegionInfo splitB, ServerName sn, int regionReplication)
+      throws IOException {
     try (Table meta = getMetaHTable(connection)) {
       long time = EnvironmentEdgeManager.currentTime();
       // Put for parent
@@ -1611,7 +1634,11 @@ public class MetaTableAccessor {
       // Puts for daughters
       Put putA = makePutFromRegionInfo(splitA, time);
       Put putB = makePutFromRegionInfo(splitB, time);
-
+      if (parentOpenSeqNum > 0) {
+        addReplicationBarrier(putParent, parentOpenSeqNum);
+        addReplicationParent(putA, Collections.singletonList(parent));
+        addReplicationParent(putB, Collections.singletonList(parent));
+      }
       // Set initial state to CLOSED
       // NOTE: If initial state is not set to CLOSED then daughter regions get added with the
       // default OFFLINE state. If Master gets restarted after this step, start up sequence of
@@ -1671,20 +1698,15 @@ public class MetaTableAccessor {
   }
 
   private static void multiMutate(Connection connection, Table table, byte[] row,
-      Mutation... mutations)
-  throws IOException {
+      Mutation... mutations) throws IOException {
     multiMutate(connection, table, row, Arrays.asList(mutations));
   }
 
   /**
    * Performs an atomic multi-mutate operation against the given table.
    */
-  // Used by the RSGroup Coprocessor Endpoint. It had a copy/paste of the below. Need to reveal
-  // this facility for CPEP use or at least those CPEPs that are on their way to becoming part of
-  // core as is the intent for RSGroup eventually.
-  public static void multiMutate(Connection connection, final Table table, byte[] row,
-      final List<Mutation> mutations)
-  throws IOException {
+  private static void multiMutate(Connection connection, final Table table, byte[] row,
+      final List<Mutation> mutations) throws IOException {
     debugLogMutations(mutations);
     // TODO: Need rollback!!!!
     // TODO: Need Retry!!!
@@ -1785,9 +1807,7 @@ public class MetaTableAccessor {
    * @param regionInfo region to be deleted from META
    * @throws IOException
    */
-  public static void deleteRegion(Connection connection,
-                                  RegionInfo regionInfo)
-    throws IOException {
+  public static void deleteRegion(Connection connection, RegionInfo regionInfo) throws IOException {
     long time = EnvironmentEdgeManager.currentTime();
     Delete delete = new Delete(regionInfo.getRegionName());
     delete.addFamily(getCatalogFamily(), time);
@@ -1904,6 +1924,33 @@ public class MetaTableAccessor {
               .build());
   }
 
+  private static void addReplicationParent(Put put, List<RegionInfo> parents) throws IOException {
+    byte[] value = parents.stream().map(RegionReplicaUtil::getRegionInfoForDefaultReplica)
+      .map(RegionInfo::getRegionNameAsString).collect(Collectors
+        .collectingAndThen(Collectors.joining(REPLICATION_PARENT_SEPARATOR), Bytes::toBytes));
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+      .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
+      .setTimestamp(put.getTimeStamp()).setType(Type.Put).setValue(value).build());
+  }
+
+  private static Put makePutForReplicationBarrier(RegionInfo regionInfo, long openSeqNum, long ts)
+      throws IOException {
+    Put put = new Put(regionInfo.getRegionName(), ts);
+    addReplicationBarrier(put, openSeqNum);
+    return put;
+  }
+
+  public static void addReplicationBarrier(Put put, long openSeqNum) throws IOException {
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+      .setRow(put.getRow())
+      .setFamily(HConstants.REPLICATION_BARRIER_FAMILY)
+      .setQualifier(HConstants.SEQNUM_QUALIFIER)
+      .setTimestamp(put.getTimeStamp())
+      .setType(Type.Put)
+      .setValue(Bytes.toBytes(openSeqNum))
+      .build());
+  }
+
   private static Put addEmptyLocation(Put p, int replicaId) throws IOException {
     CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     return p.add(builder.clear()
@@ -1927,6 +1974,92 @@ public class MetaTableAccessor {
                 .setTimestamp(p.getTimeStamp())
                 .setType(Cell.Type.Put)
                 .build());
+  }
+
+  public static final class ReplicationBarrierResult {
+    private final long[] barriers;
+    private final RegionState.State state;
+    private final List<byte[]> parentRegionNames;
+
+    public ReplicationBarrierResult(long[] barriers, State state, List<byte[]> parentRegionNames) {
+      this.barriers = barriers;
+      this.state = state;
+      this.parentRegionNames = parentRegionNames;
+    }
+
+    public long[] getBarriers() {
+      return barriers;
+    }
+
+    public RegionState.State getState() {
+      return state;
+    }
+
+    public List<byte[]> getParentRegionNames() {
+      return parentRegionNames;
+    }
+  }
+
+  private static long getReplicationBarrier(Cell c) {
+    return Bytes.toLong(c.getValueArray(), c.getValueOffset(), c.getValueLength());
+  }
+
+  private static long[] getReplicationBarriers(Result result) {
+    return result.getColumnCells(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
+      .stream().mapToLong(MetaTableAccessor::getReplicationBarrier).sorted().distinct().toArray();
+  }
+
+  private static ReplicationBarrierResult getReplicationBarrierResult(Result result) {
+    long[] barriers = getReplicationBarriers(result);
+    byte[] stateBytes = result.getValue(getCatalogFamily(), getRegionStateColumn());
+    RegionState.State state =
+      stateBytes != null ? RegionState.State.valueOf(Bytes.toString(stateBytes)) : null;
+    byte[] parentRegionsBytes =
+      result.getValue(HConstants.REPLICATION_BARRIER_FAMILY, REPLICATION_PARENT_QUALIFIER);
+    List<byte[]> parentRegionNames =
+      parentRegionsBytes != null
+        ? Stream.of(Bytes.toString(parentRegionsBytes).split(REPLICATION_PARENT_SEPARATOR_REGEX))
+          .map(Bytes::toBytes).collect(Collectors.toList())
+        : Collections.emptyList();
+    return new ReplicationBarrierResult(barriers, state, parentRegionNames);
+  }
+
+  public static ReplicationBarrierResult getReplicationBarrierResult(Connection conn,
+      TableName tableName, byte[] row, byte[] encodedRegionName) throws IOException {
+    byte[] metaStartKey = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
+    byte[] metaStopKey =
+      RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
+    Scan scan = new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey)
+      .addColumn(getCatalogFamily(), getRegionStateColumn())
+      .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions().setReversed(true)
+      .setCaching(10);
+    try (Table table = getMetaHTable(conn); ResultScanner scanner = table.getScanner(scan)) {
+      for (Result result;;) {
+        result = scanner.next();
+        if (result == null) {
+          return new ReplicationBarrierResult(new long[0], null, Collections.emptyList());
+        }
+        byte[] regionName = result.getRow();
+        // TODO: we may look up a region which has already been split or merged so we need to check
+        // whether the encoded name matches. Need to find a way to quit earlier when there is no
+        // record for the given region, for now it will scan to the end of the table.
+        if (!Bytes.equals(encodedRegionName,
+          Bytes.toBytes(RegionInfo.encodeRegionName(regionName)))) {
+          continue;
+        }
+        return getReplicationBarrierResult(result);
+      }
+    }
+  }
+
+  public static long[] getReplicationBarrier(Connection conn, byte[] regionName)
+      throws IOException {
+    try (Table table = getMetaHTable(conn)) {
+      Result result = table.get(new Get(regionName)
+        .addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
+        .readAllVersions());
+      return getReplicationBarriers(result);
+    }
   }
 
   private static void debugLogMutations(List<? extends Mutation> mutations) throws IOException {

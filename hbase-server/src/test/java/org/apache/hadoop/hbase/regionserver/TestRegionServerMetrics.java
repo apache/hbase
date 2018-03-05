@@ -343,12 +343,12 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testStoreCount() throws Exception {
-    //Force a hfile.
+    // Force a hfile.
     doNPuts(1, false);
     TEST_UTIL.getAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertGauge("storeCount", TABLES_ON_MASTER? 1: 4);
+    assertGauge("storeCount", TABLES_ON_MASTER ? 1 : 5);
     assertGauge("storeFileCount", 1);
   }
 

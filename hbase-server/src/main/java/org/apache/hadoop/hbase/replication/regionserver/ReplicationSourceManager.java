@@ -481,10 +481,10 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param queueRecovered indicates if this queue comes from another region server
    */
   public void logPositionAndCleanOldLogs(Path log, String queueId, long position,
-      boolean queueRecovered) {
+      Map<String, Long> lastSeqIds, boolean queueRecovered) {
     String fileName = log.getName();
     abortWhenFail(() -> this.queueStorage.setWALPosition(server.getServerName(), queueId, fileName,
-      position, null));
+      position, lastSeqIds));
     cleanOldLogs(fileName, queueId, queueRecovered);
   }
 

@@ -15,17 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import java.util.NavigableMap;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 
@@ -35,7 +33,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 @InterfaceAudience.Private
 public class ScopeWALEntryFilter implements WALEntryFilter, WALCellFilter {
 
-  BulkLoadCellFilter bulkLoadFilter = new BulkLoadCellFilter();
+  private final BulkLoadCellFilter bulkLoadFilter = new BulkLoadCellFilter();
 
   @Override
   public Entry filter(Entry entry) {
@@ -49,21 +47,21 @@ public class ScopeWALEntryFilter implements WALEntryFilter, WALCellFilter {
   @Override
   public Cell filterCell(Entry entry, Cell cell) {
     final NavigableMap<byte[], Integer> scopes = entry.getKey().getReplicationScopes();
-      // The scope will be null or empty if
-      // there's nothing to replicate in that WALEdit
-      byte[] fam = CellUtil.cloneFamily(cell);
-      if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
-        cell = bulkLoadFilter.filterCell(cell, new Predicate<byte[]>() {
-          @Override
-          public boolean apply(byte[] fam) {
-            return !scopes.containsKey(fam) || scopes.get(fam) == HConstants.REPLICATION_SCOPE_LOCAL;
-          }
-        });
-      } else {
-        if (!scopes.containsKey(fam) || scopes.get(fam) == HConstants.REPLICATION_SCOPE_LOCAL) {
-          return null;
+    // The scope will be null or empty if
+    // there's nothing to replicate in that WALEdit
+    byte[] fam = CellUtil.cloneFamily(cell);
+    if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
+      cell = bulkLoadFilter.filterCell(cell, new Predicate<byte[]>() {
+        @Override
+        public boolean apply(byte[] fam) {
+          return !scopes.containsKey(fam) || scopes.get(fam) == HConstants.REPLICATION_SCOPE_LOCAL;
         }
+      });
+    } else {
+      if (!scopes.containsKey(fam) || scopes.get(fam) == HConstants.REPLICATION_SCOPE_LOCAL) {
+        return null;
       }
+    }
     return cell;
   }
 }

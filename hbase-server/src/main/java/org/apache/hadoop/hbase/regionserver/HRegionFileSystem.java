@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
@@ -25,6 +23,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
@@ -84,6 +83,7 @@ public class HRegionFileSystem {
   private final Configuration conf;
   private final Path tableDir;
   private final FileSystem fs;
+  private final Path regionDir;
 
   /**
    * In order to handle NN connectivity hiccups, one need to retry non-idempotent operation at the
@@ -105,9 +105,10 @@ public class HRegionFileSystem {
       final RegionInfo regionInfo) {
     this.fs = fs;
     this.conf = conf;
-    this.tableDir = tableDir;
-    this.regionInfo = regionInfo;
+    this.tableDir = Objects.requireNonNull(tableDir, "tableDir is null");
+    this.regionInfo = Objects.requireNonNull(regionInfo, "regionInfo is null");
     this.regionInfoForFs = ServerRegionReplicaUtil.getRegionInfoForFs(regionInfo);
+    this.regionDir = FSUtils.getRegionDir(tableDir, regionInfo);
     this.hdfsClientRetriesNumber = conf.getInt("hdfs.client.retries.number",
       DEFAULT_HDFS_CLIENT_RETRIES_NUMBER);
     this.baseSleepBeforeRetries = conf.getInt("hdfs.client.sleep.before.retries",
@@ -135,7 +136,7 @@ public class HRegionFileSystem {
 
   /** @return {@link Path} to the region directory. */
   public Path getRegionDir() {
-    return new Path(this.tableDir, this.regionInfoForFs.getEncodedName());
+    return regionDir;
   }
 
   // ===========================================================================

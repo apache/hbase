@@ -415,10 +415,16 @@ public class WALKeyImpl implements WALKey {
     this.replicationScope = replicationScope;
   }
 
-  public void serializeReplicationScope(boolean serialize) {
-    if (!serialize) {
-      setReplicationScope(null);
+  public void clearReplicationScope() {
+    setReplicationScope(null);
+  }
+
+  public boolean hasSerialReplicationScope() {
+    if (replicationScope == null || replicationScope.isEmpty()) {
+      return false;
     }
+    return replicationScope.values().stream()
+      .anyMatch(scope -> scope.intValue() == HConstants.REPLICATION_SCOPE_SERIAL);
   }
 
   /**

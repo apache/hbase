@@ -25,9 +25,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -35,8 +35,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDesc
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
@@ -535,6 +534,14 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     return Stream.of(delegatee.getColumnFamilies())
             .map(this::toHColumnDescriptor)
             .collect(Collectors.toList());
+  }
+
+  /**
+   * Return true if there are at least one cf whose replication scope is serial.
+   */
+  @Override
+  public boolean hasSerialReplicationScope() {
+    return delegatee.hasSerialReplicationScope();
   }
 
   /**

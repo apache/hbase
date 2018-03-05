@@ -208,7 +208,16 @@ public class MasterFileSystem {
   /**
    * @return HBase root log dir.
    */
-  public Path getWALRootDir() { return this.walRootDir; }
+  public Path getWALRootDir() {
+    return this.walRootDir;
+  }
+
+  /**
+   * @return the directory for a give {@code region}.
+   */
+  public Path getRegionDir(RegionInfo region) {
+    return FSUtils.getRegionDir(FSUtils.getTableDir(getRootDir(), region.getTable()), region);
+  }
 
   /**
    * @return HBase temp dir.

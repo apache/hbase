@@ -35,8 +35,9 @@ import org.apache.hadoop.hbase.replication.WALEntryFilter;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RecoveredReplicationSourceWALReader extends ReplicationSourceWALReader {
+
   private static final Logger LOG =
-      LoggerFactory.getLogger(RecoveredReplicationSourceWALReader.class);
+    LoggerFactory.getLogger(RecoveredReplicationSourceWALReader.class);
 
   public RecoveredReplicationSourceWALReader(FileSystem fs, Configuration conf,
       PriorityBlockingQueue<Path> logQueue, long startPosition, WALEntryFilter filter,
@@ -45,13 +46,11 @@ public class RecoveredReplicationSourceWALReader extends ReplicationSourceWALRea
   }
 
   @Override
-  protected void handleEmptyWALEntryBatch(WALEntryBatch batch, Path currentPath)
-      throws InterruptedException {
+  protected void handleEmptyWALEntryBatch(Path currentPath) throws InterruptedException {
     LOG.trace("Didn't read any new entries from WAL");
     // we're done with queue recovery, shut ourself down
     setReaderRunning(false);
     // shuts down shipper thread immediately
-    entryBatchQueue.put(batch != null ? batch
-        : new WALEntryBatch(replicationBatchCountCapacity, currentPath));
+    entryBatchQueue.put(new WALEntryBatch(replicationBatchCountCapacity, currentPath));
   }
 }

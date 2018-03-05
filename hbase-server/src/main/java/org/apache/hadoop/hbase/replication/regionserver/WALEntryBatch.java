@@ -1,0 +1,138 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.replication.regionserver;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
+
+/**
+ * Holds a batch of WAL entries to replicate, along with some statistics
+ */
+@InterfaceAudience.Private
+class WALEntryBatch {
+  private List<Entry> walEntries;
+  // last WAL that was read
+  private Path lastWalPath;
+  // position in WAL of last entry in this batch
+  private long lastWalPosition = 0;
+  // number of distinct row keys in this batch
+  private int nbRowKeys = 0;
+  // number of HFiles
+  private int nbHFiles = 0;
+  // heap size of data we need to replicate
+  private long heapSize = 0;
+  // save the last sequenceid for each region if the table has serial-replication scope
+  private Map<String, Long> lastSeqIds = new HashMap<>();
+
+  /**
+   * @param lastWalPath Path of the WAL the last entry in this batch was read from
+   */
+  WALEntryBatch(int maxNbEntries, Path lastWalPath) {
+    this.walEntries = new ArrayList<>(maxNbEntries);
+    this.lastWalPath = lastWalPath;
+  }
+
+  public void addEntry(Entry entry) {
+    walEntries.add(entry);
+  }
+
+  /**
+   * @return the WAL Entries.
+   */
+  public List<Entry> getWalEntries() {
+    return walEntries;
+  }
+
+  /**
+   * @return the path of the last WAL that was read.
+   */
+  public Path getLastWalPath() {
+    return lastWalPath;
+  }
+
+  /**
+   * @return the position in the last WAL that was read.
+   */
+  public long getLastWalPosition() {
+    return lastWalPosition;
+  }
+
+  public void setLastWalPosition(long lastWalPosition) {
+    this.lastWalPosition = lastWalPosition;
+  }
+
+  public int getNbEntries() {
+    return walEntries.size();
+  }
+
+  /**
+   * @return the number of distinct row keys in this batch
+   */
+  public int getNbRowKeys() {
+    return nbRowKeys;
+  }
+
+  /**
+   * @return the number of HFiles in this batch
+   */
+  public int getNbHFiles() {
+    return nbHFiles;
+  }
+
+  /**
+   * @return total number of operations in this batch
+   */
+  public int getNbOperations() {
+    return getNbRowKeys() + getNbHFiles();
+  }
+
+  /**
+   * @return the heap size of this batch
+   */
+  public long getHeapSize() {
+    return heapSize;
+  }
+
+  /**
+   * @return the last sequenceid for each region if the table has serial-replication scope
+   */
+  public Map<String, Long> getLastSeqIds() {
+    return lastSeqIds;
+  }
+
+  public void incrementNbRowKeys(int increment) {
+    nbRowKeys += increment;
+  }
+
+  public void incrementNbHFiles(int increment) {
+    nbHFiles += increment;
+  }
+
+  public void incrementHeapSize(long increment) {
+    heapSize += increment;
+  }
+
+  public void setLastSeqId(String region, long sequenceId) {
+    lastSeqIds.put(region, sequenceId);
+  }
+}

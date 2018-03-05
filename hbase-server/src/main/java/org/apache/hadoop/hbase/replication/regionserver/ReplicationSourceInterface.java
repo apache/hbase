@@ -166,4 +166,11 @@ public interface ReplicationSourceInterface {
    * @return the server name which all WALs belong to
    */
   ServerName getServerWALsBelongTo();
+
+  /**
+   * @return whether this is a replication source for recovery.
+   */
+  default boolean isRecovered() {
+    return false;
+  }
 }
