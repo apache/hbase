@@ -196,8 +196,8 @@
     <table class="table table-striped">
         <tr>
             <th>Region Name</th>
-            <th>Num. Compacting KVs</th>
-            <th>Num. Compacted KVs</th>
+            <th>Num. Compacting Cells</th>
+            <th>Num. Compacted Cells</th>
             <th>Compaction Progress</th>
             <th>Last Major Compaction</th>
         </tr>

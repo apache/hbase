@@ -310,9 +310,9 @@ if (master.getServerManager() != null) {
 <table class="table table-striped">
 <tr>
     <th>RSGroup Name</th>
-    <th>Num. Compacting KVs</th>
-    <th>Num. Compacted KVs</th>
-    <th>Remaining KVs</th>
+    <th>Num. Compacting Cells</th>
+    <th>Num. Compacted Cells</th>
+    <th>Remaining Cells</th>
     <th>Compaction Progress</th>
 </tr>
 <%java>
@@ -321,7 +321,7 @@ if (master.getServerManager() != null) {
       int numStores = 0;
       long totalCompactingCells = 0;
       long totalCompactedCells = 0;
-      long remainingKVs = 0;
+      long remainingCells = 0;
       long compactionProgress  = 0;
       for (Address server : rsGroupInfo.getServers()) {
         ServerMetrics sl = collectServers.get(server);
@@ -332,7 +332,7 @@ if (master.getServerManager() != null) {
           }
         }
       }
-      remainingKVs = totalCompactingCells - totalCompactedCells;
+      remainingCells = totalCompactingCells - totalCompactedCells;
       String percentDone = "";
       if  (totalCompactingCells > 0) {
            percentDone = String.format("%.2f", 100 *
@@ -343,7 +343,7 @@ if (master.getServerManager() != null) {
 <td><& rsGroupLink; rsGroupName=rsGroupName; &></td>
 <td><% totalCompactingCells %></td>
 <td><% totalCompactedCells %></td>
-<td><% remainingKVs %></td>
+<td><% remainingCells %></td>
 <td><% percentDone %></td>
 </tr>
 <%java>
