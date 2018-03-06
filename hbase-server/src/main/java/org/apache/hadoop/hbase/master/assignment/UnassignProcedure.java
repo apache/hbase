@@ -249,17 +249,12 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       final IOException exception) {
     // TODO: Is there on-going rpc to cleanup?
     if (exception instanceof ServerCrashException) {
-      // This exception comes from ServerCrashProcedure after log splitting.
-      // SCP found this region as a RIT. Its call into here says it is ok to let this procedure go
-      // on to a complete close now. This will release lock on this region so subsequent action on
-      // region can succeed; e.g. the assign that follows this unassign when a move (w/o wait on SCP
-      // the assign could run w/o logs being split so data loss).
-      try {
-        reportTransition(env, regionNode, TransitionCode.CLOSED, HConstants.NO_SEQNUM);
-      } catch (UnexpectedStateException e) {
-        // Should never happen.
-        throw new RuntimeException(e);
-      }
+      // This exception comes from ServerCrashProcedure after it is done with log splitting.
+      // SCP found this region as a Region-In-Transition (RIT). Its call into here says it is ok to
+      // let this procedure go on to a complete close now. This will release lock on this region so
+      // subsequent action on region can succeed; e.g. the assign that follows this unassign when
+      // a move (w/o wait on SCP the assign could run w/o logs being split so data loss).
+      reportTransitionCLOSED(env, regionNode);
     } else if (exception instanceof RegionServerAbortedException ||
         exception instanceof RegionServerStoppedException ||
         exception instanceof ServerNotRunningYetException) {
@@ -273,15 +268,31 @@ public class UnassignProcedure extends RegionTransitionProcedure {
         exception);
       setTransitionState(RegionTransitionState.REGION_TRANSITION_FINISH);
     } else {
-      LOG.warn("Expiring server " + this + "; " + regionNode.toShortString() +
-        ", exception=" + exception);
-      env.getMasterServices().getServerManager().expireServer(regionNode.getRegionLocation());
-      // Return false so this procedure stays in suspended state. It will be woken up by a
-      // ServerCrashProcedure when it notices this RIT.
-      // TODO: Add a SCP as a new subprocedure that we now come to depend on.
-      return false;
+      LOG.warn("Expiring server {}; rit={}, exception={}", this, regionNode.getState(),
+          exception.toString());
+      if (env.getMasterServices().getServerManager().expireServer(regionNode.getRegionLocation())) {
+        // Return false so this procedure stays in suspended state. It will be woken up by
+        // ServerCrashProcedure when it notices this RIT and calls this method again but with
+        // a SCPException -- see above.
+        // TODO: Add a SCP as a new subprocedure that we now come to depend on.
+        return false;
+      } else {
+        LOG.warn("Failed expire of {}; presumed CRASHED; moving region to CLOSED state",
+            regionNode.getRegionLocation());
+        reportTransitionCLOSED(env, regionNode);
+      }
     }
     return true;
+  }
+
+  private void reportTransitionCLOSED(final MasterProcedureEnv env,
+      final RegionStateNode regionNode) {
+    try {
+      reportTransition(env, regionNode, TransitionCode.CLOSED, HConstants.NO_SEQNUM);
+    } catch (UnexpectedStateException e) {
+      // Should never happen.
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
