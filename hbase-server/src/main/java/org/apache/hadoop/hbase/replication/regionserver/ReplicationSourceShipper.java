@@ -120,7 +120,7 @@ public class ReplicationSourceShipper extends Thread {
   /**
    * Do the shipping logic
    */
-  protected void shipEdits(WALEntryBatch entryBatch) {
+  protected final void shipEdits(WALEntryBatch entryBatch) {
     List<Entry> entries = entryBatch.getWalEntries();
     long lastReadPosition = entryBatch.getLastWalPosition();
     currentPath = entryBatch.getLastWalPath();
@@ -253,7 +253,7 @@ public class ReplicationSourceShipper extends Thread {
     return 0;
   }
 
-  protected boolean isActive() {
+  protected final boolean isActive() {
     return source.isSourceActive() && state == WorkerState.RUNNING && !isInterrupted();
   }
 
