@@ -71,6 +71,13 @@ public class ReplicationSourceWALReader extends Thread {
   private final int maxRetriesMultiplier;
   private final boolean eofAutoRecovery;
 
+  // used to store the first cell in an entry before filtering. This is because that if serial
+  // replication is enabled, we may find out that an entry can not be pushed after filtering. And
+  // when we try the next time, the cells maybe null since the entry has already been filtered,
+  // especially for region event wal entries. And this can also used to determine whether we can
+  // skip filtering.
+  private Cell firstCellInEntryBeforeFiltering;
+
   //Indicates whether this particular worker is running
   private boolean isReaderRunning = true;
 
@@ -162,37 +169,52 @@ public class ReplicationSourceWALReader extends Thread {
     }
   }
 
+  private void removeEntryFromStream(WALEntryStream entryStream, WALEntryBatch batch)
+      throws IOException {
+    entryStream.next();
+    firstCellInEntryBeforeFiltering = null;
+    batch.setLastWalPosition(entryStream.getPosition());
+  }
+
   private WALEntryBatch readWALEntries(WALEntryStream entryStream)
       throws IOException, InterruptedException {
     if (!entryStream.hasNext()) {
       return null;
     }
+    long positionBefore = entryStream.getPosition();
     WALEntryBatch batch =
       new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
     do {
       Entry entry = entryStream.peek();
-      batch.setLastWalPosition(entryStream.getPosition());
       boolean hasSerialReplicationScope = entry.getKey().hasSerialReplicationScope();
-      // Used to locate the region record in meta table. In WAL we only have the table name and
-      // encoded region name which can not be mapping to region name without scanning all the
-      // records for a table, so we need a start key, just like what we have done at client side
-      // when locating a region. For the markers, we will use the start key of the region as the row
-      // key for the edit. And we need to do this before filtering since all the cells may be
-      // filtered out, especially that for the markers.
-      Cell firstCellInEdit = null;
+      boolean doFiltering = true;
       if (hasSerialReplicationScope) {
-        assert !entry.getEdit().isEmpty() : "should not write empty edits";
-        firstCellInEdit = entry.getEdit().getCells().get(0);
+        if (firstCellInEntryBeforeFiltering == null) {
+          assert !entry.getEdit().isEmpty() : "should not write empty edits";
+          // Used to locate the region record in meta table. In WAL we only have the table name and
+          // encoded region name which can not be mapping to region name without scanning all the
+          // records for a table, so we need a start key, just like what we have done at client side
+          // when locating a region. For the markers, we will use the start key of the region as the
+          // row key for the edit. And we need to do this before filtering since all the cells may
+          // be filtered out, especially that for the markers.
+          firstCellInEntryBeforeFiltering = entry.getEdit().getCells().get(0);
+        } else {
+          // if this is not null then we know that the entry has already been filtered.
+          doFiltering = false;
+        }
       }
-      entry = filterEntry(entry);
+
+      if (doFiltering) {
+        entry = filterEntry(entry);
+      }
       if (entry != null) {
         if (hasSerialReplicationScope) {
-          if (!serialReplicationChecker.canPush(entry, firstCellInEdit)) {
-            if (batch.getNbEntries() > 0) {
+          if (!serialReplicationChecker.canPush(entry, firstCellInEntryBeforeFiltering)) {
+            if (batch.getLastWalPosition() > positionBefore) {
               // we have something that can push, break
               break;
             } else {
-              serialReplicationChecker.waitUntilCanPush(entry, firstCellInEdit);
+              serialReplicationChecker.waitUntilCanPush(entry, firstCellInEntryBeforeFiltering);
             }
           }
           // arrive here means we can push the entry, record the last sequence id
@@ -200,7 +222,7 @@ public class ReplicationSourceWALReader extends Thread {
             entry.getKey().getSequenceId());
         }
         // actually remove the entry.
-        entryStream.next();
+        removeEntryFromStream(entryStream, batch);
         WALEdit edit = entry.getEdit();
         if (edit != null && !edit.isEmpty()) {
           long entrySize = getEntrySize(entry);
@@ -215,7 +237,7 @@ public class ReplicationSourceWALReader extends Thread {
         }
       } else {
         // actually remove the entry.
-        entryStream.next();
+        removeEntryFromStream(entryStream, batch);
       }
     } while (entryStream.hasNext());
     return batch;
