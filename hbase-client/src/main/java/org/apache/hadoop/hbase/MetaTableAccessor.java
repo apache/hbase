@@ -19,12 +19,14 @@ package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +37,6 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.client.Connection;
@@ -150,11 +151,13 @@ public class MetaTableAccessor {
       META_REGION_PREFIX, 0, len);
   }
 
-  private static final byte[] REPLICATION_PARENT_QUALIFIER = Bytes.toBytes("parent");
+  @VisibleForTesting
+  public static final byte[] REPLICATION_PARENT_QUALIFIER = Bytes.toBytes("parent");
 
-  private static final String REPLICATION_PARENT_SEPARATOR = "|";
+  private static final byte ESCAPE_BYTE = (byte) 0xFF;
 
-  private static final String REPLICATION_PARENT_SEPARATOR_REGEX = "\\|";
+  private static final byte SEPARATED_BYTE = 0x00;
+
   /**
    * Lists all of the table regions currently in META.
    * Deprecated, keep there until some test use this.
@@ -1924,10 +1927,51 @@ public class MetaTableAccessor {
               .build());
   }
 
+  private static void writeRegionName(ByteArrayOutputStream out, byte[] regionName) {
+    for (byte b : regionName) {
+      if (b == ESCAPE_BYTE) {
+        out.write(ESCAPE_BYTE);
+      }
+      out.write(b);
+    }
+  }
+
+  @VisibleForTesting
+  public static byte[] getParentsBytes(List<RegionInfo> parents) {
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    Iterator<RegionInfo> iter = parents.iterator();
+    writeRegionName(bos, iter.next().getRegionName());
+    while (iter.hasNext()) {
+      bos.write(ESCAPE_BYTE);
+      bos.write(SEPARATED_BYTE);
+      writeRegionName(bos, iter.next().getRegionName());
+    }
+    return bos.toByteArray();
+  }
+
+  private static List<byte[]> parseParentsBytes(byte[] bytes) {
+    List<byte[]> parents = new ArrayList<>();
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    for (int i = 0; i < bytes.length; i++) {
+      if (bytes[i] == ESCAPE_BYTE) {
+        i++;
+        if (bytes[i] == SEPARATED_BYTE) {
+          parents.add(bos.toByteArray());
+          bos.reset();
+          continue;
+        }
+        // fall through to append the byte
+      }
+      bos.write(bytes[i]);
+    }
+    if (bos.size() > 0) {
+      parents.add(bos.toByteArray());
+    }
+    return parents;
+  }
+
   private static void addReplicationParent(Put put, List<RegionInfo> parents) throws IOException {
-    byte[] value = parents.stream().map(RegionReplicaUtil::getRegionInfoForDefaultReplica)
-      .map(RegionInfo::getRegionNameAsString).collect(Collectors
-        .collectingAndThen(Collectors.joining(REPLICATION_PARENT_SEPARATOR), Bytes::toBytes));
+    byte[] value = getParentsBytes(parents);
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
       .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
       .setTimestamp(put.getTimeStamp()).setType(Type.Put).setValue(value).build());
@@ -1998,6 +2042,14 @@ public class MetaTableAccessor {
     public List<byte[]> getParentRegionNames() {
       return parentRegionNames;
     }
+
+    @Override
+    public String toString() {
+      return "ReplicationBarrierResult [barriers=" + Arrays.toString(barriers) + ", state=" +
+        state + ", parentRegionNames=" +
+        parentRegionNames.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", ")) +
+        "]";
+    }
   }
 
   private static long getReplicationBarrier(Cell c) {
@@ -2017,10 +2069,7 @@ public class MetaTableAccessor {
     byte[] parentRegionsBytes =
       result.getValue(HConstants.REPLICATION_BARRIER_FAMILY, REPLICATION_PARENT_QUALIFIER);
     List<byte[]> parentRegionNames =
-      parentRegionsBytes != null
-        ? Stream.of(Bytes.toString(parentRegionsBytes).split(REPLICATION_PARENT_SEPARATOR_REGEX))
-          .map(Bytes::toBytes).collect(Collectors.toList())
-        : Collections.emptyList();
+      parentRegionsBytes != null ? parseParentsBytes(parentRegionsBytes) : Collections.emptyList();
     return new ReplicationBarrierResult(barriers, state, parentRegionNames);
   }
 
