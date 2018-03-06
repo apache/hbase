@@ -2226,9 +2226,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
-      if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateGet(
-            region.getTableDesc().getTableName(), EnvironmentEdgeManager.currentTime() - before);
+      MetricsRegionServer mrs = regionServer.metricsRegionServer;
+      if (mrs != null) {
+        HTableDescriptor td = region != null ? region.getTableDesc() : null;
+        if (td != null) {
+          mrs.updateGet(td.getTableName(), EnvironmentEdgeManager.currentTime() - before);
+        }
       }
       if (quota != null) {
         quota.close();
