@@ -555,15 +555,17 @@ public class ServerManager {
   }
 
   /*
-   * Expire the passed server.  Add it to list of dead servers and queue a
-   * shutdown processing.
+   * Expire the passed server. Add it to list of dead servers and queue a shutdown processing.
+   * @return True if we expired passed <code>serverName</code> else false if we failed to schedule
+   * an expire (and attendant ServerCrashProcedure -- some clients are dependent on
+   * server crash procedure being queued and need to know if has not been queued).
    */
-  public synchronized void expireServer(final ServerName serverName) {
+  public synchronized boolean expireServer(final ServerName serverName) {
     if (serverName.equals(master.getServerName())) {
       if (!(master.isAborted() || master.isStopped())) {
         master.stop("We lost our znode?");
       }
-      return;
+      return false;
     }
     if (!master.isServerCrashProcessingEnabled()) {
       LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
@@ -573,13 +575,13 @@ public class ServerManager {
       // the SCP is not enable yet and Meta's RIT may be suspend forever. See HBase-19287
       master.getAssignmentManager().handleMetaRITOnCrashedServer(serverName);
       this.queuedDeadServers.add(serverName);
-      return;
+      return false;
     }
     if (this.deadservers.isDeadServer(serverName)) {
       // TODO: Can this happen?  It shouldn't be online in this case?
       LOG.warn("Expiration of " + serverName +
           " but server shutdown already in progress");
-      return;
+      return false;
     }
     moveFromOnlineToDeadServers(serverName);
 
@@ -591,7 +593,7 @@ public class ServerManager {
       if (this.onlineServers.isEmpty()) {
         master.stop("Cluster shutdown set; onlineServer=0");
       }
-      return;
+      return false;
     }
     LOG.info("Processing expiration of " + serverName + " on " + this.master.getServerName());
     master.getAssignmentManager().submitServerCrash(serverName, true);
@@ -602,6 +604,7 @@ public class ServerManager {
         listener.serverRemoved(serverName);
       }
     }
+    return true;
   }
 
   @VisibleForTesting
