@@ -23,9 +23,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CON
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
@@ -206,7 +204,6 @@ public class RestoreTablesClient {
   private void restore(HashMap<TableName, BackupManifest> backupManifestMap,
       TableName[] sTableArray, TableName[] tTableArray, boolean isOverwrite) throws IOException {
     TreeSet<BackupImage> restoreImageSet = new TreeSet<>();
-    Set<String> backupIdSet = new HashSet<>();
 
     for (int i = 0; i < sTableArray.length; i++) {
       TableName table = sTableArray[i];
@@ -229,10 +226,6 @@ public class RestoreTablesClient {
           LOG.info("Backup: " + image.getBackupId() + " "
               + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(),
                   table));
-          if (image.getType() == BackupType.INCREMENTAL) {
-            backupIdSet.add(image.getBackupId());
-            LOG.debug("adding " + image.getBackupId() + " for bulk load");
-          }
         }
       }
     }
