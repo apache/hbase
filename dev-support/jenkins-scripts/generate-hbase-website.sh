@@ -40,7 +40,7 @@ function usage {
   echo ""
   echo "    --working-dir /path/to/use  Path for writing logs and a local checkout of hbase-site repo."
   echo "                                if given must exist."
-  echo "                                defaults to making a directory in /tmp."
+  echo "                                defaults to making a directory via mktemp."
   echo "    --local-repo /path/for/maven/.m2  Path for putting local maven repo."
   echo "                                if given must exist."
   echo "                                defaults to making a clean directory in --working-dir."
@@ -77,12 +77,11 @@ fi
 component_dir="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 
 if [ -z "${working_dir}" ]; then
-  echo "[DEBUG] defaulting to creating a directory in /tmp"
-  working_dir=/tmp
-  while [[ -e ${working_dir} ]]; do
-    working_dir=/tmp/hbase-generate-website-${RANDOM}.${RANDOM}
-  done
-  mkdir "${working_dir}"
+  echo "[DEBUG] defaulting to creating a directory via mktemp"
+  if ! working_dir="$(mktemp -d -t hbase-generate-website)" ; then
+    echo "Failed to create temporary working directory. Please specify via --working-dir"
+    exit 1
+  fi
 else
   # absolutes please
   working_dir="$(cd "$(dirname "${working_dir}")"; pwd)/$(basename "${working_dir}")"
