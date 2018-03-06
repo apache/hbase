@@ -21,7 +21,7 @@ function usage {
   echo "Usage: ${0} [options] /path/to/component/checkout"
   echo ""
   echo "    --intermediate-file-dir /path/to/use  Path for writing listings and diffs. must exist."
-  echo "                                          defaults to making a directory in /tmp."
+  echo "                                          defaults to making a directory via mktemp."
   echo "    --unpack-temp-dir /path/to/use        Path for unpacking tarball. default to"
   echo "                                          'unpacked_src_tarball' in intermediate directory."
   echo "    --maven-m2-initial /path/to/use       Path for maven artifacts while building in"
@@ -67,11 +67,10 @@ fi
 component_dir="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 
 if [ -z "${working_dir}" ]; then
-  working_dir=/tmp
-  while [[ -e ${working_dir} ]]; do
-    working_dir=/tmp/hbase-srctarball-test-${RANDOM}.${RANDOM}
-  done
-  mkdir "${working_dir}"
+  if ! working_dir="$(mktemp -d -t hbase-srctarball-test)" ; then
+    echo "Failed to create temporary working directory. Please specify via --unpack-temp-dir"
+    exit 1
+  fi
 else
   # absolutes please
   working_dir="$(cd "$(dirname "${working_dir}")"; pwd)/$(basename "${working_dir}")"
