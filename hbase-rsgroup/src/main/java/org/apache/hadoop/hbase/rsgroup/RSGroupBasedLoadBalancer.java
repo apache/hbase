@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -118,14 +119,15 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
           " is not online, unable to perform balance");
     }
 
-    Map<ServerName,List<RegionInfo>> correctedState = correctAssignments(clusterState);
-    List<RegionPlan> regionPlans = new ArrayList<>();
+    // Calculate correct assignments and a list of RegionPlan for mis-placed regions
+    Pair<Map<ServerName,List<RegionInfo>>, List<RegionPlan>> correctedStateAndRegionPlans =
+        correctAssignments(clusterState);
+    Map<ServerName,List<RegionInfo>> correctedState = correctedStateAndRegionPlans.getFirst();
+    List<RegionPlan> regionPlans = correctedStateAndRegionPlans.getSecond();
 
-    List<RegionInfo> misplacedRegions = correctedState.get(LoadBalancer.BOGUS_SERVER_NAME);
-    for (RegionInfo regionInfo : misplacedRegions) {
-      ServerName serverName = findServerForRegion(clusterState, regionInfo);
-      regionPlans.add(new RegionPlan(regionInfo, serverName, null));
-    }
+    // Add RegionPlan
+    // for the regions which have been placed according to the region server group assignment
+    // into the movement list
     try {
       List<RSGroupInfo> rsgi = rsGroupInfoManager.listRSGroups();
       for (RSGroupInfo info: rsgi) {
@@ -150,6 +152,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       LOG.warn("Exception while balancing cluster.", exp);
       regionPlans.clear();
     }
+
+    // Return the whole movement list
     return regionPlans;
   }
 
@@ -334,44 +338,38 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     return misplacedRegions;
   }
 
-  private ServerName findServerForRegion(
-      Map<ServerName, List<RegionInfo>> existingAssignments, RegionInfo region) {
-    for (Map.Entry<ServerName, List<RegionInfo>> entry : existingAssignments.entrySet()) {
-      if (entry.getValue().contains(region)) {
-        return entry.getKey();
-      }
-    }
-
-    throw new IllegalStateException("Could not find server for region "
-        + region.getShortNameToLog());
-  }
-
-  private Map<ServerName, List<RegionInfo>> correctAssignments(
+  private Pair<Map<ServerName, List<RegionInfo>>, List<RegionPlan>> correctAssignments(
        Map<ServerName, List<RegionInfo>> existingAssignments)
   throws HBaseIOException{
+    // To return
     Map<ServerName, List<RegionInfo>> correctAssignments = new TreeMap<>();
-    correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<>());
+    List<RegionPlan> regionPlansForMisplacedRegions = new ArrayList<>();
+
     for (Map.Entry<ServerName, List<RegionInfo>> assignments : existingAssignments.entrySet()){
-      ServerName sName = assignments.getKey();
-      correctAssignments.put(sName, new LinkedList<>());
+      ServerName currentHostServer = assignments.getKey();
+      correctAssignments.put(currentHostServer, new LinkedList<>());
       List<RegionInfo> regions = assignments.getValue();
       for (RegionInfo region : regions) {
-        RSGroupInfo info = null;
+        RSGroupInfo targetRSGInfo = null;
         try {
-          info = rsGroupInfoManager.getRSGroup(
+          targetRSGInfo = rsGroupInfoManager.getRSGroup(
               rsGroupInfoManager.getRSGroupOfTable(region.getTable()));
         } catch (IOException exp) {
           LOG.debug("RSGroup information null for region of table " + region.getTable(),
               exp);
         }
-        if ((info == null) || (!info.containsServer(sName.getAddress()))) {
-          correctAssignments.get(LoadBalancer.BOGUS_SERVER_NAME).add(region);
-        } else {
-          correctAssignments.get(sName).add(region);
+        if (targetRSGInfo == null ||
+            !targetRSGInfo.containsServer(currentHostServer.getAddress())) { // region is mis-placed
+          regionPlansForMisplacedRegions.add(new RegionPlan(region, currentHostServer, null));
+        } else { // region is placed as expected
+          correctAssignments.get(currentHostServer).add(region);
         }
       }
     }
-    return correctAssignments;
+
+    // Return correct assignments and region movement plan for mis-placed regions together
+    return new Pair<Map<ServerName, List<RegionInfo>>, List<RegionPlan>>(
+        correctAssignments, regionPlansForMisplacedRegions);
   }
 
   @Override
