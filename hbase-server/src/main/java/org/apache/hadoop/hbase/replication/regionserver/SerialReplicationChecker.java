@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
@@ -107,6 +109,8 @@ import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
  */
 @InterfaceAudience.Private
 class SerialReplicationChecker {
+
+  private static final Logger LOG = LoggerFactory.getLogger(SerialReplicationChecker.class);
 
   public static final String REPLICATION_SERIALLY_WAITING_KEY =
     "hbase.serial.replication.waiting.ms";
@@ -182,9 +186,11 @@ class SerialReplicationChecker {
     long seqId = entry.getKey().getSequenceId();
     ReplicationBarrierResult barrierResult = MetaTableAccessor.getReplicationBarrierResult(conn,
       entry.getKey().getTableName(), row, entry.getKey().getEncodedRegionName());
+    LOG.debug("Replication barrier for {}: {}", entry, barrierResult);
     long[] barriers = barrierResult.getBarriers();
     int index = Arrays.binarySearch(barriers, seqId);
     if (index == -1) {
+      LOG.debug("{} is before the first barrier, pass", entry);
       // This means we are in the range before the first record openSeqNum, this usually because the
       // wal is written before we enable serial replication for this table, just return true since
       // we can not guarantee the order.
@@ -203,22 +209,29 @@ class SerialReplicationChecker {
       // we are in the first range, check whether we have parents
       for (byte[] regionName : barrierResult.getParentRegionNames()) {
         if (!isParentFinished(regionName)) {
+          LOG.debug("Parent {} has not been finished yet for entry {}, give up",
+            Bytes.toStringBinary(regionName), entry);
           return false;
         }
       }
       if (isLastRangeAndOpening(barrierResult, index)) {
+        LOG.debug("{} is in the last range and the region is opening, give up", entry);
         return false;
       }
+      LOG.debug("{} is in the first range, pass", entry);
       recordCanPush(encodedNameAsString, seqId, barriers, 1);
       return true;
     }
     // check whether the previous range is finished
     if (!isRangeFinished(barriers[index - 1], encodedNameAsString)) {
+      LOG.debug("Previous range for {} has not been finished yet, give up", entry);
       return false;
     }
     if (isLastRangeAndOpening(barrierResult, index)) {
+      LOG.debug("{} is in the last range and the region is opening, give up", entry);
       return false;
     }
+    LOG.debug("The previous range for {} has been finished, pass", entry);
     recordCanPush(encodedNameAsString, seqId, barriers, index);
     return true;
   }
@@ -229,8 +242,11 @@ class SerialReplicationChecker {
     Long canReplicateUnderSeqId = canPushUnder.getIfPresent(encodedNameAsString);
     if (canReplicateUnderSeqId != null) {
       if (seqId < canReplicateUnderSeqId.longValue()) {
+        LOG.trace("{} is before the end barrier {}, pass", entry, canReplicateUnderSeqId);
         return true;
       }
+      LOG.debug("{} is beyond the previous end barrier {}, remove from cache", entry,
+        canReplicateUnderSeqId);
       // we are already beyond the last safe point, remove
       canPushUnder.invalidate(encodedNameAsString);
     }
@@ -239,6 +255,7 @@ class SerialReplicationChecker {
     // has been moved to another RS and then back, so we need to check the barrier.
     MutableLong previousPushedSeqId = pushed.getUnchecked(encodedNameAsString);
     if (seqId == previousPushedSeqId.longValue() + 1) {
+      LOG.trace("The sequence id for {} is continuous, pass");
       previousPushedSeqId.increment();
       return true;
     }
@@ -249,6 +266,7 @@ class SerialReplicationChecker {
       throws IOException, InterruptedException {
     byte[] row = CellUtil.cloneRow(firstCellInEdit);
     while (!canPush(entry, row)) {
+      LOG.debug("Can not push{}, wait", entry);
       Thread.sleep(waitTimeMs);
     }
   }
