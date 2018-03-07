@@ -24,20 +24,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,8 +46,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore // Disabled temporarily; reenable 
-@Category(MediumTests.class)
+@Category({ MasterTests.class, MediumTests.class })
 public class TestAssignmentManagerMetrics {
 
   @ClassRule
@@ -59,7 +59,7 @@ public class TestAssignmentManagerMetrics {
 
   private static MiniHBaseCluster cluster;
   private static HMaster master;
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
   private static final int msgInterval = 1000;
 
@@ -69,7 +69,6 @@ public class TestAssignmentManagerMetrics {
   @BeforeClass
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
-    TEST_UTIL = new HBaseTestingUtility();
     conf = TEST_UTIL.getConfiguration();
 
     // Disable sanity check for coprocessor
@@ -96,20 +95,14 @@ public class TestAssignmentManagerMetrics {
 
   @AfterClass
   public static void after() throws Exception {
-    if (TEST_UTIL != null) {
-      TEST_UTIL.shutdownMiniCluster();
-    }
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testRITAssignmentManagerMetrics() throws Exception {
     final TableName TABLENAME = TableName.valueOf(name.getMethodName());
     final byte[] FAMILY = Bytes.toBytes("family");
-
-    Table table = null;
-    try {
-      table = TEST_UTIL.createTable(TABLENAME, FAMILY);
-
+    try (Table table = TEST_UTIL.createTable(TABLENAME, FAMILY)){
       final byte[] row = Bytes.toBytes("row");
       final byte[] qualifier = Bytes.toBytes("qualifier");
       final byte[] value = Bytes.toBytes("value");
@@ -130,21 +123,19 @@ public class TestAssignmentManagerMetrics {
           amSource);
 
       // alter table with a non-existing coprocessor
-      HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-
-      htd.addFamily(hcd);
 
       String spec = "hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2";
-      htd.addCoprocessorWithSpec(spec);
-
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(TABLENAME)
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).addCoprocessorWithSpec(spec)
+        .build();
       try {
-        TEST_UTIL.getAdmin().modifyTable(TABLENAME, htd);
+        TEST_UTIL.getAdmin().modifyTable(htd);
         fail("Expected region failed to open");
       } catch (IOException e) {
         // expected, the RS will crash and the assignment will spin forever waiting for a RS
         // to assign the region. the region will not go to FAILED_OPEN because in this case
         // we have just one RS and it will do one retry.
+        LOG.info("Expected error", e);
       }
 
       // Sleep 3 seconds, wait for doMetrics chore catching up
@@ -152,11 +143,6 @@ public class TestAssignmentManagerMetrics {
       metricsHelper.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 1, amSource);
       metricsHelper.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 1,
           amSource);
-
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 }
