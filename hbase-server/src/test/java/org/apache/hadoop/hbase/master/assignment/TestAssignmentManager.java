@@ -712,7 +712,7 @@ public class TestAssignmentManager {
   }
 
   private class HangOnCloseThenRSCrashExecutor extends GoodRsExecutor {
-    public static final int TYPES_OF_FAILURE = 7;
+    public static final int TYPES_OF_FAILURE = 6;
     private int invocations;
 
     @Override
@@ -724,14 +724,6 @@ public class TestAssignmentManager {
       case 2: throw new RegionServerStoppedException("Fake!");
       case 3: throw new ServerNotRunningYetException("Fake!");
       case 4:
-        // We will expire the server that we failed to rpc against.
-        throw new FailedRemoteDispatchException("Fake!");
-      case 5:
-        // Mark this regionserver as already expiring so we go different code route; i.e. we
-        // FAIL to expire the remote server and presume ok to move region to CLOSED. HBASE-20137.
-        TestAssignmentManager.this.master.getServerManager().expireServer(server);
-        throw new FailedRemoteDispatchException("Fake!");
-      case 6:
         LOG.info("Return null response from serverName=" + server + "; means STUCK...TODO timeout");
         executor.schedule(new Runnable() {
           @Override
