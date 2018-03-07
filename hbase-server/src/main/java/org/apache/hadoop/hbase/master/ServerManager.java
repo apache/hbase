@@ -957,6 +957,10 @@ public class ServerManager {
     String statusStr = "Cluster shutdown requested of master=" + this.master.getServerName();
     LOG.info(statusStr);
     this.clusterShutdown.set(true);
+    if (onlineServers.isEmpty()) {
+      // we do not synchronize here so this may cause a double stop, but not a big deal
+      master.stop("OnlineServer=0 right after cluster shutdown set");
+    }
   }
 
   boolean isClusterShutdown() {
