@@ -182,8 +182,10 @@ public abstract class RegionTransitionProcedure
   public void remoteCallFailed(final MasterProcedureEnv env,
       final ServerName serverName, final IOException exception) {
     final RegionStateNode regionNode = getRegionState(env);
-    LOG.warn("Remote call failed {}; rit={}, exception={}", this, regionNode.getState(),
-        exception.toString());
+    String msg = exception.getMessage() == null? exception.getClass().getSimpleName():
+      exception.getMessage();
+    LOG.warn("Remote call failed " + this + "; " + regionNode.toShortString() +
+      "; exception=" + msg);
     if (remoteCallFailed(env, regionNode, exception)) {
       // NOTE: This call to wakeEvent puts this Procedure back on the scheduler.
       // Thereafter, another Worker can be in here so DO NOT MESS WITH STATE beyond
@@ -218,14 +220,9 @@ public abstract class RegionTransitionProcedure
     // backtrack on stuff like the 'suspend' done above -- tricky as the 'wake' requests us -- and
     // ditto up in the caller; it needs to undo state changes. Inside in remoteCallFailed, it does
     // wake to undo the above suspend.
-    //
-    // We fail the addOperationToNode usually because there is no such remote server (it has
-    // crashed and we are currently processing it or something went badly wrong and we have a
-    // bad server).
     if (!env.getRemoteDispatcher().addOperationToNode(targetServer, this)) {
-      remoteCallFailed(env, targetServer, targetServer == null?
-          new FailedRemoteDispatchException():
-          new FailedRemoteDispatchException(targetServer.toShortString()));
+      remoteCallFailed(env, targetServer,
+          new FailedRemoteDispatchException(this + " to " + targetServer));
       return false;
     }
     return true;

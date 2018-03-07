@@ -21,17 +21,12 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used internally signaling failed queue of a remote procedure operation.
- * Usually happens because no such remote server; it is being processed as crashed so it is not
- * online at time of RPC. Otherwise, something unexpected happened.
+ * Used internally signaling failed queue of a remote procedure
+ * operation.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
 public class FailedRemoteDispatchException extends HBaseIOException {
-  public FailedRemoteDispatchException() {
-    super();
-  }
-
   public FailedRemoteDispatchException(String msg) {
     super(msg);
   }
