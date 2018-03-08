@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -155,7 +153,8 @@ class DisabledWALProvider implements WALProvider {
 
     @Override
     public long append(HTableDescriptor htd, HRegionInfo info, WALKey key, WALEdit edits,
-                       boolean inMemstore) {
+        boolean inMemstore) throws IOException {
+      key.setWriteEntry(key.getMvcc().begin());
       if (!this.listeners.isEmpty()) {
         final long start = System.nanoTime();
         long len = 0;
