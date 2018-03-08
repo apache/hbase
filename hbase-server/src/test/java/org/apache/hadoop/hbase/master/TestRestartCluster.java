@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,7 +44,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestRestartCluster {
 
   @ClassRule
@@ -60,7 +59,7 @@ public class TestRestartCluster {
       TableName.valueOf("restartTableTwo"),
       TableName.valueOf("restartTableThree")
   };
-  private static final byte [] FAMILY = Bytes.toBytes("family");
+  private static final byte[] FAMILY = Bytes.toBytes("family");
 
   @After public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
@@ -115,17 +114,13 @@ public class TestRestartCluster {
   @Test
   public void testRetainAssignmentOnRestart() throws Exception {
     UTIL.startMiniCluster(2);
-    while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
-      Threads.sleep(1);
-    }
     // Turn off balancer
-    UTIL.getMiniHBaseCluster().getMaster().
-      getMasterRpcServices().synchronousBalanceSwitch(false);
+    UTIL.getMiniHBaseCluster().getMaster().getMasterRpcServices().synchronousBalanceSwitch(false);
     LOG.info("\n\nCreating tables");
-    for(TableName TABLE : TABLES) {
+    for (TableName TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
     }
-    for(TableName TABLE : TABLES) {
+    for (TableName TABLE : TABLES) {
       UTIL.waitTableEnabled(TABLE);
     }
 
@@ -157,6 +152,7 @@ public class TestRestartCluster {
     }
 
     LOG.info("\n\nShutting down HBase cluster");
+    cluster.stopMaster(0);
     cluster.shutdown();
     cluster.waitUntilShutDown();
 
@@ -194,11 +190,8 @@ public class TestRestartCluster {
     }
 
     // Wait till master is initialized and all regions are assigned
-    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-    int expectedRegions = regionToRegionServerMap.size() + 1;
-    while (!master.isInitialized()
-        || regionStates.getRegionAssignments().size() != expectedRegions) {
-      Threads.sleep(100);
+    for (TableName TABLE : TABLES) {
+      UTIL.waitTableAvailable(TABLE);
     }
 
     snapshot = new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
@@ -206,11 +199,14 @@ public class TestRestartCluster {
     Map<RegionInfo, ServerName> newRegionToRegionServerMap =
       snapshot.getRegionToRegionServerMap();
     assertEquals(regionToRegionServerMap.size(), newRegionToRegionServerMap.size());
-    for (Map.Entry<RegionInfo, ServerName> entry: newRegionToRegionServerMap.entrySet()) {
-      if (TableName.NAMESPACE_TABLE_NAME.equals(entry.getKey().getTable())) continue;
+    for (Map.Entry<RegionInfo, ServerName> entry : newRegionToRegionServerMap.entrySet()) {
+      if (TableName.NAMESPACE_TABLE_NAME.equals(entry.getKey().getTable())) {
+        continue;
+      }
       ServerName oldServer = regionToRegionServerMap.get(entry.getKey());
       ServerName currentServer = entry.getValue();
-      LOG.info("Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
+      LOG.info(
+        "Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
       assertEquals(entry.getKey().toString(), oldServer.getAddress(), currentServer.getAddress());
       assertNotEquals(oldServer.getStartcode(), currentServer.getStartcode());
     }
