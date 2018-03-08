@@ -162,6 +162,7 @@ class DisabledWALProvider implements WALProvider {
     @Override
     public long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
         throws IOException {
+      key.setWriteEntry(key.getMvcc().begin());
       if (!this.listeners.isEmpty()) {
         final long start = System.nanoTime();
         long len = 0;
