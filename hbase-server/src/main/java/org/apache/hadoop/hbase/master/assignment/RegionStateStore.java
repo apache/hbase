@@ -165,7 +165,7 @@ public class RegionStateStore {
       MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
       // only update replication barrier for default replica
       if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID &&
-        hasSerialReplicationScope(regionInfo.getTable())) {
+        hasGlobalReplicationScope(regionInfo.getTable())) {
         MetaTableAccessor.addReplicationBarrier(put, openSeqNum);
       }
       info.append(", openSeqNum=").append(openSeqNum);
@@ -224,7 +224,7 @@ public class RegionStateStore {
       ServerName serverName) throws IOException {
     TableDescriptor htd = getTableDescriptor(parent.getTable());
     long parentOpenSeqNum = HConstants.NO_SEQNUM;
-    if (htd.hasSerialReplicationScope()) {
+    if (htd.hasGlobalReplicationScope()) {
       parentOpenSeqNum = getOpenSeqNumForParentRegion(parent);
     }
     MetaTableAccessor.splitRegion(master.getConnection(), parent, parentOpenSeqNum, hriA, hriB,
@@ -239,7 +239,7 @@ public class RegionStateStore {
     TableDescriptor htd = getTableDescriptor(child.getTable());
     long regionAOpenSeqNum = -1L;
     long regionBOpenSeqNum = -1L;
-    if (htd.hasSerialReplicationScope()) {
+    if (htd.hasGlobalReplicationScope()) {
       regionAOpenSeqNum = getOpenSeqNumForParentRegion(hriA);
       regionBOpenSeqNum = getOpenSeqNumForParentRegion(hriB);
     }
@@ -261,12 +261,12 @@ public class RegionStateStore {
   // ==========================================================================
   //  Table Descriptors helpers
   // ==========================================================================
-  private boolean hasSerialReplicationScope(TableName tableName) throws IOException {
-    return hasSerialReplicationScope(getTableDescriptor(tableName));
+  private boolean hasGlobalReplicationScope(TableName tableName) throws IOException {
+    return hasGlobalReplicationScope(getTableDescriptor(tableName));
   }
 
-  private boolean hasSerialReplicationScope(TableDescriptor htd) {
-    return htd != null ? htd.hasSerialReplicationScope() : false;
+  private boolean hasGlobalReplicationScope(TableDescriptor htd) {
+    return htd != null ? htd.hasGlobalReplicationScope() : false;
   }
 
   private int getRegionReplication(TableDescriptor htd) {

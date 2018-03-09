@@ -266,7 +266,7 @@ class SerialReplicationChecker {
       throws IOException, InterruptedException {
     byte[] row = CellUtil.cloneRow(firstCellInEdit);
     while (!canPush(entry, row)) {
-      LOG.debug("Can not push{}, wait", entry);
+      LOG.debug("Can not push {}, wait", entry);
       Thread.sleep(waitTimeMs);
     }
   }

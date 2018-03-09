@@ -392,6 +392,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return replicationPeer.isPeerEnabled();
   }
 
+  public boolean isSerial() {
+    return replicationPeer.getPeerConfig().isSerial();
+  }
+
   private void initialize() {
     int sleepMultiplier = 1;
     while (this.isSourceActive()) {
