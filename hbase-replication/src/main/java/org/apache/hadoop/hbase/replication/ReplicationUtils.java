@@ -37,8 +37,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ReplicationUtils {
 
-  public static final String SYNC_REPLICATION_ENABLED = "hbase.replication.sync.enabled";
-
   public static final String REPLICATION_ATTR_NAME = "__rep__";
 
   public static final String REMOTE_WAL_DIR_NAME = "remoteWALs";

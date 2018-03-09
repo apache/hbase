@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +68,8 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   private final WALProvider provider;
 
-  private SyncReplicationPeerInfoProvider peerInfoProvider;
+  private SyncReplicationPeerInfoProvider peerInfoProvider =
+      new DefaultSyncReplicationPeerInfoProvider();
 
   private WALFactory factory;
 
@@ -233,6 +235,21 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     if (from == SyncReplicationState.ACTIVE && to == SyncReplicationState.DOWNGRADE_ACTIVE &&
       stage == 1) {
       safeClose(peerId2WAL.remove(peerId));
+    }
+  }
+
+  private static class DefaultSyncReplicationPeerInfoProvider
+      implements SyncReplicationPeerInfoProvider {
+
+    @Override
+    public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info) {
+      return Optional.empty();
+    }
+
+    @Override
+    public boolean checkState(RegionInfo info,
+        BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
+      return false;
     }
   }
 }

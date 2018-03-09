@@ -84,7 +84,6 @@ public class TestSyncReplication {
   private static void initTestingUtility(HBaseTestingUtility util, String zkParent) {
     util.setZkCluster(ZK_UTIL.getZkCluster());
     Configuration conf = util.getConfiguration();
-    conf.setBoolean(ReplicationUtils.SYNC_REPLICATION_ENABLED, true);
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, zkParent);
     conf.setInt("replication.source.size.capacity", 102400);
     conf.setLong("replication.source.sleepforretries", 100);

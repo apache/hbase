@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
-import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
@@ -151,6 +150,21 @@ public class WALFactory {
    *          to make a directory
    */
   public WALFactory(Configuration conf, String factoryId) throws IOException {
+    // default enableSyncReplicationWALProvider is true, only disable SyncReplicationWALProvider
+    // for HMaster or HRegionServer which take system table only. See HBASE-19999
+    this(conf, factoryId, true);
+  }
+
+  /**
+   * @param conf must not be null, will keep a reference to read params in later reader/writer
+   *          instances.
+   * @param factoryId a unique identifier for this factory. used i.e. by filesystem implementations
+   *          to make a directory
+   * @param enableSyncReplicationWALProvider whether wrap the wal provider to a
+   *          {@link SyncReplicationWALProvider}
+   */
+  public WALFactory(Configuration conf, String factoryId, boolean enableSyncReplicationWALProvider)
+      throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
@@ -162,7 +176,7 @@ public class WALFactory {
     // end required early initialization
     if (conf.getBoolean("hbase.regionserver.hlog.enabled", true)) {
       WALProvider provider = createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
-      if (conf.getBoolean(ReplicationUtils.SYNC_REPLICATION_ENABLED, false)) {
+      if (enableSyncReplicationWALProvider) {
         provider = new SyncReplicationWALProvider(provider);
       }
       provider.init(this, conf, null);

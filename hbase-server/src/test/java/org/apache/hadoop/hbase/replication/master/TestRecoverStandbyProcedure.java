@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
-import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -102,7 +101,6 @@ public class TestRecoverStandbyProcedure {
 
   @BeforeClass
   public static void setupCluster() throws Exception {
-    UTIL.getConfiguration().setBoolean(ReplicationUtils.SYNC_REPLICATION_ENABLED, true);
     UTIL.startMiniCluster(RS_NUMBER);
     UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
     conf = UTIL.getConfiguration();
