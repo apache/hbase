@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory
 import org.apache.hadoop.hbase.security.{User, UserProvider}
 import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
 import org.apache.hadoop.hbase.{HConstants, TableName}
-import org.apache.spark.Logging
 
 import scala.collection.mutable
 

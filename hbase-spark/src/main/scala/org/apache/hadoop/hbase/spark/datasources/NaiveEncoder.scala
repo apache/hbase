@@ -18,9 +18,9 @@ package org.apache.hadoop.hbase.spark.datasources
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder.JavaBytesEncoder
+import org.apache.hadoop.hbase.spark.Logging
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.Logging
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 

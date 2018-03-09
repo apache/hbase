@@ -39,7 +39,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.spark.HBaseRDDFunctions._
 import org.apache.hadoop.hbase.client._
 import scala.reflect.ClassTag
-import org.apache.spark.{Logging, SerializableWritable, SparkContext}
+import org.apache.spark.{SerializableWritable, SparkContext}
 import org.apache.hadoop.hbase.mapreduce.{TableMapReduceUtil,
 TableInputFormat, IdentityTableMapper}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
@@ -60,7 +60,7 @@ import scala.collection.mutable
   * to the working and managing the life cycle of Connections.
  */
 @InterfaceAudience.Public
-class HBaseContext(@transient sc: SparkContext,
+class HBaseContext(@transient val sc: SparkContext,
                    @transient val config: Configuration,
                    val tmpHdfsConfgFile: String = null)
   extends Serializable with Logging {

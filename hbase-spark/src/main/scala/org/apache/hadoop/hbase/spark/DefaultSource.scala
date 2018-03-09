@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.CellUtil
 import org.apache.hadoop.mapred.JobConf
-import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.datasources.hbase.{Utils, Field, HBaseTableCatalog}
 import org.apache.spark.sql.{DataFrame, SaveMode, Row, SQLContext}
