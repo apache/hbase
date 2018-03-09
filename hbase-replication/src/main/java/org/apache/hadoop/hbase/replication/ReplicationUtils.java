@@ -115,6 +115,9 @@ public final class ReplicationUtils {
     if (rpc1.replicateAllUserTables() != rpc2.replicateAllUserTables()) {
       return false;
     }
+    if (rpc1.isSerial() != rpc2.isSerial()) {
+      return false;
+    }
     if (rpc1.replicateAllUserTables()) {
       return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces()) &&
         isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());

@@ -186,9 +186,9 @@ public class ReplicationSourceWALReader extends Thread {
       new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
     do {
       Entry entry = entryStream.peek();
-      boolean hasSerialReplicationScope = entry.getKey().hasSerialReplicationScope();
+      boolean isSerial = source.isSerial();
       boolean doFiltering = true;
-      if (hasSerialReplicationScope) {
+      if (isSerial) {
         if (firstCellInEntryBeforeFiltering == null) {
           assert !entry.getEdit().isEmpty() : "should not write empty edits";
           // Used to locate the region record in meta table. In WAL we only have the table name and
@@ -208,7 +208,7 @@ public class ReplicationSourceWALReader extends Thread {
         entry = filterEntry(entry);
       }
       if (entry != null) {
-        if (hasSerialReplicationScope) {
+        if (isSerial) {
           if (!serialReplicationChecker.canPush(entry, firstCellInEntryBeforeFiltering)) {
             if (batch.getLastWalPosition() > positionBefore) {
               // we have something that can push, break

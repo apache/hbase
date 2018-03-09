@@ -24,7 +24,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -232,11 +232,6 @@ public interface TableDescriptor {
   boolean hasRegionMemStoreReplication();
 
   /**
-   * @return true if there are at least one cf whose replication scope is serial.
-   */
-  boolean hasSerialReplicationScope();
-
-  /**
    * Check if the compaction enable flag of the table is true. If flag is false
    * then no minor/major compactions will be done in real.
    *
@@ -275,6 +270,16 @@ public interface TableDescriptor {
   boolean isReadOnly();
 
   /**
+   * Check if any of the table's cfs' replication scope are set to
+   * {@link HConstants#REPLICATION_SCOPE_GLOBAL}.
+   * @return {@code true} if we have, otherwise {@code false}.
+   */
+  default boolean hasGlobalReplicationScope() {
+    return Stream.of(getColumnFamilies())
+      .anyMatch(cf -> cf.getScope() == HConstants.REPLICATION_SCOPE_GLOBAL);
+  }
+
+  /**
    * Check if the table's cfs' replication scope matched with the replication state
    * @param enabled replication state
    * @return true if matched, otherwise false
@@ -284,8 +289,7 @@ public interface TableDescriptor {
     boolean hasDisabled = false;
 
     for (ColumnFamilyDescriptor cf : getColumnFamilies()) {
-      if (cf.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL &&
-        cf.getScope() != HConstants.REPLICATION_SCOPE_SERIAL) {
+      if (cf.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL) {
         hasDisabled = true;
       } else {
         hasEnabled = true;

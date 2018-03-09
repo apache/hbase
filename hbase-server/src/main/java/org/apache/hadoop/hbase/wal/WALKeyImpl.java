@@ -419,14 +419,6 @@ public class WALKeyImpl implements WALKey {
     setReplicationScope(null);
   }
 
-  public boolean hasSerialReplicationScope() {
-    if (replicationScope == null || replicationScope.isEmpty()) {
-      return false;
-    }
-    return replicationScope.values().stream()
-      .anyMatch(scope -> scope.intValue() == HConstants.REPLICATION_SCOPE_SERIAL);
-  }
-
   /**
    * Marks that the cluster with the given clusterId has consumed the change
    */

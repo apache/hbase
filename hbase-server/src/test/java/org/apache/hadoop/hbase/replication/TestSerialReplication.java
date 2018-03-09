@@ -156,7 +156,8 @@ public class TestSerialReplication {
     // add in disable state, so later when enabling it all sources will start push together.
     UTIL.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
-        .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).build(),
+        .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).setSerial(true)
+        .build(),
       false);
   }
 
@@ -234,7 +235,7 @@ public class TestSerialReplication {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName).addColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_SERIAL).build()).build());
+        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
     UTIL.waitTableAvailable(tableName);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
@@ -273,7 +274,7 @@ public class TestSerialReplication {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName).addColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_SERIAL).build()).build());
+        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
     UTIL.waitTableAvailable(tableName);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
@@ -330,7 +331,7 @@ public class TestSerialReplication {
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName)
         .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
-          .setScope(HConstants.REPLICATION_SCOPE_SERIAL).build())
+          .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
         .build(),
       new byte[][] { splitKey });
     UTIL.waitTableAvailable(tableName);

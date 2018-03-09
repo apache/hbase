@@ -72,18 +72,10 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
       return;
     }
-    WALKeyImpl keyImpl = (WALKeyImpl) logKey;
-    // For serial replication we need to count all the sequence ids even for markers, so here we
-    // always need to retain the replication scopes to let the replication wal reader to know that
-    // we need serial replication. The ScopeWALEntryFilter will help filtering out the cell for
-    // WALEdit.METAFAMILY.
-    if (keyImpl.hasSerialReplicationScope()) {
-      return;
-    }
     // For replay, or if all the cells are markers, do not need to store replication scope.
     if (logEdit.isReplay() ||
       logEdit.getCells().stream().allMatch(c -> CellUtil.matchingFamily(c, WALEdit.METAFAMILY))) {
-      keyImpl.clearReplicationScope();
+      ((WALKeyImpl) logKey).clearReplicationScope();
     }
   }
 }

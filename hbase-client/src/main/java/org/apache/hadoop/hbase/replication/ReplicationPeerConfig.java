@@ -46,6 +46,7 @@ public class ReplicationPeerConfig {
   private Map<TableName, ? extends Collection<String>> excludeTableCFsMap = null;
   private Set<String> excludeNamespaces = null;
   private long bandwidth = 0;
+  private final boolean serial;
 
   private ReplicationPeerConfig(ReplicationPeerConfigBuilderImpl builder) {
     this.clusterKey = builder.clusterKey;
@@ -64,6 +65,7 @@ public class ReplicationPeerConfig {
         builder.excludeNamespaces != null ? Collections.unmodifiableSet(builder.excludeNamespaces)
             : null;
     this.bandwidth = builder.bandwidth;
+    this.serial = builder.serial;
   }
 
   private Map<TableName, List<String>>
@@ -82,6 +84,7 @@ public class ReplicationPeerConfig {
   public ReplicationPeerConfig() {
     this.peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     this.configuration = new HashMap<>(0);
+    this.serial = false;
   }
 
   /**
@@ -214,16 +217,20 @@ public class ReplicationPeerConfig {
     return new ReplicationPeerConfigBuilderImpl();
   }
 
+  public boolean isSerial() {
+    return serial;
+  }
+
   public static ReplicationPeerConfigBuilder newBuilder(ReplicationPeerConfig peerConfig) {
     ReplicationPeerConfigBuilderImpl builder = new ReplicationPeerConfigBuilderImpl();
     builder.setClusterKey(peerConfig.getClusterKey())
-        .setReplicationEndpointImpl(peerConfig.getReplicationEndpointImpl())
-        .putAllPeerData(peerConfig.getPeerData()).putAllConfiguration(peerConfig.getConfiguration())
-        .setTableCFsMap(peerConfig.getTableCFsMap()).setNamespaces(peerConfig.getNamespaces())
-        .setReplicateAllUserTables(peerConfig.replicateAllUserTables())
-        .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
-        .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
-        .setBandwidth(peerConfig.getBandwidth());
+      .setReplicationEndpointImpl(peerConfig.getReplicationEndpointImpl())
+      .putAllPeerData(peerConfig.getPeerData()).putAllConfiguration(peerConfig.getConfiguration())
+      .setTableCFsMap(peerConfig.getTableCFsMap()).setNamespaces(peerConfig.getNamespaces())
+      .setReplicateAllUserTables(peerConfig.replicateAllUserTables())
+      .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
+      .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
+      .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial());
     return builder;
   }
 
@@ -249,6 +256,8 @@ public class ReplicationPeerConfig {
     private Set<String> excludeNamespaces = null;
 
     private long bandwidth = 0;
+
+    private boolean serial = false;
 
     @Override
     public ReplicationPeerConfigBuilder setClusterKey(String clusterKey) {
@@ -313,6 +322,12 @@ public class ReplicationPeerConfig {
     }
 
     @Override
+    public ReplicationPeerConfigBuilder setSerial(boolean serial) {
+      this.serial = serial;
+      return this;
+    }
+
+    @Override
     public ReplicationPeerConfig build() {
       // It would be nice to validate the configuration, but we have to work with "old" data
       // from ZK which makes it much more difficult.
@@ -340,7 +355,8 @@ public class ReplicationPeerConfig {
         builder.append("tableCFs=").append(tableCFsMap.toString()).append(",");
       }
     }
-    builder.append("bandwidth=").append(bandwidth);
+    builder.append("bandwidth=").append(bandwidth).append(",");
+    builder.append("serial=").append(serial);
     return builder.toString();
   }
 
