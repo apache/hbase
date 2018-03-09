@@ -83,8 +83,8 @@ public class TestAssignmentManagerMetrics {
     // set tablesOnMaster to none
     conf.set("hbase.balancer.tablesOnMaster", "none");
 
-    // set client sync wait timeout to 5sec
-    conf.setInt("hbase.client.sync.wait.timeout.msec", 2500);
+    // set client sync wait timeout to 10sec
+    conf.setInt("hbase.client.sync.wait.timeout.msec", 5000);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 2500);
     // set a small interval for updating rit metrics
