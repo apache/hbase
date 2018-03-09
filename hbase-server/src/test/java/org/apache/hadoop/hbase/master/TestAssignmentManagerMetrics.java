@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -54,14 +55,13 @@ public class TestAssignmentManagerMetrics {
       HBaseClassTestRule.forClass(TestAssignmentManagerMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManagerMetrics.class);
-  private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
+  private static final MetricsAssertHelper METRICS_HELPER = CompatibilityFactory
       .getInstance(MetricsAssertHelper.class);
 
-  private static MiniHBaseCluster cluster;
-  private static HMaster master;
+  private static MiniHBaseCluster CLUSTER;
+  private static HMaster MASTER;
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Configuration conf;
-  private static final int msgInterval = 1000;
+  private static final int MSG_INTERVAL = 1000;
 
   @Rule
   public TestName name = new TestName();
@@ -69,7 +69,7 @@ public class TestAssignmentManagerMetrics {
   @BeforeClass
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
-    conf = TEST_UTIL.getConfiguration();
+    Configuration conf = TEST_UTIL.getConfiguration();
 
     // Disable sanity check for coprocessor
     conf.setBoolean("hbase.table.sanity.checks", false);
@@ -78,7 +78,7 @@ public class TestAssignmentManagerMetrics {
     conf.setInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 20);
 
     // set msgInterval to 1 second
-    conf.setInt("hbase.regionserver.msginterval", msgInterval);
+    conf.setInt("hbase.regionserver.msginterval", MSG_INTERVAL);
 
     // set tablesOnMaster to none
     conf.set("hbase.balancer.tablesOnMaster", "none");
@@ -87,10 +87,12 @@ public class TestAssignmentManagerMetrics {
     conf.setInt("hbase.client.sync.wait.timeout.msec", 2500);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 2500);
+    // set a small interval for updating rit metrics
+    conf.setInt(AssignmentManager.RIT_CHORE_INTERVAL_MSEC_CONF_KEY, MSG_INTERVAL);
 
     TEST_UTIL.startMiniCluster(1);
-    cluster = TEST_UTIL.getHBaseCluster();
-    master = cluster.getMaster();
+    CLUSTER = TEST_UTIL.getHBaseCluster();
+    MASTER = CLUSTER.getMaster();
   }
 
   @AfterClass
@@ -112,14 +114,14 @@ public class TestAssignmentManagerMetrics {
       table.put(put);
 
       // Sleep 3 seconds, wait for doMetrics chore catching up
-      Thread.sleep(msgInterval * 3);
+      Thread.sleep(MSG_INTERVAL * 3);
 
       // check the RIT is 0
       MetricsAssignmentManagerSource amSource =
-          master.getAssignmentManager().getAssignmentManagerMetrics().getMetricsProcSource();
+          MASTER.getAssignmentManager().getAssignmentManagerMetrics().getMetricsProcSource();
 
-      metricsHelper.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 0, amSource);
-      metricsHelper.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 0,
+      METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 0, amSource);
+      METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 0,
           amSource);
 
       // alter table with a non-existing coprocessor
@@ -139,9 +141,9 @@ public class TestAssignmentManagerMetrics {
       }
 
       // Sleep 3 seconds, wait for doMetrics chore catching up
-      Thread.sleep(msgInterval * 3);
-      metricsHelper.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 1, amSource);
-      metricsHelper.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 1,
+      Thread.sleep(MSG_INTERVAL * 3);
+      METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 1, amSource);
+      METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 1,
           amSource);
     }
   }
