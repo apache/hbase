@@ -18,8 +18,8 @@
 
 declare -i missing_env=0
 # Validate params
-for required_env in "TESTS" "TOOLS" "BASEDIR" "ARCHIVE_PATTERN_LIST" "OUTPUT_DIR_RELATIVE" \
-                    "BRANCH_SPECIFIC_DOCKERFILE" "OUTPUT_DIR" "PROJECT" "AUTHOR_IGNORE_LIST" \
+for required_env in "TESTS" "PERSONALITY_FILE" "BASEDIR" "ARCHIVE_PATTERN_LIST" "OUTPUT_DIR_RELATIVE" \
+                    "OUTPUT_DIR" "PROJECT" "AUTHOR_IGNORE_LIST" \
                     "WHITESPACE_IGNORE_LIST" "BRANCH_NAME" "TESTS_FILTER" "DEBUG" \
                     "USE_YETUS_PRERELEASE" "WORKSPACE" "YETUS_RELEASE"; do
   if [ -z "${!required_env}" ]; then
@@ -44,7 +44,7 @@ if [[ -n "${SET_JAVA_HOME}" ]]; then
   YETUS_ARGS=("--java-home=${SET_JAVA_HOME}" "${YETUS_ARGS[@]}")
 fi
 YETUS_ARGS=("--plugins=${TESTS}" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--personality=${TOOLS}/personality.sh" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--personality=${PERSONALITY_FILE}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--basedir=${BASEDIR}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--archive-list=${ARCHIVE_PATTERN_LIST}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--console-urls" "${YETUS_ARGS[@]}")
@@ -52,7 +52,7 @@ YETUS_ARGS=("--console-urls" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--build-url-patchdir=artifact/${OUTPUT_DIR_RELATIVE}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--build-url-artifacts=artifact/${OUTPUT_DIR_RELATIVE}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--docker" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--dockerfile=${BRANCH_SPECIFIC_DOCKERFILE}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--dockerfile=${BASEDIR}/dev-support/docker/Dockerfile" "${YETUS_ARGS[@]}")
 # Yetus sets BUILDMODE env variable to "full" if this arg is passed.
 YETUS_ARGS=("--empty-patch" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--html-report-file=${OUTPUT_DIR}/console-report.html" "${YETUS_ARGS[@]}")
