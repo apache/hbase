@@ -370,6 +370,7 @@ function hadoopcheck_rebuild
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
+      add_footer_table hadoopcheck "@@BASE@@/patch-javac-${hadoopver}.txt"
       ((result=result+1))
     fi
   done
@@ -384,6 +385,7 @@ function hadoopcheck_rebuild
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
+      add_footer_table hadoopcheck "@@BASE@@/patch-javac-${hadoopver}.txt"
       ((result=result+1))
     fi
   done
