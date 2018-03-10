@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase.backup.mapreduce;
 
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
 
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Stack;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -36,7 +37,6 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupMergeJob;
-import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -105,7 +105,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       table.startMergeOperation(backupIds);
 
       // Select most recent backup id
-      String mergedBackupId = findMostRecentBackupId(backupIds);
+      String mergedBackupId = BackupUtils.findMostRecentBackupId(backupIds);
 
       TableName[] tableNames = getTableNamesInBackupImages(backupIds);
 
@@ -146,15 +146,34 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       table.updateProcessedTablesForMerge(tableList);
       finishedTables = true;
 
-      // Move data
+      // PHASE 2 (modification of a backup file system)
+      // Move existing mergedBackupId data into tmp directory
+      // we will need it later in case of a failure
+      Path tmpBackupDir = HBackupFileSystem.getBackupTmpDirPathForBackupId(backupRoot,
+        mergedBackupId);
+      Path backupDirPath = HBackupFileSystem.getBackupPath(backupRoot, mergedBackupId);
+
+      if (!fs.rename(backupDirPath, tmpBackupDir)) {
+        throw new IOException("Failed to rename "+ backupDirPath +" to "+tmpBackupDir);
+      } else {
+        LOG.debug("Renamed "+ backupDirPath +" to "+ tmpBackupDir);
+      }
+      // Move new data into backup dest
       for (Pair<TableName, Path> tn : processedTableList) {
         moveData(fs, backupRoot, tn.getSecond(), tn.getFirst(), mergedBackupId);
       }
-
-      // Delete old data and update manifest
+      // Update backup manifest
       List<String> backupsToDelete = getBackupIdsToDelete(backupIds, mergedBackupId);
+      updateBackupManifest(tmpBackupDir.getParent().toString(), mergedBackupId, backupsToDelete);
+      // Copy meta files back from tmp to backup dir
+      copyMetaData(fs, tmpBackupDir, backupDirPath);
+      // Delete tmp dir (Rename back during repair)
+      if (!fs.delete(tmpBackupDir, true)) {
+        // WARN and ignore
+        LOG.warn("Could not delete tmp dir: "+ tmpBackupDir);
+      }
+      // Delete old data
       deleteBackupImages(backupsToDelete, conn, fs, backupRoot);
-      updateBackupManifest(backupRoot, mergedBackupId, backupsToDelete);
       // Finish merge session
       table.finishMergeOperation();
       // Release lock
@@ -181,6 +200,80 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       table.close();
       conn.close();
     }
+  }
+
+  /**
+   * Copy meta data to of a backup session
+   * @param fs file system
+   * @param tmpBackupDir temp backup directory, where meta is locaed
+   * @param backupDirPath new path for backup
+   * @throws IOException exception
+   */
+  protected void copyMetaData(FileSystem fs, Path tmpBackupDir, Path backupDirPath)
+      throws IOException {
+    RemoteIterator<LocatedFileStatus> it = fs.listFiles(tmpBackupDir, true);
+    List<Path> toKeep = new ArrayList<Path>();
+    while (it.hasNext()) {
+      Path p = it.next().getPath();
+      if (fs.isDirectory(p)) {
+        continue;
+      }
+      // Keep meta
+      String fileName = p.toString();
+      if (fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0
+          || fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0) {
+        toKeep.add(p);
+      }
+    }
+    // Copy meta to destination
+    for (Path p : toKeep) {
+      Path newPath = convertToDest(p, backupDirPath);
+      copyFile(fs, p, newPath);
+    }
+  }
+
+  /**
+   * Copy file in DFS from p to newPath
+   * @param fs file system
+   * @param p old path
+   * @param newPath new path
+   * @throws IOException exception
+   */
+  protected void copyFile(FileSystem fs, Path p, Path newPath) throws IOException {
+    File f = File.createTempFile("data", "meta");
+    Path localPath = new Path(f.getAbsolutePath());
+    fs.copyToLocalFile(p, localPath);
+    fs.copyFromLocalFile(localPath, newPath);
+    boolean exists = fs.exists(newPath);
+    if (!exists) {
+      throw new IOException("Failed to copy meta file to: "+ newPath);
+    }
+  }
+
+/**
+ * Converts path before copying
+ * @param p path
+ * @param backupDirPath backup root
+ * @return converted path
+ */
+  protected Path convertToDest(Path p, Path backupDirPath) {
+    String backupId = backupDirPath.getName();
+    Stack<String> stack = new Stack<String>();
+    String name = null;
+    while (true) {
+      name = p.getName();
+      if (!name.equals(backupId)) {
+        stack.push(name);
+        p = p.getParent();
+      } else {
+        break;
+      }
+    }
+    Path newPath = new Path(backupDirPath.toString());
+    while (!stack.isEmpty()) {
+      newPath = new Path(newPath, stack.pop());
+    }
+    return newPath;
   }
 
   protected List<Path> toPathList(List<Pair<TableName, Path>> processedTableList) {
@@ -251,11 +344,6 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     Path dest =
         new Path(HBackupFileSystem.getTableBackupDir(backupRoot, mergedBackupId, tableName));
 
-    // Delete all *data* files in dest
-    if (!deleteData(fs, dest)) {
-      throw new IOException("Could not delete " + dest);
-    }
-
     FileStatus[] fsts = fs.listStatus(bulkOutputPath);
     for (FileStatus fst : fsts) {
       if (fst.isDirectory()) {
@@ -265,54 +353,13 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
           if (!fs.delete(newDst, true)) {
             throw new IOException("failed to delete :"+ newDst);
           }
+        } else {
+          fs.mkdirs(dest);
         }
-        fs.rename(fst.getPath(), dest);
+        boolean result = fs.rename(fst.getPath(), dest);
+        LOG.debug("MoveData from "+ fst.getPath() +" to "+ dest+" result="+ result);
       }
     }
-  }
-
-  /**
-   * Deletes only data files and keeps all META
-   * @param fs file system instance
-   * @param dest destination location
-   * @return true, if success, false - otherwise
-   * @throws FileNotFoundException exception
-   * @throws IOException exception
-   */
-  private boolean deleteData(FileSystem fs, Path dest) throws FileNotFoundException, IOException {
-    RemoteIterator<LocatedFileStatus> it = fs.listFiles(dest, true);
-    List<Path> toDelete = new ArrayList<Path>();
-    while (it.hasNext()) {
-      Path p = it.next().getPath();
-      if (fs.isDirectory(p)) {
-        continue;
-      }
-      // Keep meta
-      String fileName  = p.toString();
-      if (fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0 ||
-          fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0) {
-        continue;
-      }
-      toDelete.add(p);
-    }
-    for (Path p : toDelete) {
-      boolean result = fs.delete(p, false);
-      if (!result) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  protected String findMostRecentBackupId(String[] backupIds) {
-    long recentTimestamp = Long.MIN_VALUE;
-    for (String backupId : backupIds) {
-      long ts = Long.parseLong(backupId.split("_")[1]);
-      if (ts > recentTimestamp) {
-        recentTimestamp = ts;
-      }
-    }
-    return BackupRestoreConstants.BACKUPID_PREFIX + recentTimestamp;
   }
 
   protected TableName[] getTableNamesInBackupImages(String[] backupIds) throws IOException {
