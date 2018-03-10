@@ -284,6 +284,15 @@ module Hbase
       @admin.updateReplicationPeerConfig(id, rpc)
     end
 
+    def set_peer_serial(id, peer_serial)
+      rpc = get_peer_config(id)
+      return if rpc.nil?
+      rpc_builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
+                       .newBuilder(rpc)
+      new_rpc = rpc_builder.setSerial(peer_serial).build
+      @admin.updateReplicationPeerConfig(id, new_rpc)
+    end
+
     # Set exclude namespaces config for the specified peer
     def set_peer_exclude_namespaces(id, exclude_namespaces)
       return if exclude_namespaces.nil?
@@ -362,7 +371,7 @@ module Hbase
       # Create and populate a ReplicationPeerConfig
       replication_peer_config = get_peer_config(id)
       builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
-        .newBuilder(replication_peer_config)
+                   .newBuilder(replication_peer_config)
       unless config.nil?
         builder.putAllConfiguration(config)
       end
