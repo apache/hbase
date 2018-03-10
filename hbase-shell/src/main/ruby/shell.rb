@@ -379,6 +379,7 @@ Shell.load_command_group(
     enable_peer
     disable_peer
     set_peer_replicate_all
+    set_peer_serial
     set_peer_namespaces
     append_peer_namespaces
     remove_peer_namespaces
