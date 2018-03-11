@@ -159,6 +159,8 @@ public class RecoverMetaProcedure
    * just as we do over in ServerCrashProcedure#handleRIT except less to do here; less context
    * to carry.
    */
+  // NOTE: Make sure any fix or improvement done here is also done in SCP#handleRIT; the methods
+  // have overlap.
   private void handleRIT(MasterProcedureEnv env, RegionInfo ri, ServerName crashedServerName) {
     AssignmentManager am = env.getAssignmentManager();
     RegionTransitionProcedure rtp = am.getRegionStates().getRegionTransitionProcedure(ri);
