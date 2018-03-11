@@ -249,10 +249,10 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       final IOException exception) {
     // TODO: Is there on-going rpc to cleanup?
     if (exception instanceof ServerCrashException) {
-      // This exception comes from ServerCrashProcedure after log splitting.
+      // This exception comes from ServerCrashProcedure AFTER log splitting.
       // SCP found this region as a RIT. Its call into here says it is ok to let this procedure go
-      // on to a complete close now. This will release lock on this region so subsequent action on
-      // region can succeed; e.g. the assign that follows this unassign when a move (w/o wait on SCP
+      // complete. This complete will release lock on this region so subsequent action on region
+      // can succeed; e.g. the assign that follows this unassign when a move (w/o wait on SCP
       // the assign could run w/o logs being split so data loss).
       try {
         reportTransition(env, regionNode, TransitionCode.CLOSED, HConstants.NO_SEQNUM);
@@ -263,7 +263,6 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     } else if (exception instanceof RegionServerAbortedException ||
         exception instanceof RegionServerStoppedException ||
         exception instanceof ServerNotRunningYetException) {
-      // TODO
       // RS is aborting, we cannot offline the region since the region may need to do WAL
       // recovery. Until we see the RS expiration, we should retry.
       // TODO: This should be suspend like the below where we call expire on server?
@@ -276,8 +275,10 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       LOG.warn("Expiring server " + this + "; " + regionNode.toShortString() +
         ", exception=" + exception);
       env.getMasterServices().getServerManager().expireServer(regionNode.getRegionLocation());
-      // Return false so this procedure stays in suspended state. It will be woken up by a
-      // ServerCrashProcedure when it notices this RIT.
+      // Return false so this procedure stays in suspended state. It will be woken up by the
+      // ServerCrashProcedure that was scheduled when we called #expireServer above. SCP calls
+      // #handleRIT which will call this method only the exception will be a ServerCrashException
+      // this time around (See above).
       // TODO: Add a SCP as a new subprocedure that we now come to depend on.
       return false;
     }

@@ -1196,7 +1196,7 @@ public class AssignmentManager implements ServerListener {
   private void handleRegionOverStuckWarningThreshold(final RegionInfo regionInfo) {
     final RegionStateNode regionNode = regionStates.getRegionStateNode(regionInfo);
     //if (regionNode.isStuck()) {
-    LOG.warn("TODO Handle stuck in transition: " + regionNode);
+    LOG.warn("STUCK Region-In-Transition {}", regionNode);
   }
 
   // ============================================================================================
