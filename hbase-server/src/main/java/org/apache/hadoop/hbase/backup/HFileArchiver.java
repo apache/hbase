@@ -255,7 +255,7 @@ public class HFileArchiver {
     }
 
     // otherwise we attempt to archive the store files
-    if (LOG.isDebugEnabled()) LOG.debug("Archiving compacted store files.");
+    LOG.debug("Archiving compacted store files.");
 
     // Wrap the storefile into a File
     StoreToFile getStorePath = new StoreToFile(fs);
