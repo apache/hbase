@@ -1036,10 +1036,9 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkServiceStarted();
       TableName tableName = ProtobufUtil.toTableName(request.getTableName());
-      TableState.State state = master.getTableStateManager()
-              .getTableState(tableName);
+      TableState ts = master.getTableStateManager().getTableState(tableName);
       GetTableStateResponse.Builder builder = GetTableStateResponse.newBuilder();
-      builder.setTableState(new TableState(tableName, state).convert());
+      builder.setTableState(ts.convert());
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);

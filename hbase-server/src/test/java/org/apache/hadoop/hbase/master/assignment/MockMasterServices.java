@@ -41,12 +41,14 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MasterWalManager;
 import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -82,6 +84,7 @@ public class MockMasterServices extends MockNoopMasterServices {
   private final MasterFileSystem fileSystemManager;
   private final MasterWalManager walManager;
   private final AssignmentManager assignmentManager;
+  private final TableStateManager tableStateManager;
 
   private MasterProcedureEnv procedureEnv;
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
@@ -132,6 +135,10 @@ public class MockMasterServices extends MockNoopMasterServices {
     };
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.serverManager = new ServerManager(this);
+    this.tableStateManager = Mockito.mock(TableStateManager.class);
+    Mockito.when(this.tableStateManager.getTableState(Mockito.any())).
+        thenReturn(new TableState(TableName.valueOf("AnyTableNameSetInMockMasterServcies"),
+            TableState.State.ENABLED));
 
     // Mock up a Client Interface
     ClientProtos.ClientService.BlockingInterface ri =
@@ -285,6 +292,11 @@ public class MockMasterServices extends MockNoopMasterServices {
   @Override
   public AssignmentManager getAssignmentManager() {
     return assignmentManager;
+  }
+
+  @Override
+  public TableStateManager getTableStateManager() {
+    return tableStateManager;
   }
 
   @Override

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableStateManager;
@@ -161,7 +160,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
     // Don't assign if table is in disabling or disabled state.
     TableStateManager tsm = env.getMasterServices().getTableStateManager();
     TableName tn = regionNode.getRegionInfo().getTable();
-    if (tsm.isTableState(tn, TableState.State.DISABLING, TableState.State.DISABLED)) {
+    if (tsm.getTableState(tn).isDisabledOrDisabling()) {
       LOG.info("Table " + tn + " state=" + tsm.getTableState(tn) + ", skipping " + this);
       return false;
     }

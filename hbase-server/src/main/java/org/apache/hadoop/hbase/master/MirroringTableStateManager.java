@@ -77,7 +77,7 @@ public class MirroringTableStateManager extends TableStateManager {
   }
 
   private void updateZooKeeper(TableState tableState) throws IOException {
-    if (tableState == null || tableState.getState() == null) {
+    if (tableState == null) {
       return;
     }
     String znode = ZNodePaths.joinZNode(this.master.getZooKeeper().getZNodePaths().tableZNode,

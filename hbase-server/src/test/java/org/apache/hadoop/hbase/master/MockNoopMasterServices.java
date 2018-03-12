@@ -470,4 +470,9 @@ public class MockNoopMasterServices implements MasterServices {
   public Connection createConnection(Configuration conf) throws IOException {
     return null;
   }
+
+  @Override
+  public boolean isClusterUp() {
+    return true;
+  }
 }

@@ -20,11 +20,17 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -123,5 +129,48 @@ public abstract class AbstractStateMachineTableProcedure<TState>
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), getTableName());
     return new Path(tableDir, ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
+  }
+
+  /**
+   * Check that cluster is up and master is running. Check table is modifiable.
+   * If <code>enabled</code>, check table is enabled else check it is disabled.
+   * Call in Procedure constructor so can pass any exception to caller.
+   * @param enabled If true, check table is enabled and throw exception if not. If false, do the
+   *                inverse. If null, do no table checks.
+   */
+  protected void preflightChecks(MasterProcedureEnv env, Boolean enabled) throws HBaseIOException {
+    MasterServices master = env.getMasterServices();
+    if (!master.isClusterUp()) {
+      throw new HBaseIOException("Cluster not up!");
+    }
+    if (master.isStopping() || master.isStopped()) {
+      throw new HBaseIOException("Master stopping=" + master.isStopping() +
+          ", stopped=" + master.isStopped());
+    }
+    if (enabled == null) {
+      // Don't do any table checks.
+      return;
+    }
+    try {
+      // Checks table exists and is modifiable.
+      checkTableModifiable(env);
+      TableName tn = getTableName();
+      TableStateManager tsm = master.getTableStateManager();
+      TableState ts = tsm.getTableState(tn);
+      if (enabled) {
+        if (!ts.isEnabledOrEnabling()) {
+          throw new TableNotEnabledException(tn);
+        }
+      } else {
+        if (!ts.isDisabledOrDisabling()) {
+          throw new TableNotDisabledException(tn);
+        }
+      }
+    } catch (IOException ioe) {
+      if (ioe instanceof HBaseIOException) {
+        throw (HBaseIOException)ioe;
+      }
+      throw new HBaseIOException(ioe);
+    }
   }
 }
