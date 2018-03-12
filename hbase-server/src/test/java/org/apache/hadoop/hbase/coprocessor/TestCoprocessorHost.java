@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.coprocessor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.lang.reflect.InvocationTargetException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -56,47 +58,61 @@ public class TestCoprocessorHost {
       return this.aborted;
     }
   }
+
   @Test
   public void testDoubleLoadingAndPriorityValue() {
     final Configuration conf = HBaseConfiguration.create();
-    CoprocessorHost<RegionCoprocessor, CoprocessorEnvironment<RegionCoprocessor>> host =
-        new CoprocessorHost<RegionCoprocessor, CoprocessorEnvironment<RegionCoprocessor>>(
-            new TestAbortable()) {
-          @Override
-          public RegionCoprocessor checkAndGetInstance(Class<?> implClass)
-              throws InstantiationException, IllegalAccessException {
-            if(RegionCoprocessor.class.isAssignableFrom(implClass)) {
-              return (RegionCoprocessor)implClass.newInstance();
-            }
-            return null;
-          }
-
-          final Configuration cpHostConf = conf;
-
-      @Override
-      public CoprocessorEnvironment<RegionCoprocessor> createEnvironment(
-          final RegionCoprocessor instance, final int priority, int sequence, Configuration conf) {
-        return new BaseEnvironment<RegionCoprocessor>(instance, priority, 0, cpHostConf);
-      }
-    };
     final String key = "KEY";
     final String coprocessor = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
+
+    CoprocessorHost<RegionCoprocessor, CoprocessorEnvironment<RegionCoprocessor>> host;
+    host = new CoprocessorHostForTest<>(conf);
+
     // Try and load a coprocessor three times
     conf.setStrings(key, coprocessor, coprocessor, coprocessor,
         SimpleRegionObserverV2.class.getName());
     host.loadSystemCoprocessors(conf, key);
+
     // Two coprocessors(SimpleRegionObserver and SimpleRegionObserverV2) loaded
     Assert.assertEquals(2, host.coprocEnvironments.size());
+
     // Check the priority value
-    CoprocessorEnvironment simpleEnv = host.findCoprocessorEnvironment(
+    CoprocessorEnvironment<?> simpleEnv = host.findCoprocessorEnvironment(
         SimpleRegionObserver.class.getName());
-    CoprocessorEnvironment simpleEnv_v2 = host.findCoprocessorEnvironment(
+    CoprocessorEnvironment<?> simpleEnv_v2 = host.findCoprocessorEnvironment(
         SimpleRegionObserverV2.class.getName());
+
     assertNotNull(simpleEnv);
     assertNotNull(simpleEnv_v2);
     assertEquals(Coprocessor.PRIORITY_SYSTEM, simpleEnv.getPriority());
     assertEquals(Coprocessor.PRIORITY_SYSTEM + 1, simpleEnv_v2.getPriority());
   }
-  public static class SimpleRegionObserverV2 extends SimpleRegionObserver {
+
+  public static class SimpleRegionObserverV2 extends SimpleRegionObserver { }
+
+  private static class CoprocessorHostForTest<E extends Coprocessor> extends
+      CoprocessorHost<E, CoprocessorEnvironment<E>> {
+    final Configuration cpHostConf;
+
+    public CoprocessorHostForTest(Configuration conf) {
+      super(new TestAbortable());
+      cpHostConf = conf;
+    }
+
+    @Override
+    public E checkAndGetInstance(Class<?> implClass)
+        throws InstantiationException, IllegalAccessException {
+      try {
+        return (E) implClass.getDeclaredConstructor().newInstance();
+      } catch (InvocationTargetException | NoSuchMethodException e) {
+        throw (InstantiationException) new InstantiationException().initCause(e);
+      }
+    }
+
+    @Override
+    public CoprocessorEnvironment<E> createEnvironment(final E instance, final int priority,
+        int sequence, Configuration conf) {
+      return new BaseEnvironment<>(instance, priority, 0, cpHostConf);
+    }
   }
 }

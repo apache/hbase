@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -118,10 +119,14 @@ public class WALCoprocessorHost
   }
 
   @Override
-  public WALCoprocessor checkAndGetInstance(Class<?> implClass)
-      throws InstantiationException, IllegalAccessException {
+  public WALCoprocessor checkAndGetInstance(Class<?> implClass) throws IllegalAccessException,
+      InstantiationException {
     if (WALCoprocessor.class.isAssignableFrom(implClass)) {
-      return (WALCoprocessor)implClass.newInstance();
+      try {
+        return implClass.asSubclass(WALCoprocessor.class).getDeclaredConstructor().newInstance();
+      } catch (NoSuchMethodException | InvocationTargetException e) {
+        throw (InstantiationException) new InstantiationException(implClass.getName()).initCause(e);
+      }
     } else {
       LOG.error(implClass.getName() + " is not of type WALCoprocessor. Check the "
           + "configuration " + CoprocessorHost.WAL_COPROCESSOR_CONF_KEY);

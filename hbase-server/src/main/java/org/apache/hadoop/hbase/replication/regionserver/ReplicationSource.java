@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -242,12 +243,21 @@ public class ReplicationSource implements ReplicationSourceInterface {
       rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
     }
     String replicationEndpointImpl = replicationPeer.getPeerConfig().getReplicationEndpointImpl();
+
+    ReplicationEndpoint replicationEndpoint;
     if (replicationEndpointImpl == null) {
-      // Default to HBase inter-cluster replication endpoint
-      replicationEndpointImpl = HBaseInterClusterReplicationEndpoint.class.getName();
+      // Default to HBase inter-cluster replication endpoint; skip reflection
+      replicationEndpoint = new HBaseInterClusterReplicationEndpoint();
+    } else {
+      try {
+        replicationEndpoint = Class.forName(replicationEndpointImpl)
+            .asSubclass(ReplicationEndpoint.class)
+            .getDeclaredConstructor()
+            .newInstance();
+      } catch (NoSuchMethodException | InvocationTargetException e) {
+        throw new IllegalArgumentException(e);
+      }
     }
-    ReplicationEndpoint replicationEndpoint =
-      Class.forName(replicationEndpointImpl).asSubclass(ReplicationEndpoint.class).newInstance();
     if (rsServerHost != null) {
       ReplicationEndpoint newReplicationEndPoint =
         rsServerHost.postCreateReplicationEndPoint(replicationEndpoint);

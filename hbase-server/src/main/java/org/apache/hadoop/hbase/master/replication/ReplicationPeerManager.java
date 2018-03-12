@@ -310,10 +310,10 @@ public class ReplicationPeerManager {
       String[] filters = filterCSV.split(",");
       for (String filter : filters) {
         try {
-          Class.forName(filter).newInstance();
+          Class.forName(filter).getDeclaredConstructor().newInstance();
         } catch (Exception e) {
           throw new DoNotRetryIOException("Configured WALEntryFilter " + filter +
-            " could not be created. Failing add/update " + "peer operation.", e);
+            " could not be created. Failing add/update peer operation.", e);
         }
       }
     }

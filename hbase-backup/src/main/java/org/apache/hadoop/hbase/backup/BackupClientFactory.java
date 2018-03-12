@@ -38,8 +38,9 @@ public final class BackupClientFactory {
     try {
       String clsName = conf.get(TableBackupClient.BACKUP_CLIENT_IMPL_CLASS);
       if (clsName != null) {
-        Class<?> clientImpl = Class.forName(clsName);
-        TableBackupClient client = (TableBackupClient) clientImpl.newInstance();
+        Class<? extends TableBackupClient> clientImpl;
+        clientImpl = Class.forName(clsName).asSubclass(TableBackupClient.class);
+        TableBackupClient client = clientImpl.getDeclaredConstructor().newInstance();
         client.init(conn, backupId, request);
         return client;
       }
