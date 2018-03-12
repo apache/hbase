@@ -22,7 +22,6 @@ import scala.util.Random
 
 import org.apache.hadoop.hbase.client.{BufferedMutator, Table, RegionLocator,
   Connection, BufferedMutatorParams, Admin, TableBuilder}
-import org.apache.hadoop.hbase.spark.Logging
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.TableName
 import org.scalatest.FunSuite

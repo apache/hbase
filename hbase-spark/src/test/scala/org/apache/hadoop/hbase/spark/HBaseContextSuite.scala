@@ -20,7 +20,6 @@ import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{ CellUtil, TableName, HBaseTestingUtility}
-import org.apache.hadoop.hbase.spark.Logging
 import org.apache.spark.{SparkException, SparkContext}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
 
