@@ -85,7 +85,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   // per group queue size, keep no more than this number of logs in each wal group
   protected int queueSizePerGroup;
   protected ReplicationQueueStorage queueStorage;
-  private ReplicationPeer replicationPeer;
+  protected ReplicationPeer replicationPeer;
 
   protected Configuration conf;
   protected ReplicationQueueInfo replicationQueueInfo;
@@ -294,26 +294,32 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.walEntryFilter = new ChainWALEntryFilter(filters);
   }
 
-  protected void tryStartNewShipper(String walGroupId, PriorityBlockingQueue<Path> queue) {
-    ReplicationSourceShipper worker = new ReplicationSourceShipper(conf, walGroupId, queue, this);
+  private void tryStartNewShipper(String walGroupId, PriorityBlockingQueue<Path> queue) {
+    ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
     ReplicationSourceShipper extant = workerThreads.putIfAbsent(walGroupId, worker);
     if (extant != null) {
-      LOG.debug("Someone has beat us to start a worker thread for wal group " + walGroupId);
+      LOG.debug("Someone has beat us to start a worker thread for wal group {}", walGroupId);
     } else {
-      LOG.debug("Starting up worker for wal group " + walGroupId);
+      LOG.debug("Starting up worker for wal group {}", walGroupId);
+      ReplicationSourceWALReader walReader =
+        createNewWALReader(walGroupId, queue, worker.getStartPosition());
+      Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName() +
+        ".replicationSource.wal-reader." + walGroupId + "," + queueId, this::uncaughtException);
+      worker.setWALReader(walReader);
       worker.startup(this::uncaughtException);
-      worker.setWALReader(
-        startNewWALReader(worker.getName(), walGroupId, queue, worker.getStartPosition()));
     }
   }
 
-  protected ReplicationSourceWALReader startNewWALReader(String threadName, String walGroupId,
+  protected ReplicationSourceShipper createNewShipper(String walGroupId,
+      PriorityBlockingQueue<Path> queue) {
+    return new ReplicationSourceShipper(conf, walGroupId, queue, this);
+  }
+
+  protected ReplicationSourceWALReader createNewWALReader(String walGroupId,
       PriorityBlockingQueue<Path> queue, long startPosition) {
-    ReplicationSourceWALReader walReader =
-      new ReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this);
-    return (ReplicationSourceWALReader) Threads.setDaemonThreadRunning(walReader,
-      threadName + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
-      this::uncaughtException);
+    return replicationPeer.getPeerConfig().isSerial()
+      ? new SerialReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this)
+      : new ReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this);
   }
 
   protected final void uncaughtException(Thread t, Throwable e) {
@@ -390,10 +396,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public boolean isPeerEnabled() {
     return replicationPeer.isPeerEnabled();
-  }
-
-  public boolean isSerial() {
-    return replicationPeer.getPeerConfig().isSerial();
   }
 
   private void initialize() {
