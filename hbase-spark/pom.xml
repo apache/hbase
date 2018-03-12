@@ -615,6 +615,12 @@
           <type>test-jar</type>
           <scope>test</scope>
         </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
+          <version>${hadoop-two.version}</version>
+          <scope>test</scope>
+        </dependency>
       </dependencies>
     </profile>
     <!--
@@ -655,6 +661,12 @@
           <artifactId>hadoop-hdfs</artifactId>
           <version>${hadoop-three.version}</version>
           <type>test-jar</type>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
+          <version>${hadoop-three.version}</version>
           <scope>test</scope>
         </dependency>
       </dependencies>
