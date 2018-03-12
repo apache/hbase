@@ -1681,7 +1681,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Now we can do the move
     RegionPlan rp = new RegionPlan(hri, regionState.getServerName(), dest);
     assert rp.getDestination() != null: rp.toString() + " " + dest;
-    assert rp.getSource() != null: rp.toString();
 
     try {
       checkInitialized();
@@ -2398,8 +2397,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       throw new IOException("Can't modify catalog tables");
     }
     checkTableExists(tableName);
-    if (!getTableStateManager().isTableState(tableName, TableState.State.DISABLED)) {
-      throw new TableNotDisabledException(tableName);
+    TableState ts = getTableStateManager().getTableState(tableName);
+    if (!ts.isDisabled()) {
+      throw new TableNotDisabledException("Not DISABLE tableState=" + ts);
     }
   }
 

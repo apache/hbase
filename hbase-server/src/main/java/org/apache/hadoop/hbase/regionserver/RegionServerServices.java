@@ -234,4 +234,9 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    * See HBASE-17712 for more details.
    */
   void unassign(byte[] regionName) throws IOException;
+
+  /**
+   * @return True if cluster is up; false if cluster is not up (we are shutting down).
+   */
+  boolean isClusterUp();
 }

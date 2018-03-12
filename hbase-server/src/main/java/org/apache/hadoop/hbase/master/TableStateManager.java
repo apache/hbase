@@ -93,7 +93,7 @@ public class TableStateManager {
    * @return null if succeed or table state if failed
    * @throws IOException
    */
-  public TableState.State setTableStateIfInStates(TableName tableName,
+  public TableState setTableStateIfInStates(TableName tableName,
                                          TableState.State newState,
                                          TableState.State... states)
           throws IOException {
@@ -107,12 +107,11 @@ public class TableStateManager {
         updateMetaState(tableName, newState);
         return null;
       } else {
-        return currentState.getState();
+        return currentState;
       }
     } finally {
       lock.writeLock().unlock();
     }
-
   }
 
   /**
@@ -141,8 +140,8 @@ public class TableStateManager {
 
   public boolean isTableState(TableName tableName, TableState.State... states) {
     try {
-      TableState.State tableState = getTableState(tableName);
-      return TableState.isInStates(tableState, states);
+      TableState tableState = getTableState(tableName);
+      return tableState.isInStates(states);
     } catch (IOException e) {
       LOG.error("Unable to get table " + tableName + " state", e);
       return false;
@@ -188,12 +187,12 @@ public class TableStateManager {
   }
 
   @NonNull
-  public TableState.State getTableState(TableName tableName) throws IOException {
+  public TableState getTableState(TableName tableName) throws IOException {
     TableState currentState = readMetaState(tableName);
     if (currentState == null) {
       throw new TableStateNotFoundException(tableName);
     }
-    return currentState.getState();
+    return currentState;
   }
 
   protected void updateMetaState(TableName tableName, TableState.State newState)
@@ -243,7 +242,7 @@ public class TableStateManager {
         continue;
       }
       TableState tableState = states.get(table);
-      if (tableState == null || tableState.getState() == null) {
+      if (tableState == null) {
         LOG.warn(table + " has no table state in hbase:meta, assuming ENABLED");
         MetaTableAccessor.updateTableState(connection, TableName.valueOf(table),
             TableState.State.ENABLED);
@@ -283,13 +282,13 @@ public class TableStateManager {
               entry.getKey());
           continue;
         }
-        TableState.State state = null;
+        TableState ts = null;
         try {
-          state = getTableState(entry.getKey());
+          ts = getTableState(entry.getKey());
         } catch (TableStateNotFoundException e) {
           // This can happen; table exists but no TableState.
         }
-        if (state == null) {
+        if (ts == null) {
           TableState.State zkstate = entry.getValue();
           // Only migrate if it is an enable or disabled table. If in-between -- ENABLING or
           // DISABLING then we have a problem; we are starting up an hbase-2 on a cluster with

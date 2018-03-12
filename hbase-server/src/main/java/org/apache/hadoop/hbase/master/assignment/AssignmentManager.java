@@ -556,7 +556,7 @@ public class AssignmentManager implements ServerListener {
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
-  public Future<byte[]> moveAsync(final RegionPlan regionPlan) {
+  public Future<byte[]> moveAsync(final RegionPlan regionPlan) throws HBaseIOException {
     MoveRegionProcedure proc = createMoveRegionProcedure(regionPlan);
     return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
   }
@@ -678,7 +678,7 @@ public class AssignmentManager implements ServerListener {
     return procedures.toArray(ASSIGN_PROCEDURE_ARRAY_TYPE);
   }
 
-  // Needed for the following method so it can type the created Array we return
+  // Needed for the following method so it can type the created Array we retur n
   private static final UnassignProcedure [] UNASSIGN_PROCEDURE_ARRAY_TYPE =
       new UnassignProcedure[0];
 
@@ -695,7 +695,8 @@ public class AssignmentManager implements ServerListener {
     return procs.toArray(UNASSIGN_PROCEDURE_ARRAY_TYPE);
   }
 
-  public MoveRegionProcedure[] createReopenProcedures(final Collection<RegionInfo> regionInfo) {
+  public MoveRegionProcedure[] createReopenProcedures(final Collection<RegionInfo> regionInfo)
+  throws IOException {
     final MoveRegionProcedure[] procs = new MoveRegionProcedure[regionInfo.size()];
     int index = 0;
     for (RegionInfo hri: regionInfo) {
@@ -744,7 +745,8 @@ public class AssignmentManager implements ServerListener {
     return proc;
   }
 
-  public MoveRegionProcedure createMoveRegionProcedure(final RegionPlan plan) {
+  public MoveRegionProcedure createMoveRegionProcedure(final RegionPlan plan)
+      throws HBaseIOException {
     if (plan.getRegionInfo().getTable().isSystemTable()) {
       List<ServerName> exclude = getExcludedServersForSystemTable();
       if (plan.getDestination() != null && exclude.contains(plan.getDestination())) {
@@ -861,8 +863,8 @@ public class AssignmentManager implements ServerListener {
 
     final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
     if (!reportTransition(regionNode, serverNode, state, seqId)) {
-      LOG.warn(String.format(
-        "No procedure for %s. server=%s to transition to %s", regionNode, serverName, state));
+      // Don't log if shutting down cluster; during shutdown.
+      LOG.warn("No matchin procedure found for {} to transition to {}", regionNode, state);
     }
   }
 

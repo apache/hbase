@@ -263,13 +263,13 @@ public class MasterProcedureTestingUtility {
   public static void validateTableIsEnabled(final HMaster master, final TableName tableName)
       throws IOException {
     TableStateManager tsm = master.getTableStateManager();
-    assertTrue(tsm.getTableState(tableName).equals(TableState.State.ENABLED));
+    assertTrue(tsm.getTableState(tableName).getState().equals(TableState.State.ENABLED));
   }
 
   public static void validateTableIsDisabled(final HMaster master, final TableName tableName)
       throws IOException {
     TableStateManager tsm = master.getTableStateManager();
-    assertTrue(tsm.getTableState(tableName).equals(TableState.State.DISABLED));
+    assertTrue(tsm.getTableState(tableName).getState().equals(TableState.State.DISABLED));
   }
 
   public static void validateColumnFamilyAddition(final HMaster master, final TableName tableName,

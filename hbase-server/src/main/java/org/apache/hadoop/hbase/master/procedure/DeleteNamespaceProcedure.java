@@ -71,11 +71,7 @@ public class DeleteNamespaceProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final DeleteNamespaceState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
-    LOG.info(this + " execute state=" + state);
-
+    LOG.info(this.toString());
     try {
       switch (state) {
       case DELETE_NAMESPACE_PREPARE:

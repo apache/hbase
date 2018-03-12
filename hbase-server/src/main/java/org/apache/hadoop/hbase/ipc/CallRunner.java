@@ -138,7 +138,8 @@ public class CallRunner {
             RpcServer.LOG.trace(call.toShortString(), e);
           }
         } else {
-          RpcServer.LOG.debug(call.toShortString(), e);
+          // Don't dump full exception.. just String version
+          RpcServer.LOG.debug(call.toShortString() + ", exception=" + e);
         }
         errorThrowable = e;
         error = StringUtils.stringifyException(e);

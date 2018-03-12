@@ -315,12 +315,12 @@ public class TableNamespaceManager implements Stoppable {
     return false;
   }
 
-  private TableState.State getTableState() throws IOException {
+  private TableState getTableState() throws IOException {
     return masterServices.getTableStateManager().getTableState(TableName.NAMESPACE_TABLE_NAME);
   }
 
   private boolean isTableEnabled() throws IOException {
-    return getTableState().equals(TableState.State.ENABLED);
+    return getTableState().isEnabled();
   }
 
   private boolean isTableAssigned() {

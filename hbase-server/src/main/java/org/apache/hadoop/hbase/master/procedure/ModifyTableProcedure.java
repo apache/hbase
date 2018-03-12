@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -63,15 +64,18 @@ public class ModifyTableProcedure
     initilize();
   }
 
-  public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd) {
+  public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd)
+  throws HBaseIOException {
     this(env, htd, null);
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd,
-      final ProcedurePrepareLatch latch) {
+      final ProcedurePrepareLatch latch)
+  throws HBaseIOException {
     super(env, latch);
     initilize();
     this.modifiedTableDescriptor = htd;
+    preflightChecks(env, null/*No table checks; if changing peers, table can be online*/);
   }
 
   private void initilize() {

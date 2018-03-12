@@ -86,6 +86,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
  * The procedure to split a region in a table.
  * Takes lock on the parent region.
  * It holds the lock for the life of the procedure.
+ * <p>Throws exception on construction if determines context hostile to spllt (cluster going
+ * down or master is shutting down or table is disabled).</p>
  */
 @InterfaceAudience.Private
 public class SplitTableRegionProcedure
@@ -104,6 +106,7 @@ public class SplitTableRegionProcedure
   public SplitTableRegionProcedure(final MasterProcedureEnv env,
       final RegionInfo regionToSplit, final byte[] splitRow) throws IOException {
     super(env, regionToSplit);
+    preflightChecks(env, true);
     this.bestSplitRow = splitRow;
     checkSplittable(env, regionToSplit, bestSplitRow);
     final TableName table = regionToSplit.getTable();

@@ -678,4 +678,9 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public Connection createConnection(Configuration conf) throws IOException {
     return null;
   }
+
+  @Override
+  public boolean isClusterUp() {
+    return true;
+  }
 }

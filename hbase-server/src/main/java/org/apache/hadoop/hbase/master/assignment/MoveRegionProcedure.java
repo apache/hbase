@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -40,6 +41,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.M
  * It first runs an unassign subprocedure followed
  * by an assign subprocedure. It takes a lock on the region being moved.
  * It holds the lock for the life of the procedure.
+ *
+ * <p>Throws exception on construction if determines context hostile to move (cluster going
+ * down or master is shutting down or table is disabled).</p>
  */
 @InterfaceAudience.Private
 public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<MoveRegionState> {
@@ -51,9 +55,15 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
     super();
   }
 
-  public MoveRegionProcedure(final MasterProcedureEnv env, final RegionPlan plan) {
+  /**
+   * @throws IOException If the cluster is offline or master is stopping or if table is disabled
+   *   or non-existent.
+   */
+  public MoveRegionProcedure(final MasterProcedureEnv env, final RegionPlan plan)
+  throws HBaseIOException {
     super(env, plan.getRegionInfo());
     this.plan = plan;
+    preflightChecks(env, true);
   }
 
   @Override

@@ -73,6 +73,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.M
  * The procedure to Merge a region in a table.
  * This procedure takes an exclusive table lock since it is working over multiple regions.
  * It holds the lock for the life of the procedure.
+ * <p>Throws exception on construction if determines context hostile to merge (cluster going
+ * down or master is shutting down or table is disabled).</p>
  */
 @InterfaceAudience.Private
 public class MergeTableRegionsProcedure
@@ -96,13 +98,13 @@ public class MergeTableRegionsProcedure
 
   public MergeTableRegionsProcedure(final MasterProcedureEnv env,
       final RegionInfo regionToMergeA, final RegionInfo regionToMergeB,
-      final boolean forcible) throws MergeRegionException {
+      final boolean forcible) throws IOException {
     this(env, new RegionInfo[] {regionToMergeA, regionToMergeB}, forcible);
   }
 
   public MergeTableRegionsProcedure(final MasterProcedureEnv env,
       final RegionInfo[] regionsToMerge, final boolean forcible)
-      throws MergeRegionException {
+      throws IOException {
     super(env);
 
     // Check daughter regions and make sure that we have valid daughter regions
@@ -116,6 +118,7 @@ public class MergeTableRegionsProcedure
     // Since HBASE-7721, we don't need fix up daughters any more. so here do nothing
     this.regionsToMerge = regionsToMerge;
     this.mergedRegion = createMergedRegionInfo(regionsToMerge);
+    preflightChecks(env, true);
     this.forcible = forcible;
   }
 

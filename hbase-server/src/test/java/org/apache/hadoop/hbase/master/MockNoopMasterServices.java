@@ -478,4 +478,9 @@ public class MockNoopMasterServices implements MasterServices {
   public ReplicationPeerManager getReplicationPeerManager() {
     return null;
   }
+
+  @Override
+  public boolean isClusterUp() {
+    return true;
+  }
 }
