@@ -186,4 +186,11 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
   public int hashCode() {
     return (int)sequenceNumber;
   }
+
+  @Override
+  public String toString() {
+    return "(username=" + username + ", keyId="
+            + keyId + ", issueDate=" + issueDate
+            + ", expirationDate=" + expirationDate + ", sequenceNumber=" + sequenceNumber + ")";
+  }
 }
