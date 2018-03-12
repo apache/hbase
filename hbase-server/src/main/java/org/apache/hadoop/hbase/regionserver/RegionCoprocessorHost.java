@@ -22,6 +22,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -465,17 +466,22 @@ public class RegionCoprocessorHost
   @Override
   public RegionCoprocessor checkAndGetInstance(Class<?> implClass)
       throws InstantiationException, IllegalAccessException {
-    if (RegionCoprocessor.class.isAssignableFrom(implClass)) {
-      return (RegionCoprocessor)implClass.newInstance();
-    } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
-      // For backward compatibility with old CoprocessorService impl which don't extend
-      // RegionCoprocessor.
-      return new CoprocessorServiceBackwardCompatiblity.RegionCoprocessorService(
-          (CoprocessorService)implClass.newInstance());
-    } else {
-      LOG.error(implClass.getName() + " is not of type RegionCoprocessor. Check the "
-          + "configuration " + CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
-      return null;
+    try {
+      if (RegionCoprocessor.class.isAssignableFrom(implClass)) {
+        return implClass.asSubclass(RegionCoprocessor.class).getDeclaredConstructor().newInstance();
+      } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
+        // For backward compatibility with old CoprocessorService impl which don't extend
+        // RegionCoprocessor.
+        CoprocessorService cs;
+        cs = implClass.asSubclass(CoprocessorService.class).getDeclaredConstructor().newInstance();
+        return new CoprocessorServiceBackwardCompatiblity.RegionCoprocessorService(cs);
+      } else {
+        LOG.error("{} is not of type RegionCoprocessor. Check the configuration of {}",
+            implClass.getName(), CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+        return null;
+      }
+    } catch (NoSuchMethodException | InvocationTargetException e) {
+      throw (InstantiationException) new InstantiationException(implClass.getName()).initCause(e);
     }
   }
 

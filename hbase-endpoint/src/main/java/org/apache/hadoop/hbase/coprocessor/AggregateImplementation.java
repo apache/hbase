@@ -27,6 +27,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -480,21 +481,19 @@ extends AggregateService implements RegionCoprocessor {
   ColumnInterpreter<T,S,P,Q,R> constructColumnInterpreterFromRequest(
       AggregateRequest request) throws IOException {
     String className = request.getInterpreterClassName();
-    Class<?> cls;
     try {
-      cls = Class.forName(className);
-      ColumnInterpreter<T,S,P,Q,R> ci = (ColumnInterpreter<T, S, P, Q, R>) cls.newInstance();
+      ColumnInterpreter<T,S,P,Q,R> ci;
+      Class<?> cls = Class.forName(className);
+      ci = (ColumnInterpreter<T, S, P, Q, R>) cls.getDeclaredConstructor().newInstance();
+
       if (request.hasInterpreterSpecificBytes()) {
         ByteString b = request.getInterpreterSpecificBytes();
         P initMsg = getParsedGenericInstance(ci.getClass(), 2, b);
         ci.initialize(initMsg);
       }
       return ci;
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e);
-    } catch (InstantiationException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+        NoSuchMethodException | InvocationTargetException e) {
       throw new IOException(e);
     }
   }

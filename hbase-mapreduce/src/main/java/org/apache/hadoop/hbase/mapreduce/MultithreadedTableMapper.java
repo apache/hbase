@@ -281,7 +281,8 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
             outer.getInputSplit());
           Class<?> wrappedMapperClass = Class.forName("org.apache.hadoop.mapreduce.lib.map.WrappedMapper");
           Method getMapContext = wrappedMapperClass.getMethod("getMapContext", MapContext.class);
-          subcontext = (Context) getMapContext.invoke(wrappedMapperClass.newInstance(), mc);
+          subcontext = (Context) getMapContext.invoke(
+              wrappedMapperClass.getDeclaredConstructor().newInstance(), mc);
         } catch (Exception ee) { // FindBugs: REC_CATCH_EXCEPTION
           // rethrow as IOE
           throw new IOException(e);

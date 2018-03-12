@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 
 import com.google.protobuf.Service;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
@@ -170,17 +171,22 @@ public class MasterCoprocessorHost
   @Override
   public MasterCoprocessor checkAndGetInstance(Class<?> implClass)
       throws InstantiationException, IllegalAccessException {
-    if (MasterCoprocessor.class.isAssignableFrom(implClass)) {
-      return (MasterCoprocessor)implClass.newInstance();
-    } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
-      // For backward compatibility with old CoprocessorService impl which don't extend
-      // MasterCoprocessor.
-      return new CoprocessorServiceBackwardCompatiblity.MasterCoprocessorService(
-          (CoprocessorService)implClass.newInstance());
-    } else {
-      LOG.error(implClass.getName() + " is not of type MasterCoprocessor. Check the "
-          + "configuration " + CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-      return null;
+    try {
+      if (MasterCoprocessor.class.isAssignableFrom(implClass)) {
+        return implClass.asSubclass(MasterCoprocessor.class).getDeclaredConstructor().newInstance();
+      } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
+        // For backward compatibility with old CoprocessorService impl which don't extend
+        // MasterCoprocessor.
+        CoprocessorService cs;
+        cs = implClass.asSubclass(CoprocessorService.class).getDeclaredConstructor().newInstance();
+        return new CoprocessorServiceBackwardCompatiblity.MasterCoprocessorService(cs);
+      } else {
+        LOG.error("{} is not of type MasterCoprocessor. Check the configuration of {}",
+            implClass.getName(), CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+        return null;
+      }
+    } catch (NoSuchMethodException | InvocationTargetException e) {
+      throw (InstantiationException) new InstantiationException(implClass.getName()).initCause(e);
     }
   }
 

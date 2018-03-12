@@ -192,7 +192,7 @@ public class ReplicationManager {
       for (String filter : filters) {
         try {
           Class clazz = Class.forName(filter);
-          Object o = clazz.newInstance();
+          Object o = clazz.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
           throw new DoNotRetryIOException("Configured WALEntryFilter " + filter +
               " could not be created. Failing add/update " + "peer operation.", e);

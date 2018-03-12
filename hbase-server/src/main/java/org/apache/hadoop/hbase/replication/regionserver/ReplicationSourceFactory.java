@@ -40,10 +40,9 @@ public class ReplicationSourceFactory {
       String defaultReplicationSourceImpl =
           isQueueRecovered ? RecoveredReplicationSource.class.getCanonicalName()
               : ReplicationSource.class.getCanonicalName();
-      @SuppressWarnings("rawtypes")
-      Class c = Class.forName(
+      Class<?> c = Class.forName(
         conf.get("replication.replicationsource.implementation", defaultReplicationSourceImpl));
-      src = (ReplicationSourceInterface) c.newInstance();
+      src = c.asSubclass(ReplicationSourceInterface.class).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       LOG.warn("Passed replication source implementation throws errors, "
           + "defaulting to ReplicationSource",

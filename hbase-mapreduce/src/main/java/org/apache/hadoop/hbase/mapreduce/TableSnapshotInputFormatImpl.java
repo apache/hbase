@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -300,17 +301,11 @@ public class TableSnapshotInputFormatImpl {
     if (splitAlgoClassName == null)
       return null;
     try {
-      return ((Class<? extends RegionSplitter.SplitAlgorithm>)
-              Class.forName(splitAlgoClassName)).newInstance();
-    } catch (ClassNotFoundException e) {
-      throw new IOException("SplitAlgo class " + splitAlgoClassName +
-              " is not found", e);
-    } catch (InstantiationException e) {
-      throw new IOException("SplitAlgo class " + splitAlgoClassName +
-              " is not instantiable", e);
-    } catch (IllegalAccessException e) {
-      throw new IOException("SplitAlgo class " + splitAlgoClassName +
-              " is not instantiable", e);
+      return Class.forName(splitAlgoClassName).asSubclass(RegionSplitter.SplitAlgorithm.class)
+          .getDeclaredConstructor().newInstance();
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+        NoSuchMethodException | InvocationTargetException e) {
+      throw new IOException("SplitAlgo class " + splitAlgoClassName + " is not found", e);
     }
   }
 

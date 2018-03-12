@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 import com.google.protobuf.Service;
 
@@ -82,17 +83,23 @@ public class RegionServerCoprocessorHost extends
   @Override
   public RegionServerCoprocessor checkAndGetInstance(Class<?> implClass)
       throws InstantiationException, IllegalAccessException {
-    if (RegionServerCoprocessor.class.isAssignableFrom(implClass)) {
-      return (RegionServerCoprocessor)implClass.newInstance();
-    } else if (SingletonCoprocessorService.class.isAssignableFrom(implClass)) {
-      // For backward compatibility with old CoprocessorService impl which don't extend
-      // RegionCoprocessor.
-      return new CoprocessorServiceBackwardCompatiblity.RegionServerCoprocessorService(
-          (SingletonCoprocessorService)implClass.newInstance());
-    } else {
-      LOG.error(implClass.getName() + " is not of type RegionServerCoprocessor. Check the "
-          + "configuration " + CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-      return null;
+    try {
+      if (RegionServerCoprocessor.class.isAssignableFrom(implClass)) {
+        return implClass.asSubclass(RegionServerCoprocessor.class).getDeclaredConstructor()
+            .newInstance();
+      } else if (SingletonCoprocessorService.class.isAssignableFrom(implClass)) {
+        // For backward compatibility with old CoprocessorService impl which don't extend
+        // RegionCoprocessor.
+        SingletonCoprocessorService tmp = implClass.asSubclass(SingletonCoprocessorService.class)
+            .getDeclaredConstructor().newInstance();
+        return new CoprocessorServiceBackwardCompatiblity.RegionServerCoprocessorService(tmp);
+      } else {
+        LOG.error("{} is not of type RegionServerCoprocessor. Check the configuration of {}",
+            implClass.getName(), CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+        return null;
+      }
+    } catch (NoSuchMethodException | InvocationTargetException e) {
+      throw (InstantiationException) new InstantiationException(implClass.getName()).initCause(e);
     }
   }
 
