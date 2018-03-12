@@ -60,6 +60,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -109,6 +111,9 @@ public class TestRegionMergeTransactionOnCluster {
 
   static void setupOnce() throws Exception {
     // Start a cluster
+    //Make sure discharger does not interfere with tests that control discharger
+    TEST_UTIL.getConfiguration().setInt(CompactionConfiguration.HBASE_HFILE_COMPACTION_DISCHARGER_INTERVAL,
+        Integer.MAX_VALUE);
     TEST_UTIL.startMiniCluster(NB_SERVERS);
     cluster = TEST_UTIL.getHBaseCluster();
     master = cluster.getMaster();
@@ -235,7 +240,9 @@ public class TestRegionMergeTransactionOnCluster {
         for(HColumnDescriptor colFamily : columnFamilies) {
           newcount += hrfs.getStoreFiles(colFamily.getName()).size();
         }
-        if(newcount > count) {
+        if(newcount > count &&
+            //compacted file added to directory, let's make sure compaction is actually done with the commit
+            admin.getCompactionState(tableName) == AdminProtos.GetRegionInfoResponse.CompactionState.NONE) {
           break;
         }
         Thread.sleep(50);
