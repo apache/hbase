@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -593,14 +594,11 @@ public final class Constraints {
           // add the constraint, now that we expect it to be valid.
           Class<? extends Constraint> clazz = classloader.loadClass(key)
               .asSubclass(Constraint.class);
-          Constraint constraint = clazz.newInstance();
+          Constraint constraint = clazz.getDeclaredConstructor().newInstance();
           constraint.setConf(conf);
           constraints.add(constraint);
-        } catch (ClassNotFoundException e1) {
-          throw new IOException(e1);
-        } catch (InstantiationException e1) {
-          throw new IOException(e1);
-        } catch (IllegalAccessException e1) {
+        } catch (InvocationTargetException | NoSuchMethodException | ClassNotFoundException |
+            InstantiationException | IllegalAccessException e1) {
           throw new IOException(e1);
         }
       }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -1185,11 +1186,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     rowSizeWarnThreshold = rs.conf.getInt(BATCH_ROWS_THRESHOLD_NAME, BATCH_ROWS_THRESHOLD_DEFAULT);
     RpcSchedulerFactory rpcSchedulerFactory;
     try {
-      Class<?> rpcSchedulerFactoryClass = rs.conf.getClass(
+      Class<?> cls = rs.conf.getClass(
           REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
           SimpleRpcSchedulerFactory.class);
-      rpcSchedulerFactory = ((RpcSchedulerFactory) rpcSchedulerFactoryClass.newInstance());
-    } catch (InstantiationException | IllegalAccessException e) {
+      rpcSchedulerFactory = cls.asSubclass(RpcSchedulerFactory.class)
+          .getDeclaredConstructor().newInstance();
+    } catch (NoSuchMethodException | InvocationTargetException |
+        InstantiationException | IllegalAccessException e) {
       throw new IllegalArgumentException(e);
     }
     // Server to handle client requests.
@@ -3534,8 +3537,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         for (RemoteProcedureRequest req : request.getProcList()) {
           RSProcedureCallable callable;
           try {
-            callable =
-              Class.forName(req.getProcClass()).asSubclass(RSProcedureCallable.class).newInstance();
+            callable = Class.forName(req.getProcClass()).asSubclass(RSProcedureCallable.class)
+              .getDeclaredConstructor().newInstance();
           } catch (Exception e) {
             regionServer.remoteProcedureComplete(req.getProcId(), e);
             continue;
