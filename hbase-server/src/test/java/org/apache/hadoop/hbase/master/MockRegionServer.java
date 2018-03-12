@@ -692,4 +692,8 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
       TableName tableName, Collection<Entry<String, Long>> archivedFiles) {
     return false;
   }
+
+  public boolean isClusterUp() {
+    return true;
+  }
 }

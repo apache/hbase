@@ -496,6 +496,7 @@ public abstract class AbstractTestDLS {
     blockUntilNoRIT(zkw, master);
     // disable-enable cycle to get rid of table's dead regions left behind
     // by createMultiRegions
+    assertTrue(TEST_UTIL.getAdmin().isTableEnabled(tableName));
     LOG.debug("Disabling table\n");
     TEST_UTIL.getAdmin().disableTable(tableName);
     LOG.debug("Waiting for no more RIT\n");

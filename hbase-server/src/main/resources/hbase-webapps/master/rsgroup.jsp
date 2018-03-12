@@ -428,13 +428,12 @@
                 <tr>
                   <td><%= tableName.getNamespaceAsString() %></td>
                   <td><a href="/table.jsp?name=<%= tableName.getNameAsString() %>"><%= tableName.getQualifierAsString() %></a></td>
-              <% TableState.State tableState = master.getTableStateManager().getTableState(tableName);
-                  if(TableState.isInStates(tableState,
-                          TableState.State.DISABLED, TableState.State.DISABLING)) {
+              <% TableState tableState = master.getTableStateManager().getTableState(tableName);
+                  if(tableState.isDisabledOrDisabling()) {
               %>
-                  <td style="color:red;"><%= tableState.name() %></td>
+                  <td style="color:red;"><%= tableState.getState().name() %></td>
               <% } else {  %>
-                  <td><%= tableState.name() %></td>
+                  <td><%= tableState.getState().name() %></td>
               <% } %>
               <% Map<RegionState.State, List<RegionInfo>> tableRegions =
                      master.getAssignmentManager().getRegionStates().getRegionByStateOfTable(tableName);

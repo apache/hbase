@@ -313,7 +313,7 @@ public final class ReadOnlyZKClient implements Closeable {
       }
       if (task == null) {
         if (pendingRequests == 0) {
-          LOG.debug("{} to {} inactive for {}ms; closing (Will reconnect when new requests)",
+          LOG.trace("{} to {} inactive for {}ms; closing (Will reconnect when new requests)",
             getId(), connectString, keepAliveTimeMs);
           closeZk();
         }

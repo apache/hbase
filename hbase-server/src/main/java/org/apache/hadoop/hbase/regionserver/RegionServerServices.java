@@ -257,4 +257,9 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    */
   boolean reportFileArchivalForQuotas(
       TableName tableName, Collection<Entry<String,Long>> archivedFiles);
+
+  /**
+   * @return True if cluster is up; false if cluster is not up (we are shutting down).
+   */
+  boolean isClusterUp();
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -57,7 +58,8 @@ public class DisableTableProcedure
    * @param skipTableStateCheck whether to check table state
    */
   public DisableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final boolean skipTableStateCheck) {
+      final boolean skipTableStateCheck)
+  throws HBaseIOException {
     this(env, tableName, skipTableStateCheck, null);
   }
 
@@ -68,9 +70,11 @@ public class DisableTableProcedure
    * @param skipTableStateCheck whether to check table state
    */
   public DisableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final boolean skipTableStateCheck, final ProcedurePrepareLatch syncLatch) {
+      final boolean skipTableStateCheck, final ProcedurePrepareLatch syncLatch)
+  throws HBaseIOException {
     super(env, syncLatch);
     this.tableName = tableName;
+    preflightChecks(env, true);
     this.skipTableStateCheck = skipTableStateCheck;
   }
 
@@ -230,11 +234,10 @@ public class DisableTableProcedure
       // was implemented. With table lock, there is no need to set the state here (it will
       // set the state later on). A quick state check should be enough for us to move forward.
       TableStateManager tsm = env.getMasterServices().getTableStateManager();
-      TableState.State state = tsm.getTableState(tableName);
-      if (!state.equals(TableState.State.ENABLED)){
-        LOG.info("Table " + tableName + " isn't enabled;is "+state.name()+"; skipping disable");
-        setFailure("master-disable-table", new TableNotEnabledException(
-                tableName+" state is "+state.name()));
+      TableState ts = tsm.getTableState(tableName);
+      if (!ts.isEnabled()) {
+        LOG.info("Not ENABLED tableState=" + ts + "; skipping disable");
+        setFailure("master-disable-table", new TableNotEnabledException(ts.toString()));
         canTableBeDisabled = false;
       }
     }

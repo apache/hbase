@@ -501,4 +501,9 @@ public interface MasterServices extends Server {
   boolean recoverMeta() throws IOException;
 
   String getClientIdAuditPrefix();
+
+  /**
+   * @return True if cluster is up; false if cluster is not up (we are shutting down).
+   */
+  boolean isClusterUp();
 }

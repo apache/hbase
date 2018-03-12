@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -81,7 +82,8 @@ public class RestoreSnapshotProcedure
   }
 
   public RestoreSnapshotProcedure(final MasterProcedureEnv env,
-                                  final TableDescriptor tableDescriptor, final SnapshotDescription snapshot) {
+      final TableDescriptor tableDescriptor, final SnapshotDescription snapshot)
+  throws HBaseIOException {
     this(env, tableDescriptor, snapshot, false);
   }
   /**
@@ -95,10 +97,12 @@ public class RestoreSnapshotProcedure
       final MasterProcedureEnv env,
       final TableDescriptor tableDescriptor,
       final SnapshotDescription snapshot,
-      final boolean restoreAcl) {
+      final boolean restoreAcl)
+  throws HBaseIOException {
     super(env);
     // This is the new schema we are going to write out as this modification.
     this.modifiedTableDescriptor = tableDescriptor;
+    preflightChecks(env, null/*Table can be online when restore is called?*/);
     // Snapshot information
     this.snapshot = snapshot;
     this.restoreAcl = restoreAcl;

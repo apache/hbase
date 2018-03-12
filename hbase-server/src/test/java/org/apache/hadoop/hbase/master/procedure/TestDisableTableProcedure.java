@@ -79,16 +79,26 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
 
-    // Disable the table again - expect failure
-    long procId2 = procExec.submitProcedure(new DisableTableProcedure(
-        procExec.getEnvironment(), tableName, false));
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    Procedure<?> result = procExec.getResult(procId2);
-    assertTrue(result.isFailed());
-    LOG.debug("Disable failed with exception: " + result.getException());
-    assertTrue(
-      ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotEnabledException);
+    // Disable the table again - expect failure. We used to get it via procExec#getResult but we
+    // added fail fast so now happens on construction.
+    Throwable e = null;
+    Throwable cause = null;
+    try {
+      long procId2 = procExec.submitProcedure(new DisableTableProcedure(
+          procExec.getEnvironment(), tableName, false));
+      // Wait the completion
+      ProcedureTestingUtility.waitProcedure(procExec, procId2);
+      Procedure<?> result = procExec.getResult(procId2);
+      assertTrue(result.isFailed());
+      cause = ProcedureTestingUtility.getExceptionCause(result);
+      e = result.getException();
+    } catch (TableNotEnabledException tnde) {
+      // Expected.
+      e = tnde;
+      cause = tnde;
+    }
+    LOG.debug("Disable failed with exception {}" + e);
+    assertTrue(cause instanceof TableNotEnabledException);
 
     // Disable the table - expect failure from ProcedurePrepareLatch
     try {
@@ -100,15 +110,20 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
       Assert.fail("Disable should throw exception through latch.");
     } catch (TableNotEnabledException tnee) {
       // Expected
-      LOG.debug("Disable failed with expected exception.");
+      LOG.debug("Disable failed with expected exception {}", tnee);
     }
 
     // Disable the table again with skipping table state check flag (simulate recovery scenario)
-    long procId4 = procExec.submitProcedure(new DisableTableProcedure(
+    try {
+      long procId4 = procExec.submitProcedure(new DisableTableProcedure(
         procExec.getEnvironment(), tableName, true));
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId4);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId4);
+      // Wait the completion
+      ProcedureTestingUtility.waitProcedure(procExec, procId4);
+      ProcedureTestingUtility.assertProcNotFailed(procExec, procId4);
+    } catch (TableNotEnabledException tnee) {
+      // Expected
+      LOG.debug("Disable failed with expected exception {}", tnee);
+    }
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 

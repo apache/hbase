@@ -1084,10 +1084,7 @@ public class MetaTableAccessor {
     }
     Table metaHTable = getMetaHTable(conn);
     Get get = new Get(tableName.getName()).addColumn(getTableFamily(), getTableStateColumn());
-    long time = EnvironmentEdgeManager.currentTime();
-    get.setTimeRange(0, time);
-    Result result =
-        metaHTable.get(get);
+    Result result = metaHTable.get(get);
     return getTableState(result);
   }
 
@@ -1673,7 +1670,7 @@ public class MetaTableAccessor {
   private static void updateTableState(Connection connection, TableState state) throws IOException {
     Put put = makePutFromTableState(state, EnvironmentEdgeManager.currentTime());
     putToMetaTable(connection, put);
-    LOG.info("Updated table {} state to {} in META", state.getTableName(), state.getState());
+    LOG.info("Updated {} in hbase:meta", state);
   }
 
   /**

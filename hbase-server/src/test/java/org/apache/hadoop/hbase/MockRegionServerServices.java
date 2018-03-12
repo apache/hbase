@@ -348,4 +348,9 @@ public class MockRegionServerServices implements RegionServerServices {
       TableName tableName, Collection<Entry<String,Long>> archivedFiles) {
     return true;
   }
+
+  @Override
+  public boolean isClusterUp() {
+    return true;
+  }
 }

@@ -97,6 +97,34 @@ public class TableState {
   private final State state;
 
   /**
+   * @return True if table is {@link State#ENABLED}.
+   */
+  public boolean isEnabled() {
+    return isInStates(State.ENABLED);
+  }
+
+  /**
+   * @return True if {@link State#ENABLED} or {@link State#ENABLING}
+   */
+  public boolean isEnabledOrEnabling() {
+    return isInStates(State.ENABLED, State.ENABLING);
+  }
+
+  /**
+   * @return True if table is disabled.
+   */
+  public boolean isDisabled() {
+    return isInStates(State.DISABLED);
+  }
+
+  /**
+   * @return True if {@link State#DISABLED} or {@link State#DISABLED}
+   */
+  public boolean isDisabledOrDisabling() {
+    return isInStates(State.DISABLED, State.DISABLING);
+  }
+
+  /**
    * Create instance of TableState.
    * @param tableName name of the table
    * @param state table state
@@ -177,14 +205,14 @@ public class TableState {
 
   /**
    * Static version of state checker
-   * @param state desired
    * @param target equals to any of
    * @return true if satisfies
    */
-  public static boolean isInStates(State state, State... target) {
+  public boolean isInStates(State... target) {
     for (State tableState : target) {
-      if (state.equals(tableState))
+      if (this.state.equals(tableState)) {
         return true;
+      }
     }
     return false;
   }
@@ -212,9 +240,6 @@ public class TableState {
 
   @Override
   public String toString() {
-    return "TableState{" +
-        ", tableName=" + tableName +
-        ", state=" + state +
-        '}';
+    return "tableName=" + tableName + ", state=" + state;
   }
 }
