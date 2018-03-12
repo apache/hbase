@@ -48,46 +48,18 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   }
 
   @Override
-  public void run() {
-    setWorkerState(WorkerState.RUNNING);
-    // Loop until we close down
-    while (isActive()) {
-      int sleepMultiplier = 1;
-      // Sleep until replication is enabled again
-      if (!source.isPeerEnabled()) {
-        if (source.sleepForRetries("Replication is disabled", sleepMultiplier)) {
-          sleepMultiplier++;
-        }
-        continue;
-      }
-
-      while (entryReader == null) {
-        if (source.sleepForRetries("Replication WAL entry reader thread not initialized",
-          sleepMultiplier)) {
-          sleepMultiplier++;
-        }
-      }
-
-      try {
-        WALEntryBatch entryBatch = entryReader.take();
-        shipEdits(entryBatch);
-        if (entryBatch.getWalEntries().isEmpty()) {
-          LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
-              + source.getQueueId());
-          source.getSourceMetrics().incrCompletedRecoveryQueue();
-          setWorkerState(WorkerState.FINISHED);
-          continue;
-        }
-      } catch (InterruptedException e) {
-        LOG.trace("Interrupted while waiting for next replication entry batch", e);
-        Thread.currentThread().interrupt();
-      }
+  protected void postShipEdits(WALEntryBatch entryBatch) {
+    if (entryBatch.getWalEntries().isEmpty()) {
+      LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
+          + source.getQueueId());
+      source.getSourceMetrics().incrCompletedRecoveryQueue();
+      setWorkerState(WorkerState.FINISHED);
     }
+  }
+
+  @Override
+  protected void postFinish() {
     source.tryFinish();
-    // If the worker exits run loop without finishing its task, mark it as stopped.
-    if (!isFinished()) {
-      setWorkerState(WorkerState.STOPPED);
-    }
   }
 
   @Override

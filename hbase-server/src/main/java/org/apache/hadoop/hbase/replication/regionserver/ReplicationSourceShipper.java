@@ -83,7 +83,7 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   @Override
-  public void run() {
+  public final void run() {
     setWorkerState(WorkerState.RUNNING);
     // Loop until we close down
     while (isActive()) {
@@ -95,26 +95,29 @@ public class ReplicationSourceShipper extends Thread {
         }
         continue;
       }
-
-      while (entryReader == null) {
-        if (sleepForRetries("Replication WAL entry reader thread not initialized",
-          sleepMultiplier)) {
-          sleepMultiplier++;
-        }
-      }
-
       try {
         WALEntryBatch entryBatch = entryReader.take();
         shipEdits(entryBatch);
+        postShipEdits(entryBatch);
       } catch (InterruptedException e) {
         LOG.trace("Interrupted while waiting for next replication entry batch", e);
         Thread.currentThread().interrupt();
       }
     }
     // If the worker exits run loop without finishing its task, mark it as stopped.
-    if (state != WorkerState.FINISHED) {
+    if (!isFinished()) {
       setWorkerState(WorkerState.STOPPED);
+    } else {
+      postFinish();
     }
+  }
+
+  // To be implemented by recovered shipper
+  protected void postShipEdits(WALEntryBatch entryBatch) {
+  }
+
+  // To be implemented by recovered shipper
+  protected void postFinish() {
   }
 
   /**
@@ -229,8 +232,8 @@ public class ReplicationSourceShipper extends Thread {
 
   public void startup(UncaughtExceptionHandler handler) {
     String name = Thread.currentThread().getName();
-    Threads.setDaemonThreadRunning(this, name + ".replicationSource." + walGroupId + ","
-        + source.getQueueId(), handler);
+    Threads.setDaemonThreadRunning(this,
+      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(), handler);
   }
 
   public PriorityBlockingQueue<Path> getLogQueue() {
