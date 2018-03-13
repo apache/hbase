@@ -1136,6 +1136,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
       throws IOException {
+    // Move this ACL check to SnapshotManager#checkPermissions as part of AC deprecation.
     requirePermission(ctx, "snapshot " + snapshot.getName(),
         hTableDescriptor.getTableName(), null, null, Permission.Action.ADMIN);
   }
@@ -1266,6 +1267,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName) throws IOException {
+    // Move this ACL check to MasterFlushTableProcedureManager#checkPermissions as part of AC
+    // deprecation.
     requirePermission(ctx, "flushTable", tableName,
         null, null, Action.ADMIN, Action.CREATE);
   }

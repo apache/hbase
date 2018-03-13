@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -1147,6 +1148,13 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   @Override
   public void execProcedure(ProcedureDescription desc) throws IOException {
     takeSnapshot(toSnapshotDescription(desc));
+  }
+
+  @Override
+  public void checkPermissions(ProcedureDescription desc, AccessChecker accessChecker, User user)
+      throws IOException {
+    // Done by AccessController as part of preSnapshot coprocessor hook (legacy code path).
+    // In future, when we AC is removed for good, that check should be moved here.
   }
 
   @Override
