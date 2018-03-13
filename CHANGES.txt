@@ -31,6 +31,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-19368] - [nightly] Make xml test non-voting in branch-1.2
     * [HBASE-19373] - Fix Checkstyle error in hbase-annotations
     * [HBASE-19468] - FNFE during scans and flushes
+    * [HBASE-19502] - Make sure we have closed all StoreFileScanners if we fail to open any StoreFileScanners
     * [HBASE-19877] - hbase-common and hbase-zookeeper don't add the log4j.properties to the resource path for testing
 
 ** Bug
@@ -123,6 +124,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-18771] - Incorrect StoreFileRefresh leading to split and compaction failures
     * [HBASE-18796] - Admin#isTableAvailable returns incorrect result before daughter regions are opened
     * [HBASE-18818] - TestConnectionImplemenation fails
+    * [HBASE-18864] - NullPointerException thrown when adding rows to a table from peer cluster, table with replication factor other than 0 or 1
     * [HBASE-18885] - HFileOutputFormat2 hardcodes default FileOutputCommitter
     * [HBASE-18890] - Backport HBASE-14499 (Master coprocessors shutdown will not happen on master abort) to branch-1
     * [HBASE-18891] - Upgrade netty-all jar
@@ -150,6 +152,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-19072] - Missing break in catch block of InterruptedException in HRegion#waitForFlushes() 
     * [HBASE-19098] - Python based compatiblity checker fails if git repo does not have a remote named 'origin'
     * [HBASE-19102] - TestZooKeeperMainServer fails with KeeperException$ConnectionLossException
+    * [HBASE-19118] - Use SaslUtil to set Sasl.QOP in 'Thrift'
     * [HBASE-19124] - Move HBase-Nightly source artifact creation test from JenkinsFile to a script in dev-support
     * [HBASE-19137] - Nightly test should make junit reports optional rather than attempt archive after reporting.
     * [HBASE-19156] - Duplicative regions_per_server options on LoadTestTool
@@ -162,6 +165,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-19245] - MultiTableInputFormatBase#getSplits creates a Connection per Table
     * [HBASE-19249] - test for "hbase antipatterns" should check _count_ of occurance rather than text of
     * [HBASE-19260] - Add lock back to avoid parallel accessing meta to locate region
+    * [HBASE-19285] - Add per-table latency histograms
     * [HBASE-19332] - DumpReplicationQueues misreports total WAL size
     * [HBASE-19340] - Backport missing options in shell
     * [HBASE-19350] - TestMetaWithReplicas is flaky
@@ -181,6 +185,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-19756] - Master NPE during completed failed proc eviction
     * [HBASE-19790] - Fix compatibility break in 1.3.2-SNAPSHOT
     * [HBASE-19796] - ReplicationSynUp tool is not replicating the data if the WAL is moved to splitting directory
+    * [HBASE-19802] - Wrong usage messages on shell commands (grant/revoke namespace syntax)
     * [HBASE-19871] - delete.rb should require user to provide the column
     * [HBASE-19876] - The exception happening in converting pb mutation to hbase.mutation messes up the CellScanner
     * [HBASE-19900] - Region-level exception destroy the result of batch
@@ -195,6 +200,12 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-20061] - HStore synchronized member variable filesCompacting should be private
     * [HBASE-20062] - findbugs is not running on precommit checks
     * [HBASE-20106] - API Compliance checker should fall back to specifying origin as remote repo
+    * [HBASE-20134] - support scripts use hard-coded /tmp
+    * [HBASE-20139] - NPE in RSRpcServices.get() when getRegion throws an exception
+    * [HBASE-20146] - Regions are stuck while opening when WAL is disabled
+    * [HBASE-20162] - [nightly] depending on pipeline execution we sometimes refer to the wrong workspace
+    * [HBASE-20164] - failed hadoopcheck should add footer link
+    * [HBASE-20174] - Fix TestZKLessMergeOnCluster flakiness
 
 ** New Feature
     * [HBASE-19189] - Ad-hoc test job for running a subset of tests lots of times
@@ -214,6 +225,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-18090] - Improve TableSnapshotInputFormat to allow more multiple mappers per region
     * [HBASE-18387] - [Thrift] Make principal configurable in DemoClient.java
     * [HBASE-18426] - nightly job should use independent stages to check supported jdks
+    * [HBASE-18467] - nightly job needs to run all stages and then comment on jira
     * [HBASE-18631] - Allow configuration of ChaosMonkey properties via hbase-site
     * [HBASE-18675] - Making {max,min}SessionTimeout configurable for MiniZooKeeperCluster
     * [HBASE-18746] - Throw exception with job.getStatus().getFailureInfo() when ExportSnapshot fails
@@ -237,6 +249,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-19514] - Use random port for TestJMXListener
 
 ** Task
+    * [HBASE-15151] - Rely on nightly tests for findbugs compliance on existing branch
     * [HBASE-16459] - Remove unused hbase shell --format option
     * [HBASE-17954] - Switch findbugs implementation to spotbugs
     * [HBASE-17968] - Update copyright year in NOTICE file
@@ -250,6 +263,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-18996] - Backport HBASE-17703 (TestThriftServerCmdLine is flaky in master branch) to branch-1
     * [HBASE-19097] - update testing to use Apache Yetus Test Patch version 0.6.0
     * [HBASE-19637] - Add .checkstyle to gitignore
+    * [HBASE-20075] - remove logic for branch-1.1 nightly testing
     * [HBASE-20088] - Update copyright notices to year 2018
     * [HBASE-20089] - make_rc.sh should name SHA-512 checksum files with the extension .sha512
 
