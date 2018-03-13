@@ -329,7 +329,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // Initialized in start() since AccessChecker needs ZKWatcher which is created by HRegionServer
   // after RSRpcServices constructor and before start() is called.
   // Initialized only if authorization is enabled, else remains null.
-  private AccessChecker accessChecker;
+  protected AccessChecker accessChecker;
 
   /**
    * Services launched in RSRpcServices. By default they are on but you can use the below

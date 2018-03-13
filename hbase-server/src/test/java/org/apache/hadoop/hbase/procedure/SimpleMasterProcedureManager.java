@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,6 +114,10 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
     // return the first value for testing
     return returnData.values().iterator().next();
   }
+
+  @Override
+  public void checkPermissions(ProcedureDescription desc, AccessChecker accessChecker, User user)
+      throws IOException {}
 
   @Override
   public boolean isProcedureDone(ProcedureDescription desc) throws IOException {
