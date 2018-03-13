@@ -135,16 +135,21 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
       regionPlans.add(new RegionPlan(regionInfo, null, null));
     }
     try {
-      for (RSGroupInfo info : infoManager.listRSGroups()) {
-        Map<ServerName, List<HRegionInfo>> groupClusterState =
-            new HashMap<ServerName, List<HRegionInfo>>();
-        for (Address addr : info.getServers()) {
-          for(ServerName curr: clusterState.keySet()) {
-            if(curr.getAddress().equals(addr)) {
-              groupClusterState.put(curr, correctedState.get(curr));
-            }
+      // Record which region servers have been processed，so as to skip them after processed
+      HashSet<ServerName> processedServers = new HashSet<>();
+
+      // For each rsgroup
+      for (RSGroupInfo rsgroup : infoManager.listRSGroups()) {
+        Map<ServerName, List<HRegionInfo>> groupClusterState = new HashMap<>();
+        for (ServerName server : clusterState.keySet()) { // for each region server
+          if (!processedServers.contains(server) // server is not processed yet
+              && rsgroup.containsServer(server.getAddress())) { // server belongs to this rsgroup
+            List<HRegionInfo> regionsOnServer = correctedState.get(server);
+            groupClusterState.put(server, regionsOnServer);
+            processedServers.add(server);
           }
         }
+
         List<RegionPlan> groupPlans = this.internalBalancer
             .balanceCluster(groupClusterState);
         if (groupPlans != null) {
