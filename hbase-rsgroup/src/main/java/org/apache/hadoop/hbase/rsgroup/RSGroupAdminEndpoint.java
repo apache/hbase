@@ -34,7 +34,6 @@ import java.util.Set;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -362,34 +361,20 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   void assignTableToGroup(HTableDescriptor desc) throws IOException {
-    RSGroupInfo rsGroupInfo = preGetRSGroupInfoOfTable(desc);
-    if (!rsGroupInfo.containsTable(desc.getTableName())) {
-      groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), rsGroupInfo.getName());
-    }
-  }
-
-  public boolean rsgroupHasOnlineServers(HTableDescriptor desc) throws IOException {
-    RSGroupInfo rsGroupInfo = preGetRSGroupInfoOfTable(desc);
-    for (ServerName onlineServer : master.getServerManager().createDestinationServersList()) {
-      if (rsGroupInfo.getServers().contains(onlineServer.getAddress())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  public RSGroupInfo preGetRSGroupInfoOfTable(HTableDescriptor desc) throws IOException{
     String groupName =
-        master.getTableNamespaceManager().get(desc.getTableName().getNamespaceAsString())
-            .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
+        master.getNamespaceDescriptor(desc.getTableName().getNamespaceAsString())
+                .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
     if (groupName == null) {
       groupName = RSGroupInfo.DEFAULT_GROUP;
     }
-    RSGroupInfo RSGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
-    if (RSGroupInfo == null) {
-      throw new ConstraintException("RSGroup " + groupName + " does not exist.");
+    RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
+    if (rsGroupInfo == null) {
+      throw new ConstraintException("Default RSGroup (" + groupName + ") for this table's "
+          + "namespace does not exist.");
     }
-    return RSGroupInfo;
+    if (!rsGroupInfo.containsTable(desc.getTableName())) {
+      groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), groupName);
+    }
   }
 
   /////////////////////////////////////////////////////////////////////////////
@@ -423,10 +408,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   public void preCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                     HTableDescriptor desc,
                                     HRegionInfo[] regions) throws IOException {
-    if (!desc.getTableName().isSystemTable() && !rsgroupHasOnlineServers(desc)) {
-      throw new HBaseIOException("No online servers in the rsgroup, which table " +
-          desc.getTableName().getNameAsString() + " belongs to");
-    }
+
   }
 
   @Override
