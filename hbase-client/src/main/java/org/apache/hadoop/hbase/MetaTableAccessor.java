@@ -2056,7 +2056,7 @@ public class MetaTableAccessor {
     return Bytes.toLong(c.getValueArray(), c.getValueOffset(), c.getValueLength());
   }
 
-  private static long[] getReplicationBarriers(Result result) {
+  public static long[] getReplicationBarriers(Result result) {
     return result.getColumnCells(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
       .stream().mapToLong(MetaTableAccessor::getReplicationBarrier).sorted().distinct().toArray();
   }

@@ -157,7 +157,7 @@ public class TestSerialReplicationChecker {
     }
     for (int i = 0; i < barriers.length; i++) {
       put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER,
-        put.getTimeStamp() - i, Bytes.toBytes(barriers[i]));
+        put.getTimeStamp() - barriers.length + i, Bytes.toBytes(barriers[i]));
     }
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.put(put);
