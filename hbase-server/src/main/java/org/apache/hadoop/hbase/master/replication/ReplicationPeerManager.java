@@ -327,6 +327,16 @@ public class ReplicationPeerManager {
     }
   }
 
+  public List<String> getSerialPeerIdsBelongsTo(TableName tableName) {
+    return peers.values().stream().filter(p -> p.getPeerConfig().isSerial())
+      .filter(p -> ReplicationUtils.contains(p.getPeerConfig(), tableName)).map(p -> p.getPeerId())
+      .collect(Collectors.toList());
+  }
+
+  public ReplicationQueueStorage getQueueStorage() {
+    return queueStorage;
+  }
+
   public static ReplicationPeerManager create(ZKWatcher zk, Configuration conf)
       throws ReplicationException {
     ReplicationPeerStorage peerStorage =
