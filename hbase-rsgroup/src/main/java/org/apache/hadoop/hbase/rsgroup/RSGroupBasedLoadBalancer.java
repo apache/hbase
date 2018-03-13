@@ -129,17 +129,23 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     // for the regions which have been placed according to the region server group assignment
     // into the movement list
     try {
-      List<RSGroupInfo> rsgi = rsGroupInfoManager.listRSGroups();
-      for (RSGroupInfo info: rsgi) {
+      // Record which region servers have been processed，so as to skip them after processed
+      HashSet<ServerName> processedServers = new HashSet<>();
+
+      // For each rsgroup
+      for (RSGroupInfo rsgroup : rsGroupInfoManager.listRSGroups()) {
         Map<ServerName, List<RegionInfo>> groupClusterState = new HashMap<>();
         Map<TableName, Map<ServerName, List<RegionInfo>>> groupClusterLoad = new HashMap<>();
-        for (Address sName : info.getServers()) {
-          for(ServerName curr: clusterState.keySet()) {
-            if(curr.getAddress().equals(sName)) {
-              groupClusterState.put(curr, correctedState.get(curr));
-            }
+        for (ServerName server : clusterState.keySet()) { // for each region server
+          if (!processedServers.contains(server) // server is not processed yet
+              && rsgroup.containsServer(server.getAddress())) { // server belongs to this rsgroup
+            List<RegionInfo> regionsOnServer = correctedState.get(server);
+            groupClusterState.put(server, regionsOnServer);
+
+            processedServers.add(server);
           }
         }
+
         groupClusterLoad.put(HConstants.ENSEMBLE_TABLE_NAME, groupClusterState);
         this.internalBalancer.setClusterLoad(groupClusterLoad);
         List<RegionPlan> groupPlans = this.internalBalancer
