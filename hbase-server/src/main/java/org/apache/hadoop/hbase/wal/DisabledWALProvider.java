@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -162,7 +163,13 @@ class DisabledWALProvider implements WALProvider {
     @Override
     public long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
         throws IOException {
-      key.setWriteEntry(key.getMvcc().begin());
+      WriteEntry writeEntry = key.getMvcc().begin();
+      if (!edits.isReplay()) {
+        for (Cell cell : edits.getCells()) {
+          PrivateCellUtil.setSequenceId(cell, writeEntry.getWriteNumber());
+        }
+      }
+      key.setWriteEntry(writeEntry);
       if (!this.listeners.isEmpty()) {
         final long start = System.nanoTime();
         long len = 0;
