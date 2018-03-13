@@ -110,14 +110,25 @@
             </goals>
             <configuration>
               <outputFile>${project.parent.basedir}/target/cached_classpath.txt</outputFile>
-              <excludeArtifactIds>jruby-complete</excludeArtifactIds>
+              <excludeArtifactIds>jline,jruby-complete</excludeArtifactIds>
             </configuration>
           </execution>
 
           <execution>
-            <!-- Generates a file containing jruby jar.
-                 In dev environment, bin/hbase will read the file and add the jar into classpath when jruby is needed
-            -->
+            <!-- generates the file that will be used by the bin/hbase zkcli script in the dev env -->
+            <id>create-hbase-generated-classpath-jline</id>
+            <phase>test</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <outputFile>${project.parent.basedir}/target/cached_classpath_jline.txt</outputFile>
+              <includeArtifactIds>jline</includeArtifactIds>
+            </configuration>
+          </execution>
+
+          <execution>
+            <!-- generates the file that will be used by the bin/hbase shell script in the dev env -->
             <id>create-hbase-generated-classpath-jruby</id>
             <phase>test</phase>
             <goals>

@@ -171,22 +171,6 @@ if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
   fi
 fi
 
-add_maven_deps_to_classpath() {
-  f="${HBASE_HOME}/hbase-build-configuration/target/cached_classpath.txt"
-  if [ ! -f "${f}" ]
-  then
-      echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn install -DskipTests)"
-      exit 1
-  fi
-  CLASSPATH=${CLASSPATH}:`cat "${f}"`
-}
-
-
-#Add the development env class path stuff
-if $in_dev_env; then
-  add_maven_deps_to_classpath
-fi
-
 #add the hbase jars for each module
 for f in $HBASE_HOME/hbase-jars/hbase*.jar; do
 	if [[ $f = *sources.jar ]]
@@ -301,6 +285,15 @@ if [ "$AUTH_AS_SERVER" == "true" ] || [ "$COMMAND" = "hbck" ]; then
    fi
 fi
 
+# check if the command needs jline
+declare -a jline_cmds=("zkcli" "org.apache.hadoop.hbase.zookeeper.ZKMainServer")
+for cmd in "${jline_cmds[@]}"; do
+  if [[ $cmd == "$COMMAND" ]]; then
+    jline_needed=true
+    break
+  fi
+done
+
 # for jruby
 # (1) for the commands which need jruby (see jruby_cmds defined below)
 #     A. when JRUBY_HOME is specified explicitly, eg. export JRUBY_HOME=/usr/local/share/jruby
@@ -318,6 +311,27 @@ for cmd in "${jruby_cmds[@]}"; do
   fi
 done
 
+add_maven_deps_to_classpath() {
+  f="${HBASE_HOME}/hbase-build-configuration/target/$1"
+
+  if [ ! -f "${f}" ]; then
+      echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn install -DskipTests)"
+      exit 1
+  fi
+  CLASSPATH=${CLASSPATH}:$(cat "${f}")
+}
+
+#Add the development env class path stuff
+if $in_dev_env; then
+  add_maven_deps_to_classpath "cached_classpath.txt"
+
+  if [[ $jline_needed ]]; then
+    add_maven_deps_to_classpath "cached_classpath_jline.txt"
+  elif [[ $jruby_needed ]]; then
+    add_maven_deps_to_classpath "cached_classpath_jruby.txt"
+  fi
+fi
+
 # the command needs jruby
 if [[ $jruby_needed ]]; then
   if [ "$JRUBY_HOME" != "" ]; then  # JRUBY_HOME is specified explicitly, eg. export JRUBY_HOME=/usr/local/share/jruby
@@ -328,14 +342,7 @@ if [[ $jruby_needed ]]; then
     HBASE_OPTS="$HBASE_OPTS -Djruby.home=$JRUBY_HOME -Djruby.lib=$JRUBY_HOME/lib"
 
   else  # JRUBY_HOME is not specified explicitly
-    if $in_dev_env; then  # in dev environment
-      F_JRUBY="${HBASE_HOME}/hbase-build-configuration/target/cached_classpath_jruby.txt"
-      if [ ! -f "${F_JRUBY}" ]; then
-        echo "As this is a development environment, we need ${F_JRUBY} to be generated from maven (command: mvn install -DskipTests)"
-        exit 1
-      fi
-      CLASSPATH=$(cat "${F_JRUBY}"):$CLASSPATH;
-    else  # not in dev environment
+    if ! $in_dev_env; then  # not in dev environment
       # add jruby packaged with HBase to CLASSPATH
       JRUBY_PACKAGED_WITH_HBASE="$HBASE_HOME/lib/ruby/*.jar"
       for jruby_jar in $JRUBY_PACKAGED_WITH_HBASE; do
