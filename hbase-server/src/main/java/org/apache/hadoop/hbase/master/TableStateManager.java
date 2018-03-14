@@ -270,7 +270,8 @@ public class TableStateManager {
    */
   @Deprecated
   private void migrateZooKeeper() throws IOException {
-    if (this.master.getConfiguration().getBoolean(MIGRATE_TABLE_STATE_FROM_ZK_KEY, false)) {
+    if (!this.master.getConfiguration().getBoolean(MIGRATE_TABLE_STATE_FROM_ZK_KEY,
+        true)) {
       return;
     }
     try {
