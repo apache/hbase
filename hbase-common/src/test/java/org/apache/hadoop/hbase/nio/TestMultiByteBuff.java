@@ -426,4 +426,35 @@ public class TestMultiByteBuff {
     mbb1.get(); // Now we have reached the limit
     assertFalse(mbb1.hasRemaining());
   }
+
+  @Test
+  public void testGetPrimitivesWithSmallIndividualBBs() {
+    short s = 45;
+    int i = 2345;
+    long l = 75681526L;
+    ByteBuffer bb = ByteBuffer.allocate(14);
+    bb.putShort(s);
+    bb.putInt(i);
+    bb.putLong(l);
+
+    ByteBuffer bb1 = ((ByteBuffer) bb.duplicate().position(0).limit(1)).slice();
+    ByteBuffer bb2 = ((ByteBuffer) bb.duplicate().position(1).limit(3)).slice();
+    ByteBuffer bb3 = ((ByteBuffer) bb.duplicate().position(3).limit(5)).slice();
+    ByteBuffer bb4 = ((ByteBuffer) bb.duplicate().position(5).limit(11)).slice();
+    ByteBuffer bb5 = ((ByteBuffer) bb.duplicate().position(11).limit(12)).slice();
+    ByteBuffer bb6 = ((ByteBuffer) bb.duplicate().position(12).limit(14)).slice();
+    MultiByteBuff mbb = new MultiByteBuff(bb1, bb2, bb3, bb4, bb5, bb6);
+    assertEquals(s, mbb.getShortAfterPosition(0));
+    assertEquals(i, mbb.getIntAfterPosition(2));
+    assertEquals(l, mbb.getLongAfterPosition(6));
+
+    assertEquals(s, mbb.getShort(0));
+    assertEquals(i, mbb.getInt(2));
+    assertEquals(l, mbb.getLong(6));
+
+    mbb.position(0);
+    assertEquals(s, mbb.getShort());
+    assertEquals(i, mbb.getInt());
+    assertEquals(l, mbb.getLong());
+  }
 }
