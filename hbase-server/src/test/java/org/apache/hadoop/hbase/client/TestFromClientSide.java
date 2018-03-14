@@ -5513,9 +5513,13 @@ public class TestFromClientSide {
     checkTableIsIllegal(htd);
     hcd.setMinVersions(3);
 
-    hcd.setScope(-1);
-    checkTableIsIllegal(htd);
-    hcd.setScope(0);
+    try {
+      hcd.setScope(-1);
+      fail("Illegal value for setScope did not throw");
+    } catch (IllegalArgumentException e) {
+      // expected
+      hcd.setScope(0);
+    }
     checkTableIsLegal(htd);
 
     try {
