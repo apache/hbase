@@ -1038,7 +1038,7 @@
                 <requireJavaVersion>
                   <version>[${java.min.version},)</version>
                   <message>Java is out of date.
-  HBase requirs at least version ${java.min.version} of the JDK to properly build from source.
+  HBase requires at least version ${java.min.version} of the JDK to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
   See the reference guide on building for more information: http://hbase.apache.org/book.html#build
