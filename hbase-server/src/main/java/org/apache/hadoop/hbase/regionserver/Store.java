@@ -280,6 +280,4 @@ public interface Store {
    * @return true if the memstore may need some extra memory space
    */
   boolean isSloppyMemStore();
-
-  int getCurrentParallelPutCount();
 }

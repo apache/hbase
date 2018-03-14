@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -146,7 +146,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
-import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -675,8 +674,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final NavigableMap<byte[], Integer> replicationScope = new TreeMap<>(
       Bytes.BYTES_COMPARATOR);
 
-  private final StoreHotnessProtector storeHotnessProtector;
-
   /**
    * HRegion constructor. This constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
@@ -797,9 +794,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         "hbase.hregion.row.processor.timeout", DEFAULT_ROW_PROCESSOR_TIMEOUT);
     this.regionDurability = htd.getDurability() == Durability.USE_DEFAULT ?
         DEFAULT_DURABILITY : htd.getDurability();
-
-    this.storeHotnessProtector = new StoreHotnessProtector(this, conf);
-
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -812,8 +806,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.metricsRegion = null;
     }
     if (LOG.isDebugEnabled()) {
-      // Write out region name, its encoded name and storeHotnessProtector as string.
-      LOG.debug("Instantiated " + this +"; "+ storeHotnessProtector.toString());
+      // Write out region name as string and its encoded name.
+      LOG.debug("Instantiated " + this);
     }
 
     configurationManager = Optional.empty();
@@ -3186,31 +3180,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (!isOperationPending(lastIndexExclusive)) {
           continue;
         }
-
-        // HBASE-19389 Limit concurrency of put with dense (hundreds) columns to avoid exhausting
-        // RS handlers, covering both MutationBatchOperation and ReplayBatchOperation
-        // The BAD_FAMILY/SANITY_CHECK_FAILURE cases are handled in checkAndPrepare phase and won't
-        // pass the isOperationPending check
-        Map<byte[], List<Cell>> curFamilyCellMap =
-            getMutation(lastIndexExclusive).getFamilyCellMap();
-        try {
-          // start the protector before acquiring row lock considering performance, and will finish
-          // it when encountering exception
-          region.storeHotnessProtector.start(curFamilyCellMap);
-        } catch (RegionTooBusyException rtbe) {
-          region.storeHotnessProtector.finish(curFamilyCellMap);
-          if (isAtomic()) {
-            throw rtbe;
-          }
-          retCodeDetails[lastIndexExclusive] =
-              new OperationStatus(OperationStatusCode.STORE_TOO_BUSY, rtbe.getMessage());
-          continue;
-        }
-
         Mutation mutation = getMutation(lastIndexExclusive);
         // If we haven't got any rows in our batch, we should block to get the next one.
         RowLock rowLock = null;
-        boolean throwException = false;
         try {
           // if atomic then get exclusive lock, else shared lock
           rowLock = region.getRowLockInternal(mutation.getRow(), !isAtomic(), prevRowLock);
@@ -3218,26 +3190,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // NOTE: We will retry when other exceptions, but we should stop if we receive
           // TimeoutIOException or InterruptedIOException as operation has timed out or
           // interrupted respectively.
-          throwException = true;
           throw e;
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock, row=" + Bytes.toStringBinary(mutation.getRow()), ioe);
           if (isAtomic()) { // fail, atomic means all or none
-            throwException = true;
             throw ioe;
-          }
-        } catch (Throwable throwable) {
-          throwException = true;
-          throw throwable;
-        } finally {
-          if (throwException) {
-            region.storeHotnessProtector.finish(curFamilyCellMap);
           }
         }
         if (rowLock == null) {
           // We failed to grab another lock
           if (isAtomic()) {
-            region.storeHotnessProtector.finish(curFamilyCellMap);
             throw new IOException("Can't apply all operations atomically!");
           }
           break; // Stop acquiring more rows for this batch
@@ -3323,38 +3285,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     public void doPostOpCleanupForMiniBatch(
         final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WALEdit walEdit,
-        boolean success) throws IOException {
-      doFinishHotnessProtector(miniBatchOp);
-    }
-
-    private void doFinishHotnessProtector(
-        final MiniBatchOperationInProgress<Mutation> miniBatchOp) {
-      // check and return if the protector is not enabled
-      if (!region.storeHotnessProtector.isEnable()) {
-        return;
-      }
-      // miniBatchOp is null, if and only if lockRowsAndBuildMiniBatch throwing exception.
-      // This case was handled.
-      if (miniBatchOp == null) {
-        return;
-      }
-
-      final int finalLastIndexExclusive = miniBatchOp.getLastIndexExclusive();
-
-      for (int i = nextIndexToProcess; i < finalLastIndexExclusive; i++) {
-        switch (retCodeDetails[i].getOperationStatusCode()) {
-          case SUCCESS:
-          case FAILURE:
-            region.storeHotnessProtector.finish(getMutation(i).getFamilyCellMap());
-            break;
-          default:
-            // do nothing
-            // We won't start the protector for NOT_RUN/BAD_FAMILY/SANITY_CHECK_FAILURE and the
-            // STORE_TOO_BUSY case is handled in StoreHotnessProtector#start
-            break;
-        }
-      }
-    }
+        boolean success) throws IOException {}
 
     /**
      * Atomically apply the given map of family->edits to the memstore.
@@ -3573,8 +3504,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     @Override
     public void doPostOpCleanupForMiniBatch(MiniBatchOperationInProgress<Mutation> miniBatchOp,
         final WALEdit walEdit, boolean success) throws IOException {
-
-      super.doPostOpCleanupForMiniBatch(miniBatchOp, walEdit, success);
       if (miniBatchOp != null) {
         // synced so that the coprocessor contract is adhered to.
         if (region.coprocessorHost != null) {
@@ -4168,8 +4097,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       throw new FailedSanityCheckException(batchMutate[0].getExceptionMsg());
     } else if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.BAD_FAMILY)) {
       throw new NoSuchColumnFamilyException(batchMutate[0].getExceptionMsg());
-    } else if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.STORE_TOO_BUSY)) {
-      throw new RegionTooBusyException(batchMutate[0].getExceptionMsg());
     }
   }
 
@@ -7973,7 +7900,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      51 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
+      50 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       3 * Bytes.SIZEOF_BOOLEAN);
 
@@ -8000,7 +7927,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       + 2 * ClassSize.TREEMAP // maxSeqIdInStores, replicationScopes
       + 2 * ClassSize.ATOMIC_INTEGER // majorInProgress, minorInProgress
       + ClassSize.STORE_SERVICES // store services
-      + StoreHotnessProtector.FIXED_SIZE
       ;
 
   @Override
@@ -8465,7 +8391,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   @Override
   public void onConfigurationChange(Configuration conf) {
-    this.storeHotnessProtector.update(conf);
+    // Do nothing for now.
   }
 
   /**

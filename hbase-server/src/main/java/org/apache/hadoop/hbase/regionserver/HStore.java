@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -43,7 +43,6 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -182,9 +181,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   private final boolean verifyBulkLoads;
 
-  private final AtomicInteger currentParallelPutCount = new AtomicInteger(0);
-  private final int parallelPutCountPrintThreshold;
-
   private ScanInfo scanInfo;
 
   // All access must be synchronized.
@@ -299,6 +295,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
             this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
     }
+    LOG.debug("Memstore type={}", className);
     this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family
@@ -337,14 +334,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
               + flushRetriesNumber);
     }
     cryptoContext = EncryptionUtil.createEncryptionContext(conf, family);
-
-    int confPrintThreshold = conf.getInt("hbase.region.store.parallel.put.print.threshold", 50);
-    if (confPrintThreshold < 10) {
-      confPrintThreshold = 10;
-    }
-    this.parallelPutCountPrintThreshold = confPrintThreshold;
-    LOG.info("Memstore class name is " + className + " ; parallelPutCountPrintThreshold="
-        + parallelPutCountPrintThreshold);
   }
 
   /**
@@ -708,16 +697,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   public void add(final Cell cell, MemStoreSizing memstoreSizing) {
     lock.readLock().lock();
     try {
-      if (this.currentParallelPutCount.getAndIncrement() > this.parallelPutCountPrintThreshold) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(this.getTableName() + ":" + this.getRegionInfo().getEncodedName() + ":" + this
-              .getColumnFamilyName() + " too Busy!");
-        }
-      }
-      this.memstore.add(cell, memstoreSizing);
+       this.memstore.add(cell, memstoreSizing);
     } finally {
       lock.readLock().unlock();
-      currentParallelPutCount.decrementAndGet();
     }
   }
 
@@ -727,16 +709,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   public void add(final Iterable<Cell> cells, MemStoreSizing memstoreSizing) {
     lock.readLock().lock();
     try {
-      if (this.currentParallelPutCount.getAndIncrement() > this.parallelPutCountPrintThreshold) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(this.getTableName() + ":" + this.getRegionInfo().getEncodedName() + ":" + this
-              .getColumnFamilyName() + " too Busy!");
-        }
-      }
       memstore.add(cells, memstoreSizing);
     } finally {
       lock.readLock().unlock();
-      currentParallelPutCount.decrementAndGet();
     }
   }
 
@@ -2393,8 +2368,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (27 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG)
-              + (6 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
+      ClassSize.align(ClassSize.OBJECT + (26 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG)
+              + (5 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK
@@ -2708,10 +2683,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     if (!success) {
       LOG.warn("Failed to report archival of files: " + filesWithSizes);
     }
-  }
-
-  public int getCurrentParallelPutCount() {
-    return currentParallelPutCount.get();
   }
 
 }

@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.regionserver.MutableSegment;
 import org.apache.hadoop.hbase.regionserver.Segment;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker.NonSyncTimeRangeTracker;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker.SyncTimeRangeTracker;
-import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -471,14 +470,6 @@ public class TestHeapSize  {
     // Region Overhead
     cl = HRegion.class;
     actual = HRegion.FIXED_OVERHEAD;
-    expected = ClassSize.estimateBase(cl, false);
-    if (expected != actual) {
-      ClassSize.estimateBase(cl, true);
-      assertEquals(expected, actual);
-    }
-
-    cl = StoreHotnessProtector.class;
-    actual = StoreHotnessProtector.FIXED_SIZE;
     expected = ClassSize.estimateBase(cl, false);
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
