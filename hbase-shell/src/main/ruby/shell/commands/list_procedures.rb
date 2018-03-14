@@ -35,7 +35,6 @@ EOF
 
         list = JSON.parse(admin.list_procedures)
         list.each do |proc|
-          formatter.row([proc])
           submitted_time = Time.at(Integer(proc['submittedTime']) / 1000).to_s
           last_update = Time.at(Integer(proc['lastUpdate']) / 1000).to_s
           formatter.row([proc['procId'], proc['className'], proc['state'],
