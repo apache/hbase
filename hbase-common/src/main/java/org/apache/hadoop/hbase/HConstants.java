@@ -89,7 +89,6 @@ public final class HConstants {
     NOT_RUN,
     SUCCESS,
     BAD_FAMILY,
-    STORE_TOO_BUSY,
     SANITY_CHECK_FAILURE,
     FAILURE
   }

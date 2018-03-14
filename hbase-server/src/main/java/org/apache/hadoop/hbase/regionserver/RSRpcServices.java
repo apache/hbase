@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -1039,11 +1038,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           case SUCCESS:
             builder.addResultOrException(getResultOrException(
               ClientProtos.Result.getDefaultInstance(), index));
-            break;
-
-          case STORE_TOO_BUSY:
-            e = new RegionTooBusyException(codes[i].getExceptionMsg());
-            builder.addResultOrException(getResultOrException(e, index));
             break;
         }
       }
