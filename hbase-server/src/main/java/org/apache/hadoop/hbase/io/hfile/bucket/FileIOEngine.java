@@ -26,6 +26,7 @@ import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
@@ -49,6 +50,7 @@ public class FileIOEngine implements IOEngine {
   private final String[] filePaths;
   private final FileChannel[] fileChannels;
   private final RandomAccessFile[] rafs;
+  private final ReentrantLock[] channelLocks;
 
   private final long sizePerFile;
   private final long capacity;
@@ -75,6 +77,7 @@ public class FileIOEngine implements IOEngine {
       }
     }
     this.rafs = new RandomAccessFile[filePaths.length];
+    this.channelLocks = new ReentrantLock[filePaths.length];
     for (int i = 0; i < filePaths.length; i++) {
       String filePath = filePaths[i];
       try {
@@ -90,6 +93,7 @@ public class FileIOEngine implements IOEngine {
         }
         rafs[i].setLength(sizePerFile);
         fileChannels[i] = rafs[i].getChannel();
+        channelLocks[i] = new ReentrantLock();
         LOG.info("Allocating cache " + StringUtils.byteDesc(sizePerFile)
             + ", on the path:" + filePath);
       } catch (IOException fex) {
@@ -233,8 +237,7 @@ public class FileIOEngine implements IOEngine {
       } catch (ClosedByInterruptException e) {
         throw e;
       } catch (ClosedChannelException e) {
-        LOG.warn("Caught ClosedChannelException accessing BucketCache, reopening file. ", e);
-        refreshFileConnection(accessFileNum);
+        refreshFileConnection(accessFileNum, e);
         continue;
       }
       // recover the limit
@@ -282,13 +285,26 @@ public class FileIOEngine implements IOEngine {
   }
 
   @VisibleForTesting
-  void refreshFileConnection(int accessFileNum) throws IOException {
-    FileChannel fileChannel = fileChannels[accessFileNum];
-    if (fileChannel != null) {
-      fileChannel.close();
+  void refreshFileConnection(int accessFileNum, IOException ioe) throws IOException {
+    ReentrantLock channelLock = channelLocks[accessFileNum];
+    channelLock.lock();
+    try {
+      FileChannel fileChannel = fileChannels[accessFileNum];
+      if (fileChannel != null) {
+        // Don't re-open a channel if we were waiting on another
+        // thread to re-open the channel and it is now open.
+        if (fileChannel.isOpen()) {
+          return;
+        }
+        fileChannel.close();
+      }
+      LOG.warn("Caught ClosedChannelException accessing BucketCache, reopening file: "
+          + filePaths[accessFileNum], ioe);
+      rafs[accessFileNum] = new RandomAccessFile(filePaths[accessFileNum], "rw");
+      fileChannels[accessFileNum] = rafs[accessFileNum].getChannel();
+    } finally{
+      channelLock.unlock();
     }
-    rafs[accessFileNum] = new RandomAccessFile(filePaths[accessFileNum], "rw");
-    fileChannels[accessFileNum] = rafs[accessFileNum].getChannel();
   }
 
   private static interface FileAccessor {

@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
@@ -143,10 +144,18 @@ public class TestFileIOEngine {
   }
 
   @Test
-  public void testRefreshFileConnectionClosesConnections() throws IOException {
-    FileChannel fileChannel = fileIOEngine.getFileChannels()[0];
+  public void testRefreshFileConnection() throws IOException {
+    FileChannel[] fileChannels = fileIOEngine.getFileChannels();
+    FileChannel fileChannel = fileChannels[0];
     assertNotNull(fileChannel);
-    fileIOEngine.refreshFileConnection(0);
-    assertFalse(fileChannel.isOpen());
+    fileChannel.close();
+    fileIOEngine.refreshFileConnection(0, new IOException("Test Exception"));
+    FileChannel[] reopenedFileChannels = fileIOEngine.getFileChannels();
+    FileChannel reopenedFileChannel = reopenedFileChannels[0];
+    assertNotEquals(fileChannel, reopenedFileChannel);
+    assertEquals(fileChannels.length, reopenedFileChannels.length);
+    for (int i = 1; i < fileChannels.length; i++) {
+      assertEquals(fileChannels[i], reopenedFileChannels[i]);
+    }
   }
 }
