@@ -42,4 +42,8 @@ public class MergeRegionException extends DoNotRetryRegionException {
   public MergeRegionException(String s) {
     super(s);
   }
+
+  public MergeRegionException(Throwable cause) {
+    super(cause);
+  }
 }

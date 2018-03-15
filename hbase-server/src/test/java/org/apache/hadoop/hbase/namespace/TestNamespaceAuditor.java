@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
@@ -388,7 +389,12 @@ public class TestNamespaceAuditor {
     Collections.sort(hris);
     // verify that we cannot split
     HRegionInfo hriToSplit2 = hris.get(1);
-    ADMIN.split(tableTwo, Bytes.toBytes("6"));
+    try {
+      ADMIN.split(tableTwo, Bytes.toBytes("6"));
+      fail();
+    } catch (DoNotRetryRegionException e) {
+      // Expected
+    }
     Thread.sleep(2000);
     assertEquals(initialRegions, ADMIN.getTableRegions(tableTwo).size());
   }
