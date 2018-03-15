@@ -873,7 +873,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     byte[][] keys = inferBoundaries(map);
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     familyBuilders.stream().map(ColumnFamilyDescriptorBuilder::build)
-        .forEachOrdered(tdBuilder::addColumnFamily);
+        .forEachOrdered(tdBuilder::setColumnFamily);
     admin.createTable(tdBuilder.build(), keys);
 
     LOG.info("Table " + tableName + " is available!!");

@@ -73,7 +73,7 @@ public class TestSwitchToStreamRead {
     VALUE_PREFIX = sb.append("-").toString();
     REGION = UTIL.createLocalHRegion(
       TableDescriptorBuilder.newBuilder(TABLE_NAME)
-          .addColumnFamily(
+          .setColumnFamily(
             ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBlocksize(1024).build())
           .build(),
       null, null);

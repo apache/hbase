@@ -88,7 +88,7 @@ public class TestSplitWalDataLoss {
     Admin admin = testUtil.getAdmin();
     admin.createNamespace(namespace);
     admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build());
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build());
     testUtil.waitTableAvailable(tableName);
   }
 

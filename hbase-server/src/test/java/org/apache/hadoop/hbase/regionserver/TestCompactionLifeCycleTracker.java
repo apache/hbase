@@ -148,9 +148,9 @@ public class TestCompactionLifeCycleTracker {
   public void setUp() throws IOException {
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(CF2))
-            .addCoprocessor(CompactionObserver.class.getName()).build());
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF2))
+            .setCoprocessor(CompactionObserver.class.getName()).build());
     try (Table table = UTIL.getConnection().getTable(NAME)) {
       for (int i = 0; i < 100; i++) {
         byte[] row = Bytes.toBytes(i);

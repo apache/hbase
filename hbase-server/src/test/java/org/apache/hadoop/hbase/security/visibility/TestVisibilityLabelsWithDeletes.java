@@ -64,7 +64,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   protected Table createTable(byte[] fam) throws IOException {
     TableName tableName = TableName.valueOf(testName.getMethodName());
     TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build());
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build());
     return TEST_UTIL.getConnection().getTable(tableName);
   }
 
@@ -84,7 +84,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
       builder.setMaxVersions(maxVersions);
     }
     TEST_UTIL.getAdmin().createTable(
-      TableDescriptorBuilder.newBuilder(tableName).addColumnFamily(builder.build()).build());
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(builder.build()).build());
   }
 
   @Test

@@ -140,7 +140,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     TableDescriptorBuilder tableBuilder = TableDescriptorBuilder.newBuilder(TEST_TABLE);
     ColumnFamilyDescriptorBuilder cfd = ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY);
     cfd.setMaxVersions(100);
-    tableBuilder.addColumnFamily(cfd.build());
+    tableBuilder.setColumnFamily(cfd.build());
     tableBuilder.setValue(TableDescriptorBuilder.OWNER, USER_OWNER.getShortName());
     createTable(TEST_UTIL, tableBuilder.build(),
         new byte[][] { Bytes.toBytes("s") });

@@ -236,7 +236,7 @@ public class TestLoadIncrementalHFiles {
 
   private TableDescriptor buildHTD(TableName tableName, BloomType bloomType) {
     return TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(
+        .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBloomFilterType(bloomType).build())
         .build();
   }
@@ -462,7 +462,7 @@ public class TestLoadIncrementalHFiles {
     // set real family name to upper case in purpose to simulate the case that
     // family name in HFiles is invalid
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder
+        .setColumnFamily(ColumnFamilyDescriptorBuilder
             .of(Bytes.toBytes(new String(FAMILY).toUpperCase(Locale.ROOT))))
         .build();
 

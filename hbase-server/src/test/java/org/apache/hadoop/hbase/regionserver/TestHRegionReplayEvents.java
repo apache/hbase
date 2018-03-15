@@ -157,7 +157,7 @@ public class TestHRegionReplayEvents {
     method = name.getMethodName();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(method));
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     htd = builder.build();
 

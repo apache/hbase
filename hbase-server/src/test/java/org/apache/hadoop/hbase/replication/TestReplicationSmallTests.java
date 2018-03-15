@@ -348,7 +348,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     // Create Tables
     for (int i = 0; i < numOfTables; i++) {
       hadmin.createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(tName + i))
-          .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(colFam))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(colFam))
               .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
           .build());
     }

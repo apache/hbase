@@ -56,7 +56,7 @@ public class TestChangeSplitPolicyAction extends Action {
   public void setUp() throws Exception {
     this.admin = TEST_UTIL.getAdmin();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    admin.createTable(builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of("fam")).build());
+    admin.createTable(builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam")).build());
   }
 
   @Test

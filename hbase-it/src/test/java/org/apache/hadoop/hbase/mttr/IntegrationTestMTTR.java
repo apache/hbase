@@ -241,7 +241,7 @@ public class IntegrationTestMTTR {
     ColumnFamilyDescriptorBuilder colDescriptorBldr =
         ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
     colDescriptorBldr.setMaxVersions(1);
-    builder.addColumnFamily(colDescriptorBldr.build());
+    builder.setColumnFamily(colDescriptorBldr.build());
     util.getAdmin().createTable(builder.build());
 
     // Setup the table for LoadTestTool

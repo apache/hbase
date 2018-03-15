@@ -694,7 +694,7 @@ public final class SnapshotTestingUtils {
 
     public TableDescriptor createHtd(final String tableName) {
       return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
               .build();
     }
 
@@ -772,7 +772,7 @@ public final class SnapshotTestingUtils {
           .newBuilder(tableName)
           .setRegionReplication(regionReplication);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     byte[][] splitKeys = getSplitKeys(nRegions);
     util.createTable(builder.build(), splitKeys);

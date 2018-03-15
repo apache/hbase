@@ -145,7 +145,7 @@ public class MasterProcedureTestingUtility {
   public static TableDescriptor createHTD(final TableName tableName, final String... family) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (int i = 0; i < family.length; ++i) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family[i]));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family[i]));
     }
     return builder.build();
   }

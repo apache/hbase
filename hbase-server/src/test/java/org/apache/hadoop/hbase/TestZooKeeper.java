@@ -143,7 +143,7 @@ public class TestZooKeeper {
   private void testSanity(final String testName) throws Exception {
     String tableName = testName + "_" + System.currentTimeMillis();
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("fam")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam")).build();
     LOG.info("Creating table " + tableName);
     Admin admin = TEST_UTIL.getAdmin();
     try {
@@ -179,7 +179,7 @@ public class TestZooKeeper {
           Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
       TableDescriptor htd =
           TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
       admin.createTable(htd, SPLIT_KEYS);
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       m.getZooKeeper().close();
@@ -241,7 +241,7 @@ public class TestZooKeeper {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
         Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-          .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
       admin.createTable(htd, SPLIT_KEYS);
     }
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);

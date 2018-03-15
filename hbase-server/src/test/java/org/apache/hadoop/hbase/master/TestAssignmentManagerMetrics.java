@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -126,9 +127,14 @@ public class TestAssignmentManagerMetrics {
 
       // alter table with a non-existing coprocessor
 
-      String spec = "hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2";
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(TABLENAME)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).addCoprocessorWithSpec(spec)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+        .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder("com.foo.FooRegionObserver")
+          .setJarPath("hdfs:///foo.jar")
+          .setPriority(1001)
+          .setProperty("arg1", "1")
+          .setProperty("arg2", "2")
+          .build())
         .build();
       try {
         TEST_UTIL.getAdmin().modifyTable(htd);

@@ -203,7 +203,7 @@ public class TestHStore {
 
   private void initHRegion(String methodName, Configuration conf, TableDescriptorBuilder builder,
       ColumnFamilyDescriptor hcd, MyStoreHook hook, boolean switchToPread) throws IOException {
-    TableDescriptor htd = builder.addColumnFamily(hcd).build();
+    TableDescriptor htd = builder.setColumnFamily(hcd).build();
     Path basedir = new Path(DIR + methodName);
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
     final Path logdir = new Path(basedir, AbstractFSWALProvider.getWALDirectoryName(methodName));

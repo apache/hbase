@@ -342,7 +342,7 @@ public class MockMasterServices extends MockNoopMasterServices {
       @Override
       public TableDescriptor get(TableName tablename) throws IOException {
         TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tablename);
-        builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(DEFAULT_COLUMN_FAMILY_NAME));
+        builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(DEFAULT_COLUMN_FAMILY_NAME));
         return builder.build();
       }
 

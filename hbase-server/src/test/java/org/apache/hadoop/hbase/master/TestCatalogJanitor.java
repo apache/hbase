@@ -173,7 +173,7 @@ public class TestCatalogJanitor {
    */
   private TableDescriptor createTableDescriptorForCurrentMethod() {
     return TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName())).
-        addColumnFamily(new HColumnDescriptor(MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME)).
+      setColumnFamily(new HColumnDescriptor(MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME)).
         build();
   }
 

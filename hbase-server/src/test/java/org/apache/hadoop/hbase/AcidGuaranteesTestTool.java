@@ -320,7 +320,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     if (!admin.tableExists(TABLE_NAME)) {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME);
       Stream.of(FAMILIES).map(ColumnFamilyDescriptorBuilder::of)
-          .forEachOrdered(builder::addColumnFamily);
+          .forEachOrdered(builder::setColumnFamily);
       admin.createTable(builder.build());
     }
     ColumnFamilyDescriptor cfd = admin.getDescriptor(TABLE_NAME).getColumnFamilies()[0];

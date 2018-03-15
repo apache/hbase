@@ -268,7 +268,7 @@ public class TestAsyncTableBatch {
   public void testPartialSuccess() throws IOException, InterruptedException, ExecutionException {
     Admin admin = TEST_UTIL.getAdmin();
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(admin.getDescriptor(TABLE_NAME))
-        .addCoprocessor(ErrorInjectObserver.class.getName()).build();
+        .setCoprocessor(ErrorInjectObserver.class.getName()).build();
     admin.modifyTable(htd);
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     table.putAll(Arrays.asList(SPLIT_KEYS).stream().map(k -> new Put(k).addColumn(FAMILY, CQ, k))

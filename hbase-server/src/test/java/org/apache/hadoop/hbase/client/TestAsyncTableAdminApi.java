@@ -97,7 +97,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName3);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), "a".getBytes(), "z".getBytes(), 3).join();
     regionLocations =
       AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName3)).get();
@@ -105,7 +105,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");
     builder = TableDescriptorBuilder.newBuilder(tableName4);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     try {
       admin.createTable(builder.build(), "a".getBytes(), "z".getBytes(), 2).join();
       fail("Should not be able to create a table with only 2 regions using this API.");
@@ -115,7 +115,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     final TableName tableName5 = TableName.valueOf(tableName.getNameAsString() + "_5");
     builder = TableDescriptorBuilder.newBuilder(tableName5);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), new byte[] { 1 }, new byte[] { 127 }, 16).join();
     regionLocations =
       AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName5)).get();
@@ -191,7 +191,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     expectedRegions = 10;
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName2);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
     regions =
@@ -244,7 +244,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     expectedRegions = 5;
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
     builder = TableDescriptorBuilder.newBuilder(tableName3);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
     regions =

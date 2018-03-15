@@ -63,8 +63,8 @@ public class TestResultFromCoprocessor {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-            .addCoprocessor(MyObserver.class.getName())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .setCoprocessor(MyObserver.class.getName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
             .build();
     TEST_UTIL.getAdmin().createTable(desc);
   }

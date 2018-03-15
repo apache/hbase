@@ -64,11 +64,11 @@ public class TestZooKeeperScanPolicyObserver {
     UTIL.startMiniCluster(3);
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .addCoprocessor(ZooKeeperScanPolicyObserver.class.getName())
+            .setCoprocessor(ZooKeeperScanPolicyObserver.class.getName())
             .setValue(ZooKeeperScanPolicyObserver.ZK_ENSEMBLE_KEY,
               "localhost:" + UTIL.getZkCluster().getClientPort())
             .setValue(ZooKeeperScanPolicyObserver.ZK_SESSION_TIMEOUT_KEY, "2000")
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build());
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build());
     TABLE = UTIL.getConnection().getTable(NAME);
   }
 

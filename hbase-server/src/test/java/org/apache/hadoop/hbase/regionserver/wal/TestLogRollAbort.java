@@ -145,7 +145,7 @@ public class TestLogRollAbort {
     // Create the test table and open it
     TableName tableName = TableName.valueOf(this.getClass().getSimpleName());
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
 
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(tableName);

@@ -144,7 +144,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   private TableDescriptor createTableDesc(TableName name, int cfs) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name);
     IntStream.range(0, cfs).mapToObj(i -> ColumnFamilyDescriptorBuilder.of(family(i)))
-        .forEachOrdered(builder::addColumnFamily);
+        .forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 

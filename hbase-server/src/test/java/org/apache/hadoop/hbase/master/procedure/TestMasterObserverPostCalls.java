@@ -148,7 +148,7 @@ public class TestMasterObserverPostCalls {
 
     admin.createNamespace(NamespaceDescriptor.create(ns).build());
     admin.createTable(TableDescriptorBuilder.newBuilder(tn1)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
         .build());
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
@@ -239,7 +239,7 @@ public class TestMasterObserverPostCalls {
   public void testPostCreateTable() throws IOException {
     final Admin admin = UTIL.getAdmin();
     final TableName tn = TableName.valueOf("postcreatetable");
-    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build()).build();
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
@@ -269,7 +269,7 @@ public class TestMasterObserverPostCalls {
   public void testPostModifyTable() throws IOException {
     final Admin admin = UTIL.getAdmin();
     final TableName tn = TableName.valueOf("postmodifytable");
-    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build()).build();
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
@@ -289,7 +289,7 @@ public class TestMasterObserverPostCalls {
     preCount = observer.postHookCalls.get();
     try {
       admin.modifyTable(TableDescriptorBuilder.newBuilder(TableName.valueOf("missing"))
-          .addColumnFamily(td.getColumnFamily(Bytes.toBytes("f1"))).build());
+          .setColumnFamily(td.getColumnFamily(Bytes.toBytes("f1"))).build());
       fail("Modifying a missing table should fail");
     } catch (IOException e) {
       // Pass
@@ -303,7 +303,7 @@ public class TestMasterObserverPostCalls {
   public void testPostDisableTable() throws IOException {
     final Admin admin = UTIL.getAdmin();
     final TableName tn = TableName.valueOf("postdisabletable");
-    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build()).build();
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
@@ -336,7 +336,7 @@ public class TestMasterObserverPostCalls {
   public void testPostDeleteTable() throws IOException {
     final Admin admin = UTIL.getAdmin();
     final TableName tn = TableName.valueOf("postdeletetable");
-    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build()).build();
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();

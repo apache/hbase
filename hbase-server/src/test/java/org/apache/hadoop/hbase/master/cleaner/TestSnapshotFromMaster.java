@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -290,7 +289,7 @@ public class TestSnapshotFromMaster {
     // snapshot, the call after snapshot will be a no-op and checks will fail
     UTIL.deleteTable(TABLE_NAME);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAM))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAM))
             .setCompactionEnabled(false)
             .build();
     UTIL.getAdmin().createTable(td);

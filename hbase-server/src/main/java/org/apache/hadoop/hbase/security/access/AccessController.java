@@ -1127,7 +1127,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         setScope(HConstants.REPLICATION_SCOPE_LOCAL).build();
     TableDescriptor td =
         TableDescriptorBuilder.newBuilder(AccessControlLists.ACL_TABLE_NAME).
-        addColumnFamily(cfd).build();
+          setColumnFamily(cfd).build();
     admin.createTable(td);
   }
 

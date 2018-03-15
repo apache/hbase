@@ -150,7 +150,7 @@ public class TestVerifyReplication extends TestReplicationBase {
       ColumnFamilyDescriptor fam = ColumnFamilyDescriptorBuilder.newBuilder(familyname)
           .setMaxVersions(100).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build();
       TableDescriptor table =
-          TableDescriptorBuilder.newBuilder(tableName).addColumnFamily(fam).build();
+          TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(fam).build();
       scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (ColumnFamilyDescriptor f : table.getColumnFamilies()) {
         scopes.put(f.getName(), f.getScope());
