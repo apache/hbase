@@ -107,6 +107,9 @@ public class SplitTableRegionProcedure
       final RegionInfo regionToSplit, final byte[] splitRow) throws IOException {
     super(env, regionToSplit);
     preflightChecks(env, true);
+    // When procedure goes to run in its prepare step, it also does these checkOnline checks. Here
+    // we fail-fast on construction. There it skips the split with just a warning.
+    checkOnline(env, regionToSplit);
     this.bestSplitRow = splitRow;
     checkSplittable(env, regionToSplit, bestSplitRow);
     final TableName table = regionToSplit.getTable();

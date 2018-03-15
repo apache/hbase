@@ -64,6 +64,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
     super(env, plan.getRegionInfo());
     this.plan = plan;
     preflightChecks(env, true);
+    checkOnline(env, plan.getRegionInfo());
   }
 
   @Override
@@ -73,6 +74,16 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
       LOG.trace(this + " execute state=" + state);
     }
     switch (state) {
+      case MOVE_REGION_PREPARE:
+        // Check context again and that region is online; do it here after we have lock on region.
+        try {
+          preflightChecks(env, true);
+          checkOnline(env, this.plan.getRegionInfo());
+        } catch (HBaseIOException e) {
+          LOG.warn(this.toString() + " FAILED because " + e.toString());
+          return Flow.NO_MORE_STATE;
+        }
+        break;
       case MOVE_REGION_UNASSIGN:
         addChildProcedure(new UnassignProcedure(plan.getRegionInfo(), plan.getSource(),
             plan.getDestination(), true));

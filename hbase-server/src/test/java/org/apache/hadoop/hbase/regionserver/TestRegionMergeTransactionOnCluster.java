@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.RandomUtils;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -326,11 +326,9 @@ public class TestRegionMergeTransactionOnCluster {
         admin.mergeRegionsAsync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false)
                 .get(syncWaitTimeout, TimeUnit.MILLISECONDS);
         fail("Offline regions should not be able to merge");
-      } catch (ExecutionException ie) {
+      } catch (DoNotRetryRegionException ie) {
         System.out.println(ie);
-        assertTrue("Exception should mention regions not online",
-            StringUtils.stringifyException(ie.getCause()).contains("regions that are not online")
-            && ie.getCause() instanceof MergeRegionException);
+        assertTrue(ie instanceof MergeRegionException);
       }
 
       try {
