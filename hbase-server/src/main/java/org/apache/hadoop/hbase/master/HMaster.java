@@ -2399,7 +2399,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     checkTableExists(tableName);
     TableState ts = getTableStateManager().getTableState(tableName);
     if (!ts.isDisabled()) {
-      throw new TableNotDisabledException("Not DISABLE tableState=" + ts);
+      throw new TableNotDisabledException("Not DISABLED; " + ts);
     }
   }
 

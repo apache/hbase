@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -320,9 +321,14 @@ public class TestSplitTransactionOnCluster {
 
       // Now try splitting.... should fail.  And each should successfully
       // rollback.
-      this.admin.splitRegion(hri.getRegionName());
-      this.admin.splitRegion(hri.getRegionName());
-      this.admin.splitRegion(hri.getRegionName());
+      // We don't roll back here anymore. Instead we fail-fast on construction of the
+      // split transaction. Catch the exception instead.
+      try {
+        this.admin.splitRegion(hri.getRegionName());
+        fail();
+      } catch (DoNotRetryRegionException e) {
+        // Expected
+      }
       // Wait around a while and assert count of regions remains constant.
       for (int i = 0; i < 10; i++) {
         Thread.sleep(100);

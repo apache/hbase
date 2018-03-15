@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static junit.framework.TestCase.fail;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
@@ -114,6 +116,18 @@ public class TestRegionMove {
         "Expected to find at least one region for " + tableName + " on " + rs1.getServerName()
         + ", but found none", !regionsOnRS1ForTable.isEmpty());
     final RegionInfo regionToMove = regionsOnRS1ForTable.get(0);
+
+    // Offline the region and then try to move it. Should fail.
+    admin.unassign(regionToMove.getRegionName(), true);
+    try {
+      admin.move(regionToMove.getEncodedNameAsBytes(),
+          Bytes.toBytes(rs2.getServerName().toString()));
+      fail();
+    } catch (DoNotRetryRegionException e) {
+      // We got expected exception
+    }
+    // Reassign for next stage of test.
+    admin.assign(regionToMove.getRegionName());
 
     // Disable the table
     admin.disableTable(tableName);

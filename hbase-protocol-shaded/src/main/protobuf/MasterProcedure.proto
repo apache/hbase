@@ -338,6 +338,7 @@ message UnassignRegionStateData {
 }
 
 enum MoveRegionState {
+  MOVE_REGION_PREPARE = 0;
   MOVE_REGION_UNASSIGN = 1;
   MOVE_REGION_ASSIGN = 2;
 }

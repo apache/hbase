@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -108,8 +109,8 @@ public class MergeTableRegionsProcedure
     super(env);
 
     // Check daughter regions and make sure that we have valid daughter regions
-    // before doing the real work.
-    checkRegionsToMerge(regionsToMerge, forcible);
+    // before doing the real work. This check calls the super method #checkOnline also.
+    checkRegionsToMerge(env, regionsToMerge, forcible);
 
     // WARN: make sure there is no parent region of the two merging regions in
     // hbase:meta If exists, fixing up daughters would cause daughter regions(we
@@ -122,7 +123,7 @@ public class MergeTableRegionsProcedure
     this.forcible = forcible;
   }
 
-  private static void checkRegionsToMerge(final RegionInfo[] regionsToMerge,
+  private static void checkRegionsToMerge(MasterProcedureEnv env, final RegionInfo[] regionsToMerge,
       final boolean forcible) throws MergeRegionException {
     // For now, we only merge 2 regions.
     // It could be extended to more than 2 regions in the future.
@@ -131,10 +132,13 @@ public class MergeTableRegionsProcedure
         Arrays.toString(regionsToMerge));
     }
 
-    checkRegionsToMerge(regionsToMerge[0], regionsToMerge[1], forcible);
+    checkRegionsToMerge(env, regionsToMerge[0], regionsToMerge[1], forcible);
   }
 
-  private static void checkRegionsToMerge(final RegionInfo regionToMergeA,
+  /**
+   * One time checks.
+   */
+  private static void checkRegionsToMerge(MasterProcedureEnv env, final RegionInfo regionToMergeA,
       final RegionInfo regionToMergeB, final boolean forcible) throws MergeRegionException {
     if (!regionToMergeA.getTable().equals(regionToMergeB.getTable())) {
       throw new MergeRegionException("Can't merge regions from two different tables: " +
@@ -146,6 +150,13 @@ public class MergeTableRegionsProcedure
       throw new MergeRegionException("Can't merge non-default replicas");
     }
 
+    try {
+      checkOnline(env, regionToMergeA);
+      checkOnline(env, regionToMergeB);
+    } catch (DoNotRetryRegionException dnrre) {
+      throw new MergeRegionException(dnrre);
+    }
+
     if (!RegionInfo.areAdjacent(regionToMergeA, regionToMergeB)) {
       String msg = "Unable to merge non-adjacent regions " + regionToMergeA.getShortNameToLog() +
           ", " + regionToMergeB.getShortNameToLog() + " where forcible = " + forcible;
@@ -155,6 +166,7 @@ public class MergeTableRegionsProcedure
       }
     }
   }
+
 
   private static RegionInfo createMergedRegionInfo(final RegionInfo[] regionsToMerge) {
     return createMergedRegionInfo(regionsToMerge[0], regionsToMerge[1]);
@@ -457,7 +469,6 @@ public class MergeTableRegionsProcedure
   private boolean prepareMergeRegion(final MasterProcedureEnv env) throws IOException {
     // Note: the following logic assumes that we only have 2 regions to merge.  In the future,
     // if we want to extend to more than 2 regions, the code needs to be modified a little bit.
-    //
     CatalogJanitor catalogJanitor = env.getMasterServices().getCatalogJanitor();
     boolean regionAHasMergeQualifier = !catalogJanitor.cleanMergeQualifier(regionsToMerge[0]);
     if (regionAHasMergeQualifier
@@ -491,7 +502,6 @@ public class MergeTableRegionsProcedure
           new IOException("Merge of " + regionsStr + " failed because merge switch is off"));
       return false;
     }
-
 
     // Ask the remote regionserver if regions are mergeable. If we get an IOE, report it
     // along with the failure, so we can see why regions are not mergeable at this time.

@@ -26,11 +26,16 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionOfflineException;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -171,6 +176,32 @@ public abstract class AbstractStateMachineTableProcedure<TState>
         throw (HBaseIOException)ioe;
       }
       throw new HBaseIOException(ioe);
+    }
+  }
+
+  /**
+   * Check region is online.
+   */
+  protected static void checkOnline(MasterProcedureEnv env, final RegionInfo ri)
+      throws DoNotRetryRegionException {
+    RegionStates regionStates = env.getAssignmentManager().getRegionStates();
+    RegionState rs = regionStates.getRegionState(ri);
+    if (rs == null) {
+      throw new UnknownRegionException("No RegionState found for " + ri.getEncodedName());
+    }
+    if (!rs.isOpened()) {
+      throw new DoNotRetryRegionException(ri.getEncodedName() + " is not OPEN");
+    }
+    if (ri.isSplitParent()) {
+      throw new DoNotRetryRegionException(ri.getEncodedName() +
+          " is not online (splitParent=true)");
+    }
+    if (ri.isSplit()) {
+      throw new DoNotRetryRegionException(ri.getEncodedName() + " has split=true");
+    }
+    if (ri.isOffline()) {
+      // RegionOfflineException is not instance of DNRIOE so wrap it.
+      throw new DoNotRetryRegionException(new RegionOfflineException(ri.getEncodedName()));
     }
   }
 }
