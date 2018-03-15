@@ -2528,8 +2528,10 @@ full implications and have a sufficient background in managing HBase clusters.
 It was developed by Yahoo! and they run it at scale on their large grid cluster.
 See link:http://www.slideshare.net/HBaseCon/keynote-apache-hbase-at-yahoo-scale[HBase at Yahoo! Scale].
 
-RSGroups can be defined and managed with shell commands or corresponding Java
-APIs. A server can be added to a group with hostname and port pair and tables
+RSGroups are defined and managed with shell commands. The shell drives a
+Coprocessor Endpoint whose API is marked private given this is an evolving
+feature; the Coprocessor API is not for public consumption.
+A server can be added to a group with hostname and port pair and tables
 can be moved to this group so that only regionservers in the same rsgroup can
 host the regions of the table. RegionServers and tables can only belong to one
 rsgroup at a time. By default, all tables and regionservers belong to the
