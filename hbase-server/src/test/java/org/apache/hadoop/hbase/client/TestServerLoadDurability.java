@@ -117,7 +117,7 @@ public class TestServerLoadDurability {
 
   private void createTableWithDefaultConf(TableName tableName) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build());
   }
 

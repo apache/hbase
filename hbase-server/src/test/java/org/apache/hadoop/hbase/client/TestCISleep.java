@@ -58,10 +58,11 @@ public class TestCISleep extends AbstractTestCITimeout {
   @Test
   public void testRpcRetryingCallerSleep() throws Exception {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM))
-        .addCoprocessorWithSpec("|" + SleepAndFailFirstTime.class.getName() + "||" +
-          SleepAndFailFirstTime.SLEEP_TIME_CONF_KEY + "=2000")
-        .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM))
+      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(SleepAndFailFirstTime.class.getName())
+        .setProperty(SleepAndFailFirstTime.SLEEP_TIME_CONF_KEY, String.valueOf(2000))
+        .build())
+      .build();
     TEST_UTIL.getAdmin().createTable(htd);
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());

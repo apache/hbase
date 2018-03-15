@@ -67,10 +67,10 @@ public class TestValueReplacingCompaction {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .addCoprocessor(ValueRewritingObserver.class.getName())
+            .setCoprocessor(ValueRewritingObserver.class.getName())
             .setValue(ValueRewritingObserver.ORIGINAL_VALUE_KEY, value)
             .setValue(ValueRewritingObserver.REPLACED_VALUE_KEY, replacedValue)
-            .addColumnFamily(CFD).build());
+            .setColumnFamily(CFD).build());
   }
 
   @AfterClass

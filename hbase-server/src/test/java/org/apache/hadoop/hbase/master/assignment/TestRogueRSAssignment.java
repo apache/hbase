@@ -179,7 +179,7 @@ public class TestRogueRSAssignment {
 
   private List<HRegionInfo> createTable(final TableName tableName) throws Exception {
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
-    tdBuilder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
+    tdBuilder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
 
     byte[][] rows = new byte[initialRegionCount - 1][];
     for (int i = 0; i < rows.length; ++i) {

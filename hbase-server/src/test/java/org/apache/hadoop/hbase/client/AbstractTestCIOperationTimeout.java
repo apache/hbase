@@ -40,8 +40,8 @@ public abstract class AbstractTestCIOperationTimeout extends AbstractTestCITimeo
   public void setUp() throws IOException {
     tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-        .addCoprocessor(SleepAndFailFirstTime.class.getName())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
+        .setCoprocessor(SleepAndFailFirstTime.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
     TEST_UTIL.getAdmin().createTable(htd);
   }
 

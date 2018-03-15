@@ -120,7 +120,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     byte[][] families = { FAMILY, FAMILY_0, FAMILY_1 };
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     TableDescriptor desc = builder.build();
     admin.createTable(desc).join();

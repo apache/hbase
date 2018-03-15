@@ -47,8 +47,8 @@ public class TestWriteHeavyIncrementObserver extends WriteHeavyIncrementObserver
     WriteHeavyIncrementObserverTestBase.setUp();
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .addCoprocessor(WriteHeavyIncrementObserver.class.getName())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
+            .setCoprocessor(WriteHeavyIncrementObserver.class.getName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
     TABLE = UTIL.getConnection().getTable(NAME);
   }
 

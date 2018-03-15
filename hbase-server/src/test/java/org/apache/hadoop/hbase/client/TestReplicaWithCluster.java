@@ -317,8 +317,8 @@ public class TestReplicaWithCluster {
   public void testChangeTable() throws Exception {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("testChangeTable"))
             .setRegionReplication(NB_SERVERS)
-            .addCoprocessor(SlowMeCopro.class.getName())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(f))
+            .setCoprocessor(SlowMeCopro.class.getName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(f))
             .build();
     HTU.getAdmin().createTable(td);
     Table table = HTU.getConnection().getTable(td.getTableName());
@@ -334,7 +334,7 @@ public class TestReplicaWithCluster {
     // Add a CF, it should work.
     TableDescriptor bHdt = HTU.getAdmin().getDescriptor(td.getTableName());
     td = TableDescriptorBuilder.newBuilder(td)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(row))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(row))
             .build();
     HTU.getAdmin().disableTable(td.getTableName());
     HTU.getAdmin().modifyTable(td);

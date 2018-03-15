@@ -80,12 +80,11 @@ public interface TableDescriptor {
   int getColumnFamilyCount();
 
   /**
-   * Return the list of attached co-processor represented by their name
-   * className
+   * Return the list of attached co-processor represented
    *
-   * @return The list of co-processors classNames
+   * @return The list of CoprocessorDescriptor
    */
-  Collection<String> getCoprocessors();
+  Collection<CoprocessorDescriptor> getCoprocessorDescriptors();
 
   /**
    * Returns the durability setting for the table.

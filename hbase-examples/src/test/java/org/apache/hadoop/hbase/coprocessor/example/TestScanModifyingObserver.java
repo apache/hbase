@@ -68,10 +68,10 @@ public class TestScanModifyingObserver {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .addCoprocessor(ScanModifyingObserver.class.getName())
+            .setCoprocessor(ScanModifyingObserver.class.getName())
             .setValue(ScanModifyingObserver.FAMILY_TO_ADD_KEY, Bytes.toString(FAMILY))
             .setValue(ScanModifyingObserver.QUALIFIER_TO_ADD_KEY, Bytes.toString(IMPLICIT_QUAL))
-            .addColumnFamily(CFD).build());
+            .setColumnFamily(CFD).build());
   }
 
   @AfterClass

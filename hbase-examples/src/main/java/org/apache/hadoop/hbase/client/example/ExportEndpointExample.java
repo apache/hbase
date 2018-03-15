@@ -56,8 +56,8 @@ public class ExportEndpointExample {
          Admin admin = con.getAdmin()) {
       TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
               // MUST mount the export endpoint
-              .addCoprocessor(Export.class.getName())
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family))
+              .setCoprocessor(Export.class.getName())
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family))
               .build();
       admin.createTable(desc);
 

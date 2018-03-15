@@ -485,14 +485,14 @@ public class TestWALObserver {
   private TableDescriptor getBasic3FamilyHTableDescriptor(TableName tableName) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     Arrays.stream(TEST_FAMILY).map(ColumnFamilyDescriptorBuilder::of)
-        .forEachOrdered(builder::addColumnFamily);
+        .forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 
   private TableDescriptor createBasic3FamilyHTD(String tableName) {
     return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("a"))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("b"))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("c")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("a"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("b"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("c")).build();
   }
 }

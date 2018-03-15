@@ -21,21 +21,17 @@ package org.apache.hadoop.hbase.security.access;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
-import java.util.regex.Matcher;
-
 import org.apache.commons.io.FilenameUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,10 +77,8 @@ public class CoprocessorWhitelistMasterObserver implements MasterCoprocessor, Ma
    *                         "file:///usr/hbase/coprocessors" or for all
    *                         filesystems "/usr/hbase/coprocessors")
    * @return             if the path was found under the wlPath
-   * @throws IOException if a failure occurs in getting the path file system
    */
-  private static boolean validatePath(Path coprocPath, Path wlPath,
-      Configuration conf) throws IOException {
+  private static boolean validatePath(Path coprocPath, Path wlPath) {
     // verify if all are allowed
     if (wlPath.toString().equals("*")) {
       return(true);
@@ -143,57 +137,25 @@ public class CoprocessorWhitelistMasterObserver implements MasterCoprocessor, Ma
    * @param  ctx         as passed in from the coprocessor
    * @param  htd         as passed in from the coprocessor
    */
-  private void verifyCoprocessors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+  private static void verifyCoprocessors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableDescriptor htd) throws IOException {
-
-    Configuration conf = ctx.getEnvironment().getConfiguration();
-
     Collection<String> paths =
-        conf.getStringCollection(
+      ctx.getEnvironment().getConfiguration().getStringCollection(
             CP_COPROCESSOR_WHITELIST_PATHS_KEY);
-
-    Collection<String> coprocs = htd.getCoprocessors();
-    for (int i = 0; i < coprocs.size(); i++) {
-
-      String coprocSpec = Bytes.toString(htd.getValue(
-          Bytes.toBytes("coprocessor$" + (i + 1))));
-      if (coprocSpec == null) {
-        continue;
-      }
-
-      // File path is the 1st field of the coprocessor spec
-      Matcher matcher =
-          HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(coprocSpec);
-      if (matcher == null || !matcher.matches()) {
-        continue;
-      }
-
-      String coprocPathStr = matcher.group(1).trim();
-      // Check if coprocessor is being loaded via the classpath (i.e. no file path)
-      if (coprocPathStr.equals("")) {
-        break;
-      }
-      Path coprocPath = new Path(coprocPathStr);
-      String coprocessorClass = matcher.group(2).trim();
-
-      boolean foundPathMatch = false;
-      for (String pathStr : paths) {
-        Path wlPath = new Path(pathStr);
-        try {
-          foundPathMatch = validatePath(coprocPath, wlPath, conf);
-          if (foundPathMatch == true) {
+    for (CoprocessorDescriptor cp : htd.getCoprocessorDescriptors()) {
+      if (cp.getJarPath().isPresent()) {
+        if (paths.stream().noneMatch(p -> {
+          Path wlPath = new Path(p);
+          if (validatePath(new Path(cp.getJarPath().get()), wlPath)) {
             LOG.debug(String.format("Coprocessor %s found in directory %s",
-                coprocessorClass, pathStr));
-            break;
+              cp.getClassName(), p));
+            return true;
           }
-        } catch (IOException e) {
-          LOG.warn(String.format("Failed to validate white list path %s for coprocessor path %s",
-              pathStr, coprocPathStr));
+          return false;
+        })) {
+          throw new IOException(String.format("Loading %s DENIED in %s",
+            cp.getClassName(), CP_COPROCESSOR_WHITELIST_PATHS_KEY));
         }
-      }
-      if (!foundPathMatch) {
-        throw new IOException(String.format("Loading %s DENIED in %s",
-            coprocessorClass, CP_COPROCESSOR_WHITELIST_PATHS_KEY));
       }
     }
   }

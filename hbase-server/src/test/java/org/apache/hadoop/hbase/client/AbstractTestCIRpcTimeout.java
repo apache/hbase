@@ -41,8 +41,8 @@ public abstract class AbstractTestCIRpcTimeout extends AbstractTestCITimeout {
   public void setUp() throws IOException {
     tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(tableName).addCoprocessor(SleepCoprocessor.class.getName())
-          .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
+      TableDescriptorBuilder.newBuilder(tableName).setCoprocessor(SleepCoprocessor.class.getName())
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
     TEST_UTIL.getAdmin().createTable(htd);
   }
 

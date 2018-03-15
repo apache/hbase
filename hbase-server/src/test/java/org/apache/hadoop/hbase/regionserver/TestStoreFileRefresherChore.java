@@ -85,7 +85,7 @@ public class TestStoreFileRefresherChore {
     TableDescriptorBuilder builder =
         TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     Arrays.stream(families).map(family -> ColumnFamilyDescriptorBuilder.newBuilder(family)
-        .setMaxVersions(Integer.MAX_VALUE).build()).forEachOrdered(builder::addColumnFamily);
+        .setMaxVersions(Integer.MAX_VALUE).build()).forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 

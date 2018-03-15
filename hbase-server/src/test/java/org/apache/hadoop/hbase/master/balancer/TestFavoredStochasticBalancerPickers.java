@@ -126,7 +126,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
         ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY).build();
     TableDescriptor desc = TableDescriptorBuilder
         .newBuilder(tableName)
-        .addColumnFamily(columnFamilyDescriptor)
+        .setColumnFamily(columnFamilyDescriptor)
         .build();
     admin.createTable(desc, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), REGIONS);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);

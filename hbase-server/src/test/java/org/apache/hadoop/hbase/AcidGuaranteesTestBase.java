@@ -76,7 +76,7 @@ public abstract class AcidGuaranteesTestBase {
       builder.setValue(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, "0.9");
     }
     Stream.of(FAMILIES).map(ColumnFamilyDescriptorBuilder::of)
-        .forEachOrdered(builder::addColumnFamily);
+        .forEachOrdered(builder::setColumnFamily);
     UTIL.getAdmin().createTable(builder.build());
     tool.setConf(UTIL.getConfiguration());
   }

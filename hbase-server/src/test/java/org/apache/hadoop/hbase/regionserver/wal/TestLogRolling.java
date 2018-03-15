@@ -136,7 +136,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     // Create the test table and open it
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
 
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
@@ -244,7 +244,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       // Create the test table and open it
       TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-          .addColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
 
       admin.createTable(desc);
       Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());

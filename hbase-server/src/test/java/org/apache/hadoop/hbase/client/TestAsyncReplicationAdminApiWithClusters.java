@@ -111,7 +111,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
 
   private void createTableWithDefaultConf(AsyncAdmin admin, TableName tableName) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build()).join();
   }
 
@@ -147,7 +147,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     createTableWithDefaultConf(admin2, tableName);
     TableDescriptorBuilder builder =
         TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName).get());
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("newFamily"))
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("newFamily"))
         .build());
     admin2.disableTable(tableName).join();
     admin2.modifyTable(builder.build()).join();

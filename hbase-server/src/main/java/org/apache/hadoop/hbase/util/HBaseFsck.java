@@ -1380,7 +1380,7 @@ public class HBaseFsck extends Configured implements Closeable {
     if (columns ==null || columns.isEmpty()) return false;
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (String columnfamimly : columns) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(columnfamimly));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(columnfamimly));
     }
     fstd.createTableDescriptor(builder.build(), true);
     return true;

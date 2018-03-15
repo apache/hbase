@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -106,7 +105,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       throws IOException, InterruptedException, ExecutionException {
     TableDescriptor desc =
         TableDescriptorBuilder.newBuilder(tableName)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5).get();
 
     // wait till the table is assigned
@@ -262,7 +261,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
             .setMobEnabled(true).setMobThreshold(0).build();
 
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(columnDescriptor).build();
+        .setColumnFamily(columnDescriptor).build();
 
     admin.createTable(tableDescriptor).get();
 

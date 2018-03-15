@@ -2150,7 +2150,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     TableDescriptor newDesc = TableDescriptorBuilder
-        .newBuilder(old).addColumnFamily(column).build();
+        .newBuilder(old).setColumnFamily(column).build();
     return modifyTable(tableName, newDesc, nonceGroup, nonce);
   }
 

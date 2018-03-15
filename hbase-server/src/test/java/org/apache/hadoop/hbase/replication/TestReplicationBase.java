@@ -232,9 +232,9 @@ public class TestReplicationBase {
     hbaseAdmin.addReplicationPeer("2", rpc);
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
             .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
     scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (ColumnFamilyDescriptor f : table.getColumnFamilies()) {
       scopes.put(f.getName(), f.getScope());

@@ -63,7 +63,7 @@ public class AddColumnAction extends Action {
     LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
 
     TableDescriptor modifiedTable = TableDescriptorBuilder.newBuilder(tableDescriptor)
-        .addColumnFamily(columnDescriptor).build();
+        .setColumnFamily(columnDescriptor).build();
     admin.modifyTable(modifiedTable);
   }
 }
