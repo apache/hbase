@@ -2777,6 +2777,48 @@ Viewing the Master log will give you insight on rsgroup operation.
 
 If it appears stuck, restart the Master process.
 
+=== Remove RegionServer Grouping
+Removing RegionServer Grouping feature from a cluster on which it was enabled involves
+more steps in addition to removing the relevant properties from `hbase-site.xml`. This is 
+to clean the RegionServer grouping related meta data so that if the feature is re-enabled 
+in the future, the old meta data will not affect the functioning of the cluster.
+
+- Move all tables in non-default rsgroups to `default` regionserver group
+[source,bash]
+----
+#Reassigning table t1 from non default group - hbase shell
+hbase(main):005:0> move_tables_rsgroup 'default',['t1']
+----
+- Move all regionservers in non-default rsgroups to `default` regionserver group    
+[source, bash]
+----
+#Reassigning all the servers in the non-default rsgroup to default - hbase shell
+hbase(main):008:0> move_servers_rsgroup 'default',['rs1.xxx.com:16206','rs2.xxx.com:16202','rs3.xxx.com:16204']
+----
+- Remove all non-default rsgroups. `default` rsgroup created implicitly doesn't have to be removed
+[source,bash]
+----
+#removing non default rsgroup - hbase shell
+hbase(main):009:0> remove_rsgroup 'group2'
+----
+- Remove the changes made in `hbase-site.xml` and restart the cluster
+- Drop the table `hbase:rsgroup` from `hbase`
+[source, bash]
+----
+#Through hbase shell drop table hbase:rsgroup
+hbase(main):001:0> disable 'hbase:rsgroup'
+0 row(s) in 2.6270 seconds
+
+hbase(main):002:0> drop 'hbase:rsgroup'
+0 row(s) in 1.2730 seconds
+----
+- Remove znode `rsgroup` from the cluster ZooKeeper using zkCli.sh
+[source, bash]
+----
+#From ZK remove the node /hbase/rsgroup through zkCli.sh
+rmr /hbase/rsgroup
+----
+
 === ACL
 To enable ACL, add the following to your hbase-site.xml and restart your Master:
 
