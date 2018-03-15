@@ -184,7 +184,7 @@ public class TestFromClientSide3 {
   public void testScanAfterDeletingSpecifiedRow() throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
             .build();
     TEST_UTIL.getAdmin().createTable(desc);
     byte[] row = Bytes.toBytes("SpecifiedRow");
@@ -231,7 +231,7 @@ public class TestFromClientSide3 {
   public void testScanAfterDeletingSpecifiedRowV2() throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
             .build();
     TEST_UTIL.getAdmin().createTable(desc);
     byte[] row = Bytes.toBytes("SpecifiedRow");

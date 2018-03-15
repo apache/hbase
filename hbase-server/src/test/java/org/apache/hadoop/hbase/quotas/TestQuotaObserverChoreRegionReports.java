@@ -104,7 +104,7 @@ public class TestQuotaObserverChoreRegionReports {
 
     // Create a table
     final TableName tn = TableName.valueOf("reportExpiration");
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
         ColumnFamilyDescriptorBuilder.of(FAM1)).build();
     TEST_UTIL.getAdmin().createTable(tableDesc);
 
@@ -149,7 +149,7 @@ public class TestQuotaObserverChoreRegionReports {
 
     // Create a table
     final TableName tn = TableName.valueOf("quotaAcceptanceWithoutReports");
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
         ColumnFamilyDescriptorBuilder.of(FAM1)).build();
     TEST_UTIL.getAdmin().createTable(tableDesc);
 

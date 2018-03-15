@@ -238,7 +238,7 @@ public class TestFSTableDescriptors {
     // Update the table infos
     for (int i = 0; i < count; i++) {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name + i));
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of("" + i));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of("" + i));
       htds.updateTableDescriptor(builder.build());
     }
     // Wait a while so mod time we write is for sure different.
@@ -275,7 +275,7 @@ public class TestFSTableDescriptors {
     // Update the table infos
     for (int i = 0; i < count; i++) {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name + i));
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of("" + i));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of("" + i));
       htds.updateTableDescriptor(builder.build());
     }
     for (int i = 0; i < count; i++) {

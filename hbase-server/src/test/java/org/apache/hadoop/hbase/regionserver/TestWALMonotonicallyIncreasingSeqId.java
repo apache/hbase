@@ -104,7 +104,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     Arrays.stream(families).map(
       f -> ColumnFamilyDescriptorBuilder.newBuilder(f).setMaxVersions(Integer.MAX_VALUE).build())
-        .forEachOrdered(builder::addColumnFamily);
+        .forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 

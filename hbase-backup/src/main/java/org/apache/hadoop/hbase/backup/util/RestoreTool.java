@@ -180,7 +180,7 @@ public class RestoreTool {
         boolean schemaChangeNeeded = false;
         for (ColumnFamilyDescriptor family : families) {
           if (!existingFamilies.contains(family)) {
-            builder.addColumnFamily(family);
+            builder.setColumnFamily(family);
             schemaChangeNeeded = true;
           }
         }

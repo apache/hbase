@@ -494,7 +494,7 @@ public class TestWALFactory {
     int colCount = 10;
     TableDescriptor htd =
         TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes.put(fam, 0);
@@ -555,7 +555,7 @@ public class TestWALFactory {
     int colCount = 10;
     TableDescriptor htd =
         TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("column")).build();
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes.put(fam, 0);

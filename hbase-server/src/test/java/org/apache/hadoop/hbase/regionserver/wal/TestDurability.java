@@ -291,7 +291,7 @@ public class TestDurability {
   private HRegion createHRegion(WALFactory wals, Durability durability) throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^A-Za-z0-9-_]", "_"));
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = new Path(DIR, tableName.getNameAsString());
     if (FS.exists(path)) {

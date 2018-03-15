@@ -130,8 +130,8 @@ public class TestRegionServerReadRequestMetrics {
 
   private static Table createTable() throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1));
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2).setTimeToLive(TTL)
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2).setTimeToLive(TTL)
         .build());
     admin.createTable(builder.build());
     return TEST_UTIL.getConnection().getTable(TABLE_NAME);
@@ -422,8 +422,8 @@ public class TestRegionServerReadRequestMetrics {
   public void testReadRequestsWithCoprocessor() throws Exception {
     TableName tableName = TableName.valueOf("testReadRequestsWithCoprocessor");
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1));
-    builder.addCoprocessor(ScanRegionCoprocessor.class.getName());
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1));
+    builder.setCoprocessor(ScanRegionCoprocessor.class.getName());
     admin.createTable(builder.build());
 
     try {

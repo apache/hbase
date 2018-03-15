@@ -114,9 +114,9 @@ public class TestDropTimeoutRequest {
     // on handling timeout requests and finally all requests timeout and client throws exception.
     TableDescriptorBuilder builder =
         TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
-    builder.addCoprocessor(SleepLongerAtFirstCoprocessor.class.getName());
+    builder.setCoprocessor(SleepLongerAtFirstCoprocessor.class.getName());
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(FAM_NAM).build();
-    builder.addColumnFamily(cfd);
+    builder.setColumnFamily(cfd);
     TableDescriptor td = builder.build();
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
       admin.createTable(td);

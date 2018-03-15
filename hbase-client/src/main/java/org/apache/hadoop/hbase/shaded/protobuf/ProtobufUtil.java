@@ -2846,7 +2846,7 @@ public final class ProtobufUtil {
     ts.getColumnFamiliesList()
       .stream()
       .map(ProtobufUtil::toColumnFamilyDescriptor)
-      .forEach(builder::addColumnFamily);
+      .forEach(builder::setColumnFamily);
     ts.getAttributesList()
       .forEach(a -> builder.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray()));
     ts.getConfigurationList()

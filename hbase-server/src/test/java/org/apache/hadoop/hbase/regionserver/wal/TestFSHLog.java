@@ -111,7 +111,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       syncRunnerIndexField.set(ringBufferEventHandler, Integer.MAX_VALUE - 1);
       TableDescriptor htd =
           TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (byte[] fam : htd.getColumnFamilyNames()) {
         scopes.put(fam, 0);
@@ -160,7 +160,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       // open a new region which uses this WAL
       TableDescriptor htd =
           TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
       final HRegion region = TEST_UTIL.createLocalHRegion(hri, htd, log);

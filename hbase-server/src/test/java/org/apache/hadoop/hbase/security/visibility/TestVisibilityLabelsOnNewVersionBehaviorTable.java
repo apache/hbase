@@ -42,7 +42,7 @@ public class TestVisibilityLabelsOnNewVersionBehaviorTable
     TableName tableName = TableName.valueOf(testName.getMethodName());
     TEST_UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(tableName)
-            .addColumnFamily(
+            .setColumnFamily(
               ColumnFamilyDescriptorBuilder.newBuilder(fam).setNewVersionBehavior(true).build())
             .build());
     return TEST_UTIL.getConnection().getTable(tableName);

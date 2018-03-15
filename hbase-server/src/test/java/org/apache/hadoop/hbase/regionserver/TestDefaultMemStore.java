@@ -953,7 +953,7 @@ public class TestDefaultMemStore {
     // parameterized tests add [#] suffix get rid of [ and ].
     TableDescriptor desc = TableDescriptorBuilder
         .newBuilder(TableName.valueOf(name.getMethodName().replaceAll("[\\[\\]]", "_")))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("foo")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("foo")).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(desc.getTableName())
         .setStartKey(Bytes.toBytes("row_0200")).setEndKey(Bytes.toBytes("row_0300")).build();
     HRegion r = HRegion.createHRegion(hri, testDir, conf, desc, wFactory.getWAL(hri));

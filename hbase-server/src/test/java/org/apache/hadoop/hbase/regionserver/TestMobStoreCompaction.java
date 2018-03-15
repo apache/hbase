@@ -201,7 +201,7 @@ public class TestMobStoreCompaction {
     TableDescriptor td = TableDescriptorBuilder
             .newBuilder(region.getTableDescriptor())
             .removeColumnFamily(cfName)
-            .addColumnFamily(cfd)
+            .setColumnFamily(cfd)
             .build();
     region.setTableDescriptor(td);
     return region;

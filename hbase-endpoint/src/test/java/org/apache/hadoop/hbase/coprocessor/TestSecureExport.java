@@ -260,7 +260,7 @@ public class TestSecureExport {
     final String exportTable = name.getMethodName();
     TableDescriptor exportHtd = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
             .setOwnerString(USER_OWNER)
             .build();
     SecureTestUtil.createTable(UTIL, exportHtd, new byte[][]{Bytes.toBytes("s")});
@@ -344,7 +344,7 @@ public class TestSecureExport {
     final String exportTable = name.getMethodName() + "_export";
     final String importTable = name.getMethodName() + "_import";
     final TableDescriptor exportHtd = TableDescriptorBuilder.newBuilder(TableName.valueOf(exportTable))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
             .setOwnerString(USER_OWNER)
             .build();
     SecureTestUtil.createTable(UTIL, exportHtd, new byte[][]{Bytes.toBytes("s")});
@@ -401,7 +401,7 @@ public class TestSecureExport {
       };
       SecureTestUtil.verifyAllowed(exportAction, getUserByLogin(USER_OWNER));
       final TableDescriptor importHtd = TableDescriptorBuilder.newBuilder(TableName.valueOf(importTable))
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYB))
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYB))
               .setOwnerString(USER_OWNER)
               .build();
       SecureTestUtil.createTable(UTIL, importHtd, new byte[][]{Bytes.toBytes("s")});

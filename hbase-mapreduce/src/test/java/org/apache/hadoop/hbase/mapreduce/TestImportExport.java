@@ -297,7 +297,7 @@ public class TestImportExport {
    public void testExportScannerBatching() throws Throwable {
     TableDescriptor desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(1)
               .build())
             .build();
@@ -327,7 +327,7 @@ public class TestImportExport {
   public void testWithDeletes() throws Throwable {
     TableDescriptor desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .setKeepDeletedCells(KeepDeletedCells.TRUE)
               .build())
@@ -360,7 +360,7 @@ public class TestImportExport {
     final String IMPORT_TABLE = name.getMethodName() + "import";
     desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(IMPORT_TABLE))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .setKeepDeletedCells(KeepDeletedCells.TRUE)
               .build())
@@ -395,7 +395,7 @@ public class TestImportExport {
     final TableName exportTable = TableName.valueOf(name.getMethodName());
     TableDescriptor desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .setKeepDeletedCells(KeepDeletedCells.TRUE)
               .build())
@@ -433,7 +433,7 @@ public class TestImportExport {
     final String importTable = name.getMethodName() + "import";
     desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(importTable))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .setKeepDeletedCells(KeepDeletedCells.TRUE)
               .build())
@@ -475,7 +475,7 @@ public class TestImportExport {
     // Create simple table to export
     TableDescriptor desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .build())
             .build();
@@ -503,7 +503,7 @@ public class TestImportExport {
     final String IMPORT_TABLE = name.getMethodName() + "import";
     desc = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(IMPORT_TABLE))
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA)
               .setMaxVersions(5)
               .build())
             .build();

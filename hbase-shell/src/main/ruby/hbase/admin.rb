@@ -706,6 +706,7 @@ module Hbase
           next unless k =~ /coprocessor/i
           v = String.new(value)
           v.strip!
+          # TODO: We should not require user to config the coprocessor with our inner format.
           htd.addCoprocessorWithSpec(v)
           valid_coproc_keys << key
         end

@@ -93,7 +93,7 @@ public class TestFIFOCompactionPolicy {
           FIFOCompactionPolicy.class.getName())
         .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
           DisabledRegionSplitPolicy.class.getName())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
         .build();
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -155,7 +155,7 @@ public class TestFIFOCompactionPolicy {
           FIFOCompactionPolicy.class.getName())
         .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
           DisabledRegionSplitPolicy.class.getName())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     TEST_UTIL.getAdmin().createTable(desc);
   }
 
@@ -169,7 +169,7 @@ public class TestFIFOCompactionPolicy {
           FIFOCompactionPolicy.class.getName())
         .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
           DisabledRegionSplitPolicy.class.getName())
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1)
             .setMinVersions(1).build())
         .build();
     TEST_UTIL.getAdmin().createTable(desc);
@@ -187,7 +187,7 @@ public class TestFIFOCompactionPolicy {
         .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
           DisabledRegionSplitPolicy.class.getName())
         .setValue(HStore.BLOCKING_STOREFILES_KEY, "10")
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
         .build();
     TEST_UTIL.getAdmin().createTable(desc);
   }

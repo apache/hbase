@@ -66,7 +66,7 @@ public class MobSnapshotTestingUtils {
       = TableDescriptorBuilder.newBuilder(tableName)
             .setRegionReplication(regionReplication);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder
           .newBuilder(family)
           .setMobEnabled(true)
           .setMobThreshold(0L)
@@ -96,7 +96,7 @@ public class MobSnapshotTestingUtils {
       // tests have hard coded counts of what to expect in block cache, etc.,
       // and blooms being
       // on is interfering.
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
               .setBloomFilterType(BloomType.NONE)
               .setMobEnabled(true)
               .setMobThreshold(0L)
@@ -152,7 +152,7 @@ public class MobSnapshotTestingUtils {
     @Override
     public TableDescriptor createHtd(final String tableName) {
       return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-              .addColumnFamily(ColumnFamilyDescriptorBuilder
+              .setColumnFamily(ColumnFamilyDescriptorBuilder
                   .newBuilder(Bytes.toBytes(TEST_FAMILY))
                   .setMobEnabled(true)
                   .setMobThreshold(0L)

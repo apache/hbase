@@ -27,12 +27,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
-import org.apache.hadoop.fs.Path;
+import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -215,6 +217,24 @@ public class TableDescriptorBuilder {
   public final static byte[] NAMESPACE_COL_DESC_BYTES = Bytes.toBytes("d");
 
   /**
+   * <pre>
+   * Pattern that matches a coprocessor specification. Form is:
+   * {@code <coprocessor jar file location> '|' <class name> ['|' <priority> ['|' <arguments>]]}
+   * where arguments are {@code <KEY> '=' <VALUE> [,...]}
+   * For example: {@code hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2}
+   * </pre>
+   */
+  private static final Pattern CP_HTD_ATTR_VALUE_PATTERN =
+    Pattern.compile("(^[^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?$");
+
+  private static final String CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN = "[^=,]+";
+  private static final String CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN = "[^,]+";
+  private static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
+    "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
+      CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
+  public static final Pattern CP_HTD_ATTR_KEY_PATTERN =
+    Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
+  /**
    * Table descriptor for namespace table
    */
   // TODO We used to set CacheDataInL1 for NS table. When we have BucketCache in file mode, now the
@@ -222,14 +242,14 @@ public class TableDescriptorBuilder {
   // rethink about adding back the setCacheDataInL1 for NS table.
   public static final TableDescriptor NAMESPACE_TABLEDESC
     = TableDescriptorBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME)
-                            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(NAMESPACE_FAMILY_INFO_BYTES)
-                              // Ten is arbitrary number.  Keep versions to help debugging.
-                              .setMaxVersions(10)
-                              .setInMemory(true)
-                              .setBlocksize(8 * 1024)
-                              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                              .build())
-                            .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(NAMESPACE_FAMILY_INFO_BYTES)
+        // Ten is arbitrary number.  Keep versions to help debugging.
+        .setMaxVersions(10)
+        .setInMemory(true)
+        .setBlocksize(8 * 1024)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        .build())
+      .build();
   private final ModifyableTableDescriptor desc;
 
   /**
@@ -282,28 +302,36 @@ public class TableDescriptorBuilder {
     this.desc = new ModifyableTableDescriptor(desc);
   }
 
-  public TableDescriptorBuilder addCoprocessor(String className) throws IOException {
-    return addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
+  public TableDescriptorBuilder setCoprocessor(String className) throws IOException {
+    return setCoprocessor(CoprocessorDescriptorBuilder.of(className));
   }
 
-  public TableDescriptorBuilder addCoprocessor(String className, Path jarFilePath,
-          int priority, final Map<String, String> kvs) throws IOException {
-    desc.addCoprocessor(className, jarFilePath, priority, kvs);
+  public TableDescriptorBuilder setCoprocessor(CoprocessorDescriptor cpDesc) throws IOException {
+    desc.setCoprocessor(Objects.requireNonNull(cpDesc));
     return this;
   }
 
-  public TableDescriptorBuilder addCoprocessorWithSpec(final String specStr) throws IOException {
-    desc.addCoprocessorWithSpec(specStr);
+  public TableDescriptorBuilder setCoprocessors(Collection<CoprocessorDescriptor> cpDescs)
+    throws IOException {
+    for (CoprocessorDescriptor cpDesc : cpDescs) {
+      desc.setCoprocessor(cpDesc);
+    }
     return this;
   }
 
-  public TableDescriptorBuilder addColumnFamily(final ColumnFamilyDescriptor family) {
-    desc.addColumnFamily(family);
+  public TableDescriptorBuilder setColumnFamily(final ColumnFamilyDescriptor family) {
+    desc.setColumnFamily(Objects.requireNonNull(family));
+    return this;
+  }
+
+  public TableDescriptorBuilder setColumnFamilies(
+    final Collection<ColumnFamilyDescriptor> families) {
+    families.forEach(desc::setColumnFamily);
     return this;
   }
 
   public TableDescriptorBuilder modifyColumnFamily(final ColumnFamilyDescriptor family) {
-    desc.modifyColumnFamily(family);
+    desc.modifyColumnFamily(Objects.requireNonNull(family));
     return this;
   }
 
@@ -421,7 +449,7 @@ public class TableDescriptorBuilder {
     newFamilies
         .forEach((cf, cfDesc) -> {
           desc.removeColumnFamily(cf);
-          desc.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfDesc).setScope(scope)
+          desc.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfDesc).setScope(scope)
               .build());
         });
     return this;
@@ -839,7 +867,7 @@ public class TableDescriptorBuilder {
      * @param family to add.
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor addColumnFamily(final ColumnFamilyDescriptor family) {
+    public ModifyableTableDescriptor setColumnFamily(final ColumnFamilyDescriptor family) {
       if (family.getName() == null || family.getName().length <= 0) {
         throw new IllegalArgumentException("Family name cannot be null or empty");
       }
@@ -1154,8 +1182,10 @@ public class TableDescriptorBuilder {
      * @throws IOException
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor addCoprocessor(String className) throws IOException {
-      return addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
+    public ModifyableTableDescriptor setCoprocessor(String className) throws IOException {
+      return setCoprocessor(
+        CoprocessorDescriptorBuilder.newBuilder(className).setPriority(Coprocessor.PRIORITY_USER)
+          .build());
     }
 
     /**
@@ -1164,44 +1194,38 @@ public class TableDescriptorBuilder {
      * check if the class can be loaded or not. Whether a coprocessor is
      * loadable or not will be determined when a region is opened.
      *
-     * @param jarFilePath Path of the jar file. If it's null, the class will be
-     * loaded from default classloader.
-     * @param className Full class name.
-     * @param priority Priority
-     * @param kvs Arbitrary key-value parameter pairs passed into the
-     * coprocessor.
-     * @throws IOException
+     * @throws IOException any illegal parameter key/value
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor addCoprocessor(String className, Path jarFilePath,
-            int priority, final Map<String, String> kvs)
+    public ModifyableTableDescriptor setCoprocessor(CoprocessorDescriptor cp)
             throws IOException {
-      checkHasCoprocessor(className);
-
+      checkHasCoprocessor(cp.getClassName());
+      if (cp.getPriority() < 0) {
+        throw new IOException("Priority must be bigger than or equal with zero, current:"
+          + cp.getPriority());
+      }
       // Validate parameter kvs and then add key/values to kvString.
       StringBuilder kvString = new StringBuilder();
-      if (kvs != null) {
-        for (Map.Entry<String, String> e : kvs.entrySet()) {
-          if (!e.getKey().matches(HConstants.CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN)) {
-            throw new IOException("Illegal parameter key = " + e.getKey());
-          }
-          if (!e.getValue().matches(HConstants.CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN)) {
-            throw new IOException("Illegal parameter (" + e.getKey()
-                    + ") value = " + e.getValue());
-          }
-          if (kvString.length() != 0) {
-            kvString.append(',');
-          }
-          kvString.append(e.getKey());
-          kvString.append('=');
-          kvString.append(e.getValue());
+      for (Map.Entry<String, String> e : cp.getProperties().entrySet()) {
+        if (!e.getKey().matches(CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN)) {
+          throw new IOException("Illegal parameter key = " + e.getKey());
         }
+        if (!e.getValue().matches(CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN)) {
+          throw new IOException("Illegal parameter (" + e.getKey()
+                  + ") value = " + e.getValue());
+        }
+        if (kvString.length() != 0) {
+          kvString.append(',');
+        }
+        kvString.append(e.getKey());
+        kvString.append('=');
+        kvString.append(e.getValue());
       }
 
-      String value = ((jarFilePath == null) ? "" : jarFilePath.toString())
-              + "|" + className + "|" + Integer.toString(priority) + "|"
+      String value = cp.getJarPath().orElse("")
+              + "|" + cp.getClassName() + "|" + Integer.toString(cp.getPriority()) + "|"
               + kvString.toString();
-      return addCoprocessorToMap(value);
+      return setCoprocessorToMap(value);
     }
 
     /**
@@ -1211,18 +1235,19 @@ public class TableDescriptorBuilder {
      * loadable or not will be determined when a region is opened.
      *
      * @param specStr The Coprocessor specification all in in one String
-     * formatted so matches {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
      * @throws IOException
      * @return the modifyable TD
+     * @deprecated used by HTableDescriptor and admin.rb.
+     *                       As of release 2.0.0, this will be removed in HBase 3.0.0.
      */
-    public ModifyableTableDescriptor addCoprocessorWithSpec(final String specStr) throws IOException {
-      String className = getCoprocessorClassNameFromSpecStr(specStr);
-      if (className == null) {
-        throw new IllegalArgumentException("Format does not match "
-                + HConstants.CP_HTD_ATTR_VALUE_PATTERN + ": " + specStr);
-      }
-      checkHasCoprocessor(className);
-      return addCoprocessorToMap(specStr);
+    @Deprecated
+    public ModifyableTableDescriptor setCoprocessorWithSpec(final String specStr)
+      throws IOException {
+      CoprocessorDescriptor cpDesc = toCoprocessorDescriptor(specStr).orElseThrow(
+        () -> new IllegalArgumentException(
+          "Format does not match " + CP_HTD_ATTR_VALUE_PATTERN + ": " + specStr));
+      checkHasCoprocessor(cpDesc.getClassName());
+      return setCoprocessorToMap(specStr);
     }
 
     private void checkHasCoprocessor(final String className) throws IOException {
@@ -1233,12 +1258,10 @@ public class TableDescriptorBuilder {
 
     /**
      * Add coprocessor to values Map
-     *
      * @param specStr The Coprocessor specification all in in one String
-     * formatted so matches {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
      * @return Returns <code>this</code>
      */
-    private ModifyableTableDescriptor addCoprocessorToMap(final String specStr) {
+    private ModifyableTableDescriptor setCoprocessorToMap(final String specStr) {
       if (specStr == null) {
         return this;
       }
@@ -1246,7 +1269,7 @@ public class TableDescriptorBuilder {
       int maxCoprocessorNumber = 0;
       Matcher keyMatcher;
       for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
-        keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
+        keyMatcher = CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
         if (!keyMatcher.matches()) {
           continue;
         }
@@ -1266,24 +1289,8 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean hasCoprocessor(String classNameToMatch) {
-      Matcher keyMatcher;
-      for (Map.Entry<Bytes, Bytes> e
-              : this.values.entrySet()) {
-        keyMatcher
-                = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(
-                        Bytes.toString(e.getKey().get()));
-        if (!keyMatcher.matches()) {
-          continue;
-        }
-        String className = getCoprocessorClassNameFromSpecStr(Bytes.toString(e.getValue().get()));
-        if (className == null) {
-          continue;
-        }
-        if (className.equals(classNameToMatch.trim())) {
-          return true;
-        }
-      }
-      return false;
+      return getCoprocessorDescriptors().stream().anyMatch(cp -> cp.getClassName()
+        .equals(classNameToMatch));
     }
 
     /**
@@ -1293,33 +1300,16 @@ public class TableDescriptorBuilder {
      * @return The list of co-processors classNames
      */
     @Override
-    public List<String> getCoprocessors() {
-      List<String> result = new ArrayList<>(this.values.entrySet().size());
-      Matcher keyMatcher;
-      for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
-        keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
-        if (!keyMatcher.matches()) {
-          continue;
+    public List<CoprocessorDescriptor> getCoprocessorDescriptors() {
+      List<CoprocessorDescriptor> result = new ArrayList<>();
+      for (Map.Entry<Bytes, Bytes> e: getValues().entrySet()) {
+        String key = Bytes.toString(e.getKey().get()).trim();
+        if (CP_HTD_ATTR_KEY_PATTERN.matcher(key).matches()) {
+          toCoprocessorDescriptor(Bytes.toString(e.getValue().get()).trim())
+            .ifPresent(result::add);
         }
-        String className = getCoprocessorClassNameFromSpecStr(Bytes.toString(e.getValue().get()));
-        if (className == null) {
-          continue;
-        }
-        result.add(className); // classname is the 2nd field
       }
       return result;
-    }
-
-    /**
-     * @param spec String formatted as per
-     * {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
-     * @return Class parsed from passed in <code>spec</code> or null if no match
-     * or classpath found
-     */
-    private static String getCoprocessorClassNameFromSpecStr(final String spec) {
-      Matcher matcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
-      // Classname is the 2nd field
-      return matcher != null && matcher.matches() ? matcher.group(2).trim() : null;
     }
 
     /**
@@ -1333,12 +1323,12 @@ public class TableDescriptorBuilder {
       Matcher valueMatcher;
       for (Map.Entry<Bytes, Bytes> e : this.values
               .entrySet()) {
-        keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e
+        keyMatcher = CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e
                 .getKey().get()));
         if (!keyMatcher.matches()) {
           continue;
         }
-        valueMatcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes
+        valueMatcher = CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes
                 .toString(e.getValue().get()));
         if (!valueMatcher.matches()) {
           continue;
@@ -1413,4 +1403,40 @@ public class TableDescriptorBuilder {
     }
   }
 
+  private static Optional<CoprocessorDescriptor> toCoprocessorDescriptor(String spec) {
+    Matcher matcher = CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
+    if (matcher.matches()) {
+      // jar file path can be empty if the cp class can be loaded
+      // from class loader.
+      String path = matcher.group(1).trim().isEmpty() ?
+        null : matcher.group(1).trim();
+      String className = matcher.group(2).trim();
+      if (className.isEmpty()) {
+        return Optional.empty();
+      }
+      String priorityStr = matcher.group(3).trim();
+      int priority = priorityStr.isEmpty() ?
+        Coprocessor.PRIORITY_USER : Integer.parseInt(priorityStr);
+      String cfgSpec = null;
+      try {
+        cfgSpec = matcher.group(4);
+      } catch (IndexOutOfBoundsException ex) {
+        // ignore
+      }
+      Map<String, String> ourConf = new TreeMap<>();
+      if (cfgSpec != null && !cfgSpec.trim().equals("|")) {
+        cfgSpec = cfgSpec.substring(cfgSpec.indexOf('|') + 1);
+        Matcher m = CP_HTD_ATTR_VALUE_PARAM_PATTERN.matcher(cfgSpec);
+        while (m.find()) {
+          ourConf.put(m.group(1), m.group(2));
+        }
+      }
+      return Optional.of(CoprocessorDescriptorBuilder.newBuilder(className)
+        .setJarPath(path)
+        .setPriority(priority)
+        .setProperties(ourConf)
+        .build());
+    }
+    return Optional.empty();
+  }
 }

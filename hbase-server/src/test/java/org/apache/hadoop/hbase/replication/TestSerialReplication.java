@@ -234,7 +234,7 @@ public class TestSerialReplication {
   public void testRegionMove() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.getAdmin().createTable(
-      TableDescriptorBuilder.newBuilder(tableName).addColumnFamily(ColumnFamilyDescriptorBuilder
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
     UTIL.waitTableAvailable(tableName);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
@@ -273,7 +273,7 @@ public class TestSerialReplication {
   public void testRegionSplit() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.getAdmin().createTable(
-      TableDescriptorBuilder.newBuilder(tableName).addColumnFamily(ColumnFamilyDescriptorBuilder
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
     UTIL.waitTableAvailable(tableName);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
@@ -330,7 +330,7 @@ public class TestSerialReplication {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
           .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
         .build(),
       new byte[][] { splitKey });

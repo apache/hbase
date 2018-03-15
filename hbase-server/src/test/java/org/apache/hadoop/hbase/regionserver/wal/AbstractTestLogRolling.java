@@ -305,7 +305,7 @@ public abstract class AbstractTestLogRolling  {
   protected Table createTestTable(String tableName) throws IOException {
     // Create the test table and open it
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     admin.createTable(desc);
     return TEST_UTIL.getConnection().getTable(desc.getTableName());
   }

@@ -440,7 +440,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       String tableName = String.format("ittable-%010d", RandomUtils.nextInt());
       String familyName = "cf-" + Math.abs(RandomUtils.nextInt());
       return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-          .addColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName))
           .build();
     }
   }

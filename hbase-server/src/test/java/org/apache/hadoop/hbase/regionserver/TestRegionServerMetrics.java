@@ -553,7 +553,7 @@ public class TestRegionServerMetrics {
     TableDescriptor td = TableDescriptorBuilder
             .newBuilder(region.getTableDescriptor())
             .removeColumnFamily(cfName)
-            .addColumnFamily(cfd)
+            .setColumnFamily(cfd)
             .build();
     ((HRegion)region).setTableDescriptor(td);
     return region;

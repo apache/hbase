@@ -325,7 +325,7 @@ public class SpaceQuotaHelperForTests {
 
     // Create the table
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
     if (numRegions == 1) {
       admin.createTable(tableDesc);
     } else {
@@ -347,7 +347,7 @@ public class SpaceQuotaHelperForTests {
 
     // Create the table
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
 
     admin.createTable(tableDesc);
     return tn;

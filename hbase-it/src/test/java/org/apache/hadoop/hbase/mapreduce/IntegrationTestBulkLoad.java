@@ -212,7 +212,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     Admin admin = util.getAdmin();
     TableDescriptor desc = admin.getDescriptor(t);
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(desc);
-    builder.addCoprocessor(SlowMeCoproScanOperations.class.getName());
+    builder.setCoprocessor(SlowMeCoproScanOperations.class.getName());
     HBaseTestingUtility.modifyTableSync(admin, builder.build());
   }
 

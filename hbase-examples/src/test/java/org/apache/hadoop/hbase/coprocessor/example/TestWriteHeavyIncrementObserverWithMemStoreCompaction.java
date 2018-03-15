@@ -45,10 +45,10 @@ public class TestWriteHeavyIncrementObserverWithMemStoreCompaction
     WriteHeavyIncrementObserverTestBase.setUp();
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .addCoprocessor(WriteHeavyIncrementObserver.class.getName())
+            .setCoprocessor(WriteHeavyIncrementObserver.class.getName())
             .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
               MemoryCompactionPolicy.EAGER.name())
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
     TABLE = UTIL.getConnection().getTable(NAME);
   }
 

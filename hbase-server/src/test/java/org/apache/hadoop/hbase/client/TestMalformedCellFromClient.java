@@ -83,7 +83,7 @@ public class TestMalformedCellFromClient {
   @Before
   public void before() throws Exception {
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
       .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, String.valueOf(CELL_SIZE)).build();
     TEST_UTIL.getConnection().getAdmin().createTable(desc);
   }

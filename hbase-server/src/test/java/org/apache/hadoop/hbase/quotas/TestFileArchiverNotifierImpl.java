@@ -129,7 +129,7 @@ public class TestFileArchiverNotifierImpl {
       admin.disableTable(tn);
       admin.deleteTable(tn);
     }
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
         ColumnFamilyDescriptorBuilder.of(QuotaTableUtil.QUOTA_FAMILY_USAGE)).build();
     admin.createTable(desc);
 
@@ -229,9 +229,9 @@ public class TestFileArchiverNotifierImpl {
       admin.disableTable(fakeQuotaTableName);
       admin.deleteTable(fakeQuotaTableName);
     }
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(fakeQuotaTableName).addColumnFamily(
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(fakeQuotaTableName).setColumnFamily(
         ColumnFamilyDescriptorBuilder.of(QuotaTableUtil.QUOTA_FAMILY_USAGE))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(QuotaUtil.QUOTA_FAMILY_INFO)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(QuotaUtil.QUOTA_FAMILY_INFO)).build();
     admin.createTable(desc);
 
     final String ns = "";

@@ -92,18 +92,18 @@ public class TestNamespaceReplication extends TestReplicationBase {
     admin2.createNamespace(NamespaceDescriptor.create(ns2).build());
 
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tabAName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
       .newBuilder(f1Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
       .newBuilder(f2Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
     TableDescriptor tabA = builder.build();
     admin1.createTable(tabA);
     admin2.createTable(tabA);
 
     builder = TableDescriptorBuilder.newBuilder(tabBName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
       .newBuilder(f1Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
       .newBuilder(f2Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
     TableDescriptor tabB = builder.build();
     admin1.createTable(tabB);

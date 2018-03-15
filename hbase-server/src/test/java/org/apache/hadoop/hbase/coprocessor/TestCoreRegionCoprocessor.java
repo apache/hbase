@@ -67,7 +67,7 @@ public class TestCoreRegionCoprocessor {
     String methodName = this.name.getMethodName();
     TableName tn = TableName.valueOf(methodName);
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(methodName)).build();
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(cfd).build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfd).build();
     RegionInfo ri = RegionInfoBuilder.newBuilder(tn).build();
     this.rss = new MockRegionServerServices(HTU.getConfiguration());
     this.region = HRegion.openHRegion(ri, td, null, HTU.getConfiguration(), this.rss, null);

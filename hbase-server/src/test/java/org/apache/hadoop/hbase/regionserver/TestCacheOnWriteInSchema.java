@@ -170,7 +170,7 @@ public class TestCacheOnWriteInSchema {
           ColumnFamilyDescriptorBuilder.newBuilder(family).setBloomFilterType(BloomType.ROWCOL))
         .build();
     TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).addColumnFamily(hcd).build();
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setColumnFamily(hcd).build();
 
     // Create a store based on the schema
     String id = TestCacheOnWriteInSchema.class.getName();

@@ -112,8 +112,8 @@ public class TestPassCustomCellViaRegionObserver {
         admin.deleteTable(name);
       }
       table = UTIL.createTable(TableDescriptorBuilder.newBuilder(tableName)
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .addCoprocessor(RegionObserverImpl.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+        .setCoprocessor(RegionObserverImpl.class.getName())
         .build(), null);
     }
   }

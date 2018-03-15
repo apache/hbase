@@ -666,7 +666,7 @@ public class SecureTestUtil {
       byte[][] families) throws Exception {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
-      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     createTable(testUtil, testUtil.getAdmin(), builder.build());
     return testUtil.getConnection().getTable(tableName);

@@ -203,7 +203,7 @@ public class TestCompactionWithThroughputController {
     try {
       TEST_UTIL.getAdmin()
           .createTable(TableDescriptorBuilder.newBuilder(tableName)
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
               .build());
       TEST_UTIL.waitTableAvailable(tableName);
       HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
@@ -260,7 +260,7 @@ public class TestCompactionWithThroughputController {
     try {
       TEST_UTIL.getAdmin()
           .createTable(TableDescriptorBuilder.newBuilder(tableName)
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
               .build());
       TEST_UTIL.waitTableAvailable(tableName);
       HStore store = getStoreWithName(tableName);

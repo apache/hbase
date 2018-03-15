@@ -256,7 +256,7 @@ policy implementations, perhaps) ahead of observers.
   // create a table that references the jar
   TableDescriptor htd = TableDescriptorBuilder
                         .newBuilder(TableName.valueOf(getClass().getTableName()))
-                        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("test"))
+                        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("test"))
                         .setValue(Bytes.toBytes("Coprocessor$1", path.toString()+
                           ":" + classFullName +
                           ":" + Coprocessor.Priority.USER))

@@ -334,7 +334,7 @@ public class TestClassLoading {
     htd.setValue(cpKey2, cpValue2);
     htd.setValue(cpKey3, cpValue3);
 
-    // add 2 coprocessor by using new htd.addCoprocessor() api
+    // add 2 coprocessor by using new htd.setCoprocessor() api
     htd.addCoprocessor(cpName5, new Path(getLocalPath(jarFile5)),
         Coprocessor.PRIORITY_USER, null);
     Map<String, String> kvs = new HashMap<>();

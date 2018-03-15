@@ -252,9 +252,9 @@ public abstract class AbstractTestFSWAL {
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(conf1), DIR.toString(),
       HConstants.HREGION_OLDLOGDIR_NAME, conf1, null, true, null, null);
     TableDescriptor t1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t1"))
-      .addColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     TableDescriptor t2 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t2"))
-      .addColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(t1.getTableName()).build();
     RegionInfo hri2 = RegionInfoBuilder.newBuilder(t2.getTableName()).build();
     // add edits and roll the wal
@@ -361,7 +361,7 @@ public abstract class AbstractTestFSWAL {
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
     final byte[] rowName = tableName.getName();
     final TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .addColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, TEST_UTIL.getDefaultRootDirPath(),
       TEST_UTIL.getConfiguration(), htd);
     HBaseTestingUtility.closeRegionAndWAL(r);
@@ -449,7 +449,7 @@ public abstract class AbstractTestFSWAL {
       CONF, null, true, null, null);
     wal.close();
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
-      .addColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     RegionInfo ri = RegionInfoBuilder.newBuilder(td.getTableName()).build();
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);

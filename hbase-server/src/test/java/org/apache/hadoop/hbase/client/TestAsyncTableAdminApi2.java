@@ -70,7 +70,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   public void testAddColumnFamily() throws Exception {
     // Create a table with two families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0));
     admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
     // Verify the table descriptor
@@ -85,7 +85,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   public void testAddSameColumnFamilyTwice() throws Exception {
     // Create a table with one families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0));
     admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
     // Verify the table descriptor
@@ -109,7 +109,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(FAMILY_0);
     int blockSize = cfd.getBlocksize();
-    admin.createTable(tdBuilder.addColumnFamily(cfd).build()).join();
+    admin.createTable(tdBuilder.setColumnFamily(cfd).build()).join();
     admin.disableTable(tableName).join();
     // Verify the table descriptor
     verifyTableDescriptor(tableName, FAMILY_0);
@@ -129,7 +129,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(FAMILY_0);
     int blockSize = cfd.getBlocksize();
-    admin.createTable(tdBuilder.addColumnFamily(cfd).build()).join();
+    admin.createTable(tdBuilder.setColumnFamily(cfd).build()).join();
     admin.disableTable(tableName).join();
     // Verify the table descriptor
     verifyTableDescriptor(tableName, FAMILY_0);
@@ -150,8 +150,8 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   public void testDeleteColumnFamily() throws Exception {
     // Create a table with two families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1));
     admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
     // Verify the table descriptor
@@ -166,8 +166,8 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   public void testDeleteSameColumnFamilyTwice() throws Exception {
     // Create a table with two families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
-        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1));
     admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
     // Verify the table descriptor

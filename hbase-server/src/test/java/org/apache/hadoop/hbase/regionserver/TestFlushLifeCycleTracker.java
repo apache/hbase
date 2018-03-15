@@ -182,8 +182,8 @@ public class TestFlushLifeCycleTracker {
   public void setUp() throws IOException {
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .addColumnFamily(ColumnFamilyDescriptorBuilder.of(CF))
-            .addCoprocessor(FlushObserver.class.getName()).build());
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF))
+            .setCoprocessor(FlushObserver.class.getName()).build());
     region = UTIL.getHBaseCluster().getRegions(NAME).get(0);
   }
 

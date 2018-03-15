@@ -173,7 +173,7 @@ public class TestFlushWithThroughputController {
     hbtu.startMiniCluster(1);
     Connection conn = ConnectionFactory.createConnection(conf);
     hbtu.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
-      .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
       .build());
     hbtu.waitTableAvailable(tableName);
     HRegionServer regionServer = hbtu.getRSForFirstRegionInTable(tableName);

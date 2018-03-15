@@ -82,32 +82,32 @@ public class TableReplicationStorageBase {
         conf.getInt(HConstants.HBASE_META_BLOCK_SIZE, HConstants.DEFAULT_HBASE_META_BLOCK_SIZE);
     return TableDescriptorBuilder
         .newBuilder(REPLICATION_TABLE)
-        .addColumnFamily(
+        .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_PEER).setMaxVersions(metaMaxVersion)
               .setInMemory(true).setBlocksize(metaBlockSize)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.NONE)
               .build())
-        .addColumnFamily(
+        .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_RS_STATE).setMaxVersions(metaMaxVersion)
               .setInMemory(true).setBlocksize(metaBlockSize)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.NONE)
               .build())
-        .addColumnFamily(
+        .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_QUEUE).setMaxVersions(metaMaxVersion)
               .setInMemory(true).setBlocksize(metaBlockSize)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.NONE)
               .build())
-        .addColumnFamily(
+        .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_WAL)
               .setMaxVersions(HConstants.ALL_VERSIONS).setInMemory(true)
               .setBlocksize(metaBlockSize).setScope(HConstants.REPLICATION_SCOPE_LOCAL)
               .setBloomFilterType(BloomType.NONE).build())
-        .addColumnFamily(
+        .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_REGIONS).setMaxVersions(metaMaxVersion)
               .setInMemory(true).setBlocksize(metaBlockSize)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.NONE)
               .build())
-        .addColumnFamily(
+        .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_HFILE_REFS)
               .setMaxVersions(metaMaxVersion).setInMemory(true).setBlocksize(metaBlockSize)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.NONE)

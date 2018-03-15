@@ -1340,12 +1340,12 @@ public final class BackupSystemTable implements Closeable {
     colBuilder.setTimeToLive(ttl);
 
     ColumnFamilyDescriptor colSessionsDesc = colBuilder.build();
-    builder.addColumnFamily(colSessionsDesc);
+    builder.setColumnFamily(colSessionsDesc);
 
     colBuilder =
         ColumnFamilyDescriptorBuilder.newBuilder(META_FAMILY);
     colBuilder.setTimeToLive(ttl);
-    builder.addColumnFamily(colBuilder.build());
+    builder.setColumnFamily(colBuilder.build());
     return builder.build();
   }
 
@@ -1380,11 +1380,11 @@ public final class BackupSystemTable implements Closeable {
           BackupRestoreConstants.BACKUP_SYSTEM_TTL_DEFAULT);
     colBuilder.setTimeToLive(ttl);
     ColumnFamilyDescriptor colSessionsDesc = colBuilder.build();
-    builder.addColumnFamily(colSessionsDesc);
+    builder.setColumnFamily(colSessionsDesc);
     colBuilder =
         ColumnFamilyDescriptorBuilder.newBuilder(META_FAMILY);
     colBuilder.setTimeToLive(ttl);
-    builder.addColumnFamily(colBuilder.build());
+    builder.setColumnFamily(colBuilder.build());
     return builder.build();
   }
 
