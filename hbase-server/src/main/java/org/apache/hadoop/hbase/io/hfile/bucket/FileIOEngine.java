@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
@@ -229,6 +230,8 @@ public class FileIOEngine implements IOEngine {
       }
       try {
         accessLen = accessor.access(fileChannel, buffer, accessOffset);
+      } catch (ClosedByInterruptException e) {
+        throw e;
       } catch (ClosedChannelException e) {
         LOG.warn("Caught ClosedChannelException accessing BucketCache, reopening file. ", e);
         refreshFileConnection(accessFileNum);
