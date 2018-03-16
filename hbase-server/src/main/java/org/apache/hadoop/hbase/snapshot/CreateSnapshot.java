@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.util.Arrays;
 import java.util.Locale;
-import org.apache.commons.cli.CommandLine;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * This is a command line class that will snapshot a given table.
