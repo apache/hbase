@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
@@ -31,6 +30,8 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * This class drives the Integration test suite execution. Executes all
