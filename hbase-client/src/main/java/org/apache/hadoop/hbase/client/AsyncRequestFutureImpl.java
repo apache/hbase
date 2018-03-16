@@ -97,7 +97,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         try {
           done = waitUntilDone(startTime * 1000L + asyncProcess.primaryCallTimeoutMicroseconds);
         } catch (InterruptedException ex) {
-          LOG.error("Replica thread was interrupted - no replica calls: " + ex.getMessage());
+          LOG.error("Replica thread interrupted - no replica calls {}", ex.getMessage());
           return;
         }
       }
@@ -141,7 +141,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       if (loc == null) return;
       HRegionLocation[] locs = loc.getRegionLocations();
       if (locs.length == 1) {
-        LOG.warn("No replicas found for " + action.getAction());
+        LOG.warn("No replicas found for {}", action.getAction());
         return;
       }
       synchronized (replicaResultLock) {
@@ -222,8 +222,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           return;
         } catch (Throwable t) {
           // This should not happen. Let's log & retry anyway.
-          LOG.error("#" + asyncProcess.id + ", Caught throwable while calling. This is unexpected." +
-              " Retrying. Server is " + server + ", tableName=" + tableName, t);
+          LOG.error("id=" + asyncProcess.id + ", caught throwable. Unexpected." +
+              " Retrying. Server=" + server + ", tableName=" + tableName, t);
           receiveGlobalFailure(multiAction, server, numAttempt, t);
           return;
         }
@@ -239,8 +239,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         }
       } catch (Throwable t) {
         // Something really bad happened. We are on the send thread that will now die.
-        LOG.error("Internal AsyncProcess #" + asyncProcess.id + " error for "
-            + tableName + " processing for " + server, t);
+        LOG.error("id=" + asyncProcess.id + " error for " + tableName + " processing " + server, t);
         throw new RuntimeException(t);
       } finally {
         asyncProcess.decTaskCounters(multiAction.getRegions(), server);
@@ -550,8 +549,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
             if (t instanceof RejectedExecutionException) {
               // This should never happen. But as the pool is provided by the end user,
               // let's secure this a little.
-              LOG.warn("#" + asyncProcess.id + ", the task was rejected by the pool. This is unexpected." +
-                  " Server is " + server.getServerName(), t);
+              LOG.warn("id=" + asyncProcess.id + ", task rejected by pool. Unexpected." +
+                  " Server=" + server.getServerName(), t);
             } else {
               // see #HBASE-14359 for more details
               LOG.warn("Caught unexpected exception/error: ", t);
@@ -659,7 +658,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       try {
         pool.submit(replicaRunnable);
       } catch (RejectedExecutionException ree) {
-        LOG.warn("#" + asyncProcess.id + ", replica task was rejected by the pool - no replica calls", ree);
+        LOG.warn("id=" + asyncProcess.id + " replica task rejected by pool; no replica calls", ree);
       }
     }
   }
@@ -955,7 +954,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     StringBuilder sb = new StringBuilder();
     sb.append("id=").append(asyncProcess.id).append(", table=").append(tableName).append(", ")
         .append("attempt=").append(numAttempt)
-        .append("/").append(asyncProcess.numTries).append(" ");
+        .append("/").append(asyncProcess.numTries).append(", ");
 
     if (failureCount > 0 || error != null){
       sb.append("failed=").append(failureCount).append("ops").append(", last exception=").

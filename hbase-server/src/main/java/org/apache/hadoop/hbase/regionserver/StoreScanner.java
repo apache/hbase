@@ -980,10 +980,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         heap.peek() == null || bytesRead < preadMaxBytes) {
       return;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Switch to stream read because we have already read " + bytesRead +
-          " bytes from this scanner");
-    }
+    LOG.debug("Switch to stream read (scanned={} bytes) of {}", bytesRead,
+        this.store.getColumnFamilyName());
     scanUsePread = false;
     Cell lastTop = heap.peek();
     List<KeyValueScanner> memstoreScanners = new ArrayList<>();

@@ -92,7 +92,7 @@ public class MemStoreCompactor {
     // get a snapshot of the list of the segments from the pipeline,
     // this local copy of the list is marked with specific version
     versionedList = compactingMemStore.getImmutableSegments();
-    LOG.debug("Starting on {}/{}",
+    LOG.trace("Speculative compaction starting on {}/{}",
         compactingMemStore.getStore().getHRegion().getRegionInfo().getEncodedName(),
         compactingMemStore.getStore().getColumnFamilyName());
     HStore store = compactingMemStore.getStore();
@@ -177,8 +177,8 @@ public class MemStoreCompactor {
         }
       }
     } catch (IOException e) {
-      LOG.debug("Interrupting the MemStore in-memory compaction for store "
-          + compactingMemStore.getFamilyName());
+      LOG.trace("Interrupting in-memory compaction for store={}",
+          compactingMemStore.getFamilyName());
       Thread.currentThread().interrupt();
     } finally {
       // For the MERGE case, if the result was created, but swap didn't happen,

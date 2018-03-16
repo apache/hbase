@@ -98,13 +98,13 @@ public class ChunkCreator {
                                float poolSizePercentage, float indexChunkSizePercentage,
                                float initialCountPercentage,
                                HeapMemoryManager heapMemoryManager) {
-    this.dataChunksPool = initializePool(globalMemStoreSize,
+    this.dataChunksPool = initializePool("data", globalMemStoreSize,
             (1 - indexChunkSizePercentage) * poolSizePercentage,
             initialCountPercentage, chunkSize, heapMemoryManager);
     // The index chunks pool is needed only when the index type is CCM.
     // Since the pools are not created at all when the index type isn't CCM,
     // we don't need to check it here.
-    this.indexChunksPool = initializePool(globalMemStoreSize,
+    this.indexChunksPool = initializePool("index", globalMemStoreSize,
             indexChunkSizePercentage * poolSizePercentage,
             initialCountPercentage, (int) (indexChunkSizePercentage * chunkSize),
             heapMemoryManager);
@@ -331,8 +331,11 @@ public class ChunkCreator {
     private static final int statThreadPeriod = 60 * 5;
     private final AtomicLong chunkCount = new AtomicLong();
     private final LongAdder reusedChunkCount = new LongAdder();
+    private final String label;
 
-    MemStoreChunkPool(int chunkSize, int maxCount, int initialCount, float poolSizePercentage) {
+    MemStoreChunkPool(String label, int chunkSize, int maxCount, int initialCount,
+        float poolSizePercentage) {
+      this.label = label;
       this.chunkSize = chunkSize;
       this.maxCount = maxCount;
       this.poolSizePercentage = poolSizePercentage;
@@ -421,12 +424,10 @@ public class ChunkCreator {
         long created = chunkCount.get();
         long reused = reusedChunkCount.sum();
         long total = created + reused;
-        LOG.debug("Stats (chunk size=" + chunkSize + "): "
-                + "current pool size=" + reclaimedChunks.size()
-                + ",created chunk count=" + created
-                + ",reused chunk count=" + reused
-                + ",reuseRatio=" + (total == 0 ? "0" : StringUtils.formatPercent(
-                (float) reused / (float) total, 2)));
+        LOG.debug("{} Stats (chunk size={}): current pool size={}, created chunk count={}, " +
+                "reused chunk count={}, reuseRatio={}", label, chunkSize, reclaimedChunks.size(),
+            created, reused,
+            (total == 0? "0": StringUtils.formatPercent((float)reused/(float)total,2)));
       }
     }
 
@@ -438,7 +439,7 @@ public class ChunkCreator {
     public void onHeapMemoryTune(long newMemstoreSize, long newBlockCacheSize) {
       // don't do any tuning in case of offheap memstore
       if (isOffheap()) {
-        LOG.warn("Not tuning the chunk pool as it is offheap");
+        LOG.warn("{} not tuning the chunk pool as it is offheap", label);
         return;
       }
       int newMaxCount =
@@ -448,12 +449,14 @@ public class ChunkCreator {
         if (newMaxCount > this.maxCount) {
           // Max chunks getting increased. Just change the variable. Later calls to getChunk() would
           // create and add them to Q
-          LOG.info("Max count for chunks increased from " + this.maxCount + " to " + newMaxCount);
+          LOG.info("{} max count for chunks increased from {} to {}", this.label, this.maxCount,
+              newMaxCount);
           this.maxCount = newMaxCount;
         } else {
           // Max chunks getting decreased. We may need to clear off some of the pooled chunks now
           // itself. If the extra chunks are serving already, do not pool those when we get them back
-          LOG.info("Max count for chunks decreased from " + this.maxCount + " to " + newMaxCount);
+          LOG.info("{} max count for chunks decreased from {} to {}", this.label, this.maxCount,
+              newMaxCount);
           this.maxCount = newMaxCount;
           if (this.reclaimedChunks.size() > newMaxCount) {
             synchronized (this) {
@@ -472,11 +475,11 @@ public class ChunkCreator {
     chunkPoolDisabled = false;
   }
 
-  private MemStoreChunkPool initializePool(long globalMemStoreSize, float poolSizePercentage,
-                                           float initialCountPercentage, int chunkSize,
-                                           HeapMemoryManager heapMemoryManager) {
+  private MemStoreChunkPool initializePool(String label, long globalMemStoreSize,
+      float poolSizePercentage, float initialCountPercentage, int chunkSize,
+      HeapMemoryManager heapMemoryManager) {
     if (poolSizePercentage <= 0) {
-      LOG.info("PoolSizePercentage is less than 0. So not using pool");
+      LOG.info("{} poolSizePercentage is less than 0. So not using pool", label);
       return null;
     }
     if (chunkPoolDisabled) {
@@ -488,14 +491,13 @@ public class ChunkCreator {
     }
     int maxCount = (int) (globalMemStoreSize * poolSizePercentage / chunkSize);
     if (initialCountPercentage > 1.0 || initialCountPercentage < 0) {
-      throw new IllegalArgumentException(
-              MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY + " must be between 0.0 and 1.0");
+      throw new IllegalArgumentException(label + " " + MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY +
+          " must be between 0.0 and 1.0");
     }
     int initialCount = (int) (initialCountPercentage * maxCount);
-    LOG.info("Allocating MemStoreChunkPool with chunk size "
-            + StringUtils.byteDesc(chunkSize) + ", max count " + maxCount
-            + ", initial count " + initialCount);
-    MemStoreChunkPool memStoreChunkPool = new MemStoreChunkPool(chunkSize, maxCount,
+    LOG.info("{} allocating {} MemStoreChunkPool with chunk size {}, max count {}, " +
+            "initial count {}", label, StringUtils.byteDesc(chunkSize), maxCount, initialCount);
+    MemStoreChunkPool memStoreChunkPool = new MemStoreChunkPool(label, chunkSize, maxCount,
             initialCount, poolSizePercentage);
     if (heapMemoryManager != null && memStoreChunkPool != null) {
       // Register with Heap Memory manager

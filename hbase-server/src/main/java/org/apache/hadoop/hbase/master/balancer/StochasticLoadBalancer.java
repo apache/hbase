@@ -292,7 +292,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         continue;
       }
       if (!c.isNeeded()) {
-        LOG.debug(c.getClass().getName() + " indicated that its cost should not be considered");
+        LOG.debug("{} not needed", c.getClass().getSimpleName());
         continue;
       }
       sumMultiplier += multiplier;
