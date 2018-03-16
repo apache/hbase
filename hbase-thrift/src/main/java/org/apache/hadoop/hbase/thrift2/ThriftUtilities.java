@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.collections4.MapUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -72,6 +71,8 @@ import org.apache.hadoop.hbase.thrift2.generated.TServerName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 @InterfaceAudience.Private
 public class ThriftUtilities {

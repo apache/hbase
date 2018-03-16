@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.trace;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -39,6 +38,8 @@ import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.TraceScope;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 import java.io.IOException;
 import java.util.Random;

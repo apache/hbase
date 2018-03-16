@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -59,6 +58,7 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * A command-line utility that reads, writes, and verifies data. Unlike
