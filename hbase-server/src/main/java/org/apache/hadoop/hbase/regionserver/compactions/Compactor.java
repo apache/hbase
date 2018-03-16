@@ -199,15 +199,14 @@ public abstract class Compactor<T extends CellSink> {
       }
       tmp = fileInfo.get(TIMERANGE_KEY);
       fd.latestPutTs = tmp == null ? HConstants.LATEST_TIMESTAMP: TimeRangeTracker.parseFrom(tmp).getMax();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Compacting " + file +
-          ", keycount=" + keyCount +
-          ", bloomtype=" + r.getBloomFilterType().toString() +
-          ", size=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1) +
-          ", encoding=" + r.getHFileReader().getDataBlockEncoding() +
-          ", seqNum=" + seqNum +
-          (allFiles ? ", earliestPutTs=" + earliestPutTs: ""));
-      }
+      LOG.debug("Compacting {}, keycount={}, bloomtype={}, size={}, encoding={}, seqNum={}{}",
+          (file.getPath() == null? null: file.getPath().getName()),
+          keyCount,
+          r.getBloomFilterType().toString(),
+          TraditionalBinaryPrefix.long2String(r.length(), "", 1),
+          r.getHFileReader().getDataBlockEncoding(),
+          seqNum,
+          (allFiles? ", earliestPutTs=" + earliestPutTs: ""));
     }
     return fd;
   }

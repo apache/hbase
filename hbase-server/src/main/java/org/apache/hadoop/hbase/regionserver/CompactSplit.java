@@ -158,10 +158,10 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   @Override
   public String toString() {
-    return "compaction_queue=("
-        + longCompactions.getQueue().size() + ":"
+    return "compactionQueue=(longCompactions="
+        + longCompactions.getQueue().size() + ":shortCompactions="
         + shortCompactions.getQueue().size() + ")"
-        + ", split_queue=" + splits.getQueue().size();
+        + ", splitQueue=" + splits.getQueue().size();
   }
 
   public String dumpQueue() {
@@ -528,10 +528,10 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     @Override
     public String toString() {
       if (compaction != null) {
-        return "Request = " + compaction.getRequest();
+        return "Request=" + compaction.getRequest();
       } else {
-        return "regionName = " + region.toString() + ", storeName = " + store.toString() +
-            ", priority = " + queuedPriority + ", time = " + time;
+        return "region=" + region.toString() + ", storeName=" + store.toString() +
+            ", priority=" + queuedPriority + ", startTime=" + time;
       }
     }
 
@@ -591,7 +591,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         boolean completed =
             region.compact(c, store, compactionThroughputController, user);
         long now = EnvironmentEdgeManager.currentTime();
-        LOG.info(((completed) ? "Completed" : "Aborted") + " compaction: " +
+        LOG.info(((completed) ? "Completed" : "Aborted") + " compaction " +
               this + "; duration=" + StringUtils.formatTimeDiff(now, start));
         if (completed) {
           // degenerate case: blocked regions require recursive enqueues
@@ -619,7 +619,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         tracker.afterExecution(store);
         completeTracker.completed(store);
         region.decrementCompactionsQueuedCount();
-        LOG.debug("CompactSplitThread Status: " + CompactSplit.this);
+        LOG.debug("Status {}", CompactSplit.this);
       }
     }
 

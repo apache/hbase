@@ -568,7 +568,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       boolean hasLock = true;
       final LockAndQueue[] regionLocks = new LockAndQueue[regionInfo.length];
       for (int i = 0; i < regionInfo.length; ++i) {
-        LOG.info(procedure + ", " + regionInfo[i].getRegionNameAsString());
+        LOG.info("{} checking lock on {}", procedure, regionInfo[i].getEncodedName());
         assert table != null;
         assert regionInfo[i] != null;
         assert regionInfo[i].getTable() != null;
