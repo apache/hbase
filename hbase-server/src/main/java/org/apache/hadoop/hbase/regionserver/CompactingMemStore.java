@@ -427,9 +427,8 @@ public class CompactingMemStore extends AbstractMemStore {
         // compaction is in progress
         compactor.start();
       } catch (IOException e) {
-        LOG.warn("Unable to run memstore compaction. region "
-            + getRegionServices().getRegionInfo().getRegionNameAsString() + "store: "
-            + getFamilyName(), e);
+        LOG.warn("Unable to run in-memory compaction on {}/{}; exception={}",
+            getRegionServices().getRegionInfo().getEncodedName(), getFamilyName(), e);
       }
     } finally {
       inMemoryFlushInProgress.set(false);

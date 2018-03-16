@@ -1507,8 +1507,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         TableDescriptor tblDesc = getTableDescriptors().get(table);
         if (table.isSystemTable() || (tblDesc != null &&
             !tblDesc.isNormalizationEnabled())) {
-          LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
-              + " table or doesn't have auto normalization turned on");
+          LOG.trace("Skipping normalization for {}, as it's either system"
+              + " table or doesn't have auto normalization turned on", table);
           continue;
         }
         List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table);

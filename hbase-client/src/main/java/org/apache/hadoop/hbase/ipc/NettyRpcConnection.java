@@ -163,7 +163,7 @@ class NettyRpcConnection extends RpcConnection {
               relogin();
             }
           } catch (IOException e) {
-            LOG.warn("relogin failed", e);
+            LOG.warn("Relogin failed", e);
           }
           synchronized (this) {
             reloginInProgress = false;
@@ -251,7 +251,7 @@ class NettyRpcConnection extends RpcConnection {
   }
 
   private void connect() {
-    LOG.debug("Connecting to {}", remoteId.address);
+    LOG.trace("Connecting to {}", remoteId.address);
 
     this.channel = new Bootstrap().group(rpcClient.group).channel(rpcClient.channelClass)
         .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())

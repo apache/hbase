@@ -2077,8 +2077,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             return false;
           }
         }
-        LOG.info("Starting compaction on " + store + " in region " + this
-            + (compaction.getRequest().isOffPeak()?" as an off-peak compaction":""));
+        LOG.info("Starting compaction of {} in {}{}", store, this,
+            (compaction.getRequest().isOffPeak()?" as an off-peak compaction":""));
         doRegionCompactionPrep();
         try {
           status.setStatus("Compacting store " + store);

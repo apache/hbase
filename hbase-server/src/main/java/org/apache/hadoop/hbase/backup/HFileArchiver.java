@@ -109,9 +109,7 @@ public class HFileArchiver {
    */
   public static boolean archiveRegion(FileSystem fs, Path rootdir, Path tableDir, Path regionDir)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("ARCHIVING " + regionDir.toString());
-    }
+    LOG.debug("ARCHIVING {}", rootdir.toString());
 
     // otherwise, we archive the files
     // make sure we can archive
@@ -145,7 +143,7 @@ public class HFileArchiver {
     FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
     // if there no files, we can just delete the directory and return;
     if (storeDirs == null) {
-      LOG.debug("Region directory " + regionDir + " empty.");
+      LOG.debug("Directory {} empty.", regionDir);
       return deleteRegionWithoutArchiving(fs, regionDir);
     }
 
@@ -194,8 +192,8 @@ public class HFileArchiver {
       RegionInfo parent, Path familyDir, byte[] family) throws IOException {
     FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir);
     if (storeFiles == null) {
-      LOG.debug("No store files to dispose for region=" + parent.getRegionNameAsString() +
-          ", family=" + Bytes.toString(family));
+      LOG.debug("No files to dispose of in {}, family={}", parent.getRegionNameAsString(),
+          Bytes.toString(family));
       return;
     }
 
@@ -230,15 +228,15 @@ public class HFileArchiver {
 
     // sometimes in testing, we don't have rss, so we need to check for that
     if (fs == null) {
-      LOG.warn("Passed filesystem is null, so just deleting the files without archiving for region:"
-          + Bytes.toString(regionInfo.getRegionName()) + ", family:" + Bytes.toString(family));
+      LOG.warn("Passed filesystem is null, so just deleting files without archiving for {}," +
+              "family={}", Bytes.toString(regionInfo.getRegionName()), Bytes.toString(family));
       deleteStoreFilesWithoutArchiving(compactedFiles);
       return;
     }
 
     // short circuit if we don't have any files to delete
     if (compactedFiles.isEmpty()) {
-      LOG.debug("No store files to dispose, done!");
+      LOG.debug("No files to dispose of, done!");
       return;
     }
 
@@ -255,7 +253,7 @@ public class HFileArchiver {
     }
 
     // otherwise we attempt to archive the store files
-    LOG.debug("Archiving compacted store files.");
+    LOG.debug("Archiving compacted files.");
 
     // Wrap the storefile into a File
     StoreToFile getStorePath = new StoreToFile(fs);
@@ -319,9 +317,11 @@ public class HFileArchiver {
   private static List<File> resolveAndArchive(FileSystem fs, Path baseArchiveDir,
       Collection<File> toArchive, long start) throws IOException {
     // short circuit if no files to move
-    if (toArchive.isEmpty()) return Collections.emptyList();
+    if (toArchive.isEmpty()) {
+      return Collections.emptyList();
+    }
 
-    if (LOG.isTraceEnabled()) LOG.trace("moving files to the archive directory: " + baseArchiveDir);
+    LOG.trace("Moving files to the archive directory {}", baseArchiveDir);
 
     // make sure the archive directory exists
     if (!fs.exists(baseArchiveDir)) {
@@ -329,7 +329,7 @@ public class HFileArchiver {
         throw new IOException("Failed to create the archive directory:" + baseArchiveDir
             + ", quitting archive attempt.");
       }
-      if (LOG.isTraceEnabled()) LOG.trace("Created archive directory:" + baseArchiveDir);
+      LOG.trace("Created archive directory {}", baseArchiveDir);
     }
 
     List<File> failures = new ArrayList<>();
@@ -337,7 +337,7 @@ public class HFileArchiver {
     for (File file : toArchive) {
       // if its a file archive it
       try {
-        if (LOG.isTraceEnabled()) LOG.trace("Archiving: " + file);
+        LOG.trace("Archiving {}", file);
         if (file.isFile()) {
           // attempt to archive the file
           if (!resolveAndArchiveFile(baseArchiveDir, file, startTime)) {
@@ -346,7 +346,7 @@ public class HFileArchiver {
           }
         } else {
           // otherwise its a directory and we need to archive all files
-          if (LOG.isTraceEnabled()) LOG.trace(file + " is a directory, archiving children files");
+          LOG.trace("{} is a directory, archiving children files", file);
           // so we add the directory name to the one base archive
           Path parentArchiveDir = new Path(baseArchiveDir, file.getName());
           // and then get all the files from that directory and attempt to
@@ -355,7 +355,7 @@ public class HFileArchiver {
           failures.addAll(resolveAndArchive(fs, parentArchiveDir, children, start));
         }
       } catch (IOException e) {
-        LOG.warn("Failed to archive " + file, e);
+        LOG.warn("Failed to archive {}", file, e);
         failures.add(file);
       }
     }
@@ -385,10 +385,8 @@ public class HFileArchiver {
     // really, really unlikely situtation, where we get the same name for the existing file, but
     // is included just for that 1 in trillion chance.
     if (fs.exists(archiveFile)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("File:" + archiveFile + " already exists in archive, moving to "
-            + "timestamped backup and overwriting current.");
-      }
+      LOG.debug("{} already exists in archive, moving to timestamped backup and " +
+          "overwriting current.", archiveFile);
 
       // move the archive file to the stamped backup
       Path backedupArchiveFile = new Path(archiveDir, filename + SEPARATOR + archiveStartTime);
@@ -405,10 +403,7 @@ public class HFileArchiver {
       LOG.debug("Backed up archive file from " + archiveFile);
     }
 
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("No existing file in archive for: " + archiveFile +
-        ", free to archive original file.");
-    }
+    LOG.trace("No existing file in archive for {}, free to archive original file.", archiveFile);
 
     // at this point, we should have a free spot for the archive file
     boolean success = false;
@@ -421,11 +416,11 @@ public class HFileArchiver {
         try {
           if (!fs.exists(archiveDir)) {
             if (fs.mkdirs(archiveDir)) {
-              LOG.debug("Created archive directory:" + archiveDir);
+              LOG.debug("Created archive directory {}", archiveDir);
             }
           }
         } catch (IOException e) {
-          LOG.warn("Failed to create directory: " + archiveDir, e);
+          LOG.warn("Failed to create directory {}", archiveDir, e);
         }
       }
 
@@ -446,9 +441,7 @@ public class HFileArchiver {
       return false;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Finished archiving from " + currentFile + ", to " + archiveFile);
-    }
+    LOG.debug("Archived from {} to {}", currentFile, archiveFile);
     return true;
   }
 
@@ -462,10 +455,10 @@ public class HFileArchiver {
   private static boolean deleteRegionWithoutArchiving(FileSystem fs, Path regionDir)
       throws IOException {
     if (fs.delete(regionDir, true)) {
-      LOG.debug("Deleted " + regionDir);
+      LOG.debug("Deleted {}", regionDir);
       return true;
     }
-    LOG.debug("Failed to delete region directory:" + regionDir);
+    LOG.debug("Failed to delete directory {}", regionDir);
     return false;
   }
 
@@ -480,13 +473,13 @@ public class HFileArchiver {
    */
   private static void deleteStoreFilesWithoutArchiving(Collection<HStoreFile> compactedFiles)
       throws IOException {
-    LOG.debug("Deleting store files without archiving.");
+    LOG.debug("Deleting files without archiving.");
     List<IOException> errors = new ArrayList<>(0);
     for (HStoreFile hsf : compactedFiles) {
       try {
         hsf.deleteStoreFile();
       } catch (IOException e) {
-        LOG.error("Failed to delete store file:" + hsf.getPath());
+        LOG.error("Failed to delete {}", hsf.getPath());
         errors.add(e);
       }
     }
@@ -605,7 +598,7 @@ public class HFileArchiver {
 
     @Override
     public String toString() {
-      return this.getClass() + ", file:" + getPath().toString();
+      return this.getClass().getSimpleName() + ", " + getPath().toString();
     }
   }
 
