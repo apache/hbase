@@ -104,6 +104,21 @@ public class RecoverMetaProcedure
 
     try {
       switch (state) {
+        case RECOVER_META_PREPARE:
+          // If Master is going down or cluster is up, skip this assign by returning NO_MORE_STATE
+          if (!master.isClusterUp()) {
+            String msg = "Cluster not up! Skipping hbase:meta assign.";
+            LOG.warn(msg);
+            return Flow.NO_MORE_STATE;
+          }
+          if (master.isStopping() || master.isStopped()) {
+            String msg = "Master stopping=" + master.isStopping() + ", stopped=" +
+                master.isStopped() + "; skipping hbase:meta assign.";
+            LOG.warn(msg);
+            return Flow.NO_MORE_STATE;
+          }
+          setNextState(RecoverMetaState.RECOVER_META_SPLIT_LOGS);
+          break;
         case RECOVER_META_SPLIT_LOGS:
           LOG.info("Start " + this);
           if (shouldSplitWal) {
@@ -202,7 +217,7 @@ public class RecoverMetaProcedure
 
   @Override
   protected MasterProcedureProtos.RecoverMetaState getInitialState() {
-    return RecoverMetaState.RECOVER_META_SPLIT_LOGS;
+    return RecoverMetaState.RECOVER_META_PREPARE;
   }
 
   @Override

@@ -424,7 +424,7 @@ public class ChunkCreator {
         long created = chunkCount.get();
         long reused = reusedChunkCount.sum();
         long total = created + reused;
-        LOG.debug("{} Stats (chunk size={}): current pool size={}, created chunk count={}, " +
+        LOG.debug("{} stats (chunk size={}): current pool size={}, created chunk count={}, " +
                 "reused chunk count={}, reuseRatio={}", label, chunkSize, reclaimedChunks.size(),
             created, reused,
             (total == 0? "0": StringUtils.formatPercent((float)reused/(float)total,2)));
