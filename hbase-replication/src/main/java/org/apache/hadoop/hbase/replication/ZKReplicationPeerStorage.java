@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.apache.hadoop.hbase.replication.ReplicationUtils.PEER_STATE_DISABLED_BYTES;
-import static org.apache.hadoop.hbase.replication.ReplicationUtils.PEER_STATE_ENABLED_BYTES;
-
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +31,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
+
 /**
  * ZK based replication peer storage.
  */
@@ -46,6 +45,11 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
 
   public static final String PEERS_STATE_ZNODE = "zookeeper.znode.replication.peers.state";
   public static final String PEERS_STATE_ZNODE_DEFAULT = "peer-state";
+
+  public static final byte[] ENABLED_ZNODE_BYTES =
+    toByteArray(ReplicationProtos.ReplicationState.State.ENABLED);
+  public static final byte[] DISABLED_ZNODE_BYTES =
+    toByteArray(ReplicationProtos.ReplicationState.State.DISABLED);
 
   /**
    * The name of the znode that contains the replication status of a remote slave (i.e. peer)
@@ -85,7 +89,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
           ZKUtilOp.createAndFailSilent(getPeerNode(peerId),
             ReplicationPeerConfigUtil.toByteArray(peerConfig)),
           ZKUtilOp.createAndFailSilent(getPeerStateNode(peerId),
-            enabled ? PEER_STATE_ENABLED_BYTES : PEER_STATE_DISABLED_BYTES)),
+            enabled ? ENABLED_ZNODE_BYTES : DISABLED_ZNODE_BYTES)),
         false);
     } catch (KeeperException e) {
       throw new ReplicationException("Could not add peer with id=" + peerId + ", peerConfif=>"
@@ -104,7 +108,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
 
   @Override
   public void setPeerState(String peerId, boolean enabled) throws ReplicationException {
-    byte[] stateBytes = enabled ? PEER_STATE_ENABLED_BYTES : PEER_STATE_DISABLED_BYTES;
+    byte[] stateBytes = enabled ? ENABLED_ZNODE_BYTES : DISABLED_ZNODE_BYTES;
     try {
       ZKUtil.setData(zookeeper, getPeerStateNode(peerId), stateBytes);
     } catch (KeeperException e) {
@@ -136,7 +140,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
   @Override
   public boolean isPeerEnabled(String peerId) throws ReplicationException {
     try {
-      return Arrays.equals(PEER_STATE_ENABLED_BYTES,
+      return Arrays.equals(ENABLED_ZNODE_BYTES,
         ZKUtil.getData(zookeeper, getPeerStateNode(peerId)));
     } catch (KeeperException | InterruptedException e) {
       throw new ReplicationException("Unable to get status of the peer with id=" + peerId, e);

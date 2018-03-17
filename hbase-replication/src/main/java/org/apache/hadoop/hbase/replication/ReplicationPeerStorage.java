@@ -42,8 +42,7 @@ public interface ReplicationPeerStorage {
 
   /**
    * Set the state of peer, {@code true} to {@code ENABLED}, otherwise to {@code DISABLED}.
-   * @throws ReplicationException if there are errors accessing the storage service or peer does not
-   *           exist.
+   * @throws ReplicationException if there are errors accessing the storage service.
    */
   void setPeerState(String peerId, boolean enabled) throws ReplicationException;
 

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.apache.hadoop.hbase.replication.ZKReplicationStorageBase.toByteArray;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -32,18 +30,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
-
 /**
  * Helper class for replication.
  */
 @InterfaceAudience.Private
 public final class ReplicationUtils {
-
-  public static final byte[] PEER_STATE_ENABLED_BYTES =
-      toByteArray(ReplicationProtos.ReplicationState.State.ENABLED);
-  public static final byte[] PEER_STATE_DISABLED_BYTES =
-      toByteArray(ReplicationProtos.ReplicationState.State.DISABLED);
 
   private ReplicationUtils() {
   }
@@ -181,9 +172,5 @@ public final class ReplicationUtils {
       }
       return tableCFs != null && tableCFs.containsKey(tableName);
     }
-  }
-
-  public static String parsePeerIdFromQueueId(String queueId) {
-    return new ReplicationQueueInfo(queueId).getPeerId();
   }
 }
