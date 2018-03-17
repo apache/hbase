@@ -235,12 +235,12 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
           break;
         }
         if (task != null) {
-          LOG.debug("Removing: {} from archive", task.filePath);
+          LOG.debug("Removing {}", task.filePath);
           boolean succeed;
           try {
             succeed = this.fs.delete(task.filePath, false);
           } catch (IOException e) {
-            LOG.warn("Failed to delete file {}", task.filePath, e);
+            LOG.warn("Failed to delete {}", task.filePath, e);
             succeed = false;
           }
           task.setResult(succeed);
@@ -250,7 +250,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
         }
       }
     } finally {
-      LOG.debug("Exit thread: {}", Thread.currentThread());
+      LOG.debug("Exit {}", Thread.currentThread());
     }
   }
 

@@ -307,6 +307,7 @@ enum ServerCrashState {
 }
 
 enum RecoverMetaState {
+  RECOVER_META_PREPARE = 0;
   RECOVER_META_SPLIT_LOGS = 1;
   RECOVER_META_ASSIGN_REGIONS = 2;
 }

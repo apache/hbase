@@ -74,7 +74,8 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    */
   private int previousState;
 
-  protected enum Flow {
+  @VisibleForTesting
+  public enum Flow {
     HAS_MORE_STATE,
     NO_MORE_STATE,
   }

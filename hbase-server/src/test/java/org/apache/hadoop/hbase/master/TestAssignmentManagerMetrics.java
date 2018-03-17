@@ -98,6 +98,7 @@ public class TestAssignmentManagerMetrics {
 
   @AfterClass
   public static void after() throws Exception {
+    LOG.info("AFTER {} <= IS THIS NULL?", TEST_UTIL);
     TEST_UTIL.shutdownMiniCluster();
   }
 
