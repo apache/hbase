@@ -79,7 +79,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * </pre>
  */
 @InterfaceAudience.Private
-class ZKReplicationQueueStorage extends ZKReplicationStorageBase
+public class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     implements ReplicationQueueStorage {
 
   private static final Logger LOG = LoggerFactory.getLogger(ZKReplicationQueueStorage.class);
@@ -199,7 +199,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       // Persist the max sequence id(s) of regions for serial replication atomically.
       if (lastSeqIds != null && lastSeqIds.size() > 0) {
         for (Entry<String, Long> lastSeqEntry : lastSeqIds.entrySet()) {
-          String peerId = new ReplicationQueueInfo(queueId).getPeerId();
+          String peerId = ReplicationUtils.parsePeerIdFromQueueId(queueId);
           String path = getSerialReplicationRegionPeerNode(lastSeqEntry.getKey(), peerId);
           /*
            * Make sure the existence of path
@@ -375,7 +375,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
 
   // will be overridden in UTs
   @VisibleForTesting
-  protected int getQueuesZNodeCversion() throws KeeperException {
+  public int getQueuesZNodeCversion() throws KeeperException {
     Stat stat = new Stat();
     ZKUtil.getDataNoWatch(this.zookeeper, this.queuesZNode, stat);
     return stat.getCversion();
