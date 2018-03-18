@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -308,25 +309,25 @@ public abstract class TestReplicationSourceManager {
     for (int i = 0; i < 3; i++) {
       wal.append(hri,
         new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-          edit, true);
+        edit, true);
     }
     wal.sync();
 
     int logNumber = 0;
-    for (Map.Entry<String, SortedSet<String>> entry : manager.getWALs().get(slaveId).entrySet()) {
+    for (Map.Entry<String, NavigableSet<String>> entry : manager.getWALs().get(slaveId)
+      .entrySet()) {
       logNumber += entry.getValue().size();
     }
     assertEquals(6, logNumber);
 
     wal.rollWriter();
 
-    manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
-        "1", 0, null, false);
+    manager.logPositionAndCleanOldLogs("1", false,
+      new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
 
     wal.append(hri,
-        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-        edit,
-        true);
+      new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+      edit, true);
     wal.sync();
 
     assertEquals(1, manager.getWALs().size());
@@ -396,7 +397,7 @@ public abstract class TestReplicationSourceManager {
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
-    manager.cleanOldLogs(file2, id, true);
+    manager.cleanOldLogs(file2, false, id, true);
     // log1 should be deleted
     assertEquals(Sets.newHashSet(file2), manager.getWalsByIdRecoveredQueues().get(id).get(group));
   }

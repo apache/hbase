@@ -63,7 +63,7 @@ public interface ReplicationQueueStorage {
    * @param serverName the name of the regionserver
    * @param queueId a String that identifies the queue
    * @param fileName name of the WAL
-   * @param position the current position in the file
+   * @param position the current position in the file. Will ignore if less than or equal to 0.
    * @param lastSeqIds map with {encodedRegionName, sequenceId} pairs for serial replication.
    */
   void setWALPosition(ServerName serverName, String queueId, String fileName, long position,

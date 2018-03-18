@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -82,26 +83,28 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * operations.</li>
  * <li>Need synchronized on {@link #walsById}. There are four methods which modify it,
  * {@link #addPeer(String)}, {@link #removePeer(String)},
- * {@link #cleanOldLogs(SortedSet, String, String)} and {@link #preLogRoll(Path)}.
+ * {@link #cleanOldLogs(NavigableSet, String, boolean, String)} and {@link #preLogRoll(Path)}.
  * {@link #walsById} is a ConcurrentHashMap and there is a Lock for peer id in
  * {@link PeerProcedureHandlerImpl}. So there is no race between {@link #addPeer(String)} and
- * {@link #removePeer(String)}. {@link #cleanOldLogs(SortedSet, String, String)} is called by
- * {@link ReplicationSourceInterface}. So no race with {@link #addPeer(String)}.
+ * {@link #removePeer(String)}. {@link #cleanOldLogs(NavigableSet, String, boolean, String)} is
+ * called by {@link ReplicationSourceInterface}. So no race with {@link #addPeer(String)}.
  * {@link #removePeer(String)} will terminate the {@link ReplicationSourceInterface} firstly, then
  * remove the wals from {@link #walsById}. So no race with {@link #removePeer(String)}. The only
- * case need synchronized is {@link #cleanOldLogs(SortedSet, String, String)} and
+ * case need synchronized is {@link #cleanOldLogs(NavigableSet, String, boolean, String)} and
  * {@link #preLogRoll(Path)}.</li>
  * <li>No need synchronized on {@link #walsByIdRecoveredQueues}. There are three methods which
- * modify it, {@link #removePeer(String)} , {@link #cleanOldLogs(SortedSet, String, String)} and
+ * modify it, {@link #removePeer(String)} ,
+ * {@link #cleanOldLogs(NavigableSet, String, boolean, String)} and
  * {@link ReplicationSourceManager.NodeFailoverWorker#run()}.
- * {@link #cleanOldLogs(SortedSet, String, String)} is called by {@link ReplicationSourceInterface}.
- * {@link #removePeer(String)} will terminate the {@link ReplicationSourceInterface} firstly, then
- * remove the wals from {@link #walsByIdRecoveredQueues}. And
- * {@link ReplicationSourceManager.NodeFailoverWorker#run()} will add the wals to
- * {@link #walsByIdRecoveredQueues} firstly, then start up a {@link ReplicationSourceInterface}. So
- * there is no race here. For {@link ReplicationSourceManager.NodeFailoverWorker#run()} and
- * {@link #removePeer(String)}, there is already synchronized on {@link #oldsources}. So no need
- * synchronized on {@link #walsByIdRecoveredQueues}.</li>
+ * {@link #cleanOldLogs(NavigableSet, String, boolean, String)} is called by
+ * {@link ReplicationSourceInterface}. {@link #removePeer(String)} will terminate the
+ * {@link ReplicationSourceInterface} firstly, then remove the wals from
+ * {@link #walsByIdRecoveredQueues}. And {@link ReplicationSourceManager.NodeFailoverWorker#run()}
+ * will add the wals to {@link #walsByIdRecoveredQueues} firstly, then start up a
+ * {@link ReplicationSourceInterface}. So there is no race here. For
+ * {@link ReplicationSourceManager.NodeFailoverWorker#run()} and {@link #removePeer(String)}, there
+ * is already synchronized on {@link #oldsources}. So no need synchronized on
+ * {@link #walsByIdRecoveredQueues}.</li>
  * <li>Need synchronized on {@link #latestPaths} to avoid the new open source miss new log.</li>
  * <li>Need synchronized on {@link #oldsources} to avoid adding recovered source for the
  * to-be-removed peer.</li>
@@ -125,11 +128,11 @@ public class ReplicationSourceManager implements ReplicationListener {
   // All logs we are currently tracking
   // Index structure of the map is: queue_id->logPrefix/logGroup->logs
   // For normal replication source, the peer id is same with the queue id
-  private final ConcurrentMap<String, Map<String, SortedSet<String>>> walsById;
+  private final ConcurrentMap<String, Map<String, NavigableSet<String>>> walsById;
   // Logs for recovered sources we are currently tracking
   // the map is: queue_id->logPrefix/logGroup->logs
   // For recovered source, the queue id's format is peer_id-servername-*
-  private final ConcurrentMap<String, Map<String, SortedSet<String>>> walsByIdRecoveredQueues;
+  private final ConcurrentMap<String, Map<String, NavigableSet<String>>> walsByIdRecoveredQueues;
 
   private final Configuration conf;
   private final FileSystem fs;
@@ -336,14 +339,14 @@ public class ReplicationSourceManager implements ReplicationListener {
     // synchronized on latestPaths to avoid missing the new log
     synchronized (this.latestPaths) {
       this.sources.put(peerId, src);
-      Map<String, SortedSet<String>> walsByGroup = new HashMap<>();
+      Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
       this.walsById.put(peerId, walsByGroup);
       // Add the latest wal to that source's queue
       if (this.latestPaths.size() > 0) {
         for (Path logPath : latestPaths) {
           String name = logPath.getName();
           String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(name);
-          SortedSet<String> logs = new TreeSet<>();
+          NavigableSet<String> logs = new TreeSet<>();
           logs.add(name);
           walsByGroup.put(walPrefix, logs);
           // Abort RS and throw exception to make add peer failed
@@ -475,50 +478,51 @@ public class ReplicationSourceManager implements ReplicationListener {
   /**
    * This method will log the current position to storage. And also clean old logs from the
    * replication queue.
-   * @param log Path to the log currently being replicated
    * @param queueId id of the replication queue
-   * @param position current location in the log
    * @param queueRecovered indicates if this queue comes from another region server
+   * @param entryBatch the wal entry batch we just shipped
    */
-  public void logPositionAndCleanOldLogs(Path log, String queueId, long position,
-      Map<String, Long> lastSeqIds, boolean queueRecovered) {
-    String fileName = log.getName();
+  public void logPositionAndCleanOldLogs(String queueId, boolean queueRecovered,
+      WALEntryBatch entryBatch) {
+    String fileName = entryBatch.getLastWalPath().getName();
     abortWhenFail(() -> this.queueStorage.setWALPosition(server.getServerName(), queueId, fileName,
-      position, lastSeqIds));
-    cleanOldLogs(fileName, queueId, queueRecovered);
+      entryBatch.getLastWalPosition(), entryBatch.getLastSeqIds()));
+    cleanOldLogs(fileName, entryBatch.isEndOfFile(), queueId, queueRecovered);
   }
 
   /**
    * Cleans a log file and all older logs from replication queue. Called when we are sure that a log
    * file is closed and has no more entries.
    * @param log Path to the log
+   * @param inclusive whether we should also remove the given log file
    * @param queueId id of the replication queue
    * @param queueRecovered Whether this is a recovered queue
    */
   @VisibleForTesting
-  void cleanOldLogs(String log, String queueId, boolean queueRecovered) {
+  void cleanOldLogs(String log, boolean inclusive, String queueId, boolean queueRecovered) {
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log);
     if (queueRecovered) {
-      SortedSet<String> wals = walsByIdRecoveredQueues.get(queueId).get(logPrefix);
-      if (wals != null && !wals.first().equals(log)) {
-        cleanOldLogs(wals, log, queueId);
+      NavigableSet<String> wals = walsByIdRecoveredQueues.get(queueId).get(logPrefix);
+      if (wals != null) {
+        cleanOldLogs(wals, log, inclusive, queueId);
       }
     } else {
       // synchronized on walsById to avoid race with preLogRoll
       synchronized (this.walsById) {
-        SortedSet<String> wals = walsById.get(queueId).get(logPrefix);
+        NavigableSet<String> wals = walsById.get(queueId).get(logPrefix);
         if (wals != null && !wals.first().equals(log)) {
-          cleanOldLogs(wals, log, queueId);
+          cleanOldLogs(wals, log, inclusive, queueId);
         }
       }
     }
   }
 
-  private void cleanOldLogs(SortedSet<String> wals, String key, String id) {
-    SortedSet<String> walSet = wals.headSet(key);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing " + walSet.size() + " logs in the list: " + walSet);
+  private void cleanOldLogs(NavigableSet<String> wals, String key, boolean inclusive, String id) {
+    NavigableSet<String> walSet = wals.headSet(key, inclusive);
+    if (walSet.isEmpty()) {
+      return;
     }
+    LOG.debug("Removing {} logs in the list: {}", walSet.size(), walSet);
     for (String wal : walSet) {
       abortWhenFail(() -> this.queueStorage.removeWAL(server.getServerName(), id, wal));
     }
@@ -543,11 +547,12 @@ public class ReplicationSourceManager implements ReplicationListener {
       // synchronized on walsById to avoid race with cleanOldLogs
       synchronized (this.walsById) {
         // Update walsById map
-        for (Map.Entry<String, Map<String, SortedSet<String>>> entry : this.walsById.entrySet()) {
+        for (Map.Entry<String, Map<String, NavigableSet<String>>> entry : this.walsById
+          .entrySet()) {
           String peerId = entry.getKey();
-          Map<String, SortedSet<String>> walsByPrefix = entry.getValue();
+          Map<String, NavigableSet<String>> walsByPrefix = entry.getValue();
           boolean existingPrefix = false;
-          for (Map.Entry<String, SortedSet<String>> walsEntry : walsByPrefix.entrySet()) {
+          for (Map.Entry<String, NavigableSet<String>> walsEntry : walsByPrefix.entrySet()) {
             SortedSet<String> wals = walsEntry.getValue();
             if (this.sources.isEmpty()) {
               // If there's no slaves, don't need to keep the old wals since
@@ -561,8 +566,8 @@ public class ReplicationSourceManager implements ReplicationListener {
           }
           if (!existingPrefix) {
             // The new log belongs to a new group, add it into this peer
-            LOG.debug("Start tracking logs for wal group " + logPrefix + " for peer " + peerId);
-            SortedSet<String> wals = new TreeSet<>();
+            LOG.debug("Start tracking logs for wal group {} for peer {}", logPrefix, peerId);
+            NavigableSet<String> wals = new TreeSet<>();
             wals.add(logName);
             walsByPrefix.put(logPrefix, wals);
           }
@@ -701,11 +706,11 @@ public class ReplicationSourceManager implements ReplicationListener {
             continue;
           }
           // track sources in walsByIdRecoveredQueues
-          Map<String, SortedSet<String>> walsByGroup = new HashMap<>();
+          Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
           walsByIdRecoveredQueues.put(queueId, walsByGroup);
           for (String wal : walsSet) {
             String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
-            SortedSet<String> wals = walsByGroup.get(walPrefix);
+            NavigableSet<String> wals = walsByGroup.get(walPrefix);
             if (wals == null) {
               wals = new TreeSet<>();
               walsByGroup.put(walPrefix, wals);
@@ -750,7 +755,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return a sorted set of wal names
    */
   @VisibleForTesting
-  Map<String, Map<String, SortedSet<String>>> getWALs() {
+  Map<String, Map<String, NavigableSet<String>>> getWALs() {
     return Collections.unmodifiableMap(walsById);
   }
 
@@ -759,7 +764,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return a sorted set of wal names
    */
   @VisibleForTesting
-  Map<String, Map<String, SortedSet<String>>> getWalsByIdRecoveredQueues() {
+  Map<String, Map<String, NavigableSet<String>>> getWalsByIdRecoveredQueues() {
     return Collections.unmodifiableMap(walsByIdRecoveredQueues);
   }
 

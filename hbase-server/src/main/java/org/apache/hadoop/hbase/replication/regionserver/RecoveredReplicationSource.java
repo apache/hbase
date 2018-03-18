@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -62,38 +61,6 @@ public class RecoveredReplicationSource extends ReplicationSource {
   protected RecoveredReplicationSourceShipper createNewShipper(String walGroupId,
       PriorityBlockingQueue<Path> queue) {
     return new RecoveredReplicationSourceShipper(conf, walGroupId, queue, this, queueStorage);
-  }
-
-  private void handleEmptyWALEntryBatch0(ReplicationSourceWALReader reader,
-      BlockingQueue<WALEntryBatch> entryBatchQueue, Path currentPath) throws InterruptedException {
-    LOG.trace("Didn't read any new entries from WAL");
-    // we're done with queue recovery, shut ourself down
-    reader.setReaderRunning(false);
-    // shuts down shipper thread immediately
-    entryBatchQueue.put(new WALEntryBatch(0, currentPath));
-  }
-
-  @Override
-  protected ReplicationSourceWALReader createNewWALReader(String walGroupId,
-      PriorityBlockingQueue<Path> queue, long startPosition) {
-    if (replicationPeer.getPeerConfig().isSerial()) {
-      return new SerialReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter,
-        this) {
-
-        @Override
-        protected void handleEmptyWALEntryBatch(Path currentPath) throws InterruptedException {
-          handleEmptyWALEntryBatch0(this, entryBatchQueue, currentPath);
-        }
-      };
-    } else {
-      return new ReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this) {
-
-        @Override
-        protected void handleEmptyWALEntryBatch(Path currentPath) throws InterruptedException {
-          handleEmptyWALEntryBatch0(this, entryBatchQueue, currentPath);
-        }
-      };
-    }
   }
 
   public void locateRecoveredPaths(PriorityBlockingQueue<Path> queue) throws IOException {

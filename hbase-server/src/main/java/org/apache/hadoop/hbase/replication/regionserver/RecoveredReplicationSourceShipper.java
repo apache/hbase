@@ -48,13 +48,10 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   }
 
   @Override
-  protected void postShipEdits(WALEntryBatch entryBatch) {
-    if (entryBatch.getWalEntries().isEmpty()) {
-      LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
-          + source.getQueueId());
-      source.getSourceMetrics().incrCompletedRecoveryQueue();
-      setWorkerState(WorkerState.FINISHED);
-    }
+  protected void noMoreData() {
+    LOG.debug("Finished recovering queue for group {} of peer {}", walGroupId, source.getQueueId());
+    source.getSourceMetrics().incrCompletedRecoveryQueue();
+    setWorkerState(WorkerState.FINISHED);
   }
 
   @Override
@@ -63,7 +60,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   }
 
   @Override
-  public long getStartPosition() {
+  long getStartPosition() {
     long startPosition = getRecoveredQueueStartPos();
     int numRetries = 0;
     while (numRetries <= maxRetriesMultiplier) {

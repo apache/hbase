@@ -59,7 +59,7 @@ class ReplicationSourceWALReader extends Thread {
   private final WALEntryFilter filter;
   private final ReplicationSource source;
 
-  protected final BlockingQueue<WALEntryBatch> entryBatchQueue;
+  private final BlockingQueue<WALEntryBatch> entryBatchQueue;
   // max (heap) size of each batch - multiply by number of batches in queue to get total
   private final long replicationBatchSizeCapacity;
   // max count of each batch - multiply by number of batches in queue to get total
@@ -130,6 +130,7 @@ class ReplicationSourceWALReader extends Thread {
             continue;
           }
           WALEntryBatch batch = readWALEntries(entryStream);
+          currentPosition = entryStream.getPosition();
           if (batch != null) {
             // need to propagate the batch even it has no entries since it may carry the last
             // sequence id information for serial replication.
@@ -138,9 +139,8 @@ class ReplicationSourceWALReader extends Thread {
             sleepMultiplier = 1;
           } else { // got no entries and didn't advance position in WAL
             handleEmptyWALEntryBatch(entryStream.getCurrentPath());
+            entryStream.reset(); // reuse stream
           }
-          currentPosition = entryStream.getPosition();
-          entryStream.reset(); // reuse stream
         }
       } catch (IOException e) { // stream related
         if (sleepMultiplier < maxRetriesMultiplier) {
@@ -173,13 +173,31 @@ class ReplicationSourceWALReader extends Thread {
       batch.getNbEntries() >= replicationBatchCountCapacity;
   }
 
+  protected static final boolean switched(WALEntryStream entryStream, Path path) {
+    return !path.equals(entryStream.getCurrentPath());
+  }
+
   protected WALEntryBatch readWALEntries(WALEntryStream entryStream)
       throws IOException, InterruptedException {
+    Path currentPath = entryStream.getCurrentPath();
     if (!entryStream.hasNext()) {
-      return null;
+      // check whether we have switched a file
+      if (currentPath != null && switched(entryStream, currentPath)) {
+        return WALEntryBatch.endOfFile(currentPath);
+      } else {
+        return null;
+      }
+    }
+    if (currentPath != null) {
+      if (switched(entryStream, currentPath)) {
+        return WALEntryBatch.endOfFile(currentPath);
+      }
+    } else {
+      // when reading from the entry stream first time we will enter here
+      currentPath = entryStream.getCurrentPath();
     }
     WALEntryBatch batch = createBatch(entryStream);
-    do {
+    for (;;) {
       Entry entry = entryStream.next();
       batch.setLastWalPosition(entryStream.getPosition());
       entry = filterEntry(entry);
@@ -188,13 +206,29 @@ class ReplicationSourceWALReader extends Thread {
           break;
         }
       }
-    } while (entryStream.hasNext());
+      boolean hasNext = entryStream.hasNext();
+      // always return if we have switched to a new file
+      if (switched(entryStream, currentPath)) {
+        batch.setEndOfFile(true);
+        break;
+      }
+      if (!hasNext) {
+        break;
+      }
+    }
     return batch;
   }
 
-  protected void handleEmptyWALEntryBatch(Path currentPath) throws InterruptedException {
+  private void handleEmptyWALEntryBatch(Path currentPath) throws InterruptedException {
     LOG.trace("Didn't read any new entries from WAL");
-    Thread.sleep(sleepForRetries);
+    if (source.isRecovered()) {
+      // we're done with queue recovery, shut ourself down
+      setReaderRunning(false);
+      // shuts down shipper thread immediately
+      entryBatchQueue.put(WALEntryBatch.NO_MORE_DATA);
+    } else {
+      Thread.sleep(sleepForRetries);
+    }
   }
 
   // if we get an EOF due to a zero-length log, and there are other logs in queue

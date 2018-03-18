@@ -155,7 +155,6 @@ class WALEntryStream implements Closeable {
   /**
    * Should be called if the stream is to be reused (i.e. used again after hasNext() has returned
    * false)
-   * @throws IOException
    */
   public void reset() throws IOException {
     if (reader != null && currentPath != null) {
@@ -304,6 +303,9 @@ class WALEntryStream implements Closeable {
       if (reader != null) {
         return true;
       }
+    } else {
+      // no more files in queue, this could only happen for recovered queue.
+      setCurrentPath(null);
     }
     return false;
   }
@@ -394,6 +396,7 @@ class WALEntryStream implements Closeable {
 
   private void resetReader() throws IOException {
     try {
+      currentEntry = null;
       reader.reset();
       seek();
     } catch (FileNotFoundException fnfe) {
