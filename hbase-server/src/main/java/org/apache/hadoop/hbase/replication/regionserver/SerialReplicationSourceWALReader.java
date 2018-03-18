@@ -53,12 +53,26 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   @Override
   protected WALEntryBatch readWALEntries(WALEntryStream entryStream)
       throws IOException, InterruptedException {
+    Path currentPath = entryStream.getCurrentPath();
     if (!entryStream.hasNext()) {
-      return null;
+      // check whether we have switched a file
+      if (currentPath != null && switched(entryStream, currentPath)) {
+        return WALEntryBatch.endOfFile(currentPath);
+      } else {
+        return null;
+      }
+    }
+    if (currentPath != null) {
+      if (switched(entryStream, currentPath)) {
+        return WALEntryBatch.endOfFile(currentPath);
+      }
+    } else {
+      // when reading from the entry stream first time we will enter here
+      currentPath = entryStream.getCurrentPath();
     }
     long positionBefore = entryStream.getPosition();
     WALEntryBatch batch = createBatch(entryStream);
-    do {
+    for (;;) {
       Entry entry = entryStream.peek();
       boolean doFiltering = true;
       if (firstCellInEntryBeforeFiltering == null) {
@@ -99,7 +113,16 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
         // actually remove the entry.
         removeEntryFromStream(entryStream, batch);
       }
-    } while (entryStream.hasNext());
+      boolean hasNext = entryStream.hasNext();
+      // always return if we have switched to a new file.
+      if (switched(entryStream, currentPath)) {
+        batch.setEndOfFile(true);
+        break;
+      }
+      if (!hasNext) {
+        break;
+      }
+    }
     return batch;
   }
 

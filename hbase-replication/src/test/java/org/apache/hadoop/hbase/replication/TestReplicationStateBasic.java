@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
@@ -127,7 +128,7 @@ public abstract class TestReplicationStateBasic {
     assertEquals(0, rqs.getWALsInQueue(server2, "qId1").size());
     assertEquals(5, rqs.getWALsInQueue(server3, "qId5").size());
     assertEquals(0, rqs.getWALPosition(server3, "qId1", "filename0"));
-    rqs.setWALPosition(server3, "qId5", "filename4", 354L, null);
+    rqs.setWALPosition(server3, "qId5", "filename4", 354L, Collections.emptyMap());
     assertEquals(354L, rqs.getWALPosition(server3, "qId5", "filename4"));
 
     assertEquals(5, rqs.getWALsInQueue(server3, "qId5").size());

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -52,17 +51,18 @@ public class ReplicationSourceShipper extends Thread {
     FINISHED,  // The worker is done processing a recovered queue
   }
 
-  protected final Configuration conf;
+  private final Configuration conf;
   protected final String walGroupId;
   protected final PriorityBlockingQueue<Path> queue;
-  protected final ReplicationSourceInterface source;
+  private final ReplicationSourceInterface source;
 
   // Last position in the log that we sent to ZooKeeper
-  protected long lastLoggedPosition = -1;
+  // It will be accessed by the stats thread so make it volatile
+  private volatile long currentPosition = -1;
   // Path of the current log
-  protected volatile Path currentPath;
+  private Path currentPath;
   // Current state of the worker thread
-  private WorkerState state;
+  private volatile WorkerState state;
   protected ReplicationSourceWALReader entryReader;
 
   // How long should we sleep for each retry
@@ -97,8 +97,12 @@ public class ReplicationSourceShipper extends Thread {
       }
       try {
         WALEntryBatch entryBatch = entryReader.take();
-        shipEdits(entryBatch);
-        postShipEdits(entryBatch);
+        // the NO_MORE_DATA instance has no path so do not all shipEdits
+        if (entryBatch == WALEntryBatch.NO_MORE_DATA) {
+          noMoreData();
+        } else {
+          shipEdits(entryBatch);
+        }
       } catch (InterruptedException e) {
         LOG.trace("Interrupted while waiting for next replication entry batch", e);
         Thread.currentThread().interrupt();
@@ -113,7 +117,7 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   // To be implemented by recovered shipper
-  protected void postShipEdits(WALEntryBatch entryBatch) {
+  protected void noMoreData() {
   }
 
   // To be implemented by recovered shipper
@@ -123,14 +127,11 @@ public class ReplicationSourceShipper extends Thread {
   /**
    * Do the shipping logic
    */
-  protected final void shipEdits(WALEntryBatch entryBatch) {
+  private void shipEdits(WALEntryBatch entryBatch) {
     List<Entry> entries = entryBatch.getWalEntries();
-    long lastReadPosition = entryBatch.getLastWalPosition();
-    currentPath = entryBatch.getLastWalPath();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
-      if (lastLoggedPosition != lastReadPosition) {
-        updateLogPosition(lastReadPosition, entryBatch.getLastSeqIds());
+      if (updateLogPosition(entryBatch)) {
         // if there was nothing to ship and it's not an error
         // set "ageOfLastShippedOp" to <now> to indicate that we're current
         source.getSourceMetrics().setAgeOfLastShippedOp(EnvironmentEdgeManager.currentTime(),
@@ -168,16 +169,12 @@ public class ReplicationSourceShipper extends Thread {
         } else {
           sleepMultiplier = Math.max(sleepMultiplier - 1, 0);
         }
-
-        if (this.lastLoggedPosition != lastReadPosition) {
-          // Clean up hfile references
-          int size = entries.size();
-          for (int i = 0; i < size; i++) {
-            cleanUpHFileRefs(entries.get(i).getEdit());
-          }
-          // Log and clean up WAL logs
-          updateLogPosition(lastReadPosition, entryBatch.getLastSeqIds());
+        // Clean up hfile references
+        for (Entry entry : entries) {
+          cleanUpHFileRefs(entry.getEdit());
         }
+        // Log and clean up WAL logs
+        updateLogPosition(entryBatch);
 
         source.postShipEdits(entries, currentSize);
         // FIXME check relationship between wal group and overall
@@ -224,10 +221,29 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  private void updateLogPosition(long lastReadPosition, Map<String, Long> lastSeqIds) {
-    source.getSourceManager().logPositionAndCleanOldLogs(currentPath, source.getQueueId(),
-      lastReadPosition, lastSeqIds, source.isRecovered());
-    lastLoggedPosition = lastReadPosition;
+  private boolean updateLogPosition(WALEntryBatch batch) {
+    boolean updated = false;
+    // if end of file is true, then the logPositionAndCleanOldLogs method will remove the file
+    // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
+    // there is no entry in the batch. It is OK because that the queue storage will ignore the zero
+    // position and the file will be removed soon in cleanOldLogs.
+    if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath) ||
+      batch.getLastWalPosition() != currentPosition) {
+      source.getSourceManager().logPositionAndCleanOldLogs(source.getQueueId(),
+        source.isRecovered(), batch);
+      updated = true;
+    }
+    // if end of file is true, then we can just skip to the next file in queue.
+    // the only exception is for recovered queue, if we reach the end of the queue, then there will
+    // no more files so here the currentPath may be null.
+    if (batch.isEndOfFile()) {
+      currentPath = entryReader.getCurrentPath();
+      currentPosition = 0L;
+    } else {
+      currentPath = batch.getLastWalPath();
+      currentPosition = batch.getLastWalPosition();
+    }
+    return updated;
   }
 
   public void startup(UncaughtExceptionHandler handler) {
@@ -236,39 +252,31 @@ public class ReplicationSourceShipper extends Thread {
       name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(), handler);
   }
 
-  public PriorityBlockingQueue<Path> getLogQueue() {
-    return this.queue;
+  Path getCurrentPath() {
+    return entryReader.getCurrentPath();
   }
 
-  public Path getCurrentPath() {
-    return this.entryReader.getCurrentPath();
+  long getCurrentPosition() {
+    return currentPosition;
   }
 
-  public long getCurrentPosition() {
-    return this.lastLoggedPosition;
-  }
-
-  public void setWALReader(ReplicationSourceWALReader entryReader) {
+  void setWALReader(ReplicationSourceWALReader entryReader) {
     this.entryReader = entryReader;
   }
 
-  public long getStartPosition() {
+  long getStartPosition() {
     return 0;
   }
 
-  protected final boolean isActive() {
+  private boolean isActive() {
     return source.isSourceActive() && state == WorkerState.RUNNING && !isInterrupted();
   }
 
-  public void setWorkerState(WorkerState state) {
+  protected final void setWorkerState(WorkerState state) {
     this.state = state;
   }
 
-  public WorkerState getWorkerState() {
-    return state;
-  }
-
-  public void stopWorker() {
+  void stopWorker() {
     setWorkerState(WorkerState.STOPPED);
   }
 

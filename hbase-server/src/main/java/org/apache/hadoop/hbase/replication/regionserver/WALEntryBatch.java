@@ -30,6 +30,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 class WALEntryBatch {
+
+  // used by recovered replication queue to indicate that all the entries have been read.
+  public static final WALEntryBatch NO_MORE_DATA = new WALEntryBatch(0, null);
+
   private List<Entry> walEntries;
   // last WAL that was read
   private Path lastWalPath;
@@ -43,6 +47,8 @@ class WALEntryBatch {
   private long heapSize = 0;
   // save the last sequenceid for each region if the table has serial-replication scope
   private Map<String, Long> lastSeqIds = new HashMap<>();
+  // indicate that this is the end of the current file
+  private boolean endOfFile;
 
   /**
    * @param lastWalPath Path of the WAL the last entry in this batch was read from
@@ -50,6 +56,14 @@ class WALEntryBatch {
   WALEntryBatch(int maxNbEntries, Path lastWalPath) {
     this.walEntries = new ArrayList<>(maxNbEntries);
     this.lastWalPath = lastWalPath;
+  }
+
+
+  static WALEntryBatch endOfFile(Path lastWalPath) {
+    WALEntryBatch batch = new WALEntryBatch(0, lastWalPath);
+    batch.setLastWalPosition(-1L);
+    batch.setEndOfFile(true);
+    return batch;
   }
 
   public void addEntry(Entry entry) {
@@ -118,6 +132,14 @@ class WALEntryBatch {
    */
   public Map<String, Long> getLastSeqIds() {
     return lastSeqIds;
+  }
+
+  public boolean isEndOfFile() {
+    return endOfFile;
+  }
+
+  public void setEndOfFile(boolean endOfFile) {
+    this.endOfFile = endOfFile;
   }
 
   public void incrementNbRowKeys(int increment) {

@@ -315,7 +315,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return new ReplicationSourceShipper(conf, walGroupId, queue, this);
   }
 
-  protected ReplicationSourceWALReader createNewWALReader(String walGroupId,
+  private ReplicationSourceWALReader createNewWALReader(String walGroupId,
       PriorityBlockingQueue<Path> queue, long startPosition) {
     return replicationPeer.getPeerConfig().isSerial()
       ? new SerialReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this)
