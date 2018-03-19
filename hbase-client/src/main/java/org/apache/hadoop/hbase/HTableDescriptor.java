@@ -21,16 +21,15 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptor;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -38,8 +37,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDesc
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
@@ -760,16 +758,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   @Override
   public Collection<CoprocessorDescriptor> getCoprocessorDescriptors() {
     return delegatee.getCoprocessorDescriptors();
-  }
-
-  /**
-   * Return the list of attached co-processor represented by their name className
-   *
-   * @return The list of co-processors classNames
-   */
-  public List<String> getCoprocessors() {
-    return getCoprocessorDescriptors().stream().map(CoprocessorDescriptor::getClassName)
-      .collect(Collectors.toList());
   }
 
   /**

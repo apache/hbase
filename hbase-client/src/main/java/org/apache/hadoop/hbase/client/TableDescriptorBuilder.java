@@ -35,6 +35,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -232,7 +233,7 @@ public class TableDescriptorBuilder {
   private static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
     "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
       CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
-  public static final Pattern CP_HTD_ATTR_KEY_PATTERN =
+  private static final Pattern CP_HTD_ATTR_KEY_PATTERN =
     Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
   /**
    * Table descriptor for namespace table
@@ -300,6 +301,51 @@ public class TableDescriptorBuilder {
 
   private TableDescriptorBuilder(final TableDescriptor desc) {
     this.desc = new ModifyableTableDescriptor(desc);
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *                       Use {@link #setCoprocessor(String)} instead
+   */
+  @Deprecated
+  public TableDescriptorBuilder addCoprocessor(String className) throws IOException {
+    return addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *                       Use {@link #setCoprocessor(CoprocessorDescriptor)} instead
+   */
+  @Deprecated
+  public TableDescriptorBuilder addCoprocessor(String className, Path jarFilePath,
+    int priority, final Map<String, String> kvs) throws IOException {
+    desc.setCoprocessor(
+      CoprocessorDescriptorBuilder.newBuilder(className)
+        .setJarPath(jarFilePath == null ? null : jarFilePath.toString())
+        .setPriority(priority)
+        .setProperties(kvs == null ? Collections.emptyMap() : kvs)
+        .build());
+    return this;
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *                       Use {@link #setCoprocessor(CoprocessorDescriptor)} instead
+   */
+  @Deprecated
+  public TableDescriptorBuilder addCoprocessorWithSpec(final String specStr) throws IOException {
+    desc.setCoprocessorWithSpec(specStr);
+    return this;
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *                       Use {@link #setColumnFamily(ColumnFamilyDescriptor)} instead
+   */
+  @Deprecated
+  public TableDescriptorBuilder addColumnFamily(final ColumnFamilyDescriptor family) {
+    desc.setColumnFamily(family);
+    return this;
   }
 
   public TableDescriptorBuilder setCoprocessor(String className) throws IOException {

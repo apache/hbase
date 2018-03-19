@@ -24,7 +24,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -85,6 +85,20 @@ public interface TableDescriptor {
    * @return The list of CoprocessorDescriptor
    */
   Collection<CoprocessorDescriptor> getCoprocessorDescriptors();
+
+  /**
+   * Return the list of attached co-processor represented by their name
+   * className
+   * @return The list of co-processors classNames
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *                       Use {@link #getCoprocessorDescriptors()} instead
+   */
+  @Deprecated
+  default Collection<String> getCoprocessors() {
+    return getCoprocessorDescriptors().stream()
+      .map(CoprocessorDescriptor::getClassName)
+      .collect(Collectors.toList());
+  }
 
   /**
    * Returns the durability setting for the table.
