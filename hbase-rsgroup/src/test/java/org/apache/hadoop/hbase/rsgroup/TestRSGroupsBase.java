@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -208,7 +209,7 @@ public abstract class TestRSGroupsBase {
     try {
       rsGroupAdmin.moveTables(Sets.newHashSet(TableName.valueOf("bogustable")), "bogus");
       fail("Expected move with bogus group to fail");
-    } catch(ConstraintException ex) {
+    } catch(ConstraintException|TableNotFoundException ex) {
       //expected
     }
 
@@ -759,6 +760,37 @@ public abstract class TestRSGroupsBase {
     //verify group change
     Assert.assertEquals(newGroup.getName(),
         rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
+  }
+
+  @Test
+  public void testNonExistentTableMove() throws Exception {
+    TableName tableName = TableName.valueOf(tablePrefix + name.getMethodName());
+
+    RSGroupInfo tableGrp = rsGroupAdmin.getRSGroupInfoOfTable(tableName);
+    assertNull(tableGrp);
+
+    //test if table exists already.
+    boolean exist = admin.tableExists(tableName);
+    assertFalse(exist);
+
+    LOG.info("Moving table "+ tableName + " to " + RSGroupInfo.DEFAULT_GROUP);
+    try {
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+      fail("Table " + tableName + " shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      assertTrue(ex instanceof TableNotFoundException);
+    }
+
+    try {
+      rsGroupAdmin.moveServersAndTables(
+          Sets.newHashSet(Address.fromParts("bogus",123)),
+          Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+      fail("Table " + tableName + " shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      assertTrue(ex instanceof TableNotFoundException);
+    }
+    //verify group change
+    assertNull(rsGroupAdmin.getRSGroupInfoOfTable(tableName));
   }
 
   @Test

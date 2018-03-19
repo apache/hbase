@@ -112,6 +112,8 @@ module Shell
         handle_exceptions(cause, *args) if respond_to?(:handle_exceptions)
         # Global HBase exception handling below if not handled by respective command above
         if cause.is_a?(org.apache.hadoop.hbase.TableNotFoundException)
+          strs = cause.to_s.split(' ')
+          raise "Unknown table #{strs[0]}!" if strs.size == 1
           raise "Unknown table #{args.first}!"
         end
         if cause.is_a?(org.apache.hadoop.hbase.UnknownRegionException)
