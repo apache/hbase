@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -155,7 +156,7 @@ class MemStoreFlusher implements FlushRequester {
    * @return true if successful
    */
   private boolean flushOneForGlobalPressure() {
-    SortedMap<Long, HRegion> regionsBySize = null;
+    SortedMap<Long, Collection<HRegion>> regionsBySize = null;
     switch(flushType) {
       case ABOVE_OFFHEAP_HIGHER_MARK:
       case ABOVE_OFFHEAP_LOWER_MARK:
@@ -387,41 +388,45 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   private HRegion getBiggestMemStoreRegion(
-      SortedMap<Long, HRegion> regionsBySize,
+      SortedMap<Long, Collection<HRegion>> regionsBySize,
       Set<HRegion> excludedRegions,
       boolean checkStoreFileCount) {
     synchronized (regionsInQueue) {
-      for (HRegion region : regionsBySize.values()) {
-        if (excludedRegions.contains(region)) {
-          continue;
-        }
+      for (Map.Entry<Long, Collection<HRegion>> entry : regionsBySize.entrySet()) {
+        for (HRegion region : entry.getValue()) {
+          if (excludedRegions.contains(region)) {
+            continue;
+          }
 
-        if (region.writestate.flushing || !region.writestate.writesEnabled) {
-          continue;
-        }
+          if (region.writestate.flushing || !region.writestate.writesEnabled) {
+            continue;
+          }
 
-        if (checkStoreFileCount && isTooManyStoreFiles(region)) {
-          continue;
+          if (checkStoreFileCount && isTooManyStoreFiles(region)) {
+            continue;
+          }
+          return region;
         }
-        return region;
       }
     }
     return null;
   }
 
-  private HRegion getBiggestMemStoreOfRegionReplica(SortedMap<Long, HRegion> regionsBySize,
+  private HRegion getBiggestMemStoreOfRegionReplica(
+      SortedMap<Long, Collection<HRegion>> regionsBySize,
       Set<HRegion> excludedRegions) {
     synchronized (regionsInQueue) {
-      for (HRegion region : regionsBySize.values()) {
-        if (excludedRegions.contains(region)) {
-          continue;
-        }
+      for (Map.Entry<Long, Collection<HRegion>> entry : regionsBySize.entrySet()) {
+        for (HRegion region : entry.getValue()) {
+          if (excludedRegions.contains(region)) {
+            continue;
+          }
 
-        if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
-          continue;
+          if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
+            continue;
+          }
+          return region;
         }
-
-        return region;
       }
     }
     return null;

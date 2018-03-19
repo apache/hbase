@@ -2759,14 +2759,20 @@ public class HRegionServer extends HasThread implements
     configurationManager.registerObserver(region);
   }
 
+  private void addRegion(SortedMap<Long, Collection<HRegion>> sortedRegions, HRegion region,
+      long size) {
+    if (!sortedRegions.containsKey(size)) {
+      sortedRegions.put(size, new ArrayList<>());
+    }
+    sortedRegions.get(size).add(region);
+  }
   /**
    * @return A new Map of online regions sorted by region off-heap size with the first entry being
-   *   the biggest.  If two regions are the same size, then the last one found wins; i.e. this
-   *   method may NOT return all regions.
+   *   the biggest.
    */
-  SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedByOffHeapSize() {
+  SortedMap<Long, Collection<HRegion>> getCopyOfOnlineRegionsSortedByOffHeapSize() {
     // we'll sort the regions in reverse
-    SortedMap<Long, HRegion> sortedRegions = new TreeMap<>(
+    SortedMap<Long, Collection<HRegion>> sortedRegions = new TreeMap<>(
         new Comparator<Long>() {
           @Override
           public int compare(Long a, Long b) {
@@ -2775,19 +2781,18 @@ public class HRegionServer extends HasThread implements
         });
     // Copy over all regions. Regions are sorted by size with biggest first.
     for (HRegion region : this.onlineRegions.values()) {
-      sortedRegions.put(region.getMemStoreOffHeapSize(), region);
+      addRegion(sortedRegions, region, region.getMemStoreOffHeapSize());
     }
     return sortedRegions;
   }
 
   /**
    * @return A new Map of online regions sorted by region heap size with the first entry being the
-   *   biggest.  If two regions are the same size, then the last one found wins; i.e. this method
-   *   may NOT return all regions.
+   *   biggest.
    */
-  SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedByOnHeapSize() {
+  SortedMap<Long, Collection<HRegion>> getCopyOfOnlineRegionsSortedByOnHeapSize() {
     // we'll sort the regions in reverse
-    SortedMap<Long, HRegion> sortedRegions = new TreeMap<>(
+    SortedMap<Long, Collection<HRegion>> sortedRegions = new TreeMap<>(
         new Comparator<Long>() {
           @Override
           public int compare(Long a, Long b) {
@@ -2796,7 +2801,7 @@ public class HRegionServer extends HasThread implements
         });
     // Copy over all regions. Regions are sorted by size with biggest first.
     for (HRegion region : this.onlineRegions.values()) {
-      sortedRegions.put(region.getMemStoreHeapSize(), region);
+      addRegion(sortedRegions, region, region.getMemStoreHeapSize());
     }
     return sortedRegions;
   }
