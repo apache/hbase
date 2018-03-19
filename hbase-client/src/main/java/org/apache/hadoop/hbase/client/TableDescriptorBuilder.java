@@ -232,7 +232,7 @@ public class TableDescriptorBuilder {
   private static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
     "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
       CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
-  public static final Pattern CP_HTD_ATTR_KEY_PATTERN =
+  private static final Pattern CP_HTD_ATTR_KEY_PATTERN =
     Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
   /**
    * Table descriptor for namespace table
