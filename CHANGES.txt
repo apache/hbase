@@ -206,6 +206,7 @@ Release Notes - HBase - Version 1.3.2 03/05/18
     * [HBASE-20162] - [nightly] depending on pipeline execution we sometimes refer to the wrong workspace
     * [HBASE-20164] - failed hadoopcheck should add footer link
     * [HBASE-20174] - Fix TestZKLessMergeOnCluster flakiness
+    * [HBASE-20189] - Typo in Required Java Version error message while building HBase.
 
 ** New Feature
     * [HBASE-19189] - Ad-hoc test job for running a subset of tests lots of times
