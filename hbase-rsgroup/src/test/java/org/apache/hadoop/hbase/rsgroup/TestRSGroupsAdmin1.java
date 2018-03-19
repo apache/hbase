@@ -377,6 +377,37 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
   }
 
   @Test
+  public void testNonExistentTableMove() throws Exception {
+    TableName tableName = TableName.valueOf(tablePrefix + name.getMethodName());
+
+    RSGroupInfo tableGrp = rsGroupAdmin.getRSGroupInfoOfTable(tableName);
+    assertNull(tableGrp);
+
+    //test if table exists already.
+    boolean exist = admin.tableExists(tableName);
+    assertFalse(exist);
+
+    LOG.info("Moving table "+ tableName + " to " + RSGroupInfo.DEFAULT_GROUP);
+    try {
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+      fail("Table " + tableName + " shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      assertTrue(ex instanceof TableNotFoundException);
+    }
+
+    try {
+      rsGroupAdmin.moveServersAndTables(
+          Sets.newHashSet(Address.fromParts("bogus",123)),
+          Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+      fail("Table " + tableName + " shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      assertTrue(ex instanceof TableNotFoundException);
+    }
+    //verify group change
+    assertNull(rsGroupAdmin.getRSGroupInfoOfTable(tableName));
+  }
+
+  @Test
   public void testRSGroupListDoesNotContainFailedTableCreation() throws Exception {
     toggleQuotaCheckAndRestartMiniCluster(true);
     String nsp = "np1";
