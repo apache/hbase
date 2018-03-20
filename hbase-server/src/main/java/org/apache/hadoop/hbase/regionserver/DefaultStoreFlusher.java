@@ -82,10 +82,9 @@ public class DefaultStoreFlusher extends StoreFlusher {
     } finally {
       scanner.close();
     }
-    LOG.info("Flushed, sequenceid=" + cacheFlushId +", memsize="
-        + StringUtils.TraditionalBinaryPrefix.long2String(snapshot.getDataSize(), "", 1) +
-        ", hasBloomFilter=" + writer.hasGeneralBloom() +
-        ", into tmp file " + writer.getPath());
+    LOG.info("Flushed memstore data size={} at sequenceid={} (bloomFilter={}), to={}",
+        StringUtils.byteDesc(snapshot.getDataSize()), cacheFlushId, writer.hasGeneralBloom(),
+        writer.getPath());
     result.add(writer.getPath());
     return result;
   }

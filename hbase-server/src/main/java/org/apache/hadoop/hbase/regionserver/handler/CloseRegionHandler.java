@@ -88,13 +88,13 @@ public class CloseRegionHandler extends EventHandler {
   @Override
   public void process() {
     try {
-      String name = regionInfo.getRegionNameAsString();
-      LOG.debug("Processing close of " + name);
+      String name = regionInfo.getEncodedName();
+      LOG.trace("Processing close of {}", name);
       String encodedRegionName = regionInfo.getEncodedName();
       // Check that this region is being served here
       HRegion region = (HRegion)rsServices.getRegion(encodedRegionName);
       if (region == null) {
-        LOG.warn("Received CLOSE for region " + name + " but currently not serving - ignoring");
+        LOG.warn("Received CLOSE for region {} but currently not serving - ignoring", name);
         // TODO: do better than a simple warning
         return;
       }
@@ -104,8 +104,7 @@ public class CloseRegionHandler extends EventHandler {
         if (region.close(abort) == null) {
           // This region got closed.  Most likely due to a split.
           // The split message will clean up the master state.
-          LOG.warn("Can't close region: was already closed during close(): " +
-            name);
+          LOG.warn("Can't close region {}, was already closed during close()", name);
           return;
         }
       } catch (IOException ioe) {

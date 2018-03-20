@@ -198,11 +198,8 @@ public class CompactingMemStore extends AbstractMemStore {
       LOG.warn("Snapshot called again without clearing previous. " +
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("FLUSHING TO DISK: region "
-            + getRegionServices().getRegionInfo().getRegionNameAsString() + "store: "
-            + getFamilyName());
-      }
+      LOG.debug("FLUSHING TO DISK {}, store={}",
+            getRegionServices().getRegionInfo().getEncodedName(), getFamilyName());
       stopCompaction();
       pushActiveToPipeline(this.active);
       snapshotId = EnvironmentEdgeManager.currentTime();

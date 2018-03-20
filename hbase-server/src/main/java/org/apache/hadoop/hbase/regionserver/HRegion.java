@@ -1444,7 +1444,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Only allow one thread to close at a time. Serialize them so dual
     // threads attempting to close will run up against each other.
     MonitoredTask status = TaskMonitor.get().createStatus(
-        "Closing region " + this +
+        "Closing region " + this.getRegionInfo().getEncodedName() +
         (abort ? " due to abort" : ""));
 
     status.setStatus("Waiting for close lock");
@@ -1496,7 +1496,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // region.
       canFlush = !writestate.readOnly;
       writestate.writesEnabled = false;
-      LOG.debug("Closing " + this + ": disabling compactions & flushes");
+      LOG.debug("Closing {}, disabling compactions & flushes",
+          this.getRegionInfo().getEncodedName());
       waitForFlushesAndCompactions();
     }
     // If we were not just flushing, is it worth doing a preflush...one
@@ -1504,7 +1505,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // the close flag?
     if (!abort && worthPreFlushing() && canFlush) {
       status.setStatus("Pre-flushing region before close");
-      LOG.info("Running close preflush of " + this);
+      LOG.info("Running close preflush of {}" + this.getRegionInfo().getEncodedName());
       try {
         internalFlushcache(status);
       } catch (IOException ioe) {
@@ -2719,11 +2720,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long flushableDataSize = prepareResult.totalFlushableSize.getDataSize();
     long flushableHeapSize = prepareResult.totalFlushableSize.getHeapSize();
     long memstoresize = this.memStoreSize.getDataSize();
-    String msg = "Finished memstore flush."
-        + " Flushed data size ~" + StringUtils.byteDesc(flushableDataSize) + "/" + flushableDataSize
-        + " Flushed Heap size ~" + StringUtils.byteDesc(flushableHeapSize) + "/" + flushableHeapSize
+    String msg = "Finished memstore flush;"
+        + " data size ~" + StringUtils.byteDesc(flushableDataSize) + "/" + flushableDataSize
+        + ", heap size ~" + StringUtils.byteDesc(flushableHeapSize) + "/" + flushableHeapSize
         + ", currentsize=" + StringUtils.byteDesc(memstoresize) + "/" + memstoresize
-        + " for region " + this + " in " + time + "ms, sequenceid="
+        + " for " + this.getRegionInfo().getEncodedName() + " in " + time + "ms, sequenceid="
         + flushOpSeqId +  ", compaction requested=" + compactionRequested
         + ((wal == null) ? "; wal=null" : "");
     LOG.info(msg);

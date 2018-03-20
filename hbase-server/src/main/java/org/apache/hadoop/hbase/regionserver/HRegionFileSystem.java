@@ -460,7 +460,7 @@ public class HRegionFileSystem {
       throw new FileNotFoundException(buildPath.toString());
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Committing store file " + buildPath + " as " + dstPath);
+      LOG.debug("Committing " + buildPath + " as " + dstPath);
     }
     return dstPath;
   }

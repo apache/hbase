@@ -955,7 +955,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         }
         if (ioe != null) throw ioe;
       }
-      LOG.info("Closed {}", this);
+      LOG.trace("Closed {}", this);
       return result;
     } finally {
       this.lock.writeLock().unlock();
