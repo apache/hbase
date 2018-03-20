@@ -285,7 +285,8 @@ public abstract class TestReplicationStateBasic {
     ServerName serverName1 = ServerName.valueOf("127.0.0.1", 8000, 10000);
     assertTrue(rqs.getAllQueues(serverName1).isEmpty());
     String queue1 = "1";
-    String region0 = "region0", region1 = "region1";
+    String region0 = "6b2c8f8555335cc9af74455b94516cbe",
+        region1 = "6ecd2e9e010499f8ddef97ee8f70834f";
     for (int i = 0; i < 10; i++) {
       rqs.addWAL(serverName1, queue1, getFileName("file1", i));
     }

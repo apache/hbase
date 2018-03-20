@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
@@ -139,19 +140,28 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    * So the final znode path will be format like this:
    *
    * <pre>
-   * /hbase/replication/regions/254/dd04e76a6966d4ffa908ed0586764767-100
+   * /hbase/replication/regions/e1/ff/dd04e76a6966d4ffa908ed0586764767-100
    * </pre>
    *
-   * The 254 indicate the hash of encoded region name, the 100 indicate the peer id.
+   * The e1 indicate the first level hash of encoded region name, and the ff indicate the second
+   * level hash of encoded region name, the 100 indicate the peer id. <br>
+   * Note that here we use two-level hash because if only one-level hash (such as mod 65535), it
+   * will still lead to too many children under the /hbase/replication/regions znode.
    * @param encodedRegionName the encoded region name.
    * @param peerId peer id for replication.
    * @return ZNode path to persist the max sequence id that we've pushed for the given region and
    *         peer.
    */
-  private String getSerialReplicationRegionPeerNode(String encodedRegionName, String peerId) {
-    int hash = encodedRegionName.hashCode() & 0x0000FFFF;
-    String hashPath = ZNodePaths.joinZNode(regionsZNode, String.valueOf(hash));
-    return ZNodePaths.joinZNode(hashPath, String.format("%s-%s", encodedRegionName, peerId));
+  @VisibleForTesting
+  public String getSerialReplicationRegionPeerNode(String encodedRegionName, String peerId) {
+    if (encodedRegionName == null || encodedRegionName.length() != RegionInfo.MD5_HEX_LENGTH) {
+      throw new IllegalArgumentException(
+          "Invalid encoded region name: " + encodedRegionName + ", length should be 32.");
+    }
+    return new StringBuilder(regionsZNode).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
+        .append(encodedRegionName.substring(0, 2)).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
+        .append(encodedRegionName.substring(2, 4)).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
+        .append(encodedRegionName).append("-").append(peerId).toString();
   }
 
   @Override
