@@ -140,6 +140,23 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   void sync(long txid) throws IOException;
 
   /**
+   * @param forceSync Flag to force sync rather than flushing to the buffer. Example - Hadoop hflush
+   *          vs hsync.
+   */
+  default void sync(boolean forceSync) throws IOException {
+    sync();
+  }
+
+  /**
+   * @param txid Transaction id to sync to.
+   * @param forceSync Flag to force sync rather than flushing to the buffer. Example - Hadoop hflush
+   *          vs hsync.
+   */
+  default void sync(long txid, boolean forceSync) throws IOException {
+    sync(txid);
+  }
+
+  /**
    * WAL keeps track of the sequence numbers that are as yet not flushed im memstores
    * in order to be able to do accounting to figure which WALs can be let go. This method tells WAL
    * that some region is about to flush. The flush can be the whole region or for a column family

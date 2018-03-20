@@ -266,9 +266,9 @@ public class IOTestProvider implements WALProvider {
     }
 
     @Override
-    public void sync() throws IOException {
+    public void sync(boolean forceSync) throws IOException {
       if (doSyncs) {
-        super.sync();
+        super.sync(forceSync);
       }
     }
   }

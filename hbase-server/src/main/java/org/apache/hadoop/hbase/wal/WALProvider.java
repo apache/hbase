@@ -79,7 +79,7 @@ public interface WALProvider {
   // Writers are used internally. Users outside of the WAL should be relying on the
   // interface provided by WAL.
   interface Writer extends WriterBase {
-    void sync() throws IOException;
+    void sync(boolean forceSync) throws IOException;
 
     void append(WAL.Entry entry) throws IOException;
   }

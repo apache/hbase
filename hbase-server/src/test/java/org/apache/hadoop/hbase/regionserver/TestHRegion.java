@@ -1132,8 +1132,8 @@ public class TestHRegion {
           }
 
           @Override
-          public void sync() throws IOException {
-            w.sync();
+          public void sync(boolean forceSync) throws IOException {
+            w.sync(forceSync);
           }
 
           @Override

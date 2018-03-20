@@ -99,7 +99,7 @@ public class TestSerialReplication {
           for (Entry entry : replicateContext.getEntries()) {
             WRITER.append(entry);
           }
-          WRITER.sync();
+          WRITER.sync(false);
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }

@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -129,6 +130,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   // Minimum tolerable replicas, if the actual value is lower than it, rollWriter will be triggered
   private final int minTolerableReplication;
 
+  private final boolean useHsync;
+
   // If live datanode count is lower than the default replicas value,
   // RollWriter will be triggered in each sync(So the RollWriter will be
   // triggered one by one in a short time). Using it as a workaround to slow
@@ -212,6 +215,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       5);
     this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 2);
 
+    this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
+
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();
 
@@ -255,7 +260,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private void preemptiveSync(final ProtobufLogWriter nextWriter) {
     long startTimeNanos = System.nanoTime();
     try {
-      nextWriter.sync();
+      nextWriter.sync(useHsync);
       postSync(System.nanoTime() - startTimeNanos, 0);
     } catch (IOException e) {
       // optimization failed, no need to abort here.
@@ -332,7 +337,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           // sequence and zigzagLatch will be set together
           assert sequence > 0L : "Failed to get sequence from ring buffer";
           TraceUtil.addTimelineAnnotation("awaiting safepoint");
-          syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer(sequence));
+          syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer(sequence, false));
         }
       } catch (FailedSyncBeforeLogCloseException e) {
         // If unflushed/unsynced entries on close, it is reason to abort.
@@ -577,7 +582,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           Throwable lastException = null;
           try {
             TraceUtil.addTimelineAnnotation("syncing writer");
-            writer.sync();
+            writer.sync(useHsync);
             TraceUtil.addTimelineAnnotation("writer synced");
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
@@ -684,15 +689,15 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return this.disruptor.getRingBuffer().next();
   }
 
-  private SyncFuture publishSyncOnRingBuffer() {
+  private SyncFuture publishSyncOnRingBuffer(boolean forceSync) {
     long sequence = getSequenceOnRingBuffer();
-    return publishSyncOnRingBuffer(sequence);
+    return publishSyncOnRingBuffer(sequence, forceSync);
   }
 
   @VisibleForTesting
-  protected SyncFuture publishSyncOnRingBuffer(long sequence) {
+  protected SyncFuture publishSyncOnRingBuffer(long sequence, boolean forceSync) {
     // here we use ring buffer sequence as transaction id
-    SyncFuture syncFuture = getSyncFuture(sequence);
+    SyncFuture syncFuture = getSyncFuture(sequence).setForceSync(forceSync);
     try {
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
       truck.load(syncFuture);
@@ -703,8 +708,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   // Sync all known transactions
-  private void publishSyncThenBlockOnCompletion(TraceScope scope) throws IOException {
-    SyncFuture syncFuture = publishSyncOnRingBuffer();
+  private void publishSyncThenBlockOnCompletion(TraceScope scope, boolean forceSync) throws IOException {
+    SyncFuture syncFuture = publishSyncOnRingBuffer(forceSync);
     blockOnSync(syncFuture);
   }
 
@@ -731,19 +736,29 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   @Override
   public void sync() throws IOException {
+    sync(useHsync);
+  }
+
+  @Override
+  public void sync(boolean forceSync) throws IOException {
     try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
-      publishSyncThenBlockOnCompletion(scope);
+      publishSyncThenBlockOnCompletion(scope, forceSync);
     }
   }
 
   @Override
   public void sync(long txid) throws IOException {
+    sync(txid, useHsync);
+  }
+
+  @Override
+  public void sync(long txid, boolean forceSync) throws IOException {
     if (this.highestSyncedTxid.get() >= txid) {
       // Already sync'd.
       return;
     }
     try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
-      publishSyncThenBlockOnCompletion(scope);
+      publishSyncThenBlockOnCompletion(scope, forceSync);
     }
   }
 
