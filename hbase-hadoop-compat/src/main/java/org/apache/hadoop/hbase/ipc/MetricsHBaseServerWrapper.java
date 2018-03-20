@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public interface MetricsHBaseServerWrapper {
   long getTotalQueueSize();
 

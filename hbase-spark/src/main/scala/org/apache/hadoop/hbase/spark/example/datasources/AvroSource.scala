@@ -21,16 +21,20 @@ import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData
 import org.apache.hadoop.hbase.spark.AvroSerdes
 import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
-import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import org.apache.yetus.audience.InterfaceAudience
 
 /**
  * @param col0 Column #0, Type is String
  * @param col1 Column #1, Type is Array[Byte]
  */
+@InterfaceAudience.Private
 case class AvroHBaseRecord(col0: String,
                            col1: Array[Byte])
-
+@InterfaceAudience.Private
 object AvroHBaseRecord {
   val schemaString =
     s"""{"namespace": "example.avro",
@@ -58,7 +62,7 @@ object AvroHBaseRecord {
     favoriteArray.add(s"number${i}")
     favoriteArray.add(s"number${i+1}")
     user.put("favorite_array", favoriteArray)
-    import collection.JavaConverters._
+    import scala.collection.JavaConverters._
     val favoriteMap = Map[String, Int](("key1" -> i), ("key2" -> (i+1))).asJava
     user.put("favorite_map", favoriteMap)
     val avroByte = AvroSerdes.serialize(user, avroSchema)
@@ -66,6 +70,7 @@ object AvroHBaseRecord {
   }
 }
 
+@InterfaceAudience.Private
 object AvroSource {
   def catalog = s"""{
                     |"table":{"namespace":"default", "name":"ExampleAvrotable"},

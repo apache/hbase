@@ -31,7 +31,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.thrift.TException;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +52,7 @@ import org.slf4j.LoggerFactory;
  * thrift server dies or is shut down before everything in the queue is drained.
  *
  */
+@InterfaceAudience.Private
 public class IncrementCoalescer implements IncrementCoalescerMBean {
 
   /**

@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class provides ShutdownHookManager shims for HBase to interact with the Hadoop 1.0.x and the
  * Hadoop 2.0+ series.
- * 
+ *
  * NOTE: No testing done against 0.22.x, or 0.21.x.
  */
+@InterfaceAudience.Private
 abstract public class ShutdownHookManager {
   private static ShutdownHookManager instance;
 
@@ -39,13 +41,13 @@ abstract public class ShutdownHookManager {
   }
 
   abstract public void addShutdownHook(Thread shutdownHook, int priority);
-  
+
   abstract public boolean removeShutdownHook(Runnable shutdownHook);
-    
+
   public static void affixShutdownHook(Thread shutdownHook, int priority) {
     instance.addShutdownHook(shutdownHook, priority);
   }
-  
+
   public static boolean deleteShutdownHook(Runnable shutdownHook) {
     return instance.removeShutdownHook(shutdownHook);
   }
@@ -56,14 +58,14 @@ abstract public class ShutdownHookManager {
     public void addShutdownHook(Thread shutdownHookThread, int priority) {
       Runtime.getRuntime().addShutdownHook(shutdownHookThread);
     }
-    
+
     @Override
     public boolean removeShutdownHook(Runnable shutdownHook) {
       Thread shutdownHookThread = null;
       if (!(shutdownHook instanceof Thread)) {
         shutdownHookThread = new Thread(shutdownHook);
       } else shutdownHookThread = (Thread) shutdownHook;
-      
+
       return Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
     }
   }
@@ -72,7 +74,7 @@ abstract public class ShutdownHookManager {
     @Override
     public void addShutdownHook(Thread shutdownHookThread, int priority) {
       try {
-        Methods.call(shutdownHookManagerClass, 
+        Methods.call(shutdownHookManagerClass,
             Methods.call(shutdownHookManagerClass, null, "get", null, null),
             "addShutdownHook",
             new Class[] { Runnable.class, int.class },
@@ -81,12 +83,12 @@ abstract public class ShutdownHookManager {
         throw new RuntimeException("we could not use ShutdownHookManager.addShutdownHook", ex);
       }
     }
-    
+
     @Override
     public boolean removeShutdownHook(Runnable shutdownHook) {
       try {
         return (Boolean)
-        Methods.call(shutdownHookManagerClass, 
+        Methods.call(shutdownHookManagerClass,
             Methods.call(shutdownHookManagerClass, null, "get", null, null),
             "removeShutdownHook",
             new Class[] { Runnable.class },

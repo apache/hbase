@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class MetricsReplicationSourceFactoryImpl implements MetricsReplicationSourceFactory {
 
   private static enum SourceHolder {

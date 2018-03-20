@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface of the source that will export metrics about the region server's WAL.
  */
+@InterfaceAudience.Private
 public interface MetricsWALSource extends BaseSource {
 
 

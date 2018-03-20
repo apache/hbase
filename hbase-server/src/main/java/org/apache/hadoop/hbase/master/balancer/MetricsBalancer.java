@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Faced for exposing metrics about the balancer.
  */
+@InterfaceAudience.Private
 public class MetricsBalancer {
 
   private MetricsBalancerSource source = null;

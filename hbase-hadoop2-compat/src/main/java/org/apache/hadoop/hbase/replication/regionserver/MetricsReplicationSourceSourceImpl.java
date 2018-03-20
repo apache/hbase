@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSourceSource {
 
   private final MetricsReplicationSourceImpl rms;

@@ -24,19 +24,19 @@ import static org.apache.hadoop.hbase.rest.Constants.REST_DNS_NAMESERVER;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@InterfaceAudience.Private
 public class AuthFilter extends AuthenticationFilter {
   private static final Logger LOG = LoggerFactory.getLogger(AuthFilter.class);
   private static final String REST_PREFIX = "hbase.rest.authentication.";

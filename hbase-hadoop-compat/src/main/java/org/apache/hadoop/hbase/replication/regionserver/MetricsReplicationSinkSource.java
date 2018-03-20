@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public interface MetricsReplicationSinkSource {
   public static final String SINK_AGE_OF_LAST_APPLIED_OP = "sink.ageOfLastAppliedOp";
   public static final String SINK_APPLIED_BATCHES = "sink.appliedBatches";

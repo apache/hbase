@@ -16,9 +16,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Latency metrics for a specific table in a RegionServer.
  */
+@InterfaceAudience.Private
 public interface MetricsTableLatencies {
 
   /**

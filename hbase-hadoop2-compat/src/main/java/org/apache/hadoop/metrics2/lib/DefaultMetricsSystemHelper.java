@@ -20,9 +20,11 @@ package org.apache.hadoop.metrics2.lib;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@InterfaceAudience.Private
 public class DefaultMetricsSystemHelper {
 
   private static final Logger LOG = LoggerFactory.getLogger(DefaultMetricsSystemHelper.class);

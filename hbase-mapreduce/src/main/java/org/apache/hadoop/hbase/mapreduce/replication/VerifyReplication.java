@@ -64,6 +64,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +80,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * Two counters are provided, Verifier.Counters.GOODROWS and BADROWS. The reason
  * for a why a row is different is shown in the map's log.
  */
+@InterfaceAudience.Private
 public class VerifyReplication extends Configured implements Tool {
 
   private static final Logger LOG =

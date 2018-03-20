@@ -18,21 +18,22 @@
 package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.procedure.flush.RegionServerFlushTableProcedureManager;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Provides the globally barriered procedure framework and environment
- * for region server oriented operations. 
+ * for region server oriented operations.
  * {@link org.apache.hadoop.hbase.regionserver.HRegionServer} interacts
  * with the loaded procedure manager through this class.
  */
+@InterfaceAudience.Private
 public class RegionServerProcedureManagerHost extends
     ProcedureManagerHost<RegionServerProcedureManager> {
 

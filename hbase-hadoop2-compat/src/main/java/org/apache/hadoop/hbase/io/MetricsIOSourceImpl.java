@@ -23,7 +23,9 @@ import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.Interns;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSource {
 
   private final MetricsIOWrapper wrapper;

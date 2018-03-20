@@ -28,10 +28,12 @@ import org.apache.spark.api.java.function.Function;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is a simple example of BulkPut with Spark Streaming
  */
+@InterfaceAudience.Private
 final public class JavaHBaseStreamingBulkPutExample {
 
   private JavaHBaseStreamingBulkPutExample() {}

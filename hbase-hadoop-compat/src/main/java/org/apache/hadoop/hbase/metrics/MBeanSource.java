@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.metrics;
 
 import javax.management.ObjectName;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  *  Object that will register an mbean with the underlying metrics implementation.
  */
+@InterfaceAudience.Private
 public interface MBeanSource  {
 
   /**

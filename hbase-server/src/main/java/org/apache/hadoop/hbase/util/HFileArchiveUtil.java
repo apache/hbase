@@ -26,11 +26,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Helper class for all utilities related to archival/retrieval of HFiles
  */
-public class HFileArchiveUtil {
+@InterfaceAudience.Private
+public final class HFileArchiveUtil {
   private HFileArchiveUtil() {
     // non-external instantiation - util class
   }

@@ -1112,6 +1112,7 @@ class HBaseContext(@transient val sc: SparkContext,
   class WriterLength(var written:Long, val writer:StoreFileWriter)
 }
 
+@InterfaceAudience.Private
 object LatestHBaseContextCache {
   var latest:HBaseContext = null
 }

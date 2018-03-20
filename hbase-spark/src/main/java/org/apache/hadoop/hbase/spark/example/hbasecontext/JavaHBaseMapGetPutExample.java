@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.spark.example.hbasecontext;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -36,13 +35,14 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import scala.Tuple2;
 
 /**
  * This is a simple example of using the foreachPartition
  * method with a HBase connection
  */
+@InterfaceAudience.Private
 final public class JavaHBaseMapGetPutExample {
 
   private JavaHBaseMapGetPutExample() {}

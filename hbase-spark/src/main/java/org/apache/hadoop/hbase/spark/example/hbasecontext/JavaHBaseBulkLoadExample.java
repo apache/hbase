@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.spark.example.hbasecontext;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,6 +32,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Run this example using command below:
@@ -45,6 +45,7 @@ import org.apache.spark.api.java.function.Function;
  * 'hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles' to load the HFiles into table to
  * verify this example.
  */
+@InterfaceAudience.Private
 final public class JavaHBaseBulkLoadExample {
   private JavaHBaseBulkLoadExample() {}
 

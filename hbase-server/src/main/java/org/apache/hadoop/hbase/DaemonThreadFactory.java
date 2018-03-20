@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thread factory that creates daemon threads
  */
+@InterfaceAudience.Private
 public class DaemonThreadFactory implements ThreadFactory {
   private static final AtomicInteger poolNumber = new AtomicInteger(1);
   private final ThreadGroup group;

@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class MetricsMasterFileSystem {
 
   private final MetricsMasterFileSystemSource source;

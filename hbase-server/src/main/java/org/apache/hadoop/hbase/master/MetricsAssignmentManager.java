@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
-
 import static org.apache.hadoop.hbase.master.MetricsMaster.convertToProcedureMetrics;
 
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class MetricsAssignmentManager {
   private final MetricsAssignmentManagerSource assignmentManagerSource;
 

@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.http;
 
 import java.util.HashMap;
-
 import org.apache.commons.logging.LogConfigurationException;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.eclipse.jetty.server.NCSARequestLog;
 import org.eclipse.jetty.server.RequestLog;
 import org.slf4j.Logger;
@@ -32,7 +32,8 @@ import org.slf4j.impl.Log4jLoggerAdapter;
 /**
  * RequestLog object for use with Http
  */
-public class HttpRequestLog {
+@InterfaceAudience.Private
+public final class HttpRequestLog {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpRequestLog.class);
   private static final HashMap<String, String> serverToComponent;
@@ -101,4 +102,6 @@ public class HttpRequestLog {
       return null;
     }
   }
+
+  private HttpRequestLog() {}
 }

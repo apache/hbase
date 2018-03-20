@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * In a scenario of Replication based Disaster/Recovery, when hbase Master-Cluster crashes, this
@@ -47,6 +48,7 @@ import org.apache.hadoop.util.ToolRunner;
  * hbase org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp
  * </pre>
  */
+@InterfaceAudience.Private
 public class ReplicationSyncUp extends Configured implements Tool {
 
   private static final long SLEEP_TIME = 10000;

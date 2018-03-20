@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface for classes that expose metrics about the regionserver.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSource {
 
   /**

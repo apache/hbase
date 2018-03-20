@@ -17,13 +17,18 @@
 
 package org.apache.hadoop.hbase.spark.example.datasources
 
-import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import org.apache.yetus.audience.InterfaceAudience
 
+@InterfaceAudience.Private
 class UserCustomizedSampleException(message: String = null, cause: Throwable = null) extends
   RuntimeException(UserCustomizedSampleException.message(message, cause), cause)
 
+@InterfaceAudience.Private
 object UserCustomizedSampleException {
   def message(message: String, cause: Throwable) =
     if (message != null) message
@@ -31,6 +36,7 @@ object UserCustomizedSampleException {
     else null
 }
 
+@InterfaceAudience.Private
 case class IntKeyRecord(
   col0: Integer,
   col1: Boolean,
@@ -56,6 +62,7 @@ object IntKeyRecord {
   }
 }
 
+@InterfaceAudience.Private
 object DataType {
   val cat = s"""{
                 |"table":{"namespace":"default", "name":"DataTypeExampleTable"},

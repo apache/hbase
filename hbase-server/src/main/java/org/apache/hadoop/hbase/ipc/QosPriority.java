@@ -19,14 +19,15 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Annotation which decorates RPC methods to denote the relative priority among other RPCs in the
  * same server. Provides a basic notion of quality of service (QOS).
  */
 @Retention(RetentionPolicy.RUNTIME)
+@InterfaceAudience.Private
 public @interface QosPriority {
   int priority() default HConstants.NORMAL_QOS;
 }

@@ -17,10 +17,14 @@
 
 package org.apache.hadoop.hbase.spark.example.datasources
 
-import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import org.apache.yetus.audience.InterfaceAudience
 
+@InterfaceAudience.Private
 case class HBaseRecord(
   col0: String,
   col1: Boolean,
@@ -32,6 +36,7 @@ case class HBaseRecord(
   col7: String,
   col8: Byte)
 
+@InterfaceAudience.Private
 object HBaseRecord {
   def apply(i: Int): HBaseRecord = {
     val s = s"""row${"%03d".format(i)}"""
@@ -47,6 +52,7 @@ object HBaseRecord {
   }
 }
 
+@InterfaceAudience.Private
 object HBaseSource {
   val cat = s"""{
                 |"table":{"namespace":"default", "name":"HBaseSourceExampleTable"},

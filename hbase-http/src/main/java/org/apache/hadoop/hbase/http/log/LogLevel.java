@@ -24,28 +24,26 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.regex.Pattern;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.hbase.http.HttpServer;
+import org.apache.hadoop.util.ServletUtil;
+import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.impl.Log4jLoggerAdapter;
-import org.apache.hadoop.hbase.http.HttpServer;
-import org.apache.hadoop.util.ServletUtil;
-import org.apache.log4j.LogManager;
 
 /**
  * Change log level in runtime.
  */
-@InterfaceStability.Evolving
-public class LogLevel {
+@InterfaceAudience.Private
+public final class LogLevel {
   public static final String USAGES = "\nUsage: General options are:\n"
       + "\t[-getlevel <host:httpPort> <name>]\n"
       + "\t[-setlevel <host:httpPort> <name> <level>]\n";
@@ -174,4 +172,6 @@ public class LogLevel {
       out.println(MARKER + "Effective level: <b>" + lev + "</b><br />");
     }
   }
+
+  private LogLevel() {}
 }

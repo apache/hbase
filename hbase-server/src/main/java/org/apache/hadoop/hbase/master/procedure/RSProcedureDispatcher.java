@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RemoteProce
 /**
  * A remote procecdure dispatcher for regionservers.
  */
+@InterfaceAudience.Private
 public class RSProcedureDispatcher
     extends RemoteProcedureDispatcher<MasterProcedureEnv, ServerName>
     implements ServerListener {

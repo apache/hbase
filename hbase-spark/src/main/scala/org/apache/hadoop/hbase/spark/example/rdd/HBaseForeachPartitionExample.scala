@@ -17,17 +17,21 @@
 
 package org.apache.hadoop.hbase.spark.example.rdd
 
+import org.apache.hadoop.hbase.HBaseConfiguration
+import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client.Put
-import org.apache.hadoop.hbase.{TableName, HBaseConfiguration}
 import org.apache.hadoop.hbase.spark.HBaseContext
 import org.apache.hadoop.hbase.spark.HBaseRDDFunctions._
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.{SparkContext, SparkConf}
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import org.apache.yetus.audience.InterfaceAudience
 
 /**
  * This is a simple example of using the foreachPartition
  * method with a HBase connection
  */
+@InterfaceAudience.Private
 object HBaseForeachPartitionExample {
   def main(args: Array[String]) {
     if (args.length < 2) {

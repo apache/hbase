@@ -17,6 +17,9 @@
  * */
 package org.apache.hadoop.hbase.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.beans.IntrospectionException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -28,7 +31,6 @@ import java.lang.management.RuntimeMXBean;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Set;
-
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
@@ -37,14 +39,11 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
 import javax.management.openmbean.CompositeData;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+@InterfaceAudience.Private
 public final class JSONMetricUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(JSONMetricUtil.class);

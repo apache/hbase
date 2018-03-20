@@ -563,6 +563,27 @@
           <failOnViolation>true</failOnViolation>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+        <!-- TODO: remove the following config if https://issues.scala-lang.org/browse/SI-3600 is resolved -->
+        <!-- override the root config to add more filter -->
+        <configuration>
+          <ignoreRuleFailures>true</ignoreRuleFailures>
+          <rules>
+            <rule>
+              <!-- exclude the generated java files and package object-->
+              <classPattern>(?!.*(.generated.|.tmpl.|\$|org.apache.hadoop.hbase.spark.hbase.package)).*</classPattern>
+              <includeTestClasses>false</includeTestClasses>
+              <includePublicClasses>true</includePublicClasses>
+              <includePackagePrivateClasses>false</includePackagePrivateClasses>
+              <includeProtectedClasses>false</includeProtectedClasses>
+              <includePrivateClasses>false</includePrivateClasses>
+              <classAnnotationPattern>org[.]apache[.]yetus[.]audience[.]InterfaceAudience.*</classAnnotationPattern>
+            </rule>
+          </rules>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <profiles>

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.io;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public interface MetricsIOWrapper {
 
   long getChecksumFailures();

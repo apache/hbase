@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Factory that will be used to create metrics sources for the two diffent types of thrift servers.
  */
+@InterfaceAudience.Private
 public interface MetricsThriftServerSourceFactory {
   String METRICS_NAME = "Thrift";
   String METRICS_DESCRIPTION = "Thrift Server Metrics";

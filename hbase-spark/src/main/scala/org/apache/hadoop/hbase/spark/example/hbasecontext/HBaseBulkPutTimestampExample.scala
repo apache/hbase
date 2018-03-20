@@ -19,16 +19,18 @@ package org.apache.hadoop.hbase.spark.example.hbasecontext
 
 import org.apache.hadoop.hbase.spark.HBaseContext
 import org.apache.spark.SparkContext
-import org.apache.hadoop.hbase.{TableName, HBaseConfiguration}
+import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.client.Put
 import org.apache.spark.SparkConf
+import org.apache.yetus.audience.InterfaceAudience
 
 /**
  * This is a simple example of putting records in HBase
  * with the bulkPut function.  In this example we are
  * also setting the timestamp in the put
  */
+@InterfaceAudience.Private
 object HBaseBulkPutTimestampExample {
   def main(args: Array[String]) {
     if (args.length < 2) {

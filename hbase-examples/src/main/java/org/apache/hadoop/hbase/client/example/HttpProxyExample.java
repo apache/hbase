@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -31,6 +30,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
@@ -71,6 +71,7 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
  * Use HTTP GET to fetch data, and use HTTP PUT to put data. Encode the value as the request content
  * when doing PUT.
  */
+@InterfaceAudience.Private
 public class HttpProxyExample {
 
   private final EventLoopGroup bossGroup = new NioEventLoopGroup(1);

@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.metrics;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Interface for sources that will export JvmPauseMonitor metrics
  */
+@InterfaceAudience.Private
 public interface JvmPauseMonitorSource  {
 
   String INFO_THRESHOLD_COUNT_KEY = "pauseInfoThresholdExceeded";

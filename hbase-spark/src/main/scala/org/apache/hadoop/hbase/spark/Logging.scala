@@ -17,9 +17,10 @@
 
 package org.apache.hadoop.hbase.spark
 
-import org.apache.log4j.LogManager
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.yetus.audience.InterfaceAudience
 import org.slf4j.impl.StaticLoggerBinder
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Utility trait for classes that want to log data. Creates a SLF4J logger for the class and allows
@@ -28,6 +29,7 @@ import org.slf4j.impl.StaticLoggerBinder
  * Logging is private in Spark 2.0
  * This is to isolate incompatibilties across Spark releases.
  */
+@InterfaceAudience.Private
 trait Logging {
 
   // Make the log field transient so that objects with Logging can

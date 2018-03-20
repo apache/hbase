@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -35,6 +34,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Sample Uploader MapReduce
@@ -58,6 +58,7 @@ import org.apache.hadoop.util.ToolRunner;
  * <p>
  * This code was written against HBase 0.21 trunk.
  */
+@InterfaceAudience.Private
 public class SampleUploader extends Configured implements Tool {
 
   private static final String NAME = "SampleUploader";

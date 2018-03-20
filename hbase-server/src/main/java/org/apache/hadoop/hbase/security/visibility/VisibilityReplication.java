@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.security.visibility;
 
+import java.io.IOException;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -26,9 +28,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-
-import java.io.IOException;
-import java.util.Optional;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A RegionServerObserver impl that provides the custom
@@ -37,6 +37,7 @@ import java.util.Optional;
  * replicated as string.  The value for the configuration should be
  * 'org.apache.hadoop.hbase.security.visibility.VisibilityController$VisibilityReplication'.
  */
+@InterfaceAudience.Private
 public class VisibilityReplication implements RegionServerCoprocessor, RegionServerObserver {
   private Configuration conf;
   private VisibilityLabelService visibilityLabelService;

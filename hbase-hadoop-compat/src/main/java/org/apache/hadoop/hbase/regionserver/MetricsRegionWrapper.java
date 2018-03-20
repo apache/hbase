@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Interface of class that will wrap an HRegion and export numbers so they can be
  * used in MetricsRegionSource
  */
+@InterfaceAudience.Private
 public interface MetricsRegionWrapper {
 
   /**

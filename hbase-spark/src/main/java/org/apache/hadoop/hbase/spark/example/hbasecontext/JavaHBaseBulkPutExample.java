@@ -18,7 +18,6 @@ package org.apache.hadoop.hbase.spark.example.hbasecontext;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -29,11 +28,13 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is a simple example of putting records in HBase
  * with the bulkPut function.
  */
+@InterfaceAudience.Private
 final public class JavaHBaseBulkPutExample {
 
   private JavaHBaseBulkPutExample() {}

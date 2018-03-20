@@ -266,6 +266,7 @@ class HBaseTableScanRDD(relation: HBaseRelation,
   }
 }
 
+@InterfaceAudience.Private
 case class SerializedFilter(b: Option[Array[Byte]])
 
 object SerializedFilter {
@@ -278,13 +279,14 @@ object SerializedFilter {
   }
 }
 
+@InterfaceAudience.Private
 private[hbase] case class HBaseRegion(
     override val index: Int,
     val start: Option[HBaseType] = None,
     val end: Option[HBaseType] = None,
     val server: Option[String] = None) extends Partition
 
-
+@InterfaceAudience.Private
 private[hbase] case class HBaseScanPartition(
     override val index: Int,
     val regions: HBaseRegion,
@@ -292,6 +294,7 @@ private[hbase] case class HBaseScanPartition(
     val points: Seq[Array[Byte]],
     val sf: SerializedFilter) extends Partition
 
+@InterfaceAudience.Private
 case class RDDResources(set: mutable.HashSet[Resource]) {
   def addResource(s: Resource) {
     set += s
