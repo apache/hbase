@@ -1,5 +1,54 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.3 3/30/2018
+
+** Sub-task
+    * [HBASE-18731] - [compat 1-2] Mark protected methods of QuotaSettings that touch Protobuf internals as IA.Private
+
+** Bug
+    * [HBASE-14897] - TestTableLockManager.testReapAllTableLocks is flakey
+    * [HBASE-18864] - NullPointerException thrown when adding rows to a table from peer cluster, table with replication factor other than 0 or 1
+    * [HBASE-18985] - Fix the building warning of missing version in hbase-shaded-check-invariants module
+    * [HBASE-19364] - Truncate_preserve fails with table when replica region > 1
+    * [HBASE-19391] - Calling HRegion#initializeRegionInternals from a region replica can still re-create a region directory
+    * [HBASE-19553] - Old replica regions should be cleared from AM memory after primary region split or merge
+    * [HBASE-19769] - IllegalAccessError on package-private Hadoop metrics2 classes in MapReduce jobs
+    * [HBASE-19802] - Wrong usage messages on shell commands (grant/revoke namespace syntax)
+    * [HBASE-19863] - java.lang.IllegalStateException: isDelete failed when SingleColumnValueFilter is used
+    * [HBASE-19985] - Redundant instanceof check in ProtobufUtil#getServiceException
+    * [HBASE-19989] - READY_TO_MERGE and READY_TO_SPLIT do not update region state correctly
+    * [HBASE-20001] - cleanIfNoMetaEntry() uses encoded instead of region name to lookup region
+    * [HBASE-20016] - TestCatalogJanitorInMemoryStates#testInMemoryForReplicaParentCleanup is flaky
+    * [HBASE-20025] - TestZKPermissionWatcher is flakey in branch-1
+    * [HBASE-20061] - HStore synchronized member variable filesCompacting should be private
+    * [HBASE-20062] - findbugs is not running on precommit checks
+    * [HBASE-20091] - Fix for 'build.plugins.plugin.version' for org.codehaus.mojo: is missing.
+    * [HBASE-20102] - AssignmentManager#shutdown doesn't shut down scheduled executor
+    * [HBASE-20106] - API Compliance checker should fall back to specifying origin as remote repo
+    * [HBASE-20134] - support scripts use hard-coded /tmp
+    * [HBASE-20139] - NPE in RSRpcServices.get() when getRegion throws an exception
+    * [HBASE-20141] - Fix TooManyFiles exception when RefreshingChannels in FileIOEngine
+    * [HBASE-20146] - Regions are stuck while opening when WAL is disabled
+    * [HBASE-20153] - enable error-prone analysis in precommit
+    * [HBASE-20162] - [nightly] depending on pipeline execution we sometimes refer to the wrong workspace
+    * [HBASE-20164] - failed hadoopcheck should add footer link
+    * [HBASE-20174] - Fix TestZKLessMergeOnCluster flakiness
+    * [HBASE-20189] - Typo in Required Java Version error message while building HBase.
+
+** Improvement
+    * [HBASE-18467] - nightly job needs to run all stages and then comment on jira
+    * [HBASE-20186] - Improve RSGroupBasedLoadBalancer#balanceCluster() to be more efficient when calculating cluster state for each rsgroup
+
+** Test
+    * [HBASE-20052] - TestRegionOpen#testNonExistentRegionReplica fails due to NPE
+
+** Task
+    * [HBASE-15151] - Rely on nightly tests for findbugs compliance on existing branch
+    * [HBASE-20075] - remove logic for branch-1.1 nightly testing
+    * [HBASE-20088] - Update copyright notices to year 2018
+    * [HBASE-20089] - make_rc.sh should name SHA-512 checksum files with the extension .sha512
+
+
 Release Notes - HBase - Version 1.4.2 2/28/2018
 
 ** Sub-task
