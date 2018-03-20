@@ -172,11 +172,11 @@ public class TestWALLockup {
         }
 
         @Override
-        public void sync() throws IOException {
+        public void sync(boolean forceSync) throws IOException {
           if (throwException) {
             throw new IOException("FAKE! Failed to replace a bad datanode...SYNC");
           }
-          w.sync();
+          w.sync(forceSync);
         }
 
         @Override
@@ -252,7 +252,7 @@ public class TestWALLockup {
       dodgyWAL.append(region.getRegionInfo(), key, edit, true);
       boolean exception = false;
       try {
-        dodgyWAL.sync();
+        dodgyWAL.sync(false);
       } catch (Exception e) {
         exception = true;
       }
@@ -345,7 +345,7 @@ public class TestWALLockup {
 
       protected void publishSyncOnRingBufferAndBlock(long sequence) {
         try {
-          super.blockOnSync(super.publishSyncOnRingBuffer(sequence));
+          super.blockOnSync(super.publishSyncOnRingBuffer(sequence, false));
           Assert.fail("Expect an IOException here.");
         } catch (IOException ignore) {
           // Here, we will get an IOException.
@@ -362,7 +362,7 @@ public class TestWALLockup {
           }
 
           @Override
-          public void sync() throws IOException {
+          public void sync(boolean forceSync) throws IOException {
             throw new IOException("FAKE! Failed to replace a bad datanode...SYNC");
           }
 
@@ -425,7 +425,7 @@ public class TestWALLockup {
 
       try {
         LOG.info("Call sync for testing whether RingBufferEventHandler is hanging.");
-        dodgyWAL.sync(); // Should not get a hang here, otherwise we will see timeout in this test.
+        dodgyWAL.sync(false); // Should not get a hang here, otherwise we will see timeout in this test.
         Assert.fail("Expect an IOException here.");
       } catch (IOException ignore) {
       }

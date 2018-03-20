@@ -72,11 +72,15 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
   }
 
   @Override
-  public void sync() throws IOException {
+  public void sync(boolean forceSync) throws IOException {
     FSDataOutputStream fsdos = this.output;
     if (fsdos == null) return; // Presume closed
     fsdos.flush();
-    fsdos.hflush();
+    if (forceSync) {
+      fsdos.hsync();
+    } else {
+      fsdos.hflush();
+    }
   }
 
   public FSDataOutputStream getStream() {
@@ -89,10 +93,13 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
       short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
     this.output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize,
       null);
-    // TODO Be sure to add a check for hsync if this branch includes HBASE-19024
-    if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true) &&
-        !(CommonFSUtils.hasCapability(output, "hflush"))) {
-      throw new StreamLacksCapabilityException("hflush");
+    if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {
+      if (!CommonFSUtils.hasCapability(output, "hflush")) {
+        throw new StreamLacksCapabilityException("hflush");
+      }
+      if (!CommonFSUtils.hasCapability(output, "hsync")) {
+        throw new StreamLacksCapabilityException("hsync");
+      }
     }
   }
 

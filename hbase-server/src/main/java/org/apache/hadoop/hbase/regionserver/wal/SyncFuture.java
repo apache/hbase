@@ -67,6 +67,8 @@ class SyncFuture {
 
   private Thread t;
 
+  private boolean forceSync;
+
   /**
    * Call this method to clear old usage and get it ready for new deploy.
    * @param txid the new transaction id
@@ -95,6 +97,15 @@ class SyncFuture {
 
   synchronized long getTxid() {
     return this.txid;
+  }
+
+  synchronized boolean isForceSync() {
+    return forceSync;
+  }
+
+  synchronized SyncFuture setForceSync(boolean forceSync) {
+    this.forceSync = forceSync;
+    return this;
   }
 
   /**

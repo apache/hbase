@@ -67,9 +67,9 @@ public class TestLogRollingNoCluster {
   /** ProtobufLogWriter that simulates higher latencies in sync() call */
   public static class HighLatencySyncWriter extends  ProtobufLogWriter {
     @Override
-    public void sync() throws IOException {
+    public void sync(boolean forceSync) throws IOException {
       Threads.sleep(ThreadLocalRandom.current().nextInt(10));
-      super.sync();
+      super.sync(forceSync);
       Threads.sleep(ThreadLocalRandom.current().nextInt(10));
     }
   }

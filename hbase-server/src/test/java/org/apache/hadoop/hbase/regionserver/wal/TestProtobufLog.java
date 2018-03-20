@@ -48,6 +48,6 @@ public class TestProtobufLog extends AbstractTestProtobufLog<WALProvider.Writer>
 
   @Override
   protected void sync(Writer writer) throws IOException {
-    writer.sync();
+    writer.sync(false);
   }
 }

@@ -229,15 +229,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String HBASE_MAX_CELL_SIZE_KEY = "hbase.server.keyvalue.maxsize";
   public static final int DEFAULT_MAX_CELL_SIZE = 10485760;
 
-  public static final String HBASE_REGIONSERVER_MINIBATCH_SIZE =
-      "hbase.regionserver.minibatch.size";
-  public static final int DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE = 20000;
-
   /**
    * This is the global default value for durability. All tables/mutations not
    * defining a durability or using USE_DEFAULT will default to this value.
    */
   private static final Durability DEFAULT_DURABILITY = Durability.SYNC_WAL;
+
+  public static final String HBASE_REGIONSERVER_MINIBATCH_SIZE =
+      "hbase.regionserver.minibatch.size";
+  public static final int DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE = 20000;
+
+  public static final String WAL_HSYNC_CONF_KEY = "hbase.wal.hsync";
+  public static final boolean DEFAULT_WAL_HSYNC = false;
 
   final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -794,10 +797,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      */
     this.rowProcessorTimeout = conf.getLong(
         "hbase.hregion.row.processor.timeout", DEFAULT_ROW_PROCESSOR_TIMEOUT);
-    this.regionDurability = htd.getDurability() == Durability.USE_DEFAULT ?
-        DEFAULT_DURABILITY : htd.getDurability();
 
     this.storeHotnessProtector = new StoreHotnessProtector(this, conf);
+
+    boolean forceSync = conf.getBoolean(WAL_HSYNC_CONF_KEY, DEFAULT_WAL_HSYNC);
+    /**
+     * This is the global default value for durability. All tables/mutations not defining a
+     * durability or using USE_DEFAULT will default to this value.
+     */
+    Durability defaultDurability = forceSync ? Durability.FSYNC_WAL : Durability.SYNC_WAL;
+    this.regionDurability =
+        this.htableDescriptor.getDurability() == Durability.USE_DEFAULT ? defaultDurability :
+          this.htableDescriptor.getDurability();
 
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
@@ -8350,10 +8361,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // nothing do to
         break;
       case SYNC_WAL:
+          this.wal.sync(txid, false);
+          break;
       case FSYNC_WAL:
-        // sync the WAL edit (SYNC and FSYNC treated the same for now)
-        this.wal.sync(txid);
-        break;
+          this.wal.sync(txid, true);
+          break;
       default:
         throw new RuntimeException("Unknown durability " + durability);
       }

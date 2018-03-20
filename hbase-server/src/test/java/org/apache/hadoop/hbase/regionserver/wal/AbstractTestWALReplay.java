@@ -1230,7 +1230,7 @@ public abstract class AbstractTestWALReplay {
     for (FSWALEntry entry : entries) {
       writer.append(entry);
     }
-    writer.sync();
+    writer.sync(false);
     writer.close();
   }
 

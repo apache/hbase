@@ -1359,7 +1359,7 @@ public class TestWALSplit {
     WALKeyImpl key = new WALKeyImpl(hri.getEncodedNameAsBytes(), TABLE_NAME, 1,
         EnvironmentEdgeManager.currentTime(), HConstants.DEFAULT_CLUSTER_ID);
     w.append(new Entry(key, edit));
-    w.sync();
+    w.sync(false);
   }
 
   private static void appendRegionEvent(Writer w, String region) throws IOException {
@@ -1377,7 +1377,7 @@ public class TestWALSplit {
         HConstants.DEFAULT_CLUSTER_ID);
     w.append(
         new Entry(walKey, new WALEdit().add(kv)));
-    w.sync();
+    w.sync(false);
   }
 
   public static long appendEntry(Writer writer, TableName table, byte[] region,
@@ -1387,7 +1387,7 @@ public class TestWALSplit {
     LOG.info(Thread.currentThread().getName() + " append");
     writer.append(createTestEntry(table, region, row, family, qualifier, value, seq));
     LOG.info(Thread.currentThread().getName() + " sync");
-    writer.sync();
+    writer.sync(false);
     return seq;
   }
 
