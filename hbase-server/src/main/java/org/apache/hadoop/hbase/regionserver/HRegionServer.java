@@ -3421,8 +3421,8 @@ public class HRegionServer extends HasThread implements
       LOG.warn("Not adding moved region record: " + encodedName + " to self.");
       return;
     }
-    LOG.info("Adding moved region record: "
-      + encodedName + " to " + destination + " as of " + closeSeqNum);
+    LOG.info("Adding " + encodedName + " move to " + destination + " record at close sequenceid=" +
+        closeSeqNum);
     movedRegions.put(encodedName, new MovedRegionInfo(destination, closeSeqNum));
   }
 

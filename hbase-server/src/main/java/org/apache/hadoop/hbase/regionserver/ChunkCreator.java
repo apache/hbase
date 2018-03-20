@@ -495,8 +495,8 @@ public class ChunkCreator {
           " must be between 0.0 and 1.0");
     }
     int initialCount = (int) (initialCountPercentage * maxCount);
-    LOG.info("{} allocating {} MemStoreChunkPool with chunk size {}, max count {}, " +
-            "initial count {}", label, StringUtils.byteDesc(chunkSize), maxCount, initialCount);
+    LOG.info("Allocating {} MemStoreChunkPool with chunk size {}, max count {}, initial count {}",
+        label, StringUtils.byteDesc(chunkSize), maxCount, initialCount);
     MemStoreChunkPool memStoreChunkPool = new MemStoreChunkPool(label, chunkSize, maxCount,
             initialCount, poolSizePercentage);
     if (heapMemoryManager != null && memStoreChunkPool != null) {
