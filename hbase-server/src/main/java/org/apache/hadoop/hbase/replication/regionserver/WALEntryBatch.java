@@ -157,4 +157,12 @@ class WALEntryBatch {
   public void setLastSeqId(String region, long sequenceId) {
     lastSeqIds.put(region, sequenceId);
   }
+
+  @Override
+  public String toString() {
+    return "WALEntryBatch [walEntries=" + walEntries + ", lastWalPath=" + lastWalPath +
+      ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles=" +
+      nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile=" +
+      endOfFile + "]";
+  }
 }

@@ -510,7 +510,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       // synchronized on walsById to avoid race with preLogRoll
       synchronized (this.walsById) {
         NavigableSet<String> wals = walsById.get(queueId).get(logPrefix);
-        if (wals != null && !wals.first().equals(log)) {
+        if (wals != null) {
           cleanOldLogs(wals, log, inclusive, queueId);
         }
       }
@@ -755,7 +755,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return a sorted set of wal names
    */
   @VisibleForTesting
-  Map<String, Map<String, NavigableSet<String>>> getWALs() {
+  public Map<String, Map<String, NavigableSet<String>>> getWALs() {
     return Collections.unmodifiableMap(walsById);
   }
 

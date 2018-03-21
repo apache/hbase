@@ -192,7 +192,8 @@ public class MetaTableAccessor {
   public enum QueryType {
     ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY),
     REGION(HConstants.CATALOG_FAMILY),
-    TABLE(HConstants.TABLE_FAMILY);
+    TABLE(HConstants.TABLE_FAMILY),
+    REPLICATION(HConstants.REPLICATION_BARRIER_FAMILY);
 
     private final byte[][] families;
 
@@ -1168,8 +1169,9 @@ public class MetaTableAccessor {
     final List<T> results = new ArrayList<>();
     @Override
     public boolean visit(Result r) throws IOException {
-      if (r ==  null || r.isEmpty()) return true;
-      add(r);
+      if (r != null && !r.isEmpty()) {
+        add(r);
+      }
       return true;
     }
 
@@ -2106,6 +2108,24 @@ public class MetaTableAccessor {
         .readAllVersions());
       return getReplicationBarriers(result);
     }
+  }
+
+  public static List<Pair<String, Long>> getTableEncodedRegionNameAndLastBarrier(Connection conn,
+      TableName tableName) throws IOException {
+    List<Pair<String, Long>> list = new ArrayList<>();
+    scanMeta(conn, getTableStartRowForMeta(tableName, QueryType.REPLICATION),
+      getTableStopRowForMeta(tableName, QueryType.REPLICATION), QueryType.REPLICATION, r -> {
+        byte[] value =
+          r.getValue(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER);
+        if (value == null) {
+          return true;
+        }
+        long lastBarrier = Bytes.toLong(value);
+        String encodedRegionName = RegionInfo.encodeRegionName(r.getRow());
+        list.add(Pair.newPair(encodedRegionName, lastBarrier));
+        return true;
+      });
+    return list;
   }
 
   private static void debugLogMutations(List<? extends Mutation> mutations) throws IOException {

@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
+import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -99,19 +100,26 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
   @Override
   public void updatePeerConfig(String peerId) throws ReplicationException, IOException {
     Lock peerLock = peersLock.acquireLock(peerId);
+    ReplicationPeers peers = replicationSourceManager.getReplicationPeers();
     ReplicationPeerImpl peer = null;
     ReplicationPeerConfig oldConfig = null;
+    PeerState oldState = null;
     boolean success = false;
     try {
-      peer = replicationSourceManager.getReplicationPeers().getPeer(peerId);
+      peer = peers.getPeer(peerId);
       if (peer == null) {
         throw new ReplicationException("Peer with id=" + peerId + " is not cached.");
       }
       oldConfig = peer.getPeerConfig();
-      ReplicationPeerConfig newConfig =
-          replicationSourceManager.getReplicationPeers().refreshPeerConfig(peerId);
+      oldState = peer.getPeerState();
+      ReplicationPeerConfig newConfig = peers.refreshPeerConfig(peerId);
+      // also need to refresh peer state here. When updating a serial replication peer we may
+      // disable it first and then enable it.
+      PeerState newState = peers.refreshPeerState(peerId);
       // RS need to start work with the new replication config change
-      if (!ReplicationUtils.isKeyConfigEqual(oldConfig, newConfig)) {
+      if (!ReplicationUtils.isNamespacesAndTableCFsEqual(oldConfig, newConfig) ||
+        oldConfig.isSerial() != newConfig.isSerial() ||
+        (oldState.equals(PeerState.ENABLED) && newState.equals(PeerState.DISABLED))) {
         replicationSourceManager.refreshSources(peerId);
       }
       success = true;
@@ -119,6 +127,7 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
       if (!success && peer != null) {
         // Reset peer config if refresh source failed
         peer.setPeerConfig(oldConfig);
+        peer.setPeerState(oldState.equals(PeerState.ENABLED));
       }
       peerLock.unlock();
     }

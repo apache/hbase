@@ -203,6 +203,24 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     }
   }
 
+  private void addLastSeqIdsToOps(String queueId, Map<String, Long> lastSeqIds,
+      List<ZKUtilOp> listOfOps) throws KeeperException {
+    for (Entry<String, Long> lastSeqEntry : lastSeqIds.entrySet()) {
+      String peerId = new ReplicationQueueInfo(queueId).getPeerId();
+      String path = getSerialReplicationRegionPeerNode(lastSeqEntry.getKey(), peerId);
+      /*
+       * Make sure the existence of path
+       * /hbase/replication/regions/<hash>/<encoded-region-name>-<peer-id>. As the javadoc in
+       * multiOrSequential() method said, if received a NodeExistsException, all operations will
+       * fail. So create the path here, and in fact, no need to add this operation to listOfOps,
+       * because only need to make sure that update file position and sequence id atomically.
+       */
+      ZKUtil.createWithParents(zookeeper, path);
+      // Persist the max sequence id of region to zookeeper.
+      listOfOps.add(ZKUtilOp.setData(path, ZKUtil.positionToByteArray(lastSeqEntry.getValue())));
+    }
+  }
+
   @Override
   public void setWALPosition(ServerName serverName, String queueId, String fileName, long position,
       Map<String, Long> lastSeqIds) throws ReplicationException {
@@ -213,23 +231,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
           ZKUtil.positionToByteArray(position)));
       }
       // Persist the max sequence id(s) of regions for serial replication atomically.
-      for (Entry<String, Long> lastSeqEntry : lastSeqIds.entrySet()) {
-        String peerId = new ReplicationQueueInfo(queueId).getPeerId();
-        String path = getSerialReplicationRegionPeerNode(lastSeqEntry.getKey(), peerId);
-        /*
-         * Make sure the existence of path
-         * /hbase/replication/regions/<hash>/<encoded-region-name>-<peer-id>. As the javadoc in
-         * multiOrSequential() method said, if received a NodeExistsException, all operations will
-         * fail. So create the path here, and in fact, no need to add this operation to listOfOps,
-         * because only need to make sure that update file position and sequence id atomically.
-         */
-        ZKUtil.createWithParents(zookeeper, path);
-        // Persist the max sequence id of region to zookeeper.
-        listOfOps.add(ZKUtilOp.setData(path, ZKUtil.positionToByteArray(lastSeqEntry.getValue())));
-      }
-      if (!listOfOps.isEmpty()) {
-        ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
-      }
+      addLastSeqIdsToOps(queueId, lastSeqIds, listOfOps);
+      ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to set log position (serverName=" + serverName
           + ", queueId=" + queueId + ", fileName=" + fileName + ", position=" + position + ")", e);
@@ -254,6 +257,19 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
           + "), data=" + Bytes.toStringBinary(data));
     }
     return HConstants.NO_SEQNUM;
+  }
+
+  @Override
+  public void setLastSequenceIds(String peerId, Map<String, Long> lastSeqIds)
+      throws ReplicationException {
+    try {
+      List<ZKUtilOp> listOfOps = new ArrayList<>();
+      addLastSeqIdsToOps(peerId, lastSeqIds, listOfOps);
+      ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Failed to set last sequence ids, peerId=" + peerId +
+        ", lastSeqIds.size=" + lastSeqIds.size(), e);
+    }
   }
 
   @Override

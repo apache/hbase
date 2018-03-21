@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +42,10 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
 
   private ReplicationPeerConfig peerConfig;
 
+  private ReplicationPeerConfig oldPeerConfig;
+
+  private boolean enabled;
+
   public UpdatePeerConfigProcedure() {
   }
 
@@ -54,21 +60,53 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
   }
 
   @Override
+  protected boolean reopenRegionsAfterRefresh() {
+    // If we remove some tables from the peer config then we do not need to enter the extra states
+    // for serial replication. Could try to optimize later since it is not easy to determine this...
+    return peerConfig.isSerial() && (!oldPeerConfig.isSerial() ||
+      !ReplicationUtils.isNamespacesAndTableCFsEqual(peerConfig, oldPeerConfig));
+  }
+
+  @Override
+  protected boolean enablePeerBeforeFinish() {
+    // do not need to test reopenRegionsAfterRefresh since we can only enter here if
+    // reopenRegionsAfterRefresh returns true.
+    return enabled;
+  }
+
+  @Override
+  protected ReplicationPeerConfig getOldPeerConfig() {
+    return oldPeerConfig;
+  }
+
+  @Override
+  protected ReplicationPeerConfig getNewPeerConfig() {
+    return peerConfig;
+  }
+
+  @Override
   protected void prePeerModification(MasterProcedureEnv env) throws IOException {
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preUpdateReplicationPeerConfig(peerId, peerConfig);
     }
-    env.getReplicationPeerManager().preUpdatePeerConfig(peerId, peerConfig);
+    ReplicationPeerDescription desc =
+      env.getReplicationPeerManager().preUpdatePeerConfig(peerId, peerConfig);
+    oldPeerConfig = desc.getPeerConfig();
+    enabled = desc.isEnabled();
   }
 
   @Override
   protected void updatePeerStorage(MasterProcedureEnv env) throws ReplicationException {
     env.getReplicationPeerManager().updatePeerConfig(peerId, peerConfig);
+    if (enabled && reopenRegionsAfterRefresh()) {
+      env.getReplicationPeerManager().disablePeer(peerId);
+    }
   }
 
   @Override
-  protected void postPeerModification(MasterProcedureEnv env) throws IOException {
+  protected void postPeerModification(MasterProcedureEnv env)
+      throws IOException, ReplicationException {
     LOG.info("Successfully updated peer config of {} to {}", peerId, peerConfig);
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
@@ -79,14 +117,23 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
-    serializer.serialize(UpdatePeerConfigStateData.newBuilder()
-        .setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig)).build());
+    UpdatePeerConfigStateData.Builder builder = UpdatePeerConfigStateData.newBuilder()
+      .setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
+    if (oldPeerConfig != null) {
+      builder.setOldPeerConfig(ReplicationPeerConfigUtil.convert(oldPeerConfig));
+    }
+    serializer.serialize(builder.build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
-    peerConfig = ReplicationPeerConfigUtil
-        .convert(serializer.deserialize(UpdatePeerConfigStateData.class).getPeerConfig());
+    UpdatePeerConfigStateData data = serializer.deserialize(UpdatePeerConfigStateData.class);
+    peerConfig = ReplicationPeerConfigUtil.convert(data.getPeerConfig());
+    if (data.hasOldPeerConfig()) {
+      oldPeerConfig = ReplicationPeerConfigUtil.convert(data.getOldPeerConfig());
+    } else {
+      oldPeerConfig = null;
+    }
   }
 }

@@ -489,16 +489,17 @@ public class AsyncMetaTableAccessor {
       QueryType type) {
     return tableName.map((table) -> {
       switch (type) {
-      case REGION:
-        byte[] startRow = new byte[table.getName().length + 2];
-        System.arraycopy(table.getName(), 0, startRow, 0, table.getName().length);
-        startRow[startRow.length - 2] = HConstants.DELIMITER;
-        startRow[startRow.length - 1] = HConstants.DELIMITER;
-        return startRow;
-      case ALL:
-      case TABLE:
-      default:
-        return table.getName();
+        case REGION:
+        case REPLICATION:
+          byte[] startRow = new byte[table.getName().length + 2];
+          System.arraycopy(table.getName(), 0, startRow, 0, table.getName().length);
+          startRow[startRow.length - 2] = HConstants.DELIMITER;
+          startRow[startRow.length - 1] = HConstants.DELIMITER;
+          return startRow;
+        case ALL:
+        case TABLE:
+        default:
+          return table.getName();
       }
     });
   }
@@ -512,20 +513,21 @@ public class AsyncMetaTableAccessor {
     return tableName.map((table) -> {
       final byte[] stopRow;
       switch (type) {
-      case REGION:
-        stopRow = new byte[table.getName().length + 3];
-        System.arraycopy(table.getName(), 0, stopRow, 0, table.getName().length);
-        stopRow[stopRow.length - 3] = ' ';
-        stopRow[stopRow.length - 2] = HConstants.DELIMITER;
-        stopRow[stopRow.length - 1] = HConstants.DELIMITER;
-        break;
-      case ALL:
-      case TABLE:
-      default:
-        stopRow = new byte[table.getName().length + 1];
-        System.arraycopy(table.getName(), 0, stopRow, 0, table.getName().length);
-        stopRow[stopRow.length - 1] = ' ';
-        break;
+        case REGION:
+        case REPLICATION:
+          stopRow = new byte[table.getName().length + 3];
+          System.arraycopy(table.getName(), 0, stopRow, 0, table.getName().length);
+          stopRow[stopRow.length - 3] = ' ';
+          stopRow[stopRow.length - 2] = HConstants.DELIMITER;
+          stopRow[stopRow.length - 1] = HConstants.DELIMITER;
+          break;
+        case ALL:
+        case TABLE:
+        default:
+          stopRow = new byte[table.getName().length + 1];
+          System.arraycopy(table.getName(), 0, stopRow, 0, table.getName().length);
+          stopRow[stopRow.length - 1] = ' ';
+          break;
       }
       return stopRow;
     });
