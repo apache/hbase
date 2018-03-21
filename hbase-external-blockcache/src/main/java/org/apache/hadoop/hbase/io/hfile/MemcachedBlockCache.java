@@ -262,7 +262,7 @@ public class MemcachedBlockCache implements BlockCache {
     @Override
     public CachedData encode(HFileBlock block) {
       ByteBuffer bb = ByteBuffer.allocate(block.getSerializedLength());
-      block.serialize(bb);
+      block.serialize(bb, true);
       return new CachedData(0, bb.array(), CachedData.MAX_SIZE);
     }
 

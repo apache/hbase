@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -798,6 +799,59 @@ public class TestLruBlockCache {
     assertEquals(0.5, stats.getHitCachingRatioPastNPeriods(), delta);
   }
 
+  @Test
+  public void testCacheBlockNextBlockMetadataMissing() {
+    long maxSize = 100000;
+    long blockSize = calculateBlockSize(maxSize, 10);
+    int size = 100;
+    int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    byte[] byteArr = new byte[length];
+    ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
+    HFileContext meta = new HFileContextBuilder().build();
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, -1, 52, -1, meta);
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, -1, -1, -1, meta);
+
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
+        (int)Math.ceil(1.2*maxSize/blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR,
+        LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+        0.66f, // min
+        0.99f, // acceptable
+        0.33f, // single
+        0.33f, // multi
+        0.34f, // memory
+        1.2f,  // limit
+        false,
+        1024);
+
+    BlockCacheKey key = new BlockCacheKey("key1", 0);
+    ByteBuffer actualBuffer = ByteBuffer.allocate(length);
+    ByteBuffer block1Buffer = ByteBuffer.allocate(length);
+    ByteBuffer block2Buffer = ByteBuffer.allocate(length);
+    blockWithNextBlockMetadata.serialize(block1Buffer, true);
+    blockWithoutNextBlockMetadata.serialize(block2Buffer, true);
+
+    //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata back.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata,
+        actualBuffer, block1Buffer);
+
+    //Add blockWithoutNextBlockMetada, expect blockWithNextBlockMetadata back.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata,
+        actualBuffer, block1Buffer);
+
+    //Clear and add blockWithoutNextBlockMetadata
+    cache.clearCache();
+    assertNull(cache.getBlock(key, false, false, false));
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata,
+        actualBuffer, block2Buffer);
+
+    //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata,
+        actualBuffer, block1Buffer);
+  }
+
   private CachedItem [] generateFixedBlocks(int numBlocks, int size, String pfx) {
     CachedItem [] blocks = new CachedItem[numBlocks];
     for(int i=0;i<numBlocks;i++) {
@@ -882,9 +936,9 @@ public class TestLruBlockCache {
     }
 
     @Override
-    public void serialize(ByteBuffer destination) {
+    public void serialize(ByteBuffer destination, boolean includeNextBlockOnDiskSize) {
     }
-    
+
     @Override
     public BlockType getBlockType() {
       return BlockType.DATA;

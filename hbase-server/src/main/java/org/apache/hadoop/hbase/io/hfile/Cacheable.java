@@ -46,8 +46,9 @@ public interface Cacheable extends HeapSize {
   /**
    * Serializes its data into destination.
    * @param destination Where to serialize to
+   * @param includeNextBlockOnDiskSize Whether to include nextBlockMetadata in the Cache block.
    */
-  void serialize(ByteBuffer destination);
+  void serialize(ByteBuffer destination, boolean includeNextBlockOnDiskSize);
 
   /**
    * Returns CacheableDeserializer instance which reconstructs original object from ByteBuffer.

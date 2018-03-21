@@ -419,21 +419,30 @@ public class BucketCache implements BlockCache, HeapSize {
       return;
     }
 
-    if (backingMap.containsKey(cacheKey)) {
+    if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey)) {
       /*
        * Compare already cached block only if lruBlockCache is not used to cache data blocks
        */
       if (!cacheDataInL1) {
         Cacheable existingBlock = getBlock(cacheKey, false, false, false);
-        if (BlockCacheUtil.compareCacheBlock(cachedItem, existingBlock) != 0) {
-          throw new RuntimeException("Cached block contents differ, which should not have happened."
-                                    + "cacheKey:" + cacheKey);
+
+        int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, cachedItem, cacheKey);
+        if (comparison != 0) {
+          if (comparison < 0) {
+            LOG.debug("Cached block contents differ by nextBlockOnDiskSize. " +
+                "Keeping cached block which has nextBlockOnDiskSize populated.");
+            return;
+          } else {
+            LOG.debug("Cached block contents differ by nextBlockOnDiskSize. " +
+                "Caching new block which has nextBlockOnDiskSize populated.");
+          }
+        } else {
+          String msg = "Caching an already cached block: " + cacheKey;
+          msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
+          LOG.debug(msg);
+          return;
         }
       }
-      String msg = "Caching an already cached block: " + cacheKey;
-      msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
-      LOG.warn(msg);
-      return;
     }
 
     /*
@@ -975,7 +984,7 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Blocks until elements available in <code>q</code> then tries to grab as many as possible
    * before returning.
-   * @param recepticle Where to stash the elements taken from queue. We clear before we use it
+   * @param receptical Where to stash the elements taken from queue. We clear before we use it
    * just in case.
    * @param q The queue to take from.
    * @return <code>receptical laden with elements taken from the queue or empty if none found.
@@ -1426,7 +1435,7 @@ public class BucketCache implements BlockCache, HeapSize {
           ioEngine.write(metadata, offset + len - metadata.limit());
         } else {
           ByteBuffer bb = ByteBuffer.allocate(len);
-          data.serialize(bb);
+          data.serialize(bb, true);
           ioEngine.write(bb, offset);
         }
       } catch (IOException ioe) {
