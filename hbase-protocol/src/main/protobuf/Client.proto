@@ -81,6 +81,11 @@ message Get {
   // the existence.
   optional bool existence_only = 10 [default = false];
 
+  // If the row to get doesn't exist, return the
+  // closest row before. Deprecated. No longer used!
+  // Since hbase-2.0.0.
+  optional bool closest_row_before = 11 [default = false];
+
   optional Consistency consistency = 12 [default = STRONG];
   repeated ColumnFamilyTimeRange cf_time_range = 13;
   optional bool load_column_families_on_demand = 14; /* DO NOT add defaults to load_column_families_on_demand. */

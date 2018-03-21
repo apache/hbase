@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
+import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -816,8 +817,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         if (action.hasGet()) {
           long before = EnvironmentEdgeManager.currentTime();
+          ClientProtos.Get pbGet = action.getGet();
+          // An asynchbase client, https://github.com/OpenTSDB/asynchbase, starts by trying to do
+          // a get closest before. Throwing the UnknownProtocolException signals it that it needs
+          // to switch and do hbase2 protocol (HBase servers do not tell clients what versions
+          // they are; its a problem for non-native clients like asynchbase. HBASE-20225.
+          if (pbGet.hasClosestRowBefore() && pbGet.getClosestRowBefore()) {
+            throw new UnknownProtocolException("Is this a pre-hbase-1.0.0 or asynchbase client? " +
+                "Client is invoking getClosestRowBefore removed in hbase-2.0.0 replaced by " +
+                "reverse Scan.");
+          }
           try {
-            Get get = ProtobufUtil.toGet(action.getGet());
+            Get get = ProtobufUtil.toGet(pbGet);
             if (context != null) {
               r = get(get, (region), closeCallBack, context);
             } else {
@@ -2437,6 +2448,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
       GetResponse.Builder builder = GetResponse.newBuilder();
       ClientProtos.Get get = request.getGet();
+      // An asynchbase client, https://github.com/OpenTSDB/asynchbase, starts by trying to do
+      // a get closest before. Throwing the UnknownProtocolException signals it that it needs
+      // to switch and do hbase2 protocol (HBase servers do not tell clients what versions
+      // they are; its a problem for non-native clients like asynchbase. HBASE-20225.
+      if (get.hasClosestRowBefore() && get.getClosestRowBefore()) {
+        throw new UnknownProtocolException("Is this a pre-hbase-1.0.0 or asynchbase client? " +
+            "Client is invoking getClosestRowBefore removed in hbase-2.0.0 replaced by " +
+            "reverse Scan.");
+      }
       Boolean existence = null;
       Result r = null;
       RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
