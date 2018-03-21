@@ -33,6 +33,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utilty for aggregating counts in CachedBlocks and toString/toJSON CachedBlocks and BlockCaches.
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class BlockCacheUtil {
 
+  private static final Logger LOG = LoggerFactory.getLogger(BlockCacheUtil.class);
 
   public static final long NANOS_PER_SECOND = 1000000000;
 
@@ -173,13 +176,42 @@ public class BlockCacheUtil {
     return cbsbf;
   }
 
-  public static int compareCacheBlock(Cacheable left, Cacheable right) {
+  private static int compareCacheBlock(Cacheable left, Cacheable right,
+                                       boolean includeNextBlockMetadata) {
     ByteBuffer l = ByteBuffer.allocate(left.getSerializedLength());
-    left.serialize(l);
+    left.serialize(l, includeNextBlockMetadata);
     ByteBuffer r = ByteBuffer.allocate(right.getSerializedLength());
-    right.serialize(r);
+    right.serialize(r, includeNextBlockMetadata);
     return Bytes.compareTo(l.array(), l.arrayOffset(), l.limit(),
 	      r.array(), r.arrayOffset(), r.limit());
+  }
+
+  /**
+   * Validate that the existing and newBlock are the same without including the nextBlockMetadata,
+   * if not, throw an exception. If they are the same without the nextBlockMetadata,
+   * return the comparison.
+   *
+   * @param existing block that is existing in the cache.
+   * @param newBlock block that is trying to be cached.
+   * @param cacheKey the cache key of the blocks.
+   * @return comparison of the existing block to the newBlock.
+   */
+  public static int validateBlockAddition(Cacheable existing, Cacheable newBlock,
+                                          BlockCacheKey cacheKey) {
+    int comparison = compareCacheBlock(existing, newBlock, true);
+    if (comparison != 0) {
+      LOG.warn("Cached block contents differ, trying to just compare the block contents " +
+          "without the next block. CacheKey: " + cacheKey);
+
+      // compare the contents, if they are not equal, we are in big trouble
+      int comparisonWithoutNextBlockMetadata = compareCacheBlock(existing, newBlock, false);
+
+      if (comparisonWithoutNextBlockMetadata != 0) {
+        throw new RuntimeException("Cached block contents differ, which should not have happened."
+            + "cacheKey:" + cacheKey);
+      }
+    }
+    return comparison;
   }
 
   /**

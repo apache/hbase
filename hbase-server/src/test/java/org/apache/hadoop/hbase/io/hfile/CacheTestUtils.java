@@ -311,7 +311,7 @@ public class CacheTestUtils {
     }
 
     @Override
-    public void serialize(ByteBuffer destination) {
+    public void serialize(ByteBuffer destination, boolean includeNextBlockMetadata) {
       destination.putInt(buf.length);
       Thread.yield();
       destination.put(buf);
@@ -397,5 +397,16 @@ public class CacheTestUtils {
     public HFileBlock getBlock() {
       return this.block;
     }
+  }
+
+  public static void getBlockAndAssertEquals(BlockCache cache, BlockCacheKey key,
+                                             Cacheable blockToCache, ByteBuffer destBuffer,
+                                             ByteBuffer expectedBuffer) {
+    destBuffer.clear();
+    cache.cacheBlock(key, blockToCache);
+    Cacheable actualBlock = cache.getBlock(key, false, false, false);
+    actualBlock.serialize(destBuffer, true);
+    assertEquals(expectedBuffer, destBuffer);
+    cache.returnBlock(key, actualBlock);
   }
 }

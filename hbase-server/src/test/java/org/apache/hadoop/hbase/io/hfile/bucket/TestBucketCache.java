@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,10 +37,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils.HFileBlockPair;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.BucketSizeInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -110,17 +117,11 @@ public class TestBucketCache {
 
     @Override
     public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
-      if (super.getBlock(cacheKey, true, false, true) != null) {
-        throw new RuntimeException("Cached an already cached block");
-      }
       super.cacheBlock(cacheKey, buf, inMemory);
     }
 
     @Override
     public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-      if (super.getBlock(cacheKey, true, false, true) != null) {
-        throw new RuntimeException("Cached an already cached block");
-      }
       super.cacheBlock(cacheKey, buf);
     }
   }
@@ -405,5 +406,43 @@ public class TestBucketCache {
     long testValue = 549888460800L;
     BucketCache.BucketEntry bucketEntry = new BucketCache.BucketEntry(testValue, 10, 10L, true);
     assertEquals(testValue, bucketEntry.offset());
+  }
+
+  @Test
+  public void testCacheBlockNextBlockMetadataMissing() {
+    int size = 100;
+    int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    byte[] byteArr = new byte[length];
+    ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
+    HFileContext meta = new HFileContextBuilder().build();
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, -1, 52, -1, meta);
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, -1, -1, -1, meta);
+
+    BlockCacheKey key = new BlockCacheKey("key1", 0);
+    ByteBuffer actualBuffer = ByteBuffer.allocate(length);
+    ByteBuffer block1Buffer = ByteBuffer.allocate(length);
+    ByteBuffer block2Buffer = ByteBuffer.allocate(length);
+    blockWithNextBlockMetadata.serialize(block1Buffer, true);
+    blockWithoutNextBlockMetadata.serialize(block2Buffer, true);
+
+    //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata back.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
+        block1Buffer);
+
+    //Add blockWithoutNextBlockMetada, expect blockWithNextBlockMetadata back.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
+        block1Buffer);
+
+    //Clear and add blockWithoutNextBlockMetadata
+    cache.evictBlock(key);
+    assertNull(cache.getBlock(key, false, false, false));
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
+        block2Buffer);
+
+    //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
+        block1Buffer);
   }
 }
