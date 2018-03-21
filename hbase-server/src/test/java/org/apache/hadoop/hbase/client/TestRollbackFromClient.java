@@ -312,10 +312,20 @@ public class TestRollbackFromClient {
 
     @Override
     public void sync(long txid) throws IOException {
+      sync(txid, false);
+    }
+
+    @Override
+    public void sync(boolean forceSync) throws IOException {
+      delegation.sync(forceSync);
+    }
+
+    @Override
+    public void sync(long txid, boolean forceSync) throws IOException {
       if (SHOULD_FAIL.get()) {
         throw new IOException("[TESTING] we need the failure!!!");
       }
-      delegation.sync(txid);
+      delegation.sync(txid, forceSync);
     }
 
     @Override
@@ -347,6 +357,5 @@ public class TestRollbackFromClient {
     public long getEarliestMemstoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
       return delegation.getEarliestMemstoreSeqNum(encodedRegionName, familyName);
     }
-
   }
 }

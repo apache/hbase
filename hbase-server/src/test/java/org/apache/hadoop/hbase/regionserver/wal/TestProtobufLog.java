@@ -170,7 +170,7 @@ public class TestProtobufLog {
         }
         writer.append(new WAL.Entry(key, edit));
       }
-      writer.sync();
+      writer.sync(false);
       if (withTrailer) writer.close();
 
       // Now read the log using standard means.

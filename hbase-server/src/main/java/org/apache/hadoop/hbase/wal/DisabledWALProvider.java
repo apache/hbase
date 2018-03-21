@@ -199,6 +199,16 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
+    public void sync(boolean forceSync) throws IOException {
+      sync();
+    }
+
+    @Override
+    public void sync(long txid, boolean forceSync) throws IOException {
+      sync(txid);
+    }
+
+    @Override
     public Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> flushedFamilyNames) {
       if (closed.get()) return null;
       return HConstants.NO_SEQNUM;

@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -278,6 +279,8 @@ public class FSHLog implements WAL {
 
   // Minimum tolerable replicas, if the actual value is lower than it, rollWriter will be triggered
   private final int minTolerableReplication;
+
+  private final boolean useHsync;
 
   private final int slowSyncNs;
 
@@ -534,6 +537,8 @@ public class FSHLog implements WAL {
       ", prefix=" + this.logFilePrefix + ", suffix=" + logFileSuffix + ", logDir=" +
       this.fullPathLogDir + ", archiveDir=" + this.fullPathArchiveDir);
 
+    this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
+
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();
 
@@ -673,7 +678,7 @@ public class FSHLog implements WAL {
   private void preemptiveSync(final ProtobufLogWriter nextWriter) {
     long startTimeNanos = System.nanoTime();
     try {
-      nextWriter.sync();
+      nextWriter.sync(useHsync);
       postSync(System.nanoTime() - startTimeNanos, 0);
     } catch (IOException e) {
       // optimization failed, no need to abort here.
@@ -1280,7 +1285,7 @@ public class FSHLog implements WAL {
           Throwable lastException = null;
           try {
             Trace.addTimelineAnnotation("syncing writer");
-            writer.sync();
+            writer.sync(takeSyncFuture.isForceSync());
             Trace.addTimelineAnnotation("writer synced");
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
@@ -1383,20 +1388,20 @@ public class FSHLog implements WAL {
   }
 
   private SyncFuture publishSyncOnRingBuffer(long sequence) {
-    return publishSyncOnRingBuffer(sequence, null);
+    return publishSyncOnRingBuffer(sequence, null, false);
   }
 
   private long getSequenceOnRingBuffer() {
     return this.disruptor.getRingBuffer().next();
   }
 
-  private SyncFuture publishSyncOnRingBuffer(Span span) {
+  private SyncFuture publishSyncOnRingBuffer(Span span, boolean forceSync) {
     long sequence = this.disruptor.getRingBuffer().next();
-    return publishSyncOnRingBuffer(sequence, span);
+    return publishSyncOnRingBuffer(sequence, span, forceSync);
   }
 
-  private SyncFuture publishSyncOnRingBuffer(long sequence, Span span) {
-    SyncFuture syncFuture = getSyncFuture(sequence, span);
+  private SyncFuture publishSyncOnRingBuffer(long sequence, Span span, boolean forceSync) {
+    SyncFuture syncFuture = getSyncFuture(sequence, span).setForceSync(forceSync);
     try {
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
       truck.loadPayload(syncFuture);
@@ -1407,8 +1412,8 @@ public class FSHLog implements WAL {
   }
 
   // Sync all known transactions
-  private Span publishSyncThenBlockOnCompletion(Span span) throws IOException {
-    return blockOnSync(publishSyncOnRingBuffer(span));
+  private Span publishSyncThenBlockOnCompletion(Span span, boolean forceSync) throws IOException {
+    return blockOnSync(publishSyncOnRingBuffer(span, forceSync));
   }
 
   private Span blockOnSync(final SyncFuture syncFuture) throws IOException {
@@ -1503,9 +1508,14 @@ public class FSHLog implements WAL {
 
   @Override
   public void sync() throws IOException {
+    sync(useHsync);
+  }
+
+  @Override
+  public void sync(boolean forceSync) throws IOException {
     TraceScope scope = Trace.startSpan("FSHLog.sync");
     try {
-      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
+      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach(), forceSync));
     } finally {
       assert scope == NullScope.INSTANCE || !scope.isDetached();
       scope.close();
@@ -1514,13 +1524,18 @@ public class FSHLog implements WAL {
 
   @Override
   public void sync(long txid) throws IOException {
-    if (this.highestSyncedSequence.get() >= txid){
+    sync(txid, useHsync);
+  }
+
+  @Override
+  public void sync(long txid, boolean forceSync) throws IOException {
+    if (this.highestSyncedSequence.get() >= txid) {
       // Already sync'd.
       return;
     }
     TraceScope scope = Trace.startSpan("FSHLog.sync");
     try {
-      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
+      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach(), forceSync));
     } finally {
       assert scope == NullScope.INSTANCE || !scope.isDetached();
       scope.close();

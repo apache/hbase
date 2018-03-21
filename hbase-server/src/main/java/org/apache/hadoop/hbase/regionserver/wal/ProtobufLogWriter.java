@@ -164,11 +164,15 @@ public class ProtobufLogWriter extends WriterBase {
   }
 
   @Override
-  public void sync() throws IOException {
+  public void sync(boolean forceSync) throws IOException {
     FSDataOutputStream fsdos = this.output;
     if (fsdos == null) return; // Presume closed
     fsdos.flush();
-    fsdos.hflush();
+    if (forceSync) {
+      fsdos.hsync();
+    } else {
+      fsdos.hflush();
+    }
   }
 
   @Override

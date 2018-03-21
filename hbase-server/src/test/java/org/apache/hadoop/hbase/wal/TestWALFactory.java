@@ -677,7 +677,7 @@ public class TestWALFactory {
         }
         sflw.append(new WAL.Entry(key, edit));
       }
-      sflw.sync();
+      sflw.sync(false);
       sflw.close();
 
       // Now read the log using standard means.

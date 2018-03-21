@@ -80,6 +80,8 @@ class SyncFuture {
    */
   private Span span;
 
+  private boolean forceSync;
+
   /**
    * Call this method to clear old usage and get it ready for new deploy. Call
    * this method even if it is being used for the first time.
@@ -118,6 +120,15 @@ class SyncFuture {
 
   synchronized long getRingBufferSequence() {
     return this.ringBufferSequence;
+  }
+
+  synchronized boolean isForceSync() {
+    return forceSync;
+  }
+
+  synchronized SyncFuture setForceSync(boolean forceSync) {
+    this.forceSync = forceSync;
+    return this;
   }
 
   /**

@@ -133,13 +133,13 @@ public class TestFailedAppendAndSync {
               w.close();
             }
 
-            @Override
-            public void sync() throws IOException {
-              if (throwSyncException) {
-                throw new IOException("FAKE! Failed to replace a bad datanode...");
-              }
-              w.sync();
+          @Override
+          public void sync(boolean forceSync) throws IOException {
+            if (throwSyncException) {
+              throw new IOException("FAKE! Failed to replace a bad datanode...");
             }
+            w.sync(forceSync);
+          }
 
             @Override
             public void append(Entry entry) throws IOException {

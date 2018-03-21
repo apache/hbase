@@ -120,7 +120,7 @@ public class TestReadOldRootAndMetaEdits {
       writer.append(oldMetaEntry);
 
       // sync/close the writer
-      writer.sync();
+      writer.sync(false);
       writer.close();
 
       // read the log and see things are okay.

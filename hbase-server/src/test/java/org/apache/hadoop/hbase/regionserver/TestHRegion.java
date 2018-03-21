@@ -325,9 +325,9 @@ public class TestHRegion {
       }
 
       @Override
-      public void sync(long txid) throws IOException {
+      public void sync(long txid, boolean forceSync) throws IOException {
         storeFlushCtx.prepare();
-        super.sync(txid);
+        super.sync(txid, forceSync);
       }
     }
 
@@ -1170,8 +1170,8 @@ public class TestHRegion {
           }
 
           @Override
-          public void sync() throws IOException {
-            w.sync();
+          public void sync(boolean forceSync) throws IOException {
+            w.sync(forceSync);
           }
 
           @Override

@@ -172,11 +172,11 @@ public class TestWALLockup {
           }
 
           @Override
-          public void sync() throws IOException {
+          public void sync(boolean forceSync) throws IOException {
             if (throwException) {
               throw new IOException("FAKE! Failed to replace a bad datanode...SYNC");
             }
-            w.sync();
+            w.sync(forceSync);
           }
 
           @Override
@@ -327,12 +327,11 @@ public class TestWALLockup {
           }
 
           @Override
-          public void sync() throws IOException {
+          public void sync(boolean forceSync) throws IOException {
             if (throwException) {
-              throw new IOException(
-                  "FAKE! Failed to replace a bad datanode...SYNC");
+              throw new IOException("FAKE! Failed to replace a bad datanode...SYNC");
             }
-            w.sync();
+            w.sync(forceSync);
           }
 
           @Override

@@ -221,6 +221,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String HBASE_MAX_CELL_SIZE_KEY = "hbase.server.keyvalue.maxsize";
   public static final int DEFAULT_MAX_CELL_SIZE = 10485760;
 
+  public static final String WAL_HSYNC_CONF_KEY = "hbase.wal.hsync";
+  public static final boolean DEFAULT_WAL_HSYNC = false;
+
   /**
    * Longest time we'll wait on a sequenceid.
    * Sequenceid comes up out of the WAL subsystem. WAL subsystem can go bad or a test might use
@@ -786,9 +789,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      */
     this.rowProcessorTimeout = conf.getLong(
         "hbase.hregion.row.processor.timeout", DEFAULT_ROW_PROCESSOR_TIMEOUT);
-    this.durability = htd.getDurability() == Durability.USE_DEFAULT
-        ? DEFAULT_DURABILITY
-        : htd.getDurability();
+
+    boolean forceSync = conf.getBoolean(WAL_HSYNC_CONF_KEY, DEFAULT_WAL_HSYNC);
+    /**
+     * This is the global default value for durability. All tables/mutations not defining a
+     * durability or using USE_DEFAULT will default to this value.
+     */
+    Durability defaultDurability = forceSync ? Durability.FSYNC_WAL : Durability.SYNC_WAL;
+    this.durability =
+        htd.getDurability() == Durability.USE_DEFAULT ? defaultDurability : htd.getDurability();
+
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -8758,9 +8768,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // nothing do to
         break;
       case SYNC_WAL:
+        this.wal.sync(txid, false);
+        break;
       case FSYNC_WAL:
         // sync the WAL edit (SYNC and FSYNC treated the same for now)
-        this.wal.sync(txid);
+        this.wal.sync(txid, true);
         break;
       default:
         throw new RuntimeException("Unknown durability " + durability);

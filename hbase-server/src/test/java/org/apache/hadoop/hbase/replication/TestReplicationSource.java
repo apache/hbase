@@ -120,7 +120,7 @@ public class TestReplicationSource {
       WALKey key = new WALKey(b, TableName.valueOf(b), 0, 0,
           HConstants.DEFAULT_CLUSTER_ID);
       writer.append(new WAL.Entry(key, edit));
-      writer.sync();
+      writer.sync(false);
     }
     writer.close();
 

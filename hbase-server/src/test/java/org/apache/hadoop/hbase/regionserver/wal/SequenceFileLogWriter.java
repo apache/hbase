@@ -193,7 +193,7 @@ public class SequenceFileLogWriter extends WriterBase {
   }
 
   @Override
-  public void sync() throws IOException {
+  public void sync(boolean forceSync) throws IOException {
     try {
       this.writer.syncFs();
     } catch (NullPointerException npe) {
@@ -219,4 +219,5 @@ public class SequenceFileLogWriter extends WriterBase {
   public FSDataOutputStream getWriterFSDataOutputStream() {
     return this.writer_out;
   }
+
 }

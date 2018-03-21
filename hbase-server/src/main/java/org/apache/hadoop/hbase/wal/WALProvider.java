@@ -80,7 +80,12 @@ public interface WALProvider {
   // Writers are used internally. Users outside of the WAL should be relying on the
   // interface provided by WAL.
   interface Writer extends Closeable {
-    void sync() throws IOException;
+    /**
+     * @param forceSync Flag to force sync rather than flushing to the buffer. Example - Hadoop
+     *          hflush vs hsync.
+     * @throws IOException
+     */
+    void sync(boolean forceSync) throws IOException;
     void append(WAL.Entry entry) throws IOException;
     long getLength() throws IOException;
   }
