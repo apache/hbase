@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -254,8 +253,13 @@ class MemStoreFlusher implements FlushRequester {
           bestRegionReplicaSize = getMemStoreDataSize(bestRegionReplica);
       }
 
-      Preconditions.checkState(
-        (regionToFlush != null && regionToFlushSize > 0) || bestRegionReplicaSize > 0);
+      if ((regionToFlush == null || regionToFlushSize == 0) && bestRegionReplicaSize == 0) {
+        // A concurrency issue (such as splitting region) may happen such that the online region
+        // seen by getCopyOfOnlineRegionsSortedByXX() method is no longer eligible to
+        // getBiggestMemStoreRegion(). This means that we can come out of the loop
+        LOG.debug("Above memory mark but there is no flushable region");
+        return false;
+      }
 
       if (regionToFlush == null ||
           (bestRegionReplica != null &&
