@@ -468,7 +468,7 @@ public class TestHFileBlock {
             // test serialized blocks
             for (boolean reuseBuffer : new boolean[] { false, true }) {
               ByteBuffer serialized = ByteBuffer.allocate(blockFromHFile.getSerializedLength());
-              blockFromHFile.serialize(serialized);
+              blockFromHFile.serialize(serialized, true);
               HFileBlock deserialized =
                   (HFileBlock) blockFromHFile.getDeserializer().deserialize(
                     new SingleByteBuff(serialized), reuseBuffer, MemoryType.EXCLUSIVE);
@@ -857,5 +857,28 @@ public class TestHFileBlock {
           "size: " + hfileBlockExpectedSize + ";", expected,
           block.heapSize());
     }
+  }
+
+  @Test
+  public void testSerializeWithoutNextBlockMetadata() {
+    int size = 100;
+    int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    byte[] byteArr = new byte[length];
+    ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
+    HFileContext meta = new HFileContextBuilder().build();
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, -1, 52, -1, meta);
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, -1, -1, -1, meta);
+    ByteBuffer buff1 = ByteBuffer.allocate(length);
+    ByteBuffer buff2 = ByteBuffer.allocate(length);
+    blockWithNextBlockMetadata.serialize(buff1, true);
+    blockWithoutNextBlockMetadata.serialize(buff2, true);
+    assertNotEquals(buff1, buff2);
+    buff1.clear();
+    buff2.clear();
+    blockWithNextBlockMetadata.serialize(buff1, false);
+    blockWithoutNextBlockMetadata.serialize(buff2, false);
+    assertEquals(buff1, buff2);
   }
 }

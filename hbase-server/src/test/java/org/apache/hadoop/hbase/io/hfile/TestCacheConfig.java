@@ -136,7 +136,7 @@ public class TestCacheConfig {
     }
 
     @Override
-    public void serialize(ByteBuffer destination) {
+    public void serialize(ByteBuffer destination, boolean includeNextBlockMetadata) {
       LOG.info("Serialized " + this + " to " + destination);
     }
 

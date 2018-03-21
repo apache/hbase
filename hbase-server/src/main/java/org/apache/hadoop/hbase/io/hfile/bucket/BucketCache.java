@@ -425,21 +425,28 @@ public class BucketCache implements BlockCache, HeapSize {
       return;
     }
 
-    if (backingMap.containsKey(cacheKey)) {
+    if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey)) {
       Cacheable existingBlock = getBlock(cacheKey, false, false, false);
+
       try {
-        if (BlockCacheUtil.compareCacheBlock(cachedItem, existingBlock) != 0) {
-          throw new RuntimeException("Cached block contents differ, which should not have happened."
-              + "cacheKey:" + cacheKey);
+        int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, cachedItem, cacheKey);
+        if (comparison != 0) {
+          if (comparison < 0) {
+            LOG.warn("Cached block contents differ by nextBlockOnDiskSize. Keeping cached block.");
+            return;
+          } else {
+            LOG.warn("Cached block contents differ by nextBlockOnDiskSize. Caching new block.");
+          }
+        } else {
+          String msg = "Caching an already cached block: " + cacheKey;
+          msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
+          LOG.warn(msg);
+          return;
         }
-        String msg = "Caching an already cached block: " + cacheKey;
-        msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
-        LOG.warn(msg);
       } finally {
         // return the block since we need to decrement the count
         returnBlock(cacheKey, existingBlock);
       }
-      return;
     }
 
     /*
@@ -1505,7 +1512,7 @@ public class BucketCache implements BlockCache, HeapSize {
           ioEngine.write(metadata, offset + len - metadata.limit());
         } else {
           ByteBuffer bb = ByteBuffer.allocate(len);
-          data.serialize(bb);
+          data.serialize(bb, true);
           ioEngine.write(bb, offset);
         }
       } catch (IOException ioe) {

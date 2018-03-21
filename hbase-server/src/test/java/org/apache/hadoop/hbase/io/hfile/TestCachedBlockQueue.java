@@ -131,7 +131,7 @@ public class TestCachedBlockQueue extends TestCase {
             }
 
             @Override
-            public void serialize(ByteBuffer destination) {
+            public void serialize(ByteBuffer destination, boolean includeNextBlockMetadata) {
             }
 
             @Override
