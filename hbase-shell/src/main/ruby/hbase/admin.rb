@@ -142,9 +142,9 @@ module Hbase
     def splitormerge_switch(type, enabled)
       switch_type = nil
       if type == 'SPLIT'
-        switch_type = org.apache.hadoop.hbase.client.Admin::MasterSwitchType::SPLIT
+        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::SPLIT
       elsif type == 'MERGE'
-        switch_type = org.apache.hadoop.hbase.client.Admin::MasterSwitchType::MERGE
+        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::MERGE
       else
         raise ArgumentError, 'only SPLIT or MERGE accepted for type!'
       end
@@ -160,9 +160,9 @@ module Hbase
     def splitormerge_enabled(type)
       switch_type = nil
       if type == 'SPLIT'
-        switch_type = org.apache.hadoop.hbase.client.Admin::MasterSwitchType::SPLIT
+        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::SPLIT
       elsif type == 'MERGE'
-        switch_type = org.apache.hadoop.hbase.client.Admin::MasterSwitchType::MERGE
+        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::MERGE
       else
         raise ArgumentError, 'only SPLIT or MERGE accepted for type!'
       end
