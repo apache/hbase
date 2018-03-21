@@ -968,7 +968,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       WALSplitter.getMaxRegionSequenceId(fs.getFileSystem(), fs.getRegionDir());
     long nextSeqId = Math.max(maxSeqId, maxSeqIdFromFile) + 1;
     if (writestate.writesEnabled) {
-      WALSplitter.writeRegionSequenceIdFile(fs.getFileSystem(), fs.getRegionDir(), nextSeqId);
+      WALSplitter.writeRegionSequenceIdFile(fs.getFileSystem(), fs.getRegionDir(), nextSeqId - 1);
     }
 
     LOG.info("Opened {}; next sequenceid={}", this.getRegionInfo().getShortNameToLog(), nextSeqId);
@@ -1097,7 +1097,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return allStoreFiles;
   }
 
-  private void writeRegionOpenMarker(WAL wal, long openSeqId) throws IOException {
+  @VisibleForTesting
+  protected void writeRegionOpenMarker(WAL wal, long openSeqId) throws IOException {
     Map<byte[], List<Path>> storeFiles = getStoreFiles();
     RegionEventDescriptor regionOpenDesc = ProtobufUtil.toRegionEventDescriptor(
       RegionEventDescriptor.EventType.REGION_OPEN, getRegionInfo(), openSeqId,
