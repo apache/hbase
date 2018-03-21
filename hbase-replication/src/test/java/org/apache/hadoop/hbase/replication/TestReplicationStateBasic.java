@@ -316,6 +316,12 @@ public abstract class TestReplicationStateBasic {
     }
     assertEquals(900L, rqs.getLastSequenceId(region0, queue1));
     assertEquals(1000L, rqs.getLastSequenceId(region1, queue1));
+
+    // Try to decrease the last pushed id by setWALPosition method.
+    rqs.setWALPosition(serverName1, queue1, getFileName("file1", 0), 11 * 100,
+      ImmutableMap.of(region0, 899L, region1, 1001L));
+    assertEquals(900L, rqs.getLastSequenceId(region0, queue1));
+    assertEquals(1001L, rqs.getLastSequenceId(region1, queue1));
   }
 
   protected void assertConnectedPeerStatus(boolean status, String peerId) throws Exception {

@@ -1500,8 +1500,15 @@ public final class ZKUtil {
     /**
      * @return a setData ZKUtilOp
      */
-    public static ZKUtilOp setData(String path, byte [] data) {
+    public static ZKUtilOp setData(String path, byte[] data) {
       return new SetData(path, data);
+    }
+
+    /**
+     * @return a setData ZKUtilOp
+     */
+    public static ZKUtilOp setData(String path, byte[] data, int version) {
+      return new SetData(path, data, version);
     }
 
     /**
@@ -1578,15 +1585,26 @@ public final class ZKUtil {
      * ZKUtilOp representing setData in ZooKeeper
      */
     public static final class SetData extends ZKUtilOp {
-      private byte [] data;
+      private byte[] data;
+      private int version = -1;
 
-      private SetData(String path, byte [] data) {
+      private SetData(String path, byte[] data) {
         super(path);
         this.data = data;
       }
 
+      private SetData(String path, byte[] data, int version) {
+        super(path);
+        this.data = data;
+        this.version = version;
+      }
+
       public byte[] getData() {
         return data;
+      }
+
+      public int getVersion() {
+        return version;
       }
 
       @Override
@@ -1599,13 +1617,15 @@ public final class ZKUtil {
         }
 
         SetData op = (SetData) o;
-        return getPath().equals(op.getPath()) && Arrays.equals(data, op.data);
+        return getPath().equals(op.getPath()) && Arrays.equals(data, op.data)
+            && getVersion() == op.getVersion();
       }
 
       @Override
       public int hashCode() {
         int ret = getPath().hashCode();
-        return ret * 31 + Bytes.hashCode(data);
+        ret = ret * 31 + Bytes.hashCode(data);
+        return ret * 31 + Integer.hashCode(version);
       }
     }
   }
@@ -1626,8 +1646,8 @@ public final class ZKUtil {
       DeleteNodeFailSilent dnfs = (DeleteNodeFailSilent)op;
       return Op.delete(dnfs.getPath(), -1);
     } else if (op instanceof SetData) {
-      SetData sd = (SetData)op;
-      return Op.setData(sd.getPath(), sd.getData(), -1);
+      SetData sd = (SetData) op;
+      return Op.setData(sd.getPath(), sd.getData(), sd.getVersion());
     } else {
       throw new UnsupportedOperationException("Unexpected ZKUtilOp type: "
         + op.getClass().getName());

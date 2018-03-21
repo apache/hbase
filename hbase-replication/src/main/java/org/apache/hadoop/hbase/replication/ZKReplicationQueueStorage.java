@@ -204,20 +204,25 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   private void addLastSeqIdsToOps(String queueId, Map<String, Long> lastSeqIds,
-      List<ZKUtilOp> listOfOps) throws KeeperException {
+      List<ZKUtilOp> listOfOps) throws KeeperException, ReplicationException {
+    String peerId = new ReplicationQueueInfo(queueId).getPeerId();
     for (Entry<String, Long> lastSeqEntry : lastSeqIds.entrySet()) {
-      String peerId = new ReplicationQueueInfo(queueId).getPeerId();
       String path = getSerialReplicationRegionPeerNode(lastSeqEntry.getKey(), peerId);
-      /*
-       * Make sure the existence of path
-       * /hbase/replication/regions/<hash>/<encoded-region-name>-<peer-id>. As the javadoc in
-       * multiOrSequential() method said, if received a NodeExistsException, all operations will
-       * fail. So create the path here, and in fact, no need to add this operation to listOfOps,
-       * because only need to make sure that update file position and sequence id atomically.
-       */
-      ZKUtil.createWithParents(zookeeper, path);
-      // Persist the max sequence id of region to zookeeper.
-      listOfOps.add(ZKUtilOp.setData(path, ZKUtil.positionToByteArray(lastSeqEntry.getValue())));
+      Pair<Long, Integer> p = getLastSequenceIdWithVersion(lastSeqEntry.getKey(), peerId);
+      byte[] data = ZKUtil.positionToByteArray(lastSeqEntry.getValue());
+      if (p.getSecond() < 0) { // ZNode does not exist.
+        ZKUtil.createWithParents(zookeeper,
+          path.substring(0, path.lastIndexOf(ZNodePaths.ZNODE_PATH_SEPARATOR)));
+        listOfOps.add(ZKUtilOp.createAndFailSilent(path, data));
+        continue;
+      }
+      // Perform CAS in a specific version v0 (HBASE-20138)
+      int v0 = p.getSecond();
+      long lastPushedSeqId = p.getFirst();
+      if (lastSeqEntry.getValue() <= lastPushedSeqId) {
+        continue;
+      }
+      listOfOps.add(ZKUtilOp.setData(path, data, v0));
     }
   }
 
@@ -225,50 +230,85 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   public void setWALPosition(ServerName serverName, String queueId, String fileName, long position,
       Map<String, Long> lastSeqIds) throws ReplicationException {
     try {
-      List<ZKUtilOp> listOfOps = new ArrayList<>();
-      if (position > 0) {
-        listOfOps.add(ZKUtilOp.setData(getFileNode(serverName, queueId, fileName),
-          ZKUtil.positionToByteArray(position)));
+      for (int retry = 0;; retry++) {
+        List<ZKUtilOp> listOfOps = new ArrayList<>();
+        if (position > 0) {
+          listOfOps.add(ZKUtilOp.setData(getFileNode(serverName, queueId, fileName),
+            ZKUtil.positionToByteArray(position)));
+        }
+        // Persist the max sequence id(s) of regions for serial replication atomically.
+        addLastSeqIdsToOps(queueId, lastSeqIds, listOfOps);
+        if (listOfOps.isEmpty()) {
+          return;
+        }
+        try {
+          ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
+          return;
+        } catch (KeeperException.BadVersionException | KeeperException.NodeExistsException e) {
+          LOG.warn(
+            "Bad version(or node exist) when persist the last pushed sequence id to zookeeper storage, "
+                + "Retry = " + retry + ", serverName=" + serverName + ", queueId=" + queueId
+                + ", fileName=" + fileName);
+        }
       }
-      // Persist the max sequence id(s) of regions for serial replication atomically.
-      addLastSeqIdsToOps(queueId, lastSeqIds, listOfOps);
-      ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to set log position (serverName=" + serverName
           + ", queueId=" + queueId + ", fileName=" + fileName + ", position=" + position + ")", e);
     }
   }
 
-  @Override
-  public long getLastSequenceId(String encodedRegionName, String peerId)
-      throws ReplicationException {
-    byte[] data;
-    try {
-      data =
-          ZKUtil.getData(zookeeper, getSerialReplicationRegionPeerNode(encodedRegionName, peerId));
-    } catch (KeeperException | InterruptedException e) {
-      throw new ReplicationException("Failed to get the last sequence id(region="
-          + encodedRegionName + ", peerId=" + peerId + ")");
+  /**
+   * Return the {lastPushedSequenceId, ZNodeDataVersion} pair. if ZNodeDataVersion is -1, it means
+   * that the ZNode does not exist.
+   */
+  @VisibleForTesting
+  protected Pair<Long, Integer> getLastSequenceIdWithVersion(String encodedRegionName,
+      String peerId) throws KeeperException {
+    Stat stat = new Stat();
+    String path = getSerialReplicationRegionPeerNode(encodedRegionName, peerId);
+    byte[] data = ZKUtil.getDataNoWatch(zookeeper, path, stat);
+    if (data == null) {
+      // ZNode does not exist, so just return version -1 to indicate that no node exist.
+      return Pair.newPair(HConstants.NO_SEQNUM, -1);
     }
     try {
-      return ZKUtil.parseWALPositionFrom(data);
+      return Pair.newPair(ZKUtil.parseWALPositionFrom(data), stat.getVersion());
     } catch (DeserializationException de) {
       LOG.warn("Failed to parse log position (region=" + encodedRegionName + ", peerId=" + peerId
           + "), data=" + Bytes.toStringBinary(data));
     }
-    return HConstants.NO_SEQNUM;
+    return Pair.newPair(HConstants.NO_SEQNUM, stat.getVersion());
+  }
+
+  @Override
+  public long getLastSequenceId(String encodedRegionName, String peerId)
+      throws ReplicationException {
+    try {
+      return getLastSequenceIdWithVersion(encodedRegionName, peerId).getFirst();
+    } catch (KeeperException e) {
+      throw new ReplicationException("Failed to get last pushed sequence id (encodedRegionName="
+          + encodedRegionName + ", peerId=" + peerId + ")", e);
+    }
   }
 
   @Override
   public void setLastSequenceIds(String peerId, Map<String, Long> lastSeqIds)
       throws ReplicationException {
     try {
+      // No need CAS and retry here, because it'll call setLastSequenceIds() for disabled peers
+      // only, so no conflict happen.
       List<ZKUtilOp> listOfOps = new ArrayList<>();
-      addLastSeqIdsToOps(peerId, lastSeqIds, listOfOps);
-      ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
+      for (Entry<String, Long> lastSeqEntry : lastSeqIds.entrySet()) {
+        String path = getSerialReplicationRegionPeerNode(lastSeqEntry.getKey(), peerId);
+        ZKUtil.createWithParents(zookeeper, path);
+        listOfOps.add(ZKUtilOp.setData(path, ZKUtil.positionToByteArray(lastSeqEntry.getValue())));
+      }
+      if (!listOfOps.isEmpty()) {
+        ZKUtil.multiOrSequential(zookeeper, listOfOps, true);
+      }
     } catch (KeeperException e) {
-      throw new ReplicationException("Failed to set last sequence ids, peerId=" + peerId +
-        ", lastSeqIds.size=" + lastSeqIds.size(), e);
+      throw new ReplicationException("Failed to set last sequence ids, peerId=" + peerId
+          + ", size of lastSeqIds=" + lastSeqIds.size(), e);
     }
   }
 
