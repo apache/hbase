@@ -377,7 +377,11 @@ enum PeerModificationState {
   PRE_PEER_MODIFICATION = 1;
   UPDATE_PEER_STORAGE = 2;
   REFRESH_PEER_ON_RS = 3;
-  POST_PEER_MODIFICATION = 4;
+  SERIAL_PEER_REOPEN_REGIONS = 4;
+  SERIAL_PEER_UPDATE_LAST_PUSHED_SEQ_ID = 5;
+  SERIAL_PEER_SET_PEER_ENABLED = 6;
+  SERIAL_PEER_ENABLE_PEER_REFRESH_PEER_ON_RS = 7;
+  POST_PEER_MODIFICATION = 8;
 }
 
 message PeerModificationStateData {
@@ -415,4 +419,5 @@ message AddPeerStateData {
 
 message UpdatePeerConfigStateData {
   required ReplicationPeer peer_config = 1;
+  optional ReplicationPeer old_peer_config = 2;
 }

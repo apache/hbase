@@ -23,211 +23,49 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALProvider;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestSerialReplication {
+@Category({ ReplicationTests.class, MediumTests.class })
+public class TestSerialReplication extends SerialReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSerialReplication.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private static String PEER_ID = "1";
-
-  private static byte[] CF = Bytes.toBytes("CF");
-
-  private static byte[] CQ = Bytes.toBytes("CQ");
-
-  private static FileSystem FS;
-
-  private static Path LOG_DIR;
-
-  private static WALProvider.Writer WRITER;
-
-  public static final class LocalReplicationEndpoint extends BaseReplicationEndpoint {
-
-    private static final UUID PEER_UUID = UUID.randomUUID();
-
-    @Override
-    public UUID getPeerUUID() {
-      return PEER_UUID;
-    }
-
-    @Override
-    public boolean replicate(ReplicateContext replicateContext) {
-      synchronized (WRITER) {
-        try {
-          for (Entry entry : replicateContext.getEntries()) {
-            WRITER.append(entry);
-          }
-          WRITER.sync(false);
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      }
-      return true;
-    }
-
-    @Override
-    public void start() {
-      startAsync();
-    }
-
-    @Override
-    public void stop() {
-      stopAsync();
-    }
-
-    @Override
-    protected void doStart() {
-      notifyStarted();
-    }
-
-    @Override
-    protected void doStop() {
-      notifyStopped();
-    }
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    UTIL.getConfiguration().setInt("replication.source.nb.capacity", 10);
-    UTIL.startMiniCluster(3);
-    // disable balancer
-    UTIL.getAdmin().balancerSwitch(false, true);
-    LOG_DIR = UTIL.getDataTestDirOnTestFS("replicated");
-    FS = UTIL.getTestFileSystem();
-    FS.mkdirs(LOG_DIR);
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    UTIL.shutdownMiniCluster();
-  }
-
-  @Rule
-  public final TestName name = new TestName();
-
-  private Path logPath;
-
   @Before
   public void setUp() throws IOException, StreamLacksCapabilityException {
-    logPath = new Path(LOG_DIR, name.getMethodName());
-    WRITER = WALFactory.createWALWriter(FS, logPath, UTIL.getConfiguration());
+    setupWALWriter();
     // add in disable state, so later when enabling it all sources will start push together.
-    UTIL.getAdmin().addReplicationPeer(PEER_ID,
-      ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
-        .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).setSerial(true)
-        .build(),
-      false);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    UTIL.getAdmin().removeReplicationPeer(PEER_ID);
-    for (RegionServerThread t : UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
-      t.getRegionServer().getWalRoller().requestRollAll();
-    }
-    UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
-
-      @Override
-      public boolean evaluate() throws Exception {
-        return UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-          .map(t -> t.getRegionServer()).allMatch(HRegionServer::walRollRequestFinished);
-      }
-
-      @Override
-      public String explainFailure() throws Exception {
-        return "Log roll has not finished yet";
-      }
-    });
-    for (RegionServerThread t : UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
-      t.getRegionServer().getWalRoller().requestRollAll();
-    }
-    if (WRITER != null) {
-      WRITER.close();
-      WRITER = null;
-    }
-  }
-
-  private void moveRegion(RegionInfo region, HRegionServer rs) throws Exception {
-    UTIL.getAdmin().move(region.getEncodedNameAsBytes(),
-      Bytes.toBytes(rs.getServerName().getServerName()));
-    UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
-
-      @Override
-      public boolean evaluate() throws Exception {
-        return rs.getRegion(region.getEncodedName()) != null;
-      }
-
-      @Override
-      public String explainFailure() throws Exception {
-        return region + " is still not on " + rs;
-      }
-    });
+    addPeer(false);
   }
 
   private void enablePeerAndWaitUntilReplicationDone(int expectedEntries) throws Exception {
     UTIL.getAdmin().enableReplicationPeer(PEER_ID);
-    UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
-
-      @Override
-      public boolean evaluate() throws Exception {
-        try (WAL.Reader reader = WALFactory.createReader(FS, logPath, UTIL.getConfiguration())) {
-          int count = 0;
-          while (reader.next() != null) {
-            count++;
-          }
-          return count >= expectedEntries;
-        } catch (IOException e) {
-          return false;
-        }
-      }
-
-      @Override
-      public String explainFailure() throws Exception {
-        return "Not enough entries replicated";
-      }
-    });
+    waitUntilReplicationDone(expectedEntries);
   }
 
   @Test
@@ -251,22 +89,7 @@ public class TestSerialReplication {
       }
     }
     enablePeerAndWaitUntilReplicationDone(200);
-    try (WAL.Reader reader =
-      WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
-      long seqId = -1L;
-      int count = 0;
-      for (Entry entry;;) {
-        entry = reader.next();
-        if (entry == null) {
-          break;
-        }
-        assertTrue(
-          "Sequence id go backwards from " + seqId + " to " + entry.getKey().getSequenceId(),
-          entry.getKey().getSequenceId() >= seqId);
-        count++;
-      }
-      assertEquals(200, count);
-    }
+    checkOrder(200);
   }
 
   @Test

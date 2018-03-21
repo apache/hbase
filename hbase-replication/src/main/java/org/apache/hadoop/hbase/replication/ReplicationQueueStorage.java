@@ -79,6 +79,14 @@ public interface ReplicationQueueStorage {
   long getLastSequenceId(String encodedRegionName, String peerId) throws ReplicationException;
 
   /**
+   * Set the max sequence id of a bunch of regions for a given peer. Will be called when setting up
+   * a serial replication peer.
+   * @param peerId peer id
+   * @param lastSeqIds map with {encodedRegionName, sequenceId} pairs for serial replication.
+   */
+  void setLastSequenceIds(String peerId, Map<String, Long> lastSeqIds) throws ReplicationException;
+
+  /**
    * Get the current position for a specific WAL in a given queue for a given regionserver.
    * @param serverName the name of the regionserver
    * @param queueId a String that identifies the queue

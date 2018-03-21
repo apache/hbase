@@ -111,11 +111,9 @@ public final class ReplicationUtils {
     return true;
   }
 
-  public static boolean isKeyConfigEqual(ReplicationPeerConfig rpc1, ReplicationPeerConfig rpc2) {
+  public static boolean isNamespacesAndTableCFsEqual(ReplicationPeerConfig rpc1,
+      ReplicationPeerConfig rpc2) {
     if (rpc1.replicateAllUserTables() != rpc2.replicateAllUserTables()) {
-      return false;
-    }
-    if (rpc1.isSerial() != rpc2.isSerial()) {
       return false;
     }
     if (rpc1.replicateAllUserTables()) {

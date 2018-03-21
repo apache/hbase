@@ -57,6 +57,21 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   }
 
   @Override
+  protected boolean reopenRegionsAfterRefresh() {
+    return true;
+  }
+
+  @Override
+  protected boolean enablePeerBeforeFinish() {
+    return enabled;
+  }
+
+  @Override
+  protected ReplicationPeerConfig getNewPeerConfig() {
+    return peerConfig;
+  }
+
+  @Override
   protected void prePeerModification(MasterProcedureEnv env)
       throws IOException, ReplicationException {
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
@@ -68,11 +83,13 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void updatePeerStorage(MasterProcedureEnv env) throws ReplicationException {
-    env.getReplicationPeerManager().addPeer(peerId, peerConfig, enabled);
+    env.getReplicationPeerManager().addPeer(peerId, peerConfig,
+      peerConfig.isSerial() ? false : enabled);
   }
 
   @Override
-  protected void postPeerModification(MasterProcedureEnv env) throws IOException {
+  protected void postPeerModification(MasterProcedureEnv env)
+      throws IOException, ReplicationException {
     LOG.info("Successfully added {} peer {}, config {}", enabled ? "ENABLED" : "DISABLED", peerId,
       peerConfig);
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();

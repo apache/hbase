@@ -85,7 +85,7 @@ public class ReplicationPeerManager {
     }
   }
 
-  public void preAddPeer(String peerId, ReplicationPeerConfig peerConfig)
+  void preAddPeer(String peerId, ReplicationPeerConfig peerConfig)
       throws DoNotRetryIOException, ReplicationException {
     if (peerId.contains("-")) {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
@@ -109,43 +109,47 @@ public class ReplicationPeerManager {
     return desc;
   }
 
-  public void preRemovePeer(String peerId) throws DoNotRetryIOException {
+  void preRemovePeer(String peerId) throws DoNotRetryIOException {
     checkPeerExists(peerId);
   }
 
-  public void preEnablePeer(String peerId) throws DoNotRetryIOException {
+  void preEnablePeer(String peerId) throws DoNotRetryIOException {
     ReplicationPeerDescription desc = checkPeerExists(peerId);
     if (desc.isEnabled()) {
       throw new DoNotRetryIOException("Replication peer " + peerId + " has already been enabled");
     }
   }
 
-  public void preDisablePeer(String peerId) throws DoNotRetryIOException {
+  void preDisablePeer(String peerId) throws DoNotRetryIOException {
     ReplicationPeerDescription desc = checkPeerExists(peerId);
     if (!desc.isEnabled()) {
       throw new DoNotRetryIOException("Replication peer " + peerId + " has already been disabled");
     }
   }
 
-  public void preUpdatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
+  /**
+   * Return the old peer description. Can never be null.
+   */
+  ReplicationPeerDescription preUpdatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
       throws DoNotRetryIOException {
     checkPeerConfig(peerConfig);
     ReplicationPeerDescription desc = checkPeerExists(peerId);
     ReplicationPeerConfig oldPeerConfig = desc.getPeerConfig();
     if (!isStringEquals(peerConfig.getClusterKey(), oldPeerConfig.getClusterKey())) {
       throw new DoNotRetryIOException(
-          "Changing the cluster key on an existing peer is not allowed. Existing key '" +
-              oldPeerConfig.getClusterKey() + "' for peer " + peerId + " does not match new key '" +
-              peerConfig.getClusterKey() + "'");
+        "Changing the cluster key on an existing peer is not allowed. Existing key '" +
+          oldPeerConfig.getClusterKey() + "' for peer " + peerId + " does not match new key '" +
+          peerConfig.getClusterKey() + "'");
     }
 
     if (!isStringEquals(peerConfig.getReplicationEndpointImpl(),
       oldPeerConfig.getReplicationEndpointImpl())) {
       throw new DoNotRetryIOException("Changing the replication endpoint implementation class " +
-          "on an existing peer is not allowed. Existing class '" +
-          oldPeerConfig.getReplicationEndpointImpl() + "' for peer " + peerId +
-          " does not match new class '" + peerConfig.getReplicationEndpointImpl() + "'");
+        "on an existing peer is not allowed. Existing class '" +
+        oldPeerConfig.getReplicationEndpointImpl() + "' for peer " + peerId +
+        " does not match new class '" + peerConfig.getReplicationEndpointImpl() + "'");
     }
+    return desc;
   }
 
   public void addPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
@@ -216,7 +220,7 @@ public class ReplicationPeerManager {
     return desc != null ? Optional.of(desc.getPeerConfig()) : Optional.empty();
   }
 
-  public void removeAllQueuesAndHFileRefs(String peerId) throws ReplicationException {
+  void removeAllQueuesAndHFileRefs(String peerId) throws ReplicationException {
     // Here we need two passes to address the problem of claimQueue. Maybe a claimQueue is still
     // on-going when the refresh peer config procedure is done, if a RS which has already been
     // scanned claims the queue of a RS which has not been scanned yet, we will miss that queue in
@@ -340,7 +344,7 @@ public class ReplicationPeerManager {
   public static ReplicationPeerManager create(ZKWatcher zk, Configuration conf)
       throws ReplicationException {
     ReplicationPeerStorage peerStorage =
-        ReplicationStorageFactory.getReplicationPeerStorage(zk, conf);
+      ReplicationStorageFactory.getReplicationPeerStorage(zk, conf);
     ConcurrentMap<String, ReplicationPeerDescription> peers = new ConcurrentHashMap<>();
     for (String peerId : peerStorage.listPeerIds()) {
       ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
@@ -348,7 +352,7 @@ public class ReplicationPeerManager {
       peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig));
     }
     return new ReplicationPeerManager(peerStorage,
-        ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers);
+      ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers);
   }
 
   /**
