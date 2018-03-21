@@ -126,7 +126,7 @@ public class TestCacheConfig {
     }
 
     @Override
-    public void serialize(ByteBuffer destination) {
+    public void serialize(ByteBuffer destination, boolean includeNextBlockOnDiskSize) {
       LOG.info("Serialized " + this + " to " + destination);
     }
 

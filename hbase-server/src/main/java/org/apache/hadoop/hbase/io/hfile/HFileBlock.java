@@ -91,7 +91,7 @@ import com.google.common.base.Preconditions;
  * Caches cache whole blocks with trailing checksums if any. We then tag on some metadata, the
  * content of BLOCK_METADATA_SPACE which will be flag on if we are doing 'hbase'
  * checksums and then the offset into the file which is needed when we re-make a cache key
- * when we return the block to the cache as 'done'. See {@link Cacheable#serialize(ByteBuffer)} and
+ * when we return the block to the cache as 'done'. See {@link Cacheable#serialize(ByteBuffer, boolean)} and
  * {@link Cacheable#getDeserializer()}.
  *
  * <p>TODO: Should we cache the checksums? Down in Writer#getBlockForCaching(CacheConfig) where
@@ -320,9 +320,11 @@ public class HFileBlock implements Cacheable {
    * @param onDiskDataSizeWithHeader see {@link #onDiskDataSizeWithHeader}
    * @param fileContext HFile meta data
    */
-  HFileBlock(BlockType blockType, int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
-      long prevBlockOffset, ByteBuffer b, boolean fillHeader, long offset,
-      final int nextBlockOnDiskSize, int onDiskDataSizeWithHeader, HFileContext fileContext) {
+  @VisibleForTesting
+  public HFileBlock(BlockType blockType, int onDiskSizeWithoutHeader,
+      int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuffer b, boolean fillHeader,
+      long offset, final int nextBlockOnDiskSize, int onDiskDataSizeWithHeader,
+      HFileContext fileContext) {
     init(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
         prevBlockOffset, offset, onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext);
     this.buf = b;
@@ -593,6 +595,7 @@ public class HFileBlock implements Cacheable {
       .append(", buf=[").append(buf).append("]")
       .append(", dataBeginsWith=").append(dataBegin)
       .append(", fileContext=").append(fileContext)
+      .append(", nextBlockOnDiskSize=").append(nextBlockOnDiskSize)
       .append("]");
     return sb.toString();
   }
@@ -1892,12 +1895,10 @@ public class HFileBlock implements Cacheable {
 
   // Cacheable implementation
   @Override
-  public void serialize(ByteBuffer destination) {
-    // BE CAREFUL!! There is a custom version of this serialization over in BucketCache#doDrain.
-    // Make sure any changes in here are reflected over there.
+  public void serialize(ByteBuffer destination, boolean includeNextBlockOnDiskSize) {
     ByteBufferUtils.copyFromBufferToBuffer(destination, this.buf, 0,
         getSerializedLength() - BLOCK_METADATA_SPACE);
-    destination = addMetaData(destination);
+    destination = addMetaData(destination, includeNextBlockOnDiskSize);
 
     // Make it ready for reading. flip sets position to zero and limit to current position which
     // is what we want if we do not want to serialize the block plus checksums if present plus
@@ -1910,7 +1911,7 @@ public class HFileBlock implements Cacheable {
    */
   public ByteBuffer getMetaData() {
     ByteBuffer bb = ByteBuffer.allocate(BLOCK_METADATA_SPACE);
-    bb = addMetaData(bb);
+    bb = addMetaData(bb, true);
     bb.flip();
     return bb;
   }
@@ -1919,10 +1920,12 @@ public class HFileBlock implements Cacheable {
    * Adds metadata at current position (position is moved forward). Does not flip or reset.
    * @return The passed <code>destination</code> with metadata added.
    */
-  private ByteBuffer addMetaData(final ByteBuffer destination) {
+  private ByteBuffer addMetaData(final ByteBuffer destination, boolean includeNextBlockMetadata) {
     destination.put(this.fileContext.isUseHBaseChecksum() ? (byte) 1 : (byte) 0);
     destination.putLong(this.offset);
-    destination.putInt(this.nextBlockOnDiskSize);
+    if (includeNextBlockMetadata) {
+      destination.putInt(this.nextBlockOnDiskSize);
+    }
     return destination;
   }
 
