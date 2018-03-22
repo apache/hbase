@@ -17,13 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -34,17 +27,24 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Abstract Cleaner that uses a chain of delegates to clean a directory of files
@@ -52,6 +52,7 @@ import org.slf4j.LoggerFactory;
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD",
     justification="TODO: Fix. It is wonky have static pool initialized from instance")
+@InterfaceAudience.Private
 public abstract class CleanerChore<T extends FileCleanerDelegate> extends ScheduledChore
     implements ConfigurationObserver {
 
@@ -315,7 +316,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       }
 
       Iterable<FileStatus> filteredFiles = cleaner.getDeletableFiles(deletableValidFiles);
-      
+
       // trace which cleaner is holding on to each file
       if (LOG.isTraceEnabled()) {
         ImmutableSet<FileStatus> filteredFileSet = ImmutableSet.copyOf(filteredFiles);
@@ -325,10 +326,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           }
         }
       }
-      
+
       deletableValidFiles = filteredFiles;
     }
-    
+
     Iterable<FileStatus> filesToDelete = Iterables.concat(invalidFiles, deletableValidFiles);
     return deleteFiles(filesToDelete) == files.size();
   }

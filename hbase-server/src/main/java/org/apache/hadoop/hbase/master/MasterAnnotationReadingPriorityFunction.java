@@ -17,16 +17,19 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.AnnotationReadingPriorityFunction;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
-import org.apache.hadoop.hbase.regionserver.AnnotationReadingPriorityFunction;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.security.User;
 
 /**
  * Priority function specifically for the master.
@@ -41,6 +44,7 @@ import org.apache.hadoop.hbase.security.User;
  * that all requests to transition meta are handled in different threads from other report region
  * in transition calls.
  */
+@InterfaceAudience.Private
 public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPriorityFunction {
   public MasterAnnotationReadingPriorityFunction(final RSRpcServices rpcServices) {
     this(rpcServices, rpcServices.getClass());

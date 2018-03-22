@@ -22,12 +22,14 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A ThreadPoolExecutor customized for working with HBase thrift to update metrics before and
  * after the execution of a task.
  */
 
+@InterfaceAudience.Private
 public class THBaseThreadPoolExecutor extends ThreadPoolExecutor {
 
   private ThriftMetrics metrics;

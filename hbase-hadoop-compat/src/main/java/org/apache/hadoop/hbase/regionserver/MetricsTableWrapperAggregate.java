@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface of class that will wrap a MetricsTableSource and export numbers so they can be
  * used in MetricsTableSource
  */
+@InterfaceAudience.Private
 public interface MetricsTableWrapperAggregate {
 
   /**

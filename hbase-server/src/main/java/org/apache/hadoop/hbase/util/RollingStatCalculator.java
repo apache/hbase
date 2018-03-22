@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * This class maintains mean and variation for any sequence of input provided to it.
  * It is initialized with number of rolling periods which basically means the number of past
@@ -30,6 +32,7 @@ package org.apache.hadoop.hbase.util;
  * from the start the statistics may behave like constants and may ignore short trends.
  * All operations are O(1) except the initialization which is O(N).
  */
+@InterfaceAudience.Private
 public class RollingStatCalculator {
   private double currentSum;
   private double currentSqrSum;

@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.procedure;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
  * There is a category of procedure (ex: online-snapshots), and a user-specified instance-specific
  * barrierName. (ex: snapshot121126).
  */
+@InterfaceAudience.Private
 abstract public class Subprocedure implements Callable<Void> {
   private static final Logger LOG = LoggerFactory.getLogger(Subprocedure.class);
 

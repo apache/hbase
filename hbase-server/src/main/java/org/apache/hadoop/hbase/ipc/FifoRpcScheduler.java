@@ -23,9 +23,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +36,7 @@ import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
  *
  * This can be used for HMaster, where no prioritization is needed.
  */
+@InterfaceAudience.Private
 public class FifoRpcScheduler extends RpcScheduler {
   private static final Logger LOG = LoggerFactory.getLogger(FifoRpcScheduler.class);
   private final int handlerCount;

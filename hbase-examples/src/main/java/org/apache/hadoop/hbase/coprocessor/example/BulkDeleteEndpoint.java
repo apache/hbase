@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,7 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -48,12 +50,9 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 
 /**
  * Defines a protocol to delete data in bulk based on a scan. The scan can be range scan or with
@@ -95,6 +94,7 @@ import com.google.protobuf.Service;
  * }
  * </code></pre>
  */
+@InterfaceAudience.Private
 public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCoprocessor {
   private static final String NO_OF_VERSIONS_TO_DELETE = "noOfVersionsToDelete";
   private static final Logger LOG = LoggerFactory.getLogger(BulkDeleteEndpoint.class);

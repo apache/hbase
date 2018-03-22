@@ -14,14 +14,15 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.rmi.ssl.SslRMIServerSocketFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Avoid SSL V3.0 "Poodle" Vulnerability - CVE-2014-3566
  */
+@InterfaceAudience.Private
 public class SslRMIServerSocketFactorySecure extends SslRMIServerSocketFactory {
   // If you add more constructors, you may have to change the rest of this implementation,
   // which assumes an empty constructor, i.e. there are no specially enabled protocols or

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client.example;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -28,14 +31,11 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.Export;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.coprocessor.Export;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A simple example on how to use {@link org.apache.hadoop.hbase.coprocessor.Export}.
@@ -45,7 +45,8 @@ import java.util.Map;
  * hbase-endpoint/src/main/protobuf/Export.proto.
  * </p>
  */
-public class ExportEndpointExample {
+@InterfaceAudience.Private
+public final class ExportEndpointExample {
 
   public static void main(String[] args) throws Throwable {
     int rowCount = 100;
@@ -83,4 +84,6 @@ public class ExportEndpointExample {
       System.out.println("total cells:" + totalOutputCells);
     }
   }
+
+  private ExportEndpointExample(){}
 }

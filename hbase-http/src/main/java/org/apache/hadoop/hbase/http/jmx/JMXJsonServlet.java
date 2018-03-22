@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.http.jmx;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
-
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -30,9 +29,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.util.JSONBean;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,6 +109,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  */
+@InterfaceAudience.Private
 public class JMXJsonServlet extends HttpServlet {
   private static final Logger LOG = LoggerFactory.getLogger(JMXJsonServlet.class);
 

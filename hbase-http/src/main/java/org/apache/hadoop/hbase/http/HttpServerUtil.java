@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import org.eclipse.jetty.security.ConstraintSecurityHandler;
-import org.eclipse.jetty.util.security.Constraint;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.eclipse.jetty.security.ConstraintMapping;
+import org.eclipse.jetty.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.util.security.Constraint;
 
 /**
  * HttpServer utility.
  */
-public class HttpServerUtil {
+@InterfaceAudience.Private
+public final class HttpServerUtil {
   /**
    * Add constraints to a Jetty Context to disallow undesirable Http methods.
    * @param ctxHandler The context to modify
@@ -49,4 +51,6 @@ public class HttpServerUtil {
 
     ctxHandler.setSecurityHandler(securityHandler);
   }
+
+  private HttpServerUtil() {}
 }

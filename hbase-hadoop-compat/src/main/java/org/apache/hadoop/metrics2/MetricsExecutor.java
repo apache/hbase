@@ -19,10 +19,12 @@
 package org.apache.hadoop.metrics2;
 
 import java.util.concurrent.ScheduledExecutorService;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ScheduledExecutorService for metrics.
  */
+@InterfaceAudience.Private
 public interface MetricsExecutor {
 
   ScheduledExecutorService getExecutor();

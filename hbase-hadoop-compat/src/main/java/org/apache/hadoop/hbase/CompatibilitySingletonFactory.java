@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.ServiceLoader;
 
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
  *  Factory for classes supplied by hadoop compatibility modules.  Only one of each class will be
  *  created.
  */
+@InterfaceAudience.Private
 public class CompatibilitySingletonFactory extends CompatibilityFactory {
   public static enum SingletonStorage {
     INSTANCE;

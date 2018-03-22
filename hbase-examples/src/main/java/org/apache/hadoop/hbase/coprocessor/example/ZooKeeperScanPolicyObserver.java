@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.coprocessor.example;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.OptionalLong;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is an example showing how a RegionObserver could configured via ZooKeeper in order to
@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  * successful backup via ZK and instruct HBase that to safely delete the data which has already been
  * backup.
  */
+@InterfaceAudience.Private
 public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObserver {
 
   @Override

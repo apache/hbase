@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.fs;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -30,7 +31,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,16 +52,16 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Progressable;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * An encapsulation for the FileSystem object that hbase uses to access
  * data. This class allows the flexibility of using
  * separate filesystem objects for reading and writing hfiles and wals.
  */
+@InterfaceAudience.Private
 public class HFileSystem extends FilterFileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(HFileSystem.class);
 
@@ -128,8 +128,8 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Returns the filesystem that is specially setup for 
-   * doing reads from storage. This object avoids doing 
+   * Returns the filesystem that is specially setup for
+   * doing reads from storage. This object avoids doing
    * checksum verifications for reads.
    * @return The FileSystem object that can be used to read data
    *         from files.
@@ -473,7 +473,7 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * The org.apache.hadoop.fs.FilterFileSystem does not yet support 
+   * The org.apache.hadoop.fs.FilterFileSystem does not yet support
    * createNonRecursive. This is a hadoop bug and when it is fixed in Hadoop,
    * this definition will go away.
    */

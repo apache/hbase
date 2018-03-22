@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class MetricsIOWrapperImpl implements MetricsIOWrapper {
 
   @Override

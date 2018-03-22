@@ -18,7 +18,6 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -26,11 +25,13 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A RegionObserver which modifies incoming Scan requests to include additional
  * columns than what the user actually requested.
  */
+@InterfaceAudience.Private
 public class ScanModifyingObserver implements RegionCoprocessor, RegionObserver {
 
   public static final String FAMILY_TO_ADD_KEY = "hbase.examples.coprocessor.scanmodifying.family";

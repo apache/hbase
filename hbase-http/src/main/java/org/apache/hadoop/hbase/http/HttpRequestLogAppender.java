@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.http;
 
 import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.AppenderSkeleton;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Log4j Appender adapter for HttpRequestLog
  */
+@InterfaceAudience.Private
 public class HttpRequestLogAppender extends AppenderSkeleton {
 
   private String filename;

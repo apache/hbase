@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Gauge;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  * @see ExampleRegionObserverWithMetrics
  */
+@InterfaceAudience.Private
 public class ExampleMasterObserverWithMetrics implements MasterCoprocessor, MasterObserver {
   @Override
   public Optional<MasterObserver> getMasterObserver() {

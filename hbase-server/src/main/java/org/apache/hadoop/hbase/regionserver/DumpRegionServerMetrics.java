@@ -16,8 +16,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.util.JSONBean;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -25,11 +23,14 @@ import java.lang.management.ManagementFactory;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
+import org.apache.hadoop.hbase.util.JSONBean;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility for doing JSON and MBeans.
  */
-public class DumpRegionServerMetrics {
+@InterfaceAudience.Private
+public final class DumpRegionServerMetrics {
   /**
    * Dump out a subset of regionserver mbeans only, not all of them, as json on System.out.
    */
@@ -57,4 +58,6 @@ public class DumpRegionServerMetrics {
     String str = dumpMetrics();
     System.out.println(str);
   }
+
+  private DumpRegionServerMetrics() {}
 }

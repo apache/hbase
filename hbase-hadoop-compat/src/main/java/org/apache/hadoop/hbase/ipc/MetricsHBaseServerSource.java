@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String AUTHORIZATION_SUCCESSES_NAME = "authorizationSuccesses";
   String AUTHORIZATION_SUCCESSES_DESC =

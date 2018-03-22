@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.http;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Initialize a javax.servlet.Filter.
  */
+@InterfaceAudience.Private
 public abstract class FilterInitializer {
   /**
    * Initialize a Filter to a FilterContainer.

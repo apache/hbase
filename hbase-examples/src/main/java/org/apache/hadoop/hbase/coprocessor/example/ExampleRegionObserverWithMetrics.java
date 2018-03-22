@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Get;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An example coprocessor that collects some metrics to demonstrate the usage of exporting custom
@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
  *
  * @see ExampleMasterObserverWithMetrics
  */
+@InterfaceAudience.Private
 public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
 
   private Counter preGetCounter;

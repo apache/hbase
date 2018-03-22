@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,12 +34,14 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Similar to {@link RegionReplicaUtil} but for the server side
  */
+@InterfaceAudience.Private
 public class ServerRegionReplicaUtil extends RegionReplicaUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(ServerRegionReplicaUtil.class);

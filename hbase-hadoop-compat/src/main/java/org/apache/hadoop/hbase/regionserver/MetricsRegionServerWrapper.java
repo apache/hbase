@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * This is the interface that will expose RegionServer information to hadoop1/hadoop2
  * implementations of the MetricsRegionServerSource.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionServerWrapper {
 
   /**
