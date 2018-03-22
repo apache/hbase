@@ -26,21 +26,23 @@ Merge two regions. Passing 'true' as the optional third parameter will force
 a merge ('force' merges regardless else merge will fail unless passed
 adjacent regions. 'force' is for expert use only).
 
-NOTE: You must pass the encoded region name, not the full region name so
-this command is a little different from other region operations.  The encoded
+You can pass the encoded region name or the full region name.  The encoded
 region name is the hash suffix on region names: e.g. if the region name were
 TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396. then
 the encoded region name portion is 527db22f95c8a9e0116f0cc13c680396
 
 Examples:
 
+  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME'
+  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', true
+
   hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
   hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
 EOF
       end
 
-      def command(encoded_region_a_name, encoded_region_b_name, force = 'false')
-        admin.merge_region(encoded_region_a_name, encoded_region_b_name, force)
+      def command(region_a_name, region_b_name, force = 'false')
+        admin.merge_region(region_a_name, region_b_name, force)
       end
     end
   end
