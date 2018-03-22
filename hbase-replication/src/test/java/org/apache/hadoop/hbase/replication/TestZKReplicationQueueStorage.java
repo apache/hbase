@@ -257,7 +257,7 @@ public class TestZKReplicationQueueStorage {
   public void testRegionsZNodeLayout() throws Exception {
     String peerId = "1";
     String encodedRegionName = "31d9792f4435b99d9fb1016f6fbc8dc7";
-    String expectedPath = "/hbase/replication/regions/31/d9/" + encodedRegionName + "-" + peerId;
+    String expectedPath = "/hbase/replication/regions/31/d9/792f4435b99d9fb1016f6fbc8dc7-" + peerId;
     String path = STORAGE.getSerialReplicationRegionPeerNode(encodedRegionName, peerId);
     Assert.assertEquals(expectedPath, path);
   }
