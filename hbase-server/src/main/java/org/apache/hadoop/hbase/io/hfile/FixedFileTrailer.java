@@ -38,6 +38,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The {@link HFile} has a fixed trailer which contains offsets to other
@@ -53,6 +55,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class FixedFileTrailer {
+  private static final Logger LOG = LoggerFactory.getLogger(FixedFileTrailer.class);
+
   /**
    * We store the comparator class name as a fixed-length field in the trailer.
    */
@@ -623,7 +627,13 @@ public class FixedFileTrailer {
   public static CellComparator createComparator(
       String comparatorClassName) throws IOException {
     try {
-      return getComparatorClass(comparatorClassName).getDeclaredConstructor().newInstance();
+
+      Class<? extends CellComparator> comparatorClass = getComparatorClass(comparatorClassName);
+      if(comparatorClass != null){
+        return comparatorClass.getDeclaredConstructor().newInstance();
+      }
+      LOG.warn("No Comparator class for " + comparatorClassName + ". Returning Null.");
+      return null;
     } catch (Exception e) {
       throw new IOException("Comparator class " + comparatorClassName +
         " is not instantiable", e);
