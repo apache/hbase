@@ -25,7 +25,7 @@ module Shell
           return <<-EOF
   Show replicable table-cf config for the specified peer.
 
-    hbase> show_peer_tableCFs
+    hbase> show_peer_tableCFs '2'
   EOF
       end
 
