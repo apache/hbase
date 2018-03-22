@@ -44,24 +44,6 @@ table, enable or disable the table, and start and stop HBase.
 
 Apart from downloading HBase, this procedure should take less than 10 minutes.
 
-[[loopback.ip]]
-[NOTE]
-====
-.Loopback IP - HBase 0.94.x and earlier
-
-Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1.
-Ubuntu and some other distributions default to 127.0.1.1 and this will cause
-problems for you. See link:https://web-beta.archive.org/web/20140104070155/http://blog.devving.com/why-does-hbase-care-about-etchosts[Why does HBase care about /etc/hosts?] for detail
-
-The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble.
-[listing]
-----
-127.0.0.1 localhost
-127.0.0.1 ubuntu.ubuntu-domain ubuntu
-----
-This issue has been fixed in hbase-0.96.0 and beyond.
-====
-
 === JDK Version Requirements
 
 HBase requires that a JDK be installed.

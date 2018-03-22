@@ -441,7 +441,7 @@ $ hbase org.apache.hadoop.hbase.util.LoadTestTool -write 1:10:100 -num_keys 1000
 ====
 
 [[data.block.encoding.enable]]
-== Enable Data Block Encoding
+=== Enable Data Block Encoding
 
 Codecs are built into HBase so no extra configuration is needed.
 Codecs are enabled on a table by setting the `DATA_BLOCK_ENCODING` property.

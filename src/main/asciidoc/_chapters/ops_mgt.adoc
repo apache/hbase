@@ -44,17 +44,18 @@ Some commands, such as `version`, `pe`, `ltt`, `clean`, are not available in pre
 $ bin/hbase
 Usage: hbase [<options>] <command> [<args>]
 Options:
-  --config DIR    Configuration direction to use. Default: ./conf
-  --hosts HOSTS   Override the list in 'regionservers' file
+  --config DIR     Configuration direction to use. Default: ./conf
+  --hosts HOSTS    Override the list in 'regionservers' file
+  --auth-as-server Authenticate to ZooKeeper using servers configuration
 
 Commands:
 Some commands take arguments. Pass no args or -h for usage.
   shell           Run the HBase shell
   hbck            Run the hbase 'fsck' tool
+  snapshot        Tool for managing snapshots
   wal             Write-ahead-log analyzer
   hfile           Store file analyzer
   zkcli           Run the ZooKeeper shell
-  upgrade         Upgrade hbase
   master          Run an HBase HMaster node
   regionserver    Run an HBase HRegionServer node
   zookeeper       Run a ZooKeeper server
@@ -66,6 +67,7 @@ Some commands take arguments. Pass no args or -h for usage.
   mapredcp        Dump CLASSPATH entries required by mapreduce
   pe              Run PerformanceEvaluation
   ltt             Run LoadTestTool
+  canary          Run the Canary tool
   version         Print the version
   CLASSNAME       Run the class named CLASSNAME
 ----
@@ -81,20 +83,27 @@ To see the usage, use the `--help` parameter.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -help
 
-Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
+Usage: hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
  where [opts] are:
    -help          Show this help and exit.
    -regionserver  replace the table argument to regionserver,
       which means to enable regionserver mode
+   -allRegions    Tries all regions on a regionserver,
+      only works in regionserver mode.
+   -zookeeper    Tries to grab zookeeper.znode.parent
+      on each zookeeper instance
    -daemon        Continuous check at defined intervals.
    -interval <N>  Interval between checks (sec)
-   -e             Use region/regionserver as regular expression
-      which means the region/regionserver is regular expression pattern
+   -e             Use table/regionserver as regular expression
+      which means the table/regionserver is regular expression pattern
    -f <B>         stop whole program if first error occurs, default is true
-   -t <N>         timeout for a check, default is 600000 (milliseconds)
+   -t <N>         timeout for a check, default is 600000 (millisecs)
+   -writeTableTimeout <N>         write timeout for the writeTable, default is 600000 (millisecs)
+   -readTableTimeouts <tableName>=<read timeout>,<tableName>=<read timeout>, ...    comma-separated list of read timeouts per table (no spaces), default is 600000 (millisecs)
    -writeSniffing enable the write sniffing in canary
    -treatFailureAsError treats read / write failure as error
    -writeTable    The table used for write sniffing. Default is hbase:canary
+   -Dhbase.canary.read.raw.enabled=<true/false> Use this flag to enable or disable raw scan during read canary test Default is false and raw is not enabled during scan
    -D<configProperty>=<value> assigning or override the configuration params
 ----
 
@@ -107,6 +116,7 @@ private static final int USAGE_EXIT_CODE = 1;
 private static final int INIT_ERROR_EXIT_CODE = 2;
 private static final int TIMEOUT_ERROR_EXIT_CODE = 3;
 private static final int ERROR_EXIT_CODE = 4;
+private static final int FAILURE_EXIT_CODE = 5;
 ----
 
 Here are some examples based on the following given case.
@@ -737,26 +747,19 @@ Options:
 
 === `hbase pe`
 
-The `hbase pe` command is a shortcut provided to run the `org.apache.hadoop.hbase.PerformanceEvaluation` tool, which is used for testing.
-The `hbase pe` command was introduced in HBase 0.98.4.
+The `hbase pe` command runs the PerformanceEvaluation tool, which is used for testing.
 
 The PerformanceEvaluation tool accepts many different options and commands.
 For usage instructions, run the command with no options.
-
-To run PerformanceEvaluation prior to HBase 0.98.4, issue the command `hbase org.apache.hadoop.hbase.PerformanceEvaluation`.
 
 The PerformanceEvaluation tool has received many updates in recent HBase releases, including support for namespaces, support for tags, cell-level ACLs and visibility labels, multiget support for RPC calls, increased sampling sizes, an option to randomly sleep during testing, and ability to "warm up" the cluster before testing starts.
 
 === `hbase ltt`
 
-The `hbase ltt` command is a shortcut provided to run the `org.apache.hadoop.hbase.util.LoadTestTool` utility, which is used for testing.
-The `hbase ltt` command was introduced in HBase 0.98.4.
+The `hbase ltt` command runs the LoadTestTool utility, which is used for testing.
 
-You must specify either `-write` or `-update-read` as the first option.
+You must specify one of `-write`, `-update`, or `-read` as the first option.
 For general usage instructions, pass the `-h` option.
-
-To run LoadTestTool prior to HBase 0.98.4, issue the command +hbase
-          org.apache.hadoop.hbase.util.LoadTestTool+.
 
 The LoadTestTool has received many updates in recent HBase releases, including support for namespaces, support for tags, cell-level ACLS and visibility labels, testing security-related features, ability to specify the number of regions per server, tests for multi-get RPC calls, and tests relating to replication.
 
@@ -820,7 +823,7 @@ See <<lb,lb>> below.
 [NOTE]
 ====
 In hbase-2.0, in the bin directory, we added a script named _considerAsDead.sh_ that can be used to kill a regionserver.
-Hardware issues could be detected by specialized monitoring tools before the  zookeeper timeout has expired. _considerAsDead.sh_ is a simple function to mark a RegionServer as dead.
+Hardware issues could be detected by specialized monitoring tools before the zookeeper timeout has expired. _considerAsDead.sh_ is a simple function to mark a RegionServer as dead.
 It deletes all the znodes of the server, starting the recovery process.
 Plug in the script into your monitoring/fault detection tools to initiate faster failover.
 Be careful how you use this disruptive tool.

@@ -101,6 +101,11 @@ To disable, set the logging level back to `INFO` level.
 [[trouble.log.gc]]
 === JVM Garbage Collection Logs
 
+[NOTE]
+----
+All example Garbage Collection logs in this section are based on Java 8 output. The introduction of Unified Logging in Java 9 and newer will result in very different looking logs.
+----
+
 HBase is memory intensive, and using the default GC you can see long pauses in all threads including the _Juliet Pause_ aka "GC of Death". To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.
 
 To enable, in _hbase-env.sh_, uncomment one of the below lines :
@@ -258,7 +263,6 @@ link:https://issues.apache.org/jira/browse/HBASE[JIRA] is also really helpful wh
 ==== Master Web Interface
 
 The Master starts a web-interface on port 16010 by default.
-(Up to and including 0.98 this was port 60010)
 
 The Master web UI lists created tables and their definition (e.g., ColumnFamilies, blocksize, etc.). Additionally, the available RegionServers in the cluster are listed along with selected high-level metrics (requests, number of regions, usedHeap, maxHeap). The Master web UI allows navigation to each RegionServer's web UI.
 
@@ -266,7 +270,6 @@ The Master web UI lists created tables and their definition (e.g., ColumnFamilie
 ==== RegionServer Web Interface
 
 RegionServers starts a web-interface on port 16030 by default.
-(Up to an including 0.98 this was port 60030)
 
 The RegionServer web UI lists online regions and their start/end keys, as well as point-in-time RegionServer metrics (requests, regions, storeFileIndexSize, compactionQueueSize, etc.).
 
@@ -564,14 +567,6 @@ You can also tail all the logs at the same time, edit files, etc.
 
 For more information on the HBase client, see <<architecture.client,client>>.
 
-=== Missed Scan Results Due To Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
-If either the client or server version is lower than 0.98.11/1.0.0 and the server
-has a smaller value for `hbase.client.scanner.max.result.size` than the client, scan
-requests that reach the server's `hbase.client.scanner.max.result.size` are likely
-to miss data. In particular, 0.98.11 defaults `hbase.client.scanner.max.result.size`
-to 2 MB but other versions default to larger values. For this reason, be very careful
-using 0.98.11 servers with any other client version.
-
 [[trouble.client.scantimeout]]
 === ScannerTimeoutException or UnknownScannerException
 
@@ -682,12 +677,6 @@ You are likely running into the issue that is described and worked through in th
 A workaround is passing your client-side JVM a reasonable value for `-XX:MaxDirectMemorySize`.
 By default, the `MaxDirectMemorySize` is equal to your `-Xmx` max heapsize setting (if `-Xmx` is set). Try setting it to something smaller (for example, one user had success setting it to `1g` when they had a client-side heap of `12g`). If you set it too small, it will bring on `FullGCs` so keep it a bit hefty.
 You want to make this setting client-side only especially if you are running the new experimental server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep separate client-side and server-side config dirs).
-
-[[trouble.client.slowdown.admin]]
-=== Client Slowdown When Calling Admin Methods (flush, compact, etc.)
-
-This is a client issue fixed by link:https://issues.apache.org/jira/browse/HBASE-5073[HBASE-5073] in 0.90.6.
-There was a ZooKeeper leak in the client and the client was getting pummeled by ZooKeeper events with each additional invocation of the admin API.
 
 [[trouble.client.security.rpc]]
 === Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided(Mechanism level: Failed to find any Kerberos tgt)])
@@ -892,7 +881,6 @@ See <<managed.compactions>> for more information on managing compactions.
 === Loopback IP
 
 HBase expects the loopback IP Address to be 127.0.0.1.
-See the Getting Started section on <<loopback.ip>>.
 
 [[trouble.network.ints]]
 === Network Interfaces
@@ -1076,13 +1064,6 @@ This exception is returned back to the client and then the client goes back to `
 
 However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.
 
-[[trouble.rs.runtime.double_listed_regions]]
-==== Regions listed by domain name, then IP
-
-Fix your DNS.
-In versions of Apache HBase before 0.92.x, reverse DNS needs to give same answer as forward lookup.
-See link:https://issues.apache.org/jira/browse/HBASE-3431[HBASE 3431 RegionServer is not using the name given it by the master; double entry in master listing of servers] for gory details.
-
 [[brand.new.compressor]]
 ==== Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Gotbrand-new compressor' messages
 
@@ -1216,31 +1197,6 @@ See Andrew's answer here, up on the user list: link:http://search-hadoop.com/m/s
 [[trouble.versions]]
 == HBase and Hadoop version issues
 
-[[trouble.versions.205]]
-=== `NoClassDefFoundError` when trying to run 0.90.x on hadoop-0.20.205.x (or hadoop-1.0.x)
-
-Apache HBase 0.90.x does not ship with hadoop-0.20.205.x, etc.
-To make it run, you need to replace the hadoop jars that Apache HBase shipped with in its _lib_ directory with those of the Hadoop you want to run HBase on.
-If even after replacing Hadoop jars you get the below exception:
-
-[source]
-----
-
-sv4r6s38: Exception in thread "main" java.lang.NoClassDefFoundError: org/apache/commons/configuration/Configuration
-sv4r6s38:       at org.apache.hadoop.metrics2.lib.DefaultMetricsSystem.<init>(DefaultMetricsSystem.java:37)
-sv4r6s38:       at org.apache.hadoop.metrics2.lib.DefaultMetricsSystem.<clinit>(DefaultMetricsSystem.java:34)
-sv4r6s38:       at org.apache.hadoop.security.UgiInstrumentation.create(UgiInstrumentation.java:51)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.initialize(UserGroupInformation.java:209)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:177)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.isSecurityEnabled(UserGroupInformation.java:229)
-sv4r6s38:       at org.apache.hadoop.security.KerberosName.<clinit>(KerberosName.java:83)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.initialize(UserGroupInformation.java:202)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:177)
-----
-
-you need to copy under _hbase/lib_, the _commons-configuration-X.jar_ you find in your Hadoop's _lib_ directory.
-That should fix the above complaint.
-
 [[trouble.wrong.version]]
 === ...cannot communicate with client version...
 
@@ -1248,67 +1204,6 @@ If you see something like the following in your logs [computeroutput]+... 2012-0
           10:20:52,168 FATAL org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting
           shutdown. org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate
           with client version 4 ...+ ...are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client? Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the +-Dhadoop.profile=2.0+ attribute to Maven (See <<maven.build.hadoop>> for more).
-
-== IPC Configuration Conflicts with Hadoop
-
-If the Hadoop configuration is loaded after the HBase configuration, and you have configured custom IPC settings in both HBase and Hadoop, the Hadoop values may overwrite the HBase values.
-There is normally no need to change these settings for HBase, so this problem is an edge case.
-However, link:https://issues.apache.org/jira/browse/HBASE-11492[HBASE-11492] renames these settings for HBase to remove the chance of a conflict.
-Each of the setting names have been prefixed with `hbase.`, as shown in the following table.
-No action is required related to these changes unless you are already experiencing a conflict.
-
-These changes were backported to HBase 0.98.x and apply to all newer versions.
-
-[cols="1,1", options="header"]
-|===
-| Pre-0.98.x
-| 0.98-x And Newer
-
-| ipc.server.listen.queue.size
-| hbase.ipc.server.listen.queue.size
-
-| ipc.server.max.callqueue.size
-| hbase.ipc.server.max.callqueue.size
-
-| ipc.server.callqueue.handler.factor
-| hbase.ipc.server.callqueue.handler.factor
-
-| ipc.server.callqueue.read.share
-| hbase.ipc.server.callqueue.read.share
-
-| ipc.server.callqueue.type
-| hbase.ipc.server.callqueue.type
-
-| ipc.server.queue.max.call.delay
-| hbase.ipc.server.queue.max.call.delay
-
-| ipc.server.max.callqueue.length
-| hbase.ipc.server.max.callqueue.length
-
-| ipc.server.read.threadpool.size
-| hbase.ipc.server.read.threadpool.size
-
-| ipc.server.tcpkeepalive
-| hbase.ipc.server.tcpkeepalive
-
-| ipc.server.tcpnodelay
-| hbase.ipc.server.tcpnodelay
-
-| ipc.client.call.purge.timeout
-| hbase.ipc.client.call.purge.timeout
-
-| ipc.client.connection.maxidletime
-| hbase.ipc.client.connection.maxidletime
-
-| ipc.client.idlethreshold
-| hbase.ipc.client.idlethreshold
-
-| ipc.client.kill.max
-| hbase.ipc.client.kill.max
-
-| ipc.server.scan.vtime.weight
-| hbase.ipc.server.scan.vtime.weight
-|===
 
 == HBase and HDFS
 
