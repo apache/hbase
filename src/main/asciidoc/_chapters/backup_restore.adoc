@@ -710,66 +710,54 @@ image::backup-app-components.png[]
 The following is an outline of the steps and examples of commands that are used to backup the data for the _green_ application and
 to recover the data later. All commands are run when logged in as HBase superuser.
 
-1. A backup set called _green_set_ is created as an alias for both the transactions table and the customer table. The backup set can
+* A backup set called _green_set_ is created as an alias for both the transactions table and the customer table. The backup set can
 be used for all operations to avoid typing each table name. The backup set name is case-sensitive and should be formed with only
 printable characters and without spaces.
 
-[source]
-----
-$ hbase backup set add green_set transactions
-$ hbase backup set add green_set customer
-----
+ $ hbase backup set add green_set transactions
+ $ hbase backup set add green_set customer
 
-2. The first backup of green_set data must be a full backup. The following command example shows how credentials are passed to Amazon
+* The first backup of green_set data must be a full backup. The following command example shows how credentials are passed to Amazon
 S3 and specifies the file system with the s3a: prefix.
 
-[source]
-----
-$ ACCESS_KEY=ABCDEFGHIJKLMNOPQRST
-$ SECRET_KEY=123456789abcdefghijklmnopqrstuvwxyzABCD
-$ sudo -u hbase hbase backup create full\
-  s3a://$ACCESS_KEY:SECRET_KEY@prodhbasebackups/backups -s green_set
-----
+ $ ACCESS_KEY=ABCDEFGHIJKLMNOPQRST
+ $ SECRET_KEY=123456789abcdefghijklmnopqrstuvwxyzABCD
+ $ sudo -u hbase hbase backup create full\
+   s3a://$ACCESS_KEY:SECRET_KEY@prodhbasebackups/backups -s green_set
 
-3. Incremental backups should be run according to a schedule that ensures essential data recovery in the event of a catastrophe. At
+* Incremental backups should be run according to a schedule that ensures essential data recovery in the event of a catastrophe. At
 this retail company, the HBase admin team decides that automated daily backups secures the data sufficiently. The team decides that
 they can implement this by modifying an existing Cron job that is defined in `/etc/crontab`. Consequently, IT modifies the Cron job
 by adding the following line:
 
-[source]
-----
-@daily hbase hbase backup create incremental s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups -s green_set
-----
+ @daily hbase hbase backup create incremental s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups -s green_set
 
-4. A catastrophic IT incident disables the production cluster that the green application uses. An HBase system administrator of the
+* A catastrophic IT incident disables the production cluster that the green application uses. An HBase system administrator of the
 backup cluster must restore the _green_set_ dataset to the point in time closest to the recovery objective.
-
++
 NOTE: If the administrator of the backup HBase cluster has the backup ID with relevant details in accessible records, the following
 search with the `hdfs dfs -ls` command and manually scanning the backup ID list can be bypassed. Consider continuously maintaining
 and protecting a detailed log of backup IDs outside the production cluster in your environment.
-
++
 The HBase administrator runs the following command on the directory where backups are stored to print the list of successful backup
 IDs on the console:
 
-`hdfs dfs -ls -t /prodhbasebackups/backups`
+ `hdfs dfs -ls -t /prodhbasebackups/backups`
 
-5. The admin scans the list to see which backup was created at a date and time closest to the recovery objective. To do this, the
+* The admin scans the list to see which backup was created at a date and time closest to the recovery objective. To do this, the
 admin converts the calendar timestamp of the recovery point in time to Unix time because backup IDs are uniquely identified with
 Unix time. The backup IDs are listed in reverse chronological order, meaning the most recent successful backup appears first.
-
++
 The admin notices that the following line in the command output corresponds with the _green_set_ backup that needs to be restored:
 
-`/prodhbasebackups/backups/backup_1467823988425`
+ /prodhbasebackups/backups/backup_1467823988425`
 
-6. The admin restores green_set invoking the backup ID and the -overwrite option. The -overwrite option truncates all existing data
+* The admin restores green_set invoking the backup ID and the -overwrite option. The -overwrite option truncates all existing data
 in the destination and populates the tables with data from the backup dataset. Without this flag, the backup data is appended to the
 existing data in the destination. In this case, the admin decides to overwrite the data because it is corrupted.
 
-[source]
-----
-$ sudo -u hbase hbase restore -s green_set \
-  s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups backup_1467823988425 \ -overwrite
-----
+ $ sudo -u hbase hbase restore -s green_set \
+   s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups backup_1467823988425 \ -overwrite
 
 [[br.data.security]]
 ## Security of Backup Data

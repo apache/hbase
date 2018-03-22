@@ -786,14 +786,18 @@ Make sure you are pulling from the repository when tests run and that you are no
 ====
 
 See link:https://www.apache.org/dev/publishing-maven-artifacts.html[Publishing Maven Artifacts] for some pointers on this maven staging process.
-
++
 If the HBase version ends in `-SNAPSHOT`, the artifacts go elsewhere.
 They are put into the Apache snapshots repository directly and are immediately available.
 Making a SNAPSHOT release, this is what you want to happen.
-
-At this stage, you have two tarballs in your 'build output directory' and a set of artifacts in a staging area of the maven repository, in the 'closed' state.
++
+At this stage, you have two tarballs in your 'build output directory' and a set of artifacts
+in a staging area of the maven repository, in the 'closed' state.
 Next sign, fingerprint and then 'stage' your release candiate build output directory via svnpubsub by committing
-your directory to link:https://dist.apache.org/repos/dist/dev/hbase/[The 'dev' distribution directory] (See comments on link:https://issues.apache.org/jira/browse/HBASE-10554[HBASE-10554 Please delete old releases from mirroring system] but in essence it is an svn checkout of https://dist.apache.org/repos/dist/dev/hbase -- releases are at https://dist.apache.org/repos/dist/release/hbase). In the _version directory_ run the following commands:
+your directory to link:https://dist.apache.org/repos/dist/dev/hbase/[The dev distribution directory]
+(See comments on link:https://issues.apache.org/jira/browse/HBASE-10554[HBASE-10554 Please delete old releases from mirroring system]
+but in essence it is an svn checkout of link:https://dist.apache.org/repos/dist/dev/hbase[dev/hbase] -- releases are at
+link:https://dist.apache.org/repos/dist/release/hbase[release/hbase]). In the _version directory_ run the following commands:
 
 [source,bourne]
 ----
