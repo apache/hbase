@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class SteppingSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
   /**
    * @return flushSize * 2 if there's exactly one region of the table in question

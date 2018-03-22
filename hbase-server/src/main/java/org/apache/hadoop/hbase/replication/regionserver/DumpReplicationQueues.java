@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -56,9 +55,11 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AtomicLongMap;
 
 /**
@@ -68,7 +69,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AtomicLongM
  * Arguments: --distributed    Polls each RS to dump information about the queue
  *            --hdfs           Reports HDFS usage by the replication queues (note: can be overestimated).
  */
-
+@InterfaceAudience.Private
 public class DumpReplicationQueues extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(DumpReplicationQueues.class.getName());

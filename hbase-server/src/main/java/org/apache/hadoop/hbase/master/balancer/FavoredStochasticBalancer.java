@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +67,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * {@link org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.CandidateGenerator}
  *
  */
+@InterfaceAudience.Private
 public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     FavoredNodesPromoter {
 

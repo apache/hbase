@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This interface will be implemented to allow single regions to push metrics into
  * MetricsRegionAggregateSource that will in turn push data to the Hadoop metrics system.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
 
   String OPS_SAMPLE_NAME = "ops";

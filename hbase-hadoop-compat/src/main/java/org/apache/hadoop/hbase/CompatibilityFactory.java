@@ -21,12 +21,14 @@ package org.apache.hadoop.hbase;
 import java.util.Iterator;
 import java.util.ServiceLoader;
 
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Class that will create many instances of classes provided by the hbase-hadoop{1|2}-compat jars.
  */
+@InterfaceAudience.Private
 public class CompatibilityFactory {
 
   private static final Logger LOG = LoggerFactory.getLogger(CompatibilitySingletonFactory.class);

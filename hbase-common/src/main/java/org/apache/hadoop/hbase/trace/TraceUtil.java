@@ -24,10 +24,12 @@ import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanReceiver;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This wrapper class provides functions for accessing htrace 4+ functionality in a simplified way.
  */
+@InterfaceAudience.Private
 public final class TraceUtil {
   private static HTraceConfiguration conf;
   private static Tracer tracer;

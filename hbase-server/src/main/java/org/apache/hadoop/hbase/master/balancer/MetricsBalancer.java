@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Faced for exposing metrics about the balancer.
  */
+@InterfaceAudience.Private
 public class MetricsBalancer {
 
   private MetricsBalancerSource source = null;
@@ -30,9 +32,9 @@ public class MetricsBalancer {
   public MetricsBalancer() {
     initSource();
   }
-  
+
   /**
-   * A function to instantiate the metrics source. This function can be overridden in its 
+   * A function to instantiate the metrics source. This function can be overridden in its
    * subclasses to provide extended sources
    */
   protected void initSource() {

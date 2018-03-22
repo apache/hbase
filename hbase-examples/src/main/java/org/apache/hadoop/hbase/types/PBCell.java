@@ -19,14 +19,15 @@ package org.apache.hadoop.hbase.types;
 
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
+import java.io.IOException;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-
-import java.io.IOException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An example for using protobuf objects with {@link DataType} API.
  */
+@InterfaceAudience.Private
 public class PBCell extends PBType<CellProtos.Cell> {
   @Override
   public Class<CellProtos.Cell> encodedClass() {

@@ -22,6 +22,7 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
@@ -31,7 +32,8 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
  * Helper class for passing netty event loop config to {@link AsyncFSWALProvider}.
  * @since 2.0.0
  */
-public class NettyAsyncFSWALConfigHelper {
+@InterfaceAudience.Private
+public final class NettyAsyncFSWALConfigHelper {
 
   private static final String EVENT_LOOP_CONFIG = "hbase.wal.async.event-loop.config";
 
@@ -59,4 +61,6 @@ public class NettyAsyncFSWALConfigHelper {
     }
     return EVENT_LOOP_CONFIG_MAP.get(name);
   }
+
+  private NettyAsyncFSWALConfigHelper() {}
 }

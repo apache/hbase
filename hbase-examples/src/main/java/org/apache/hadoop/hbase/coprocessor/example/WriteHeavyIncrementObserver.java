@@ -26,7 +26,6 @@ import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.IntStream;
-
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -52,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
 
@@ -64,6 +64,7 @@ import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
  * Notice that this is only an example so we do not handle most corner cases, for example, you must
  * provide a qualifier when doing a get.
  */
+@InterfaceAudience.Private
 public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObserver {
 
   @Override

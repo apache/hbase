@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.backup.example;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * It is internally synchronized to ensure consistent view of the table state.
  */
+@InterfaceAudience.Private
 public class HFileArchiveTableMonitor {
   private static final Logger LOG = LoggerFactory.getLogger(HFileArchiveTableMonitor.class);
   private final Set<String> archivedTables = new TreeSet<>();

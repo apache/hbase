@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.util.hbck;
 
 import java.io.IOException;
 import java.util.Collection;
-
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This interface provides callbacks for handling particular table integrity
@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
  * and handling overlaps but currently preserves the older more specific error
  * condition codes.
  */
+@InterfaceAudience.Private
 public interface TableIntegrityErrorHandler {
 
   TableInfo getTableInfo();
@@ -48,7 +49,7 @@ public interface TableIntegrityErrorHandler {
    *    has an empty start key.
    */
   void handleRegionStartKeyNotEmpty(HbckInfo hi) throws IOException;
-  
+
   /**
    * Callback for handling case where a Table has a last region that does not
    * have an empty end key.
@@ -68,7 +69,7 @@ public interface TableIntegrityErrorHandler {
   /**
    * Callback for handling two regions that have the same start key.  This is
    * a specific case of a region overlap.
-   * @param hi1 one of the overlapping HbckInfo 
+   * @param hi1 one of the overlapping HbckInfo
    * @param hi2 the other overlapping HbckInfo
    */
   void handleDuplicateStartKeys(HbckInfo hi1, HbckInfo hi2) throws IOException;
@@ -96,7 +97,7 @@ public interface TableIntegrityErrorHandler {
    * Callback for handling a region hole between two keys.
    * @param holeStartKey key at the beginning of the region hole
    * @param holeEndKey key at the end of the region hole
-   
+
    */
   void handleHoleInRegionChain(byte[] holeStartKey, byte[] holeEndKey)
       throws IOException;

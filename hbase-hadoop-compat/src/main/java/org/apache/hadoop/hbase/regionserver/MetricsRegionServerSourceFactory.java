@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.io.MetricsIOSource;
 import org.apache.hadoop.hbase.io.MetricsIOWrapper;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface of a factory to create Metrics Sources used inside of regionservers.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionServerSourceFactory {
 
   /**

@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * This interface will be implemented to allow region server to push table metrics into
  * MetricsRegionAggregateSource that will in turn push data to the Hadoop metrics system.
  */
+@InterfaceAudience.Private
 public interface MetricsTableSource extends Comparable<MetricsTableSource> {
 
   String READ_REQUEST_COUNT = "readRequestCount";

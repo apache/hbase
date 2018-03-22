@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +36,7 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
  * This code was borrowed from Apache Crunch project.
  * Updated to the recent version of HBase.
  */
+@InterfaceAudience.Private
 public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
 
   private static final Logger LOG = LoggerFactory.getLogger(HFileInputFormat.class);

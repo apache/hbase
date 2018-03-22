@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class HttpAuthenticationException extends Exception {
   private static final long serialVersionUID = 0;
   /**

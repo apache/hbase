@@ -20,8 +20,11 @@ package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSourceFactory;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
+@InterfaceAudience.Private
 public class MetricsIO {
 
   private final MetricsIOSource source;

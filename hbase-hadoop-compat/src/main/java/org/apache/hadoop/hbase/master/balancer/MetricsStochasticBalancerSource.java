@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
- * This interface extends the basic metrics balancer source to add a function 
- * to report metrics that related to stochastic load balancer. The purpose is to 
+ * This interface extends the basic metrics balancer source to add a function
+ * to report metrics that related to stochastic load balancer. The purpose is to
  * offer an insight to the internal cost calculations that can be useful to tune
  * the balancer. For details, refer to HBASE-13965
  */
+@InterfaceAudience.Private
 public interface MetricsStochasticBalancerSource extends MetricsBalancerSource {
 
   /**

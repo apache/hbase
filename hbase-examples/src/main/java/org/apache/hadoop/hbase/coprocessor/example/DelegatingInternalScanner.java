@@ -19,14 +19,15 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A simple delegation for doing filtering on {@link InternalScanner}.
  */
+@InterfaceAudience.Private
 public class DelegatingInternalScanner implements InternalScanner {
 
   protected final InternalScanner scanner;

@@ -18,10 +18,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * A generic way for querying Java properties.
  */
-public class GetJavaProperty {
+@InterfaceAudience.Private
+public final class GetJavaProperty {
   public static void main(String args[]) {
     if (args.length == 0) {
       for (Object prop: System.getProperties().keySet()) {
@@ -33,4 +36,6 @@ public class GetJavaProperty {
       }
     }
   }
+
+  private GetJavaProperty() {}
 }

@@ -17,5 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 @SuppressWarnings("serial")
 public class EmptyServiceNameException extends FatalConnectionException {}

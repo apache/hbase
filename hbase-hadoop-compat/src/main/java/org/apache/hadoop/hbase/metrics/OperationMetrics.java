@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.metrics;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Container class for commonly collected metrics for most operations. Instantiate this class to
  * collect submitted count, failed count and time histogram for an operation.
  */
+@InterfaceAudience.Private
 public class OperationMetrics {
   private static final String SUBMITTED_COUNT = "SubmittedCount";
   private static final String TIME = "Time";

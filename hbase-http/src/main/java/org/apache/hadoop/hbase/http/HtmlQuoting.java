@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase.http;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class is responsible for quoting HTML characters.
  */
-public class HtmlQuoting {
+@InterfaceAudience.Private
+public final class HtmlQuoting {
   private static final byte[] ampBytes = "&amp;".getBytes();
   private static final byte[] aposBytes = "&apos;".getBytes();
   private static final byte[] gtBytes = "&gt;".getBytes();
@@ -212,4 +214,5 @@ public class HtmlQuoting {
     }
   }
 
+  private HtmlQuoting() {}
 }

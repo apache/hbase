@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.tool;
 
+import java.io.IOException;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -26,12 +29,9 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <p>
@@ -59,7 +59,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * Will return:
  * 0 row(s) in 0.0050 seconds
  * </p>
+ * TODO: It needs tests
  */
+@InterfaceAudience.Private
 public class WriteSinkCoprocessor implements RegionCoprocessor, RegionObserver {
   private static final Logger LOG = LoggerFactory.getLogger(WriteSinkCoprocessor.class);
   private final AtomicLong ops = new AtomicLong();

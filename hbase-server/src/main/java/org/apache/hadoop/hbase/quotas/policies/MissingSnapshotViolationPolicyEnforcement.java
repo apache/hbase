@@ -18,18 +18,20 @@ package org.apache.hadoop.hbase.quotas.policies;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link SpaceViolationPolicyEnforcement} which can be treated as a singleton. When a quota is
  * not defined on a table or we lack quota information, we want to avoid creating a policy, keeping
  * this path fast.
  */
-public class MissingSnapshotViolationPolicyEnforcement extends AbstractViolationPolicyEnforcement {
+@InterfaceAudience.Private
+public final class MissingSnapshotViolationPolicyEnforcement
+  extends AbstractViolationPolicyEnforcement {
   private static final MissingSnapshotViolationPolicyEnforcement SINGLETON =
       new MissingSnapshotViolationPolicyEnforcement();
 

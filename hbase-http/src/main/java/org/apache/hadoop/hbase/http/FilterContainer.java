@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.http;
 
 import java.util.Map;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A container interface to add javax.servlet.Filter.
  */
+@InterfaceAudience.Private
 public interface FilterContainer {
   /**
    * Add a filter to the container.

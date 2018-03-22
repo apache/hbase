@@ -19,10 +19,10 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionNormalizerProtos;
 /**
  * Tracks region normalizer state up in ZK
  */
+@InterfaceAudience.Private
 public class RegionNormalizerTracker extends ZKNodeTracker {
   private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerTracker.class);
 
