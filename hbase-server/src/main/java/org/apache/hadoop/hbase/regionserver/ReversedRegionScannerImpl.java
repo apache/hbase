@@ -22,13 +22,13 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ReversibleRegionScannerImpl extends from RegionScannerImpl, and is used to
@@ -53,8 +53,7 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
       List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
     this.storeHeap = new ReversedKeyValueHeap(scanners, comparator);
     if (!joinedScanners.isEmpty()) {
-      this.joinedHeap = new ReversedKeyValueHeap(joinedScanners,
-          comparator);
+      throw new DoNotRetryIOException("Reverse scan with loading CFs on demand is not supported");
     }
   }
 
