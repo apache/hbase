@@ -131,7 +131,7 @@ HBase recommends downstream users rely on JDK releases that are marked as Long T
 
 |===
 
-NOTE: HBase will neither build nor compile with Java 6.
+NOTE: HBase will neither build nor run with Java 6.
 
 NOTE: You must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ provides a handy mechanism to do this.
 
@@ -141,11 +141,7 @@ ssh::
   HBase uses the Secure Shell (ssh) command and utilities extensively to communicate between cluster nodes. Each server in the cluster must be running `ssh` so that the Hadoop and HBase daemons can be managed. You must be able to connect to all nodes via SSH, including the local node, from the Master as well as any backup Master, using a shared key rather than a password. You can see the basic methodology for such a set-up in Linux or Unix systems at "<<passwordless.ssh.quickstart>>". If your cluster nodes use OS X, see the section, link:https://wiki.apache.org/hadoop/Running_Hadoop_On_OS_X_10.5_64-bit_%28Single-Node_Cluster%29[SSH: Setting up Remote Desktop and Enabling Self-Login] on the Hadoop wiki.
 
 DNS::
-  HBase uses the local hostname to self-report its IP address. Both forward and reverse DNS resolving must work in versions of HBase previous to 0.92.0. The link:https://github.com/sujee/hadoop-dns-checker[hadoop-dns-checker] tool can be used to verify DNS is working correctly on the cluster. The project `README` file provides detailed instructions on usage.
-
-Loopback IP::
-  Prior to hbase-0.96.0, HBase only used the IP address `127.0.0.1` to refer to `localhost`, and this was not configurable.
-  See <<loopback.ip,Loopback IP>> for more details.
+  HBase uses the local hostname to self-report its IP address.
 
 NTP::
   The clocks on cluster nodes should be synchronized. A small amount of variation is acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time synchronization is one of the first things to check if you see unexplained problems in your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or another time-synchronization mechanism on your cluster and that all nodes look to the same service for time synchronization. See the link:http://www.tldp.org/LDP/sag/html/basic-ntp-config.html[Basic NTP Configuration] at [citetitle]_The Linux Documentation Project (TLDP)_ to set up NTP.
@@ -189,14 +185,14 @@ Linux Shell::
   All of the shell scripts that come with HBase rely on the link:http://www.gnu.org/software/bash[GNU Bash] shell.
 
 Windows::
-  Prior to HBase 0.96, running HBase on Microsoft Windows was limited only for testing purposes.
   Running production systems on Windows machines is not recommended.
 
 
 [[hadoop]]
 === link:https://hadoop.apache.org[Hadoop](((Hadoop)))
 
-The following table summarizes the versions of Hadoop supported with each version of HBase.
+The following table summarizes the versions of Hadoop supported with each version of HBase. Older versions not appearing in this table are considered unsupported and likely missing necessary features, while newer versions are untested but may be suitable.
+
 Based on the version of HBase, you should select the most appropriate version of Hadoop.
 You can use Apache Hadoop, or a vendor's distribution of Hadoop.
 No distinction is made here.
@@ -223,10 +219,6 @@ Use the following legend to interpret this table:
 [cols="1,1,1,1", options="header"]
 |===
 | | HBase-1.2.x | HBase-1.3.x | HBase-2.0.x
-|Hadoop-2.0.x-alpha | X | X | X
-|Hadoop-2.1.0-beta | X | X | X
-|Hadoop-2.2.0 | X  | X | X
-|Hadoop-2.3.x | X  | X | X
 |Hadoop-2.4.x | S | S | X
 |Hadoop-2.5.x | S | S | X
 |Hadoop-2.6.0 | X | X | X
@@ -307,9 +299,6 @@ See also <<casestudies.max.transfer.threads,casestudies.max.transfer.threads>> a
 === ZooKeeper Requirements
 
 ZooKeeper 3.4.x is required.
-HBase makes use of the `multi` functionality that is only available since Zookeeper 3.4.0. The `hbase.zookeeper.useMulti` configuration property defaults to `true`.
-Refer to link:https://issues.apache.org/jira/browse/HBASE-12241[HBASE-12241 (The crash of regionServer when taking deadserver's replication queue breaks replication)] and link:https://issues.apache.org/jira/browse/HBASE-6775[HBASE-6775 (Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix)] for background.
-The property is deprecated and useMulti is always enabled in HBase 2.0.
 
 [[standalone_dist]]
 == HBase run modes: Standalone and Distributed
@@ -556,13 +545,13 @@ Usually this ensemble location is kept out in the _hbase-site.xml_ and is picked
 
 If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests).
 
-Minimally, an HBase client needs hbase-client module in its dependencies when connecting to a cluster:
+For Java applications using Maven, including the hbase-shaded-client module is the recommended dependency when connecting to a cluster:
 [source,xml]
 ----
 <dependency>
   <groupId>org.apache.hbase</groupId>
-  <artifactId>hbase-client</artifactId>
-  <version>1.2.4</version>
+  <artifactId>hbase-shaded-client</artifactId>
+  <version>2.0.0</version>
 </dependency>
 ----
 
@@ -797,7 +786,6 @@ For most usage patterns, you should use automatic splitting.
 See <<manual_region_splitting_decisions,manual region splitting decisions>> for more information about manual region splitting.
 
 Instead of allowing HBase to split your regions automatically, you can choose to manage the splitting yourself.
-This feature was added in HBase 0.90.0.
 Manually managing splits works if you know your keyspace well, otherwise let HBase figure where to split for you.
 Manual splitting can mitigate region creation and movement under load.
 It also makes it so region boundaries are known and invariant (if you disable region splitting). If you use manual splits, it is easier doing staggered, time-based major compactions to spread out your network IO load.
@@ -823,13 +811,12 @@ Otherwise, the cluster can be prone to compaction storms with a large number of 
 It is important to understand that the data growth causes compaction storms and not the manual split decision.
 
 If the regions are split into too many large regions, you can increase the major compaction interval by configuring `HConstants.MAJOR_COMPACTION_PERIOD`.
-HBase 0.90 introduced `org.apache.hadoop.hbase.util.RegionSplitter`, which provides a network-IO-safe rolling split of all regions.
+The `org.apache.hadoop.hbase.util.RegionSplitter` utility also provides a network-IO-safe rolling split of all regions.
 
 [[managed.compactions]]
 ==== Managed Compactions
 
 By default, major compactions are scheduled to run once in a 7-day period.
-Prior to HBase 0.96.x, major compactions were scheduled to happen once per day by default.
 
 If you need to control exactly when and how often major compaction runs, you can disable managed major compactions.
 See the entry for `hbase.hregion.majorcompaction` in the <<compaction.parameters,compaction.parameters>> table for details.
@@ -949,8 +936,8 @@ To enable monitoring and management from remote systems, you need to set system 
 See the link:http://docs.oracle.com/javase/8/docs/technotes/guides/management/agent.html[official documentation] for more information.
 Historically, besides above port mentioned, JMX opens two additional random TCP listening ports, which could lead to port conflict problem. (See link:https://issues.apache.org/jira/browse/HBASE-10289[HBASE-10289] for details)
 
-As an alternative, You can use the coprocessor-based JMX implementation provided by HBase.
-To enable it in 0.99 or above, add below property in _hbase-site.xml_:
+As an alternative, you can use the coprocessor-based JMX implementation provided by HBase.
+To enable it, add below property in _hbase-site.xml_:
 
 [source,xml]
 ----
@@ -1045,8 +1032,8 @@ The corresponding properties for port configuration are `master.rmi.registry.por
 [[dyn_config]]
 == Dynamic Configuration
 
-Since HBase 1.0.0, it is possible to change a subset of the configuration without requiring a server restart.
-In the HBase shell, there are new operators, `update_config` and `update_all_config` that will prompt a server or all servers to reload configuration.
+It is possible to change a subset of the configuration without requiring a server restart.
+In the HBase shell, the operations `update_config` and `update_all_config` will prompt a server or all servers to reload configuration.
 
 Only a subset of all configurations can currently be changed in the running server.
 Here are those configurations:

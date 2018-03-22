@@ -19,7 +19,7 @@
  */
 ////
 
-[[casestudies]]
+[[backuprestore]]
 = Backup and Restore
 :doctype: book
 :numbered:

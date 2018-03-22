@@ -1493,11 +1493,14 @@ Alphanumeric Rowkeys::
 Using a Custom Algorithm::
   The RegionSplitter tool is provided with HBase, and uses a _SplitAlgorithm_ to determine split points for you.
   As parameters, you give it the algorithm, desired number of regions, and column families.
-  It includes two split algorithms.
+  It includes three split algorithms.
   The first is the
   `link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.HexStringSplit.html[HexStringSplit]`
   algorithm, which assumes the row keys are hexadecimal strings.
-  The second,
+  The second is the
+  `link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.DecimalStringSplit.html[DecimalStringSplit]`
+  algorithm, which assumes the row keys are decimal strings in the range 00000000 to 99999999.
+  The third,
   `link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.UniformSplit.html[UniformSplit]`,
   assumes the row keys are random byte arrays.
   You will probably need to develop your own
