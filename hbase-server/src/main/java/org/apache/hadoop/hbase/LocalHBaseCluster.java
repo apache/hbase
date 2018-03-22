@@ -141,7 +141,7 @@ public class LocalHBaseCluster {
 
     // Always have masters and regionservers come up on port '0' so we don't
     // clash over default ports.
-    if (conf.getBoolean(ASSIGN_RANDOM_PORTS, false)) {
+    if (conf.getBoolean(ASSIGN_RANDOM_PORTS, true)) {
       conf.set(HConstants.MASTER_PORT, "0");
       conf.set(HConstants.REGIONSERVER_PORT, "0");
       if (conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1) {
