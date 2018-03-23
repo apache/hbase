@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -4829,6 +4830,60 @@ public class TestFromClientSide {
       fail("trying to check and modify different rows should have failed.");
     } catch(Exception e) {}
 
+  }
+
+  @Test
+  public void testCheckAndMutateWithTimeRange() throws IOException {
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
+    final long ts = System.currentTimeMillis() / 2;
+    Put put = new Put(ROW);
+    put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
+
+    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+      .ifNotExists()
+      .thenPut(put);
+    assertTrue(ok);
+
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+      .timeRange(TimeRange.at(ts + 10000))
+      .ifEquals(VALUE)
+      .thenPut(put);
+    assertFalse(ok);
+
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+      .timeRange(TimeRange.at(ts))
+      .ifEquals(VALUE)
+      .thenPut(put);
+    assertTrue(ok);
+
+    RowMutations rm = new RowMutations(ROW)
+      .add((Mutation) put);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+      .timeRange(TimeRange.at(ts + 10000))
+      .ifEquals(VALUE)
+      .thenMutate(rm);
+    assertFalse(ok);
+
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+      .timeRange(TimeRange.at(ts))
+      .ifEquals(VALUE)
+      .thenMutate(rm);
+    assertTrue(ok);
+
+    Delete delete = new Delete(ROW)
+      .addColumn(FAMILY, QUALIFIER);
+
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+      .timeRange(TimeRange.at(ts + 10000))
+      .ifEquals(VALUE)
+      .thenDelete(delete);
+    assertFalse(ok);
+
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+      .timeRange(TimeRange.at(ts))
+      .ifEquals(VALUE)
+      .thenDelete(delete);
+    assertTrue(ok);
   }
 
   @Test

@@ -1738,7 +1738,7 @@ public class TestHRegion {
 
       // checkAndPut with empty value
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
-          emptyVal), put, true);
+          emptyVal), put);
       assertTrue(res);
 
       // Putting data in key
@@ -1747,25 +1747,25 @@ public class TestHRegion {
 
       // checkAndPut with correct value
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
-          put, true);
+          put);
       assertTrue(res);
 
       // not empty anymore
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
-          put, true);
+          put);
       assertFalse(res);
 
       Delete delete = new Delete(row1);
       delete.addColumn(fam1, qf1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
-          delete, true);
+          delete);
       assertFalse(res);
 
       put = new Put(row1);
       put.addColumn(fam1, qf1, val2);
       // checkAndPut with correct value
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
-          put, true);
+          put);
       assertTrue(res);
 
       // checkAndDelete with correct value
@@ -1773,12 +1773,12 @@ public class TestHRegion {
       delete.addColumn(fam1, qf1);
       delete.addColumn(fam1, qf1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val2),
-          delete, true);
+          delete);
       assertTrue(res);
 
       delete = new Delete(row1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
-          delete, true);
+          delete);
       assertTrue(res);
 
       // checkAndPut looking for a null value
@@ -1786,7 +1786,7 @@ public class TestHRegion {
       put.addColumn(fam1, qf1, val1);
 
       res = region
-          .checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new NullComparator(), put, true);
+          .checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new NullComparator(), put);
       assertTrue(res);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -1814,14 +1814,14 @@ public class TestHRegion {
 
       // checkAndPut with wrong value
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
-          val2), put, true);
+          val2), put);
       assertEquals(false, res);
 
       // checkAndDelete with wrong value
       Delete delete = new Delete(row1);
       delete.addFamily(fam1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val2),
-          put, true);
+          put);
       assertEquals(false, res);
 
       // Putting data in key
@@ -1832,7 +1832,7 @@ public class TestHRegion {
       // checkAndPut with wrong value
       res =
           region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
-              bd2), put, true);
+              bd2), put);
       assertEquals(false, res);
 
       // checkAndDelete with wrong value
@@ -1840,7 +1840,7 @@ public class TestHRegion {
       delete.addFamily(fam1);
       res =
           region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
-              bd2), put, true);
+              bd2), put);
       assertEquals(false, res);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -1866,14 +1866,14 @@ public class TestHRegion {
 
       // checkAndPut with correct value
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
-          val1), put, true);
+          val1), put);
       assertEquals(true, res);
 
       // checkAndDelete with correct value
       Delete delete = new Delete(row1);
       delete.addColumn(fam1, qf1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
-          delete, true);
+          delete);
       assertEquals(true, res);
 
       // Putting data in key
@@ -1884,7 +1884,7 @@ public class TestHRegion {
       // checkAndPut with correct value
       res =
           region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
-              bd1), put, true);
+              bd1), put);
       assertEquals(true, res);
 
       // checkAndDelete with correct value
@@ -1892,7 +1892,7 @@ public class TestHRegion {
       delete.addColumn(fam1, qf1);
       res =
           region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
-              bd1), delete, true);
+              bd1), delete);
       assertEquals(true, res);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -1920,12 +1920,12 @@ public class TestHRegion {
 
       // Test CompareOp.LESS: original = val3, compare with val3, fail
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS,
-          new BinaryComparator(val3), put, true);
+          new BinaryComparator(val3), put);
       assertEquals(false, res);
 
       // Test CompareOp.LESS: original = val3, compare with val4, fail
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS,
-          new BinaryComparator(val4), put, true);
+          new BinaryComparator(val4), put);
       assertEquals(false, res);
 
       // Test CompareOp.LESS: original = val3, compare with val2,
@@ -1933,18 +1933,18 @@ public class TestHRegion {
       put = new Put(row1);
       put.addColumn(fam1, qf1, val2);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS,
-          new BinaryComparator(val2), put, true);
+          new BinaryComparator(val2), put);
       assertEquals(true, res);
 
       // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val3, fail
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS_OR_EQUAL,
-          new BinaryComparator(val3), put, true);
+          new BinaryComparator(val3), put);
       assertEquals(false, res);
 
       // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val2,
       // succeed (value still = val2)
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS_OR_EQUAL,
-          new BinaryComparator(val2), put, true);
+          new BinaryComparator(val2), put);
       assertEquals(true, res);
 
       // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val1,
@@ -1952,17 +1952,17 @@ public class TestHRegion {
       put = new Put(row1);
       put.addColumn(fam1, qf1, val3);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.LESS_OR_EQUAL,
-          new BinaryComparator(val1), put, true);
+          new BinaryComparator(val1), put);
       assertEquals(true, res);
 
       // Test CompareOp.GREATER: original = val3, compare with val3, fail
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER,
-          new BinaryComparator(val3), put, true);
+          new BinaryComparator(val3), put);
       assertEquals(false, res);
 
       // Test CompareOp.GREATER: original = val3, compare with val2, fail
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER,
-          new BinaryComparator(val2), put, true);
+          new BinaryComparator(val2), put);
       assertEquals(false, res);
 
       // Test CompareOp.GREATER: original = val3, compare with val4,
@@ -1970,23 +1970,23 @@ public class TestHRegion {
       put = new Put(row1);
       put.addColumn(fam1, qf1, val2);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER,
-          new BinaryComparator(val4), put, true);
+          new BinaryComparator(val4), put);
       assertEquals(true, res);
 
       // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val1, fail
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER_OR_EQUAL,
-          new BinaryComparator(val1), put, true);
+          new BinaryComparator(val1), put);
       assertEquals(false, res);
 
       // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val2,
       // succeed (value still = val2)
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER_OR_EQUAL,
-          new BinaryComparator(val2), put, true);
+          new BinaryComparator(val2), put);
       assertEquals(true, res);
 
       // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val3, succeed
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.GREATER_OR_EQUAL,
-          new BinaryComparator(val3), put, true);
+          new BinaryComparator(val3), put);
       assertEquals(true, res);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -2021,7 +2021,7 @@ public class TestHRegion {
 
       // checkAndPut with wrong value
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
-          val1), put, true);
+          val1), put);
       assertEquals(true, res);
 
       Get get = new Get(row1);
@@ -2048,7 +2048,7 @@ public class TestHRegion {
       put.addColumn(fam1, qual1, value1);
       try {
         region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL,
-            new BinaryComparator(value2), put, false);
+            new BinaryComparator(value2), put);
         fail();
       } catch (org.apache.hadoop.hbase.DoNotRetryIOException expected) {
         // expected exception.
@@ -2097,7 +2097,7 @@ public class TestHRegion {
       delete.addColumn(fam2, qf1);
       delete.addColumn(fam1, qf3);
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(
-          val2), delete, true);
+          val2), delete);
       assertEquals(true, res);
 
       Get get = new Get(row1);
@@ -2113,7 +2113,7 @@ public class TestHRegion {
       delete = new Delete(row1);
       delete.addFamily(fam2);
       res = region.checkAndMutate(row1, fam2, qf1, CompareOperator.EQUAL, new BinaryComparator(emptyVal),
-          delete, true);
+          delete);
       assertEquals(true, res);
 
       get = new Get(row1);
@@ -2124,7 +2124,7 @@ public class TestHRegion {
       // Row delete
       delete = new Delete(row1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
-          delete, true);
+          delete);
       assertEquals(true, res);
       get = new Get(row1);
       r = region.get(get);
@@ -6260,7 +6260,7 @@ public class TestHRegion {
     p = new Put(row);
     p.setDurability(Durability.SKIP_WAL);
     p.addColumn(fam1, qual1, qual2);
-    region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL, new BinaryComparator(qual1), p, false);
+    region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL, new BinaryComparator(qual1), p);
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
     assertEquals(10L, c.getTimestamp());

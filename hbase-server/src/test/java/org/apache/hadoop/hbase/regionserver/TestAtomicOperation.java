@@ -663,7 +663,7 @@ public class TestAtomicOperation {
       }
       testStep = TestStep.CHECKANDPUT_STARTED;
       region.checkAndMutate(Bytes.toBytes("r1"), Bytes.toBytes(family), Bytes.toBytes("q1"),
-        CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("10")), put, true);
+        CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("10")), put);
       testStep = TestStep.CHECKANDPUT_COMPLETED;
     }
   }

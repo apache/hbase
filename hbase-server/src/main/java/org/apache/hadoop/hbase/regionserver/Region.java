@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -303,14 +304,31 @@ public interface Region extends ConfigurationObserver {
    * @param family column family to check
    * @param qualifier column qualifier to check
    * @param op the comparison operator
-   * @param comparator
-   * @param mutation
-   * @param writeToWAL
+   * @param comparator the expected value
+   * @param mutation data to put if check succeeds
    * @return true if mutation was applied, false otherwise
-   * @throws IOException
+   */
+  default boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, Mutation mutation) throws IOException {
+    return checkAndMutate(row, family, qualifier, op, comparator, TimeRange.allTime(), mutation);
+  }
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value and if it does,
+   * it performs the mutation. If the passed value is null, the lack of column value
+   * (ie: non-existence) is used. See checkAndRowMutate to do many checkAndPuts at a time on a
+   * single row.
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param op the comparison operator
+   * @param comparator the expected value
+   * @param mutation data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutation was applied, false otherwise
    */
   boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
-      ByteArrayComparable comparator, Mutation mutation, boolean writeToWAL) throws IOException;
+      ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected values and if it does,
@@ -321,13 +339,32 @@ public interface Region extends ConfigurationObserver {
    * @param family column family to check
    * @param qualifier column qualifier to check
    * @param op the comparison operator
-   * @param comparator
-   * @param mutations
+   * @param comparator the expected value
+   * @param mutations data to put if check succeeds
    * @return true if mutations were applied, false otherwise
-   * @throws IOException
+   */
+  default boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, RowMutations mutations) throws IOException {
+    return checkAndRowMutate(row, family, qualifier, op, comparator, TimeRange.allTime(),
+      mutations);
+  }
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected values and if it does,
+   * it performs the row mutations. If the passed value is null, the lack of column value
+   * (ie: non-existence) is used. Use to do many mutations on a single row. Use checkAndMutate
+   * to do one checkAndMutate at a time.
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param op the comparison operator
+   * @param comparator the expected value
+   * @param mutations data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutations were applied, false otherwise
    */
   boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
-      ByteArrayComparable comparator, RowMutations mutations)
+      ByteArrayComparable comparator, TimeRange timeRange, RowMutations mutations)
       throws IOException;
 
   /**
