@@ -245,6 +245,13 @@ if ( fqtn != null ) {
     <td><%= locality%></td>
     <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
+<%
+      if (withReplica) {
+%>
+    <td><%= meta.getReplicaId() %></td>
+<%
+      }
+%>
 </tr>
 <%  } %>
 <%} %>
