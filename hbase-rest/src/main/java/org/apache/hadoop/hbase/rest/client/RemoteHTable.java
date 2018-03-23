@@ -976,6 +976,11 @@ public class RemoteHTable implements Table {
     }
 
     @Override
+    public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
+      throw new UnsupportedOperationException("timeRange not implemented");
+    }
+
+    @Override
     public CheckAndMutateBuilder ifNotExists() {
       throw new UnsupportedOperationException("CheckAndMutate for non-equal comparison "
           + "not implemented");

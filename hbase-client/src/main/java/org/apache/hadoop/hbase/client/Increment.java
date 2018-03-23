@@ -48,7 +48,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class Increment extends Mutation {
   private static final int HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
-  private TimeRange tr = new TimeRange();
+  private TimeRange tr = TimeRange.allTime();
 
   /**
    * Create a Increment operation for the specified row.
