@@ -16,13 +16,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-HTrace = org.apache.htrace.core.Tracer
-java_import org.apache.htrace.core.Sampler
+
 java_import org.apache.hadoop.hbase.trace.SpanReceiverHost
 
 module Shell
   module Commands
     class Trace < Command
+      @@conf = org.apache.htrace.core.HTraceConfiguration.fromKeyValuePairs(
+        'sampler.classes', 'org.apache.htrace.core.AlwaysSampler'
+      )
+      @@tracer = org.apache.htrace.core.Tracer::Builder.new('HBaseShell').conf(@@conf).build()
+      @@tracescope = nil
+
       def help
         <<-EOF
 Start or Stop tracing using HTrace.
@@ -55,16 +60,19 @@ EOF
         @@receiver ||= SpanReceiverHost.getInstance(@shell.hbase.configuration)
         if startstop == 'start'
           unless tracing?
-            @@tracescope = HTrace.startSpan(spanname, Sampler.ALWAYS)
+            @@tracescope = @@tracer.newScope(spanname)
           end
         elsif startstop == 'stop'
-          @@tracescope.close if tracing?
+          if tracing?
+            @@tracescope.close
+            @@tracescope = nil
+          end
         end
         tracing?
       end
 
       def tracing?
-        HTrace.isTracing
+        @@tracescope != nil
       end
     end
   end
