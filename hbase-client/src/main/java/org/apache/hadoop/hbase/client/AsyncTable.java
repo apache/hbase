@@ -22,15 +22,14 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.allOf;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
 
 import com.google.protobuf.RpcChannel;
-
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -234,6 +233,11 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
      * @param qualifier column qualifier to check.
      */
     CheckAndMutateBuilder qualifier(byte[] qualifier);
+
+    /**
+     * @param timeRange time range to check.
+     */
+    CheckAndMutateBuilder timeRange(TimeRange timeRange);
 
     /**
      * Check for lack of column.

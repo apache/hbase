@@ -239,7 +239,7 @@ public class TestMalformedCellFromClient {
     ClientProtos.MutationProto.Builder mutationBuilder = ClientProtos.MutationProto.newBuilder();
     ClientProtos.Condition condition = RequestConverter
       .buildCondition(rm.getRow(), FAMILY, null, new BinaryComparator(new byte[10]),
-        HBaseProtos.CompareType.EQUAL);
+        HBaseProtos.CompareType.EQUAL, null);
     for (Mutation mutation : rm.getMutations()) {
       ClientProtos.MutationProto.MutationType mutateType = null;
       if (mutation instanceof Put) {

@@ -143,6 +143,7 @@ message Condition {
   required bytes qualifier = 3;
   required CompareType compare_type = 4;
   required Comparator comparator = 5;
+  optional TimeRange time_range = 6;
 }
 
 

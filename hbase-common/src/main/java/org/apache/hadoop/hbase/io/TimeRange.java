@@ -37,6 +37,20 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class TimeRange {
   public static final long INITIAL_MIN_TIMESTAMP = 0L;
   public static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;
+  private static final TimeRange ALL_TIME = new TimeRange(INITIAL_MIN_TIMESTAMP,
+    INITIAL_MAX_TIMESTAMP);
+
+  public static TimeRange allTime() {
+    return ALL_TIME;
+  }
+
+  public static TimeRange at(long ts) {
+    if (ts < 0 || ts == Long.MAX_VALUE) {
+      throw new IllegalArgumentException("invalid ts:" + ts);
+    }
+    return new TimeRange(ts, ts + 1);
+  }
+
   private final long minStamp;
   private final long maxStamp;
   private final boolean allTime;
@@ -150,7 +164,10 @@ public class TimeRange {
    * @param bytes timestamp to check
    * @param offset offset into the bytes
    * @return true if within TimeRange, false if not
+   * @deprecated This is made @InterfaceAudience.Private in the 2.0 line and above and may be
+   *   changed to private or removed in 3.0. Use {@link #withinTimeRange(long)} instead
    */
+  @Deprecated
   public boolean withinTimeRange(byte [] bytes, int offset) {
     if (allTime) {
       return true;

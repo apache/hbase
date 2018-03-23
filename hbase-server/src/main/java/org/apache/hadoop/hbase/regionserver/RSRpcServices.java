@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -591,9 +592,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @param cellScanner if non-null, the mutation data -- the Cell content.
    */
   private boolean checkAndRowMutate(final HRegion region, final List<ClientProtos.Action> actions,
-                                    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
-                                    CompareOperator op, ByteArrayComparable comparator, RegionActionResult.Builder builder,
-                                    ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
+    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, TimeRange timeRange, RegionActionResult.Builder builder,
+    ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
     int countOfCompleteMutation = 0;
     try {
       if (!region.getRegionInfo().isMetaRegion()) {
@@ -636,7 +637,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         builder.addResultOrException(
           resultOrExceptionOrBuilder.build());
       }
-      return region.checkAndRowMutate(row, family, qualifier, op, comparator, rm);
+      return region.checkAndRowMutate(row, family, qualifier, op, comparator, timeRange, rm);
     } finally {
       // Currently, the checkAndMutate isn't supported by batch so it won't mess up the cell scanner
       // even if the malformed cells are not skipped.
@@ -2633,9 +2634,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               CompareOperator.valueOf(condition.getCompareType().name());
             ByteArrayComparable comparator =
                 ProtobufUtil.toComparator(condition.getComparator());
-            processed = checkAndRowMutate(region, regionAction.getActionList(),
-                  cellScanner, row, family, qualifier, op,
-                  comparator, regionActionResultBuilder, spaceQuotaEnforcement);
+            TimeRange timeRange = condition.hasTimeRange() ?
+              ProtobufUtil.toTimeRange(condition.getTimeRange()) :
+              TimeRange.allTime();
+            processed =
+              checkAndRowMutate(region, regionAction.getActionList(), cellScanner, row, family,
+                qualifier, op, comparator, timeRange, regionActionResultBuilder,
+                spaceQuotaEnforcement);
           } else {
             doAtomicBatchOp(regionActionResultBuilder, region, quota, regionAction.getActionList(),
               cellScanner, spaceQuotaEnforcement);
@@ -2756,79 +2761,84 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       spaceQuotaEnforcement = getSpaceQuotaManager().getActiveEnforcements();
 
       switch (type) {
-      case APPEND:
-        // TODO: this doesn't actually check anything.
-        r = append(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
-        break;
-      case INCREMENT:
-        // TODO: this doesn't actually check anything.
-        r = increment(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
-        break;
-      case PUT:
-        Put put = ProtobufUtil.toPut(mutation, cellScanner);
-        checkCellSizeLimit(region, put);
-        // Throws an exception when violated
-        spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
-        quota.addMutation(put);
-        if (request.hasCondition()) {
-          Condition condition = request.getCondition();
-          byte[] row = condition.getRow().toByteArray();
-          byte[] family = condition.getFamily().toByteArray();
-          byte[] qualifier = condition.getQualifier().toByteArray();
-          CompareOperator compareOp =
-            CompareOperator.valueOf(condition.getCompareType().name());
-          ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
-          if (region.getCoprocessorHost() != null) {
-            processed = region.getCoprocessorHost().preCheckAndPut(row, family, qualifier,
-                compareOp, comparator, put);
-          }
-          if (processed == null) {
-            boolean result = region.checkAndMutate(row, family,
-              qualifier, compareOp, comparator, put, true);
+        case APPEND:
+          // TODO: this doesn't actually check anything.
+          r = append(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
+          break;
+        case INCREMENT:
+          // TODO: this doesn't actually check anything.
+          r = increment(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
+          break;
+        case PUT:
+          Put put = ProtobufUtil.toPut(mutation, cellScanner);
+          checkCellSizeLimit(region, put);
+          // Throws an exception when violated
+          spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
+          quota.addMutation(put);
+          if (request.hasCondition()) {
+            Condition condition = request.getCondition();
+            byte[] row = condition.getRow().toByteArray();
+            byte[] family = condition.getFamily().toByteArray();
+            byte[] qualifier = condition.getQualifier().toByteArray();
+            CompareOperator compareOp =
+              CompareOperator.valueOf(condition.getCompareType().name());
+            ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
+            TimeRange timeRange = condition.hasTimeRange() ?
+              ProtobufUtil.toTimeRange(condition.getTimeRange()) :
+              TimeRange.allTime();
             if (region.getCoprocessorHost() != null) {
-              result = region.getCoprocessorHost().postCheckAndPut(row, family,
-                qualifier, compareOp, comparator, put, result);
+              processed = region.getCoprocessorHost().preCheckAndPut(row, family, qualifier,
+                  compareOp, comparator, put);
             }
-            processed = result;
+            if (processed == null) {
+              boolean result = region.checkAndMutate(row, family,
+                qualifier, compareOp, comparator, timeRange, put);
+              if (region.getCoprocessorHost() != null) {
+                result = region.getCoprocessorHost().postCheckAndPut(row, family,
+                  qualifier, compareOp, comparator, put, result);
+              }
+              processed = result;
+            }
+          } else {
+            region.put(put);
+            processed = Boolean.TRUE;
           }
-        } else {
-          region.put(put);
-          processed = Boolean.TRUE;
-        }
-        break;
-      case DELETE:
-        Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
-        checkCellSizeLimit(region, delete);
-        spaceQuotaEnforcement.getPolicyEnforcement(region).check(delete);
-        quota.addMutation(delete);
-        if (request.hasCondition()) {
-          Condition condition = request.getCondition();
-          byte[] row = condition.getRow().toByteArray();
-          byte[] family = condition.getFamily().toByteArray();
-          byte[] qualifier = condition.getQualifier().toByteArray();
-          CompareOperator op = CompareOperator.valueOf(condition.getCompareType().name());
-          ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
-          if (region.getCoprocessorHost() != null) {
-            processed = region.getCoprocessorHost().preCheckAndDelete(row, family, qualifier, op,
-                comparator, delete);
-          }
-          if (processed == null) {
-            boolean result = region.checkAndMutate(row, family,
-              qualifier, op, comparator, delete, true);
+          break;
+        case DELETE:
+          Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
+          checkCellSizeLimit(region, delete);
+          spaceQuotaEnforcement.getPolicyEnforcement(region).check(delete);
+          quota.addMutation(delete);
+          if (request.hasCondition()) {
+            Condition condition = request.getCondition();
+            byte[] row = condition.getRow().toByteArray();
+            byte[] family = condition.getFamily().toByteArray();
+            byte[] qualifier = condition.getQualifier().toByteArray();
+            CompareOperator op = CompareOperator.valueOf(condition.getCompareType().name());
+            ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
+            TimeRange timeRange = condition.hasTimeRange() ?
+              ProtobufUtil.toTimeRange(condition.getTimeRange()) :
+              TimeRange.allTime();
             if (region.getCoprocessorHost() != null) {
-              result = region.getCoprocessorHost().postCheckAndDelete(row, family,
-                qualifier, op, comparator, delete, result);
+              processed = region.getCoprocessorHost().preCheckAndDelete(row, family, qualifier, op,
+                  comparator, delete);
             }
-            processed = result;
+            if (processed == null) {
+              boolean result = region.checkAndMutate(row, family,
+                qualifier, op, comparator, timeRange, delete);
+              if (region.getCoprocessorHost() != null) {
+                result = region.getCoprocessorHost().postCheckAndDelete(row, family,
+                  qualifier, op, comparator, delete, result);
+              }
+              processed = result;
+            }
+          } else {
+            region.delete(delete);
+            processed = Boolean.TRUE;
           }
-        } else {
-          region.delete(delete);
-          processed = Boolean.TRUE;
-        }
-        break;
-      default:
-          throw new DoNotRetryIOException(
-            "Unsupported mutate type: " + type.name());
+          break;
+        default:
+          throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
       }
       if (processed != null) {
         builder.setProcessed(processed.booleanValue());

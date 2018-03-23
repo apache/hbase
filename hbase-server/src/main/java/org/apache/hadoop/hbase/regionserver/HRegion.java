@@ -3926,28 +3926,25 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
-                                CompareOperator op, ByteArrayComparable comparator, Mutation mutation, boolean writeToWAL)
-  throws IOException{
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException {
     checkMutationType(mutation, row);
-    return doCheckAndRowMutate(row, family, qualifier, op, comparator, null,
-      mutation);
+    return doCheckAndRowMutate(row, family, qualifier, op, comparator, timeRange, null, mutation);
   }
 
   @Override
-  public boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier,
-    CompareOperator op, ByteArrayComparable comparator, RowMutations rm)
-  throws IOException {
-    return doCheckAndRowMutate(row, family, qualifier, op, comparator, rm, null);
+  public boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, TimeRange timeRange, RowMutations rm) throws IOException {
+    return doCheckAndRowMutate(row, family, qualifier, op, comparator, timeRange, rm, null);
   }
 
   /**
    * checkAndMutate and checkAndRowMutate are 90% the same. Rather than copy/paste, below has
    * switches in the few places where there is deviation.
    */
-  private boolean doCheckAndRowMutate(byte [] row, byte [] family, byte [] qualifier,
-                                      CompareOperator op, ByteArrayComparable comparator, RowMutations rowMutations,
-                                      Mutation mutation)
+  private boolean doCheckAndRowMutate(byte[] row, byte[] family, byte[] qualifier,
+    CompareOperator op, ByteArrayComparable comparator, TimeRange timeRange,
+    RowMutations rowMutations, Mutation mutation)
   throws IOException {
     // Could do the below checks but seems wacky with two callers only. Just comment out for now.
     // One caller passes a Mutation, the other passes RowMutation. Presume all good so we don't
@@ -3962,6 +3959,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Get get = new Get(row);
       checkFamily(family);
       get.addColumn(family, qualifier);
+      if (timeRange != null) {
+        get.setTimeRange(timeRange.getMin(), timeRange.getMax());
+      }
       // Lock row - note that doBatchMutate will relock this row if called
       checkRow(row, "doCheckAndRowMutate");
       RowLock rowLock = getRowLockInternal(get.getRow(), false, null);

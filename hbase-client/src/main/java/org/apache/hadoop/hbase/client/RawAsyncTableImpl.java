@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.SingleRequestCallerBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -265,6 +266,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     private byte[] qualifier;
 
+    private TimeRange timeRange;
+
     private CompareOperator op;
 
     private byte[] value;
@@ -278,6 +281,12 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     public CheckAndMutateBuilder qualifier(byte[] qualifier) {
       this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using" +
         " an empty byte array, or just do not call this method if you want a null qualifier");
+      return this;
+    }
+
+    @Override
+    public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
+      this.timeRange = timeRange;
       return this;
     }
 
@@ -307,7 +316,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           .action((controller, loc, stub) -> RawAsyncTableImpl.<Put, Boolean> mutate(controller,
             loc, stub, put,
             (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-              new BinaryComparator(value), CompareType.valueOf(op.name()), p),
+              new BinaryComparator(value), CompareType.valueOf(op.name()), timeRange, p),
             (c, r) -> r.getProcessed()))
           .call();
     }
@@ -319,7 +328,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete, Boolean> mutate(controller,
             loc, stub, delete,
             (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-              new BinaryComparator(value), CompareType.valueOf(op.name()), d),
+              new BinaryComparator(value), CompareType.valueOf(op.name()), timeRange, d),
             (c, r) -> r.getProcessed()))
           .call();
     }
@@ -331,7 +340,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           .action((controller, loc, stub) -> RawAsyncTableImpl.<Boolean> mutateRow(controller, loc,
             stub, mutation,
             (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-              new BinaryComparator(value), CompareType.valueOf(op.name()), rm),
+              new BinaryComparator(value), CompareType.valueOf(op.name()), timeRange, rm),
             resp -> resp.getExists()))
           .call();
     }
