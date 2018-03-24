@@ -145,7 +145,7 @@ public final class ReplicationUtils {
       if (excludeNamespaces != null && excludeNamespaces.contains(namespace)) {
         return false;
       }
-      Map<TableName, List<String>> excludedTableCFs = peerConfig.getTableCFsMap();
+      Map<TableName, List<String>> excludedTableCFs = peerConfig.getExcludeTableCFsMap();
       // trap here, must check existence first since HashMap allows null value.
       if (excludedTableCFs == null || !excludedTableCFs.containsKey(tableName)) {
         return true;
