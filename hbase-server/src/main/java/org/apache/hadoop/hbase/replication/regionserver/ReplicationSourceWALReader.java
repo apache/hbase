@@ -174,7 +174,8 @@ class ReplicationSourceWALReader extends Thread {
   }
 
   protected static final boolean switched(WALEntryStream entryStream, Path path) {
-    return !path.equals(entryStream.getCurrentPath());
+    Path newPath = entryStream.getCurrentPath();
+    return newPath == null || !path.getName().equals(newPath.getName());
   }
 
   protected WALEntryBatch readWALEntries(WALEntryStream entryStream)
