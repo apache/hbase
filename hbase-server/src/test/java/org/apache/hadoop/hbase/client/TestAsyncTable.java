@@ -342,7 +342,8 @@ public class TestAsyncTable {
 
   @Test
   public void testCheckAndMutateWithTimeRange() throws Exception {
-    TEST_UTIL.createTable(TableName.valueOf("testCheckAndMutateWithTimeRange"), FAMILY);
+    TEST_UTIL.createTable(TableName.valueOf("testCheckAndMutateWithTimeRange" +
+        System.currentTimeMillis()), FAMILY);
     AsyncTable<?> table = getTable.get();
     final long ts = System.currentTimeMillis() / 2;
     Put put = new Put(row);
