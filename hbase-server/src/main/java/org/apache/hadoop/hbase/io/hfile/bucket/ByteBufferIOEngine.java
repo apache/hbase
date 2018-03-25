@@ -103,6 +103,11 @@ public class ByteBufferIOEngine implements IOEngine {
   }
 
   @Override
+  public boolean usesSharedMemory() {
+    return true;
+  }
+
+  @Override
   public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
       throws IOException {
     ByteBuff dstBuffer = bufferArray.asSubByteBuff(offset, length);
