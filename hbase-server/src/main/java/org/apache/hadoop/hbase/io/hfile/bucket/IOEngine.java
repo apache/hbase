@@ -38,6 +38,15 @@ public interface IOEngine {
   boolean isPersistent();
 
   /**
+   * IOEngine uses shared memory means, when reading Cacheable from it, those refers to the same
+   * memory area as used by the Engine for caching it.
+   * @return true when IOEngine using shared memory.
+   */
+  default boolean usesSharedMemory() {
+    return false;
+  }
+
+  /**
    * Transfers data from IOEngine to a Cacheable object.
    * @param length How many bytes to be read from the offset
    * @param offset The offset in the IO engine where the first byte to be read
