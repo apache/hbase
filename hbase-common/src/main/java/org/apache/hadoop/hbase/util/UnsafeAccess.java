@@ -37,7 +37,7 @@ public final class UnsafeAccess {
 
   private static final Logger LOG = LoggerFactory.getLogger(UnsafeAccess.class);
 
-  static final Unsafe theUnsafe;
+  public static final Unsafe theUnsafe;
 
   /** The offset to the first element in a byte array. */
   public static final long BYTE_ARRAY_BASE_OFFSET;
