@@ -672,6 +672,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
     List<HRegionLocation> locations = new ArrayList<>();
     for (RegionInfo regionInfo : regions) {
+      if (!RegionReplicaUtil.isDefaultReplica(regionInfo)) {
+        continue;
+      }
       RegionLocations list = locateRegion(tableName, regionInfo.getStartKey(), useCache, true);
       if (list != null) {
         for (HRegionLocation loc : list.getRegionLocations()) {
