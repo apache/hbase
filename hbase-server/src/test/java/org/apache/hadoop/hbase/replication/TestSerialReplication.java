@@ -63,11 +63,6 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     addPeer(false);
   }
 
-  private void enablePeerAndWaitUntilReplicationDone(int expectedEntries) throws Exception {
-    UTIL.getAdmin().enableReplicationPeer(PEER_ID);
-    waitUntilReplicationDone(expectedEntries);
-  }
-
   @Test
   public void testRegionMove() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
