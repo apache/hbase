@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -30,13 +32,22 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
@@ -46,10 +57,13 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * This class tests operations in MasterRpcServices which require ADMIN access.
@@ -74,10 +88,13 @@ import org.junit.experimental.categories.Category;
  * But this doesn't work for the tests here, so we go around by doing complete RPCs.
  */
 @Category({SecurityTests.class, MediumTests.class})
-public class TestAdminOnlyOperations {
+public class TestRpcAccessChecks {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAdminOnlyOperations.class);
+      HBaseClassTestRule.forClass(TestRpcAccessChecks.class);
+
+  @Rule
+  public final TestName TEST_NAME = new TestName();
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
@@ -264,5 +281,82 @@ public class TestAdminOnlyOperations {
     verifyAllowed(USER_ADMIN, action);
     verifyAllowed(USER_GROUP_ADMIN, action);
     verifiedDeniedServiceException(USER_NON_ADMIN, action);
+  }
+
+  @Test
+  public void testTableFlush() throws Exception {
+    TableName tn = TableName.valueOf(TEST_NAME.getMethodName());
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
+    Action adminAction = (admin) -> {
+      admin.createTable(desc);
+      // Avoid giving a global permission which may screw up other tests
+      SecureTestUtil.grantOnTable(
+          TEST_UTIL, USER_NON_ADMIN.getShortName(), tn, null, null, Permission.Action.READ,
+          Permission.Action.WRITE, Permission.Action.CREATE);
+    };
+    verifyAllowed(USER_ADMIN, adminAction);
+
+    Action userAction = (admin) -> {
+      Connection conn = admin.getConnection();
+      final byte[] rowKey = Bytes.toBytes("row1");
+      final byte[] col = Bytes.toBytes("q1");
+      final byte[] val = Bytes.toBytes("v1");
+      try (Table table = conn.getTable(tn)) {
+        // Write a value
+        Put p = new Put(rowKey);
+        p.addColumn(Bytes.toBytes("f1"), col, val);
+        table.put(p);
+        // Flush should not require ADMIN permission
+        admin.flush(tn);
+        // Nb: ideally, we would verify snapshot permission too (as that was fixed in the
+        //   regression HBASE-20185) but taking a snapshot requires ADMIN permission which
+        //   masks the root issue.
+        // Make sure we read the value
+        Result result = table.get(new Get(rowKey));
+        assertFalse(result.isEmpty());
+        Cell c = result.getColumnLatestCell(Bytes.toBytes("f1"), col);
+        assertArrayEquals(val, CellUtil.cloneValue(c));
+      }
+    };
+    verifyAllowed(USER_NON_ADMIN, userAction);
+  }
+
+  @Test
+  public void testTableFlushAndSnapshot() throws Exception {
+    TableName tn = TableName.valueOf(TEST_NAME.getMethodName());
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
+    Action adminAction = (admin) -> {
+      admin.createTable(desc);
+      // Giving ADMIN here, but only on this table, *not* globally
+      SecureTestUtil.grantOnTable(
+          TEST_UTIL, USER_NON_ADMIN.getShortName(), tn, null, null, Permission.Action.READ,
+          Permission.Action.WRITE, Permission.Action.CREATE, Permission.Action.ADMIN);
+    };
+    verifyAllowed(USER_ADMIN, adminAction);
+
+    Action userAction = (admin) -> {
+      Connection conn = admin.getConnection();
+      final byte[] rowKey = Bytes.toBytes("row1");
+      final byte[] col = Bytes.toBytes("q1");
+      final byte[] val = Bytes.toBytes("v1");
+      try (Table table = conn.getTable(tn)) {
+        // Write a value
+        Put p = new Put(rowKey);
+        p.addColumn(Bytes.toBytes("f1"), col, val);
+        table.put(p);
+        // Flush should not require ADMIN permission
+        admin.flush(tn);
+        // Table admin should be sufficient to snapshot this table
+        admin.snapshot(tn.getNameAsString() + "_snapshot1", tn);
+        // Read the value just because
+        Result result = table.get(new Get(rowKey));
+        assertFalse(result.isEmpty());
+        Cell c = result.getColumnLatestCell(Bytes.toBytes("f1"), col);
+        assertArrayEquals(val, CellUtil.cloneValue(c));
+      }
+    };
+    verifyAllowed(USER_NON_ADMIN, userAction);
   }
 }
