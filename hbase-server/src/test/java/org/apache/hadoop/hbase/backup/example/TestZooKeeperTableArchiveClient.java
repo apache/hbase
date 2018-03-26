@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
+import org.apache.hadoop.hbase.master.cleaner.CleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -175,6 +176,7 @@ public class TestZooKeeperTableArchiveClient {
     Configuration conf = UTIL.getConfiguration();
     // setup the delegate
     Stoppable stop = new StoppableImplementation();
+    CleanerChore.initChorePool(conf);
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);
@@ -229,6 +231,7 @@ public class TestZooKeeperTableArchiveClient {
     // setup the delegate
     Stoppable stop = new StoppableImplementation();
     final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    CleanerChore.initChorePool(conf);
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);

@@ -79,6 +79,7 @@ public class TestLogsCleaner {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniDFSCluster(1);
+    CleanerChore.initChorePool(TEST_UTIL.getConfiguration());
   }
 
   @AfterClass

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
@@ -41,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -51,7 +53,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * @param <T> Cleaner delegate class that is dynamically loaded from configuration
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD",
-    justification="TODO: Fix. It is wonky have static pool initialized from instance")
+    justification="Static pool will be only updated once.")
 @InterfaceAudience.Private
 public abstract class CleanerChore<T extends FileCleanerDelegate> extends ScheduledChore
     implements ConfigurationObserver {
@@ -68,18 +70,92 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   public static final String CHORE_POOL_SIZE = "hbase.cleaner.scan.dir.concurrent.size";
   private static final String DEFAULT_CHORE_POOL_SIZE = "0.25";
 
+  private static class DirScanPool {
+    int size;
+    ForkJoinPool pool;
+    int cleanerLatch;
+    AtomicBoolean reconfigNotification;
+
+    DirScanPool(Configuration conf) {
+      String poolSize = conf.get(CHORE_POOL_SIZE, DEFAULT_CHORE_POOL_SIZE);
+      size = calculatePoolSize(poolSize);
+      // poolSize may be 0 or 0.0 from a careless configuration,
+      // double check to make sure.
+      size = size == 0 ? calculatePoolSize(DEFAULT_CHORE_POOL_SIZE) : size;
+      pool = new ForkJoinPool(size);
+      LOG.info("Cleaner pool size is {}", size);
+      reconfigNotification = new AtomicBoolean(false);
+      cleanerLatch = 0;
+    }
+
+    /**
+     * Checks if pool can be updated immediately.
+     * @param conf configuration
+     * @return true if pool can be updated immediately, false otherwise
+     */
+    synchronized boolean canUpdateImmediately(Configuration conf) {
+      int newSize = calculatePoolSize(conf.get(CHORE_POOL_SIZE, DEFAULT_CHORE_POOL_SIZE));
+      if (newSize == size) {
+        LOG.trace("Size from configuration is same as previous={}, no need to update.", newSize);
+        return false;
+      }
+      size = newSize;
+      if (pool.getPoolSize() == 0) {
+        // chore has no working thread.
+        return true;
+      }
+      // Chore is working, update it later.
+      reconfigNotification.set(true);
+      return false;
+    }
+
+    /**
+     * Update pool with new size.
+     */
+    synchronized void updatePool(long timeout) {
+      while (cleanerLatch != 0) {
+        try {
+          wait(timeout);
+        } catch (InterruptedException ie) {
+          // It's ok to ignore
+        }
+        break;
+      }
+      pool.shutdownNow();
+      LOG.info("Update chore's pool size from {} to {}", pool.getParallelism(), size);
+      pool = new ForkJoinPool(size);
+    }
+
+    synchronized void latchCountUp() {
+      cleanerLatch++;
+    }
+
+    synchronized void latchCountDown() {
+      cleanerLatch--;
+      notifyAll();
+    }
+
+    @SuppressWarnings("FutureReturnValueIgnored")
+    synchronized void submit(ForkJoinTask task) {
+      pool.submit(task);
+    }
+  }
   // It may be waste resources for each cleaner chore own its pool,
   // so let's make pool for all cleaner chores.
-  private static volatile ForkJoinPool CHOREPOOL;
-  private static volatile int CHOREPOOLSIZE;
+  private static volatile DirScanPool POOL;
 
   protected final FileSystem fs;
   private final Path oldFileDir;
   private final Configuration conf;
   protected final Map<String, Object> params;
   private final AtomicBoolean enabled = new AtomicBoolean(true);
-  private final AtomicBoolean reconfig = new AtomicBoolean(false);
   protected List<T> cleanersChain;
+
+  public static void initChorePool(Configuration conf) {
+    if (POOL == null) {
+      POOL = new DirScanPool(conf);
+    }
+  }
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
                       FileSystem fs, Path oldFileDir, String confKey) {
@@ -99,21 +175,14 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
       FileSystem fs, Path oldFileDir, String confKey, Map<String, Object> params) {
     super(name, s, sleepPeriod);
+
+    Preconditions.checkNotNull(POOL, "Chore's pool isn't initialized, please call"
+      + "CleanerChore.initChorePool(Configuration) before new a cleaner chore.");
     this.fs = fs;
     this.oldFileDir = oldFileDir;
     this.conf = conf;
     this.params = params;
     initCleanerChain(confKey);
-
-    if (CHOREPOOL == null) {
-      String poolSize = conf.get(CHORE_POOL_SIZE, DEFAULT_CHORE_POOL_SIZE);
-      CHOREPOOLSIZE = calculatePoolSize(poolSize);
-      // poolSize may be 0 or 0.0 from a careless configuration,
-      // double check to make sure.
-      CHOREPOOLSIZE = CHOREPOOLSIZE == 0? calculatePoolSize(DEFAULT_CHORE_POOL_SIZE): CHOREPOOLSIZE;
-      this.CHOREPOOL = new ForkJoinPool(CHOREPOOLSIZE);
-      LOG.info("Cleaner pool size is {}", CHOREPOOLSIZE);
-    }
   }
 
   /**
@@ -174,25 +243,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    int updatedSize = calculatePoolSize(conf.get(CHORE_POOL_SIZE, DEFAULT_CHORE_POOL_SIZE));
-    if (updatedSize == CHOREPOOLSIZE) {
-      LOG.trace("Size from configuration is same as previous={}, no need to update.", updatedSize);
-      return;
+    if (POOL.canUpdateImmediately(conf)) {
+      // Can immediately update, no need to wait.
+      POOL.updatePool(0);
     }
-    CHOREPOOLSIZE = updatedSize;
-    if (CHOREPOOL.getPoolSize() == 0) {
-      // Chore does not work now, update it directly.
-      updateChorePoolSize(updatedSize);
-      return;
-    }
-    // Chore is working, update it after chore finished.
-    reconfig.set(true);
-  }
-
-  private void updateChorePoolSize(int updatedSize) {
-    CHOREPOOL.shutdownNow();
-    LOG.info("Update chore's pool size from {} to {}", CHOREPOOL.getParallelism(), updatedSize);
-    CHOREPOOL = new ForkJoinPool(updatedSize);
   }
 
   /**
@@ -221,14 +275,22 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   @Override
   protected void chore() {
     if (getEnabled()) {
-      if (runCleaner()) {
-        LOG.debug("Cleaned all WALs under {}",  oldFileDir);
-      } else {
-        LOG.warn("WALs outstanding under {}", oldFileDir);
+      try {
+        POOL.latchCountUp();
+        if (runCleaner()) {
+          LOG.debug("Cleaned all WALs under {}", oldFileDir);
+        } else {
+          LOG.warn("WALs outstanding under {}", oldFileDir);
+        }
+      } finally {
+        POOL.latchCountDown();
       }
-      // After each clean chore, checks if receives reconfigure notification while cleaning
-      if (reconfig.compareAndSet(true, false)) {
-        updateChorePoolSize(CHOREPOOLSIZE);
+      // After each cleaner chore, checks if received reconfigure notification while cleaning.
+      // First in cleaner turns off notification, to avoid another cleaner updating pool again.
+      if (POOL.reconfigNotification.compareAndSet(true, false)) {
+        // This cleaner is waiting for other cleaners finishing their jobs.
+        // To avoid missing next chore, only wait 0.8 * period, then shutdown.
+        POOL.updatePool((long) (0.8 * getTimeUnit().toMillis(getPeriod())));
       }
     } else {
       LOG.debug("Cleaner chore disabled! Not cleaning.");
@@ -242,7 +304,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   public Boolean runCleaner() {
     preRunCleaner();
     CleanerTask task = new CleanerTask(this.oldFileDir, true);
-    CHOREPOOL.submit(task);
+    POOL.submit(task);
     return task.join();
   }
 
@@ -374,7 +436,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
 
   @VisibleForTesting
   int getChorePoolSize() {
-    return CHOREPOOLSIZE;
+    return POOL.size;
   }
 
   /**
