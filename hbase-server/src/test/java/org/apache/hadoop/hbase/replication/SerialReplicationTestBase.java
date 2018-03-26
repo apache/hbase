@@ -26,8 +26,13 @@ import java.util.UUID;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -129,7 +134,10 @@ public class SerialReplicationTestBase {
 
   @After
   public void tearDown() throws Exception {
-    UTIL.getAdmin().removeReplicationPeer(PEER_ID);
+    Admin admin = UTIL.getAdmin();
+    for (ReplicationPeerDescription pd : admin.listReplicationPeers()) {
+      admin.removeReplicationPeer(pd.getPeerId());
+    }
     rollAllWALs();
     if (WRITER != null) {
       WRITER.close();
@@ -232,5 +240,14 @@ public class SerialReplicationTestBase {
       }
       assertEquals(expectedEntries, count);
     }
+  }
+
+  protected final TableName createTable() throws IOException, InterruptedException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.getAdmin().createTable(
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
+    UTIL.waitTableAvailable(tableName);
+    return tableName;
   }
 }

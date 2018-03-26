@@ -32,15 +32,17 @@ import java.util.SortedSet;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -71,7 +73,7 @@ public class TestZKReplicationQueueStorage {
   }
 
   @After
-  public void tearDownAfterTest() throws ReplicationException {
+  public void tearDownAfterTest() throws ReplicationException, KeeperException, IOException {
     for (ServerName serverName : STORAGE.getListOfReplicators()) {
       for (String queue : STORAGE.getAllQueues(serverName)) {
         STORAGE.removeQueue(serverName, queue);
@@ -301,6 +303,29 @@ public class TestZKReplicationQueueStorage {
     String encodedRegionName = "31d9792f4435b99d9fb1016f6fbc8dc7";
     String expectedPath = "/hbase/replication/regions/31/d9/792f4435b99d9fb1016f6fbc8dc7-" + peerId;
     String path = STORAGE.getSerialReplicationRegionPeerNode(encodedRegionName, peerId);
-    Assert.assertEquals(expectedPath, path);
+    assertEquals(expectedPath, path);
+  }
+
+  @Test
+  public void testRemoveAllLastPushedSeqIdsForPeer() throws Exception {
+    String peerId = "1";
+    String peerIdToDelete = "2";
+    for (int i = 0; i < 100; i++) {
+      String encodedRegionName = MD5Hash.getMD5AsHex(Bytes.toBytes(i));
+      STORAGE.setLastSequenceIds(peerId, ImmutableMap.of(encodedRegionName, (long) i));
+      STORAGE.setLastSequenceIds(peerIdToDelete, ImmutableMap.of(encodedRegionName, (long) i));
+    }
+    for (int i = 0; i < 100; i++) {
+      String encodedRegionName = MD5Hash.getMD5AsHex(Bytes.toBytes(i));
+      assertEquals(i, STORAGE.getLastSequenceId(encodedRegionName, peerId));
+      assertEquals(i, STORAGE.getLastSequenceId(encodedRegionName, peerIdToDelete));
+    }
+    STORAGE.removeLastSequenceIds(peerIdToDelete);
+    for (int i = 0; i < 100; i++) {
+      String encodedRegionName = MD5Hash.getMD5AsHex(Bytes.toBytes(i));
+      assertEquals(i, STORAGE.getLastSequenceId(encodedRegionName, peerId));
+      assertEquals(HConstants.NO_SEQNUM,
+        STORAGE.getLastSequenceId(encodedRegionName, peerIdToDelete));
+    }
   }
 }

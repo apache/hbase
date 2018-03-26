@@ -109,8 +109,8 @@ public class ReplicationPeerManager {
     return desc;
   }
 
-  void preRemovePeer(String peerId) throws DoNotRetryIOException {
-    checkPeerExists(peerId);
+  ReplicationPeerConfig preRemovePeer(String peerId) throws DoNotRetryIOException {
+    return checkPeerExists(peerId).getPeerConfig();
   }
 
   void preEnablePeer(String peerId) throws DoNotRetryIOException {
@@ -218,6 +218,10 @@ public class ReplicationPeerManager {
   public Optional<ReplicationPeerConfig> getPeerConfig(String peerId) {
     ReplicationPeerDescription desc = peers.get(peerId);
     return desc != null ? Optional.of(desc.getPeerConfig()) : Optional.empty();
+  }
+
+  void removeAllLastPushedSeqIds(String peerId) throws ReplicationException {
+    queueStorage.removeLastSequenceIds(peerId);
   }
 
   void removeAllQueuesAndHFileRefs(String peerId) throws ReplicationException {
