@@ -24,6 +24,7 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,22 @@ public class TestSimpleRegionNormalizer {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     normalizer = new SimpleRegionNormalizer();
+  }
+
+  @Test
+  public void testPlanComparator() {
+    Comparator<NormalizationPlan> comparator = new SimpleRegionNormalizer.PlanComparator();
+    NormalizationPlan splitPlan1 = new SplitNormalizationPlan(null, null);
+    NormalizationPlan splitPlan2 = new SplitNormalizationPlan(null, null);
+    NormalizationPlan mergePlan1 = new MergeNormalizationPlan(null, null);
+    NormalizationPlan mergePlan2 = new MergeNormalizationPlan(null, null);
+
+    assertTrue(comparator.compare(splitPlan1, splitPlan2) == 0);
+    assertTrue(comparator.compare(splitPlan2, splitPlan1) == 0);
+    assertTrue(comparator.compare(mergePlan1, mergePlan2) == 0);
+    assertTrue(comparator.compare(mergePlan2, mergePlan1) == 0);
+    assertTrue(comparator.compare(splitPlan1, mergePlan1) < 0);
+    assertTrue(comparator.compare(mergePlan1, splitPlan1) > 0);
   }
 
   @Test
