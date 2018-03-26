@@ -392,10 +392,10 @@ Running multiple HRegionServers on the same system can be useful for testing in 
 The `local-regionservers.sh` command allows you to run multiple RegionServers.
 It works in a similar way to the `local-master-backup.sh` command, in that each parameter you provide represents the port offset for an instance.
 Each RegionServer requires two ports, and the default ports are 16020 and 16030.
-However, the base ports for additional RegionServers are not the default ports since the default ports are used by the HMaster, which is also a RegionServer since HBase version 1.0.0.
-The base ports are 16200 and 16300 instead.
-You can run 99 additional RegionServers that are not a HMaster or backup HMaster, on a server.
-The following command starts four additional RegionServers, running on sequential ports starting at 16202/16302 (base ports 16200/16300 plus 2).
+Since HBase version 1.1.0, HMaster doesn't use region server ports, this leaves 10 ports (16020 to 16029 and 16030 to 16039) to be used for RegionServers.
+For supporting additional RegionServers, base ports can be changed in script 'local-regionservers.sh' to appropriate value.
+e.g. With values 16200 and 16300 for base ports, 99 additional RegionServers can be supported, on a server.
+The following command starts four additional RegionServers, running on sequential ports starting at 16022/16032 (base ports 16020/16030 plus 2).
 +
 ----
 

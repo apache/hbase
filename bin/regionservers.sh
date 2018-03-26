@@ -60,8 +60,8 @@ fi
 regionservers=`cat "$HOSTLIST"`
 if [ "$regionservers" = "localhost" ]; then
   HBASE_REGIONSERVER_ARGS="\
-    -Dhbase.regionserver.port=16201 \
-    -Dhbase.regionserver.info.port=16301"
+    -Dhbase.regionserver.port=16020 \
+    -Dhbase.regionserver.info.port=16030"
 
   $"${@// /\\ }" ${HBASE_REGIONSERVER_ARGS} \
         2>&1 | sed "s/^/$regionserver: /" &
