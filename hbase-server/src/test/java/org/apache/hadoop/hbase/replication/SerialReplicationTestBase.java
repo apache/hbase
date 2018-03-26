@@ -113,6 +113,7 @@ public class SerialReplicationTestBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setInt("replication.source.nb.capacity", 10);
+    UTIL.getConfiguration().setLong("replication.sleep.before.failover", 1000);
     UTIL.startMiniCluster(3);
     // disable balancer
     UTIL.getAdmin().balancerSwitch(false, true);
@@ -200,6 +201,11 @@ public class SerialReplicationTestBase {
     });
   }
 
+  protected final void enablePeerAndWaitUntilReplicationDone(int expectedEntries) throws Exception {
+    UTIL.getAdmin().enableReplicationPeer(PEER_ID);
+    waitUntilReplicationDone(expectedEntries);
+  }
+
   protected final void addPeer(boolean enabled) throws IOException {
     UTIL.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
@@ -221,6 +227,7 @@ public class SerialReplicationTestBase {
         assertTrue(
           "Sequence id go backwards from " + seqId + " to " + entry.getKey().getSequenceId(),
           entry.getKey().getSequenceId() >= seqId);
+        seqId = entry.getKey().getSequenceId();
         count++;
       }
       assertEquals(expectedEntries, count);
