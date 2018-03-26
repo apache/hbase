@@ -29,6 +29,7 @@ import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadLocalRandom;
@@ -37,6 +38,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -1043,5 +1047,37 @@ public class TestConnectionImplementation {
     TEST_UTIL.deleteTable(tableName);
     table.close();
     connection.close();
+  }
+
+  @Test
+  public void testLocateRegionsWithRegionReplicas() throws IOException {
+    int regionReplication = 3;
+    byte[] family = Bytes.toBytes("cf");
+    TableName tableName = TableName.valueOf(name.getMethodName());
+
+    // Create a table with region replicas
+    TableDescriptorBuilder builder = TableDescriptorBuilder
+      .newBuilder(tableName)
+      .setRegionReplication(regionReplication)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+    TEST_UTIL.getAdmin().createTable(builder.build());
+
+    try (ConnectionImplementation con = (ConnectionImplementation) ConnectionFactory.
+      createConnection(TEST_UTIL.getConfiguration())) {
+      // Get locations of the regions of the table
+      List<HRegionLocation> locations = con.locateRegions(tableName, false, false);
+
+      // The size of the returned locations should be 3
+      assertEquals(regionReplication, locations.size());
+
+      // The replicaIds of the returned locations should be 0, 1 and 2
+      Set<Integer> expectedReplicaIds = IntStream.range(0, regionReplication).
+        boxed().collect(Collectors.toSet());
+      for (HRegionLocation location : locations) {
+        assertTrue(expectedReplicaIds.remove(location.getRegion().getReplicaId()));
+      }
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
   }
 }
