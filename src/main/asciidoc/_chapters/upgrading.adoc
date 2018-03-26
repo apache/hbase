@@ -344,6 +344,9 @@ The following configuration settings are no longer applicable or available. For 
 * hbase.bucketcache.ioengine no longer supports the 'heap' value.
 * hbase.bulkload.staging.dir
 * hbase.balancer.tablesOnMaster wasn't removed, strictly speaking, but its meaning has fundamentally changed and users should not set it. See the section [[upgrade2.0.regions.on.master]] for details.
+* hbase.master.distributed.log.replay See the section [[upgrade2.0.distributed.log.replay]] for details
+* hbase.regionserver.disallow.writes.when.recovering See the section [[upgrade2.0.distributed.log.replay]] for details
+* hbase.regionserver.wal.logreplay.batch.size See the section [[upgrade2.0.distributed.log.replay]] for details
 
 [[upgrade2.0.changed.defaults]]
 .Configuration settings with different defaults in HBase 2.0+
@@ -372,6 +375,11 @@ A brief summary of related changes:
 * hbase.balancer.tablesOnMaster.systemTablesOnly is boolean to keep user tables off master. default false
 * those wishing to replicate old list-of-servers config should deploy a stand-alone RegionServer process and then rely on Region Server Groups
 
+[[upgrade2.0.distributed.log.replay]]
+."Distributed Log Replay" feature broken and removed
+
+The Distributed Log Replay feature was broken and has been removed from HBase 2.y+. As a consequence all related configs, metrics, RPC fields, and logging have also been removed. Note that this feature was found to be unreliable in the run up to HBase 1.0, defaulted to being unused, and was effectively removed in HBase 1.2.0 when we started ignoring the config that turns it on (link:https://issues.apache.org/jira/browse/HBASE-14465[HBASE-14465]). If you are currently using the feature, be sure to perform a clean shutdown, ensure all DLR work is complete, and disable the feature prior to upgrading.
+
 [[upgrade2.0.metrics]]
 .Changed metrics
 
@@ -382,6 +390,10 @@ The following metrics have changed names:
 The following metrics have changed their meaning:
 
 * The metric 'blockCacheEvictionCount' published on a per-region server basis no longer includes blocks removed from the cache due to the invalidation of the hfiles they are from (e.g. via compaction).
+
+The following metrics have been removed:
+
+* Metrics related to the Distributed Log Replay feature are no longer present. They were previsouly found in the region server context under the name 'replay'. See the section [[upgrade2.0.distributed.log.replay]] for details.
 
 [[upgrade2.0.zkconfig]]
 .ZooKeeper configs no longer read from zoo.cfg
