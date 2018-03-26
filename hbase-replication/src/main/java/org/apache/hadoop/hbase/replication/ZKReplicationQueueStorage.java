@@ -103,7 +103,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    */
   private final String hfileRefsZNode;
 
-  private final String regionsZNode;
+  @VisibleForTesting
+  final String regionsZNode;
 
   public ZKReplicationQueueStorage(ZKWatcher zookeeper, Configuration conf) {
     super(zookeeper, conf);
@@ -309,6 +310,40 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to set last sequence ids, peerId=" + peerId
           + ", size of lastSeqIds=" + lastSeqIds.size(), e);
+    }
+  }
+
+  @Override
+  public void removeLastSequenceIds(String peerId) throws ReplicationException {
+    String suffix = "-" + peerId;
+    try {
+      StringBuilder sb = new StringBuilder(regionsZNode);
+      int regionsZNodeLength = regionsZNode.length();
+      int levelOneLength = regionsZNodeLength + 3;
+      int levelTwoLength = levelOneLength + 3;
+      List<String> levelOneDirs = ZKUtil.listChildrenNoWatch(zookeeper, regionsZNode);
+      // it is possible that levelOneDirs is null if we haven't write any last pushed sequence ids
+      // yet, so we need an extra check here.
+      if (CollectionUtils.isEmpty(levelOneDirs)) {
+        return;
+      }
+      for (String levelOne : levelOneDirs) {
+        sb.append(ZNodePaths.ZNODE_PATH_SEPARATOR).append(levelOne);
+        for (String levelTwo : ZKUtil.listChildrenNoWatch(zookeeper, sb.toString())) {
+          sb.append(ZNodePaths.ZNODE_PATH_SEPARATOR).append(levelTwo);
+          for (String znode : ZKUtil.listChildrenNoWatch(zookeeper, sb.toString())) {
+            if (znode.endsWith(suffix)) {
+              sb.append(ZNodePaths.ZNODE_PATH_SEPARATOR).append(znode);
+              ZKUtil.deleteNode(zookeeper, sb.toString());
+              sb.setLength(levelTwoLength);
+            }
+          }
+          sb.setLength(levelOneLength);
+        }
+        sb.setLength(regionsZNodeLength);
+      }
+    } catch (KeeperException e) {
+      throw new ReplicationException("Failed to remove all last sequence ids, peerId=" + peerId, e);
     }
   }
 

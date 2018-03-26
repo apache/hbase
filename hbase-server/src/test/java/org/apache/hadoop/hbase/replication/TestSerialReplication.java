@@ -65,11 +65,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
 
   @Test
   public void testRegionMove() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
-    UTIL.getAdmin().createTable(
-      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
-    UTIL.waitTableAvailable(tableName);
+    TableName tableName = createTable();
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
@@ -89,11 +85,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
 
   @Test
   public void testRegionSplit() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
-    UTIL.getAdmin().createTable(
-      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
-    UTIL.waitTableAvailable(tableName);
+    TableName tableName = createTable();
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
@@ -203,5 +195,59 @@ public class TestSerialReplication extends SerialReplicationTestBase {
       }
       assertEquals(200, count);
     }
+  }
+
+  @Test
+  public void testRemovePeerNothingReplicated() throws Exception {
+    TableName tableName = createTable();
+    String encodedRegionName =
+      UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
+    ReplicationQueueStorage queueStorage =
+      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+    assertEquals(HConstants.NO_SEQNUM, queueStorage.getLastSequenceId(encodedRegionName, PEER_ID));
+    UTIL.getAdmin().removeReplicationPeer(PEER_ID);
+    assertEquals(HConstants.NO_SEQNUM, queueStorage.getLastSequenceId(encodedRegionName, PEER_ID));
+  }
+
+  @Test
+  public void testRemovePeer() throws Exception {
+    TableName tableName = createTable();
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      for (int i = 0; i < 100; i++) {
+        table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
+      }
+    }
+    enablePeerAndWaitUntilReplicationDone(100);
+    checkOrder(100);
+    String encodedRegionName =
+      UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
+    ReplicationQueueStorage queueStorage =
+      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+    assertTrue(queueStorage.getLastSequenceId(encodedRegionName, PEER_ID) > 0);
+    UTIL.getAdmin().removeReplicationPeer(PEER_ID);
+    // confirm that we delete the last pushed sequence id
+    assertEquals(HConstants.NO_SEQNUM, queueStorage.getLastSequenceId(encodedRegionName, PEER_ID));
+  }
+
+  @Test
+  public void testRemoveSerialFlag() throws Exception {
+    TableName tableName = createTable();
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      for (int i = 0; i < 100; i++) {
+        table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
+      }
+    }
+    enablePeerAndWaitUntilReplicationDone(100);
+    checkOrder(100);
+    String encodedRegionName =
+      UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
+    ReplicationQueueStorage queueStorage =
+      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+    assertTrue(queueStorage.getLastSequenceId(encodedRegionName, PEER_ID) > 0);
+    ReplicationPeerConfig peerConfig = UTIL.getAdmin().getReplicationPeerConfig(PEER_ID);
+    UTIL.getAdmin().updateReplicationPeerConfig(PEER_ID,
+      ReplicationPeerConfig.newBuilder(peerConfig).setSerial(false).build());
+    // confirm that we delete the last pushed sequence id
+    assertEquals(HConstants.NO_SEQNUM, queueStorage.getLastSequenceId(encodedRegionName, PEER_ID));
   }
 }

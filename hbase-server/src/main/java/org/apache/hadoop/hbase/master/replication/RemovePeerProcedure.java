@@ -18,12 +18,17 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RemovePeerStateData;
 
 /**
  * The procedure for removing a replication peer.
@@ -32,6 +37,8 @@ import org.slf4j.LoggerFactory;
 public class RemovePeerProcedure extends ModifyPeerProcedure {
 
   private static final Logger LOG = LoggerFactory.getLogger(RemovePeerProcedure.class);
+
+  private ReplicationPeerConfig peerConfig;
 
   public RemovePeerProcedure() {
   }
@@ -51,7 +58,7 @@ public class RemovePeerProcedure extends ModifyPeerProcedure {
     if (cpHost != null) {
       cpHost.preRemoveReplicationPeer(peerId);
     }
-    env.getReplicationPeerManager().preRemovePeer(peerId);
+    peerConfig = env.getReplicationPeerManager().preRemovePeer(peerId);
   }
 
   @Override
@@ -63,10 +70,32 @@ public class RemovePeerProcedure extends ModifyPeerProcedure {
   protected void postPeerModification(MasterProcedureEnv env)
       throws IOException, ReplicationException {
     env.getReplicationPeerManager().removeAllQueuesAndHFileRefs(peerId);
+    if (peerConfig.isSerial()) {
+      env.getReplicationPeerManager().removeAllLastPushedSeqIds(peerId);
+    }
     LOG.info("Successfully removed peer {}", peerId);
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.postRemoveReplicationPeer(peerId);
+    }
+  }
+
+  @Override
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.serializeStateData(serializer);
+    RemovePeerStateData.Builder builder = RemovePeerStateData.newBuilder();
+    if (peerConfig != null) {
+      builder.setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
+    }
+    serializer.serialize(builder.build());
+  }
+
+  @Override
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.deserializeStateData(serializer);
+    RemovePeerStateData data = serializer.deserialize(RemovePeerStateData.class);
+    if (data.hasPeerConfig()) {
+      this.peerConfig = ReplicationPeerConfigUtil.convert(data.getPeerConfig());
     }
   }
 }

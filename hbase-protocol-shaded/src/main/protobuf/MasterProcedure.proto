@@ -421,3 +421,13 @@ message UpdatePeerConfigStateData {
   required ReplicationPeer peer_config = 1;
   optional ReplicationPeer old_peer_config = 2;
 }
+
+message RemovePeerStateData {
+  optional ReplicationPeer peer_config = 1;
+}
+
+message EnablePeerStateData {
+}
+
+message DisablePeerStateData {
+}
