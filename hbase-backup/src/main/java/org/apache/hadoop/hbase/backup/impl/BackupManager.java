@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupHFileCleaner;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupObserver;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureM
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -120,9 +122,13 @@ public class BackupManager implements Closeable {
         classes + "," + masterProcedureClass);
     }
 
+    plugins = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, (plugins == null ? "" : plugins + ",") +
+      BackupHFileCleaner.class.getName());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Added log cleaner: " + cleanerClass + "\n" + "Added master procedure manager: "
-          + masterProcedureClass);
+      LOG.debug("Added log cleaner: {}. Added master procedure manager: {}."
+        +"Added master procedure manager: {}", cleanerClass, masterProcedureClass,
+        BackupHFileCleaner.class.getName());
     }
   }
 
@@ -150,8 +156,8 @@ public class BackupManager implements Closeable {
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       (coproc == null ? "" : coproc + ",") + regionObserverClass);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Added region procedure manager: " + regionProcedureClass
-        + ". Added region observer: " + regionObserverClass);
+      LOG.debug("Added region procedure manager: {}. Added region observer: {}",
+        regionProcedureClass, regionObserverClass);
     }
   }
 
@@ -222,7 +228,7 @@ public class BackupManager implements Closeable {
           tableList.add(hTableDescriptor.getTableName());
         }
 
-        LOG.info("Full backup all the tables available in the cluster: " + tableList);
+        LOG.info("Full backup all the tables available in the cluster: {}", tableList);
       }
     }
 
@@ -256,9 +262,9 @@ public class BackupManager implements Closeable {
   public void initialize() throws IOException {
     String ongoingBackupId = this.getOngoingBackupId();
     if (ongoingBackupId != null) {
-      LOG.info("There is a ongoing backup " + ongoingBackupId
-        + ". Can not launch new backup until no ongoing backup remains.");
-      throw new BackupException("There is ongoing backup.");
+      LOG.info("There is a ongoing backup {}"
+        + ". Can not launch new backup until no ongoing backup remains.", ongoingBackupId);
+      throw new BackupException("There is ongoing backup seesion.");
     }
   }
 
@@ -273,7 +279,7 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo) throws IOException {
-    LOG.debug("Getting the direct ancestors of the current backup " + backupInfo.getBackupId());
+    LOG.debug("Getting the direct ancestors of the current backup {}", backupInfo.getBackupId());
 
     ArrayList<BackupImage> ancestors = new ArrayList<>();
 
@@ -309,25 +315,25 @@ public class BackupManager implements Closeable {
         if (BackupManifest.canCoverImage(ancestors, image)) {
           LOG.debug("Met the backup boundary of the current table set:");
           for (BackupImage image1 : ancestors) {
-            LOG.debug("  BackupID=" + image1.getBackupId() + ", BackupDir=" + image1.getRootDir());
+            LOG.debug("  BackupID={}, BackupDir={}", image1.getBackupId(),  image1.getRootDir());
           }
         } else {
           Path logBackupPath =
               HBackupFileSystem.getBackupPath(backup.getBackupRootDir(), backup.getBackupId());
           LOG.debug("Current backup has an incremental backup ancestor, "
-              + "touching its image manifest in " + logBackupPath.toString()
-              + " to construct the dependency.");
+              + "touching its image manifest in {}"
+              + " to construct the dependency.", logBackupPath.toString());
           BackupManifest lastIncrImgManifest = new BackupManifest(conf, logBackupPath);
           BackupImage lastIncrImage = lastIncrImgManifest.getBackupImage();
           ancestors.add(lastIncrImage);
 
           LOG.debug(
-            "Last dependent incremental backup image: " + "{BackupID=" + lastIncrImage.getBackupId()
-            + "," + "BackupDir=" + lastIncrImage.getRootDir() + "}");
+            "Last dependent incremental backup image: {BackupID={}" +
+                "BackupDir={}}", lastIncrImage.getBackupId(), lastIncrImage.getRootDir());
         }
       }
     }
-    LOG.debug("Got " + ancestors.size() + " ancestors for the current backup.");
+    LOG.debug("Got {} ancestors for the current backup.", ancestors.size());
     return ancestors;
   }
 
@@ -391,8 +397,8 @@ public class BackupManager implements Closeable {
           if (lastWarningOutputTime == 0
               || (System.currentTimeMillis() - lastWarningOutputTime) > 60000) {
             lastWarningOutputTime = System.currentTimeMillis();
-            LOG.warn("Waiting to acquire backup exclusive lock for "
-                + (lastWarningOutputTime - startTime) / 1000 + "s");
+            LOG.warn("Waiting to acquire backup exclusive lock for {}s",
+                +(lastWarningOutputTime - startTime) / 1000);
           }
         } else {
           throw e;
