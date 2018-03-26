@@ -552,8 +552,3 @@ Doing a raw scan will now return results that have expired according to TTL sett
 === Upgrading to 1.x
 
 Please consult the documentation published specifically for the version of HBase that you are upgrading to for details on the upgrade process.
-
-[[upgrade2.0]]
-=== Upgrading to 2.x
-
-Coming soon...
