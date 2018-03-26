@@ -90,20 +90,27 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     return skippedCount[type.ordinal()];
   }
 
-  // Comparator that gives higher priority to region Split plan
-  private Comparator<NormalizationPlan> planComparator =
-      new Comparator<NormalizationPlan>() {
+  /**
+   * Comparator class that gives higher priority to region Split plan.
+   */
+  static class PlanComparator implements Comparator<NormalizationPlan> {
     @Override
-    public int compare(NormalizationPlan plan, NormalizationPlan plan2) {
-      if (plan instanceof SplitNormalizationPlan) {
+    public int compare(NormalizationPlan plan1, NormalizationPlan plan2) {
+      boolean plan1IsSplit = plan1 instanceof SplitNormalizationPlan;
+      boolean plan2IsSplit = plan2 instanceof SplitNormalizationPlan;
+      if (plan1IsSplit && plan2IsSplit) {
+        return 0;
+      } else if (plan1IsSplit) {
         return -1;
-      }
-      if (plan2 instanceof SplitNormalizationPlan) {
+      } else if (plan2IsSplit) {
         return 1;
+      } else {
+        return 0;
       }
-      return 0;
     }
-  };
+  }
+
+  private Comparator<NormalizationPlan> planComparator = new PlanComparator();
 
   /**
    * Computes next most "urgent" normalization action on the table.
