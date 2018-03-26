@@ -18,7 +18,11 @@
 # */
 # This is used for starting multiple regionservers on the same machine.
 # run it from hbase-dir/ just like 'bin/hbase'
-# Supports up to 100 regionservers (limitation = overlapping ports)
+# Supports up to 10 regionservers (limitation = overlapping ports)
+# For supporting more instances select different values (e.g. 16200, 16300)
+# for HBASE_RS_BASE_PORT and HBASE_RS_INFO_BASE_PORT below
+HBASE_RS_BASE_PORT=16020
+HBASE_RS_INFO_BASE_PORT=16030
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin" >/dev/null && pwd`
@@ -44,8 +48,8 @@ run_regionserver () {
   DN=$2
   export HBASE_IDENT_STRING="$USER-$DN"
   HBASE_REGIONSERVER_ARGS="\
-    -Dhbase.regionserver.port=`expr 16200 + $DN` \
-    -Dhbase.regionserver.info.port=`expr 16300 + $DN`"
+    -Dhbase.regionserver.port=`expr $HBASE_RS_BASE_PORT + $DN` \
+    -Dhbase.regionserver.info.port=`expr $HBASE_RS_INFO_BASE_PORT + $DN`"
 
   "$bin"/hbase-daemon.sh  --config "${HBASE_CONF_DIR}" \
     --autostart-window-size "${AUTOSTART_WINDOW_SIZE}" \
