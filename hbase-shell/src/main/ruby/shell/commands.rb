@@ -114,6 +114,9 @@ module Shell
         if cause.is_a?(org.apache.hadoop.hbase.TableNotFoundException)
           raise "Unknown table #{args.first}!"
         end
+        if cause.is_a?(org.apache.hadoop.hbase.TableNotEnabledException)
+          raise "Table #{args.first} is disabled!"
+        end
         if cause.is_a?(org.apache.hadoop.hbase.UnknownRegionException)
           raise "Unknown region #{args.first}!"
         end
