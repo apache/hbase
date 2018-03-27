@@ -24,7 +24,7 @@ module Shell
         <<-EOF
 Reload a subset of configuration on server 'servername' where servername is
 host, port plus startcode. For example: host187.example.com,60020,1289493121758
-See http://hbase.apache.org/book.html?dyn_config for more details. Here is how
+See http://hbase.apache.org/book.html#dyn_config for more details. Here is how
 you would run the command in the hbase shell:
   hbase> update_config 'servername'
 EOF
