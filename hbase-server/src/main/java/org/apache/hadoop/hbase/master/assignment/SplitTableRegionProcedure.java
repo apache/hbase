@@ -179,7 +179,7 @@ public class SplitTableRegionProcedure
     }
 
     if (!splittable) {
-      IOException e = new IOException(regionToSplit.getShortNameToLog() + " NOT splittable");
+      IOException e = new DoNotRetryIOException(regionToSplit.getShortNameToLog() + " NOT splittable");
       if (splittableCheckIOE != null) e.initCause(splittableCheckIOE);
       throw e;
     }
