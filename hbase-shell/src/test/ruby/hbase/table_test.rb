@@ -695,5 +695,16 @@ module Hbase
       assert_equal(0, splits.size)
       assert_equal([], splits)
     end
+
+    define_test "scan should throw an exception on a disabled table" do
+      @test_table.disable
+      begin
+        assert_raise(RuntimeError) do
+          @test_table.scan
+        end
+      ensure
+        @test_table.enable
+      end
+    end
   end
 end
