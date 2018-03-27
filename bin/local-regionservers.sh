@@ -21,8 +21,12 @@
 # Supports up to 10 regionservers (limitation = overlapping ports)
 # For supporting more instances select different values (e.g. 16200, 16300)
 # for HBASE_RS_BASE_PORT and HBASE_RS_INFO_BASE_PORT below
-HBASE_RS_BASE_PORT=16020
-HBASE_RS_INFO_BASE_PORT=16030
+if [ -z "$HBASE_RS_BASE_PORT" ]; then
+  HBASE_RS_BASE_PORT=16020
+fi
+if [ -z "$HBASE_RS_INFO_BASE_PORT" ]; then
+  HBASE_RS_INFO_BASE_PORT=16030
+fi
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin" >/dev/null && pwd`
@@ -48,22 +52,22 @@ run_regionserver () {
   DN=$2
   export HBASE_IDENT_STRING="$USER-$DN"
   HBASE_REGIONSERVER_ARGS="\
-    -Dhbase.regionserver.port=`expr $HBASE_RS_BASE_PORT + $DN` \
-    -Dhbase.regionserver.info.port=`expr $HBASE_RS_INFO_BASE_PORT + $DN`"
+    -Dhbase.regionserver.port=`expr "$HBASE_RS_BASE_PORT" + "$DN"` \
+    -Dhbase.regionserver.info.port=`expr "$HBASE_RS_INFO_BASE_PORT" + "$DN"`"
 
   "$bin"/hbase-daemon.sh  --config "${HBASE_CONF_DIR}" \
     --autostart-window-size "${AUTOSTART_WINDOW_SIZE}" \
     --autostart-window-retry-limit "${AUTOSTART_WINDOW_RETRY_LIMIT}" \
-    $1 regionserver $HBASE_REGIONSERVER_ARGS
+    "$1" regionserver "$HBASE_REGIONSERVER_ARGS"
 }
 
 cmd=$1
 shift;
 
-for i in $*
+for i in "$@"
 do
   if [[ "$i" =~ ^[0-9]+$ ]]; then
-   run_regionserver $cmd $i
+   run_regionserver "$cmd" "$i"
   else
    echo "Invalid argument"
   fi
