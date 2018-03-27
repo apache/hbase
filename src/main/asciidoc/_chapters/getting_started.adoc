@@ -366,8 +366,8 @@ The HMaster server controls the HBase cluster.
 You can start up to 9 backup HMaster servers, which makes 10 total HMasters, counting the primary.
 To start a backup HMaster, use the `local-master-backup.sh`.
 For each backup master you want to start, add a parameter representing the port offset for that master.
-Each HMaster uses three ports (16010, 16020, and 16030 by default). The port offset is added to these ports, so using an offset of 2, the backup HMaster would use ports 16012, 16022, and 16032.
-The following command starts 3 backup servers using ports 16012/16022/16032, 16013/16023/16033, and 16015/16025/16035.
+Each HMaster uses two ports (16000 and 16010 by default). The port offset is added to these ports, so using an offset of 2, the backup HMaster would use ports 16002 and 16012.
+The following command starts 3 backup servers using ports 16002/16012, 16003/16013, and 16005/16015.
 +
 ----
 
@@ -393,7 +393,7 @@ The `local-regionservers.sh` command allows you to run multiple RegionServers.
 It works in a similar way to the `local-master-backup.sh` command, in that each parameter you provide represents the port offset for an instance.
 Each RegionServer requires two ports, and the default ports are 16020 and 16030.
 Since HBase version 1.1.0, HMaster doesn't use region server ports, this leaves 10 ports (16020 to 16029 and 16030 to 16039) to be used for RegionServers.
-For supporting additional RegionServers, base ports can be changed in script 'local-regionservers.sh' to appropriate value.
+For supporting additional RegionServers, set environment variables HBASE_RS_BASE_PORT and HBASE_RS_INFO_BASE_PORT to appropriate values before running script `local-regionservers.sh`.
 e.g. With values 16200 and 16300 for base ports, 99 additional RegionServers can be supported, on a server.
 The following command starts four additional RegionServers, running on sequential ports starting at 16022/16032 (base ports 16020/16030 plus 2).
 +
