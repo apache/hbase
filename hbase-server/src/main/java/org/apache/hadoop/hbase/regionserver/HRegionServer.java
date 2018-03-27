@@ -47,7 +47,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -166,7 +165,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -455,11 +453,6 @@ public class HRegionServer extends HasThread implements
    * Unique identifier for the cluster we are a part of.
    */
   protected String clusterId;
-
-  /**
-   * MX Bean for RegionServerInfo
-   */
-  private ObjectName mxBean = null;
 
   /**
    * Chore to clean periodically the moved region list
@@ -1021,12 +1014,9 @@ public class HRegionServer extends HasThread implements
         abort(prefix + t.getMessage(), t);
       }
     }
-    // Run shutdown.
-    if (mxBean != null) {
-      MBeans.unregister(mxBean);
-      mxBean = null;
+    if (this.leases != null) {
+      this.leases.closeAfterLeasesExpire();
     }
-    if (this.leases != null) this.leases.closeAfterLeasesExpire();
     if (this.splitLogWorker != null) {
       splitLogWorker.stop();
     }

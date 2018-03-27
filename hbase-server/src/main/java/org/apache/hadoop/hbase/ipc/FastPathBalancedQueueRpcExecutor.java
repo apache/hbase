@@ -80,6 +80,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
     // if an empty queue of CallRunners so we are available for direct handoff when one comes in.
     final Deque<FastPathHandler> fastPathHandlerStack;
     // Semaphore to coordinate loading of fastpathed loadedTask and our running it.
+    // UNFAIR synchronization.
     private Semaphore semaphore = new Semaphore(0);
     // The task we get when fast-pathing.
     private CallRunner loadedCallRunner;
@@ -112,7 +113,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
     }
 
     /**
-     * @param task Task gotten via fastpath.
+     * @param cr Task gotten via fastpath.
      * @return True if we successfully loaded our task
      */
     boolean loadCallRunner(final CallRunner cr) {
