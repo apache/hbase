@@ -418,10 +418,16 @@ The following metrics have changed names:
 The following metrics have changed their meaning:
 
 * The metric 'blockCacheEvictionCount' published on a per-region server basis no longer includes blocks removed from the cache due to the invalidation of the hfiles they are from (e.g. via compaction).
+* The metric 'totalRequestCount' increments once per request; previously it incremented by the number of `Actions` carried in the request; e.g. if a request was a `multi` made of four Gets and two Puts, we'd increment 'totalRequestCount' by six; now we increment by one regardless. Expect to see lower values for this metric in hbase-2.0.0.
+* The 'readRequestCount' now counts reads that return a non-empty row where in older hbases, we'd increment 'readRequestCount' whether a Result or not. This change will flatten the profile of the read-requests graphs if requests for non-existent rows. A YCSB read-heavy workload can do this dependent on how the database was loaded.
 
 The following metrics have been removed:
 
 * Metrics related to the Distributed Log Replay feature are no longer present. They were previsouly found in the region server context under the name 'replay'. See the section [[upgrade2.0.distributed.log.replay]] for details.
+
+The following metrics have been added:
+
+* 'totalRowActionRequestCount' is a count of region row actions summing reads and writes.
 
 [[upgrade2.0.zkconfig]]
 .ZooKeeper configs no longer read from zoo.cfg
