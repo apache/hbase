@@ -23,7 +23,7 @@ module Shell
       def help
         <<-EOF
 Reload a subset of configuration on all servers in the cluster.  See
-http://hbase.apache.org/book.html?dyn_config for more details. Here is how
+http://hbase.apache.org/book.html#dyn_config for more details. Here is how
 you would run the command in the hbase shell:
   hbase> update_all_config
 EOF
