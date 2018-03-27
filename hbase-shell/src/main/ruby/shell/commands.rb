@@ -116,6 +116,9 @@ module Shell
           raise "Unknown table #{strs[0]}!" if strs.size == 1
           raise "Unknown table #{args.first}!"
         end
+        if cause.is_a?(org.apache.hadoop.hbase.TableNotEnabledException)
+          raise "Table #{args.first} is disabled!"
+        end
         if cause.is_a?(org.apache.hadoop.hbase.UnknownRegionException)
           raise "Unknown region #{args.first}!"
         end
