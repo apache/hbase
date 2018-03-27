@@ -371,6 +371,10 @@
               <groupId>org.apache.htrace</groupId>
               <artifactId>htrace-core</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>net.minidev</groupId>
+              <artifactId>json-smart</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
       </dependencies>
