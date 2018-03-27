@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -54,6 +56,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -65,7 +68,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 
@@ -1390,5 +1392,33 @@ public class TestAdmin1 {
       this.admin.disableTable(tableName);
       this.admin.deleteTable(tableName);
     }
+  }
+
+  @Test
+  public void testSplitShouldNotHappenIfSplitIsDisabledForTable()
+      throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor("f"));
+    htd.setRegionSplitPolicyClassName(DisabledRegionSplitPolicy.class.getName());
+    Table table = TEST_UTIL.createTable(htd, null);
+    for(int i = 0; i < 10; i++) {
+      Put p = new Put(Bytes.toBytes("row"+i));
+      byte[] q1 = Bytes.toBytes("q1");
+      byte[] v1 = Bytes.toBytes("v1");
+      p.addColumn(Bytes.toBytes("f"), q1, v1);
+      table.put(p);
+    }
+    this.admin.flush(tableName);
+    try {
+      this.admin.split(tableName, Bytes.toBytes("row5"));
+      Threads.sleep(10000);
+    } catch (Exception e) {
+      // Nothing to do.
+    }
+    // Split should not happen.
+    List<RegionInfo> allRegions = MetaTableAccessor.getTableRegions(
+        this.admin.getConnection(), tableName, true);
+    assertEquals(1, allRegions.size());
   }
 }

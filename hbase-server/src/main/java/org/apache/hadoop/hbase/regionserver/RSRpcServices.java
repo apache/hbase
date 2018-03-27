@@ -1729,10 +1729,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       HRegion region = getRegion(request.getRegion());
       RegionInfo info = region.getRegionInfo();
       byte[] bestSplitRow = null;
+      boolean shouldSplit = true;
       if (request.hasBestSplitRow() && request.getBestSplitRow()) {
         HRegion r = region;
         region.startRegionOperation(Operation.SPLIT_REGION);
         r.forceSplit(null);
+        // Even after setting force split if split policy says no to split then we should not split.
+        shouldSplit = region.getSplitPolicy().shouldSplit() && !info.isMetaRegion();
         bestSplitRow = r.checkSplit();
         // when all table data are in memstore, bestSplitRow = null
         // try to flush region first
@@ -1747,7 +1750,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (request.hasCompactionState() && request.getCompactionState()) {
         builder.setCompactionState(ProtobufUtil.createCompactionState(region.getCompactionState()));
       }
-      builder.setSplittable(region.isSplittable());
+      builder.setSplittable(region.isSplittable() && shouldSplit);
       builder.setMergeable(region.isMergeable());
       if (request.hasBestSplitRow() && request.getBestSplitRow() && bestSplitRow != null) {
         builder.setBestSplitRow(UnsafeByteOperations.unsafeWrap(bestSplitRow));
