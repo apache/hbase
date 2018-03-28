@@ -105,6 +105,7 @@ if [ $# = 0 ]; then
   echo "  version         Print the version"
   echo "  backup          Backup tables for recovery"
   echo "  restore         Restore tables from existing backup image"
+  echo "  regionsplitter  Run RegionSplitter tool"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
 fi
@@ -462,6 +463,8 @@ elif [ "$COMMAND" = "canary" ] ; then
   HBASE_OPTS="$HBASE_OPTS $HBASE_CANARY_OPTS"
 elif [ "$COMMAND" = "version" ] ; then
   CLASS='org.apache.hadoop.hbase.util.VersionInfo'
+elif [ "$COMMAND" = "regionsplitter" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.RegionSplitter'
 else
   CLASS=$COMMAND
 fi
