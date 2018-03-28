@@ -103,6 +103,7 @@ if [ $# = 0 ]; then
   echo "  ltt             Run LoadTestTool"
   echo "  canary          Run the Canary tool"
   echo "  version         Print the version"
+  echo "  regionsplitter  Run RegionSplitter tool"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
 fi
@@ -456,6 +457,8 @@ elif [ "$COMMAND" = "canary" ] ; then
   HBASE_OPTS="$HBASE_OPTS $HBASE_CANARY_OPTS"
 elif [ "$COMMAND" = "version" ] ; then
   CLASS='org.apache.hadoop.hbase.util.VersionInfo'
+elif [ "$COMMAND" = "regionsplitter" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.RegionSplitter'
 else
   CLASS=$COMMAND
 fi

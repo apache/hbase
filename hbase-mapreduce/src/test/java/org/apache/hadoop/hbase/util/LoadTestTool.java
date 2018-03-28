@@ -58,7 +58,14 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.util.ToolRunner;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.AlreadySelectedException;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.MissingOptionException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 /**
  * A command-line utility that reads, writes, and verifies data. Unlike
@@ -359,6 +366,40 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   @Override
+  protected CommandLineParser newParser() {
+    // Commons-CLI lacks the capability to handle combinations of options, so we do it ourselves
+    // Validate in parse() to get helpful error messages instead of exploding in processOptions()
+    return new DefaultParser() {
+      @Override
+      public CommandLine parse(Options opts, String[] args, Properties props, boolean stop)
+          throws ParseException {
+        CommandLine cl = super.parse(opts, args, props, stop);
+
+        boolean isReadWriteUpdate = cmd.hasOption(OPT_READ)
+            || cmd.hasOption(OPT_WRITE)
+            || cmd.hasOption(OPT_UPDATE);
+        boolean isInitOnly = cmd.hasOption(OPT_INIT_ONLY);
+
+        if (!isInitOnly && !isReadWriteUpdate) {
+          throw new MissingOptionException("Must specify either -" + OPT_INIT_ONLY
+              + " or at least one of -" + OPT_READ + ", -" + OPT_WRITE + ", -" + OPT_UPDATE);
+        }
+
+        if (isInitOnly && isReadWriteUpdate) {
+          throw new AlreadySelectedException(OPT_INIT_ONLY + " cannot be specified with any of -"
+              + OPT_READ + ", -" + OPT_WRITE + ", -" + OPT_UPDATE);
+        }
+
+        if (isReadWriteUpdate && !cmd.hasOption(OPT_NUM_KEYS)) {
+          throw new MissingOptionException(OPT_NUM_KEYS + " must be specified in read/write mode.");
+        }
+
+        return cl;
+      }
+    };
+  }
+
+  @Override
   protected void processOptions(CommandLine cmd) {
     this.cmd = cmd;
 
@@ -381,21 +422,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     isInitOnly = cmd.hasOption(OPT_INIT_ONLY);
     deferredLogFlush = cmd.hasOption(OPT_DEFERRED_LOG_FLUSH);
 
-    if (!isWrite && !isRead && !isUpdate && !isInitOnly) {
-      throw new IllegalArgumentException("Either -" + OPT_WRITE + " or " +
-        "-" + OPT_UPDATE + " or -" + OPT_READ + " has to be specified");
-    }
-
-    if (isInitOnly && (isRead || isWrite || isUpdate)) {
-      throw new IllegalArgumentException(OPT_INIT_ONLY + " cannot be specified with"
-          + " either -" + OPT_WRITE + " or -" + OPT_UPDATE + " or -" + OPT_READ);
-    }
-
     if (!isInitOnly) {
-      if (!cmd.hasOption(OPT_NUM_KEYS)) {
-        throw new IllegalArgumentException(OPT_NUM_KEYS + " must be specified in "
-            + "read or write mode");
-      }
       startKey = parseLong(cmd.getOptionValue(OPT_START_KEY,
           String.valueOf(DEFAULT_START_KEY)), 0, Long.MAX_VALUE);
       long numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1,

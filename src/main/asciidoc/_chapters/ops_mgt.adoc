@@ -68,6 +68,7 @@ Some commands take arguments. Pass no args or -h for usage.
   pe              Run PerformanceEvaluation
   ltt             Run LoadTestTool
   canary          Run the Canary tool
+  regionsplitter  Run the RegionSplitter tool
   version         Print the version
   CLASSNAME       Run the class named CLASSNAME
 ----
@@ -83,7 +84,7 @@ To see the usage, use the `--help` parameter.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -help
 
-Usage: hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
+Usage: hbase canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
  where [opts] are:
    -help          Show this help and exit.
    -regionserver  replace the table argument to regionserver,
@@ -275,6 +276,35 @@ property>
 </property>
 ----
 ====
+
+=== RegionSplitter
+
+----
+usage: bin/hbase regionsplitter <TABLE> <SPLITALGORITHM>
+SPLITALGORITHM is the java class name of a class implementing
+                      SplitAlgorithm, or one of the special strings
+                      HexStringSplit or DecimalStringSplit or
+                      UniformSplit, which are built-in split algorithms.
+                      HexStringSplit treats keys as hexadecimal ASCII, and
+                      DecimalStringSplit treats keys as decimal ASCII, and
+                      UniformSplit treats keys as arbitrary bytes.
+ -c <region count>        Create a new table with a pre-split number of
+                          regions
+ -D <property=value>      Override HBase Configuration Settings
+ -f <family:family:...>   Column Families to create with new table.
+                          Required with -c
+    --firstrow <arg>      First Row in Table for Split Algorithm
+ -h                       Print this usage help
+    --lastrow <arg>       Last Row in Table for Split Algorithm
+ -o <count>               Max outstanding splits that have unfinished
+                          major compactions
+ -r                       Perform a rolling split of an existing region
+    --risky               Skip verification steps to complete
+                          quickly. STRONGLY DISCOURAGED for production
+                          systems.
+----
+
+For additional detail, see <<manual_region_splitting_decisions>>.
 
 [[health.check]]
 === Health Checker
@@ -758,7 +788,7 @@ The PerformanceEvaluation tool has received many updates in recent HBase release
 
 The `hbase ltt` command runs the LoadTestTool utility, which is used for testing.
 
-You must specify one of `-write`, `-update`, or `-read` as the first option.
+You must specify either `-init_only` or at least one of `-write`, `-update`, or `-read`.
 For general usage instructions, pass the `-h` option.
 
 The LoadTestTool has received many updates in recent HBase releases, including support for namespaces, support for tags, cell-level ACLS and visibility labels, testing security-related features, ability to specify the number of regions per server, tests for multi-get RPC calls, and tests relating to replication.

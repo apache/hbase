@@ -137,7 +137,7 @@ public abstract class AbstractHBaseTool implements Tool, Configurable {
       }
       String[] remainingArgs = new String[argsList.size()];
       argsList.toArray(remainingArgs);
-      cmd = new DefaultParser().parse(options, remainingArgs);
+      cmd = newParser().parse(options, remainingArgs);
     } catch (MissingOptionException e) {
       LOG.error(e.getMessage());
       LOG.error("Use -h or --help for usage instructions.");
@@ -158,6 +158,16 @@ public abstract class AbstractHBaseTool implements Tool, Configurable {
       return EXIT_FAILURE;
     }
     return ret;
+  }
+
+  /**
+   * Create the parser to use for parsing and validating the command line. Since commons-cli lacks
+   * the capability to validate arbitrary combination of options, it may be helpful to bake custom
+   * logic into a specialized parser implementation. See LoadTestTool for examples.
+   * @return a new parser specific to the current tool
+   */
+  protected CommandLineParser newParser() {
+    return new DefaultParser();
   }
 
   private boolean isHelpCommand(String[] args) throws ParseException {

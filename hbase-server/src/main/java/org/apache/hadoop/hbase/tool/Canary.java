@@ -837,9 +837,8 @@ public final class Canary implements Tool {
   }
 
   private void printUsageAndExit() {
-    System.err.printf(
-      "Usage: hbase %s [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]%n",
-        getClass().getName());
+    System.err.println(
+      "Usage: hbase canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]");
     System.err.println(" where [opts] are:");
     System.err.println("   -help          Show this help and exit.");
     System.err.println("   -regionserver  replace the table argument to regionserver,");
