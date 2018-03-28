@@ -20,6 +20,7 @@
 FROM maven:3.5-jdk-8
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
+       git \
        bats \
        findbugs \
        libperl-critic-perl \
