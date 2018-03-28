@@ -1757,9 +1757,20 @@ These parameters will be explained in context, and then will be given in a table
 ====== Being Stuck
 
 When the MemStore gets too large, it needs to flush its contents to a StoreFile.
-However, a Store can only have `hbase.hstore.blockingStoreFiles` files, so the MemStore needs to wait for the number of StoreFiles to be reduced by one or more compactions.
-However, if the MemStore grows larger than `hbase.hregion.memstore.flush.size`, it is not able to flush its contents to a StoreFile.
-If the MemStore is too large and the number of StoreFiles is also too high, the algorithm is said to be "stuck". The compaction algorithm checks for this "stuck" situation and provides mechanisms to alleviate it.
+However, Stores are configured with a bound on the number StoreFiles,
+`hbase.hstore.blockingStoreFiles`, and if in excess, the MemStore flush must wait
+until the StoreFile count is reduced by one or more compactions. If the MemStore
+is too large and the number of StoreFiles is also too high, the algorithm is said
+to be "stuck". By default we'll wait on compactions up to
+`hbase.hstore.blockingWaitTime` milliseconds. If this period expires, we'll flush
+anyways even though we are in excess of the
+`hbase.hstore.blockingStoreFiles` count.
+
+Upping the `hbase.hstore.blockingStoreFiles` count will allow flushes to happen
+but a Store with many StoreFiles in will likely have higher read latencies. Try to
+figure why Compactions are not keeping up. Is it a write spurt that is bringing
+about this situation or is a regular occurance and the cluster is under-provisioned
+for the volume of writes?
 
 [[exploringcompaction.policy]]
 ====== The ExploringCompactionPolicy Algorithm
