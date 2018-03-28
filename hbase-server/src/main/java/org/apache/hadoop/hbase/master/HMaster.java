@@ -138,6 +138,8 @@ import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
+import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -300,6 +302,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   private DrainingServerTracker drainingServerTracker;
   // Tracker for load balancer state
   LoadBalancerTracker loadBalancerTracker;
+  // Tracker for meta location, if any client ZK quorum specified
+  MetaLocationSyncer metaLocationSyncer;
+  // Tracker for active master location, if any client ZK quorum specified
+  MasterAddressSyncer masterAddressSyncer;
 
   // Tracker for split and merge state
   private SplitOrMergeTracker splitOrMergeTracker;
@@ -556,18 +562,20 @@ public class HMaster extends HRegionServer implements MasterServices {
   public void run() {
     try {
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-        try {
-          int infoPort = putUpJettyServer();
-          startActiveMasterManager(infoPort);
-        } catch (Throwable t) {
-          // Make sure we log the exception.
-          String error = "Failed to become Active Master";
-          LOG.error(error, t);
-          // Abort should have been called already.
-          if (!isAborted()) {
-            abort(error, t);
+        Threads.setDaemonThreadRunning(new Thread(() -> {
+          try {
+            int infoPort = putUpJettyServer();
+            startActiveMasterManager(infoPort);
+          } catch (Throwable t) {
+            // Make sure we log the exception.
+            String error = "Failed to become Active Master";
+            LOG.error(error, t);
+            // Abort should have been called already.
+            if (!isAborted()) {
+              abort(error, t);
+            }
           }
-        }
+        }));
       }
       // Fall in here even if we have been aborted. Need to run the shutdown services and
       // the super run call will do this for us.
@@ -748,6 +756,23 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.maintenanceModeTracker = new MasterMaintenanceModeTracker(zooKeeper);
     this.maintenanceModeTracker.start();
+
+    String clientQuorumServers = conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM);
+    boolean clientZkObserverMode = conf.getBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE,
+      HConstants.DEFAULT_CLIENT_ZOOKEEPER_OBSERVER_MODE);
+    if (clientQuorumServers != null && !clientZkObserverMode) {
+      // we need to take care of the ZK information synchronization
+      // if given client ZK are not observer nodes
+      ZKWatcher clientZkWatcher = new ZKWatcher(conf,
+          getProcessName() + ":" + rpcServices.getSocketAddress().getPort() + "-clientZK", this,
+          false, true);
+      this.metaLocationSyncer = new MetaLocationSyncer(zooKeeper, clientZkWatcher, this);
+      this.metaLocationSyncer.start();
+      this.masterAddressSyncer = new MasterAddressSyncer(zooKeeper, clientZkWatcher, this);
+      this.masterAddressSyncer.start();
+      // set cluster id is a one-go effort
+      ZKClusterId.setClusterId(clientZkWatcher, fileSystemManager.getClusterId());
+    }
 
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.

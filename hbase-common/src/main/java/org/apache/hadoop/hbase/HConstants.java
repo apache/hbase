@@ -183,6 +183,19 @@ public final class HConstants {
   /** Name of ZooKeeper quorum configuration parameter. */
   public static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
 
+  /** Name of ZooKeeper quorum configuration parameter for client to locate meta. */
+  public static final String CLIENT_ZOOKEEPER_QUORUM = "hbase.client.zookeeper.quorum";
+
+  /** Client port of ZooKeeper for client to locate meta */
+  public static final String CLIENT_ZOOKEEPER_CLIENT_PORT =
+      "hbase.client.zookeeper.property.clientPort";
+
+  /** Indicate whether the client ZK are observer nodes of the server ZK */
+  public static final String CLIENT_ZOOKEEPER_OBSERVER_MODE =
+      "hbase.client.zookeeper.observer.mode";
+  /** Assuming client zk not in observer mode and master need to synchronize information */
+  public static final boolean DEFAULT_CLIENT_ZOOKEEPER_OBSERVER_MODE = false;
+
   /** Common prefix of ZooKeeper configuration properties */
   public static final String ZK_CFG_PROPERTY_PREFIX =
       "hbase.zookeeper.property.";
@@ -201,7 +214,7 @@ public final class HConstants {
       ZK_CFG_PROPERTY_PREFIX + CLIENT_PORT_STR;
 
   /** Default client port that the zookeeper listens on */
-  public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
+  public static final int DEFAULT_ZOOKEEPER_CLIENT_PORT = 2181;
 
   /** Parameter name for the root dir in ZK for this cluster */
   public static final String ZOOKEEPER_ZNODE_PARENT = "zookeeper.znode.parent";
@@ -224,7 +237,7 @@ public final class HConstants {
       ZK_CFG_PROPERTY_PREFIX + "tickTime";
 
   /** Default limit on concurrent client-side zookeeper connections */
-  public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 300;
+  public static final int DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS = 300;
 
   /** Configuration key for ZooKeeper session timeout */
   public static final String ZK_SESSION_TIMEOUT = "zookeeper.session.timeout";

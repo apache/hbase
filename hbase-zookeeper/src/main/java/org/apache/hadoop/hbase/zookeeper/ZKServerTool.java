@@ -46,7 +46,7 @@ public final class ZKServerTool {
     for (String value : values) {
       String[] parts = value.split(":");
       String host = parts[0];
-      int port = HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT;
+      int port = HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT;
       if (parts.length > 1) {
         port = Integer.parseInt(parts[1]);
       }

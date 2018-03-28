@@ -124,7 +124,13 @@ public final class ReadOnlyZKClient implements Closeable {
   }
 
   public ReadOnlyZKClient(Configuration conf) {
-    this.connectString = ZKConfig.getZKQuorumServersString(conf);
+    // We might use a different ZK for client access
+    String clientZkQuorumServers = ZKConfig.getClientZKQuorumServersString(conf);
+    if (clientZkQuorumServers != null) {
+      this.connectString = clientZkQuorumServers;
+    } else {
+      this.connectString = ZKConfig.getZKQuorumServersString(conf);
+    }
     this.sessionTimeoutMs = conf.getInt(ZK_SESSION_TIMEOUT, DEFAULT_ZK_SESSION_TIMEOUT);
     this.maxRetries = conf.getInt(RECOVERY_RETRY, DEFAULT_RECOVERY_RETRY);
     this.retryIntervalMs =

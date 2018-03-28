@@ -325,6 +325,8 @@ public class HRegionServer extends HasThread implements
 
   volatile boolean killed = false;
 
+  private volatile boolean shutDown = false;
+
   protected final Configuration conf;
 
   private Path rootDir;
@@ -777,6 +779,13 @@ public class HRegionServer extends HasThread implements
    */
   @VisibleForTesting
   protected ClusterConnection createClusterConnection() throws IOException {
+    Configuration conf = this.conf;
+    if (conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
+      // Use server ZK cluster for server-issued connections, so we clone
+      // the conf and unset the client ZK related properties
+      conf = new Configuration(this.conf);
+      conf.unset(HConstants.CLIENT_ZOOKEEPER_QUORUM);
+    }
     // Create a cluster connection that when appropriate, can short-circuit and go directly to the
     // local server if the request is to the local server bypassing RPC. Can be used for both local
     // and remote invocations.
@@ -1150,6 +1159,7 @@ public class HRegionServer extends HasThread implements
     if (this.zooKeeper != null) {
       this.zooKeeper.close();
     }
+    this.shutDown = true;
     LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
   }
 
@@ -3781,5 +3791,9 @@ public class HRegionServer extends HasThread implements
           plugins + "," + rsCoprocessorClass);
       }
     }
+  }
+
+  public boolean isShutDown() {
+    return shutDown;
   }
 }

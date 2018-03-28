@@ -146,6 +146,10 @@ public class ReplicationSink {
     if (StringUtils.isNotEmpty(replicationCodec)) {
       this.conf.set(HConstants.RPC_CODEC_CONF_KEY, replicationCodec);
     }
+    // use server ZK cluster for replication, so we unset the client ZK related properties if any
+    if (this.conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
+      this.conf.unset(HConstants.CLIENT_ZOOKEEPER_QUORUM);
+    }
    }
 
   /**
