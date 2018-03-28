@@ -446,6 +446,16 @@ The following permission related changes either altered semantics or defaults:
 
 A number of admin commands are known to not work when used from a pre-HBase 2.0 client. This includes an HBase Shell that has the library jars from pre-HBase 2.0. You will need to plan for an outage of use of admin APIs and commands until you can also update to the needed client version.
 
+The following client operations do not work against HBase 2.0+ cluster when executed from a pre-HBase 2.0 client:
+
+* list_procedures
+* split
+* merge_region
+* list_quotas
+* enable_table_replication
+* disable_table_replication
+* Snapshot related commands
+
 .Deprecated in 1.0 admin commands have been removed.
 
 The following commands that were deprecated in 1.0 have been removed. Where applicable the replacement command is listed.
