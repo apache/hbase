@@ -53,6 +53,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -317,5 +318,41 @@ public class TestMasterNoCluster {
       master.stopMaster();
       master.join();
     }
+  }
+
+  @Test(timeout = 60000)
+  public void testMasterInitWithSameClientServerZKQuorum() throws Exception {
+    Configuration conf = new Configuration(TESTUTIL.getConfiguration());
+    conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
+    conf.setInt(HConstants.CLIENT_ZOOKEEPER_CLIENT_PORT, TESTUTIL.getZkCluster().getClientPort());
+    HMaster master = new HMaster(conf);
+    master.start();
+    // the master will abort due to IllegalArgumentException so we should finish within 60 seconds
+    master.join();
+  }
+
+  @Test(timeout = 60000)
+  public void testMasterInitWithObserverModeClientZKQuorum() throws Exception {
+    Configuration conf = new Configuration(TESTUTIL.getConfiguration());
+    Assert.assertFalse(Boolean.getBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE));
+    // set client ZK to some non-existing address and make sure server won't access client ZK
+    // (server start should not be affected)
+    conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
+    conf.setInt(HConstants.CLIENT_ZOOKEEPER_CLIENT_PORT,
+      TESTUTIL.getZkCluster().getClientPort() + 1);
+    // settings to allow us not to start additional RS
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    conf.setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
+    // main setting for this test case
+    conf.setBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE, true);
+    HMaster master = new HMaster(conf);
+    master.start();
+    while (!master.isInitialized()) {
+      Threads.sleep(200);
+    }
+    Assert.assertNull(master.metaLocationSyncer);
+    Assert.assertNull(master.masterAddressSyncer);
+    master.stopMaster();
+    master.join();
   }
 }

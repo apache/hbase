@@ -116,8 +116,43 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   public ZKWatcher(Configuration conf, String identifier,
                    Abortable abortable, boolean canCreateBaseZNode)
   throws IOException, ZooKeeperConnectionException {
+    this(conf, identifier, abortable, canCreateBaseZNode, false);
+  }
+
+  /**
+   * Instantiate a ZooKeeper connection and watcher.
+   * @param conf the configuration to use
+   * @param identifier string that is passed to RecoverableZookeeper to be used as identifier for
+   *          this instance. Use null for default.
+   * @param abortable Can be null if there is on error there is no host to abort: e.g. client
+   *          context.
+   * @param canCreateBaseZNode true if a base ZNode can be created
+   * @param clientZK whether this watcher is set to access client ZK
+   * @throws IOException if the connection to ZooKeeper fails
+   * @throws ZooKeeperConnectionException if the connection to Zookeeper fails when create base
+   *           ZNodes
+   */
+  public ZKWatcher(Configuration conf, String identifier, Abortable abortable,
+      boolean canCreateBaseZNode, boolean clientZK)
+      throws IOException, ZooKeeperConnectionException {
     this.conf = conf;
-    this.quorum = ZKConfig.getZKQuorumServersString(conf);
+    if (clientZK) {
+      String clientZkQuorumServers = ZKConfig.getClientZKQuorumServersString(conf);
+      String serverZkQuorumServers = ZKConfig.getZKQuorumServersString(conf);
+      if (clientZkQuorumServers != null) {
+        if (clientZkQuorumServers.equals(serverZkQuorumServers)) {
+          // Don't allow same settings to avoid dead loop when master trying
+          // to sync meta information from server ZK to client ZK
+          throw new IllegalArgumentException(
+              "The quorum settings for client ZK should be different from those for server");
+        }
+        this.quorum = clientZkQuorumServers;
+      } else {
+        this.quorum = serverZkQuorumServers;
+      }
+    } else {
+      this.quorum = ZKConfig.getZKQuorumServersString(conf);
+    }
     this.prefix = identifier;
     // Identifier will get the sessionid appended later below down when we
     // handle the syncconnect event.

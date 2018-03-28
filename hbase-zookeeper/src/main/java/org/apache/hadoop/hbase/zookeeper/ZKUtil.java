@@ -1932,7 +1932,7 @@ public final class ZKUtil {
 
     String host = sp[0];
     int port = sp.length > 1 ? Integer.parseInt(sp[1])
-        : HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT;
+        : HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT;
 
     InetSocketAddress sockAddr = new InetSocketAddress(host, port);
     try (Socket socket = new Socket()) {
