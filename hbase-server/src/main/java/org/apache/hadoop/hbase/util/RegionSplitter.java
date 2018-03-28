@@ -331,7 +331,7 @@ public class RegionSplitter {
     opt.addOption(null, "lastrow", true,
         "Last Row in Table for Split Algorithm");
     opt.addOption(null, "risky", false,
-        "Skip verification steps to complete quickly."
+        "Skip verification steps to complete quickly. "
             + "STRONGLY DISCOURAGED for production systems.  ");
     CommandLine cmd = new GnuParser().parse(opt, args);
 
@@ -356,8 +356,8 @@ public class RegionSplitter {
     boolean oneOperOnly = createTable ^ rollingSplit;
 
     if (2 != cmd.getArgList().size() || !oneOperOnly || cmd.hasOption("h")) {
-      new HelpFormatter().printHelp("RegionSplitter <TABLE> <SPLITALGORITHM>\n"+
-          "SPLITALGORITHM is a java class name of a class implementing " +
+      new HelpFormatter().printHelp("bin/hbase regionsplitter <TABLE> <SPLITALGORITHM>\n"+
+          "SPLITALGORITHM is the java class name of a class implementing " +
           "SplitAlgorithm, or one of the special strings HexStringSplit or " +
           "DecimalStringSplit or UniformSplit, which are built-in split algorithms. " +
           "HexStringSplit treats keys as hexadecimal ASCII, and " +

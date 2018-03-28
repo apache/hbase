@@ -66,6 +66,8 @@ Some commands take arguments. Pass no args or -h for usage.
   mapredcp        Dump CLASSPATH entries required by mapreduce
   pe              Run PerformanceEvaluation
   ltt             Run LoadTestTool
+  canary          Run the Canary tool
+  regionsplitter  Run the RegionSplitter tool
   version         Print the version
   CLASSNAME       Run the class named CLASSNAME
 ----
@@ -81,7 +83,7 @@ To see the usage, use the `--help` parameter.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -help
 
-Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
+Usage: hbase canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
  where [opts] are:
    -help          Show this help and exit.
    -regionserver  replace the table argument to regionserver,
@@ -265,6 +267,35 @@ property>
 </property>
 ----
 ====
+
+=== RegionSplitter
+
+----
+usage: bin/hbase regionsplitter <TABLE> <SPLITALGORITHM>
+SPLITALGORITHM is the java class name of a class implementing
+                      SplitAlgorithm, or one of the special strings
+                      HexStringSplit or DecimalStringSplit or
+                      UniformSplit, which are built-in split algorithms.
+                      HexStringSplit treats keys as hexadecimal ASCII, and
+                      DecimalStringSplit treats keys as decimal ASCII, and
+                      UniformSplit treats keys as arbitrary bytes.
+ -c <region count>        Create a new table with a pre-split number of
+                          regions
+ -D <property=value>      Override HBase Configuration Settings
+ -f <family:family:...>   Column Families to create with new table.
+                          Required with -c
+    --firstrow <arg>      First Row in Table for Split Algorithm
+ -h                       Print this usage help
+    --lastrow <arg>       Last Row in Table for Split Algorithm
+ -o <count>               Max outstanding splits that have unfinished
+                          major compactions
+ -r                       Perform a rolling split of an existing region
+    --risky               Skip verification steps to complete
+                          quickly. STRONGLY DISCOURAGED for production
+                          systems.
+----
+
+For additional detail, see <<manual_region_splitting_decisions>>.
 
 [[health.check]]
 === Health Checker
@@ -752,7 +783,7 @@ The PerformanceEvaluation tool has received many updates in recent HBase release
 The `hbase ltt` command is a shortcut provided to run the `org.apache.hadoop.hbase.util.LoadTestTool` utility, which is used for testing.
 The `hbase ltt` command was introduced in HBase 0.98.4.
 
-You must specify either `-write` or `-update-read` as the first option.
+You must specify either `-init_only` or at least one of `-write`, `-update`, or `-read`.
 For general usage instructions, pass the `-h` option.
 
 To run LoadTestTool prior to HBase 0.98.4, issue the command +hbase
