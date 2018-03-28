@@ -63,7 +63,9 @@ public class SyncTable extends Configured implements Tool {
   static final String TARGET_TABLE_CONF_KEY = "sync.table.target.table.name";
   static final String SOURCE_ZK_CLUSTER_CONF_KEY = "sync.table.source.zk.cluster";
   static final String TARGET_ZK_CLUSTER_CONF_KEY = "sync.table.target.zk.cluster";
-  static final String DRY_RUN_CONF_KEY="sync.table.dry.run";
+  static final String DRY_RUN_CONF_KEY = "sync.table.dry.run";
+  static final String DO_DELETES_CONF_KEY = "sync.table.do.deletes";
+  static final String DO_PUTS_CONF_KEY = "sync.table.do.puts";
 
   Path sourceHashDir;
   String sourceTableName;
@@ -72,6 +74,8 @@ public class SyncTable extends Configured implements Tool {
   String sourceZkCluster;
   String targetZkCluster;
   boolean dryRun;
+  boolean doDeletes = true;
+  boolean doPuts = true;
 
   Counters counters;
 
@@ -128,6 +132,8 @@ public class SyncTable extends Configured implements Tool {
       jobConf.set(TARGET_ZK_CLUSTER_CONF_KEY, targetZkCluster);
     }
     jobConf.setBoolean(DRY_RUN_CONF_KEY, dryRun);
+    jobConf.setBoolean(DO_DELETES_CONF_KEY, doDeletes);
+    jobConf.setBoolean(DO_PUTS_CONF_KEY, doPuts);
 
     TableMapReduceUtil.initTableMapperJob(targetTableName, tableHash.initScan(),
         SyncMapper.class, null, null, job);
@@ -162,6 +168,8 @@ public class SyncTable extends Configured implements Tool {
     Table sourceTable;
     Table targetTable;
     boolean dryRun;
+    boolean doDeletes = true;
+    boolean doPuts = true;
 
     HashTable.TableHash sourceTableHash;
     HashTable.TableHash.Reader sourceHashReader;
@@ -186,7 +194,9 @@ public class SyncTable extends Configured implements Tool {
           TableOutputFormat.OUTPUT_CONF_PREFIX);
       sourceTable = openTable(sourceConnection, conf, SOURCE_TABLE_CONF_KEY);
       targetTable = openTable(targetConnection, conf, TARGET_TABLE_CONF_KEY);
-      dryRun = conf.getBoolean(SOURCE_TABLE_CONF_KEY, false);
+      dryRun = conf.getBoolean(DRY_RUN_CONF_KEY, false);
+      doDeletes = conf.getBoolean(DO_DELETES_CONF_KEY, true);
+      doPuts = conf.getBoolean(DO_PUTS_CONF_KEY, true);
 
       sourceTableHash = HashTable.TableHash.read(conf, sourceHashDir);
       LOG.info("Read source hash manifest: " + sourceTableHash);
@@ -473,7 +483,7 @@ public class SyncTable extends Configured implements Tool {
           context.getCounter(Counter.TARGETMISSINGCELLS).increment(1);
           matchingRow = false;
 
-          if (!dryRun) {
+          if (!dryRun && doPuts) {
             if (put == null) {
               put = new Put(rowKey);
             }
@@ -488,7 +498,7 @@ public class SyncTable extends Configured implements Tool {
           context.getCounter(Counter.SOURCEMISSINGCELLS).increment(1);
           matchingRow = false;
 
-          if (!dryRun) {
+          if (!dryRun && doDeletes) {
             if (delete == null) {
               delete = new Delete(rowKey);
             }
@@ -515,7 +525,7 @@ public class SyncTable extends Configured implements Tool {
             context.getCounter(Counter.DIFFERENTCELLVALUES).increment(1);
             matchingRow = false;
 
-            if (!dryRun) {
+            if (!dryRun && doPuts) {
               // overwrite target cell
               if (put == null) {
                 put = new Put(rowKey);
@@ -696,6 +706,10 @@ public class SyncTable extends Configured implements Tool {
     System.err.println("                  (defaults to cluster in classpath's config)");
     System.err.println(" dryrun           if true, output counters but no writes");
     System.err.println("                  (defaults to false)");
+    System.err.println(" doDeletes        if false, does not perform deletes");
+    System.err.println("                  (defaults to true)");
+    System.err.println(" doPuts           if false, does not perform puts ");
+    System.err.println("                  (defaults to true)");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" sourcehashdir    path to HashTable output dir for source table");
@@ -744,6 +758,18 @@ public class SyncTable extends Configured implements Tool {
         final String dryRunKey = "--dryrun=";
         if (cmd.startsWith(dryRunKey)) {
           dryRun = Boolean.parseBoolean(cmd.substring(dryRunKey.length()));
+          continue;
+        }
+
+        final String doDeletesKey = "--doDeletes=";
+        if (cmd.startsWith(doDeletesKey)) {
+          doDeletes = Boolean.parseBoolean(cmd.substring(doDeletesKey.length()));
+          continue;
+        }
+
+        final String doPutsKey = "--doPuts=";
+        if (cmd.startsWith(doPutsKey)) {
+          doPuts = Boolean.parseBoolean(cmd.substring(doPutsKey.length()));
           continue;
         }
 
