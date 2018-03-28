@@ -672,7 +672,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   %>
 </tr>
 <% } %>
-+<% } %>
+<% } %>
 </table>
 <% if (numRegions > numRegionsRendered) {
      String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
