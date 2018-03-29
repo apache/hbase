@@ -1543,7 +1543,7 @@
     <rsgroup.test.jar>hbase-rsgroup-${project.version}-tests.jar</rsgroup.test.jar>
     <mapreduce.test.jar>hbase-mapreduce-${project.version}-tests.jar</mapreduce.test.jar>
     <shell-executable>bash</shell-executable>
-    <surefire.version>2.20.1</surefire.version>
+    <surefire.version>2.21.0</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
