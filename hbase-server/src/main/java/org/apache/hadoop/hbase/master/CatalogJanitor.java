@@ -116,7 +116,9 @@ public class CatalogJanitor extends ScheduledChore {
           && am.getRegionStates().getRegionsInTransition().size() == 0) {
         scan();
       } else {
-        LOG.warn("CatalogJanitor disabled! Not running scan.");
+        LOG.warn("CatalogJanitor is disabled! Enabled=" + this.enabled.get() +
+          ", am=" + am + ", failoverCleanupDone=" + (am != null && am.isFailoverCleanupDone()) +
+          ", hasRIT=" + (am != null && am.getRegionStates().getRegionsInTransition().size() == 0));
       }
     } catch (IOException e) {
       LOG.warn("Failed scan of catalog table", e);
