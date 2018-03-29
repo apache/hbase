@@ -183,7 +183,6 @@ public class TestMobCompactor {
     TEST_UTIL.getConfiguration().setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 1);
     TEST_UTIL.getConfiguration().setInt("hbase.hfile.compaction.discharger.interval", 100);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.startMiniCluster(1);
     pool = createThreadPool(TEST_UTIL.getConfiguration());
     conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), pool);

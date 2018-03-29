@@ -347,6 +347,27 @@ The following configuration settings are no longer applicable or available. For 
 * hbase.master.distributed.log.replay See the section [[upgrade2.0.distributed.log.replay]] for details
 * hbase.regionserver.disallow.writes.when.recovering See the section [[upgrade2.0.distributed.log.replay]] for details
 * hbase.regionserver.wal.logreplay.batch.size See the section [[upgrade2.0.distributed.log.replay]] for details
+* hbase.master.catalog.timeout
+* hbase.regionserver.catalog.timeout
+* hbase.metrics.exposeOperationTimes
+* hbase.metrics.showTableName
+* hbase.online.schema.update.enable (HBase now always supports this)
+* hbase.thrift.htablepool.size.max
+
+[[upgrade2.0.renamed.configs]]
+.Configuration properties that were renamed in HBase 2.0+
+
+The following properties have been renamed. Attempts to set the old property will be ignored at run time.
+
+.Renamed properties
+[options="header"]
+|============================================================================================================
+|Old name |New name
+|hbase.rpc.server.nativetransport |hbase.netty.nativetransport
+|hbase.netty.rpc.server.worker.count |hbase.netty.worker.count
+|hbase.hfile.compactions.discharger.interval |hbase.hfile.compaction.discharger.interval
+|hbase.hregion.percolumnfamilyflush.size.lower.bound |hbase.hregion.percolumnfamilyflush.size.lower.bound.min
+|============================================================================================================
 
 [[upgrade2.0.changed.defaults]]
 .Configuration settings with different defaults in HBase 2.0+
@@ -362,6 +383,13 @@ The following configuration settings changed their default value. Where applicab
 * hbase.client.start.log.errors.counter changed to 5. Previously it was 9.
 * hbase.ipc.server.callqueue.type changed to 'fifo'. In HBase versions 1.0 - 1.2 it was 'deadline'. In prior and later 1.x versions it already defaults to 'fifo'.
 * hbase.hregion.memstore.chunkpool.maxsize is 1.0 by default. Previously it was 0.0. Effectively, this means previously we would not use a chunk pool when our memstore is onheap and now we will. See the section [[gcpause]] for more infromation about the MSLAB chunk pool.
+* hbase.master.cleaner.interval is now set to 10 minutes. Previously it was 1 minute.
+* hbase.master.procedure.threads will now default to 1/4 of the number of available CPUs, but not less than 16 threads. Previously it would be number of threads equal to number of CPUs.
+* hbase.hstore.blockingStoreFiles is now 16. Previously it was 10.
+* hbase.http.max.threads is now 16. Previously it was 10.
+* hbase.client.max.perserver.tasks is now 2. Previously it was 5.
+* hbase.normalizer.period is now 5 minutes. Previously it was 30 minutes.
+* hbase.regionserver.region.split.policy is now SteppingSplitPolicy. Previously it was IncreasingToUpperBoundRegionSplitPolicy.
 
 [[upgrade2.0.regions.on.master]]
 ."Master hosting regions" feature broken and unsupported
