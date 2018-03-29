@@ -79,7 +79,7 @@ Others, such as `hbase shell` (<<shell>>), `hbase upgrade` (<<upgrading>>), and 
 === Canary
 
 There is a Canary class can help users to canary-test the HBase cluster status, with every column-family for every regions or RegionServer's granularity.
-To see the usage, use the `--help` parameter.
+To see the usage, use the `-help` parameter.
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -help
@@ -192,10 +192,10 @@ This daemon will stop itself and return non-zero error code if any error occurs,
 $ ${HBASE_HOME}/bin/hbase canary -daemon
 ----
 
-Run repeatedly with internal 5 seconds and will not stop itself even if errors occur in the test.
+Run repeatedly with 5 second intervals and will not stop itself even if errors occur in the test.
 
 ----
-$ ${HBASE_HOME}/bin/hbase canary -daemon -interval 50000 -f false
+$ ${HBASE_HOME}/bin/hbase canary -daemon -interval 5 -f false
 ----
 
 ==== Force timeout if canary test stuck
@@ -205,7 +205,7 @@ Because of this we provide a timeout option to kill the canary test and return a
 This run sets the timeout value to 60 seconds, the default value is 600 seconds.
 
 ----
-$ ${HBASE_HOME}/bin/hbase canary -t 600000
+$ ${HBASE_HOME}/bin/hbase canary -t 60000
 ----
 
 ==== Enable write sniffing in canary
@@ -234,7 +234,7 @@ while returning normal exit code. To treat read / write failure as error, you ca
 with the `-treatFailureAsError` option. When enabled, read / write failure would result in error
 exit code.
 ----
-$ ${HBASE_HOME}/bin/hbase canary --treatFailureAsError
+$ ${HBASE_HOME}/bin/hbase canary -treatFailureAsError
 ----
 
 ==== Running Canary in a Kerberos-enabled Cluster
@@ -266,7 +266,7 @@ This example shows each of the properties with valid values.
   <value>/etc/hbase/conf/keytab.krb5</value>
 </property>
 <!-- optional params -->
-property>
+<property>
   <name>hbase.client.dns.interface</name>
   <value>default</value>
 </property>
