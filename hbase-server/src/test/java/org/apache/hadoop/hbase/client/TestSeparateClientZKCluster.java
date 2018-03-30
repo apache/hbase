@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.NoSuchProcedureException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -131,7 +132,7 @@ public class TestSeparateClientZKCluster {
       while (!master.isShutDown()) {
         Thread.sleep(200);
       }
-      while (!cluster.getMaster().isInitialized()) {
+      while (cluster.getMaster() == null || !cluster.getMaster().isInitialized()) {
         Thread.sleep(200);
       }
       // confirm client access still works
@@ -228,8 +229,12 @@ public class TestSeparateClientZKCluster {
         Thread.sleep(200);
       }
       // wait for meta region online
-      cluster.getMaster().getAssignmentManager()
+      try {
+        cluster.getMaster().getAssignmentManager()
           .waitForAssignment(RegionInfoBuilder.FIRST_META_REGIONINFO);
+      } catch (NoSuchProcedureException e) {
+        // we don't need to take any further action
+      }
       // wait some long time to make sure we will retry sync data to client ZK until data set
       Thread.sleep(10000);
       clientZkCluster.startup(clientZkDir);
