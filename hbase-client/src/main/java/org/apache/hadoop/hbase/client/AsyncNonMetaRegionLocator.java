@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HConstants.CATALOG_FAMILY;
 import static org.apache.hadoop.hbase.HConstants.NINES;
 import static org.apache.hadoop.hbase.HConstants.ZEROES;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
@@ -32,7 +31,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -41,13 +39,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -269,26 +268,22 @@ class AsyncNonMetaRegionLocator {
     toSend.ifPresent(r -> locateInMeta(tableName, r));
   }
 
-  private void onScanComplete(TableName tableName, LocateRequest req, List<Result> results,
+  // return whether we should stop the scan
+  private boolean onScanNext(TableName tableName, LocateRequest req, Result result,
       Throwable error) {
     if (error != null) {
       complete(tableName, req, null, error);
-      return;
+      return true;
     }
-    if (results.isEmpty()) {
-      complete(tableName, req, null, new TableNotFoundException(tableName));
-      return;
-    }
-    RegionLocations locs = MetaTableAccessor.getRegionLocations(results.get(0));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("The fetched location of '" + tableName + "', row='" +
-        Bytes.toStringBinary(req.row) + "', locateType=" + req.locateType + " is " + locs);
-    }
+    RegionLocations locs = MetaTableAccessor.getRegionLocations(result);
+    LOG.debug("The fetched location of '{}', row='{}', locateType={} is {}", tableName,
+      Bytes.toStringBinary(req.row), req.locateType, locs);
+
     if (locs == null || locs.getDefaultRegionLocation() == null) {
       complete(tableName, req, null,
         new IOException(String.format("No location found for '%s', row='%s', locateType=%s",
           tableName, Bytes.toStringBinary(req.row), req.locateType)));
-      return;
+      return true;
     }
     HRegionLocation loc = locs.getDefaultRegionLocation();
     RegionInfo info = loc.getRegion();
@@ -296,33 +291,20 @@ class AsyncNonMetaRegionLocator {
       complete(tableName, req, null,
         new IOException(String.format("HRegionInfo is null for '%s', row='%s', locateType=%s",
           tableName, Bytes.toStringBinary(req.row), req.locateType)));
-      return;
+      return true;
     }
-    if (!info.getTable().equals(tableName)) {
-      complete(tableName, req, null, new TableNotFoundException(
-          "Table '" + tableName + "' was not found, got: '" + info.getTable() + "'"));
-      return;
-    }
-    if (info.isSplit()) {
-      complete(tableName, req, null,
-        new RegionOfflineException(
-            "the only available region for the required row is a split parent," +
-              " the daughters should be online soon: '" + info.getRegionNameAsString() + "'"));
-      return;
-    }
-    if (info.isOffline()) {
-      complete(tableName, req, null, new RegionOfflineException("the region is offline, could" +
-        " be caused by a disable table call: '" + info.getRegionNameAsString() + "'"));
-      return;
+    if (info.isSplitParent()) {
+      return false;
     }
     if (loc.getServerName() == null) {
       complete(tableName, req, null,
         new NoServerForRegionException(
             String.format("No server address listed for region '%s', row='%s', locateType=%s",
               info.getRegionNameAsString(), Bytes.toStringBinary(req.row), req.locateType)));
-      return;
+      return true;
     }
     complete(tableName, req, loc, null);
+    return true;
   }
 
   private HRegionLocation locateRowInCache(TableCache tableCache, TableName tableName, byte[] row) {
@@ -368,21 +350,49 @@ class AsyncNonMetaRegionLocator {
       LOG.trace("Try locate '" + tableName + "', row='" + Bytes.toStringBinary(req.row) +
         "', locateType=" + req.locateType + " in meta");
     }
-    byte[] metaKey;
+    byte[] metaStartKey;
     if (req.locateType.equals(RegionLocateType.BEFORE)) {
       if (isEmptyStopRow(req.row)) {
         byte[] binaryTableName = tableName.getName();
-        metaKey = Arrays.copyOf(binaryTableName, binaryTableName.length + 1);
+        metaStartKey = Arrays.copyOf(binaryTableName, binaryTableName.length + 1);
       } else {
-        metaKey = createRegionName(tableName, req.row, ZEROES, false);
+        metaStartKey = createRegionName(tableName, req.row, ZEROES, false);
       }
     } else {
-      metaKey = createRegionName(tableName, req.row, NINES, false);
+      metaStartKey = createRegionName(tableName, req.row, NINES, false);
     }
+    byte[] metaStopKey =
+      RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
     conn.getTable(META_TABLE_NAME)
-        .scanAll(new Scan().withStartRow(metaKey).setReversed(true).addFamily(CATALOG_FAMILY)
-            .setOneRowLimit())
-        .whenComplete((results, error) -> onScanComplete(tableName, req, results, error));
+      .scan(new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey, true)
+        .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(5)
+        .setReadType(ReadType.PREAD), new AdvancedScanResultConsumer() {
+
+          private boolean completeNormally = false;
+
+          @Override
+          public void onError(Throwable error) {
+            onScanNext(tableName, req, null, error);
+          }
+
+          @Override
+          public void onComplete() {
+            if (!completeNormally) {
+              onScanNext(tableName, req, null, new TableNotFoundException(tableName));
+            }
+          }
+
+          @Override
+          public void onNext(Result[] results, ScanController controller) {
+            for (Result result : results) {
+              if (onScanNext(tableName, req, result, null)) {
+                completeNormally = true;
+                controller.terminate();
+                return;
+              }
+            }
+          }
+        });
   }
 
   private HRegionLocation locateInCache(TableCache tableCache, TableName tableName, byte[] row,
