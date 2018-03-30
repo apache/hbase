@@ -182,6 +182,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   private final boolean verifyBulkLoads;
 
+  /**
+   * Use this counter to track concurrent puts. If TRACE-log is enabled, if we are over the
+   * threshold set by hbase.region.store.parallel.put.print.threshold (Default is 50) we will
+   * log a message that identifies the Store experience this high-level of concurrency.
+   */
   private final AtomicInteger currentParallelPutCount = new AtomicInteger(0);
   private final int parallelPutCountPrintThreshold;
 
@@ -260,8 +265,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
     this.fs.setStoragePolicy(family.getNameAsString(), policyName.trim());
 
-    this.dataBlockEncoder =
-        new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
+    this.dataBlockEncoder = new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
 
     this.comparator = region.getCellComparator();
     // used by ScanQueryMatcher
@@ -273,32 +277,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     // Why not just pass a HColumnDescriptor in here altogether?  Even if have
     // to clone it?
     scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.comparator);
-    MemoryCompactionPolicy inMemoryCompaction = null;
-    if (this.getTableName().isSystemTable()) {
-      inMemoryCompaction = MemoryCompactionPolicy
-          .valueOf(conf.get("hbase.systemtables.compacting.memstore.type", "NONE"));
-    } else {
-      inMemoryCompaction = family.getInMemoryCompaction();
-    }
-    if (inMemoryCompaction == null) {
-      inMemoryCompaction =
-          MemoryCompactionPolicy.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-            CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
-    }
-    String className;
-    switch (inMemoryCompaction) {
-      case NONE:
-        className = DefaultMemStore.class.getName();
-        this.memstore = ReflectionUtils.newInstance(DefaultMemStore.class,
-            new Object[] { conf, this.comparator });
-        break;
-      default:
-        Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
-          CompactingMemStore.class, CompactingMemStore.class);
-        className = clz.getName();
-        this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
-            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
-    }
+    this.memstore = getMemstore();
+
     this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family
@@ -338,13 +318,48 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
     cryptoContext = EncryptionUtil.createEncryptionContext(conf, family);
 
-    int confPrintThreshold = conf.getInt("hbase.region.store.parallel.put.print.threshold", 50);
+    int confPrintThreshold =
+        this.conf.getInt("hbase.region.store.parallel.put.print.threshold", 50);
     if (confPrintThreshold < 10) {
       confPrintThreshold = 10;
     }
     this.parallelPutCountPrintThreshold = confPrintThreshold;
-    LOG.info("Memstore class name is " + className + " ; parallelPutCountPrintThreshold="
-        + parallelPutCountPrintThreshold);
+    LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, " +
+            "parallelPutCountPrintThreshold={}", getColumnFamilyName(),
+        this.memstore.getClass().getSimpleName(), policyName,
+        this.verifyBulkLoads, this.parallelPutCountPrintThreshold);
+  }
+
+  /**
+   * @return MemStore Instance to use in this store.
+   */
+  private MemStore getMemstore() {
+    MemStore ms = null;
+    // Check if in-memory-compaction configured. Note MemoryCompactionPolicy is an enum!
+    MemoryCompactionPolicy inMemoryCompaction = null;
+    if (this.getTableName().isSystemTable()) {
+      inMemoryCompaction = MemoryCompactionPolicy.valueOf(
+          conf.get("hbase.systemtables.compacting.memstore.type", "NONE"));
+    } else {
+      inMemoryCompaction = family.getInMemoryCompaction();
+    }
+    if (inMemoryCompaction == null) {
+      inMemoryCompaction =
+          MemoryCompactionPolicy.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+              CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
+    }
+    switch (inMemoryCompaction) {
+      case NONE:
+        ms = ReflectionUtils.newInstance(DefaultMemStore.class,
+            new Object[]{conf, this.comparator});
+        break;
+      default:
+        Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
+            CompactingMemStore.class, CompactingMemStore.class);
+        ms = ReflectionUtils.newInstance(clz, new Object[]{conf, this.comparator, this,
+            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction});
+    }
+    return ms;
   }
 
   /**
@@ -709,10 +724,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     lock.readLock().lock();
     try {
       if (this.currentParallelPutCount.getAndIncrement() > this.parallelPutCountPrintThreshold) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(this.getTableName() + ":" + this.getRegionInfo().getEncodedName() + ":" + this
-              .getColumnFamilyName() + " too Busy!");
-        }
+        LOG.trace(this.getTableName() + "tableName={}, encodedName={}, columnFamilyName={} is " +
+          "too busy!", this.getRegionInfo().getEncodedName(), this .getColumnFamilyName());
       }
       this.memstore.add(cell, memstoreSizing);
     } finally {
@@ -728,10 +741,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     lock.readLock().lock();
     try {
       if (this.currentParallelPutCount.getAndIncrement() > this.parallelPutCountPrintThreshold) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(this.getTableName() + ":" + this.getRegionInfo().getEncodedName() + ":" + this
-              .getColumnFamilyName() + " too Busy!");
-        }
+        LOG.trace(this.getTableName() + "tableName={}, encodedName={}, columnFamilyName={} is " +
+            "too busy!", this.getRegionInfo().getEncodedName(), this .getColumnFamilyName());
       }
       memstore.add(cells, memstoreSizing);
     } finally {

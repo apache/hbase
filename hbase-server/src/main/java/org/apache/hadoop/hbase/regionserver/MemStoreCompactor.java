@@ -79,6 +79,11 @@ public class MemStoreCompactor {
         compactingMemStore.getFamilyName());
   }
 
+  @Override
+  public String toString() {
+    return this.strategy + ", compactionCellMax=" + this.compactionKVMax;
+  }
+
   /**----------------------------------------------------------------------
    * The request to dispatch the compaction asynchronous task.
    * The method returns true if compaction was successfully dispatched, or false if there

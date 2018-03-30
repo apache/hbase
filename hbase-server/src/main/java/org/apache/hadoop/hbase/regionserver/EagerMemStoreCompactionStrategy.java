@@ -23,14 +23,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class EagerMemStoreCompactionStrategy extends MemStoreCompactionStrategy{
+  private static final String NAME = "EAGER";
 
-  private static final String name = "EAGER";
   public EagerMemStoreCompactionStrategy(Configuration conf, String cfName) {
     super(conf, cfName);
   }
 
   @Override
   public Action getAction(VersionedSegmentsList versionedList) {
-    return compact(versionedList, name);
+    return compact(versionedList, getName());
+  }
+
+  @Override
+  protected String getName() {
+    return NAME;
   }
 }

@@ -73,6 +73,13 @@ public abstract class MemStoreCompactionStrategy {
     }
   }
 
+  @Override
+  public String toString() {
+    return getName() + ", pipelineThreshold=" + this.pipelineThreshold;
+  }
+
+  protected abstract String getName();
+
   // get next compaction action to apply on compaction pipeline
   public abstract Action getAction(VersionedSegmentsList versionedList);
   // update policy stats based on the segment that replaced previous versioned list (in
@@ -108,5 +115,4 @@ public abstract class MemStoreCompactionStrategy {
         cfName, numOfSegments);
     return Action.COMPACT;
   }
-
 }

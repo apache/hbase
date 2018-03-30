@@ -1732,11 +1732,9 @@ public class HFileBlock implements Cacheable {
       // and will save us having to seek the stream backwards to reread the header we
       // read the last time through here.
       ByteBuffer headerBuf = getCachedHeader(offset);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Reading " + this.fileContext.getHFileName() + " at offset=" + offset +
-          ", pread=" + pread + ", verifyChecksum=" + verifyChecksum + ", cachedHeader=" +
-          headerBuf + ", onDiskSizeWithHeader=" + onDiskSizeWithHeader);
-      }
+      LOG.trace("Reading {} at offset={}, pread={}, verifyChecksum={}, cachedHeader={}, " +
+          "onDiskSizeWithHeader={}", this.fileContext.getHFileName(), offset, pread,
+          verifyChecksum, headerBuf, onDiskSizeWithHeader);
       // This is NOT same as verifyChecksum. This latter is whether to do hbase
       // checksums. Can change with circumstances. The below flag is whether the
       // file has support for checksums (version 2+).
@@ -1800,9 +1798,7 @@ public class HFileBlock implements Cacheable {
       if (!fileContext.isCompressedOrEncrypted()) {
         hFileBlock.sanityCheckUncompressed();
       }
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Read " + hFileBlock + " in " + duration + " ns");
-      }
+      LOG.trace("Read {} in {} ns", hFileBlock, duration);
       // Cache next block header if we read it for the next time through here.
       if (nextBlockOnDiskSize != -1) {
         cacheNextBlockHeader(offset + hFileBlock.getOnDiskSizeWithHeader(),

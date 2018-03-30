@@ -29,8 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class BasicMemStoreCompactionStrategy extends MemStoreCompactionStrategy{
-
-  private static final String name = "BASIC";
+  private static final String NAME = "BASIC";
 
   public BasicMemStoreCompactionStrategy(Configuration conf, String cfName) {
     super(conf, cfName);
@@ -38,6 +37,11 @@ public class BasicMemStoreCompactionStrategy extends MemStoreCompactionStrategy{
 
   @Override
   public Action getAction(VersionedSegmentsList versionedList) {
-    return simpleMergeOrFlatten(versionedList, name);
+    return simpleMergeOrFlatten(versionedList, getName());
+  }
+
+  @Override
+  protected String getName() {
+    return NAME;
   }
 }
