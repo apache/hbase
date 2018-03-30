@@ -253,8 +253,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
     this.fs.setStoragePolicy(family.getNameAsString(), policyName.trim());
 
-    this.dataBlockEncoder =
-        new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
+    this.dataBlockEncoder = new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
 
     this.comparator = region.getCellComparator();
     // used by ScanQueryMatcher
@@ -266,33 +265,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     // Why not just pass a HColumnDescriptor in here altogether?  Even if have
     // to clone it?
     scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.comparator);
-    MemoryCompactionPolicy inMemoryCompaction = null;
-    if (this.getTableName().isSystemTable()) {
-      inMemoryCompaction = MemoryCompactionPolicy
-          .valueOf(conf.get("hbase.systemtables.compacting.memstore.type", "NONE"));
-    } else {
-      inMemoryCompaction = family.getInMemoryCompaction();
-    }
-    if (inMemoryCompaction == null) {
-      inMemoryCompaction =
-          MemoryCompactionPolicy.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-            CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
-    }
-    String className;
-    switch (inMemoryCompaction) {
-      case NONE:
-        className = DefaultMemStore.class.getName();
-        this.memstore = ReflectionUtils.newInstance(DefaultMemStore.class,
-            new Object[] { conf, this.comparator });
-        break;
-      default:
-        Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
-          CompactingMemStore.class, CompactingMemStore.class);
-        className = clz.getName();
-        this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
-            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
-    }
-    LOG.debug("Memstore type={}", className);
+    this.memstore = getMemstore();
     this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family
@@ -331,6 +304,43 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
               + flushRetriesNumber);
     }
     cryptoContext = EncryptionUtil.createEncryptionContext(conf, family);
+
+    LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}",
+        getColumnFamilyName(), this.memstore.getClass().getSimpleName(), policyName,
+        this.verifyBulkLoads);
+  }
+
+  /**
+   * @return MemStore Instance to use in this store.
+   */
+  private MemStore getMemstore() {
+    MemStore ms = null;
+    // Check if in-memory-compaction configured. Note MemoryCompactionPolicy is an enum!
+    MemoryCompactionPolicy inMemoryCompaction = null;
+    if (this.getTableName().isSystemTable()) {
+      inMemoryCompaction = MemoryCompactionPolicy.valueOf(
+          conf.get("hbase.systemtables.compacting.memstore.type", "NONE"));
+    } else {
+      inMemoryCompaction = family.getInMemoryCompaction();
+    }
+    if (inMemoryCompaction == null) {
+      inMemoryCompaction =
+          MemoryCompactionPolicy.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+              CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
+    }
+    switch (inMemoryCompaction) {
+      case NONE:
+        ms = ReflectionUtils.newInstance(DefaultMemStore.class,
+            new Object[]{conf, this.comparator});
+        break;
+      default:
+        Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
+            CompactingMemStore.class, CompactingMemStore.class);
+        ms = ReflectionUtils.newInstance(clz, new Object[]{conf, this.comparator, this,
+            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction});
+    }
+    return ms;
+>>>>>>> c88ca54c16... HBASE-20259 Doc configs for in-memory-compaction and add detail to
   }
 
   /**

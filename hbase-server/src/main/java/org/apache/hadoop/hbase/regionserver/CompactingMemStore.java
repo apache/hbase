@@ -119,6 +119,10 @@ public class CompactingMemStore extends AbstractMemStore {
     // initialization of the flush size should happen after initialization of the index type
     // so do not transfer the following method
     initInmemoryFlushSize(conf);
+    LOG.info("Store={}, in-memory flush size threshold={}, immutable segments index type={}, " +
+            "compactor={}", this.store.getColumnFamilyName(),
+        StringUtils.byteDesc(this.inmemoryFlushSize), this.indexType,
+        (this.compactor == null? "NULL": this.compactor.toString()));
   }
 
   @VisibleForTesting
@@ -141,8 +145,6 @@ public class CompactingMemStore extends AbstractMemStore {
           IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
 
     inmemoryFlushSize = (long) (inmemoryFlushSize * factor);
-    LOG.info("Setting in-memory flush size threshold to {} and immutable segments index to type={}",
-        StringUtils.byteDesc(inmemoryFlushSize), indexType);
   }
 
   /**
