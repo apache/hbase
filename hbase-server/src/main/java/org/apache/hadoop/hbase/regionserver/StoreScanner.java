@@ -443,17 +443,29 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public void close() {
-    if (this.closing) return;
-    this.closing = true;
-    clearAndClose(scannersForDelayedClose);
-    clearAndClose(memStoreScannersAfterFlush);
-    // clear them at any case. In case scanner.next() was never called
-    // and there were some lease expiry we need to close all the scanners
-    // on the flushed files which are open
-    clearAndClose(flushedstoreFileScanners);
+    if (this.closing) {
+      return;
+    }
+    // Lets remove from observers as early as possible
     // Under test, we dont have a this.store
-    if (this.store != null)
+    if (this.store != null) {
       this.store.deleteChangedReaderObserver(this);
+    }
+    // There is a race condition between close() and updateReaders(), during region flush. So,
+    // even though its just close, we will still acquire the flush lock, as a
+    // ConcurrentModificationException will abort the regionserver.
+    flushLock.lock();
+    try {
+      this.closing = true;
+      clearAndClose(scannersForDelayedClose);
+      clearAndClose(memStoreScannersAfterFlush);
+      // clear them at any case. In case scanner.next() was never called
+      // and there were some lease expiry we need to close all the scanners
+      // on the flushed files which are open
+      clearAndClose(flushedstoreFileScanners);
+    } finally {
+      flushLock.unlock();
+    }
     if (this.heap != null)
       this.heap.close();
     this.heap = null; // CLOSED!
@@ -809,6 +821,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
     flushLock.lock();
     try {
+      if (this.closing) {
+        // Lets close scanners created by caller, since close() won't notice this.
+        clearAndClose(memStoreScanners);
+        return;
+      }
       flushed = true;
       final boolean isCompaction = false;
       boolean usePread = get || scanUsePread;
