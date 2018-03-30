@@ -2105,7 +2105,9 @@ public class HBaseFsck extends Configured implements Closeable {
             errors.reportError(ERROR_CODE.ORPHAN_TABLE_STATE,
                 tableName + " unable to delete dangling table state " + tableState);
           }
-        } else {
+        } else if (!checkMetaOnly) {
+          // dangling table state in meta if checkMetaOnly is false. If checkMetaOnly is
+          // true, tableInfo will be null as tablesInfo are not polulated for all tables from hdfs
           errors.reportError(ERROR_CODE.ORPHAN_TABLE_STATE,
               tableName + " has dangling table state " + tableState);
         }
