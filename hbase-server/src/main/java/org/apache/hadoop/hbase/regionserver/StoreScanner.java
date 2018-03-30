@@ -859,7 +859,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     try {
       if (this.closing) {
         // Lets close scanners created by caller, since close() won't notice this.
-        clearAndClose(memStoreScanners);
+        // memStoreScanners is immutable, so lets create a new list.
+        clearAndClose(new ArrayList<>(memStoreScanners));
         return;
       }
       flushed = true;
