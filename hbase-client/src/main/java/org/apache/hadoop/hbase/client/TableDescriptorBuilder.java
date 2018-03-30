@@ -183,8 +183,8 @@ public class TableDescriptorBuilder {
   public static final boolean DEFAULT_NORMALIZATION_ENABLED = false;
 
   /**
-   * Constant that denotes the maximum default size of the memstore after which
-   * the contents are flushed to the store files
+   * Constant that denotes the maximum default size of the memstore in bytes after which
+   * the contents are flushed to the store files.
    */
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024 * 1024 * 128L;
 
