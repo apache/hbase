@@ -87,9 +87,9 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     }
 
     @Override
-    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
-        throws IOException {
-      if (e.getEnvironment().getRegionInfo().isMetaRegion()) {
+    public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+        InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
+      if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         int concurrency = CONCURRENCY.incrementAndGet();
         for (;;) {
           int max = MAX_CONCURRENCY.get();
@@ -102,14 +102,16 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
         }
         Threads.sleepWithoutInterrupt(10);
       }
+      return hasNext;
     }
 
     @Override
-    public void postScannerClose(ObserverContext<RegionCoprocessorEnvironment> e, InternalScanner s)
-        throws IOException {
-      if (e.getEnvironment().getRegionInfo().isMetaRegion()) {
+    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+        InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
+      if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         CONCURRENCY.decrementAndGet();
       }
+      return hasNext;
     }
   }
 
@@ -119,7 +121,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     conf.set(REGION_COPROCESSOR_CONF_KEY, CountingRegionObserver.class.getName());
     conf.setInt(MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE, MAX_ALLOWED);
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
     AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
         registry.getClusterId().get(), User.getCurrent());
@@ -142,14 +144,14 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     for (int i = 0; i < futures.size(); i++) {
       HRegionLocation loc = futures.get(i).get();
       if (i == 0) {
-        assertTrue(isEmptyStartRow(loc.getRegionInfo().getStartKey()));
+        assertTrue(isEmptyStartRow(loc.getRegion().getStartKey()));
       } else {
-        assertEquals(String.format("%02x", i), Bytes.toString(loc.getRegionInfo().getStartKey()));
+        assertEquals(String.format("%02x", i), Bytes.toString(loc.getRegion().getStartKey()));
       }
       if (i == futures.size() - 1) {
-        assertTrue(isEmptyStopRow(loc.getRegionInfo().getEndKey()));
+        assertTrue(isEmptyStopRow(loc.getRegion().getEndKey()));
       } else {
-        assertEquals(String.format("%02x", i + 1), Bytes.toString(loc.getRegionInfo().getEndKey()));
+        assertEquals(String.format("%02x", i + 1), Bytes.toString(loc.getRegion().getEndKey()));
       }
     }
   }
@@ -161,6 +163,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
             .map(r -> LOCATOR.getRegionLocation(TABLE_NAME, r, RegionLocateType.CURRENT, false))
             .collect(toList());
     assertLocs(futures);
-    assertTrue(MAX_CONCURRENCY.get() <= MAX_ALLOWED);
+    assertTrue("max allowed is " + MAX_ALLOWED + " but actual is " + MAX_CONCURRENCY.get(),
+      MAX_CONCURRENCY.get() <= MAX_ALLOWED);
   }
 }
