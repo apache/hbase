@@ -175,7 +175,9 @@ public class Reference {
       in.mark(pblen);
       byte [] pbuf = new byte[pblen];
       int read = in.read(pbuf);
-      if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
+      if (read != pblen) {
+        throw new IOException("read=" + read + ", wanted=" + pblen);
+      }
       // WATCHOUT! Return in middle of function!!!
       if (ProtobufUtil.isPBMagicPrefix(pbuf)) return convert(FSProtos.Reference.parseFrom(in));
       // Else presume Writables.  Need to reset the stream since it didn't start w/ pb.
