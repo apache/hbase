@@ -91,6 +91,15 @@ public interface ReplicationQueueStorage {
    * @param peerId peer id
    */
   void removeLastSequenceIds(String peerId) throws ReplicationException;
+
+  /**
+   * Remove the max sequence id record for the given peer and regions.
+   * @param peerId peer id
+   * @param encodedRegionNames the encoded region names
+   */
+  void removeLastSequenceIds(String peerId, List<String> encodedRegionNames)
+      throws ReplicationException;
+
   /**
    * Get the current position for a specific WAL in a given queue for a given regionserver.
    * @param serverName the name of the regionserver

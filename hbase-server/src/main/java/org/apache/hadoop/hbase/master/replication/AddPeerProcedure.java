@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.AddPeerStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationState;
 
 /**
  * The procedure for adding a new replication peer.
@@ -57,8 +58,15 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   }
 
   @Override
-  protected boolean reopenRegionsAfterRefresh() {
-    return true;
+  protected PeerModificationState nextStateAfterRefresh() {
+    return peerConfig.isSerial() ? PeerModificationState.SERIAL_PEER_REOPEN_REGIONS
+      : super.nextStateAfterRefresh();
+  }
+
+  @Override
+  protected void updateLastPushedSequenceIdForSerialPeer(MasterProcedureEnv env)
+      throws IOException, ReplicationException {
+    setLastPushedSequenceId(env, peerConfig);
   }
 
   @Override
@@ -102,7 +110,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     serializer.serialize(AddPeerStateData.newBuilder()
-        .setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig)).setEnabled(enabled).build());
+      .setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig)).setEnabled(enabled).build());
   }
 
   @Override
