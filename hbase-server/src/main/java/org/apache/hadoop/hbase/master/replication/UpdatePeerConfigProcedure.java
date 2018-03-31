@@ -18,6 +18,14 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -25,11 +33,13 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePeerConfigStateData;
 
 /**
@@ -59,12 +69,84 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
     return PeerOperationType.UPDATE_CONFIG;
   }
 
+  private void addToList(List<String> encodedRegionNames, String encodedRegionName,
+      ReplicationQueueStorage queueStorage) throws ReplicationException {
+    encodedRegionNames.add(encodedRegionName);
+    if (encodedRegionNames.size() >= UPDATE_LAST_SEQ_ID_BATCH_SIZE) {
+      queueStorage.removeLastSequenceIds(peerId, encodedRegionNames);
+      encodedRegionNames.clear();
+    }
+  }
+
   @Override
-  protected boolean reopenRegionsAfterRefresh() {
-    // If we remove some tables from the peer config then we do not need to enter the extra states
-    // for serial replication. Could try to optimize later since it is not easy to determine this...
-    return peerConfig.isSerial() && (!oldPeerConfig.isSerial() ||
-      !ReplicationUtils.isNamespacesAndTableCFsEqual(peerConfig, oldPeerConfig));
+  protected PeerModificationState nextStateAfterRefresh() {
+    if (peerConfig.isSerial()) {
+      if (oldPeerConfig.isSerial()) {
+        // both serial, then if the ns/table-cfs configs are not changed, just go with the normal
+        // way, otherwise we need to reopen the regions for the newly added tables.
+        return ReplicationUtils.isNamespacesAndTableCFsEqual(peerConfig, oldPeerConfig)
+          ? super.nextStateAfterRefresh()
+          : PeerModificationState.SERIAL_PEER_REOPEN_REGIONS;
+      } else {
+        // we change the peer to serial, need to reopen all regions
+        return PeerModificationState.SERIAL_PEER_REOPEN_REGIONS;
+      }
+    } else {
+      if (oldPeerConfig.isSerial()) {
+        // we remove the serial flag for peer, then we do not need to reopen all regions, but we
+        // need to remove the last pushed sequence ids.
+        return PeerModificationState.SERIAL_PEER_UPDATE_LAST_PUSHED_SEQ_ID;
+      } else {
+        // not serial for both, just go with the normal way.
+        return super.nextStateAfterRefresh();
+      }
+    }
+  }
+
+  @Override
+  protected void updateLastPushedSequenceIdForSerialPeer(MasterProcedureEnv env)
+      throws IOException, ReplicationException {
+    if (!oldPeerConfig.isSerial()) {
+      assert peerConfig.isSerial();
+      // change to serial
+      setLastPushedSequenceId(env, peerConfig);
+      return;
+    }
+    if (!peerConfig.isSerial()) {
+      // remove the serial flag
+      env.getReplicationPeerManager().removeAllLastPushedSeqIds(peerId);
+      return;
+    }
+    // enter here means peerConfig and oldPeerConfig are both serial, let's find out the diffs and
+    // process them
+    ReplicationQueueStorage queueStorage = env.getReplicationPeerManager().getQueueStorage();
+    Connection conn = env.getMasterServices().getConnection();
+    Map<String, Long> lastSeqIds = new HashMap<String, Long>();
+    List<String> encodedRegionNames = new ArrayList<>();
+    for (TableDescriptor td : env.getMasterServices().getTableDescriptors().getAll().values()) {
+      if (!td.hasGlobalReplicationScope()) {
+        continue;
+      }
+      TableName tn = td.getTableName();
+      if (ReplicationUtils.contains(oldPeerConfig, tn)) {
+        if (!ReplicationUtils.contains(peerConfig, tn)) {
+          // removed from peer config
+          for (String encodedRegionName : MetaTableAccessor
+            .getTableEncodedRegionNamesForSerialReplication(conn, tn)) {
+            addToList(encodedRegionNames, encodedRegionName, queueStorage);
+          }
+        }
+      } else if (ReplicationUtils.contains(peerConfig, tn)) {
+        // newly added to peer config
+        setLastPushedSequenceIdForTable(env, tn, lastSeqIds);
+      }
+    }
+    if (!encodedRegionNames.isEmpty()) {
+      queueStorage.removeLastSequenceIds(peerId, encodedRegionNames);
+    }
+    if (!lastSeqIds.isEmpty()) {
+      queueStorage.setLastSequenceIds(peerId, lastSeqIds);
+    }
   }
 
   @Override
@@ -99,7 +181,9 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
   @Override
   protected void updatePeerStorage(MasterProcedureEnv env) throws ReplicationException {
     env.getReplicationPeerManager().updatePeerConfig(peerId, peerConfig);
-    if (enabled && reopenRegionsAfterRefresh()) {
+    // if we need to jump to the special states for serial peers, then we need to disable the peer
+    // first if it is not disabled yet.
+    if (enabled && nextStateAfterRefresh() != super.nextStateAfterRefresh()) {
       env.getReplicationPeerManager().disablePeer(peerId);
     }
   }

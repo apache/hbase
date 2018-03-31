@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -682,20 +684,19 @@ public class MetaTableAccessor {
     scanMeta(connection, null, null, QueryType.ALL, v);
   }
 
-  public static void scanMetaForTableRegions(Connection connection,
-      Visitor visitor, TableName tableName) throws IOException {
+  public static void scanMetaForTableRegions(Connection connection, Visitor visitor,
+      TableName tableName) throws IOException {
     scanMeta(connection, tableName, QueryType.REGION, Integer.MAX_VALUE, visitor);
   }
 
-  public static void scanMeta(Connection connection, TableName table,
-      QueryType type, int maxRows, final Visitor visitor) throws IOException {
+  public static void scanMeta(Connection connection, TableName table, QueryType type, int maxRows,
+      final Visitor visitor) throws IOException {
     scanMeta(connection, getTableStartRowForMeta(table, type), getTableStopRowForMeta(table, type),
-        type, maxRows, visitor);
+      type, maxRows, visitor);
   }
 
-  public static void scanMeta(Connection connection,
-      @Nullable final byte[] startRow, @Nullable final byte[] stopRow,
-      QueryType type, final Visitor visitor) throws IOException {
+  public static void scanMeta(Connection connection, @Nullable final byte[] startRow,
+      @Nullable final byte[] stopRow, QueryType type, final Visitor visitor) throws IOException {
     scanMeta(connection, startRow, stopRow, type, Integer.MAX_VALUE, visitor);
   }
 
@@ -708,26 +709,19 @@ public class MetaTableAccessor {
    * @param tableName  table withing we scan
    * @param row        start scan from this row
    * @param rowLimit   max number of rows to return
-   * @throws IOException
    */
-  public static void scanMeta(Connection connection,
-      final Visitor visitor, final TableName tableName,
-      final byte[] row, final int rowLimit)
-      throws IOException {
-
+  public static void scanMeta(Connection connection, final Visitor visitor,
+      final TableName tableName, final byte[] row, final int rowLimit) throws IOException {
     byte[] startRow = null;
     byte[] stopRow = null;
     if (tableName != null) {
-      startRow =
-          getTableStartRowForMeta(tableName, QueryType.REGION);
+      startRow = getTableStartRowForMeta(tableName, QueryType.REGION);
       if (row != null) {
-        RegionInfo closestRi =
-            getClosestRegionInfo(connection, tableName, row);
-        startRow = RegionInfo
-            .createRegionName(tableName, closestRi.getStartKey(), HConstants.ZEROES, false);
+        RegionInfo closestRi = getClosestRegionInfo(connection, tableName, row);
+        startRow =
+          RegionInfo.createRegionName(tableName, closestRi.getStartKey(), HConstants.ZEROES, false);
       }
-      stopRow =
-          getTableStopRowForMeta(tableName, QueryType.REGION);
+      stopRow = getTableStopRowForMeta(tableName, QueryType.REGION);
     }
     scanMeta(connection, startRow, stopRow, QueryType.REGION, rowLimit, visitor);
   }
@@ -743,11 +737,16 @@ public class MetaTableAccessor {
    * @param type scanned part of meta
    * @param maxRows maximum rows to return
    * @param visitor Visitor invoked against each row.
-   * @throws IOException
    */
   public static void scanMeta(Connection connection, @Nullable final byte[] startRow,
       @Nullable final byte[] stopRow, QueryType type, int maxRows, final Visitor visitor)
       throws IOException {
+    scanMeta(connection, startRow, stopRow, type, null, maxRows, visitor);
+  }
+
+  private static void scanMeta(Connection connection, @Nullable final byte[] startRow,
+      @Nullable final byte[] stopRow, QueryType type, @Nullable Filter filter, int maxRows,
+      final Visitor visitor) throws IOException {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
     Scan scan = getMetaScan(connection, rowUpperLimit);
 
@@ -760,13 +759,14 @@ public class MetaTableAccessor {
     if (stopRow != null) {
       scan.withStopRow(stopRow);
     }
+    if (filter != null) {
+      scan.setFilter(filter);
+    }
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Scanning META"
-          + " starting at row=" + Bytes.toStringBinary(startRow)
-          + " stopping at row=" + Bytes.toStringBinary(stopRow)
-          + " for max=" + rowUpperLimit
-          + " with caching=" + scan.getCaching());
+      LOG.trace("Scanning META" + " starting at row=" + Bytes.toStringBinary(startRow) +
+        " stopping at row=" + Bytes.toStringBinary(stopRow) + " for max=" + rowUpperLimit +
+        " with caching=" + scan.getCaching());
     }
 
     int currentRow = 0;
@@ -1973,7 +1973,7 @@ public class MetaTableAccessor {
     byte[] value = getParentsBytes(parents);
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
       .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
-      .setTimestamp(put.getTimeStamp()).setType(Type.Put).setValue(value).build());
+      .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(value).build());
   }
 
   private static Put makePutForReplicationBarrier(RegionInfo regionInfo, long openSeqNum, long ts)
@@ -1988,7 +1988,7 @@ public class MetaTableAccessor {
       .setRow(put.getRow())
       .setFamily(HConstants.REPLICATION_BARRIER_FAMILY)
       .setQualifier(HConstants.SEQNUM_QUALIFIER)
-      .setTimestamp(put.getTimeStamp())
+      .setTimestamp(put.getTimestamp())
       .setType(Type.Put)
       .setValue(Bytes.toBytes(openSeqNum))
       .build());
@@ -2123,6 +2123,18 @@ public class MetaTableAccessor {
         long lastBarrier = Bytes.toLong(value);
         String encodedRegionName = RegionInfo.encodeRegionName(r.getRow());
         list.add(Pair.newPair(encodedRegionName, lastBarrier));
+        return true;
+      });
+    return list;
+  }
+
+  public static List<String> getTableEncodedRegionNamesForSerialReplication(Connection conn,
+      TableName tableName) throws IOException {
+    List<String> list = new ArrayList<>();
+    scanMeta(conn, getTableStartRowForMeta(tableName, QueryType.REPLICATION),
+      getTableStopRowForMeta(tableName, QueryType.REPLICATION), QueryType.REPLICATION,
+      new FirstKeyOnlyFilter(), Integer.MAX_VALUE, r -> {
+        list.add(RegionInfo.encodeRegionName(r.getRow()));
         return true;
       });
     return list;

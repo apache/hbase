@@ -186,8 +186,8 @@ public class TestEnableTable {
         fail("Got an exception while deleting " + tableName);
       }
       int rowCount = 0;
-      try (ResultScanner scanner =
-          metaTable.getScanner(MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+      try (ResultScanner scanner = metaTable
+        .getScanner(MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
         for (Result result : scanner) {
           LOG.info("Found when none expected: " + result);
           rowCount++;

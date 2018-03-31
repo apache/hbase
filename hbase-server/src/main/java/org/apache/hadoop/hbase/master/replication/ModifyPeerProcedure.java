@@ -18,11 +18,10 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -55,7 +54,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
 
   private static final Logger LOG = LoggerFactory.getLogger(ModifyPeerProcedure.class);
 
-  private static final int SET_LAST_SEQ_ID_BATCH_SIZE = 1000;
+  protected static final int UPDATE_LAST_SEQ_ID_BATCH_SIZE = 1000;
 
   protected ModifyPeerProcedure() {
   }
@@ -93,12 +92,11 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   }
 
   /**
-   * Implementation class can override this method. The default return value is false which means we
-   * will jump to POST_PEER_MODIFICATION and finish the procedure. If returns true, we will jump to
-   * SERIAL_PEER_REOPEN_REGIONS.
+   * Implementation class can override this method. By default we will jump to
+   * POST_PEER_MODIFICATION and finish the procedure.
    */
-  protected boolean reopenRegionsAfterRefresh() {
-    return false;
+  protected PeerModificationState nextStateAfterRefresh() {
+    return PeerModificationState.POST_PEER_MODIFICATION;
   }
 
   /**
@@ -123,80 +121,97 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     throw new UnsupportedOperationException();
   }
 
-  private Stream<TableDescriptor> getTables(MasterProcedureEnv env) throws IOException {
-    ReplicationPeerConfig peerConfig = getNewPeerConfig();
-    Stream<TableDescriptor> stream = env.getMasterServices().getTableDescriptors().getAll().values()
-      .stream().filter(TableDescriptor::hasGlobalReplicationScope)
-      .filter(td -> ReplicationUtils.contains(peerConfig, td.getTableName()));
-    ReplicationPeerConfig oldPeerConfig = getOldPeerConfig();
-    if (oldPeerConfig != null && oldPeerConfig.isSerial()) {
-      stream = stream.filter(td -> !ReplicationUtils.contains(oldPeerConfig, td.getTableName()));
-    }
-    return stream;
+  protected void updateLastPushedSequenceIdForSerialPeer(MasterProcedureEnv env)
+      throws IOException, ReplicationException {
+    throw new UnsupportedOperationException();
   }
 
   private void reopenRegions(MasterProcedureEnv env) throws IOException {
-    Stream<TableDescriptor> stream = getTables(env);
+    ReplicationPeerConfig peerConfig = getNewPeerConfig();
+    ReplicationPeerConfig oldPeerConfig = getOldPeerConfig();
     TableStateManager tsm = env.getMasterServices().getTableStateManager();
-    stream.filter(td -> {
+    for (TableDescriptor td : env.getMasterServices().getTableDescriptors().getAll().values()) {
+      if (!td.hasGlobalReplicationScope()) {
+        continue;
+      }
+      TableName tn = td.getTableName();
+      if (!ReplicationUtils.contains(peerConfig, tn)) {
+        continue;
+      }
+      if (oldPeerConfig != null && oldPeerConfig.isSerial() &&
+        ReplicationUtils.contains(oldPeerConfig, tn)) {
+        continue;
+      }
       try {
-        return tsm.getTableState(td.getTableName()).isEnabled();
+        if (!tsm.getTableState(tn).isEnabled()) {
+          continue;
+        }
       } catch (TableStateNotFoundException e) {
-        return false;
-      } catch (IOException e) {
-        throw new UncheckedIOException(e);
+        continue;
       }
-    }).forEach(td -> {
-      try {
-        addChildProcedure(env.getAssignmentManager().createReopenProcedures(
-          env.getAssignmentManager().getRegionStates().getRegionsOfTable(td.getTableName())));
-      } catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
-    });
+      addChildProcedure(env.getAssignmentManager().createReopenProcedures(
+        env.getAssignmentManager().getRegionStates().getRegionsOfTable(tn)));
+    }
   }
 
   private void addToMap(Map<String, Long> lastSeqIds, String encodedRegionName, long barrier,
       ReplicationQueueStorage queueStorage) throws ReplicationException {
     if (barrier >= 0) {
       lastSeqIds.put(encodedRegionName, barrier);
-      if (lastSeqIds.size() >= SET_LAST_SEQ_ID_BATCH_SIZE) {
+      if (lastSeqIds.size() >= UPDATE_LAST_SEQ_ID_BATCH_SIZE) {
         queueStorage.setLastSequenceIds(peerId, lastSeqIds);
         lastSeqIds.clear();
       }
     }
   }
 
-  private void setLastSequenceIdForSerialPeer(MasterProcedureEnv env)
-      throws IOException, ReplicationException {
-    Stream<TableDescriptor> stream = getTables(env);
+  protected final void setLastPushedSequenceId(MasterProcedureEnv env,
+      ReplicationPeerConfig peerConfig) throws IOException, ReplicationException {
+    Map<String, Long> lastSeqIds = new HashMap<String, Long>();
+    for (TableDescriptor td : env.getMasterServices().getTableDescriptors().getAll().values()) {
+      if (!td.hasGlobalReplicationScope()) {
+        continue;
+      }
+      TableName tn = td.getTableName();
+      if (!ReplicationUtils.contains(peerConfig, tn)) {
+        continue;
+      }
+      setLastPushedSequenceIdForTable(env, tn, lastSeqIds);
+    }
+    if (!lastSeqIds.isEmpty()) {
+      env.getReplicationPeerManager().getQueueStorage().setLastSequenceIds(peerId, lastSeqIds);
+    }
+  }
+
+  // Will put the encodedRegionName->lastPushedSeqId pair into the map passed in, if the map is
+  // large enough we will call queueStorage.setLastSequenceIds and clear the map. So the caller
+  // should not forget to check whether the map is empty at last, if not you should call
+  // queueStorage.setLastSequenceIds to write out the remaining entries in the map.
+  protected final void setLastPushedSequenceIdForTable(MasterProcedureEnv env, TableName tableName,
+      Map<String, Long> lastSeqIds) throws IOException, ReplicationException {
     TableStateManager tsm = env.getMasterServices().getTableStateManager();
     ReplicationQueueStorage queueStorage = env.getReplicationPeerManager().getQueueStorage();
     Connection conn = env.getMasterServices().getConnection();
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    Map<String, Long> lastSeqIds = new HashMap<String, Long>();
-    stream.forEach(td -> {
-      try {
-        if (tsm.getTableState(td.getTableName()).isEnabled()) {
-          for (Pair<String, Long> name2Barrier : MetaTableAccessor
-            .getTableEncodedRegionNameAndLastBarrier(conn, td.getTableName())) {
-            addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
-              queueStorage);
-          }
-        } else {
-          for (RegionInfo region : regionStates.getRegionsOfTable(td.getTableName(), true)) {
-            long maxSequenceId =
-              WALSplitter.getMaxRegionSequenceId(mfs.getFileSystem(), mfs.getRegionDir(region));
-            addToMap(lastSeqIds, region.getEncodedName(), maxSequenceId, queueStorage);
-          }
-        }
-      } catch (IOException | ReplicationException e) {
-        throw new RuntimeException(e);
+    boolean isTableEnabled;
+    try {
+      isTableEnabled = tsm.getTableState(tableName).isEnabled();
+    } catch (TableStateNotFoundException e) {
+      return;
+    }
+    if (isTableEnabled) {
+      for (Pair<String, Long> name2Barrier : MetaTableAccessor
+        .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
+        addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
+          queueStorage);
       }
-    });
-    if (!lastSeqIds.isEmpty()) {
-      queueStorage.setLastSequenceIds(peerId, lastSeqIds);
+    } else {
+      for (RegionInfo region : regionStates.getRegionsOfTable(tableName, true)) {
+        long maxSequenceId =
+          WALSplitter.getMaxRegionSequenceId(mfs.getFileSystem(), mfs.getRegionDir(region));
+        addToMap(lastSeqIds, region.getEncodedName(), maxSequenceId, queueStorage);
+      }
     }
   }
 
@@ -232,8 +247,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         return Flow.HAS_MORE_STATE;
       case REFRESH_PEER_ON_RS:
         refreshPeer(env, getPeerOperationType());
-        setNextState(reopenRegionsAfterRefresh() ? PeerModificationState.SERIAL_PEER_REOPEN_REGIONS
-          : PeerModificationState.POST_PEER_MODIFICATION);
+        setNextState(nextStateAfterRefresh());
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_REOPEN_REGIONS:
         try {
@@ -246,7 +260,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_UPDATE_LAST_PUSHED_SEQ_ID:
         try {
-          setLastSequenceIdForSerialPeer(env);
+          updateLastPushedSequenceIdForSerialPeer(env);
         } catch (Exception e) {
           LOG.warn("{} set last sequence id for peer {} failed, retry", getClass().getName(),
             peerId, e);
