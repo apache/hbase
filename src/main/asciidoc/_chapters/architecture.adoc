@@ -951,8 +951,11 @@ However, if a RegionServer crashes or becomes unavailable before the MemStore is
 If writing to the WAL fails, the entire operation to modify the data fails.
 
 HBase uses an implementation of the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/wal/WAL.html[WAL] interface.
-Usually, there is only one instance of a WAL per RegionServer.
-The RegionServer records Puts and Deletes to it, before recording them to the <<store.memstore>> for the affected <<store>>.
+Usually, there is only one instance of a WAL per RegionServer. An exception
+is the RegionServer that is carrying _hbase:meta_; the _meta_ table gets its
+own dedicated WAL.
+The RegionServer records Puts and Deletes to its WAL, before recording them
+these Mutations <<store.memstore>> for the affected <<store>>.
 
 .The HLog
 [NOTE]
@@ -962,9 +965,30 @@ In 0.94, HLog was the name of the implementation of the WAL.
 You will likely find references to the HLog in documentation tailored to these older versions.
 ====
 
-The WAL resides in HDFS in the _/hbase/WALs/_ directory (prior to HBase 0.94, they were stored in _/hbase/.logs/_), with subdirectories per region.
+The WAL resides in HDFS in the _/hbase/WALs/_ directory, with subdirectories per region.
 
-For more general information about the concept of write ahead logs, see the Wikipedia link:http://en.wikipedia.org/wiki/Write-ahead_logging[Write-Ahead Log] article.
+For more general information about the concept of write ahead logs, see the Wikipedia
+link:http://en.wikipedia.org/wiki/Write-ahead_logging[Write-Ahead Log] article.
+
+
+[[wal.providers]]
+==== WAL Providers
+In HBase, there are a number of WAL imlementations (or 'Providers'). Each is known
+by a short name label (that unfortunately is not always descriptive). You set the provider in
+_hbase-site.xml_ passing the WAL provder short-name as the value on the
+_hbase.wal.provider_ property (Set the provider for _hbase:meta_ using the
+_hbase.wal.meta_provider_ property).
+
+ * _asyncfs_: The *default*. New since hbase-2.0.0 (HBASE-15536, HBASE-14790). This _AsyncFSWAL_ provider, as it identifies itself in RegionServer logs, is built on a new non-blocking dfsclient implementation. It is currently resident in the hbase codebase but intent is to move it back up into HDFS itself. WALs edits are written concurrently ("fan-out") style to each of the WAL-block replicas on each DataNode rather than in a chained pipeline as the default client does. Latencies should be better. See link:https://www.slideshare.net/HBaseCon/apache-hbase-improvements-and-practices-at-xiaomi[Apache HBase Improements and Practices at Xiaomi] at slide 14 onward for more detail on implementation.
+ * _filesystem_: This was the default in hbase-1.x releases. It is built on the blocking _DFSClient_ and writes to replicas in classic _DFSCLient_ pipeline mode. In logs it identifies as _FSHLog_ or _FSHLogProvider_.
+ * _multiwal_: This provider is made of multiple instances of _asyncfs_ or  _filesystem_. See the next section for more on _multiwal_.
+
+Look for the lines like the below in the RegionServer log to see which provider is in place (The below shows the default AsyncFSWALProvider):
+
+----
+2018-04-02 13:22:37,983 INFO  [regionserver/ve0528:16020] wal.WALFactory: Instantiating WALProvider of type class org.apache.hadoop.hbase.wal.AsyncFSWALProvider
+----
+
 
 ==== MultiWAL
 With a single WAL per RegionServer, the RegionServer must write to the WAL serially, because HDFS files must be sequential. This causes the WAL to be a performance bottleneck.
@@ -1219,6 +1243,18 @@ A possible downside to WAL compression is that we lose more data from the last b
 mid-write. If entries in this last block were added with new dictionary entries but we failed persist the amended
 dictionary because of an abrupt termination, a read of this last block may not be able to resolve last-written entries.
 
+[[wal.durability]]
+==== Durability
+It is possible to set _durability_ on each Mutation or on a Table basis. Options include:
+
+ * _SKIP_WAL_: Do not write Mutations to the WAL (See the next section, <<wal.disable>>).
+ * _ASYNC_WAL_: Write the WAL asynchronously; do not hold-up clients waiting on the sync of their write to the filesystem but return immediately; the Mutation will be flushed to the WAL at a later time. This option currently may lose data. See HBASE-16689.
+ * _SYNC_WAL_: The *default*. Each edit is sync'd to HDFS before we return success to the client.
+ * _FSYNC_WAL_: Each edit is fsync'd to HDFS and the filesystem before we return success to the client.
+
+Do not confuse the _ASYNC_WAL_ option on a Mutation or Table with the _AsyncFSWAL_ writer; they are distinct
+options unfortunately closely named
+
 [[wal.disable]]
 ==== Disabling the WAL
 
@@ -1232,6 +1268,7 @@ Use the `Mutation.setDurability(Durability.SKIP_WAL)` and Mutation.getDurability
 There is no way to disable the WAL for only a specific table.
 
 WARNING: If you disable the WAL for anything other than bulk loads, your data is at risk.
+
 
 [[regions.arch]]
 == Regions
