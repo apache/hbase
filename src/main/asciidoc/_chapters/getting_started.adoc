@@ -371,7 +371,7 @@ The following command starts 3 backup servers using ports 16002/16012, 16003/160
 +
 ----
 
-$ ./bin/local-master-backup.sh 2 3 5
+$ ./bin/local-master-backup.sh start 2 3 5
 ----
 +
 To kill a backup master without killing the entire cluster, you need to find its process ID (PID). The PID is stored in a file with a name like _/tmp/hbase-USER-X-master.pid_.
