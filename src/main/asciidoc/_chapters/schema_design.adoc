@@ -1148,15 +1148,35 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 - `dfs.namenode.avoid.read.stale.datanode = true`
 - `dfs.namenode.avoid.write.stale.datanode = true`
 
+[[shortcircuit.reads]]
 ===  Optimize on the Server Side for Low Latency
+Skip the network for local blocks when the RegionServer goes to read from HDFS by exploiting HDFS's
+link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html[Short-Circuit Local Reads] facility.
+Note how setup must be done both at the datanode and on the dfsclient ends of the conneciton -- i.e. at the RegionServer
+and how both ends need to have loaded the hadoop native `.so` library.
+After configuring your hadoop setting _dfs.client.read.shortcircuit_ to _true_ and configuring
+the _dfs.domain.socket.path_ path for the datanode and dfsclient to share and restarting, next configure
+the regionserver/dfsclient side.
 
-* Skip the network for local blocks. In `hbase-site.xml`, set the following parameters:
+* In `hbase-site.xml`, set the following parameters:
 - `dfs.client.read.shortcircuit = true`
-- `dfs.client.read.shortcircuit.buffer.size = 131072` (Important to avoid OOME)
+- `dfs.client.read.shortcircuit.skip.checksum = true` so we don't double checksum (HBase does its own checksumming to save on i/os. See <<hbase.regionserver.checksum.verify.performance>> for more on this. 
+- `dfs.domain.socket.path` to match what was set for the datanodes.
+- `dfs.client.read.shortcircuit.buffer.size = 131072` Important to avoid OOME -- hbase has a default it uses if unset, see `hbase.dfs.client.read.shortcircuit.buffer.size`; its default is 131072.
 * Ensure data locality. In `hbase-site.xml`, set `hbase.hstore.min.locality.to.skip.major.compact = 0.7` (Meaning that 0.7 \<= n \<= 1)
 * Make sure DataNodes have enough handlers for block transfers. In `hdfs-site.xml`, set the following parameters:
 - `dfs.datanode.max.xcievers >= 8192`
 - `dfs.datanode.handler.count =` number of spindles
+
+Check the RegionServer logs after restart. You should only see complaint if misconfiguration.
+Otherwise, shortcircuit read operates quietly in background. It does not provide metrics so
+no optics on how effective it is but read latencies should show a marked improvement, especially if
+good data locality, lots of random reads, and dataset is larger than available cache.
+
+For more on short-circuit reads, see Colin's old blog on rollout,
+link:http://blog.cloudera.com/blog/2013/08/how-improved-short-circuit-local-reads-bring-better-performance-and-security-to-hadoop/[How Improved Short-Circuit Local Reads Bring Better Performance and Security to Hadoop].
+The link:https://issues.apache.org/jira/browse/HDFS-347[HDFS-347] issue also makes for an
+interesting read showing the HDFS community at its best (caveat a few comments).
 
 ===  JVM Tuning
 
