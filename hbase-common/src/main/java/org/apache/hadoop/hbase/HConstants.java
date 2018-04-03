@@ -217,6 +217,13 @@ public final class HConstants {
   public static final String ZOOKEEPER_CLIENT_PORT =
       ZK_CFG_PROPERTY_PREFIX + CLIENT_PORT_STR;
 
+  /**
+   * Will be removed in hbase 3.0
+   * @deprecated use {@link #DEFAULT_ZOOKEEPER_CLIENT_PORT} instead
+   */
+  @Deprecated
+  public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
+
   /** Default client port that the zookeeper listens on */
   public static final int DEFAULT_ZOOKEEPER_CLIENT_PORT = 2181;
 
