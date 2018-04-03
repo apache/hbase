@@ -63,6 +63,7 @@ pipeline {
     stage ('yetus install') {
       steps {
         sh  '''#!/usr/bin/env bash
+set -e
 echo "Ensure we have a copy of Apache Yetus."
 if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
   YETUS_DIR="${WORKSPACE}/yetus-${YETUS_RELEASE}"
@@ -101,6 +102,7 @@ fi
         // Set up the file we need at PERSONALITY_FILE location
         dir ("tools") {
           sh """#!/usr/bin/env bash
+set -e
 echo "Downloading Project personality."
 curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           """
@@ -144,12 +146,14 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               checkout scm
             }
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             // TODO roll this into the hbase_nightly_yetus script
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
@@ -202,11 +206,13 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               checkout scm
             }
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
@@ -273,11 +279,13 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               checkout scm
             }
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
@@ -351,11 +359,13 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               checkout scm
             }
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
@@ -425,6 +435,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               checkout scm
             }
             sh '''#!/usr/bin/env bash
+              set -e
               rm -rf "output-srctarball/machine" && mkdir "output-srctarball/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "output-srctarball/machine"
 '''

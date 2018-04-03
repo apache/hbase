@@ -33,6 +33,11 @@ fi
 
 declare output=$1
 
+if [ ! -d "${output}" ] || [ ! -w "${output}" ]; then
+  echo "Specified output directory must exist and be writable." >&2
+  exit 1
+fi
+
 echo "getting machine specs, find in ${BUILD_URL}/artifact/${output}/"
 echo "JAVA_HOME: ${JAVA_HOME}" >"${output}/java_home" 2>&1 || true
 ls -l "${JAVA_HOME}" >"${output}/java_home_ls" 2>&1 || true
