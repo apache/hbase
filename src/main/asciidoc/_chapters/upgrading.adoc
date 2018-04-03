@@ -546,6 +546,48 @@ The Java client API for HBase has a number of changes that break both source and
 This would be a good place to link to an appendix on migrating applications
 ////
 
+[[upgrade2.0.coprocessors]]
+==== Upgrading Coprocessors to 2.0
+Coprocessors have changed substantially in 2.0 ranging from top level design changes in class
+hierarchies to changed/removed methods, interfaces, etc.
+(Parent jira: link:https://issues.apache.org/jira/browse/HBASE-18169[HBASE-18169 Coprocessor fix
+and cleanup before 2.0.0 release]). Some of the reasons for such widespread changes:
+
+. Pass Interfaces instead of Implementations; e.g. TableDescriptor instead of HTableDescriptor and
+Region instead of HRegion (link:https://issues.apache.org/jira/browse/HBASE-18241[HBASE-18241]
+Change client.Table and client.Admin to not use HTableDescriptor).
+. Design refactor so implementers need to fill out less boilerplate and so we can do more
+compile-time checking (link:https://issues.apache.org/jira/browse/HBASE-17732[HBASE-17732])
+. Purge Protocol Buffers from Coprocessor API
+(link:https://issues.apache.org/jira/browse/HBASE-18859[HBASE-18859],
+link:https://issues.apache.org/jira/browse/HBASE-16769[HBASE-16769], etc)
+. Cut back on what we expose to Coprocessors removing hooks on internals that were too private to
+ expose (for eg. link:https://issues.apache.org/jira/browse/HBASE-18453[HBASE-18453]
+ CompactionRequest should not be exposed to user directly;
+ link:https://issues.apache.org/jira/browse/HBASE-18298[HBASE-18298] RegionServerServices Interface
+ cleanup for CP expose; etc)
+
+To use coprocessors in 2.0, they should be rebuilt against new API otherwise they will fail to
+load and HBase processes will die.
+
+Suggested order of changes to upgrade the coprocessors:
+
+. Directly implement observer interfaces instead of extending Base*Observer classes. Change
+ `Foo extends BaseXXXObserver` to `Foo implements XXXObserver`.
+ (link:https://issues.apache.org/jira/browse/HBASE-17312[HBASE-17312]).
+. Adapt to design change from Inheritence to Composition
+ (link:https://issues.apache.org/jira/browse/HBASE-17732[HBASE-17732]) by following
+ link:https://github.com/apache/hbase/blob/master/dev-support/design-docs/Coprocessor_Design_Improvements-Use_composition_instead_of_inheritance-HBASE-17732.adoc#migrating-existing-cps-to-new-design[this
+ example].
+. getTable() has been removed from the CoprocessorEnvrionment, coprocessors should self-manage
+ Table instances.
+
+Some examples of writing coprocessors with new API can be found in hbase-example module
+link:https://github.com/apache/hbase/tree/branch-2.0/hbase-examples/src/main/java/org/apache/hadoop/hbase/coprocessor/example[here] .
+
+Lastly, if an api has been changed/removed that breaks you in an irreparable way, and if there's a
+good justification to add it back, bring it our notice (dev@hbase.apache.org).
+
 [[upgrade2.0.rolling.upgrades]]
 ==== Rolling Upgrade from 1.x to 2.x
 There is no rolling upgrade from HBase 1.x+ to HBase 2.x+. In order to perform a zero downtime upgrade, you will need to run an additional cluster in parallel and handle failover in application logic.
@@ -556,6 +598,7 @@ There is no rolling upgrade from HBase 1.x+ to HBase 2.x+. In order to perform a
 To upgrade an existing HBase 1.x cluster, you should:
 
 * Clean shutdown of existing 1.x cluster
+* Update coprocessors
 * Upgrade Master roles first
 * Upgrade RegionServers
 * (Eventually) Upgrade Clients
