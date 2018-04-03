@@ -108,6 +108,13 @@ Usage: hbase canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]
    -D<configProperty>=<value> assigning or override the configuration params
 ----
 
+[NOTE]
+The `Sink` class is instantiated using the `hbase.canary.sink.class` configuration property which
+will also determine the used Monitor class. In the absence of this property RegionServerStdOutSink
+will be used. You need to use the Sink according to the passed parameters to the _canary_ command.
+As an example you have to set `hbase.canary.sink.class` property to
+`org.apache.hadoop.hbase.tool.Canary$RegionStdOutSink` for using table parameters.
+
 This tool will return non zero error codes to user for collaborating with other monitoring tools, such as Nagios.
 The error code definitions are:
 
