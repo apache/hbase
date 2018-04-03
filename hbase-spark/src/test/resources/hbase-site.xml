@@ -154,4 +154,11 @@
       Enable replay sanity checks on procedure tests.
     </description>
   </property>
+  <property>
+    <name>hbase.localcluster.assign.random.ports</name>
+    <value>true</value>
+    <description>
+      Assign random ports to master and RS info server (UI).
+    </description>
+  </property>
 </configuration>
