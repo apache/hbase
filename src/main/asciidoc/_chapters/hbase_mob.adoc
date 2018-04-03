@@ -46,6 +46,12 @@ configure the MOB file reader's cache settings for each RegionServer (see
 Client code does not need to change to take advantage of HBase MOB support. The
 feature is transparent to the client.
 
+MOB compaction
+
+MOB data is flushed into MOB files after MemStore flush. There will be lots of MOB files
+after some time. To reduce MOB file count, there is a periodic task which compacts
+small MOB files into a large one (MOB compaction).
+
 === Configuring Columns for MOB
 
 You can configure columns to support MOB during table creation or alteration,
@@ -75,6 +81,42 @@ hcd.setMobThreshold(102400L);
 ----
 ====
 
+=== Configure MOB Compaction Policy
+
+By default, MOB files for one specific day are compacted into one large MOB file.
+To reduce MOB file count more, there are other MOB Compaction policies supported.
+
+daily policy  - compact MOB Files for one day into one large MOB file (default policy)
+weekly policy - compact MOB Files for one week into one large MOB file
+montly policy - compact MOB Files for one  month into one large MOB File
+
+.Configure MOB compaction policy Using HBase Shell
+====
+----
+hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'daily'}
+hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'weekly'}
+hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'monthly'}
+
+hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'daily'}
+hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'weekly'}
+hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'monthly'}
+----
+====
+
+=== Configure MOB Compaction mergeable threshold
+
+If the size of a mob file is less than this value, it's regarded as a small file and needs to
+be merged in mob compaction. The default value is 1280MB.
+
+====
+[source,xml]
+----
+<property>
+    <name>hbase.mob.compaction.mergeable.threshold</name>
+    <value>10000000000</value>
+</property>
+----
+====
 
 === Testing MOB
 
