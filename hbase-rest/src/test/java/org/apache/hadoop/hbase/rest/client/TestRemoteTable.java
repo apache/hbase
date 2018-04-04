@@ -353,18 +353,27 @@ public class TestRemoteTable {
     Put put = new Put(ROW_3);
     put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     put.addColumn(COLUMN_2, QUALIFIER_2, VALUE_2);
+    put.addColumn(COLUMN_3, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_3, QUALIFIER_2, VALUE_2);
     remoteTable.put(put);
 
     Get get = new Get(ROW_3);
     get.addFamily(COLUMN_1);
     get.addFamily(COLUMN_2);
+    get.addFamily(COLUMN_3);
     Result result = remoteTable.get(get);
     byte[] value1 = result.getValue(COLUMN_1, QUALIFIER_1);
     byte[] value2 = result.getValue(COLUMN_2, QUALIFIER_2);
+    byte[] value3 = result.getValue(COLUMN_3, QUALIFIER_1);
+    byte[] value4 = result.getValue(COLUMN_3, QUALIFIER_2);
     assertNotNull(value1);
     assertTrue(Bytes.equals(VALUE_1, value1));
     assertNotNull(value2);
     assertTrue(Bytes.equals(VALUE_2, value2));
+    assertNotNull(value3);
+    assertTrue(Bytes.equals(VALUE_1, value3));
+    assertNotNull(value4);
+    assertTrue(Bytes.equals(VALUE_2, value4));
 
     Delete delete = new Delete(ROW_3);
     delete.addColumn(COLUMN_2, QUALIFIER_2);
@@ -393,6 +402,19 @@ public class TestRemoteTable {
     assertNotNull(value1);
     assertTrue(Bytes.equals(VALUE_1, value1));
     assertNull(value2);
+
+    // Delete column family from row
+    delete = new Delete(ROW_3);
+    delete.addFamily(COLUMN_3);
+    remoteTable.delete(delete);
+
+    get = new Get(ROW_3);
+    get.addFamily(COLUMN_3);
+    result = remoteTable.get(get);
+    value3 = result.getValue(COLUMN_3, QUALIFIER_1);
+    value4 = result.getValue(COLUMN_3, QUALIFIER_2);
+    assertNull(value3);
+    assertNull(value4);
 
     delete = new Delete(ROW_3);
     remoteTable.delete(delete);
