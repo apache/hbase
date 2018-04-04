@@ -1173,6 +1173,11 @@ Otherwise, shortcircuit read operates quietly in background. It does not provide
 no optics on how effective it is but read latencies should show a marked improvement, especially if
 good data locality, lots of random reads, and dataset is larger than available cache.
 
+Other advanced configurations that you might play with, especially if shortcircuit functionality
+is complaining in the logs,  include `dfs.client.read.shortcircuit.streams.cache.size` and
+`dfs.client.socketcache.capacity`. Documentation is sparse on these options. You'll have to
+read source code.
+
 For more on short-circuit reads, see Colin's old blog on rollout,
 link:http://blog.cloudera.com/blog/2013/08/how-improved-short-circuit-local-reads-bring-better-performance-and-security-to-hadoop/[How Improved Short-Circuit Local Reads Bring Better Performance and Security to Hadoop].
 The link:https://issues.apache.org/jira/browse/HDFS-347[HDFS-347] issue also makes for an
