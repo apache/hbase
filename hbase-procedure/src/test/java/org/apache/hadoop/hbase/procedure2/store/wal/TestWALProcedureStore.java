@@ -54,6 +54,9 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -757,6 +760,40 @@ public class TestWALProcedureStore {
     assertEquals(1, loader.getRunnableCount());
     assertEquals(0, loader.getCompletedCount());
     assertEquals(0, loader.getCorruptedCount());
+  }
+
+  @Test
+  public void testLogFileAleadExists() throws IOException {
+    final boolean[] tested = {false};
+    WALProcedureStore mStore = Mockito.spy(procStore);
+
+    Answer<Boolean> ans = new Answer<Boolean>() {
+      @Override
+      public Boolean answer(InvocationOnMock invocationOnMock) throws Throwable {
+        long logId = ((Long) invocationOnMock.getArgument(0)).longValue();
+        switch ((int) logId) {
+          case 2:
+            // Create a file so that real rollWriter() runs into file exists condition
+            Path logFilePath = mStore.getLogFilePath(logId);
+            mStore.getFileSystem().create(logFilePath);
+            break;
+          case 3:
+            // Success only when we retry with logId 3
+            tested[0] = true;
+          default:
+            break;
+        }
+        return (Boolean) invocationOnMock.callRealMethod();
+      }
+    };
+
+    // First time Store has one log file, next id will be 2
+    Mockito.doAnswer(ans).when(mStore).rollWriter(2);
+    // next time its 3
+    Mockito.doAnswer(ans).when(mStore).rollWriter(3);
+
+    mStore.recoverLease();
+    assertTrue(tested[0]);
   }
 
   @Test
