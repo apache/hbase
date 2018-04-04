@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -135,6 +135,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
@@ -239,6 +240,12 @@ public class HBaseFsck extends Configured implements Closeable {
   // ShutdownHook and the main code. We cleanup only if the connect() is
   // successful
   private final AtomicBoolean hbckLockCleanup = new AtomicBoolean(false);
+
+  // Unsupported options in HBase 2.0+
+  private static final Set<String> unsupportedOptionsInV2 = Sets.newHashSet("-fix",
+      "-fixAssignments", "-fixMeta", "-fixHdfsHoles", "-fixHdfsOrphans", "-fixTableOrphans",
+      "-fixHdfsOverlaps", "-sidelineBigOverlaps", "-fixSplitParents", "-removeParents",
+      "-fixEmptyMetaCells", "-repair", "-repairHoles", "-maxOverlapsToSideline", "-maxMerge");
 
   /***********
    * Options
@@ -4118,7 +4125,8 @@ public class HBaseFsck extends Configured implements Closeable {
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
       LINGERING_HFILELINK, WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, BOUNDARIES_ERROR,
-      ORPHAN_TABLE_STATE, NO_TABLE_STATE, UNDELETED_REPLICATION_QUEUE, DUPE_ENDKEYS
+      ORPHAN_TABLE_STATE, NO_TABLE_STATE, UNDELETED_REPLICATION_QUEUE, DUPE_ENDKEYS,
+      UNSUPPORTED_OPTION
     }
     void clear();
     void report(String message);
@@ -4775,6 +4783,14 @@ public class HBaseFsck extends Configured implements Closeable {
   protected HBaseFsck printUsageAndExit() {
     StringWriter sw = new StringWriter(2048);
     PrintWriter out = new PrintWriter(sw);
+    out.println("");
+    out.println("-----------------------------------------------------------------------");
+    out.println("NOTE: As of HBase version 2.0, the hbck tool is significantly changed.");
+    out.println("In general, all Read-Only options are supported and can be be used");
+    out.println("safely. Most -fix/ -repair options are NOT supported. Please see usage");
+    out.println("below for details on which options are not supported.");
+    out.println("-----------------------------------------------------------------------");
+    out.println("");
     out.println("Usage: fsck [opts] {only tables}");
     out.println(" where [opts] are:");
     out.println("   -help Display help options (this)");
@@ -4791,43 +4807,48 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("   -exclusive Abort if another hbck is exclusive or fixing.");
 
     out.println("");
-    out.println("  Metadata Repair options: (expert features, use with caution!)");
-    out.println("   -fix              Try to fix region assignments.  This is for backwards compatiblity");
-    out.println("   -fixAssignments   Try to fix region assignments.  Replaces the old -fix");
-    out.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
-    out.println("   -noHdfsChecking   Don't load/check region info from HDFS."
-        + " Assumes hbase:meta region info is good. Won't check/fix any HDFS issue, e.g. hole, orphan, or overlap");
-    out.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
-    out.println("   -fixHdfsOrphans   Try to fix region dirs with no .regioninfo file in hdfs");
-    out.println("   -fixTableOrphans  Try to fix table dirs with no .tableinfo file in hdfs (online mode only)");
-    out.println("   -fixHdfsOverlaps  Try to fix region overlaps in hdfs.");
-    out.println("   -fixVersionFile   Try to fix missing hbase.version file in hdfs.");
-    out.println("   -maxMerge <n>     When fixing region overlaps, allow at most <n> regions to merge. (n=" + DEFAULT_MAX_MERGE +" by default)");
-    out.println("   -sidelineBigOverlaps  When fixing region overlaps, allow to sideline big overlaps");
-    out.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
-    out.println("   -fixSplitParents  Try to force offline split parents to be online.");
-    out.println("   -removeParents    Try to offline and sideline lingering parents and keep daughter regions.");
-    out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
-    out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
-    out.println("   -fixHFileLinks  Try to offline lingering HFileLinks");
-    out.println("   -fixEmptyMetaCells  Try to fix hbase:meta entries not referencing any region"
-        + " (empty REGIONINFO_QUALIFIER rows)");
-
-    out.println("");
     out.println("  Datafile Repair options: (expert features, use with caution!)");
     out.println("   -checkCorruptHFiles     Check all Hfiles by opening them to make sure they are valid");
     out.println("   -sidelineCorruptHFiles  Quarantine corrupted HFiles.  implies -checkCorruptHFiles");
 
     out.println("");
-    out.println("  Metadata Repair shortcuts");
+    out.println(" Replication options");
+    out.println("   -fixReplication   Deletes replication queues for removed peers");
+
+    out.println("");
+    out.println("  Metadata Repair options supported as of version 2.0: (expert features, use with caution!)");
+    out.println("   -fixVersionFile   Try to fix missing hbase.version file in hdfs.");
+    out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
+    out.println("   -fixHFileLinks  Try to offline lingering HFileLinks");
+    out.println("   -noHdfsChecking   Don't load/check region info from HDFS."
+        + " Assumes hbase:meta region info is good. Won't check/fix any HDFS issue, e.g. hole, orphan, or overlap");
+    out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
+
+    out.println("");
+    out.println("NOTE: Following options are NOT supported as of HBase version 2.0+.");
+    out.println("");
+    out.println("  UNSUPPORTED Metadata Repair options: (expert features, use with caution!)");
+    out.println("   -fix              Try to fix region assignments.  This is for backwards compatiblity");
+    out.println("   -fixAssignments   Try to fix region assignments.  Replaces the old -fix");
+    out.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
+    out.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
+    out.println("   -fixHdfsOrphans   Try to fix region dirs with no .regioninfo file in hdfs");
+    out.println("   -fixTableOrphans  Try to fix table dirs with no .tableinfo file in hdfs (online mode only)");
+    out.println("   -fixHdfsOverlaps  Try to fix region overlaps in hdfs.");
+    out.println("   -maxMerge <n>     When fixing region overlaps, allow at most <n> regions to merge. (n=" + DEFAULT_MAX_MERGE +" by default)");
+    out.println("   -sidelineBigOverlaps  When fixing region overlaps, allow to sideline big overlaps");
+    out.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
+    out.println("   -fixSplitParents  Try to force offline split parents to be online.");
+    out.println("   -removeParents    Try to offline and sideline lingering parents and keep daughter regions.");
+    out.println("   -fixEmptyMetaCells  Try to fix hbase:meta entries not referencing any region"
+        + " (empty REGIONINFO_QUALIFIER rows)");
+
+    out.println("");
+    out.println("  UNSUPPORTED Metadata Repair shortcuts");
     out.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
         "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps -fixReferenceFiles" +
         "-fixHFileLinks");
     out.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
-
-    out.println("");
-    out.println(" Replication options");
-    out.println("   -fixReplication   Deletes replication queues for removed peers");
 
     out.flush();
     errors.reportError(ERROR_CODE.WRONG_USAGE, sw.toString());
@@ -5039,6 +5060,12 @@ public class HBaseFsck extends Configured implements Closeable {
     // do the real work of hbck
     connect();
 
+    // after connecting to server above, we have server version
+    // check if unsupported option is specified based on server version
+    if (!isOptionsSupported(args)) {
+      return printUsageAndExit();
+    }
+
     try {
       // if corrupt file mode is on, first fix them since they may be opened later
       if (checkCorruptHFiles || sidelineCorruptHFiles) {
@@ -5089,6 +5116,24 @@ public class HBaseFsck extends Configured implements Closeable {
       IOUtils.closeQuietly(this);
     }
     return this;
+  }
+
+  private boolean isOptionsSupported(String[] args) {
+    boolean result = true;
+    String hbaseServerVersion = status.getHBaseVersion();
+    Object[] versionComponents = VersionInfo.getVersionComponents(hbaseServerVersion);
+    if (versionComponents[0] instanceof Integer && ((Integer)versionComponents[0]) >= 2) {
+      // Process command-line args.
+      for (String arg : args) {
+        if (unsupportedOptionsInV2.contains(arg)) {
+          errors.reportError(ERROR_CODE.UNSUPPORTED_OPTION,
+              "option '" + arg + "' is not " + "supportted!");
+          result = false;
+          break;
+        }
+      }
+    }
+    return result;
   }
 
   /**
