@@ -115,13 +115,16 @@ public class RemoteHTable implements Table {
           Iterator ii = quals.iterator();
           while (ii.hasNext()) {
             sb.append(toURLEncodedBytes((byte[])e.getKey()));
-            sb.append(':');
             Object o = ii.next();
             // Puts use byte[] but Deletes use KeyValue
             if (o instanceof byte[]) {
-              sb.append(toURLEncodedBytes((byte[])o));
+              sb.append(':');
+              sb.append(toURLEncodedBytes((byte[]) o));
             } else if (o instanceof KeyValue) {
-              sb.append(toURLEncodedBytes(CellUtil.cloneQualifier((KeyValue)o)));
+              if (((KeyValue) o).getQualifierLength() != 0) {
+                sb.append(':');
+                sb.append(toURLEncodedBytes(CellUtil.cloneQualifier((KeyValue) o)));
+              }
             } else {
               throw new RuntimeException("object type not handled");
             }
