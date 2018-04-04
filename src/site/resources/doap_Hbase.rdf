@@ -31,7 +31,7 @@
     <description>Use Apache HBase software when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware. HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's Bigtable: A Distributed Storage System for Structured Data by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS. </description>
     <bug-database rdf:resource="http://issues.apache.org/jira/browse/HBASE" />
     <mailing-list rdf:resource="http://hbase.apache.org/mail-lists.html" />
-    <download-page rdf:resource="http://www.apache.org/dyn/closer.cgi/hbase/" />
+    <download-page rdf:resource="http://www.apache.org/dyn/closer.lua/hbase/" />
     <programming-language>Java</programming-language>
     <category rdf:resource="http://projects.apache.org/category/database" />
     <release>

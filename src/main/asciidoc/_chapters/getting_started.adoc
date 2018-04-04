@@ -52,7 +52,7 @@ See <<java,Java>> for information about supported JDK versions.
 === Get Started with HBase
 
 .Procedure: Download, Configure, and Start HBase in Standalone Mode
-. Choose a download site from this list of link:https://www.apache.org/dyn/closer.cgi/hbase/[Apache Download Mirrors].
+. Choose a download site from this list of link:https://www.apache.org/dyn/closer.lua/hbase/[Apache Download Mirrors].
   Click on the suggested top link.
   This will take you to a mirror of _HBase Releases_.
   Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem.

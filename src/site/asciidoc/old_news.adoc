@@ -57,7 +57,7 @@ October 25th, 2012:: link:http://www.meetup.com/HBase-NYC/events/81728932/[Strat
 
 September 11th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/80621872/[Contributor's Pow-Wow at HortonWorks HQ.]
 
-August 8th, 2012:: link:https://www.apache.org/dyn/closer.cgi/hbase/[Apache HBase 0.94.1 is available for download]
+August 8th, 2012:: link:https://www.apache.org/dyn/closer.lua/hbase/[Apache HBase 0.94.1 is available for download]
 
 June 15th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/59829652/[Birds-of-a-feather] in San Jose, day after:: link:http://hadoopsummit.org[Hadoop Summit]
 
@@ -69,9 +69,9 @@ March 27th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/56021562/[Me
 
 January 19th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/46702842/[Meetup @ EBay]
 
-January 23rd, 2012:: Apache HBase 0.92.0 released. link:https://www.apache.org/dyn/closer.cgi/hbase/[Download it!]
+January 23rd, 2012:: Apache HBase 0.92.0 released. link:https://www.apache.org/dyn/closer.lua/hbase/[Download it!]
 
-December 23rd, 2011:: Apache HBase 0.90.5 released. link:https://www.apache.org/dyn/closer.cgi/hbase/[Download it!]
+December 23rd, 2011:: Apache HBase 0.90.5 released. link:https://www.apache.org/dyn/closer.lua/hbase/[Download it!]
 
 November 29th, 2011:: link:http://www.meetup.com/hackathon/events/41025972/[Developer Pow-Wow in SF] at Salesforce HQ
 
@@ -83,9 +83,9 @@ June 30th, 2011:: link:http://www.meetup.com/hbaseusergroup/events/20572251/[HBa
 
 June 8th, 2011:: link:http://berlinbuzzwords.de/wiki/hbase-workshop-and-hackathon[HBase Hackathon] in Berlin to coincide with:: link:http://berlinbuzzwords.de/[Berlin Buzzwords]
 
-May 19th, 2011: Apache HBase 0.90.3 released. link:https://www.apache.org/dyn/closer.cgi/hbase/[Download it!]
+May 19th, 2011: Apache HBase 0.90.3 released. link:https://www.apache.org/dyn/closer.lua/hbase/[Download it!]
 
-April 12th, 2011: Apache HBase 0.90.2 released. link:https://www.apache.org/dyn/closer.cgi/hbase/[Download it!]
+April 12th, 2011: Apache HBase 0.90.2 released. link:https://www.apache.org/dyn/closer.lua/hbase/[Download it!]
 
 March 21st, 2011:: link:http://www.meetup.com/hackathon/events/16770852/[HBase 0.92 Hackathon at StumbleUpon, SF]
 February 22nd, 2011:: link:http://www.meetup.com/hbaseusergroup/events/16492913/[HUG12: February HBase User Group at StumbleUpon SF]
@@ -105,7 +105,7 @@ March 10th, 2010:: link:http://www.meetup.com/hbaseusergroup/calendar/12689351/[
 
 January 27th, 2010:: Sign up for the link:http://www.meetup.com/hbaseusergroup/calendar/12241393/[HBase User Group Meeting, HUG8], at StumbleUpon in SF
 
-September 8th, 2010:: Apache HBase 0.20.0 is faster, stronger, slimmer, and sweeter tasting than any previous Apache HBase release.  Get it off the link:https://www.apache.org/dyn/closer.cgi/hbase/[Releases] page.
+September 8th, 2010:: Apache HBase 0.20.0 is faster, stronger, slimmer, and sweeter tasting than any previous Apache HBase release.  Get it off the link:https://www.apache.org/dyn/closer.lua/hbase/[Releases] page.
 
 November 2-6th, 2009:: link:http://dev.us.apachecon.com/c/acus2009/[ApacheCon] in Oakland. The Apache Foundation will be celebrating its 10th anniversary in beautiful Oakland by the Bay. Lots of good talks and meetups including an HBase presentation by a couple of the lads.
 
