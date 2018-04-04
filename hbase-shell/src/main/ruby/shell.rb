@@ -68,22 +68,18 @@ module Shell
   end
 
   #----------------------------------------------------------------------
+  # rubocop:disable Metrics/ClassLength
   class Shell
     attr_accessor :hbase
     attr_accessor :interactive
-    attr_accessor :return_values
     alias interactive? interactive
-    alias return_values? return_values
 
     @debug = false
     attr_accessor :debug
 
-    def initialize(hbase, interactive = true, return_values = !interactive)
+    def initialize(hbase, interactive = true)
       self.hbase = hbase
       self.interactive = interactive
-      self.return_values = return_values
-      # If we're in non-interactive mode, force return_values
-      self.return_values = true unless self.interactive
     end
 
     # Returns Admin class from admin.rb
@@ -140,11 +136,8 @@ module Shell
     end
 
     # call the method 'command' on the specified command
-    # If return_values is false, then we suppress the return value. The command
-    # should have printed relevant output.
     def command(command, *args)
-      ret = internal_command(command, :command, *args)
-      ret if return_values
+      internal_command(command, :command, *args)
     end
 
     # call a specific internal method in the command instance
@@ -245,6 +238,7 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
       HERE
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end
 
 # Load commands base class
