@@ -480,10 +480,12 @@ Previously, the Web UI included functionality on table status pages to merge or 
 
 User running versions of HBase prior to the 1.4.0 release that make use of replication should be sure to read the instructions in the section <<upgrade1.4.replication>>.
 
-[[upgrade2.0.jruby]]
-.HBase shell now based on JRuby 9.1.10.0
+[[upgrade2.0.shell]]
+.HBase shell changes
 
-The bundled JRuby 1.6.8 has been updated to version 9.1.10.0. The represents a change from Ruby 1.8 to Ruby 2.3.3, which introduces non-compatible language changes for user scripts.
+The HBase shell command relies on a bundled JRuby instance. This bundled JRuby been updated from version 1.6.8 to version 9.1.10.0. The represents a change from Ruby 1.8 to Ruby 2.3.3, which introduces non-compatible language changes for user scripts.
+
+The HBase shell command now ignores the '--return-values' flag that was present in early HBase 1.4 releases. Instead the shell always behaves as though that flag were passed. If you wish to avoid having expression results printed in the console you should alter your IRB configuration as noted in the section <<irbrc>>.
 
 [[upgrade2.0.coprocessors]]
 .Coprocessor APIs have changed in HBase 2.0+
