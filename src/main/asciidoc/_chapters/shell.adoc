@@ -318,6 +318,7 @@ hbase(main):017:0> tables.map { |t| disable t ; drop  t}
 hbase(main):018:0>
 ----
 
+[[irbrc]]
 === _irbrc_
 
 Create an _.irbrc_ file for yourself in your home directory.
@@ -329,6 +330,13 @@ $ more .irbrc
 require 'irb/ext/save-history'
 IRB.conf[:SAVE_HISTORY] = 100
 IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb-save-history"
+----
+
+If you'd like to avoid printing the result of evaluting each expression to stderr, for example the array of tables returned from the "list" command:
+
+[source,bash]
+----
+$ echo "IRB.conf[:ECHO] = false" >>~/.irbrc
 ----
 
 See the `ruby` documentation of _.irbrc_ to learn about other possible configurations.

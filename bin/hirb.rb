@@ -59,15 +59,12 @@ Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
  -n | --noninteractive          Do not run within an IRB session
                                 and exit with non-zero status on
                                 first error.
- -r | --return-values           Include return values from commands
-                                executed in the shell.
 HERE
 found = []
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
 interactive = true
-return_values = false
 for arg in ARGV
   if arg == '-h' || arg == '--help'
     puts cmdline_help
@@ -82,7 +79,8 @@ for arg in ARGV
     interactive = false
     found.push(arg)
   elsif arg == '-r' || arg == '--return-values'
-    return_values = true
+    warn '[INFO] the -r | --return-values option is ignored. we always behave '\
+         'as though it was given.'
     found.push(arg)
   else
     # Presume it a script. Save it off for running later below
@@ -116,7 +114,7 @@ require 'shell/formatter'
 @hbase = Hbase::Hbase.new
 
 # Setup console
-@shell = Shell::Shell.new(@hbase, interactive, return_values)
+@shell = Shell::Shell.new(@hbase, interactive)
 @shell.debug = @shell_debug
 
 # Add commands to this namespace
