@@ -1023,13 +1023,10 @@ The script requires you to set some environment variables before running it.
 Examine the script and modify it to suit your needs.
 
 ._rolling-restart.sh_ General Usage
-====
 ----
-
 $ ./bin/rolling-restart.sh --help
 Usage: rolling-restart.sh [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful] [--maxthreads xx]
 ----
-====
 
 Rolling Restart on RegionServers Only::
   To perform a rolling restart on the RegionServers only, use the `--rs-only` option.

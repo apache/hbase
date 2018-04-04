@@ -604,18 +604,14 @@ On each node of the cluster, run the `jps` command and verify that the correct p
 You may see additional Java processes running on your servers as well, if they are used for other purposes.
 +
 .`node-a` `jps` Output
-====
 ----
-
 $ jps
 20355 Jps
 20071 HQuorumPeer
 20137 HMaster
 ----
-====
 +
 .`node-b` `jps` Output
-====
 ----
 $ jps
 15930 HRegionServer
@@ -623,17 +619,14 @@ $ jps
 15838 HQuorumPeer
 16010 HMaster
 ----
-====
 +
 .`node-c` `jps` Output
-====
 ----
 $ jps
 13901 Jps
 13639 HQuorumPeer
 13737 HRegionServer
 ----
-====
 +
 .ZooKeeper Process Name
 [NOTE]

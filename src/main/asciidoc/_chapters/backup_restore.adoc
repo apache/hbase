@@ -175,7 +175,7 @@ and its options. The below information is captured in this help message for each
 // hbase backup create
 
 [[br.creating.complete.backup]]
-### Creating a Backup Image
+=== Creating a Backup Image
 
 [NOTE]
 ====
@@ -204,7 +204,7 @@ dataset with a restore operation, having the backup ID readily available can sav
 ====
 
 [[br.create.positional.cli.arguments]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 _type_::
   The type of backup to execute: _full_ or _incremental_. As a reminder, an _incremental_ backup requires a _full_ backup to
@@ -215,7 +215,7 @@ _backup_path_::
   are _hdfs:_, _webhdfs:_, _gpfs:_, and _s3fs:_.
 
 [[br.create.named.cli.arguments]]
-#### Named Command-Line Arguments
+==== Named Command-Line Arguments
 
 _-t <table_name[,table_name]>_::
   A comma-separated list of tables to back up. If no tables are specified, all tables are backed up. No regular-expression or
@@ -242,7 +242,7 @@ _-q <name>_::
   is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
 
 [[br.usage.examples]]
-#### Example usage
+==== Example usage
 
 [source]
 ----
@@ -255,7 +255,7 @@ in the path _/data/backup_. The _-w_ option specifies that no more than three pa
 // hbase backup restore
 
 [[br.restoring.backup]]
-### Restoring a Backup Image
+=== Restoring a Backup Image
 
 Run the following command as an HBase superuser. You can only restore a backup on a running HBase cluster because the data must be
 redistributed the RegionServers for the operation to complete successfully.
@@ -266,7 +266,7 @@ hbase restore <backup_path> <backup_id>
 ----
 
 [[br.restore.positional.args]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 _backup_path_::
   The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
@@ -277,7 +277,7 @@ _backup_id_::
 
 
 [[br.restore.named.args]]
-#### Named Command-Line Arguments
+==== Named Command-Line Arguments
 
 _-t <table_name[,table_name]>_::
   A comma-separated list of tables to restore. See <<br.using.backup.sets,Backup Sets>> for more
@@ -304,7 +304,7 @@ _-o_::
 
 
 [[br.restore.usage]]
-#### Example of Usage
+==== Example of Usage
 
 [source]
 ----
@@ -319,7 +319,7 @@ This command restores two tables of an incremental backup image. In this example
 // hbase backup merge
 
 [[br.merge.backup]]
-### Merging Incremental Backup Images
+=== Merging Incremental Backup Images
 
 This command can be used to merge two or more incremental backup images into a single incremental
 backup image. This can be used to consolidate multiple, small incremental backup images into a single
@@ -332,18 +332,18 @@ $ hbase backup merge <backup_ids>
 ----
 
 [[br.merge.backup.positional.cli.arguments]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 _backup_ids_::
   A comma-separated list of incremental backup image IDs that are to be combined into a single image.
 
 [[br.merge.backup.named.cli.arguments]]
-#### Named Command-Line Arguments
+==== Named Command-Line Arguments
 
 None.
 
 [[br.merge.backup.example]]
-#### Example usage
+==== Example usage
 
 [source]
 ----
@@ -353,7 +353,7 @@ $ hbase backup merge backupId_1467823988425,backupId_1467827588425
 // hbase backup set
 
 [[br.using.backup.sets]]
-### Using Backup Sets
+=== Using Backup Sets
 
 Backup sets can ease the administration of HBase data backups and restores by reducing the amount of repetitive input
 of table names. You can group tables into a named backup set with the `hbase backup set add` command. You can then use
@@ -381,7 +381,7 @@ $ hbase backup set <subcommand> <backup_set_name> <tables>
 ----
 
 [[br.set.subcommands]]
-#### Backup Set Subcommands
+==== Backup Set Subcommands
 
 The following list details subcommands of the hbase backup set command.
 
@@ -406,7 +406,7 @@ _delete_::
   Deletes a backup set. Enter the value for the _backup_set_name_ option directly after the `hbase backup set delete` command.
 
 [[br.set.positional.cli.arguments]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 _backup_set_name_::
   Use to assign or invoke a backup set name. The backup set name must contain only printable characters and cannot have any spaces.
@@ -419,7 +419,7 @@ TIP: Maintain a log or other record of the case-sensitive backup set names and t
 or remote cluster, backup strategy. This information can help you in case of failure on the primary cluster.
 
 [[br.set.usage]]
-#### Example of Usage
+==== Example of Usage
 
 [source]
 ----
@@ -432,7 +432,7 @@ Depending on the environment, this command results in _one_ of the following act
 * If the `Q1Data` backup set exists already, the tables `TEAM_3` and `TEAM_4` are added to the `Q1Data` backup set.
 
 [[br.administration]]
-## Administration of Backup Images
+== Administration of Backup Images
 
 The `hbase backup` command has several subcommands that help with administering backup images as they accumulate. Most production
 environments require recurring backups, so it is necessary to have utilities to help manage the data of the backup repository.
@@ -445,7 +445,7 @@ the HBase superuser.
 // hbase backup progress
 
 [[br.managing.backup.progress]]
-### Managing Backup Progress
+=== Managing Backup Progress
 
 You can monitor a running backup in another terminal session by running the _hbase backup progress_ command and specifying the backup ID as an argument.
 
@@ -457,18 +457,18 @@ $ hbase backup progress <backup_id>
 ----
 
 [[br.progress.positional.cli.arguments]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 _backup_id_::
   Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
 
 [[br.progress.named.cli.arguments]]
-#### Named Command-Line Arguments
+==== Named Command-Line Arguments
 
 None.
 
 [[br.progress.example]]
-#### Example usage
+==== Example usage
 
 [source]
 ----
@@ -478,7 +478,7 @@ hbase backup progress backupId_1467823988425
 // hbase backup history
 
 [[br.managing.backup.history]]
-### Managing Backup History
+=== Managing Backup History
 
 This command displays a log of backup sessions. The information for each session includes backup ID, type (full or incremental), the tables
 in the backup, status, and start and end time. Specify the number of backup sessions to display with the optional -n argument.
@@ -489,13 +489,13 @@ $ hbase backup history <backup_id>
 ----
 
 [[br.history.positional.cli.arguments]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 _backup_id_::
   Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
 
 [[br.history.named.cli.arguments]]
-#### Named Command-Line Arguments
+==== Named Command-Line Arguments
 
 _-n <num_records>_::
   (Optional) The maximum number of backup records (Default: 10).
@@ -510,7 +510,7 @@ _-t_ <table_name>::
   The name of table to obtain history for. Mutually exclusive with the _-s_ option.
 
 [[br.history.backup.example]]
-#### Example usage
+==== Example usage
 
 [source]
 ----
@@ -522,7 +522,7 @@ $ hbase backup history -t WebIndexRecords
 // hbase backup describe
 
 [[br.describe.backup]]
-### Describing a Backup Image
+=== Describing a Backup Image
 
 This command can be used to obtain information about a specific backup image.
 
@@ -532,18 +532,18 @@ $ hbase backup describe <backup_id>
 ----
 
 [[br.describe.backup.positional.cli.arguments]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 _backup_id_::
   The ID of the backup image to describe.
 
 [[br.describe.backup.named.cli.arguments]]
-#### Named Command-Line Arguments
+==== Named Command-Line Arguments
 
 None.
 
 [[br.describe.backup.example]]
-#### Example usage
+==== Example usage
 
 [source]
 ----
@@ -553,7 +553,7 @@ $ hbase backup describe backupId_1467823988425
 // hbase backup delete
 
 [[br.delete.backup]]
-### Deleting a Backup Image
+=== Deleting a Backup Image
 
 This command can be used to delete a backup image which is no longer needed.
 
@@ -563,18 +563,18 @@ $ hbase backup delete <backup_id>
 ----
 
 [[br.delete.backup.positional.cli.arguments]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 _backup_id_::
   The ID to the backup image which should be deleted.
 
 [[br.delete.backup.named.cli.arguments]]
-#### Named Command-Line Arguments
+==== Named Command-Line Arguments
 
 None.
 
 [[br.delete.backup.example]]
-#### Example usage
+==== Example usage
 
 [source]
 ----
@@ -584,7 +584,7 @@ $ hbase backup delete backupId_1467823988425
 // hbase backup repair
 
 [[br.repair.backup]]
-### Backup Repair Command
+=== Backup Repair Command
 
 This command attempts to correct any inconsistencies in persisted backup metadata which exists as
 the result of software errors or unhandled failure scenarios. While the backup implementation tries
@@ -597,17 +597,17 @@ $ hbase backup repair
 ----
 
 [[br.repair.backup.positional.cli.arguments]]
-#### Positional Command-Line Arguments
+==== Positional Command-Line Arguments
 
 None.
 
 [[br.repair.backup.named.cli.arguments]]
-### Named Command-Line Arguments
+=== Named Command-Line Arguments
 
 None.
 
 [[br.repair.backup.example]]
-#### Example usage
+==== Example usage
 
 [source]
 ----
@@ -615,11 +615,11 @@ $ hbase backup repair
 ----
 
 [[br.backup.configuration]]
-## Configuration keys
+== Configuration keys
 
 The backup and restore feature includes both required and optional configuration keys.
 
-### Required properties
+=== Required properties
 
 _hbase.backup.enable_: Controls whether or not the feature is enabled (Default: `false`). Set this value to `true`.
 
@@ -638,7 +638,7 @@ _hbase.coprocessor.region.classes_: A comma-separated list of RegionObservers de
 _hbase.master.hfilecleaner.plugins_: A comma-separated list of HFileCleaners deployed on the Master. Set this value
 to `org.apache.hadoop.hbase.backup.BackupHFileCleaner` or append it to the current value.
 
-### Optional properties
+=== Optional properties
 
 _hbase.backup.system.ttl_: The time-to-live in seconds of data in the `hbase:backup` tables (default: forever). This property
 is only relevant prior to the creation of the `hbase:backup` table. Use the `alter` command in the HBase shell to modify the TTL
@@ -653,9 +653,9 @@ _hbase.backup.logroll.timeout.millis_: The amount of time (in milliseconds) to w
 in the Master's procedure framework (default: 30000).
 
 [[br.best.practices]]
-## Best Practices
+== Best Practices
 
-### Formulate a restore strategy and test it.
+=== Formulate a restore strategy and test it.
 
 Before you rely on a backup and restore strategy for your production environment, identify how backups must be performed,
 and more importantly, how restores must be performed. Test the plan to ensure that it is workable.
@@ -668,14 +668,14 @@ site renders locally stored backups useless. Consider storing the backup data an
 and operator expertise) to restore the data at a site sufficiently remote from the production site. In the case of a catastrophe
 at the whole primary site (fire, earthquake, etc.), the remote backup site can be very valuable.
 
-### Secure a full backup image first.
+=== Secure a full backup image first.
 
 As a baseline, you must complete a full backup of HBase data at least once before you can rely on incremental backups. The full
 backup should be stored outside of the source cluster. To ensure complete dataset recovery, you must run the restore utility
 with the option to restore baseline full backup. The full backup is the foundation of your dataset. Incremental backup data
 is applied on top of the full backup during the restore operation to return you to the point in time when backup was last taken.
 
-### Define and use backup sets for groups of tables that are logical subsets of the entire dataset.
+=== Define and use backup sets for groups of tables that are logical subsets of the entire dataset.
 
 You can group tables into an object called a backup set. A backup set can save time when you have a particular group of tables
 that you expect to repeatedly back up or restore.
@@ -684,7 +684,7 @@ When you create a backup set, you type table names to include in the group. The 
 tables, but also retains the HBase backup metadata. Afterwards, you can invoke the backup set name to indicate what tables apply
 to the command execution instead of entering all the table names individually.
 
-### Document the backup and restore strategy, and ideally log information about each backup.
+=== Document the backup and restore strategy, and ideally log information about each backup.
 
 Document the whole process so that the knowledge base can transfer to new administrators after employee turnover. As an extra
 safety precaution, also log the calendar date, time, and other relevant details about the data of each backup. This metadata
@@ -693,7 +693,7 @@ copies of all documentation: one copy at the production cluster site and another
 accessed by an administrator remotely from the production cluster.
 
 [[br.s3.backup.scenario]]
-## Scenario: Safeguarding Application Datasets on Amazon S3
+== Scenario: Safeguarding Application Datasets on Amazon S3
 
 This scenario describes how a hypothetical retail business uses backups to safeguard application data and then restore the dataset
 after failure.
@@ -760,7 +760,7 @@ existing data in the destination. In this case, the admin decides to overwrite t
    s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups backup_1467823988425 \ -overwrite
 
 [[br.data.security]]
-## Security of Backup Data
+== Security of Backup Data
 
 With this feature which makes copying data to remote locations, it's important to take a moment to clearly state the procedural
 concerns that exist around data security. Like the HBase replication feature, backup and restore provides the constructs to automatically
@@ -774,7 +774,7 @@ being accessed via HBase, and its authentication and authorization controls, we 
 providing a comparable level of security. This is a manual step which users *must* implement on their own.
 
 [[br.technical.details]]
-## Technical Details of Incremental Backup and Restore
+== Technical Details of Incremental Backup and Restore
 
 HBase incremental backups enable more efficient capture of HBase table images than previous attempts at serial backup and restore
 solutions, such as those that only used HBase Export and Import APIs. Incremental backups use Write Ahead Logs (WALs) to capture
@@ -790,7 +790,7 @@ Bulk Load utility automatically imports as restored data in the table.
 You can only restore on a live HBase cluster because the data must be redistributed to complete the restore operation successfully.
 
 [[br.filesystem.growth.warning]]
-## A Warning on File System Growth
+== A Warning on File System Growth
 
 As a reminder, incremental backups are implemented via retaining the write-ahead logs which HBase primarily uses for data durability.
 Thus, to ensure that all data needing to be included in a backup is still available in the system, the HBase backup and restore feature
@@ -806,14 +806,14 @@ more aggressive backup merges and deletions). As a reminder, the TTL can be alte
 in the HBase shell. Modifying the configuration property `hbase.backup.system.ttl` in hbase-site.xml after the system table exists has no effect.
 
 [[br.backup.capacity.planning]]
-## Capacity Planning
+== Capacity Planning
 
 When designing a distributed system deployment, it is critical that some basic mathmatical rigor is executed to ensure sufficient computational
 capacity is available given the data and software requirements of the system. For this feature, the availability of network capacity is the largest
 bottleneck when estimating the performance of some implementation of backup and restore. The second most costly function is the speed at which
 data can be read/written.
 
-### Full Backups
+=== Full Backups
 
 To estimate the duration of a full backup, we have to understand the general actions which are invoked:
 
@@ -840,7 +840,7 @@ queue which can limit the specific nodes where the workers will be spawned -- th
 a set of non-critical nodes. Relating the `-b` and `-w` options to our earlier equations: `-b` would be used to restrict each node from reading
 data at the full 80MB/s and `-w` is used to limit the job from spawning 16 worker tasks.
 
-### Incremental Backup
+=== Incremental Backup
 
 Like we did for full backups, we have to understand the incremental backup process to approximate its runtime and cost.
 
@@ -854,7 +854,7 @@ this would require approximately 15 minutes to perform this step for 50GB of dat
 DistCp MapReduce job would likely dominate the actual time taken to copy the data (50 / 1.25 = 40 seconds) and can be ignored.
 
 [[br.limitations]]
-## Limitations of the Backup and Restore Utility
+== Limitations of the Backup and Restore Utility
 
 *Serial backup operations*
 

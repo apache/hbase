@@ -61,12 +61,10 @@ an object is considered to be a MOB. Only `IS_MOB` is required. If you do not
 specify the `MOB_THRESHOLD`, the default threshold value of 100 KB is used.
 
 .Configure a Column for MOB Using HBase Shell
-====
 ----
 hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
 hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
 ----
-====
 
 .Configure a Column for MOB Using the Java API
 ====
@@ -91,7 +89,6 @@ weekly policy - compact MOB Files for one week into one large MOB file
 montly policy - compact MOB Files for one  month into one large MOB File
 
 .Configure MOB compaction policy Using HBase Shell
-====
 ----
 hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'daily'}
 hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'weekly'}
@@ -101,7 +98,6 @@ hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_C
 hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'weekly'}
 hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400, MOB_COMPACT_PARTITION_POLICY => 'monthly'}
 ----
-====
 
 === Configure MOB Compaction mergeable threshold
 

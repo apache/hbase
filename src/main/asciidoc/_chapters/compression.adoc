@@ -335,25 +335,18 @@ You do not need to re-create the table or copy data.
 If you are changing codecs, be sure the old codec is still available until all the old StoreFiles have been compacted.
 
 .Enabling Compression on a ColumnFamily of an Existing Table using HBaseShell
-====
 ----
-
 hbase> disable 'test'
 hbase> alter 'test', {NAME => 'cf', COMPRESSION => 'GZ'}
 hbase> enable 'test'
 ----
-====
 
 .Creating a New Table with Compression On a ColumnFamily
-====
 ----
-
 hbase> create 'test2', { NAME => 'cf2', COMPRESSION => 'SNAPPY' }
 ----
-====
 
 .Verifying a ColumnFamily's Compression Settings
-====
 ----
 
 hbase> describe 'test'
@@ -366,7 +359,6 @@ DESCRIPTION                                          ENABLED
  LOCKCACHE => 'true'}
 1 row(s) in 0.1070 seconds
 ----
-====
 
 ==== Testing Compression Performance
 
@@ -374,9 +366,7 @@ HBase includes a tool called LoadTestTool which provides mechanisms to test your
 You must specify either `-write` or `-update-read` as your first parameter, and if you do not specify another parameter, usage advice is printed for each option.
 
 .+LoadTestTool+ Usage
-====
 ----
-
 $ bin/hbase org.apache.hadoop.hbase.util.LoadTestTool -h
 usage: bin/hbase org.apache.hadoop.hbase.util.LoadTestTool <options>
 Options:
@@ -429,16 +419,12 @@ Options:
                               port numbers
  -zk_root <arg>               name of parent znode in zookeeper
 ----
-====
 
 .Example Usage of LoadTestTool
-====
 ----
-
 $ hbase org.apache.hadoop.hbase.util.LoadTestTool -write 1:10:100 -num_keys 1000000
           -read 100:30 -num_tables 1 -data_block_encoding NONE -tn load_test_tool_NONE
 ----
-====
 
 [[data.block.encoding.enable]]
 === Enable Data Block Encoding
@@ -449,9 +435,7 @@ Disable the table before altering its DATA_BLOCK_ENCODING setting.
 Following is an example using HBase Shell:
 
 .Enable Data Block Encoding On a Table
-====
 ----
-
 hbase>  disable 'test'
 hbase> alter 'test', { NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
 Updating all regions with the new schema...
@@ -462,12 +446,9 @@ Done.
 hbase> enable 'test'
 0 row(s) in 0.1580 seconds
 ----
-====
 
 .Verifying a ColumnFamily's Data Block Encoding
-====
 ----
-
 hbase> describe 'test'
 DESCRIPTION                                          ENABLED
  'test', {NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST true
@@ -478,7 +459,6 @@ DESCRIPTION                                          ENABLED
  e', BLOCKCACHE => 'true'}
 1 row(s) in 0.0650 seconds
 ----
-====
 
 :numbered:
 

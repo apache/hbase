@@ -145,7 +145,6 @@ For instance, if your script creates a table, but returns a non-zero exit value,
 You can enter HBase Shell commands into a text file, one command per line, and pass that file to the HBase Shell.
 
 .Example Command File
-====
 ----
 create 'test', 'cf'
 list 'test'
@@ -158,7 +157,6 @@ get 'test', 'row1'
 disable 'test'
 enable 'test'
 ----
-====
 
 .Directing HBase Shell to Execute the Commands
 ====
