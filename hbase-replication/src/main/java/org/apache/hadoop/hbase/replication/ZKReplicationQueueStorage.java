@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.hadoop.hbase.util.CollectionUtils.nullToEmpty;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,6 +29,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
@@ -451,8 +450,11 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   private List<ServerName> getListOfReplicators0() throws KeeperException {
-    return nullToEmpty(ZKUtil.listChildrenNoWatch(zookeeper, queuesZNode)).stream()
-        .map(ServerName::parseServerName).collect(toList());
+    List<String> children = ZKUtil.listChildrenNoWatch(zookeeper, queuesZNode);
+    if (children == null) {
+      children = Collections.emptyList();
+    }
+    return children.stream().map(ServerName::parseServerName).collect(toList());
   }
 
   @Override
@@ -466,7 +468,9 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
 
   private List<String> getWALsInQueue0(ServerName serverName, String queueId)
       throws KeeperException {
-    return nullToEmpty(ZKUtil.listChildrenNoWatch(zookeeper, getQueueNode(serverName, queueId)));
+    List<String> children = ZKUtil.listChildrenNoWatch(zookeeper, getQueueNode(serverName,
+        queueId));
+    return children != null ? children : Collections.emptyList();
   }
 
   @Override
@@ -482,7 +486,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   private List<String> getAllQueues0(ServerName serverName) throws KeeperException {
-    return nullToEmpty(ZKUtil.listChildrenNoWatch(zookeeper, getRsNode(serverName)));
+    List<String> children = ZKUtil.listChildrenNoWatch(zookeeper, getRsNode(serverName));
+    return children != null ? children : Collections.emptyList();
   }
 
   @Override
@@ -602,7 +607,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   private List<String> getAllPeersFromHFileRefsQueue0() throws KeeperException {
-    return nullToEmpty(ZKUtil.listChildrenNoWatch(zookeeper, hfileRefsZNode));
+    List<String> children = ZKUtil.listChildrenNoWatch(zookeeper, hfileRefsZNode);
+    return children != null ? children : Collections.emptyList();
   }
 
   @Override
@@ -616,7 +622,9 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   private List<String> getReplicableHFiles0(String peerId) throws KeeperException {
-    return nullToEmpty(ZKUtil.listChildrenNoWatch(this.zookeeper, getHFileRefsPeerNode(peerId)));
+    List<String> children = ZKUtil.listChildrenNoWatch(this.zookeeper,
+        getHFileRefsPeerNode(peerId));
+    return children != null ? children : Collections.emptyList();
   }
 
   @Override

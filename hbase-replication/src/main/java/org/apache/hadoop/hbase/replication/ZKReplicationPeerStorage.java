@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -131,7 +131,8 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
   @Override
   public List<String> listPeerIds() throws ReplicationException {
     try {
-      return CollectionUtils.nullToEmpty(ZKUtil.listChildrenNoWatch(zookeeper, peersZNode));
+      List<String> children = ZKUtil.listChildrenNoWatch(zookeeper, peersZNode);
+      return children != null ? children : Collections.emptyList();
     } catch (KeeperException e) {
       throw new ReplicationException("Cannot get the list of peers", e);
     }
