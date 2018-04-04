@@ -359,21 +359,20 @@ public class WALProcedureStore extends ProcedureStoreBase {
     lock.lock();
     try {
       LOG.trace("Starting WAL Procedure Store lease recovery");
-      FileStatus[] oldLogs = getLogFiles();
       while (isRunning()) {
+        FileStatus[] oldLogs = getLogFiles();
         // Get Log-MaxID and recover lease on old logs
         try {
           flushLogId = initOldLogs(oldLogs);
         } catch (FileNotFoundException e) {
           LOG.warn("Someone else is active and deleted logs. retrying.", e);
-          oldLogs = getLogFiles();
           continue;
         }
 
         // Create new state-log
         if (!rollWriter(flushLogId + 1)) {
           // someone else has already created this log
-          LOG.debug("Someone else has already created log " + flushLogId);
+          LOG.debug("Someone else has already created log {}. Retrying.", flushLogId);
           continue;
         }
 
@@ -1002,7 +1001,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return true;
   }
 
-  private boolean rollWriter(final long logId) throws IOException {
+  @VisibleForTesting
+  boolean rollWriter(final long logId) throws IOException {
     assert logId > flushLogId : "logId=" + logId + " flushLogId=" + flushLogId;
     assert lock.isHeldByCurrentThread() : "expected to be the lock owner. " + lock.isLocked();
 
@@ -1072,7 +1072,10 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   private void closeCurrentLogStream() {
-    if (stream == null) return;
+    if (stream == null || logs.isEmpty()) {
+      return;
+    }
+
     try {
       ProcedureWALFile log = logs.getLast();
       log.setProcIds(storeTracker.getUpdatedMinProcId(), storeTracker.getUpdatedMaxProcId());
