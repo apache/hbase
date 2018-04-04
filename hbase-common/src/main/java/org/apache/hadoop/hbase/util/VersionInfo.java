@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ public class VersionInfo {
 
   // If between two dots there is not a number, we regard it as a very large number so it is
   // higher than any numbers in the version.
-  private static int VERY_LARGE_NUMBER = 100000;
+  private static final int VERY_LARGE_NUMBER = 100000;
 
   /**
    * Get the hbase version.
@@ -118,37 +118,52 @@ public class VersionInfo {
       return 0;
     }
 
-    String s1[] = v1.split("\\.|-");//1.2.3-hotfix -> [1, 2, 3, hotfix]
-    String s2[] = v2.split("\\.|-");
+    Object[] v1Comps = getVersionComponents(v1); //1.2.3-hotfix -> [1, 2, 3, hotfix]
+    Object[] v2Comps = getVersionComponents(v2);
     int index = 0;
-    while (index < s1.length && index < s2.length) {
-      int va = VERY_LARGE_NUMBER, vb = VERY_LARGE_NUMBER;
-      try {
-        va = Integer.parseInt(s1[index]);
-      } catch (Exception ingore) {
-      }
-      try {
-        vb = Integer.parseInt(s2[index]);
-      } catch (Exception ingore) {
-      }
+    while (index < v1Comps.length && index < v2Comps.length) {
+      int va = v1Comps[index] instanceof Integer ? (Integer)v1Comps[index] : VERY_LARGE_NUMBER;
+      int vb = v2Comps[index] instanceof Integer ? (Integer)v2Comps[index] : VERY_LARGE_NUMBER;
+
       if (va != vb) {
         return va - vb;
       }
       if (va == VERY_LARGE_NUMBER) {
-        // compare as String
-        int c = s1[index].compareTo(s2[index]);
+        // here, va and vb components must be same and Strings, compare as String
+        int c = ((String)v1Comps[index]).compareTo((String)v2Comps[index]);
         if (c != 0) {
           return c;
         }
       }
       index++;
     }
-    if (index < s1.length) {
-      // s1 is longer
+    if (index < v1Comps.length) {
+      // v1 is longer
       return 1;
     }
-    //s2 is longer
+    //v2 is longer
     return -1;
+  }
+
+  /**
+   * Returns the version components as Integer and String objects
+   * Examples: "1.2.3" returns [1, 2, 3], "4.5.6-SNAPSHOT" returns [4, 5, 6, "SNAPSHOT"]
+   * @return the components of the version string
+   */
+  static Object[] getVersionComponents(final String version) {
+    assert(version != null);
+    Object[] strComps = version.split("[\\.-]");
+    assert(strComps.length > 0);
+
+    Object[] comps = new Object[strComps.length];
+    for (int i = 0; i < strComps.length; ++i) {
+      try {
+        comps[i] = Integer.parseInt((String) strComps[i]);
+      } catch (NumberFormatException e) {
+        comps[i] = strComps[i];
+      }
+    }
+    return comps;
   }
 
   public static void main(String[] args) {
