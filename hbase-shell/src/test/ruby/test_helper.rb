@@ -43,7 +43,7 @@ module Hbase
 
     def setup_hbase
       hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
-      @shell = ::Shell::Shell.new(hbase, interactive = false, return_values = true)
+      @shell = ::Shell::Shell.new(hbase, interactive = false)
     end
     
     def shutdown
