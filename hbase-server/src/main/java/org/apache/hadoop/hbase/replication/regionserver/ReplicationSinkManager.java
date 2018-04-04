@@ -54,7 +54,7 @@ public class ReplicationSinkManager {
    * Default ratio of the total number of peer cluster region servers to consider
    * replicating to.
    */
-  static final float DEFAULT_REPLICATION_SOURCE_RATIO = 0.1f;
+  static final float DEFAULT_REPLICATION_SOURCE_RATIO = 0.5f;
 
 
   private final HConnection conn;
