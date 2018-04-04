@@ -906,13 +906,21 @@ For any other module, for example `hbase-common`, the tests must be strict unit 
 ==== Testing the HBase Shell
 
 The HBase shell and its tests are predominantly written in jruby.
-In order to make these tests run as a part of the standard build, there is a single JUnit test, `TestShell`, that takes care of loading the jruby implemented tests and running them.
+
+In order to make these tests run as a part of the standard build, there are a few JUnit test classes that take care of loading the jruby implemented tests and running them.
+The tests were split into separate classes to accomodate class level timeouts (see <<hbase.unittests>> for specifics).
 You can run all of these tests from the top level with:
 
 [source,bourne]
 ----
+      mvn clean test -Dtest=Test*Shell
+----
 
-      mvn clean test -Dtest=TestShell
+If you have previously done a `mvn install`, then you can instruct maven to run only the tests in the hbase-shell module with:
+
+[source,bourne]
+----
+      mvn clean test -pl hbase-shell
 ----
 
 Alternatively, you may limit the shell tests that run using the system variable `shell.test`.
@@ -921,8 +929,7 @@ For example, the tests that cover the shell commands for altering tables are con
 
 [source,bourne]
 ----
-
-      mvn clean test -Dtest=TestShell -Dshell.test=/AdminAlterTableTest/
+      mvn clean test -pl hbase-shell -Dshell.test=/AdminAlterTableTest/
 ----
 
 You may also use a link:http://docs.ruby-doc.com/docs/ProgrammingRuby/html/language.html#UJ[Ruby Regular Expression
@@ -932,14 +939,13 @@ You can run all of the HBase admin related tests, including both the normal admi
 [source,bourne]
 ----
 
-      mvn clean test -Dtest=TestShell -Dshell.test=/.*Admin.*Test/
+      mvn clean test -pl hbase-shell -Dshell.test=/.*Admin.*Test/
 ----
 
 In the event of a test failure, you can see details by examining the XML version of the surefire report results
 
 [source,bourne]
 ----
-
       vim hbase-shell/target/surefire-reports/TEST-org.apache.hadoop.hbase.client.TestShell.xml
 ----
 
