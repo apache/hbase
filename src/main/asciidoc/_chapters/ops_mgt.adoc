@@ -388,7 +388,7 @@ directory.
 You can get a textual dump of a WAL file content by doing the following:
 
 ----
- $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --dump hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
+ $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --dump hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
 ----
 
 The return code will be non-zero if there are any issues with the file so you can test wholesomeness of file by redirecting `STDOUT` to `/dev/null` and testing the program return.
@@ -396,7 +396,7 @@ The return code will be non-zero if there are any issues with the file so you ca
 Similarly you can force a split of a log file directory by doing:
 
 ----
- $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --split hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/
+ $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --split hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/
 ----
 
 [[hlog_tool.prettyprint]]
@@ -406,7 +406,7 @@ The `WALPrettyPrinter` is a tool with configurable options to print the contents
 You can invoke it via the HBase cli with the 'wal' command.
 
 ----
- $ ./bin/hbase wal hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
+ $ ./bin/hbase wal hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
 ----
 
 .WAL Printing in older versions of HBase

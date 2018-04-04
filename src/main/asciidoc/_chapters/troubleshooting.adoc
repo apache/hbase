@@ -806,10 +806,12 @@ The HDFS directory structure of HBase tables in the cluster is...
 ----
 
 /hbase
-    /<Table>                    (Tables in the cluster)
-        /<Region>               (Regions for the table)
-            /<ColumnFamily>     (ColumnFamilies for the Region for the table)
-                /<StoreFile>    (StoreFiles for the ColumnFamily for the Regions for the table)
+    /data
+        /<Namespace>                    (Namespaces in the cluster)
+            /<Table>                    (Tables in the cluster)
+                /<Region>               (Regions for the table)
+                    /<ColumnFamily>     (ColumnFamilies for the Region for the table)
+                        /<StoreFile>    (StoreFiles for the ColumnFamily for the Regions for the table)
 ----
 
 The HDFS directory structure of HBase WAL is..
@@ -817,7 +819,7 @@ The HDFS directory structure of HBase WAL is..
 ----
 
 /hbase
-    /.logs
+    /WALs
         /<RegionServer>    (RegionServers)
             /<WAL>         (WAL files for the RegionServer)
 ----
@@ -827,7 +829,7 @@ See the link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hd
 [[trouble.namenode.0size.hlogs]]
 ==== Zero size WALs with data in them
 
-Problem: when getting a listing of all the files in a RegionServer's _.logs_ directory, one file has a size of 0 but it contains data.
+Problem: when getting a listing of all the files in a RegionServer's _WALs_ directory, one file has a size of 0 but it contains data.
 
 Answer: It's an HDFS quirk.
 A file that's currently being written to will appear to have a size of 0 but once it's closed it will show its true size

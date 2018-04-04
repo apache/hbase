@@ -1114,28 +1114,28 @@ The general process for log splitting, as described in <<log.splitting.step.by.s
 
 . If distributed log processing is enabled, the HMaster creates a _split log manager_ instance when the cluster is started.
   .. The split log manager manages all log files which need to be scanned and split.
-  .. The split log manager places all the logs into the ZooKeeper splitlog node (_/hbase/splitlog_) as tasks.
-  .. You can view the contents of the splitlog by issuing the following `zkCli` command. Example output is shown.
+  .. The split log manager places all the logs into the ZooKeeper splitWAL node (_/hbase/splitWAL_) as tasks.
+  .. You can view the contents of the splitWAL by issuing the following `zkCli` command. Example output is shown.
 +
 [source,bash]
 ----
-ls /hbase/splitlog
-[hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2F.logs%2Fhost8.sample.com%2C57020%2C1340474893275-splitting%2Fhost8.sample.com%253A57020.1340474893900,
-hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2F.logs%2Fhost3.sample.com%2C57020%2C1340474893299-splitting%2Fhost3.sample.com%253A57020.1340474893931,
-hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2F.logs%2Fhost4.sample.com%2C57020%2C1340474893287-splitting%2Fhost4.sample.com%253A57020.1340474893946]
+ls /hbase/splitWAL
+[hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost8.sample.com%2C57020%2C1340474893275-splitting%2Fhost8.sample.com%253A57020.1340474893900,
+hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost3.sample.com%2C57020%2C1340474893299-splitting%2Fhost3.sample.com%253A57020.1340474893931,
+hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost4.sample.com%2C57020%2C1340474893287-splitting%2Fhost4.sample.com%253A57020.1340474893946]
 ----
 +
 The output contains some non-ASCII characters.
 When decoded, it looks much more simple:
 +
 ----
-[hdfs://host2.sample.com:56020/hbase/.logs
+[hdfs://host2.sample.com:56020/hbase/WALs
 /host8.sample.com,57020,1340474893275-splitting
 /host8.sample.com%3A57020.1340474893900,
-hdfs://host2.sample.com:56020/hbase/.logs
+hdfs://host2.sample.com:56020/hbase/WALs
 /host3.sample.com,57020,1340474893299-splitting
 /host3.sample.com%3A57020.1340474893931,
-hdfs://host2.sample.com:56020/hbase/.logs
+hdfs://host2.sample.com:56020/hbase/WALs
 /host4.sample.com,57020,1340474893287-splitting
 /host4.sample.com%3A57020.1340474893946]
 ----
@@ -1146,7 +1146,7 @@ The listing represents WAL file names to be scanned and split, which is a list o
 +
 The split log manager is responsible for the following ongoing tasks:
 +
-* Once the split log manager publishes all the tasks to the splitlog znode, it monitors these task nodes and waits for them to be processed.
+* Once the split log manager publishes all the tasks to the splitWAL znode, it monitors these task nodes and waits for them to be processed.
 * Checks to see if there are any dead split log workers queued up.
   If it finds tasks claimed by unresponsive workers, it will resubmit those tasks.
   If the resubmit fails due to some ZooKeeper exception, the dead worker is queued up again for retry.
@@ -1164,7 +1164,7 @@ The split log manager is responsible for the following ongoing tasks:
   In the example output below, the first line of the output shows that the task is currently unassigned.
 +
 ----
-get /hbase/splitlog/hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2F.logs%2Fhost6.sample.com%2C57020%2C1340474893287-splitting%2Fhost6.sample.com%253A57020.1340474893945
+get /hbase/splitWAL/hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost6.sample.com%2C57020%2C1340474893287-splitting%2Fhost6.sample.com%253A57020.1340474893945
 
 unassigned host2.sample.com:57000
 cZxid = 0×7115
@@ -1195,12 +1195,12 @@ Based on the state of the task whose data is changed, the split log manager does
 +
 Each RegionServer runs a daemon thread called the _split log worker_, which does the work to split the logs.
 The daemon thread starts when the RegionServer starts, and registers itself to watch HBase znodes.
-If any splitlog znode children change, it notifies a sleeping worker thread to wake up and grab more tasks.
+If any splitWAL znode children change, it notifies a sleeping worker thread to wake up and grab more tasks.
 If a worker's current task's node data is changed,
 the worker checks to see if the task has been taken by another worker.
 If so, the worker thread stops work on the current task.
 +
-The worker monitors the splitlog znode constantly.
+The worker monitors the splitWAL znode constantly.
 When a new task appears, the split log worker retrieves the task paths and checks each one until it finds an unclaimed task, which it attempts to claim.
 If the claim was successful, it attempts to perform the task and updates the task's `state` property based on the splitting outcome.
 At this point, the split log worker scans for another unclaimed task.
@@ -1633,10 +1633,10 @@ Type the following to see usage:
 ----
 $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile
 ----
-For example, to view the content of the file _hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475_, type the following:
+For example, to view the content of the file _hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475_, type the following:
 [source,bash]
 ----
- $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475
+ $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475
 ----
 If you leave off the option -v to see just a summary on the HFile.
 See usage for other things to do with the `HFile` tool.
