@@ -30,8 +30,10 @@
 :icons: font
 :experimental:
 
-link:https://issues.apache.org/jira/browse/HBASE-6449[HBASE-6449] added support for tracing requests through HBase, using the open source tracing library, link:https://htrace.incubator.apache.org/[HTrace].
-Setting up tracing is quite simple, however it currently requires some very minor changes to your client code (it would not be very difficult to remove this requirement).
+HBase includes facilities for tracing requests using the open source tracing library, link:https://htrace.incubator.apache.org/[Apache HTrace].
+Setting up tracing is quite simple, however it currently requires some very minor changes to your client code (this requirement may be removed in the future).
+
+Support for this feature using HTrace 3 in HBase was added in link:https://issues.apache.org/jira/browse/HBASE-6449[HBASE-6449]. Starting with HBase 2.0, there was a non-compatible update to HTrace 4 via link:https://issues.apache.org/jira/browse/HBASE-18601[HBASE-18601]. The examples provided in this section will be using HTrace 4 package names, syntax, and conventions. For older examples, please consult previous versions of this guide.
 
 [[tracing.spanreceivers]]
 === SpanReceivers

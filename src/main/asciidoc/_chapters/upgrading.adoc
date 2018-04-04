@@ -543,6 +543,14 @@ A number of internal dependencies for HBase were updated or removed from the run
 .Multiple breaking changes to source and binary compatibility for client API
 The Java client API for HBase has a number of changes that break both source and binary compatibility for details see the Compatibility Check Report for the release you'll be upgrading to.
 
+[[upgrade2.0.tracing]]
+.Tracing implementation changes
+The backing implementation of HBase's tracing features was updated from Apache HTrace 3 to HTrace 4, which includes several breaking changes. While HTrace 3 and 4 can coexist in the same runtime, they will not integrate with each other, leading to disjoint trace information.
+
+The internal changes to HBase during this upgrade were sufficient for compilation, but it has not been confirmed that there are no regressions in tracing functionality. Please consider this feature expiremental for the immediate future.
+
+If you previously relied on client side tracing integrated with HBase operations, it is recommended that you upgrade your usage to HTrace 4 as well.
+
 ////
 This would be a good place to link to an appendix on migrating applications
 ////
