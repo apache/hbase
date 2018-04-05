@@ -941,6 +941,45 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
 \... then there is a path issue with the compression libraries.
 See the Configuration section on link:[LZO compression configuration].
 
+[[trouble.rs.startup.hsync]]
+==== RegionServer aborts due to lack of hsync for filesystem
+
+In order to provide data durability for writes to the cluster HBase relies on the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
+
+For RegionServer roles, the failure will show up in logs like this:
+
+----
+2018-04-05 11:36:22,785 ERROR [regionserver/192.168.1.123:16020] wal.AsyncFSWALProvider: The RegionServer async write ahead log provider relies on the ability to call hflush and hsync for proper operation during component failures, but the current FileSystem does not support doing so. Please check the config value of 'hbase.wal.dir' and ensure it points to a FileSystem mount that has suitable capabilities for output streams.
+2018-04-05 11:36:22,799 ERROR [regionserver/192.168.1.123:16020] regionserver.HRegionServer: ***** ABORTING region server 192.168.1.123,16020,1522946074234: Unhandled: cannot get log writer *****
+java.io.IOException: cannot get log writer
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createAsyncWriter(AsyncFSWALProvider.java:112)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.createWriterInstance(AsyncFSWAL.java:612)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.createWriterInstance(AsyncFSWAL.java:124)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.rollWriter(AbstractFSWAL.java:759)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.rollWriter(AbstractFSWAL.java:489)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.<init>(AsyncFSWAL.java:251)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createWAL(AsyncFSWALProvider.java:69)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createWAL(AsyncFSWALProvider.java:44)
+        at org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWAL(AbstractFSWALProvider.java:138)
+        at org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWAL(AbstractFSWALProvider.java:57)
+        at org.apache.hadoop.hbase.wal.WALFactory.getWAL(WALFactory.java:252)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.getWAL(HRegionServer.java:2105)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.buildServerLoad(HRegionServer.java:1326)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.tryRegionServerReport(HRegionServer.java:1191)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.run(HRegionServer.java:1007)
+        at java.lang.Thread.run(Thread.java:745)
+Caused by: org.apache.hadoop.hbase.util.CommonFSUtils$StreamLacksCapabilityException: hflush and hsync
+        at org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper.createOutput(AsyncFSOutputHelper.java:69)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter.initOutput(AsyncProtobufLogWriter.java:168)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufLogWriter.init(AbstractProtobufLogWriter.java:167)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createAsyncWriter(AsyncFSWALProvider.java:99)
+        ... 15 more
+
+----
+
+If you are attempting to run in standalone mode and see this error, please walk back through the section <<quickstart>> and ensure you have included *all* the given configuration settings.
+
+
 [[trouble.rs.runtime]]
 === Runtime Errors
 
@@ -1126,6 +1165,29 @@ Sure fire solution is to just use Hadoop dfs to delete the HBase root and let HB
 ==== Packet len6080218 is out of range!
 
 If you have many regions on your cluster and you see an error like that reported above in this sections title in your logs, see link:https://issues.apache.org/jira/browse/HBASE-4246[HBASE-4246 Cluster with too many regions cannot withstand some master failover scenarios].
+
+[[trouble.master.startup.hsync]]
+==== Master fails to become active due to lack of hsync for filesystem
+
+HBase's internal framework for cluster operations requires the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
+
+For Master roles, the failure will show up in logs like this:
+
+----
+2018-04-05 11:18:44,653 ERROR [Thread-21] master.HMaster: Failed to become active master
+java.lang.IllegalStateException: The procedure WAL relies on the ability to hsync for proper operation during component failures, but the underlying filesystem does not support doing so. Please check the config value of 'hbase.procedure.store.wal.use.hsync' to set the desired level of robustness and ensure the config value of 'hbase.wal.dir' points to a FileSystem mount that can provide it.
+        at org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore.rollWriter(WALProcedureStore.java:1034)
+        at org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore.recoverLease(WALProcedureStore.java:374)
+        at org.apache.hadoop.hbase.procedure2.ProcedureExecutor.start(ProcedureExecutor.java:530)
+        at org.apache.hadoop.hbase.master.HMaster.startProcedureExecutor(HMaster.java:1267)
+        at org.apache.hadoop.hbase.master.HMaster.startServiceThreads(HMaster.java:1173)
+        at org.apache.hadoop.hbase.master.HMaster.finishActiveMasterInitialization(HMaster.java:881)
+        at org.apache.hadoop.hbase.master.HMaster.startActiveMasterManager(HMaster.java:2048)
+        at org.apache.hadoop.hbase.master.HMaster.lambda$run$0(HMaster.java:568)
+        at java.lang.Thread.run(Thread.java:745)
+----
+
+If you are attempting to run in standalone mode and see this error, please walk back through the section <<quickstart>> and ensure you have included *all* the given configuration settings.
 
 [[trouble.master.shutdown]]
 === Shutdown Errors

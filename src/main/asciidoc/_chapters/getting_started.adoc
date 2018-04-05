@@ -82,7 +82,7 @@ JAVA_HOME=/usr
 +
 
 . Edit _conf/hbase-site.xml_, which is the main HBase configuration file.
-  At this time, you only need to specify the directory on the local filesystem where HBase and ZooKeeper write data.
+  At this time, you need to specify the directory on the local filesystem where HBase and ZooKeeper write data and acknowledge some risks.
   By default, a new directory is created under /tmp.
   Many servers are configured to delete the contents of _/tmp_ upon reboot, so you should store the data elsewhere.
   The following configuration will store HBase's data in the _hbase_ directory, in the home directory of the user called `testuser`.
@@ -102,6 +102,21 @@ JAVA_HOME=/usr
     <name>hbase.zookeeper.property.dataDir</name>
     <value>/home/testuser/zookeeper</value>
   </property>
+  <property>
+    <name>hbase.unsafe.stream.capability.enforce</name>
+    <value>false</value>
+    <description>
+      Controls whether HBase will check for stream capabilities (hflush/hsync).
+
+      Disable this if you intend to run on LocalFileSystem, denoted by a rootdir
+      with the 'file://' scheme, but be mindful of the NOTE below.
+
+      WARNING: Setting this to false blinds you to potential data loss and
+      inconsistent system state in the event of process and/or node failures. If
+      HBase is complaining of an inability to use hsync or hflush it's most
+      likely not a false positive.
+    </description>
+  </property>
 </configuration>
 ----
 ====
@@ -111,7 +126,14 @@ HBase will do this for you.  If you create the directory,
 HBase will attempt to do a migration, which is not what you want.
 +
 NOTE: The _hbase.rootdir_ in the above example points to a directory
-in the _local filesystem_. The 'file:/' prefix is how we denote local filesystem.
+in the _local filesystem_. The 'file://' prefix is how we denote local
+filesystem. You should take the WARNING present in the configuration example
+to heart. In standalone mode HBase makes use of the local filesystem abstraction
+from the Apache Hadoop project. That abstraction doesn't provide the durability
+promises that HBase needs to operate safely. This is fine for local development
+and testing use cases where the cost of cluster failure is well contained. It is
+not appropriate for production deployments; eventually you will lose data.
+
 To home HBase on an existing instance of HDFS, set the _hbase.rootdir_ to point at a
 directory up on your instance: e.g. _hdfs://namenode.example.org:8020/hbase_.
 For more on this variant, see the section below on Standalone HBase over HDFS.
@@ -163,7 +185,7 @@ hbase(main):001:0> create 'test', 'cf'
 
 . List Information About your Table
 +
-Use the `list` command to
+Use the `list` command to confirm your table exists
 +
 ----
 hbase(main):002:0> list 'test'
@@ -172,6 +194,22 @@ test
 1 row(s) in 0.0180 seconds
 
 => ["test"]
+----
+
++
+Now use the `describe` command to see details, including configuration defaults
++
+----
+hbase(main):003:0> describe 'test'
+Table test is ENABLED
+test
+COLUMN FAMILIES DESCRIPTION
+{NAME => 'cf', VERSIONS => '1', EVICT_BLOCKS_ON_CLOSE => 'false', NEW_VERSION_BEHAVIOR => 'false', KEEP_DELETED_CELLS => 'FALSE', CACHE_DATA_ON_WRITE =>
+'false', DATA_BLOCK_ENCODING => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', REPLICATION_SCOPE => '0', BLOOMFILTER => 'ROW', CACHE_INDEX_ON_WRITE => 'f
+alse', IN_MEMORY => 'false', CACHE_BLOOMS_ON_WRITE => 'false', PREFETCH_BLOCKS_ON_OPEN => 'false', COMPRESSION => 'NONE', BLOCKCACHE => 'true', BLOCKSIZE
+ => '65536'}
+1 row(s)
+Took 0.9998 seconds
 ----
 
 . Put data into your table.
@@ -314,7 +352,7 @@ First, add the following property which directs HBase to run in distributed mode
 ----
 +
 Next, change the `hbase.rootdir` from the local filesystem to the address of your HDFS instance, using the `hdfs:////` URI syntax.
-In this example, HDFS is running on the localhost at port 8020.
+In this example, HDFS is running on the localhost at port 8020. Be sure to either remove the entry for `hbase.unsafe.stream.capability.enforce` or set it to true.
 +
 [source,xml]
 ----

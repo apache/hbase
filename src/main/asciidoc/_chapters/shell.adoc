@@ -227,7 +227,7 @@ The table reference can be used to perform data read write operations such as pu
 For example, previously you would always specify a table name:
 
 ----
-hbase(main):000:0> create ‘t’, ‘f’
+hbase(main):000:0> create 't', 'f'
 0 row(s) in 1.0970 seconds
 hbase(main):001:0> put 't', 'rold', 'f', 'v'
 0 row(s) in 0.0080 seconds
@@ -291,7 +291,7 @@ hbase(main):012:0> tab = get_table 't'
 0 row(s) in 0.0010 seconds
 
 => Hbase::Table - t
-hbase(main):013:0> tab.put ‘r1’ ,’f’, ‘v’
+hbase(main):013:0> tab.put 'r1' ,'f', 'v'
 0 row(s) in 0.0100 seconds
 hbase(main):014:0> tab.scan
 ROW                                COLUMN+CELL
@@ -305,7 +305,7 @@ You can then use jruby to script table operations based on these names.
 The list_snapshots command also acts similarly.
 
 ----
-hbase(main):016 > tables = list(‘t.*’)
+hbase(main):016 > tables = list('t.*')
 TABLE
 t
 1 row(s) in 0.1040 seconds
