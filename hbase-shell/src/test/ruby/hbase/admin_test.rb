@@ -319,6 +319,18 @@ module Hbase
       admin.truncate_preserve(@create_test_name, $TEST_CLUSTER.getConfiguration)
       assert_equal(splits, table(@create_test_name)._get_splits_internal())
     end
+
+    #-------------------------------------------------------------------------------
+
+    define_test "list_regions should fail for disabled table" do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a')
+      command(:disable, @create_test_name)
+      assert(:is_disabled, @create_test_name)
+      assert_raise(RuntimeError) do
+        command(:list_regions, @create_test_name)
+      end
+    end
   end
 
   # Simple administration methods tests
