@@ -317,7 +317,7 @@ First we'll cover deployment / operational changes that you might hit when upgra
 
 [[upgrade2.0.basic.requirements]]
 .Update to basic prerequisite minimums in HBase 2.0+
-As noted in the section [[basic.prerequisites]], HBase 2.0+ requires a minimum of Java 8 and Hadoop 2.6. The HBase community recommends ensuring you have already completed any needed upgrades in prerequisites prior to upgrading your HBase version.
+As noted in the section <<basic.prerequisites>>, HBase 2.0+ requires a minimum of Java 8 and Hadoop 2.6. The HBase community recommends ensuring you have already completed any needed upgrades in prerequisites prior to upgrading your HBase version.
 
 [[upgrade2.0.hbck]]
 .HBCK must match HBase server version
@@ -334,7 +334,7 @@ Link to a ref guide section on HBCK in 2.0 that explains use and calls out the i
 
 The following configuration settings are no longer applicable or available. For details, please see the detailed release notes.
 
-* hbase.config.read.zookeeper.config (see [[upgrade2.0.zkconfig]] for migration details)
+* hbase.config.read.zookeeper.config (see <<upgrade2.0.zkconfig>> for migration details)
 * hbase.zookeeper.useMulti (HBase now always uses ZK's multi functionality)
 * hbase.rpc.client.threads.max
 * hbase.rpc.client.nativetransport
@@ -343,10 +343,10 @@ The following configuration settings are no longer applicable or available. For 
 * hbase.bucketcache.combinedcache.enabled
 * hbase.bucketcache.ioengine no longer supports the 'heap' value.
 * hbase.bulkload.staging.dir
-* hbase.balancer.tablesOnMaster wasn't removed, strictly speaking, but its meaning has fundamentally changed and users should not set it. See the section [[upgrade2.0.regions.on.master]] for details.
-* hbase.master.distributed.log.replay See the section [[upgrade2.0.distributed.log.replay]] for details
-* hbase.regionserver.disallow.writes.when.recovering See the section [[upgrade2.0.distributed.log.replay]] for details
-* hbase.regionserver.wal.logreplay.batch.size See the section [[upgrade2.0.distributed.log.replay]] for details
+* hbase.balancer.tablesOnMaster wasn't removed, strictly speaking, but its meaning has fundamentally changed and users should not set it. See the section <<upgrade2.0.regions.on.master>> for details.
+* hbase.master.distributed.log.replay See the section <<upgrade2.0.distributed.log.replay>> for details
+* hbase.regionserver.disallow.writes.when.recovering See the section <<upgrade2.0.distributed.log.replay>> for details
+* hbase.regionserver.wal.logreplay.batch.size See the section <<upgrade2.0.distributed.log.replay>> for details
 * hbase.master.catalog.timeout
 * hbase.regionserver.catalog.timeout
 * hbase.metrics.exposeOperationTimes
@@ -375,14 +375,14 @@ The following properties have been renamed. Attempts to set the old property wil
 The following configuration settings changed their default value. Where applicable, the value to set to restore the behavior of HBase 1.2 is given.
 
 * hbase.security.authorization now defaults to false. set to true to restore same behavior as previous default.
-* hbase.client.retries.number is now set to 10. Previously it was 35. Downstream users are advised to use client timeouts as described in section [[config_timeouts]] instead.
-* hbase.client.serverside.retries.multiplier is now set to 3. Previously it was 10. Downstream users are advised to use client timesout as describe in section [[config_timeouts]] instead.
+* hbase.client.retries.number is now set to 10. Previously it was 35. Downstream users are advised to use client timeouts as described in section <<config_timeouts>> instead.
+* hbase.client.serverside.retries.multiplier is now set to 3. Previously it was 10. Downstream users are advised to use client timesout as describe in section <<config_timeouts>> instead.
 * hbase.master.fileSplitTimeout is now set to 10 minutes. Previously it was 30 seconds.
 * hbase.regionserver.logroll.multiplier is now set to 0.5. Previously it was 0.95.
 * hbase.regionserver.hlog.blocksize defaults to 2x the HDFS default block size for the WAL dir. Previously it was equal to the HDFS default block size for the WAL dir.
 * hbase.client.start.log.errors.counter changed to 5. Previously it was 9.
 * hbase.ipc.server.callqueue.type changed to 'fifo'. In HBase versions 1.0 - 1.2 it was 'deadline'. In prior and later 1.x versions it already defaults to 'fifo'.
-* hbase.hregion.memstore.chunkpool.maxsize is 1.0 by default. Previously it was 0.0. Effectively, this means previously we would not use a chunk pool when our memstore is onheap and now we will. See the section [[gcpause]] for more infromation about the MSLAB chunk pool.
+* hbase.hregion.memstore.chunkpool.maxsize is 1.0 by default. Previously it was 0.0. Effectively, this means previously we would not use a chunk pool when our memstore is onheap and now we will. See the section <<gcpause>> for more infromation about the MSLAB chunk pool.
 * hbase.master.cleaner.interval is now set to 10 minutes. Previously it was 1 minute.
 * hbase.master.procedure.threads will now default to 1/4 of the number of available CPUs, but not less than 16 threads. Previously it would be number of threads equal to number of CPUs.
 * hbase.hstore.blockingStoreFiles is now 16. Previously it was 10.
@@ -424,7 +424,7 @@ The following metrics have changed their meaning:
 
 The following metrics have been removed:
 
-* Metrics related to the Distributed Log Replay feature are no longer present. They were previsouly found in the region server context under the name 'replay'. See the section [[upgrade2.0.distributed.log.replay]] for details.
+* Metrics related to the Distributed Log Replay feature are no longer present. They were previsouly found in the region server context under the name 'replay'. See the section <<upgrade2.0.distributed.log.replay>> for details.
 
 The following metrics have been added:
 
@@ -466,7 +466,7 @@ The following commands that were deprecated in 1.0 have been removed. Where appl
 [[upgrade2.0.memory]]
 .Region Server memory consumption changes.
 
-Users upgrading from versions prior to HBase 1.4 should read the instructions in section [[upgrade1.4.memory]].
+Users upgrading from versions prior to HBase 1.4 should read the instructions in section <<upgrade1.4.memory>>.
 
 Additionally, HBase 2.0 has changed how memstore memory is tracked for flushing decisions. Previously, both the data size and overhead for storage were used to calculate utilization against the flush threashold. Now, only data size is used to make these per-region decisions. Globally the addition of the storage overhead is used to make decisions about forced flushes.
 
@@ -478,7 +478,7 @@ Previously, the Web UI included functionality on table status pages to merge or 
 [[upgrade2.0.replication]]
 .Special upgrading for Replication users from pre-HBase 1.4
 
-User running versions of HBase prior to the 1.4.0 release that make use of replication should be sure to read the instructions in the section [[upgrade1.4.replication]].
+User running versions of HBase prior to the 1.4.0 release that make use of replication should be sure to read the instructions in the section <<upgrade1.4.replication>>.
 
 [[upgrade2.0.jruby]]
 .HBase shell now based on JRuby 9.1.10.0
@@ -516,7 +516,7 @@ HBase has simplified our internal HFile handling. As a result, we can no longer 
 
 HBase can no longer read the deprecated WAL files written in the Apache Hadoop Sequence File format. The hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.reader.impl configuration entries should be set to use the Protobuf based WAL reader / writer classes. This implementation has been the default since HBase 0.96, so legacy WAL files should not be a concern for most downstream users.
 
-A clean cluster shutdown should ensure there are no WAL files. If you are unsure of a given WAL file's format you can use the `hbase wal` command to parse files while the HBase cluster is offline. In HBase 2.0+, this command will not be able to read a Sequence File based WAL. For more information on the tool see the section [[hlog_tool.prettyprint]].
+A clean cluster shutdown should ensure there are no WAL files. If you are unsure of a given WAL file's format you can use the `hbase wal` command to parse files while the HBase cluster is offline. In HBase 2.0+, this command will not be able to read a Sequence File based WAL. For more information on the tool see the section <<hlog_tool.prettyprint>>.
 
 [[upgrade2.0.filters]]
 .Change in behavior for filters
@@ -537,7 +537,7 @@ Note that this artifact exposes some classes in the org.apache.hadoop package sp
 
 [[upgrade2.0.dependencies]]
 .Significant changes to runtime classpath
-A number of internal dependencies for HBase were updated or removed from the runtime classpath. Downstream client users who do not follow the guidance in [[upgrade2.0.shaded.client.preferred]] will have to examine the set of dependencies Maven pulls in for impact. Downstream users of LimitedPrivate Coprocessor APIs will need to examine the runtime environment for impact. For details on our new handling of third party libraries that have historically been a problem with respect to harmonizing compatible runtime versions, see the reference guide section [[thirdparty]].
+A number of internal dependencies for HBase were updated or removed from the runtime classpath. Downstream client users who do not follow the guidance in <<upgrade2.0.shaded.client.preferred>> will have to examine the set of dependencies Maven pulls in for impact. Downstream users of LimitedPrivate Coprocessor APIs will need to examine the runtime environment for impact. For details on our new handling of third party libraries that have historically been a problem with respect to harmonizing compatible runtime versions, see the reference guide section <<thirdparty>>.
 
 [[upgrade2.0.public.api]]
 .Multiple breaking changes to source and binary compatibility for client API
