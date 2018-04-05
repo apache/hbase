@@ -359,7 +359,16 @@ public class WALProcedureStore extends ProcedureStoreBase {
     lock.lock();
     try {
       LOG.trace("Starting WAL Procedure Store lease recovery");
+      boolean afterFirstAttempt = false;
       while (isRunning()) {
+        // Don't sleep before first attempt
+        if (afterFirstAttempt) {
+          LOG.trace("Sleep {} ms after first lease recovery attempt.",
+              waitBeforeRoll);
+          Threads.sleepWithoutInterrupt(waitBeforeRoll);
+        } else {
+          afterFirstAttempt = true;
+        }
         FileStatus[] oldLogs = getLogFiles();
         // Get Log-MaxID and recover lease on old logs
         try {
