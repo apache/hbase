@@ -390,6 +390,7 @@ The following configuration settings changed their default value. Where applicab
 * hbase.client.max.perserver.tasks is now 2. Previously it was 5.
 * hbase.normalizer.period is now 5 minutes. Previously it was 30 minutes.
 * hbase.regionserver.region.split.policy is now SteppingSplitPolicy. Previously it was IncreasingToUpperBoundRegionSplitPolicy.
+* replication.source.ratio is now 0.5. Previously it was 0.1.
 
 [[upgrade2.0.regions.on.master]]
 ."Master hosting regions" feature broken and unsupported
