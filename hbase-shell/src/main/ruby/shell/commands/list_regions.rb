@@ -50,6 +50,8 @@ EOF
           options = { SERVER_NAME => options }
         end
 
+        raise "Table #{table_name} must be enabled." unless admin.enabled?(table_name)
+
         size_hash = {}
         if cols.nil?
           size_hash = { 'SERVER_NAME' => 12, 'REGION_NAME' => 12, 'START_KEY' => 10, 'END_KEY' => 10, 'SIZE' => 5, 'REQ' => 5, 'LOCALITY' => 10 }
