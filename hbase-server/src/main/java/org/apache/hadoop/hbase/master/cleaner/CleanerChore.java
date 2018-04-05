@@ -89,37 +89,33 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     }
 
     /**
-     * Checks if pool can be updated immediately.
+     * Checks if pool can be updated. If so, mark for update later.
      * @param conf configuration
-     * @return true if pool can be updated immediately, false otherwise
      */
-    synchronized boolean canUpdateImmediately(Configuration conf) {
+    synchronized void markUpdate(Configuration conf) {
       int newSize = calculatePoolSize(conf.get(CHORE_POOL_SIZE, DEFAULT_CHORE_POOL_SIZE));
       if (newSize == size) {
         LOG.trace("Size from configuration is same as previous={}, no need to update.", newSize);
-        return false;
+        return;
       }
       size = newSize;
-      if (pool.getPoolSize() == 0) {
-        // chore has no working thread.
-        return true;
-      }
       // Chore is working, update it later.
       reconfigNotification.set(true);
-      return false;
     }
 
     /**
      * Update pool with new size.
      */
     synchronized void updatePool(long timeout) {
-      while (cleanerLatch != 0) {
+      long stopTime = System.currentTimeMillis() + timeout;
+      while (cleanerLatch != 0 && timeout > 0) {
         try {
           wait(timeout);
+          timeout = stopTime - System.currentTimeMillis();
         } catch (InterruptedException ie) {
-          // It's ok to ignore
+          Thread.currentThread().interrupt();
+          break;
         }
-        break;
       }
       pool.shutdownNow();
       LOG.info("Update chore's pool size from {} to {}", pool.getParallelism(), size);
@@ -243,10 +239,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    if (POOL.canUpdateImmediately(conf)) {
-      // Can immediately update, no need to wait.
-      POOL.updatePool(0);
-    }
+    POOL.markUpdate(conf);
   }
 
   /**
