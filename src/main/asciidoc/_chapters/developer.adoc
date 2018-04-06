@@ -578,8 +578,9 @@ You could also set this in an environment variable or alias in your shell.
 The script _dev-support/make_rc.sh_ automates many of the below steps.
 It will checkout a tag, clean the checkout, build src and bin tarballs,
 and deploy the built jars to repository.apache.org.
-It does NOT do the modification of the _CHANGES.txt_ for the release,
-the checking of the produced artifacts to ensure they are 'good' --
+It does NOT do the modification of the _CHANGES.md_ and _RELEASENOTES.md_
+(See HBASE-18828 for how to generate these files)
+for the release, the checking of the produced artifacts to ensure they are 'good' --
 e.g. extracting the produced tarballs, verifying that they
 look right, then starting HBase and checking that everything is running
 correctly -- or the signing and pushing of the tarballs to
@@ -588,9 +589,9 @@ Take a look. Modify/improve as you see fit.
 ====
 
 .Procedure: Release Procedure
-. Update the _CHANGES.txt_ file and the POM files.
+. Update the _CHANGES.md and _RELEASENOTES.md_ files (See HBASE-18828 for how)_ and the POM files.
 +
-Update _CHANGES.txt_ with the changes since the last release.
+Update _CHANGES.md and _RELEASENOTES.md_ with the changes since the last release.
 Make sure the URL to the JIRA points to the proper location which lists fixes for this release.
 Adjust the version in all the POM files appropriately.
 If you are making a release candidate, you must remove the `-SNAPSHOT` label from all versions
@@ -604,7 +605,8 @@ To set a version in all the many poms of the hbase multi-module project, use a c
 $ mvn clean org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=2.1.0-SNAPSHOT
 ----
 +
-Make sure all versions in poms are changed! Checkin the _CHANGES.txt_ and any maven version changes.
+Make sure all versions in poms are changed! Checkin the _CHANGES.md_ and _RELEASENOTES.md_
+and any maven version changes.
 
 . Update the documentation.
 +

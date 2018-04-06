@@ -830,7 +830,6 @@
               <exclude>**/0000000000000016310</exclude>
               <exclude>**/.idea/**</exclude>
               <exclude>**/*.iml</exclude>
-              <exclude>**/CHANGES.txt</exclude>
               <exclude>**/generated/**</exclude>
               <exclude>**/gen-*/**</exclude>
               <!-- No material contents -->
