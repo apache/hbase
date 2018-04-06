@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -33,9 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 /**
  * ThriftServer- this class starts up a Thrift server which implements the
@@ -78,7 +75,8 @@ public class ThriftServer {
       throws ExitCodeException {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("Thrift", null, options,
-        "To start the Thrift server run 'hbase-daemon.sh start thrift'\n" +
+        "To start the Thrift server run 'hbase-daemon.sh start thrift' or " +
+        "'hbase thrift'\n" +
         "To shutdown the thrift server run 'hbase-daemon.sh stop " +
         "thrift' or send a kill signal to the thrift server pid",
         true);
@@ -143,20 +141,10 @@ public class ThriftServer {
 
     options.addOptionGroup(ImplType.createOptionGroup());
 
-    CommandLineParser parser = new PosixParser();
+    CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 
-    // This is so complicated to please both bin/hbase and bin/hbase-daemon.
-    // hbase-daemon provides "start" and "stop" arguments
-    // hbase should print the help if no argument is provided
-    List<String> commandLine = Arrays.asList(args);
-    boolean stop = commandLine.contains("stop");
-    boolean start = commandLine.contains("start");
-    boolean invalidStartStop = (start && stop) || (!start && !stop);
-    if (cmd.hasOption("help") || invalidStartStop) {
-      if (invalidStartStop) {
-        LOG.error("Exactly one of 'start' and 'stop' has to be specified");
-      }
+    if (cmd.hasOption("help")) {
       printUsageAndExit(options, 1);
     }
 
@@ -194,7 +182,7 @@ public class ThriftServer {
         conf, TBoundedThreadPoolServer.THREAD_KEEP_ALIVE_TIME_SEC_CONF_KEY);
     optionToConf(cmd, READ_TIMEOUT_OPTION, conf,
         ThriftServerRunner.THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY);
-    
+
     // Set general thrift server options
     boolean compact = cmd.hasOption(COMPACT_OPTION) ||
       conf.getBoolean(ThriftServerRunner.COMPACT_CONF_KEY, false);
