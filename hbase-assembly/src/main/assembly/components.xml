@@ -26,6 +26,11 @@
     <fileSet>
       <directory>${project.basedir}/../target/site</directory>
       <outputDirectory>docs</outputDirectory>
+      <!--Don't include dev apidocs. They bloat the tgz by almost 50%.
+           See HBASE-20149-->
+      <excludes>
+        <exclude>**/*devapidocs/**</exclude>
+      </excludes>
     </fileSet>
     <!-- Include top level text files-->
     <fileSet>
