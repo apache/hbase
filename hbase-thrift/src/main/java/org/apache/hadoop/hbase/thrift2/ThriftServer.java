@@ -23,7 +23,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -81,12 +80,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.OptionGroup;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 /**
  * ThriftServer - this class starts up a Thrift server which implements the HBase API specified in the
@@ -129,9 +128,10 @@ public class ThriftServer extends Configured implements Tool {
   private static void printUsage() {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("Thrift", null, getOptions(),
-        "To start the Thrift server run 'hbase-daemon.sh start thrift2'\n" +
-            "To shutdown the thrift server run 'hbase-daemon.sh stop thrift2' or" +
-            " send a kill signal to the thrift server pid",
+        "To start the Thrift server run 'hbase-daemon.sh start thrift2' or " +
+        "'hbase thrift2'\n" +
+        "To shutdown the thrift server run 'hbase-daemon.sh stop thrift2' or" +
+        " send a kill signal to the thrift server pid",
         true);
   }
 
@@ -166,7 +166,7 @@ public class ThriftServer extends Configured implements Tool {
 
   private static CommandLine parseArguments(Configuration conf, Options options, String[] args)
       throws ParseException, IOException {
-    CommandLineParser parser = new PosixParser();
+    CommandLineParser parser = new DefaultParser();
     return parser.parse(options, args);
   }
 
@@ -385,12 +385,7 @@ public class ThriftServer extends Configured implements Tool {
     int selectorThreads = 0;
     int maxCallQueueSize = -1; // use unbounded queue by default
 
-    /**
-     * This is to please both bin/hbase and bin/hbase-daemon. hbase-daemon provides "start" and "stop" arguments hbase
-     * should print the help if no argument is provided
-     */
-    List<?> argList = cmd.getArgList();
-    if (cmd.hasOption("help") || !argList.contains("start") || argList.contains("stop")) {
+    if (cmd.hasOption("help")) {
       printUsage();
       return 1;
     }
