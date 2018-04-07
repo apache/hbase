@@ -224,8 +224,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
       this.current.close();
     }
     if (this.heap != null) {
-      KeyValueScanner scanner;
-      while ((scanner = this.heap.poll()) != null) {
+      // Order of closing the scanners shouldn't matter here, so simply iterate and close them.
+      for (KeyValueScanner scanner : heap) {
         scanner.close();
       }
     }
