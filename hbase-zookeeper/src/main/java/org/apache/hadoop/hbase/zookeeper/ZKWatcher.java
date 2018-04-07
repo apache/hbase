@@ -76,7 +76,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // Used if abortable is null
   private boolean aborted = false;
 
-  protected final ZNodePaths znodePaths;
+  public final ZNodePaths znodePaths;
 
   // listeners to be notified
   private final List<ZKListener> listeners = new CopyOnWriteArrayList<>();
