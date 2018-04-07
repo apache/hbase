@@ -16,6 +16,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
+
+CHANGES.md and RELEASENOTES.md were generated using yetus releasedocmaker.
+
+First make sure what is in JIRA agrees with what is in git and vice-versa
+(See HBASE-14175 for original exposition on how to do this followed by
+the travails of various release managers. See also HBASE-18828 for a
+deriviative makes the move to yetus releasedocmaker).
+
+Then make sure that anything in current release as noted in JIRA has
+not made it out in earlier major/minor (see HBASE-14175 for how to
+reconcile which).
+
+Obtain a yetus release (see HBASE-18828 for some help). To run
+releasedocmaker, do as follows (below example is for hbase-2.0.0):
+
+ $ ./release-doc-maker/releasedocmaker.py -p HBASE --fileversions \
+    -v 2.0.0 -l --sortorder=newer --skip-credits
+
+Rename the output as CHANGES.md and RELEASENOTES.md. Edit both to put
+document title above the apache license so markdown readers work. You
+may have to bulk import old-style CHANGES.txt on to the end in a code
+comment to preserve continuity of the CHANGELOG.
+
 -->
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
