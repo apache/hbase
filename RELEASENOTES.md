@@ -22,12 +22,12 @@
 CHANGES.md and RELEASENOTES.md were generated using yetus releasedocmaker.
 
 First make sure what is in JIRA agrees with what is in git and vice-versa
-(See HBASE-14175 for original exposition on how to do this followed by
+(See HBASE-14025 for original exposition on how to do this followed by
 the travails of various release managers. See also HBASE-18828 for a
 deriviative makes the move to yetus releasedocmaker).
 
 Then make sure that anything in current release as noted in JIRA has
-not made it out in earlier major/minor (see HBASE-14175 for how to
+not made it out in earlier major/minor (see HBASE-14025 for how to
 reconcile which).
 
 Obtain a yetus release (see HBASE-18828 for some help). To run
