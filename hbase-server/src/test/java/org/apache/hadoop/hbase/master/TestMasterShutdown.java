@@ -55,7 +55,6 @@ public class TestMasterShutdown {
    * <p>
    * Starts with three masters.  Tells the active master to shutdown the cluster.
    * Verifies that all masters are properly shutdown.
-   * @throws Exception
    */
   @Test
   public void testMasterShutdown() throws Exception {
@@ -130,17 +129,18 @@ public class TestMasterShutdown {
       public void run() {
         LOG.info("Before call to shutdown master");
         try {
-          try (Connection connection =
-              ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (
+            Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
             try (Admin admin = connection.getAdmin()) {
               admin.shutdown();
             }
           }
-          LOG.info("After call to shutdown master");
-          cluster.waitOnMaster(MASTER_INDEX);
         } catch (Exception e) {
+          LOG.info("Error while calling Admin.shutdown, which is expected: " + e.getMessage());
         }
-      };
+        LOG.info("After call to shutdown master");
+        cluster.waitOnMaster(MASTER_INDEX);
+      }
     };
     shutdownThread.start();
     LOG.info("Called master join on " + master.getName());
