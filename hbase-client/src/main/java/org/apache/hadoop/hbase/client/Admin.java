@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -1415,15 +1414,25 @@ public interface Admin extends Abortable, Closeable {
       throws IOException;
 
   /**
+   * <p>
    * Shuts down the HBase cluster.
-   *
+   * </p>
+   * <p>
+   * Notice that, a success shutdown call may ends with an error since the remote server has already
+   * been shutdown.
+   * </p>
    * @throws IOException if a remote or network exception occurs
    */
   void shutdown() throws IOException;
 
   /**
+   * <p>
    * Shuts down the current HBase master only. Does not shutdown the cluster.
-   *
+   * </p>
+   * <p>
+   * Notice that, a success stopMaster call may ends with an error since the remote server has
+   * already been shutdown.
+   * </p>
    * @throws IOException if a remote or network exception occurs
    * @see #shutdown()
    */
