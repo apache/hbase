@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
@@ -348,24 +349,24 @@ public class TestNamespaceAuditor {
       UTIL.loadNumericRows(table, Bytes.toBytes("info"), 1000, 1999);
     }
     ADMIN.flush(tableTwo);
-    List<HRegionInfo> hris = ADMIN.getTableRegions(tableTwo);
+    List<RegionInfo> hris = ADMIN.getRegions(tableTwo);
     assertEquals(initialRegions, hris.size());
-    Collections.sort(hris);
+    Collections.sort(hris, RegionInfo.COMPARATOR);
     Future<?> f = ADMIN.mergeRegionsAsync(
       hris.get(0).getEncodedNameAsBytes(),
       hris.get(1).getEncodedNameAsBytes(),
       false);
     f.get(10, TimeUnit.SECONDS);
 
-    hris = ADMIN.getTableRegions(tableTwo);
+    hris = ADMIN.getRegions(tableTwo);
     assertEquals(initialRegions - 1, hris.size());
-    Collections.sort(hris);
-    ADMIN.split(tableTwo, Bytes.toBytes("3"));
-    // Not much we can do here until we have split return a Future.
-    Threads.sleep(5000);
-    hris = ADMIN.getTableRegions(tableTwo);
+    Collections.sort(hris, RegionInfo.COMPARATOR);
+    UTIL.compact(tableTwo, true);
+    ADMIN.splitRegionAsync(hris.get(0).getRegionName(), Bytes.toBytes("3")).get(10,
+      TimeUnit.SECONDS);
+    hris = ADMIN.getRegions(tableTwo);
     assertEquals(initialRegions, hris.size());
-    Collections.sort(hris);
+    Collections.sort(hris, RegionInfo.COMPARATOR);
 
     // Fail region merge through Coprocessor hook
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
@@ -384,11 +385,10 @@ public class TestNamespaceAuditor {
     } catch (ExecutionException ee) {
       // Expected.
     }
-    hris = ADMIN.getTableRegions(tableTwo);
+    hris = ADMIN.getRegions(tableTwo);
     assertEquals(initialRegions, hris.size());
-    Collections.sort(hris);
+    Collections.sort(hris, RegionInfo.COMPARATOR);
     // verify that we cannot split
-    HRegionInfo hriToSplit2 = hris.get(1);
     try {
       ADMIN.split(tableTwo, Bytes.toBytes("6"));
       fail();
@@ -396,7 +396,7 @@ public class TestNamespaceAuditor {
       // Expected
     }
     Thread.sleep(2000);
-    assertEquals(initialRegions, ADMIN.getTableRegions(tableTwo).size());
+    assertEquals(initialRegions, ADMIN.getRegions(tableTwo).size());
   }
 
   /*
