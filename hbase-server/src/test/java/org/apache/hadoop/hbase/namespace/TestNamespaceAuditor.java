@@ -361,8 +361,14 @@ public class TestNamespaceAuditor {
     hris = ADMIN.getRegions(tableTwo);
     assertEquals(initialRegions - 1, hris.size());
     Collections.sort(hris, RegionInfo.COMPARATOR);
-    UTIL.compact(tableTwo, true);
-    ADMIN.splitRegionAsync(hris.get(0).getRegionName(), Bytes.toBytes("3")).get(10,
+    byte[] splitKey = Bytes.toBytes("3");
+    HRegion regionToSplit = UTIL.getMiniHBaseCluster().getRegions(tableTwo).stream()
+      .filter(r -> r.getRegionInfo().containsRow(splitKey)).findFirst().get();
+    regionToSplit.compact(true);
+    // the above compact may quit immediately if there is a compaction ongoing, so here we need to
+    // wait a while to let the ongoing compaction finish.
+    UTIL.waitFor(10000, regionToSplit::isSplittable);
+    ADMIN.splitRegionAsync(regionToSplit.getRegionInfo().getRegionName(), splitKey).get(10,
       TimeUnit.SECONDS);
     hris = ADMIN.getRegions(tableTwo);
     assertEquals(initialRegions, hris.size());
