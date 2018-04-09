@@ -277,8 +277,10 @@ function refguide_rebuild
 
   start_clock
 
+  # disabled because "maven_executor" needs to return both command and args
+  # shellcheck disable=2046
   echo_and_redirect "${logfile}" \
-    "${MAVEN}" "${MAVEN_ARGS[@]}" clean site --batch-mode \
+    $(maven_executor) clean site --batch-mode \
       -pl . \
       -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
       -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
@@ -352,8 +354,10 @@ function shadedjars_rebuild
 
   start_clock
 
+  # disabled because "maven_executor" needs to return both command and args
+  # shellcheck disable=2046
   echo_and_redirect "${logfile}" \
-    "${MAVEN}" "${MAVEN_ARGS[@]}" clean verify -fae --batch-mode \
+    $(maven_executor) clean verify -fae --batch-mode \
       -pl hbase-shaded/hbase-shaded-check-invariants -am \
       -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
       -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
@@ -459,8 +463,10 @@ function hadoopcheck_rebuild
   export MAVEN_OPTS="${MAVEN_OPTS}"
   for hadoopver in ${hbase_hadoop2_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    # disabled because "maven_executor" needs to return both command and args
+    # shellcheck disable=2046
     echo_and_redirect "${logfile}" \
-      "${MAVEN}" clean install \
+      $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-two.version="${hadoopver}"
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
@@ -473,8 +479,10 @@ function hadoopcheck_rebuild
 
   for hadoopver in ${hbase_hadoop3_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    # disabled because "maven_executor" needs to return both command and args
+    # shellcheck disable=2046
     echo_and_redirect "${logfile}" \
-      "${MAVEN}" clean install \
+      $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-three.version="${hadoopver}" \
         -Dhadoop.profile=3.0
