@@ -62,6 +62,10 @@
         </plugins>
     </build>
     <dependencies>
+        <!--
+             We want to ensure needed hadoop bits are at provided scope for our shaded
+             artifact, so we list them below in hadoop specific profiles.
+          -->
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-mapreduce</artifactId>
@@ -138,16 +142,23 @@
                 <artifactId>jetty-webapp</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>org.glassfish.web</groupId>
-                <artifactId>javax.servlet.jsp</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>org.glassfish.jersey.core</groupId>
                 <artifactId>jersey-server</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.glassfish.jersey.containers</groupId>
                 <artifactId>jersey-container-servlet-core</artifactId>
+              </exclusion>
+              <!-- We excluded the server-side generated classes for JSP, so exclude
+                   their runtime support libraries too
+                -->
+              <exclusion>
+                <groupId>org.glassfish.web</groupId>
+                <artifactId>javax.servlet.jsp</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>javax.servlet.jsp-api</artifactId>
               </exclusion>
             </exclusions>
         </dependency>
@@ -158,12 +169,175 @@
             <id>release</id>
             <build>
                 <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-shade-plugin</artifactId>
-                    </plugin>
+                <!-- Tell the shade plugin we want to leave Hadoop as a dependency -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>aggregate-into-a-jar-with-relocated-third-parties</id>
+                            <configuration>
+                                <artifactSet>
+                                    <excludes>
+                                        <exclude>org.apache.hadoop:*</exclude>
+                                        <!-- The rest of these should be kept in sync with the parent pom -->
+                                        <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
+                                        <exclude>org.slf4j:*</exclude>
+                                        <exclude>com.google.code.findbugs:*</exclude>
+                                        <exclude>com.github.stephenc.findbugs:*</exclude>
+                                        <exclude>org.apache.htrace:*</exclude>
+                                        <exclude>org.apache.yetus:*</exclude>
+                                        <exclude>log4j:*</exclude>
+                                        <exclude>commons-logging:*</exclude>
+                                    </excludes>
+                                </artifactSet>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
                 </plugins>
             </build>
+        </profile>
+        <!-- These hadoop profiles should be derived from those in the hbase-mapreduce
+             module. Essentially, you must list the same hadoop-* dependencies
+             since provided dependencies are not transitively included.
+        -->
+        <!-- profile against Hadoop 2.x: This is the default. -->
+        <profile>
+          <id>hadoop-2.0</id>
+          <activation>
+            <property>
+                <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+                <!--h2--><name>!hadoop.profile</name>
+            </property>
+          </activation>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-common</artifactId>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>net.java.dev.jets3t</groupId>
+                  <artifactId>jets3t</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>javax.servlet.jsp</groupId>
+                  <artifactId>jsp-api</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>org.mortbay.jetty</groupId>
+                  <artifactId>jetty</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>com.sun.jersey</groupId>
+                  <artifactId>jersey-server</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>com.sun.jersey</groupId>
+                  <artifactId>jersey-core</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>com.sun.jersey</groupId>
+                  <artifactId>jersey-json</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>javax.servlet</groupId>
+                  <artifactId>servlet-api</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>tomcat</groupId>
+                  <artifactId>jasper-compiler</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>tomcat</groupId>
+                  <artifactId>jasper-runtime</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>com.google.code.findbugs</groupId>
+                  <artifactId>jsr305</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-hdfs</artifactId>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>javax.servlet.jsp</groupId>
+                  <artifactId>jsp-api</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>javax.servlet</groupId>
+                  <artifactId>servlet-api</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>io.netty</groupId>
+                  <artifactId>netty</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>stax</groupId>
+                  <artifactId>stax-api</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>xerces</groupId>
+                  <artifactId>xercesImpl</artifactId>
+                </exclusion>
+              </exclusions>
+              <version>${hadoop-two.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-mapreduce-client-core</artifactId>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>com.google.guava</groupId>
+                  <artifactId>guava</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-auth</artifactId>
+              <scope>provided</scope>
+            </dependency>
+          </dependencies>
+        </profile>
+
+        <!--
+          profile for building against Hadoop 3.0.x. Activate using:
+           mvn -Dhadoop.profile=3.0
+        -->
+        <profile>
+          <id>hadoop-3.0</id>
+          <activation>
+            <property>
+              <name>hadoop.profile</name>
+              <value>3.0</value>
+            </property>
+          </activation>
+          <properties>
+            <hadoop.version>${hadoop-three.version}</hadoop.version>
+          </properties>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-common</artifactId>
+              <scope>provided</scope>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-hdfs</artifactId>
+              <scope>provided</scope>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-auth</artifactId>
+              <scope>provided</scope>
+            </dependency>
+          </dependencies>
         </profile>
     </profiles>
 </project>

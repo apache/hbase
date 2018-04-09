@@ -42,6 +42,7 @@
         <module>hbase-shaded-client</module>
         <module>hbase-shaded-mapreduce</module>
         <module>hbase-shaded-check-invariants</module>
+        <module>hbase-shaded-with-hadoop-check-invariants</module>
     </modules>
     <dependencies>
       <dependency>
@@ -118,6 +119,7 @@
                     <artifactId>maven-shade-plugin</artifactId>
                     <executions>
                         <execution>
+                            <id>aggregate-into-a-jar-with-relocated-third-parties</id>
                             <phase>package</phase>
                             <goals>
                                 <goal>shade</goal>
@@ -448,11 +450,22 @@
                                     </excludes>
                                   </filter>
                                   <filter>
+                                    <!-- Duplication of classes that ship in commons-collections 2.x and 3.x
+                                         If we stop bundling a relevant commons-collections artifact we'll
+                                         need to revisit. See: https://s.apache.org/e09o
+                                    -->
+                                    <artifact>commons-beanutils:commons-beanutils-core</artifact>
+                                    <excludes>
+                                      <exclude>org/apache/commons/collections/*.class</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <filter>
                                     <!-- server side webapps that we don't need -->
                                     <artifact>org.apache.hbase:hbase-server</artifact>
                                     <excludes>
                                       <exclude>hbase-webapps/*</exclude>
                                       <exclude>hbase-webapps/**/*</exclude>
+                                      <exclude>**/*_jsp.class</exclude>
                                     </excludes>
                                   </filter>
                                   <filter>
