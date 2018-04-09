@@ -225,10 +225,6 @@
           <artifactId>hadoop-common</artifactId>
           <exclusions>
             <exclusion>
-              <groupId>org.apache.htrace</groupId>
-              <artifactId>htrace-core</artifactId>
-            </exclusion>
-            <exclusion>
               <groupId>com.google.guava</groupId>
               <artifactId>guava</artifactId>
             </exclusion>

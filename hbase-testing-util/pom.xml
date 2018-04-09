@@ -140,12 +140,6 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
                     <scope>compile</scope>
-                    <exclusions>
-                        <exclusion>
-                            <groupId>org.apache.htrace</groupId>
-                            <artifactId>htrace-core</artifactId>
-                        </exclusion>
-                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
@@ -202,10 +196,6 @@
                     <scope>compile</scope>
                     <exclusions>
                       <exclusion>
-                        <groupId>org.apache.htrace</groupId>
-                        <artifactId>htrace-core</artifactId>
-                      </exclusion>
-                      <exclusion>
                         <groupId>com.google.guava</groupId>
                         <artifactId>guava</artifactId>
                       </exclusion>
@@ -242,12 +232,6 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-minicluster</artifactId>
                     <scope>compile</scope>
-                    <exclusions>
-                        <exclusion>
-                            <groupId>org.apache.htrace</groupId>
-                            <artifactId>htrace-core</artifactId>
-                        </exclusion>
-                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>

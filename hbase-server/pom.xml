@@ -71,6 +71,14 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-remote-resources-plugin</artifactId>
         <version>1.5</version>
+        <dependencies>
+          <!-- resource bundle only needed at build time -->
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-resource-bundle</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <id>default</id>
@@ -392,12 +400,6 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-metrics</artifactId>
     </dependency>
-    <!-- resource bundle only needed at build time -->
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-resource-bundle</artifactId>
-      <optional>true</optional>
-    </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
@@ -437,19 +439,16 @@
       <artifactId>jetty-webapp</artifactId>
     </dependency>
     <dependency>
-      <!--For JspC used in ant task-->
+      <!-- For JspC used in ant task, then needed at compile /runtime
+           because the source code made from the JSP refers to its runtime
+        -->
       <groupId>org.glassfish.web</groupId>
       <artifactId>javax.servlet.jsp</artifactId>
     </dependency>
+      <!-- Also used by generated sources from our JSP -->
     <dependency>
-      <groupId>org.codehaus.jettison</groupId>
-      <artifactId>jettison</artifactId>
-        <exclusions>
-          <exclusion>
-            <groupId>stax</groupId>
-            <artifactId>stax-api</artifactId>
-          </exclusion>
-        </exclusions>
+      <groupId>javax.servlet.jsp</groupId>
+      <artifactId>javax.servlet.jsp-api</artifactId>
     </dependency>
     <!-- General dependencies -->
     <dependency>
@@ -501,20 +500,26 @@
       <groupId>javax.servlet</groupId>
       <artifactId>javax.servlet-api</artifactId>
     </dependency>
+    <!-- Jackson only used in compile/runtime scope by BlockCacheUtil class
+         also used by some tests
+      -->
     <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
     </dependency>
 
     <!-- tracing Dependencies -->
     <dependency>
       <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.htrace</groupId>
-      <artifactId>htrace-core</artifactId>
-      <version>${htrace-hadoop.version}</version>
     </dependency>
     <dependency>
       <groupId>com.lmax</groupId>
@@ -555,6 +560,15 @@
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpcore</artifactId>
       <scope>test</scope>
+    </dependency>
+    <!-- commons-logging is used by HBTU to monkey with log levels
+         have to put it at compile scope because Hadoop's IOUtils uses it
+         both for hadoop 2.7 and 3.0, so we'll fail at compile if it's at test scope.
+      -->
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -676,31 +690,7 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-distcp</artifactId>
-          <version>${hadoop-two.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
-          <version>${hadoop-two.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client</artifactId>
-          <exclusions>
-            <exclusion>
-              <groupId>com.google.guava</groupId>
-              <artifactId>guava</artifactId>
-            </exclusion>
-          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -796,11 +786,6 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-distcp</artifactId>
-          <version>${hadoop-three.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </dependency>
         <dependency>
@@ -809,8 +794,24 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
-          <version>${hadoop-three.version}</version>
+          <artifactId>hadoop-hdfs-client</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-core</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

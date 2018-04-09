@@ -19,7 +19,7 @@
     <version>3.0.0-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
-  <artifactId>hbase-shaded-check-invariants</artifactId>
+  <artifactId>hbase-shaded-with-hadoop-check-invariants</artifactId>
   <packaging>pom</packaging>
 
   <description>
@@ -28,24 +28,18 @@
   classes that are in particular packages. Does the enforcement through
   the maven-enforcer-plugin and integration test.
   </description>
-  <name>Apache HBase Shaded Packaging Invariants</name>
+  <name>Apache HBase Shaded Packaging Invariants (with Hadoop bundled)</name>
 
   <properties>
   </properties>
 
   <dependencies>
-    <!-- Include here any client facing artifacts that presume
-         the runtime environment will have hadoop.
-
-         If our checks fail for the shaded mapreduce artifact,
-         then probably a dependency from hadoop has shown up
-         in the hbase-mapreduce module without being flagged
-         as 'provided' scope. See the note by the relevant
-         hadoop profile in that module.
+    <!-- This should only be client facing artifacts that bundle
+         Apache Hadoop related artifacts.
       -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-shaded-mapreduce</artifactId>
+      <artifactId>hbase-shaded-client</artifactId>
       <version>${project.version}</version>
     </dependency>
     <!-- parent pom defines these for children. :( :( :( -->
@@ -117,8 +111,9 @@
                     <exclude>com.github.stephenc.findbugs:*</exclude>
                     <!-- We leave HTrace as an unshaded dependnecy on purpose so that tracing within a JVM will work -->
                     <exclude>org.apache.htrace:*</exclude>
-                    <!-- Our public API requires Hadoop at runtime to work -->
-                    <exclude>org.apache.hadoop:*</exclude>
+                    <!-- NB we don't exclude Hadoop from this check here, because the assumption is any needed classes
+                         are contained in our artifacts.
+                      -->
                   </excludes>
                 </banTransitiveDependencies>
                 <banDuplicateClasses>
@@ -183,8 +178,8 @@
               <executable>diff</executable>
               <requiresOnline>false</requiresOnline>
               <arguments>
-                <argument>../hbase-shaded-check-invariants/src/test/resources/ensure-jars-have-correct-contents.sh</argument>
                 <argument>../hbase-shaded-with-hadoop-check-invariants/src/test/resources/ensure-jars-have-correct-contents.sh</argument>
+                <argument>../hbase-shaded-check-invariants/src/test/resources/ensure-jars-have-correct-contents.sh</argument>
               </arguments>
             </configuration>
           </execution>
@@ -196,7 +191,7 @@
             means inspecting all the jars.
             -->
           <execution>
-            <id>check-jar-contents</id>
+            <id>check-jar-contents-for-stuff-with-hadoop</id>
             <phase>integration-test</phase>
             <goals>
               <goal>exec</goal>
@@ -205,11 +200,9 @@
               <executable>${shell-executable}</executable>
               <workingDirectory>${project.build.testOutputDirectory}</workingDirectory>
               <requiresOnline>false</requiresOnline>
-              <!-- Important that we don't pass the 'allow-hadoop' flag here, because
-                   we allowed it as a provided dependency above.
-                -->
               <arguments>
                 <argument>ensure-jars-have-correct-contents.sh</argument>
+                <argument>--allow-hadoop</argument>
                 <argument>${hbase-client-artifacts}</argument>
               </arguments>
             </configuration>

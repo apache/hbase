@@ -155,10 +155,6 @@
           <artifactId>hadoop-common</artifactId>
           <exclusions>
             <exclusion>
-              <groupId>org.apache.htrace</groupId>
-              <artifactId>htrace-core</artifactId>
-            </exclusion>
-            <exclusion>
               <groupId>net.java.dev.jets3t</groupId>
               <artifactId>jets3t</artifactId>
             </exclusion>
@@ -264,9 +260,6 @@
           <value>3.0</value>
         </property>
       </activation>
-      <properties>
-        <hadoop.version>3.0-SNAPSHOT</hadoop.version>
-      </properties>
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -275,6 +268,11 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-distcp</artifactId>
+          <version>${hadoop.version}</version>
         </dependency>
       </dependencies>
     </profile>

@@ -314,12 +314,6 @@
           <artifactId>hadoop-common</artifactId>
           <!--FYI This pulls in hadoop's guava. Its needed for Configuration
                at least-->
-          <exclusions>
-            <exclusion>
-              <groupId>org.apache.htrace</groupId>
-              <artifactId>htrace-core</artifactId>
-            </exclusion>
-          </exclusions>
         </dependency>
       </dependencies>
       <build>
@@ -366,12 +360,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
-          <exclusions>
-            <exclusion>
-              <groupId>org.apache.htrace</groupId>
-              <artifactId>htrace-core</artifactId>
-            </exclusion>
-          </exclusions>
         </dependency>
       </dependencies>
       <build>

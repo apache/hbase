@@ -300,6 +300,19 @@
       <artifactId>jackson-jaxrs-json-provider</artifactId>
     </dependency>
     <dependency>
+      <!-- We *might* need this for XMLStreamReader use in RemoteAdmin
+           TODO figure out if we can remove it.
+        -->
+      <groupId>org.codehaus.jettison</groupId>
+      <artifactId>jettison</artifactId>
+        <exclusions>
+          <exclusion>
+            <groupId>stax</groupId>
+            <artifactId>stax-api</artifactId>
+          </exclusion>
+        </exclusions>
+    </dependency>
+    <dependency>
       <!--For JspC used in ant task-->
       <groupId>org.glassfish.web</groupId>
       <artifactId>javax.servlet.jsp</artifactId>
@@ -374,12 +387,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
-          <exclusions>
-            <exclusion>
-              <groupId>org.apache.htrace</groupId>
-              <artifactId>htrace-core</artifactId>
-            </exclusion>
-          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

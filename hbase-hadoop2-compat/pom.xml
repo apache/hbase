@@ -167,12 +167,6 @@ limitations under the License.
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <version>${hadoop.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.htrace</groupId>
-          <artifactId>htrace-core</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
