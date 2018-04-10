@@ -40,24 +40,6 @@ When the feature is ready for commit, 3 +1s from committers will get your featur
 See link:http://search-hadoop.com/m/asM982C5FkS1[HBase, mail # dev - Thoughts
               about large feature dev branches]
 
-[[patchplusonepolicy]]
-.Patch +1 Policy
-
-The below policy is something we put in place 09/2012.
-It is a suggested policy rather than a hard requirement.
-We want to try it first to see if it works before we cast it in stone.
-
-Apache HBase is made of link:https://issues.apache.org/jira/projects/HBASE?selectedItem=com.atlassian.jira.jira-projects-plugin:components-page[components].
-Components have one or more <<owner,OWNER>>s.
-See the 'Description' field on the link:https://issues.apache.org/jira/projects/HBASE?selectedItem=com.atlassian.jira.jira-projects-plugin:components-page[components] JIRA page for who the current owners are by component.
-
-Patches that fit within the scope of a single Apache HBase component require, at least, a +1 by one of the component's owners before commit.
-If owners are absent -- busy or otherwise -- two +1s by non-owners will suffice.
-
-Patches that span components need at least two +1s before they can be committed, preferably +1s by owners of components touched by the x-component patch (TODO: This needs tightening up but I think fine for first pass).
-
-Any -1 on a patch by anyone vetoes a patch; it cannot be committed until the justification for the -1 is addressed.
-
 [[hbase.fix.version.in.jira]]
 .How to set fix version in JIRA on issue resolve
 
@@ -85,19 +67,34 @@ We also are currently in violation of this basic tenet -- replication at least k
 [[community.roles]]
 == Community Roles
 
-[[owner]]
-.Component Owner/Lieutenant
+=== Release Managers
 
-Component owners are listed in the description field on this Apache HBase JIRA link:https://issues.apache.org/jira/projects/HBASE?selectedItem=com.atlassian.jira.jira-projects-plugin:components-page[components] page.
-The owners are listed in the 'Description' field rather than in the 'Component Lead' field because the latter only allows us list one individual whereas it is encouraged that components have multiple owners.
+Each maintained release branch has a release manager, who volunteers to coordinate new features and bug fixes are backported to that release.
+The release managers are link:https://hbase.apache.org/team-list.html[committers].
+If you would like your feature or bug fix to be included in a given release, communicate with that release manager.
+If this list goes out of date or you can't reach the listed person, reach out to someone else on the list.
 
-Owners or component lieutenants are volunteers who are (usually, but not necessarily) expert in their component domain and may have an agenda on how they think their Apache HBase component should evolve.
+NOTE: End-of-life releases are not included in this list.
 
-. Owners will try and review patches that land within their component's scope.
-. If applicable, if an owner has an agenda, they will publish their goals or the design toward which they are driving their component
+.Release Managers
+[cols="1,1", options="header"]
+|===
+| Release
+| Release Manager
 
-If you would like to be volunteer as a component owner, just write the dev list and we'll sign you up.
-Owners do not need to be committers.
+| 1.2
+| Sean Busbey
+
+| 1.3
+| Mikhail Antonov
+
+| 1.4
+| Andrew Purtell
+
+| 2.0
+| Michael Stack
+
+|===
 
 [[hbase.commit.msg.format]]
 == Commit Message format

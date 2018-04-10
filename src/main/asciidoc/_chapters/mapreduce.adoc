@@ -120,7 +120,7 @@ You might find the more selective `hbase mapredcp` tool output of interest; it l
 to run a basic mapreduce job against an hbase install. It does not include configuration. You'll probably need to add
 these if you want your MapReduce job to find the target cluster. You'll probably have to also add pointers to extra jars
 once you start to do anything of substance. Just specify the extras by passing the system propery `-Dtmpjars` when
-you run `hbase mapredcp`.
+you run `hbase mapredcp`. 
 
 For jobs that do not package their dependencies or call `TableMapReduceUtil#addDependencyJars`, the following command structure is necessary:
 

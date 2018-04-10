@@ -150,7 +150,7 @@ A comma-separated list of BaseLogCleanerDelegate invoked by
 *`hbase.master.logcleaner.ttl`*::
 +
 .Description
-Maximum time a WAL can stay in the .oldlogdir directory,
+Maximum time a WAL can stay in the oldWALs directory,
     after which it will be cleaned by a Master thread.
 +
 .Default

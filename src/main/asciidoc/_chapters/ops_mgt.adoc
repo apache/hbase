@@ -44,17 +44,18 @@ Some commands, such as `version`, `pe`, `ltt`, `clean`, are not available in pre
 $ bin/hbase
 Usage: hbase [<options>] <command> [<args>]
 Options:
-  --config DIR    Configuration direction to use. Default: ./conf
-  --hosts HOSTS   Override the list in 'regionservers' file
+  --config DIR     Configuration direction to use. Default: ./conf
+  --hosts HOSTS    Override the list in 'regionservers' file
+  --auth-as-server Authenticate to ZooKeeper using servers configuration
 
 Commands:
 Some commands take arguments. Pass no args or -h for usage.
   shell           Run the HBase shell
   hbck            Run the hbase 'fsck' tool
+  snapshot        Tool for managing snapshots
   wal             Write-ahead-log analyzer
   hfile           Store file analyzer
   zkcli           Run the ZooKeeper shell
-  upgrade         Upgrade hbase
   master          Run an HBase HMaster node
   regionserver    Run an HBase HRegionServer node
   zookeeper       Run a ZooKeeper server
@@ -78,7 +79,7 @@ Others, such as `hbase shell` (<<shell>>), `hbase upgrade` (<<upgrading>>), and 
 === Canary
 
 There is a Canary class can help users to canary-test the HBase cluster status, with every column-family for every regions or RegionServer's granularity.
-To see the usage, use the `--help` parameter.
+To see the usage, use the `-help` parameter.
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -help
@@ -88,17 +89,31 @@ Usage: hbase canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]
    -help          Show this help and exit.
    -regionserver  replace the table argument to regionserver,
       which means to enable regionserver mode
+   -allRegions    Tries all regions on a regionserver,
+      only works in regionserver mode.
+   -zookeeper    Tries to grab zookeeper.znode.parent
+      on each zookeeper instance
    -daemon        Continuous check at defined intervals.
    -interval <N>  Interval between checks (sec)
-   -e             Use region/regionserver as regular expression
-      which means the region/regionserver is regular expression pattern
+   -e             Use table/regionserver as regular expression
+      which means the table/regionserver is regular expression pattern
    -f <B>         stop whole program if first error occurs, default is true
-   -t <N>         timeout for a check, default is 600000 (milliseconds)
+   -t <N>         timeout for a check, default is 600000 (millisecs)
+   -writeTableTimeout <N>         write timeout for the writeTable, default is 600000 (millisecs)
+   -readTableTimeouts <tableName>=<read timeout>,<tableName>=<read timeout>, ...    comma-separated list of read timeouts per table (no spaces), default is 600000 (millisecs)
    -writeSniffing enable the write sniffing in canary
    -treatFailureAsError treats read / write failure as error
    -writeTable    The table used for write sniffing. Default is hbase:canary
+   -Dhbase.canary.read.raw.enabled=<true/false> Use this flag to enable or disable raw scan during read canary test Default is false and raw is not enabled during scan
    -D<configProperty>=<value> assigning or override the configuration params
 ----
+
+[NOTE]
+The `Sink` class is instantiated using the `hbase.canary.sink.class` configuration property which
+will also determine the used Monitor class. In the absence of this property RegionServerStdOutSink
+will be used. You need to use the Sink according to the passed parameters to the _canary_ command.
+As an example you have to set `hbase.canary.sink.class` property to
+`org.apache.hadoop.hbase.tool.Canary$RegionStdOutSink` for using table parameters.
 
 This tool will return non zero error codes to user for collaborating with other monitoring tools, such as Nagios.
 The error code definitions are:
@@ -109,6 +124,7 @@ private static final int USAGE_EXIT_CODE = 1;
 private static final int INIT_ERROR_EXIT_CODE = 2;
 private static final int TIMEOUT_ERROR_EXIT_CODE = 3;
 private static final int ERROR_EXIT_CODE = 4;
+private static final int FAILURE_EXIT_CODE = 5;
 ----
 
 Here are some examples based on the following given case.
@@ -183,10 +199,10 @@ This daemon will stop itself and return non-zero error code if any error occurs,
 $ ${HBASE_HOME}/bin/hbase canary -daemon
 ----
 
-Run repeatedly with internal 5 seconds and will not stop itself even if errors occur in the test.
+Run repeatedly with 5 second intervals and will not stop itself even if errors occur in the test.
 
 ----
-$ ${HBASE_HOME}/bin/hbase canary -daemon -interval 50000 -f false
+$ ${HBASE_HOME}/bin/hbase canary -daemon -interval 5 -f false
 ----
 
 ==== Force timeout if canary test stuck
@@ -196,7 +212,7 @@ Because of this we provide a timeout option to kill the canary test and return a
 This run sets the timeout value to 60 seconds, the default value is 600 seconds.
 
 ----
-$ ${HBASE_HOME}/bin/hbase canary -t 600000
+$ ${HBASE_HOME}/bin/hbase canary -t 60000
 ----
 
 ==== Enable write sniffing in canary
@@ -225,7 +241,7 @@ while returning normal exit code. To treat read / write failure as error, you ca
 with the `-treatFailureAsError` option. When enabled, read / write failure would result in error
 exit code.
 ----
-$ ${HBASE_HOME}/bin/hbase canary --treatFailureAsError
+$ ${HBASE_HOME}/bin/hbase canary -treatFailureAsError
 ----
 
 ==== Running Canary in a Kerberos-enabled Cluster
@@ -257,7 +273,7 @@ This example shows each of the properties with valid values.
   <value>/etc/hbase/conf/keytab.krb5</value>
 </property>
 <!-- optional params -->
-property>
+<property>
   <name>hbase.client.dns.interface</name>
   <value>default</value>
 </property>
@@ -372,7 +388,7 @@ directory.
 You can get a textual dump of a WAL file content by doing the following:
 
 ----
- $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --dump hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
+ $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --dump hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
 ----
 
 The return code will be non-zero if there are any issues with the file so you can test wholesomeness of file by redirecting `STDOUT` to `/dev/null` and testing the program return.
@@ -380,7 +396,7 @@ The return code will be non-zero if there are any issues with the file so you ca
 Similarly you can force a split of a log file directory by doing:
 
 ----
- $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --split hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/
+ $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --split hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/
 ----
 
 [[hlog_tool.prettyprint]]
@@ -390,7 +406,7 @@ The `WALPrettyPrinter` is a tool with configurable options to print the contents
 You can invoke it via the HBase cli with the 'wal' command.
 
 ----
- $ ./bin/hbase wal hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
+ $ ./bin/hbase wal hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
 ----
 
 .WAL Printing in older versions of HBase
@@ -768,26 +784,19 @@ Options:
 
 === `hbase pe`
 
-The `hbase pe` command is a shortcut provided to run the `org.apache.hadoop.hbase.PerformanceEvaluation` tool, which is used for testing.
-The `hbase pe` command was introduced in HBase 0.98.4.
+The `hbase pe` command runs the PerformanceEvaluation tool, which is used for testing.
 
 The PerformanceEvaluation tool accepts many different options and commands.
 For usage instructions, run the command with no options.
-
-To run PerformanceEvaluation prior to HBase 0.98.4, issue the command `hbase org.apache.hadoop.hbase.PerformanceEvaluation`.
 
 The PerformanceEvaluation tool has received many updates in recent HBase releases, including support for namespaces, support for tags, cell-level ACLs and visibility labels, multiget support for RPC calls, increased sampling sizes, an option to randomly sleep during testing, and ability to "warm up" the cluster before testing starts.
 
 === `hbase ltt`
 
-The `hbase ltt` command is a shortcut provided to run the `org.apache.hadoop.hbase.util.LoadTestTool` utility, which is used for testing.
-The `hbase ltt` command was introduced in HBase 0.98.4.
+The `hbase ltt` command runs the LoadTestTool utility, which is used for testing.
 
 You must specify either `-init_only` or at least one of `-write`, `-update`, or `-read`.
 For general usage instructions, pass the `-h` option.
-
-To run LoadTestTool prior to HBase 0.98.4, issue the command +hbase
-          org.apache.hadoop.hbase.util.LoadTestTool+.
 
 The LoadTestTool has received many updates in recent HBase releases, including support for namespaces, support for tags, cell-level ACLS and visibility labels, testing security-related features, ability to specify the number of regions per server, tests for multi-get RPC calls, and tests relating to replication.
 
@@ -851,7 +860,7 @@ See <<lb,lb>> below.
 [NOTE]
 ====
 In hbase-2.0, in the bin directory, we added a script named _considerAsDead.sh_ that can be used to kill a regionserver.
-Hardware issues could be detected by specialized monitoring tools before the  zookeeper timeout has expired. _considerAsDead.sh_ is a simple function to mark a RegionServer as dead.
+Hardware issues could be detected by specialized monitoring tools before the zookeeper timeout has expired. _considerAsDead.sh_ is a simple function to mark a RegionServer as dead.
 It deletes all the znodes of the server, starting the recovery process.
 Plug in the script into your monitoring/fault detection tools to initiate faster failover.
 Be careful how you use this disruptive tool.
@@ -2559,8 +2568,10 @@ full implications and have a sufficient background in managing HBase clusters.
 It was developed by Yahoo! and they run it at scale on their large grid cluster.
 See link:http://www.slideshare.net/HBaseCon/keynote-apache-hbase-at-yahoo-scale[HBase at Yahoo! Scale].
 
-RSGroups can be defined and managed with shell commands or corresponding Java
-APIs. A server can be added to a group with hostname and port pair and tables
+RSGroups are defined and managed with shell commands. The shell drives a
+Coprocessor Endpoint whose API is marked private given this is an evolving
+feature; the Coprocessor API is not for public consumption.
+A server can be added to a group with hostname and port pair and tables
 can be moved to this group so that only regionservers in the same rsgroup can
 host the regions of the table. RegionServers and tables can only belong to one
 rsgroup at a time. By default, all tables and regionservers belong to the
@@ -2707,3 +2718,141 @@ To enable ACL, add the following to your hbase-site.xml and restart your Master:
 ----
 
 
+
+[[normalizer]]
+== Region Normalizer
+
+The Region Normalizer tries to make Regions all in a table about the same in size.
+It does this by finding a rough average. Any region that is larger than twice this
+size is split. Any region that is much smaller is merged into an adjacent region.
+It is good to run the Normalizer on occasion on a down time after the cluster has
+been running a while or say after a burst of activity such as a large delete.
+
+(The bulk of the below detail was copied wholesale from the blog by Romil Choksi at
+link:https://community.hortonworks.com/articles/54987/hbase-region-normalizer.html[HBase Region Normalizer])
+
+The Region Normalizer is feature available since HBase-1.2. It runs a set of
+pre-calculated merge/split actions to resize regions that are either too
+large or too small compared to the average region size for a given table. Region
+Normalizer when invoked computes a normalization 'plan' for all of the tables in
+HBase. System tables (such as hbase:meta, hbase:namespace, Phoenix system tables
+etc) and user tables with normalization disabled are ignored while computing the
+plan. For normalization enabled tables, normalization plan is carried out in
+parallel across multiple tables.
+
+Normalizer can be enabled or disabled globally for the entire cluster using the
+‘normalizer_switch’ command in the HBase shell. Normalization can also be
+controlled on a per table basis, which is disabled by default when a table is
+created. Normalization for a table can be enabled or disabled by setting the
+NORMALIZATION_ENABLED table attribute to true or false.
+
+To check normalizer status and enable/disable normalizer
+
+[source,bash]
+----
+hbase(main):001:0> normalizer_enabled
+true 
+0 row(s) in 0.4870 seconds
+ 
+hbase(main):002:0> normalizer_switch false
+true 
+0 row(s) in 0.0640 seconds
+ 
+hbase(main):003:0> normalizer_enabled
+false 
+0 row(s) in 0.0120 seconds
+ 
+hbase(main):004:0> normalizer_switch true
+false
+0 row(s) in 0.0200 seconds
+ 
+hbase(main):005:0> normalizer_enabled
+true
+0 row(s) in 0.0090 seconds
+----
+
+When enabled, Normalizer is invoked in the background every 5 mins (by default),
+which can be configured using `hbase.normalization.period` in `hbase-site.xml`.
+Normalizer can also be invoked manually/programmatically at will using HBase shell’s
+`normalize` command. HBase by default uses `SimpleRegionNormalizer`, but users can
+design their own normalizer as long as they implement the RegionNormalizer Interface.
+Details about the logic used by `SimpleRegionNormalizer` to compute its normalization
+plan can be found link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/master/normalizer/SimpleRegionNormalizer.html[here].
+
+The below example shows a normalization plan being computed for an user table, and
+merge action being taken as a result of the normalization plan computed by SimpleRegionNormalizer.
+
+Consider an user table with some pre-split regions having 3 equally large regions
+(about 100K rows) and 1 relatively small region (about 25K rows). Following is the
+snippet from an hbase meta table scan showing each of the pre-split regions for 
+the user table.
+
+----
+table_p8ddpd6q5z,,1469494305548.68b9892220865cb6048 column=info:regioninfo, timestamp=1469494306375, value={ENCODED => 68b9892220865cb604809c950d1adf48, NAME => 'table_p8ddpd6q5z,,1469494305548.68b989222 09c950d1adf48.   0865cb604809c950d1adf48.', STARTKEY => '', ENDKEY => '1'} 
+.... 
+table_p8ddpd6q5z,1,1469494317178.867b77333bdc75a028 column=info:regioninfo, timestamp=1469494317848, value={ENCODED => 867b77333bdc75a028bb4c5e4b235f48, NAME => 'table_p8ddpd6q5z,1,1469494317178.867b7733 bb4c5e4b235f48.  3bdc75a028bb4c5e4b235f48.', STARTKEY => '1', ENDKEY => '3'} 
+.... 
+table_p8ddpd6q5z,3,1469494328323.98f019a753425e7977 column=info:regioninfo, timestamp=1469494328486, value={ENCODED => 98f019a753425e7977ab8636e32deeeb, NAME => 'table_p8ddpd6q5z,3,1469494328323.98f019a7 ab8636e32deeeb.  53425e7977ab8636e32deeeb.', STARTKEY => '3', ENDKEY => '7'} 
+.... 
+table_p8ddpd6q5z,7,1469494339662.94c64e748979ecbb16 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 94c64e748979ecbb166f6cc6550e25c6, NAME => 'table_p8ddpd6q5z,7,1469494339662.94c64e74 6f6cc6550e25c6.   8979ecbb166f6cc6550e25c6.', STARTKEY => '7', ENDKEY => '8'} 
+.... 
+table_p8ddpd6q5z,8,1469494339662.6d2b3f5fd1595ab8e7 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 6d2b3f5fd1595ab8e7c031876057b1ee, NAME => 'table_p8ddpd6q5z,8,1469494339662.6d2b3f5f c031876057b1ee.   d1595ab8e7c031876057b1ee.', STARTKEY => '8', ENDKEY => ''}  
+----
+Invoking the normalizer using ‘normalize’ int the HBase shell, the below log snippet
+from HMaster log shows the normalization plan computed as per the logic defined for
+SimpleRegionNormalizer. Since the total region size (in MB) for the adjacent smallest
+regions in the table is less than the average region size, the normalizer computes a
+plan to merge these two regions.
+
+----
+2016-07-26 07:08:26,928 DEBUG [B.fifo.QRpcServer.handler=20,queue=2,port=20000] master.HMaster: Skipping normalization for table: hbase:namespace, as it's either system table or doesn't have auto
+normalization turned on
+2016-07-26 07:08:26,928 DEBUG [B.fifo.QRpcServer.handler=20,queue=2,port=20000] master.HMaster: Skipping normalization for table: hbase:backup, as it's either system table or doesn't have auto normalization turned on
+2016-07-26 07:08:26,928 DEBUG [B.fifo.QRpcServer.handler=20,queue=2,port=20000] master.HMaster: Skipping normalization for table: hbase:meta, as it's either system table or doesn't have auto normalization turned on
+2016-07-26 07:08:26,928 DEBUG [B.fifo.QRpcServer.handler=20,queue=2,port=20000] master.HMaster: Skipping normalization for table: table_h2osxu3wat, as it's either system table or doesn't have autonormalization turned on
+2016-07-26 07:08:26,928 DEBUG [B.fifo.QRpcServer.handler=20,queue=2,port=20000] normalizer.SimpleRegionNormalizer: Computing normalization plan for table: table_p8ddpd6q5z, number of regions: 5
+2016-07-26 07:08:26,929 DEBUG [B.fifo.QRpcServer.handler=20,queue=2,port=20000] normalizer.SimpleRegionNormalizer: Table table_p8ddpd6q5z, total aggregated regions size: 12
+2016-07-26 07:08:26,929 DEBUG [B.fifo.QRpcServer.handler=20,queue=2,port=20000] normalizer.SimpleRegionNormalizer: Table table_p8ddpd6q5z, average region size: 2.4
+2016-07-26 07:08:26,929 INFO  [B.fifo.QRpcServer.handler=20,queue=2,port=20000] normalizer.SimpleRegionNormalizer: Table table_p8ddpd6q5z, small region size: 0 plus its neighbor size: 0, less thanthe avg size 2.4, merging them
+2016-07-26 07:08:26,971 INFO  [B.fifo.QRpcServer.handler=20,queue=2,port=20000] normalizer.MergeNormalizationPlan: Executing merging normalization plan: MergeNormalizationPlan{firstRegion={ENCODED=> d51df2c58e9b525206b1325fd925a971, NAME => 'table_p8ddpd6q5z,,1469514755237.d51df2c58e9b525206b1325fd925a971.', STARTKEY => '', ENDKEY => '1'}, secondRegion={ENCODED => e69c6b25c7b9562d078d9ad3994f5330, NAME => 'table_p8ddpd6q5z,1,1469514767669.e69c6b25c7b9562d078d9ad3994f5330.',
+STARTKEY => '1', ENDKEY => '3'}}
+----
+Region normalizer as per it’s computed plan, merged the region with start key as ‘’
+and end key as ‘1’, with another region having start key as ‘1’ and end key as ‘3’.
+Now, that these regions have been merged we see a single new region with start key
+as ‘’ and end key as ‘3’
+----
+table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeA, timestamp=1469516907431, 
+value=PBUF\x08\xA5\xD9\x9E\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x00"\x011(\x000\x00 ea74d246741ba.   8\x00 
+table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeB, timestamp=1469516907431,
+value=PBUF\x08\xB5\xBA\x9F\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x011"\x013(\x000\x0 ea74d246741ba.   08\x00 
+table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:regioninfo, timestamp=1469516907431, value={ENCODED => e06c9b83c4a252b130eea74d246741ba, NAME => 'table_p8ddpd6q5z,,1469516907210.e06c9b83c ea74d246741ba.   4a252b130eea74d246741ba.', STARTKEY => '', ENDKEY => '3'}
+.... 
+table_p8ddpd6q5z,3,1469514778736.bf024670a847c0adff column=info:regioninfo, timestamp=1469514779417, value={ENCODED => bf024670a847c0adffb74b2e13408b32, NAME => 'table_p8ddpd6q5z,3,1469514778736.bf024670 b74b2e13408b32.  a847c0adffb74b2e13408b32.' STARTKEY => '3', ENDKEY => '7'} 
+.... 
+table_p8ddpd6q5z,7,1469514790152.7c5a67bc755e649db2 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 7c5a67bc755e649db22f49af6270f1e1, NAME => 'table_p8ddpd6q5z,7,1469514790152.7c5a67bc 2f49af6270f1e1.  755e649db22f49af6270f1e1.', STARTKEY => '7', ENDKEY => '8'} 
+....
+table_p8ddpd6q5z,8,1469514790152.58e7503cda69f98f47 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 58e7503cda69f98f4755178e74288c3a, NAME => 'table_p8ddpd6q5z,8,1469514790152.58e7503c 55178e74288c3a.  da69f98f4755178e74288c3a.', STARTKEY => '8', ENDKEY => ''}
+----
+
+A similar example can be seen for an user table with 3 smaller regions and 1
+relatively large region. For this example, we have an user table with 1 large region containing 100K rows, and 3 relatively smaller regions with about 33K rows each. As seen from the normalization plan, since the larger region is more than twice the average region size it ends being split into two regions – one with start key as ‘1’ and end key as ‘154717’ and the other region with start key as '154717' and end key as ‘3’
+----
+2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] master.HMaster: Skipping normalization for table: hbase:backup, as it's either system table or doesn't have auto normalization turned on
+2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SimpleRegionNormalizer: Computing normalization plan for table: table_p8ddpd6q5z, number of regions: 4
+2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SimpleRegionNormalizer: Table table_p8ddpd6q5z, total aggregated regions size: 12
+2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SimpleRegionNormalizer: Table table_p8ddpd6q5z, average region size: 3.0
+2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SimpleRegionNormalizer: No normalization needed, regions look good for table: table_p8ddpd6q5z
+2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SimpleRegionNormalizer: Computing normalization plan for table: table_h2osxu3wat, number of regions: 5
+2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SimpleRegionNormalizer: Table table_h2osxu3wat, total aggregated regions size: 7
+2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SimpleRegionNormalizer: Table table_h2osxu3wat, average region size: 1.4
+2016-07-26 07:39:45,636 INFO  [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SimpleRegionNormalizer: Table table_h2osxu3wat, large region table_h2osxu3wat,1,1469515926544.27f2fdbb2b6612ea163eb6b40753c3db. has size 4, more than twice avg size, splitting
+2016-07-26 07:39:45,640 INFO [B.fifo.QRpcServer.handler=7,queue=1,port=20000] normalizer.SplitNormalizationPlan: Executing splitting normalization plan: SplitNormalizationPlan{regionInfo={ENCODED => 27f2fdbb2b6612ea163eb6b40753c3db, NAME => 'table_h2osxu3wat,1,1469515926544.27f2fdbb2b6612ea163eb6b40753c3db.', STARTKEY => '1', ENDKEY => '3'}, splitPoint=null}
+2016-07-26 07:39:45,656 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] master.HMaster: Skipping normalization for table: hbase:namespace, as it's either system table or doesn't have auto normalization turned on
+2016-07-26 07:39:45,656 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] master.HMaster: Skipping normalization for table: hbase:meta, as it's either system table or doesn't
+have auto normalization turned on …..…..….
+2016-07-26 07:39:46,246 DEBUG [AM.ZK.Worker-pool2-t278] master.RegionStates: Onlined 54de97dae764b864504704c1c8d3674a on hbase-test-rc-5.openstacklocal,16020,1469419333913 {ENCODED => 54de97dae764b864504704c1c8d3674a, NAME => 'table_h2osxu3wat,1,1469518785661.54de97dae764b864504704c1c8d3674a.', STARTKEY => '1', ENDKEY => '154717'}
+2016-07-26 07:39:46,246 INFO  [AM.ZK.Worker-pool2-t278] master.RegionStates: Transition {d6b5625df331cfec84dce4f1122c567f state=SPLITTING_NEW, ts=1469518786246, server=hbase-test-rc-5.openstacklocal,16020,1469419333913} to {d6b5625df331cfec84dce4f1122c567f state=OPEN, ts=1469518786246,
+server=hbase-test-rc-5.openstacklocal,16020,1469419333913}
+2016-07-26 07:39:46,246 DEBUG [AM.ZK.Worker-pool2-t278] master.RegionStates: Onlined d6b5625df331cfec84dce4f1122c567f on hbase-test-rc-5.openstacklocal,16020,1469419333913 {ENCODED => d6b5625df331cfec84dce4f1122c567f, NAME => 'table_h2osxu3wat,154717,1469518785661.d6b5625df331cfec84dce4f1122c567f.', STARTKEY => '154717', ENDKEY => '3'}
+----
