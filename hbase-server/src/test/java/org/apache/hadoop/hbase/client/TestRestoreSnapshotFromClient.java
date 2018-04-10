@@ -31,12 +31,17 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -80,8 +85,9 @@ public class TestRestoreSnapshotFromClient {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    TEST_UTIL.getConfiguration().setBoolean(
-        "hbase.master.enabletable.roundrobin", true);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
+    // Setting bigger value to avoid catalog janitor execution (parent region cleanup)
+    TEST_UTIL.getConfiguration().setLong("hbase.catalogjanitor.interval", 1800000);
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -278,6 +284,63 @@ public class TestRestoreSnapshotFromClient {
       assertFalse(admin.tableExists(cloneName));
     } catch (Exception e) {
       fail("Expected CorruptedSnapshotException got: " + e);
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testRestoreSnapshotAfterSplit() throws Exception {
+    Admin admin = null;
+    try {
+      admin = TEST_UTIL.getHBaseAdmin();
+      final int regionReplication = admin.getTableDescriptor(tableName).getRegionReplication();
+      // Region count before split
+      final int primaryRegionCountBeforeSplit = MetaTableAccessor
+          .getTableRegions(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConnection(), tableName)
+          .size() / regionReplication;
+
+      admin.split(tableName, "m".getBytes());
+      final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+      // Wait for replica region to become online
+      TEST_UTIL.waitFor(60000, 500, new Waiter.Predicate<IOException>() {
+        @Override
+        public boolean evaluate() throws IOException {
+          return am.getRegionStates().getRegionByStateOfTable(tableName).get(RegionState.State.OPEN)
+              .size() == ((primaryRegionCountBeforeSplit + 1) * regionReplication);
+        }
+      });
+
+      int regionCountAfterSplit = MetaTableAccessor
+          .getTableRegions(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConnection(), tableName)
+          .size() / regionReplication;
+      // regionCountAfterSplit will contain parent region, so primaryregionCountBeforeSplit + 2
+      assertEquals(primaryRegionCountBeforeSplit + 2, regionCountAfterSplit);
+
+      String snapshotName = "testRestoreSnapshotAfterSplit-snap";
+      // Create snapshot after table split
+      admin.snapshot(snapshotName, tableName);
+      assertEquals(1, admin.listSnapshots("testRestoreSnapshotAfterSplit-snap*").size());
+      // Restore snapshot
+      admin.disableTable(tableName);
+      admin.restoreSnapshot(snapshotName);
+
+      int regionCountAfterRestoreSnapshot = MetaTableAccessor
+          .getTableRegions(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConnection(), tableName)
+          .size();
+      assertEquals(primaryRegionCountBeforeSplit + 2, regionCountAfterRestoreSnapshot);
+
+      // Enable the table
+      admin.enableTable(tableName);
+      assertEquals((primaryRegionCountBeforeSplit + 1) * regionReplication,
+        am.getRegionStates().getRegionByStateOfTable(tableName).get(RegionState.State.OPEN).size());
+
+    } finally {
+      if (admin != null) {
+        try {
+          admin.deleteSnapshots("testRestoreSnapshotAfterSplit-snap*");
+        } catch (SnapshotDoesNotExistException ignore) {
+        }
+        admin.close();
+      }
     }
   }
 

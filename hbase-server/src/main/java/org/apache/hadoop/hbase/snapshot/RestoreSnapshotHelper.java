@@ -198,7 +198,9 @@ public class RestoreSnapshotHelper {
         if (regionNames.contains(regionName)) {
           LOG.info("region to restore: " + regionName);
           regionNames.remove(regionName);
-          metaChanges.addRegionToRestore(regionInfo);
+          // Add the regionInfo from snapshot manifest, so that will not miss parent region details
+          metaChanges.addRegionToRestore(
+            HRegionInfo.convert(regionManifests.get(regionName).getRegionInfo()));
         } else {
           LOG.info("region to remove: " + regionName);
           metaChanges.addRegionToRemove(regionInfo);
