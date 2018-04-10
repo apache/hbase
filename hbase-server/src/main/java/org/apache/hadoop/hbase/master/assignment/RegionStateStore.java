@@ -118,9 +118,8 @@ public class RegionStateStore {
       final long openSeqNum = -1;
 
       // TODO: move under trace, now is visible for debugging
-      LOG.info(String.format("Load hbase:meta entry region=%s regionState=%s lastHost=%s regionLocation=%s",
-        regionInfo, state, lastHost, regionLocation));
-
+      LOG.info("Load hbase:meta entry region={}, regionState={}, lastHost={}, " +
+          "regionLocation={}", regionInfo.getEncodedName(), state, lastHost, regionLocation);
       visitor.visitRegionState(regionInfo, state, regionLocation, lastHost, openSeqNum);
     }
   }
@@ -158,7 +157,7 @@ public class RegionStateStore {
     MetaTableAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info =
       new StringBuilder("pid=").append(pid).append(" updating hbase:meta row=")
-        .append(regionInfo.getRegionNameAsString()).append(", regionState=").append(state);
+        .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
           "Open region should be on a server");
