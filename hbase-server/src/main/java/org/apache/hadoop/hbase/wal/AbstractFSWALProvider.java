@@ -136,8 +136,16 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
         walCopy = wal;
         if (walCopy == null) {
           walCopy = createWAL();
+          boolean succ = false;
+          try {
+            walCopy.init();
+            succ = true;
+          } finally {
+            if (!succ) {
+              walCopy.close();
+            }
+          }
           wal = walCopy;
-          walCopy.init();
         }
       }
     }

@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link WALEntryFilter} which contains multiple filters and applies them
@@ -82,22 +82,16 @@ public class ChainWALEntryFilter implements WALEntryFilter {
     if (entry == null || cellFilters.length == 0) {
       return;
     }
-    ArrayList<Cell> cells = entry.getEdit().getCells();
-    int size = cells.size();
-    for (int i = size - 1; i >= 0; i--) {
-      Cell cell = cells.get(i);
-      for (WALCellFilter filter : cellFilters) {
-        cell = filter.filterCell(entry, cell);
-        if (cell != null) {
-          cells.set(i, cell);
-        } else {
-          cells.remove(i);
-          break;
-        }
+    WALUtil.filterCells(entry.getEdit(), c -> filterCell(entry, c));
+  }
+
+  private Cell filterCell(Entry entry, Cell cell) {
+    for (WALCellFilter filter : cellFilters) {
+      cell = filter.filterCell(entry, cell);
+      if (cell == null) {
+        break;
       }
     }
-    if (cells.size() < size / 2) {
-      cells.trimToSize();
-    }
+    return cell;
   }
 }

@@ -38,6 +38,8 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
 
   private final Path remoteWalDir;
 
+  private volatile boolean skipRemoteWal = false;
+
   public DualAsyncFSWAL(FileSystem fs, FileSystem remoteFs, Path rootDir, Path remoteWalDir,
       String logDir, String archiveDir, Configuration conf, List<WALActionsListener> listeners,
       boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
@@ -51,6 +53,9 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
   @Override
   protected AsyncWriter createWriterInstance(Path path) throws IOException {
     AsyncWriter localWriter = super.createWriterInstance(path);
+    if (skipRemoteWal) {
+      return localWriter;
+    }
     AsyncWriter remoteWriter;
     boolean succ = false;
     try {
@@ -63,5 +68,14 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
     }
     return CombinedAsyncWriter.create(CombinedAsyncWriter.Mode.SEQUENTIAL, remoteWriter,
       localWriter);
+  }
+
+  // Allow temporarily skipping the creation of remote writer. When failing to write to the remote
+  // dfs cluster, we need to reopen the regions and switch to use the original wal writer. But we
+  // need to write a close marker when closing a region, and if it fails, the whole rs will abort.
+  // So here we need to skip the creation of remote writer and make it possible to write the region
+  // close marker.
+  public void skipRemoteWal() {
+    this.skipRemoteWal = true;
   }
 }

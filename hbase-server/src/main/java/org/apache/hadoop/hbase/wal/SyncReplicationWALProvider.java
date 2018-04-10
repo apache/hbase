@@ -69,7 +69,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   private final WALProvider provider;
 
   private SyncReplicationPeerInfoProvider peerInfoProvider =
-      new DefaultSyncReplicationPeerInfoProvider();
+    new DefaultSyncReplicationPeerInfoProvider();
 
   private WALFactory factory;
 
@@ -83,7 +83,11 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   private AtomicBoolean initialized = new AtomicBoolean(false);
 
-  private final ConcurrentMap<String, DualAsyncFSWAL> peerId2WAL = new ConcurrentHashMap<>();
+  // when switching from A to DA, we will put a Optional.empty into this map if there is no WAL for
+  // the peer yet. When getting WAL from this map the caller should know that it should not use
+  // DualAsyncFSWAL any more.
+  private final ConcurrentMap<String, Optional<DualAsyncFSWAL>> peerId2WAL =
+    new ConcurrentHashMap<>();
 
   private final KeyLocker<String> createLock = new KeyLocker<>();
 
@@ -123,18 +127,27 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   }
 
   private DualAsyncFSWAL getWAL(String peerId, String remoteWALDir) throws IOException {
-    DualAsyncFSWAL wal = peerId2WAL.get(peerId);
-    if (wal != null) {
-      return wal;
+    Optional<DualAsyncFSWAL> opt = peerId2WAL.get(peerId);
+    if (opt != null) {
+      return opt.orElse(null);
     }
     Lock lock = createLock.acquireLock(peerId);
     try {
-      wal = peerId2WAL.get(peerId);
-      if (wal == null) {
-        wal = createWAL(peerId, remoteWALDir);
-        peerId2WAL.put(peerId, wal);
-        wal.init();
+      opt = peerId2WAL.get(peerId);
+      if (opt != null) {
+        return opt.orElse(null);
       }
+      DualAsyncFSWAL wal = createWAL(peerId, remoteWALDir);
+      boolean succ = false;
+      try {
+        wal.init();
+        succ = true;
+      } finally {
+        if (!succ) {
+          wal.close();
+        }
+      }
+      peerId2WAL.put(peerId, Optional.of(wal));
       return wal;
     } finally {
       lock.unlock();
@@ -146,18 +159,20 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     if (region == null) {
       return provider.getWAL(null);
     }
+    WAL wal = null;
     Optional<Pair<String, String>> peerIdAndRemoteWALDir =
       peerInfoProvider.getPeerIdAndRemoteWALDir(region);
     if (peerIdAndRemoteWALDir.isPresent()) {
       Pair<String, String> pair = peerIdAndRemoteWALDir.get();
-      return getWAL(pair.getFirst(), pair.getSecond());
-    } else {
-      return provider.getWAL(region);
+      wal = getWAL(pair.getFirst(), pair.getSecond());
     }
+    return wal != null ? wal : provider.getWAL(region);
   }
 
   private Stream<WAL> getWALStream() {
-    return Streams.concat(peerId2WAL.values().stream(), provider.getWALs().stream());
+    return Streams.concat(
+      peerId2WAL.values().stream().filter(Optional::isPresent).map(Optional::get),
+      provider.getWALs().stream());
   }
 
   @Override
@@ -169,12 +184,14 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   public void shutdown() throws IOException {
     // save the last exception and rethrow
     IOException failure = null;
-    for (DualAsyncFSWAL wal : peerId2WAL.values()) {
-      try {
-        wal.shutdown();
-      } catch (IOException e) {
-        LOG.error("Shutdown WAL failed", e);
-        failure = e;
+    for (Optional<DualAsyncFSWAL> wal : peerId2WAL.values()) {
+      if (wal.isPresent()) {
+        try {
+          wal.get().shutdown();
+        } catch (IOException e) {
+          LOG.error("Shutdown WAL failed", e);
+          failure = e;
+        }
       }
     }
     provider.shutdown();
@@ -187,12 +204,14 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   public void close() throws IOException {
     // save the last exception and rethrow
     IOException failure = null;
-    for (DualAsyncFSWAL wal : peerId2WAL.values()) {
-      try {
-        wal.close();
-      } catch (IOException e) {
-        LOG.error("Close WAL failed", e);
-        failure = e;
+    for (Optional<DualAsyncFSWAL> wal : peerId2WAL.values()) {
+      if (wal.isPresent()) {
+        try {
+          wal.get().close();
+        } catch (IOException e) {
+          LOG.error("Close WAL failed", e);
+          failure = e;
+        }
       }
     }
     provider.close();
@@ -208,8 +227,8 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   @Override
   public long getLogFileSize() {
-    return peerId2WAL.values().stream().mapToLong(DualAsyncFSWAL::getLogFileSize).sum() +
-      provider.getLogFileSize();
+    return peerId2WAL.values().stream().filter(Optional::isPresent).map(Optional::get)
+      .mapToLong(DualAsyncFSWAL::getLogFileSize).sum() + provider.getLogFileSize();
   }
 
   private void safeClose(WAL wal) {
@@ -231,10 +250,23 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   @Override
   public void peerSyncReplicationStateChange(String peerId, SyncReplicationState from,
       SyncReplicationState to, int stage) {
-    // TODO: stage 0
-    if (from == SyncReplicationState.ACTIVE && to == SyncReplicationState.DOWNGRADE_ACTIVE &&
-      stage == 1) {
-      safeClose(peerId2WAL.remove(peerId));
+    if (from == SyncReplicationState.ACTIVE && to == SyncReplicationState.DOWNGRADE_ACTIVE) {
+      if (stage == 0) {
+        Lock lock = createLock.acquireLock(peerId);
+        try {
+          Optional<DualAsyncFSWAL> opt = peerId2WAL.get(peerId);
+          if (opt != null) {
+            opt.ifPresent(DualAsyncFSWAL::skipRemoteWal);
+          } else {
+            // add a place holder to tell the getWAL caller do not use DualAsyncFSWAL any more.
+            peerId2WAL.put(peerId, Optional.empty());
+          }
+        } finally {
+          lock.unlock();
+        }
+      } else if (stage == 1) {
+        peerId2WAL.remove(peerId).ifPresent(this::safeClose);
+      }
     }
   }
 

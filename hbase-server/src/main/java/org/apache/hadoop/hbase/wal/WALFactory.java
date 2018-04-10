@@ -135,7 +135,7 @@ public class WALFactory {
   static WALProvider createProvider(Class<? extends WALProvider> clazz) throws IOException {
     LOG.info("Instantiating WALProvider of type {}", clazz);
     try {
-      return clazz.newInstance();
+      return clazz.getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       LOG.error("couldn't set up WALProvider, the configured class is " + clazz);
       LOG.debug("Exception details for failure to load WALProvider.", e);

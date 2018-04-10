@@ -54,8 +54,10 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
     }
     Pair<SyncReplicationState, SyncReplicationState> states =
         peer.getSyncReplicationStateAndNewState();
-    if (states.getFirst() == SyncReplicationState.ACTIVE &&
-      states.getSecond() == SyncReplicationState.NONE) {
+    if ((states.getFirst() == SyncReplicationState.ACTIVE &&
+      states.getSecond() == SyncReplicationState.NONE) ||
+      (states.getFirst() == SyncReplicationState.DOWNGRADE_ACTIVE &&
+        states.getSecond() == SyncReplicationState.ACTIVE)) {
       return Optional.of(Pair.newPair(peerId, peer.getPeerConfig().getRemoteWALDir()));
     } else {
       return Optional.empty();

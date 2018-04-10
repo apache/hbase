@@ -171,7 +171,7 @@ public class TransitPeerSyncReplicationStateProcedure
         }
         return Flow.HAS_MORE_STATE;
       case REPLAY_REMOTE_WAL_IN_PEER:
-        // TODO: replay remote wal when transiting from S to DA.
+        addChildProcedure(new RecoverStandbyProcedure(peerId));
         setNextState(PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
         return Flow.HAS_MORE_STATE;
       case REOPEN_ALL_REGIONS_IN_PEER:

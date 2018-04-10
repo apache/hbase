@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -259,9 +260,11 @@ public class TestReplicationAdmin {
     TEST_UTIL.createTable(tableName, Bytes.toBytes("family"));
     ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder();
 
-    String rootDir = "hdfs://srv1:9999/hbase";
+    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS("remoteWAL");
+    TEST_UTIL.getTestFileSystem().mkdirs(new Path(rootDir, ID_ONE));
     builder.setClusterKey(KEY_ONE);
-    builder.setRemoteWALDir(rootDir);
+    builder.setRemoteWALDir(rootDir.makeQualified(TEST_UTIL.getTestFileSystem().getUri(),
+      TEST_UTIL.getTestFileSystem().getWorkingDirectory()).toString());
     builder.setReplicateAllUserTables(false);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, new ArrayList<>());
@@ -1081,10 +1084,12 @@ public class TestReplicationAdmin {
       // OK
     }
 
-    String rootDir = "hdfs://srv1:9999/hbase";
+    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS("remoteWAL");
+    TEST_UTIL.getTestFileSystem().mkdirs(new Path(rootDir, ID_SECOND));
     builder = ReplicationPeerConfig.newBuilder();
     builder.setClusterKey(KEY_SECOND);
-    builder.setRemoteWALDir(rootDir);
+    builder.setRemoteWALDir(rootDir.makeQualified(TEST_UTIL.getTestFileSystem().getUri(),
+      TEST_UTIL.getTestFileSystem().getWorkingDirectory()).toString());
     builder.setReplicateAllUserTables(false);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, new ArrayList<>());
@@ -1105,13 +1110,18 @@ public class TestReplicationAdmin {
     assertEquals(SyncReplicationState.ACTIVE,
       hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
 
-    try {
-      hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND,
-        SyncReplicationState.STANDBY);
-      fail("Can't transit cluster state from ACTIVE to STANDBY");
-    } catch (Exception e) {
-      // OK
-    }
+    hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND, SyncReplicationState.STANDBY);
+    assertEquals(SyncReplicationState.STANDBY,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
+
+    hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND,
+      SyncReplicationState.DOWNGRADE_ACTIVE);
+    assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
+
+    hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND, SyncReplicationState.ACTIVE);
+    assertEquals(SyncReplicationState.ACTIVE,
+      hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
 
     hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND,
       SyncReplicationState.DOWNGRADE_ACTIVE);
@@ -1121,7 +1131,6 @@ public class TestReplicationAdmin {
     hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND, SyncReplicationState.STANDBY);
     assertEquals(SyncReplicationState.STANDBY,
       hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
-
     try {
       hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND, SyncReplicationState.ACTIVE);
       fail("Can't transit cluster state from STANDBY to ACTIVE");

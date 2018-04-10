@@ -21,21 +21,23 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -129,20 +131,31 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
     }
   }
 
+  // return whether we should include this entry.
+  private boolean filter(Entry entry) {
+    WALEdit edit = entry.getEdit();
+    WALUtil.filterCells(edit, c -> CellUtil.matchingFamily(c, WALEdit.METAFAMILY) ? null : c);
+    return !edit.isEmpty();
+  }
+
   private List<Entry> readWALEntries(Reader reader) throws IOException {
     List<Entry> entries = new ArrayList<>();
     if (reader == null) {
       return entries;
     }
     long size = 0;
-    Entry entry = reader.next();
-    while (entry != null) {
-      entries.add(entry);
-      size += entry.getEdit().heapSize();
-      if (size > batchSize) {
+    for (;;) {
+      Entry entry = reader.next();
+      if (entry == null) {
         break;
       }
-      entry = reader.next();
+      if (filter(entry)) {
+        entries.add(entry);
+        size += entry.getEdit().heapSize();
+        if (size > batchSize) {
+          break;
+        }
+      }
     }
     return entries;
   }

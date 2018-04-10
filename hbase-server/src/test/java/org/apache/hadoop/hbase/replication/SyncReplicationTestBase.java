@@ -17,69 +17,51 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
-import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestSyncReplication {
+/**
+ * Base class for testing sync replication.
+ */
+public class SyncReplicationTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSyncReplication.class);
+  protected static final HBaseZKTestingUtility ZK_UTIL = new HBaseZKTestingUtility();
 
-  private static final HBaseZKTestingUtility ZK_UTIL = new HBaseZKTestingUtility();
+  protected static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
 
-  private static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
 
-  private static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
+  protected static TableName TABLE_NAME = TableName.valueOf("SyncRep");
 
-  private static TableName TABLE_NAME = TableName.valueOf("SyncRep");
+  protected static byte[] CF = Bytes.toBytes("cf");
 
-  private static byte[] CF = Bytes.toBytes("cf");
+  protected static byte[] CQ = Bytes.toBytes("cq");
 
-  private static byte[] CQ = Bytes.toBytes("cq");
-
-  private static String PEER_ID = "1";
+  protected static String PEER_ID = "1";
 
   private static void initTestingUtility(HBaseTestingUtility util, String zkParent) {
     util.setZkCluster(ZK_UTIL.getZkCluster());
@@ -108,18 +90,18 @@ public class TestSyncReplication {
     UTIL1.startMiniCluster(3);
     UTIL2.startMiniCluster(3);
     TableDescriptor td =
-        TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
-          .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
     UTIL1.getAdmin().createTable(td);
     UTIL2.getAdmin().createTable(td);
     FileSystem fs1 = UTIL1.getTestFileSystem();
     FileSystem fs2 = UTIL2.getTestFileSystem();
     Path remoteWALDir1 =
-        new Path(UTIL1.getMiniHBaseCluster().getMaster().getMasterFileSystem().getRootDir(),
-          "remoteWALs").makeQualified(fs1.getUri(), fs1.getWorkingDirectory());
+      new Path(UTIL1.getMiniHBaseCluster().getMaster().getMasterFileSystem().getRootDir(),
+        "remoteWALs").makeQualified(fs1.getUri(), fs1.getWorkingDirectory());
     Path remoteWALDir2 =
-        new Path(UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem().getRootDir(),
-          "remoteWALs").makeQualified(fs2.getUri(), fs2.getWorkingDirectory());
+      new Path(UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem().getRootDir(),
+        "remoteWALs").makeQualified(fs2.getUri(), fs2.getWorkingDirectory());
     UTIL1.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
         .setReplicateAllUserTables(false)
@@ -139,60 +121,47 @@ public class TestSyncReplication {
     ZK_UTIL.shutdownMiniZKCluster();
   }
 
-  @FunctionalInterface
-  private interface TableAction {
-
-    void call(Table table) throws IOException;
-  }
-
-  private void assertDisallow(Table table, TableAction action) throws IOException {
-    try {
-      action.call(table);
-    } catch (DoNotRetryIOException | RetriesExhaustedException e) {
-      // expected
-      assertThat(e.getMessage(), containsString("STANDBY"));
-    }
-  }
-
-  @Test
-  public void testStandby() throws Exception {
-    MasterFileSystem mfs = UTIL2.getHBaseCluster().getMaster().getMasterFileSystem();
-    Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
-    Path remoteWALDirForPeer = new Path(remoteWALDir, PEER_ID);
-    assertFalse(mfs.getWALFileSystem().exists(remoteWALDirForPeer));
-    UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
-      SyncReplicationState.STANDBY);
-    assertTrue(mfs.getWALFileSystem().exists(remoteWALDirForPeer));
-    try (Table table = UTIL2.getConnection().getTable(TABLE_NAME)) {
-      assertDisallow(table, t -> t.get(new Get(Bytes.toBytes("row"))));
-      assertDisallow(table,
-        t -> t.put(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row"))));
-      assertDisallow(table, t -> t.delete(new Delete(Bytes.toBytes("row"))));
-      assertDisallow(table, t -> t.incrementColumnValue(Bytes.toBytes("row"), CF, CQ, 1));
-      assertDisallow(table,
-        t -> t.append(new Append(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row"))));
-      assertDisallow(table,
-        t -> t.get(Arrays.asList(new Get(Bytes.toBytes("row")), new Get(Bytes.toBytes("row1")))));
-      assertDisallow(table,
-        t -> t
-          .put(Arrays.asList(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")),
-            new Put(Bytes.toBytes("row1")).addColumn(CF, CQ, Bytes.toBytes("row1")))));
-      assertDisallow(table, t -> t.mutateRow(new RowMutations(Bytes.toBytes("row"))
-        .add((Mutation) new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")))));
-    }
-    // But we should still allow replication writes
-    try (Table table = UTIL1.getConnection().getTable(TABLE_NAME)) {
-      for (int i = 0; i < 100; i++) {
+  protected final void write(HBaseTestingUtility util, int start, int end) throws IOException {
+    try (Table table = util.getConnection().getTable(TABLE_NAME)) {
+      for (int i = start; i < end; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
     }
+  }
+
+  protected final void verify(HBaseTestingUtility util, int start, int end) throws IOException {
+    try (Table table = util.getConnection().getTable(TABLE_NAME)) {
+      for (int i = start; i < end; i++) {
+        assertEquals(i, Bytes.toInt(table.get(new Get(Bytes.toBytes(i))).getValue(CF, CQ)));
+      }
+    }
+  }
+
+  protected final void verifyThroughRegion(HBaseTestingUtility util, int start, int end)
+      throws IOException {
+    HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
+    for (int i = start; i < end; i++) {
+      assertEquals(i, Bytes.toInt(region.get(new Get(Bytes.toBytes(i))).getValue(CF, CQ)));
+    }
+  }
+
+  protected final void verifyNotReplicatedThroughRegion(HBaseTestingUtility util, int start,
+      int end) throws IOException {
+    HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
+    for (int i = start; i < end; i++) {
+      assertTrue(region.get(new Get(Bytes.toBytes(i))).isEmpty());
+    }
+  }
+
+  protected final void waitUntilReplicationDone(HBaseTestingUtility util, int end)
+      throws Exception {
     // The reject check is in RSRpcService so we can still read through HRegion
-    HRegion region = UTIL2.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
-    UTIL2.waitFor(30000, new ExplainingPredicate<Exception>() {
+    HRegion region = util.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
+    util.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override
       public boolean evaluate() throws Exception {
-        return !region.get(new Get(Bytes.toBytes(99))).isEmpty();
+        return !region.get(new Get(Bytes.toBytes(end - 1))).isEmpty();
       }
 
       @Override
@@ -200,8 +169,17 @@ public class TestSyncReplication {
         return "Replication has not been catched up yet";
       }
     });
-    for (int i = 0; i < 100; i++) {
-      assertEquals(i, Bytes.toInt(region.get(new Get(Bytes.toBytes(i))).getValue(CF, CQ)));
-    }
+  }
+
+  protected final void writeAndVerifyReplication(HBaseTestingUtility util1,
+      HBaseTestingUtility util2, int start, int end) throws Exception {
+    write(util1, start, end);
+    waitUntilReplicationDone(util2, end);
+    verifyThroughRegion(util2, start, end);
+  }
+
+  protected final Path getRemoteWALDir(MasterFileSystem mfs, String peerId) {
+    Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
+    return new Path(remoteWALDir, PEER_ID);
   }
 }
