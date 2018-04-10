@@ -864,7 +864,7 @@ public class AssignmentManager implements ServerListener {
     final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
     if (!reportTransition(regionNode, serverNode, state, seqId)) {
       // Don't log if shutting down cluster; during shutdown.
-      LOG.warn("No matchin procedure found for {} to transition to {}", regionNode, state);
+      LOG.warn("No matching procedure found for {} transition to {}", regionNode, state);
     }
   }
 

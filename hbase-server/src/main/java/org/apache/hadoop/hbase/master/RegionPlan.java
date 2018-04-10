@@ -189,7 +189,7 @@ public class RegionPlan implements Comparable<RegionPlan> {
 
   @Override
   public String toString() {
-    return "hri=" + this.hri.getRegionNameAsString() + ", source=" +
+    return "hri=" + this.hri.getEncodedName() + ", source=" +
       (this.source == null? "": this.source.toString()) +
       ", destination=" + (this.dest == null? "": this.dest.toString());
   }
