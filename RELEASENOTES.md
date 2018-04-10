@@ -48,6 +48,26 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-18828](https://issues.apache.org/jira/browse/HBASE-18828) | *Blocker* | **[2.0] Generate CHANGES.txt**
+
+Moves us over to yetus releasedocmaker tooling generating CHANGES. CHANGES is not markdown (CHANGES.md) as opposed to CHANGES.txt. We've also added a new RELEASENOTES.md that lists JIRA release notes (courtesy of releasedocmaker).
+
+CHANGES/RELEASENOTES are current as of now. Will need a 'freshening' when we cut the RC.
+
+
+---
+
+* [HBASE-20276](https://issues.apache.org/jira/browse/HBASE-20276) | *Blocker* | **[shell] Revert shell REPL change and document**
+
+<!-- markdown -->
+The HBase shell now behaves as it did prior to the changes that started in HBASE-15965. Namely, some shell commands return values that may be further manipulated within the shell's IRB session.
+
+The command line option `--return-values` is no longer acted on by the shell since it now always behaves as it did when passed this parameter. Passing the option results in a harmless warning about this change.
+
+Users who wish to maintain the behavior seen in the 1.4.0-1.4.2 releases of the HBase shell should refer to the section _irbrc_ in the reference guide for how to configure their IRB session to avoid echoing expression results to the console.
+
+---
+
 * [HBASE-14175](https://issues.apache.org/jira/browse/HBASE-14175) | *Critical* | **Adopt releasedocmaker for better generated release notes**
 
 We will use yetus releasedocmaker to make our changes doc from here on out. A CHANGELOG.md will replace our current CHANGES.txt. Adjacent, we'll keep up a RELEASENOTES.md doc courtesy of releasedocmaker.
