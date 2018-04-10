@@ -68,8 +68,12 @@ Some commands take arguments. Pass no args or -h for usage.
   pe              Run PerformanceEvaluation
   ltt             Run LoadTestTool
   canary          Run the Canary tool
-  regionsplitter  Run the RegionSplitter tool
   version         Print the version
+  backup          Backup tables for recovery
+  restore         Restore tables from existing backup image
+  regionsplitter  Run RegionSplitter tool
+  rowcounter      Run RowCounter tool
+  cellcounter     Run CellCounter tool
   CLASSNAME       Run the class named CLASSNAME
 ----
 
@@ -744,24 +748,28 @@ For performance also consider the following options:
 ----
 
 [[rowcounter]]
-=== RowCounter and CellCounter
+=== RowCounter
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter]        is a mapreduce job to count all the rows of a table.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] is a mapreduce job to count all the rows of a table.
 This is a good utility to use as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
-It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit. It is also possible to limit
-the time range of data to be scanned by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
+It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit.
+It is possible to limit the time range of data to be scanned by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
+The scanned data can be limited based on keys using the `--range=[startKey],[endKey][;[startKey],[endKey]...]` option.
 
 ----
-$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter <tablename> [<column1> <column2>...]
+$ bin/hbase rowcounter [options] <tablename> [--starttime=<start> --endtime=<end>] [--range=[startKey],[endKey][;[startKey],[endKey]...]] [<column1> <column2>...]
 ----
 
 RowCounter only counts one version per cell.
 
-Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
+For performance consider to use `-Dhbase.client.scanner.caching=100` and `-Dmapreduce.map.speculative=false` options.
+
+[[cellcounter]]
+=== CellCounter
 
 HBase ships another diagnostic mapreduce job called link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html[CellCounter].
 Like RowCounter, it gathers more fine-grained statistics about your table.
-The statistics gathered by RowCounter are more fine-grained and include:
+The statistics gathered by CellCounter are more fine-grained and include:
 
 * Total number of rows in the table.
 * Total number of CFs across all rows.
@@ -772,12 +780,12 @@ The statistics gathered by RowCounter are more fine-grained and include:
 
 The program allows you to limit the scope of the run.
 Provide a row regex or prefix to limit the rows to analyze.
-Specify a time range to scan the table by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
+Specify a time range to scan the table by using the `--starttime=<starttime>` and `--endtime=<endtime>` flags.
 
 Use `hbase.mapreduce.scan.column.family` to specify scanning a single column family.
 
 ----
-$ bin/hbase org.apache.hadoop.hbase.mapreduce.CellCounter <tablename> <outputDir> [regex or prefix]
+$ bin/hbase cellcounter <tablename> <outputDir> [reportSeparator] [regex or prefix] [--starttime=<starttime> --endtime=<endtime>]
 ----
 
 Note: just like RowCounter, caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
@@ -785,8 +793,7 @@ Note: just like RowCounter, caching for the input Scan is configured via `hbase.
 === mlockall
 
 It is possible to optionally pin your servers in physical memory making them less likely to be swapped out in oversubscribed environments by having the servers call link:http://linux.die.net/man/2/mlockall[mlockall] on startup.
-See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability to
-          start RS as root and call mlockall] for how to build the optional library and have it run on startup.
+See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability to start RS as root and call mlockall] for how to build the optional library and have it run on startup.
 
 [[compaction.tool]]
 === Offline Compaction Tool

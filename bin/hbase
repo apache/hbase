@@ -106,6 +106,8 @@ if [ $# = 0 ]; then
   echo "  backup          Backup tables for recovery"
   echo "  restore         Restore tables from existing backup image"
   echo "  regionsplitter  Run RegionSplitter tool"
+  echo "  rowcounter      Run RowCounter tool"
+  echo "  cellcounter     Run CellCounter tool"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
 fi
@@ -465,6 +467,10 @@ elif [ "$COMMAND" = "version" ] ; then
   CLASS='org.apache.hadoop.hbase.util.VersionInfo'
 elif [ "$COMMAND" = "regionsplitter" ] ; then
   CLASS='org.apache.hadoop.hbase.util.RegionSplitter'
+elif [ "$COMMAND" = "rowcounter" ] ; then
+  CLASS='org.apache.hadoop.hbase.mapreduce.RowCounter'
+elif [ "$COMMAND" = "cellcounter" ] ; then
+  CLASS='org.apache.hadoop.hbase.mapreduce.CellCounter'
 else
   CLASS=$COMMAND
 fi
