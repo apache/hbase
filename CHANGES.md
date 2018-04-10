@@ -47,6 +47,7 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-20149](https://issues.apache.org/jira/browse/HBASE-20149) | Purge dev javadoc from bin tarball (or make a separate tarball of javadoc) | Critical | build, community, documentation |
 | [HBASE-20276](https://issues.apache.org/jira/browse/HBASE-20276) | [shell] Revert shell REPL change and document |  Blocker | documentation, shell |
 | [HBASE-16459](https://issues.apache.org/jira/browse/HBASE-16459) | Remove unused hbase shell --format option |  Trivial | shell |
 | [HBASE-19128](https://issues.apache.org/jira/browse/HBASE-19128) | Purge Distributed Log Replay from codebase, configurations, text; mark the feature as unsupported, broken. |  Major | documentation |
