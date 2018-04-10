@@ -1976,7 +1976,7 @@ public class MetaTableAccessor {
       .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(value).build());
   }
 
-  private static Put makePutForReplicationBarrier(RegionInfo regionInfo, long openSeqNum, long ts)
+  public static Put makePutForReplicationBarrier(RegionInfo regionInfo, long openSeqNum, long ts)
       throws IOException {
     Put put = new Put(regionInfo.getRegionName(), ts);
     addReplicationBarrier(put, openSeqNum);

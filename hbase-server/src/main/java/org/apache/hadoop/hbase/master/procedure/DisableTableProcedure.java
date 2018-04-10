@@ -19,20 +19,25 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
@@ -81,48 +86,61 @@ public class DisableTableProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final DisableTableState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
-
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
-      case DISABLE_TABLE_PREPARE:
-        if (prepareDisable(env)) {
-          setNextState(DisableTableState.DISABLE_TABLE_PRE_OPERATION);
-        } else {
-          assert isFailed() : "disable should have an exception here";
+        case DISABLE_TABLE_PREPARE:
+          if (prepareDisable(env)) {
+            setNextState(DisableTableState.DISABLE_TABLE_PRE_OPERATION);
+          } else {
+            assert isFailed() : "disable should have an exception here";
+            return Flow.NO_MORE_STATE;
+          }
+          break;
+        case DISABLE_TABLE_PRE_OPERATION:
+          preDisable(env, state);
+          setNextState(DisableTableState.DISABLE_TABLE_SET_DISABLING_TABLE_STATE);
+          break;
+        case DISABLE_TABLE_SET_DISABLING_TABLE_STATE:
+          setTableStateToDisabling(env, tableName);
+          setNextState(DisableTableState.DISABLE_TABLE_MARK_REGIONS_OFFLINE);
+          break;
+        case DISABLE_TABLE_MARK_REGIONS_OFFLINE:
+          addChildProcedure(env.getAssignmentManager().createUnassignProcedures(tableName));
+          setNextState(DisableTableState.DISABLE_TABLE_SET_DISABLED_TABLE_STATE);
+          break;
+        case DISABLE_TABLE_ADD_REPLICATION_BARRIER:
+          if (env.getMasterServices().getTableDescriptors().get(tableName)
+            .hasGlobalReplicationScope()) {
+            MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+            try (BufferedMutator mutator = env.getMasterServices().getConnection()
+              .getBufferedMutator(TableName.META_TABLE_NAME)) {
+              for (RegionInfo region : env.getAssignmentManager().getRegionStates()
+                .getRegionsOfTable(tableName)) {
+                long maxSequenceId =
+                  WALSplitter.getMaxRegionSequenceId(mfs.getFileSystem(), mfs.getRegionDir(region));
+                mutator.mutate(MetaTableAccessor.makePutForReplicationBarrier(region, maxSequenceId,
+                  EnvironmentEdgeManager.currentTime()));
+              }
+            }
+          }
+          setNextState(DisableTableState.DISABLE_TABLE_SET_DISABLED_TABLE_STATE);
+          break;
+        case DISABLE_TABLE_SET_DISABLED_TABLE_STATE:
+          setTableStateToDisabled(env, tableName);
+          setNextState(DisableTableState.DISABLE_TABLE_POST_OPERATION);
+          break;
+        case DISABLE_TABLE_POST_OPERATION:
+          postDisable(env, state);
           return Flow.NO_MORE_STATE;
-        }
-        break;
-      case DISABLE_TABLE_PRE_OPERATION:
-        preDisable(env, state);
-        setNextState(DisableTableState.DISABLE_TABLE_SET_DISABLING_TABLE_STATE);
-        break;
-      case DISABLE_TABLE_SET_DISABLING_TABLE_STATE:
-        setTableStateToDisabling(env, tableName);
-        setNextState(DisableTableState.DISABLE_TABLE_MARK_REGIONS_OFFLINE);
-        break;
-      case DISABLE_TABLE_MARK_REGIONS_OFFLINE:
-        addChildProcedure(env.getAssignmentManager().createUnassignProcedures(tableName));
-        setNextState(DisableTableState.DISABLE_TABLE_SET_DISABLED_TABLE_STATE);
-        break;
-      case DISABLE_TABLE_SET_DISABLED_TABLE_STATE:
-        setTableStateToDisabled(env, tableName);
-        setNextState(DisableTableState.DISABLE_TABLE_POST_OPERATION);
-        break;
-      case DISABLE_TABLE_POST_OPERATION:
-        postDisable(env, state);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException("Unhandled state=" + state);
+        default:
+          throw new UnsupportedOperationException("Unhandled state=" + state);
       }
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
         setFailure("master-disable-table", e);
       } else {
-        LOG.warn("Retriable error trying to disable table=" + tableName +
-          " (in state=" + state + ")", e);
+        LOG.warn("Retriable error trying to disable table={} (in state={})", tableName, state, e);
       }
     }
     return Flow.HAS_MORE_STATE;
