@@ -149,9 +149,11 @@ public class RegionInfoBuilder {
      * old region name format.
      */
 
-    // This flag is in the parent of a split while the parent is still referenced
-    // by daughter regions.  We USED to set this flag when we disabled a table
-    // but now table state is kept up in zookeeper as of 0.90.0 HBase.
+    // This flag is in the parent of a split while the parent is still referenced by daughter
+    // regions. We USED to set this flag when we disabled a table but now table state is kept up in
+    // zookeeper as of 0.90.0 HBase. And now in DisableTableProcedure, finally we will create bunch
+    // of UnassignProcedures and at the last of the procedure we will set the region state to
+    // CLOSED, and will not change the offLine flag.
     private boolean offLine = false;
     private boolean split = false;
     private final long regionId;
