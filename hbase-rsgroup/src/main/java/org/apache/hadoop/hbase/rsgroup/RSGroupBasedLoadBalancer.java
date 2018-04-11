@@ -216,6 +216,16 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
         if(candidateList.size() > 0) {
           assignments.putAll(this.internalBalancer.retainAssignment(
               currentAssignmentMap, candidateList));
+        } else{
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("No available server to assign regions: " + regionList.toString());
+          }
+          for(RegionInfo region : regionList) {
+            if (!assignments.containsKey(LoadBalancer.BOGUS_SERVER_NAME)) {
+              assignments.put(LoadBalancer.BOGUS_SERVER_NAME, new ArrayList<>());
+            }
+            assignments.get(LoadBalancer.BOGUS_SERVER_NAME).add(region);
+          }
         }
       }
 
