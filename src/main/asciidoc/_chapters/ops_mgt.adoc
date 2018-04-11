@@ -684,6 +684,7 @@ Assuming you're running HDFS with permissions enabled, those permissions will ne
 
 For more information about bulk-loading HFiles into HBase, see <<arch.bulk.load,arch.bulk.load>>.
 
+[[walplayer]]
 === WALPlayer
 
 WALPlayer is a utility to replay WAL files into HBase.
@@ -707,6 +708,40 @@ $ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer /backuplogdir oldTable1,
 
 WALPlayer, by default, runs as a mapreduce job.
 To NOT run WALPlayer as a mapreduce job on your cluster, force it to run all in the local process by adding the flags `-Dmapreduce.jobtracker.address=local` on the command line.
+
+[[walplayer.options]]
+==== WALPlayer Options
+
+Running `WALPlayer` with no arguments prints brief usage information:
+
+----
+Usage: WALPlayer [options] <wal inputdir> <tables> [<tableMappings>]
+Replay all WAL files into HBase.
+<tables> is a comma separated list of tables.
+If no tables ("") are specified, all tables are imported.
+(Be careful, hbase:meta entries will be imported in this case.)
+
+WAL entries can be mapped to new set of tables via <tableMappings>.
+<tableMappings> is a comma separated list of target tables.
+If specified, each table in <tables> must have a mapping.
+
+By default WALPlayer will load data directly into HBase.
+To generate HFiles for a bulk data load instead, pass the following option:
+  -Dwal.bulk.output=/path/for/output
+  (Only one table can be specified, and no mapping is allowed!)
+Time range options:
+  -Dwal.start.time=[date|ms]
+  -Dwal.end.time=[date|ms]
+  (The start and the end date of timerange. The dates can be expressed
+  in milliseconds since epoch or in yyyy-MM-dd'T'HH:mm:ss.SS format.
+  E.g. 1234567890120 or 2009-02-13T23:32:30.12)
+Other options:
+  -Dmapreduce.job.name=jobName
+  Use the specified mapreduce job name for the wal player
+For performance also consider the following options:
+  -Dmapreduce.map.speculative=false
+  -Dmapreduce.reduce.speculative=false
+----
 
 [[rowcounter]]
 === RowCounter and CellCounter
