@@ -204,6 +204,15 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       done.run(CleanupBulkLoadResponse.newBuilder().build());
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
+    } finally {
+      UserGroupInformation ugi = getActiveUser().getUGI();
+      try {
+        if (!UserGroupInformation.getLoginUser().equals(ugi)) {
+          FileSystem.closeAllForUGI(ugi);
+        }
+      } catch (IOException e) {
+        LOG.error("Failed to close FileSystem for: " + ugi, e);
+      }
     }
     done.run(null);
   }
@@ -374,7 +383,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       Path p = new Path(srcPath);
       Path stageP = new Path(stagingDir, new Path(Bytes.toString(family), p.getName()));
       if (srcFs == null) {
-        srcFs = FileSystem.get(p.toUri(), conf);
+        srcFs = FileSystem.newInstance(p.toUri(), conf);
       }
 
       if(!isFile(p)) {
@@ -401,26 +410,40 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     @Override
     public void doneBulkLoad(byte[] family, String srcPath) throws IOException {
       LOG.debug("Bulk Load done for: " + srcPath);
+      closeSrcFs();
+    }
+
+    private void closeSrcFs() throws IOException {
+      if (srcFs != null) {
+        srcFs.close();
+        srcFs = null;
+      }
     }
 
     @Override
     public void failedBulkLoad(final byte[] family, final String srcPath) throws IOException {
-      if (!FSHDFSUtils.isSameHdfs(conf, srcFs, fs)) {
-        // files are copied so no need to move them back
-        return;
-      }
-      Path p = new Path(srcPath);
-      Path stageP = new Path(stagingDir,
-          new Path(Bytes.toString(family), p.getName()));
-      LOG.debug("Moving " + stageP + " back to " + p);
-      if(!fs.rename(stageP, p))
-        throw new IOException("Failed to move HFile: " + stageP + " to " + p);
+      try {
+        Path p = new Path(srcPath);
+        if (srcFs == null) {
+          srcFs = FileSystem.newInstance(p.toUri(), conf);
+        }
+        if (!FSHDFSUtils.isSameHdfs(conf, srcFs, fs)) {
+          // files are copied so no need to move them back
+          return;
+        }
+        Path stageP = new Path(stagingDir, new Path(Bytes.toString(family), p.getName()));
+        LOG.debug("Moving " + stageP + " back to " + p);
+        if (!fs.rename(stageP, p))
+          throw new IOException("Failed to move HFile: " + stageP + " to " + p);
 
-      // restore original permission
-      if (origPermissions.containsKey(srcPath)) {
-        fs.setPermission(p, origPermissions.get(srcPath));
-      } else {
-        LOG.warn("Can't find previous permission for path=" + srcPath);
+        // restore original permission
+        if (origPermissions.containsKey(srcPath)) {
+          fs.setPermission(p, origPermissions.get(srcPath));
+        } else {
+          LOG.warn("Can't find previous permission for path=" + srcPath);
+        }
+      } finally {
+        closeSrcFs();
       }
     }
 
