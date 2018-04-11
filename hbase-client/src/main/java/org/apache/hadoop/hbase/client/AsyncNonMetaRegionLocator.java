@@ -269,12 +269,7 @@ class AsyncNonMetaRegionLocator {
   }
 
   // return whether we should stop the scan
-  private boolean onScanNext(TableName tableName, LocateRequest req, Result result,
-      Throwable error) {
-    if (error != null) {
-      complete(tableName, req, null, error);
-      return true;
-    }
+  private boolean onScanNext(TableName tableName, LocateRequest req, Result result) {
     RegionLocations locs = MetaTableAccessor.getRegionLocations(result);
     LOG.debug("The fetched location of '{}', row='{}', locateType={} is {}", tableName,
       Bytes.toStringBinary(req.row), req.locateType, locs);
@@ -298,7 +293,7 @@ class AsyncNonMetaRegionLocator {
     }
     if (loc.getServerName() == null) {
       complete(tableName, req, null,
-        new NoServerForRegionException(
+        new IOException(
             String.format("No server address listed for region '%s', row='%s', locateType=%s",
               info.getRegionNameAsString(), Bytes.toStringBinary(req.row), req.locateType)));
       return true;
@@ -370,22 +365,28 @@ class AsyncNonMetaRegionLocator {
 
           private boolean completeNormally = false;
 
+          private boolean tableNotFound = true;
+
           @Override
           public void onError(Throwable error) {
-            onScanNext(tableName, req, null, error);
+            complete(tableName, req, null, error);
           }
 
           @Override
           public void onComplete() {
-            if (!completeNormally) {
-              onScanNext(tableName, req, null, new TableNotFoundException(tableName));
+            if (tableNotFound) {
+              complete(tableName, req, null, new TableNotFoundException(tableName));
+            } else if (!completeNormally) {
+              complete(tableName, req, null, new IOException(
+                "Unable to find region for " + Bytes.toStringBinary(req.row) + " in " + tableName));
             }
           }
 
           @Override
           public void onNext(Result[] results, ScanController controller) {
             for (Result result : results) {
-              if (onScanNext(tableName, req, result, null)) {
+              tableNotFound = false;
+              if (onScanNext(tableName, req, result)) {
                 completeNormally = true;
                 controller.terminate();
                 return;

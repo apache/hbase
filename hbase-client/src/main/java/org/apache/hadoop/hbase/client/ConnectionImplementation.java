@@ -836,7 +836,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
               if (tableNotFound) {
                 throw new TableNotFoundException(tableName);
               } else {
-                throw new NoServerForRegionException(
+                throw new IOException(
                   "Unable to find region for " + Bytes.toStringBinary(row) + " in " + tableName);
               }
             }
@@ -864,7 +864,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
             // the parent in the above condition, so we may have already reached a region which does
             // not contains us.
             if (!regionInfo.containsRow(row)) {
-              throw new NoServerForRegionException(
+              throw new IOException(
                 "Unable to find region for " + Bytes.toStringBinary(row) + " in " + tableName);
             }
             ServerName serverName = locations.getRegionLocation(replicaId).getServerName();
