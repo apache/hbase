@@ -383,26 +383,29 @@ public class WALPlayer extends Configured implements Tool {
       System.err.println("ERROR: " + errorMsg);
     }
     System.err.println("Usage: " + NAME + " [options] <wal inputdir> <tables> [<tableMappings>]");
-    System.err.println("Read all WAL entries for <tables>.");
-    System.err.println("If no tables (\"\") are specific, all tables are imported.");
-    System.err.println("(Careful, even hbase:meta entries will be imported"+
-      " in that case.)");
-    System.err.println("Otherwise <tables> is a comma separated list of tables.\n");
-    System.err.println("The WAL entries can be mapped to new set of tables via <tableMapping>.");
-    System.err.println("<tableMapping> is a command separated list of targettables.");
+    System.err.println("Replay all WAL files into HBase.");
+    System.err.println("<tables> is a comma separated list of tables.");
+    System.err.println("If no tables (\"\") are specified, all tables are imported.");
+    System.err.println("(Be careful, hbase:meta entries will be imported in this case.)\n");
+    System.err.println("WAL entries can be mapped to new set of tables via <tableMappings>.");
+    System.err.println("<tableMappings> is a comma separated list of target tables.");
     System.err.println("If specified, each table in <tables> must have a mapping.\n");
     System.err.println("By default " + NAME + " will load data directly into HBase.");
-    System.err.println("To generate HFiles for a bulk data load instead, pass the option:");
+    System.err.println("To generate HFiles for a bulk data load instead, pass the following option:");
     System.err.println("  -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output");
     System.err.println("  (Only one table can be specified, and no mapping is allowed!)");
-    System.err.println("Other options: (specify time range to WAL edit to consider)");
+    System.err.println("Time range options:");
     System.err.println("  -D" + WALInputFormat.START_TIME_KEY + "=[date|ms]");
     System.err.println("  -D" + WALInputFormat.END_TIME_KEY + "=[date|ms]");
-    System.err.println("   -D " + JOB_NAME_CONF_KEY
-      + "=jobName - use the specified mapreduce job name for the wal player");
+    System.err.println("  (The start and the end date of timerange. The dates can be expressed");
+    System.err.println("  in milliseconds since epoch or in yyyy-MM-dd'T'HH:mm:ss.SS format.");
+    System.err.println("  E.g. 1234567890120 or 2009-02-13T23:32:30.12)");
+    System.err.println("Other options:");
+    System.err.println("  -D" + JOB_NAME_CONF_KEY + "=jobName");
+    System.err.println("  Use the specified mapreduce job name for the wal player");
     System.err.println("For performance also consider the following options:\n"
-      + "  -Dmapreduce.map.speculative=false\n"
-      + "  -Dmapreduce.reduce.speculative=false");
+        + "  -Dmapreduce.map.speculative=false\n"
+        + "  -Dmapreduce.reduce.speculative=false");
   }
 
   /**
