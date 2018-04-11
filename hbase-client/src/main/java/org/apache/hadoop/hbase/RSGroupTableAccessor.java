@@ -45,6 +45,13 @@ public final class RSGroupTableAccessor {
   private static final byte[] META_FAMILY_BYTES = Bytes.toBytes("m");
   private static final byte[] META_QUALIFIER_BYTES = Bytes.toBytes("i");
 
+  private RSGroupTableAccessor() {
+  }
+
+  public static boolean isRSGroupsEnabled(Connection connection) throws IOException {
+    return connection.getAdmin().tableExists(RSGROUP_TABLE_NAME);
+  }
+
   public static List<RSGroupInfo> getAllRSGroupInfo(Connection connection)
       throws IOException {
     try (Table rsGroupTable = connection.getTable(RSGROUP_TABLE_NAME)) {
@@ -75,8 +82,5 @@ public final class RSGroupTableAccessor {
       Result result = rsGroupTable.get(new Get(rsGroupName));
       return getRSGroupInfo(result);
     }
-  }
-
-  private RSGroupTableAccessor() {
   }
 }
