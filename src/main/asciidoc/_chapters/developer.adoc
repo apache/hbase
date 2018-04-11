@@ -2177,6 +2177,12 @@ When the amending author is different from the original committer, add notice of
                                 - [DISCUSSION] Best practice when amending commits cherry picked
                                 from master to branch].
 
+====== Close related GitHub PRs
+
+As a project we work to ensure there's a JIRA associated with each change, but we don't mandate any particular tool be used for reviews. Due to implementation details of the ASF's integration between hosted git repositories and GitHub, the PMC has no ability to directly close PRs on our GitHub repo. In the event that a contributor makes a Pull Request on GitHub, either because the contributor finds that easier than attaching a patch to JIRA or because a reviewer prefers that UI for examining changes, it's important to make note of the PR in the commit that goes to the master branch so that PRs are kept up to date.
+
+To read more about the details of what kinds of commit messages will work with the GitHub "close via keyword in commit" mechanism see link:https://help.github.com/articles/closing-issues-using-keywords/[the GitHub documentation for "Closing issues using keywords"]. In summary, you should include a line with the phrase "closes #XXX", where the XXX is the pull request id. The pull request id is usually given in the GitHub UI in grey at the end of the subject heading.
+
 [[committer.tests]]
 ====== Committers are responsible for making sure commits do not break the build or tests
 
