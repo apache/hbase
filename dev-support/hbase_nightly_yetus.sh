@@ -91,8 +91,11 @@ if [[ true == "${DEBUG}" ]]; then
   YETUS_ARGS=("--debug" "${YETUS_ARGS[@]}")
 fi
 
-rm -rf "${OUTPUT_DIR}"
-mkdir -p "${OUTPUT_DIR}"
+if [[ ! -d "${OUTPUT_DIR}" ]]; then
+  echo "[ERROR] the specified output directory must already exist: '${OUTPUT_DIR}'"
+  exit 1
+fi
+
 if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
   YETUS_ARGS=("--shelldocs=${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/shelldocs" "${YETUS_ARGS[@]}")
   TESTPATCHBIN="${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/test-patch"
