@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -100,22 +99,7 @@ public abstract class TestRSGroupsBase {
 
   protected RSGroupInfo addGroup(String groupName, int serverCount)
       throws IOException, InterruptedException {
-    RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
-    assertTrue(defaultInfo != null);
-    assertTrue(defaultInfo.getServers().size() >= serverCount);
-    rsGroupAdmin.addRSGroup(groupName);
-
-    Set<Address> set = new HashSet<>();
-    for(Address server: defaultInfo.getServers()) {
-      if(set.size() == serverCount) {
-        break;
-      }
-      set.add(server);
-    }
-    rsGroupAdmin.moveServers(set, groupName);
-    RSGroupInfo result = rsGroupAdmin.getRSGroupInfo(groupName);
-    assertTrue(result.getServers().size() >= serverCount);
-    return result;
+    return RSGroupTestingUtil.addRSGroup(rsGroupAdmin, groupName, serverCount);
   }
 
   void removeGroup(String groupName) throws IOException {

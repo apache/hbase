@@ -1748,6 +1748,11 @@ public class AssignmentManager implements ServerListener {
 
     if (plan.isEmpty()) return;
 
+    List<RegionInfo> bogusRegions = plan.remove(LoadBalancer.BOGUS_SERVER_NAME);
+    if (bogusRegions != null && !bogusRegions.isEmpty()) {
+      addToPendingAssignment(regions, bogusRegions);
+    }
+
     int evcount = 0;
     for (Map.Entry<ServerName, List<RegionInfo>> entry: plan.entrySet()) {
       final ServerName server = entry.getKey();
