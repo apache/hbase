@@ -150,6 +150,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             // TODO roll this into the hbase_nightly_yetus script
             sh '''#!/usr/bin/env bash
@@ -210,6 +212,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             sh '''#!/usr/bin/env bash
               set -e
@@ -283,6 +287,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             sh '''#!/usr/bin/env bash
               set -e
@@ -363,6 +369,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
 '''
             sh '''#!/usr/bin/env bash
               set -e
@@ -437,6 +445,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               set -e
               rm -rf "output-srctarball/machine" && mkdir "output-srctarball/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "output-srctarball/machine"
+              echo "got the following saved stats in 'output-srctarball/machine'"
+              ls -lh "output-srctarball/machine"
 '''
             sh """#!/bin/bash -e
               if "${env.BASEDIR}/dev-support/hbase_nightly_source-artifact.sh" \
@@ -456,6 +466,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             always {
               stash name: 'srctarball-result', includes: "output-srctarball/commentfile"
               archive 'output-srctarball/*'
+              archive 'output-srctarball/**/*'
             }
           }
         }
