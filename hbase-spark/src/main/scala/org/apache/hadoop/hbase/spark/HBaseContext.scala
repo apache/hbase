@@ -65,7 +65,7 @@ class HBaseContext(@transient val sc: SparkContext,
                    val tmpHdfsConfgFile: String = null)
   extends Serializable with Logging {
 
-  @transient var credentials = SparkHadoopUtil.get.getCurrentUserCredentials()
+  @transient var credentials = UserGroupInformation.getCurrentUser().getCredentials()
   @transient var tmpHdfsConfiguration:Configuration = config
   @transient var appliedCredentials = false
   @transient val job = Job.getInstance(config)
@@ -233,9 +233,11 @@ class HBaseContext(@transient val sc: SparkContext,
   }
 
   def applyCreds[T] (){
-    credentials = SparkHadoopUtil.get.getCurrentUserCredentials()
+    credentials = UserGroupInformation.getCurrentUser().getCredentials()
 
-    logDebug("appliedCredentials:" + appliedCredentials + ",credentials:" + credentials)
+    if (log.isDebugEnabled) {
+      logDebug("appliedCredentials:" + appliedCredentials + ",credentials:" + credentials)
+    }
 
     if (!appliedCredentials && credentials != null) {
       appliedCredentials = true
