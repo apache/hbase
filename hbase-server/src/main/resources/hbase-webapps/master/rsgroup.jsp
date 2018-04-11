@@ -45,20 +45,43 @@
 <%@ page import="org.apache.hadoop.hbase.Size" %>
 <%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
 <%
-  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   String rsGroupName = request.getParameter("name");
-  List<Address> rsGroupServers = new ArrayList<>();
-  List<TableName> rsGroupTables = new ArrayList<>();
+  pageContext.setAttribute("pageTitle", "RSGroup: " + rsGroupName);
+%>
+<jsp:include page="header.jsp">
+    <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
+<div class="container-fluid content">
+<%
+  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   RSGroupInfo rsGroupInfo = null;
-  if (rsGroupName != null && !rsGroupName.isEmpty()) {
-    rsGroupInfo = RSGroupTableAccessor.getRSGroupInfo(
-        master.getConnection(), Bytes.toBytes(rsGroupName));
-    if (rsGroupInfo != null) {
-      rsGroupServers.addAll(rsGroupInfo.getServers());
-      rsGroupTables.addAll(rsGroupInfo.getTables());
-    }
-  }
-  Collections.sort(rsGroupServers);
+
+  if (!RSGroupTableAccessor.isRSGroupsEnabled(master.getConnection())) {
+%>
+  <div class="row inner_header">
+    <div class="page-header">
+      <h1>RSGroups are not enabled</h1>
+    </div>
+  </div>
+  <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+<%
+  } else if (rsGroupName == null || rsGroupName.isEmpty() ||
+      (rsGroupInfo = RSGroupTableAccessor.getRSGroupInfo(
+          master.getConnection(), Bytes.toBytes(rsGroupName))) == null) {
+%>
+  <div class="row inner_header">
+    <div class="page-header">
+      <h1>RSGroup: <%= rsGroupName %> does not exist</h1>
+    </div>
+  </div>
+  <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+<%
+  } else {
+    List<Address> rsGroupServers = new ArrayList<>();
+    List<TableName> rsGroupTables = new ArrayList<>();
+    rsGroupServers.addAll(rsGroupInfo.getServers());
+    rsGroupTables.addAll(rsGroupInfo.getTables());
+    Collections.sort(rsGroupServers);
     rsGroupTables.sort((o1, o2) -> {
       int compare = Bytes.compareTo(o1.getNamespace(), o2.getNamespace());
       if (compare != 0)
@@ -69,29 +92,16 @@
       return 0;
     });
 
-  Map<Address, ServerMetrics> onlineServers = Collections.emptyMap();
-  Map<Address, ServerName> serverMaping = Collections.emptyMap();
-  if (master.getServerManager() != null) {
-    onlineServers = master.getServerManager().getOnlineServers().entrySet().stream()
-            .collect(Collectors.toMap(p -> p.getKey().getAddress(), Map.Entry::getValue));
-    serverMaping =
-        master.getServerManager().getOnlineServers().entrySet().stream()
-            .collect(Collectors.toMap(p -> p.getKey().getAddress(), Map.Entry::getKey));
-  }
-  pageContext.setAttribute("pageTitle", "RSGroup: " + rsGroupName);
+    Map<Address, ServerMetrics> onlineServers = Collections.emptyMap();
+    Map<Address, ServerName> serverMaping = Collections.emptyMap();
+    if (master.getServerManager() != null) {
+      onlineServers = master.getServerManager().getOnlineServers().entrySet().stream()
+              .collect(Collectors.toMap(p -> p.getKey().getAddress(), Map.Entry::getValue));
+      serverMaping =
+          master.getServerManager().getOnlineServers().entrySet().stream()
+              .collect(Collectors.toMap(p -> p.getKey().getAddress(), Map.Entry::getKey));
+    }
 %>
-<jsp:include page="header.jsp">
-    <jsp:param name="pageTitle" value="${pageTitle}"/>
-</jsp:include>
-<div class="container-fluid content">
-  <% if (rsGroupName == null || rsGroupName.isEmpty() || rsGroupInfo == null) { %>
-  <div class="row inner_header">
-      <div class="page-header">
-          <h1>RSGroup: "<%= rsGroupName %>" does not exist</h1>
-      </div>
-  </div>
-  <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
-  <% } else { %>
   <div class="container-fluid content">
     <div class="row">
       <div class="page-header">
