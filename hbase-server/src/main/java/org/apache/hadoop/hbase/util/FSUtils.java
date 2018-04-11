@@ -31,8 +31,10 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +83,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 
 /**
@@ -1728,6 +1731,78 @@ public abstract class FSUtils {
    */
   public static boolean isExists(final FileSystem fs, final Path path) throws IOException {
     return fs.exists(path);
+  }
+
+  /**
+   * Filters FileStatuses in an array and returns a list
+   *
+   * @param input   An array of FileStatuses
+   * @param filter  A required filter to filter the array
+   * @return        A list of FileStatuses
+   */
+  public static List<FileStatus> filterFileStatuses(FileStatus[] input,
+      FileStatusFilter filter) {
+    if (input == null) return null;
+    return filterFileStatuses(Iterators.forArray(input), filter);
+  }
+
+  /**
+   * Filters FileStatuses in an iterator and returns a list
+   *
+   * @param input   An iterator of FileStatuses
+   * @param filter  A required filter to filter the array
+   * @return        A list of FileStatuses
+   */
+  public static List<FileStatus> filterFileStatuses(Iterator<FileStatus> input,
+      FileStatusFilter filter) {
+    if (input == null) return null;
+    ArrayList<FileStatus> results = new ArrayList<>();
+    while (input.hasNext()) {
+      FileStatus f = input.next();
+      if (filter.accept(f)) {
+        results.add(f);
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
+   * This accommodates differences between hadoop versions, where hadoop 1
+   * does not throw a FileNotFoundException, and return an empty FileStatus[]
+   * while Hadoop 2 will throw FileNotFoundException.
+   *
+   * @param fs file system
+   * @param dir directory
+   * @param filter file status filter
+   * @return null if dir is empty or doesn't exist, otherwise FileStatus list
+   */
+  public static List<FileStatus> listStatusWithStatusFilter(final FileSystem fs,
+      final Path dir, final FileStatusFilter filter) throws IOException {
+    FileStatus [] status = null;
+    try {
+      status = fs.listStatus(dir);
+    } catch (FileNotFoundException fnfe) {
+      // if directory doesn't exist, return null
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(dir + " doesn't exist");
+      }
+    }
+
+    if (status == null || status.length < 1)  {
+      return null;
+    }
+
+    if (filter == null) {
+      return Arrays.asList(status);
+    } else {
+      List<FileStatus> status2 = filterFileStatuses(status, filter);
+      if (status2 == null || status2.isEmpty()) {
+        return null;
+      } else {
+        return status2;
+      }
+    }
   }
 
   /**

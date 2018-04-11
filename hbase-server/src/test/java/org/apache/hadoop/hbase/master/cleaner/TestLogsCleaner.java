@@ -30,10 +30,12 @@ import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -76,6 +78,8 @@ public class TestLogsCleaner {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
+    TEST_UTIL.startMiniDFSCluster(1);
+    CleanerChore.initChorePool(TEST_UTIL.getConfiguration());
   }
 
   /**
@@ -84,6 +88,7 @@ public class TestLogsCleaner {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
+    TEST_UTIL.shutdownMiniDFSCluster();
   }
 
   @Test
@@ -250,6 +255,58 @@ public class TestLogsCleaner {
       assertFalse(iter.hasNext());
     } finally {
       zkw.close();
+    }
+  }
+
+  @Test
+  public void testOnConfigurationChange() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(LogCleaner.OLD_WALS_CLEANER_SIZE, LogCleaner.OLD_WALS_CLEANER_DEFAULT_SIZE);
+    // Prepare environments
+    Server server = new DummyServer();
+    Path oldWALsDir = new Path(TEST_UTIL.getDefaultRootDirPath(),
+        HConstants.HREGION_OLDLOGDIR_NAME);
+    FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
+    final LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, oldWALsDir);
+    assertEquals(LogCleaner.OLD_WALS_CLEANER_DEFAULT_SIZE, cleaner.getSizeOfCleaners());
+    // Create dir and files for test
+    fs.delete(oldWALsDir, true);
+    fs.mkdirs(oldWALsDir);
+    int numOfFiles = 10;
+    createFiles(fs, oldWALsDir, numOfFiles);
+    FileStatus[] status = fs.listStatus(oldWALsDir);
+    assertEquals(numOfFiles, status.length);
+    // Start cleaner chore
+    Thread thread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        cleaner.chore();
+      }
+    });
+    thread.setDaemon(true);
+    thread.start();
+    // change size of cleaners dynamically
+    int sizeToChange = 4;
+    conf.setInt(LogCleaner.OLD_WALS_CLEANER_SIZE, sizeToChange);
+    cleaner.onConfigurationChange(conf);
+    assertEquals(sizeToChange, cleaner.getSizeOfCleaners());
+    // Stop chore
+    thread.join();
+    status = fs.listStatus(oldWALsDir);
+    assertEquals(0, status.length);
+  }
+
+  private void createFiles(FileSystem fs, Path parentDir, int numOfFiles) throws IOException {
+    Random random = new Random();
+    for (int i = 0; i < numOfFiles; i++) {
+      int xMega = 1 + random.nextInt(3); // size of each file is between 1~3M
+      try (FSDataOutputStream fsdos = fs.create(new Path(parentDir, "file-" + i))) {
+        for (int m = 0; m < xMega; m++) {
+          byte[] M = new byte[1024 * 1024];
+          random.nextBytes(M);
+          fsdos.write(M);
+        }
+      }
     }
   }
 
