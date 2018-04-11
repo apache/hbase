@@ -30,7 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +54,7 @@ public class ZKSecretWatcher extends ZKListener {
     super(watcher);
     this.secretManager = secretManager;
     String keyZNodeParent = conf.get("zookeeper.znode.tokenauth.parent", DEFAULT_ROOT_NODE);
-    this.baseKeyZNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, keyZNodeParent);
+    this.baseKeyZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, keyZNodeParent);
     this.keysParentZNode = ZNodePaths.joinZNode(baseKeyZNode, DEFAULT_KEYS_PARENT);
   }
 

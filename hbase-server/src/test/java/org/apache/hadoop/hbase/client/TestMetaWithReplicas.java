@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -179,7 +179,7 @@ public class TestMetaWithReplicas {
     for (int i = 1; i < 3; i++) {
       String secZnode = ZNodePaths.joinZNode(baseZNode,
           conf.get("zookeeper.znode.metaserver", "meta-region-server") + "-" + i);
-      String str = zkw.znodePaths.getZNodeForReplica(i);
+      String str = zkw.getZNodePaths().getZNodeForReplica(i);
       assertTrue(str.equals(secZnode));
       // check that the data in the znode is parseable (this would also mean the znode exists)
       data = ZKUtil.getData(zkw, secZnode);
@@ -413,7 +413,7 @@ public class TestMetaWithReplicas {
     HBaseFsckRepair.closeRegionSilentlyAndWait(c,
         rl.getRegionLocation(2).getServerName(), rl.getRegionLocation(2).getRegionInfo());
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-    ZKUtil.deleteNode(zkw, zkw.znodePaths.getZNodeForReplica(2));
+    ZKUtil.deleteNode(zkw, zkw.getZNodePaths().getZNodeForReplica(2));
     // check that problem exists
     HBaseFsck hbck = doFsck(TEST_UTIL.getConfiguration(), false);
     assertErrors(hbck, new ERROR_CODE[]{ERROR_CODE.UNKNOWN,ERROR_CODE.NO_META_REGION});

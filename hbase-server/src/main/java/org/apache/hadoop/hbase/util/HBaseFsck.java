@@ -129,7 +129,7 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -705,7 +705,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean setMasterInMaintenanceMode() throws IOException {
     RetryCounter retryCounter = createZNodeRetryCounterFactory.create();
     hbckEphemeralNodePath = ZNodePaths.joinZNode(
-      zkw.znodePaths.masterMaintZNode,
+      zkw.getZNodePaths().masterMaintZNode,
       "hbck-" + Long.toString(EnvironmentEdgeManager.currentTime()));
     do {
       try {
@@ -3651,7 +3651,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private void unassignMetaReplica(HbckInfo hi) throws IOException, InterruptedException,
   KeeperException {
     undeployRegions(hi);
-    ZKUtil.deleteNode(zkw, zkw.znodePaths.getZNodeForReplica(hi.metaEntry.getReplicaId()));
+    ZKUtil.deleteNode(zkw, zkw.getZNodePaths().getZNodeForReplica(hi.metaEntry.getReplicaId()));
   }
 
   private void assignMetaReplica(int replicaId)

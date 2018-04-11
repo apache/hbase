@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -82,7 +82,7 @@ public class TestMirroringTableStateManager {
 
   private TableState.State getTableStateInZK(ZKWatcher watcher, final TableName tableName)
       throws KeeperException, IOException, InterruptedException {
-    String znode = ZNodePaths.joinZNode(watcher.znodePaths.tableZNode, tableName.getNameAsString());
+    String znode = ZNodePaths.joinZNode(watcher.getZNodePaths().tableZNode, tableName.getNameAsString());
     byte [] data = ZKUtil.getData(watcher, znode);
     if (data == null || data.length <= 0) {
       return null;

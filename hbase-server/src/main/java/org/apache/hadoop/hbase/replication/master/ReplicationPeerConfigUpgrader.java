@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
@@ -97,7 +97,7 @@ public class ReplicationPeerConfigUpgrader{
 
   @VisibleForTesting
   protected String getTableCFsNode(String peerId) {
-    String replicationZNode = ZNodePaths.joinZNode(zookeeper.znodePaths.baseZNode,
+    String replicationZNode = ZNodePaths.joinZNode(zookeeper.getZNodePaths().baseZNode,
       conf.get(REPLICATION_ZNODE, REPLICATION_ZNODE_DEFAULT));
     String peersZNode =
         ZNodePaths.joinZNode(replicationZNode, conf.get(PEERS_ZNODE, PEERS_ZNODE_DEFAULT));

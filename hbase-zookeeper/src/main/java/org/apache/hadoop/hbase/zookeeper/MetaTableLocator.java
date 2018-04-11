@@ -211,7 +211,7 @@ public class MetaTableLocator {
   public ServerName waitMetaRegionLocation(ZKWatcher zkw, int replicaId, long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
     try {
-      if (ZKUtil.checkExists(zkw, zkw.znodePaths.baseZNode) == -1) {
+      if (ZKUtil.checkExists(zkw, zkw.getZNodePaths().baseZNode) == -1) {
         String errorMsg = "Check the value configured in 'zookeeper.znode.parent'. "
             + "There could be a mismatch with the one configured in the master.";
         LOG.error(errorMsg);
@@ -460,7 +460,7 @@ public class MetaTableLocator {
     byte[] data = ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
     try {
       ZKUtil.setData(zookeeper,
-          zookeeper.znodePaths.getZNodeForReplica(replicaId), data);
+          zookeeper.getZNodePaths().getZNodeForReplica(replicaId), data);
     } catch(KeeperException.NoNodeException nne) {
       if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
         LOG.debug("META region location doesn't exist, create it");
@@ -468,7 +468,8 @@ public class MetaTableLocator {
         LOG.debug("META region location doesn't exist for replicaId=" + replicaId +
             ", create it");
       }
-      ZKUtil.createAndWatch(zookeeper, zookeeper.znodePaths.getZNodeForReplica(replicaId), data);
+      ZKUtil.createAndWatch(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId), 
+              data);
     }
   }
 
@@ -492,7 +493,7 @@ public class MetaTableLocator {
     RegionState.State state = RegionState.State.OPEN;
     ServerName serverName = null;
     try {
-      byte[] data = ZKUtil.getData(zkw, zkw.znodePaths.getZNodeForReplica(replicaId));
+      byte[] data = ZKUtil.getData(zkw, zkw.getZNodePaths().getZNodeForReplica(replicaId));
       if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
         try {
           int prefixLen = ProtobufUtil.lengthOfPBMagic();
@@ -545,7 +546,7 @@ public class MetaTableLocator {
     }
     try {
       // Just delete the node.  Don't need any watches.
-      ZKUtil.deleteNode(zookeeper, zookeeper.znodePaths.getZNodeForReplica(replicaId));
+      ZKUtil.deleteNode(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId));
     } catch(KeeperException.NoNodeException nne) {
       // Has already been deleted
     }

@@ -67,7 +67,7 @@ public abstract class ClientZKSyncer extends ZKListener {
     LOG.debug("Starting " + getClass().getSimpleName());
     this.watcher.registerListener(this);
     // create base znode on remote ZK
-    ZKUtil.createWithParents(clientZkWatcher, watcher.znodePaths.baseZNode);
+    ZKUtil.createWithParents(clientZkWatcher, watcher.getZNodePaths().baseZNode);
     // set meta znodes for client ZK
     Collection<String> nodes = getNodesToWatch();
     LOG.debug("Znodes to watch: " + nodes);

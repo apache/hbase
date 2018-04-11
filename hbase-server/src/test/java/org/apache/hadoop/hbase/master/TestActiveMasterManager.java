@@ -79,8 +79,8 @@ public class TestActiveMasterManager {
     ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
-      ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
-      ZKUtil.deleteNode(zk, zk.znodePaths.clusterStateZNode);
+      ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.getZNodePaths().clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
@@ -121,8 +121,8 @@ public class TestActiveMasterManager {
     ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
-      ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
-      ZKUtil.deleteNode(zk, zk.znodePaths.clusterStateZNode);
+      ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.getZNodePaths().clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
@@ -167,11 +167,11 @@ public class TestActiveMasterManager {
     ms1.stop("stopping first server");
 
     // Use a listener to capture when the node is actually deleted
-    NodeDeletionListener listener = new NodeDeletionListener(zk, zk.znodePaths.masterAddressZNode);
+    NodeDeletionListener listener = new NodeDeletionListener(zk, zk.getZNodePaths().masterAddressZNode);
     zk.registerListener(listener);
 
     LOG.info("Deleting master node");
-    ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
+    ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
 
     // Wait for the node to be deleted
     LOG.info("Waiting for active master manager to be notified");
@@ -191,7 +191,7 @@ public class TestActiveMasterManager {
     assertTrue(t.isActiveMaster);
 
     LOG.info("Deleting master node");
-    ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
+    ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
   }
 
   /**

@@ -196,7 +196,7 @@ import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.eclipse.jetty.server.Server;
@@ -2014,7 +2014,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void startActiveMasterManager(int infoPort) throws KeeperException {
     String backupZNode = ZNodePaths.joinZNode(
-      zooKeeper.znodePaths.backupMasterAddressesZNode, serverName.toString());
+      zooKeeper.getZNodePaths().backupMasterAddressesZNode, serverName.toString());
     /*
     * Add a ZNode for ourselves in the backup master directory since we
     * may not become the active master. If so, we want the actual active
@@ -2524,7 +2524,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     List<String> backupMasterStrings;
     try {
       backupMasterStrings = ZKUtil.listChildrenNoWatch(this.zooKeeper,
-        this.zooKeeper.znodePaths.backupMasterAddressesZNode);
+        this.zooKeeper.getZNodePaths().backupMasterAddressesZNode);
     } catch (KeeperException e) {
       LOG.warn(this.zooKeeper.prefix("Unable to list backup servers"), e);
       backupMasterStrings = null;
@@ -2538,7 +2538,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           byte [] bytes;
           try {
             bytes = ZKUtil.getData(this.zooKeeper, ZNodePaths.joinZNode(
-                this.zooKeeper.znodePaths.backupMasterAddressesZNode, s));
+                this.zooKeeper.getZNodePaths().backupMasterAddressesZNode, s));
           } catch (InterruptedException e) {
             throw new InterruptedIOException();
           }
@@ -3484,7 +3484,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       throws HBaseIOException {
     List<ServerName> serversAdded = new ArrayList<>(servers.size());
     // Place the decommission marker first.
-    String parentZnode = getZooKeeper().znodePaths.drainingZNode;
+    String parentZnode = getZooKeeper().getZNodePaths().drainingZNode;
     for (ServerName server : servers) {
       try {
         String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
@@ -3533,7 +3533,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   public void recommissionRegionServer(final ServerName server,
       final List<byte[]> encodedRegionNames) throws HBaseIOException {
     // Remove the server from decommissioned (draining) server list.
-    String parentZnode = getZooKeeper().znodePaths.drainingZNode;
+    String parentZnode = getZooKeeper().getZNodePaths().drainingZNode;
     String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
     try {
       ZKUtil.deleteNodeFailSilent(getZooKeeper(), node);

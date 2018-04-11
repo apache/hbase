@@ -891,7 +891,7 @@ public final class ZKUtil {
 
   public static ArrayList<ACL> createACL(ZKWatcher zkw, String node,
                                          boolean isSecureZooKeeper) {
-    if (!node.startsWith(zkw.znodePaths.baseZNode)) {
+    if (!node.startsWith(zkw.getZNodePaths().baseZNode)) {
       return Ids.OPEN_ACL_UNSAFE;
     }
     if (isSecureZooKeeper) {
@@ -923,7 +923,7 @@ public final class ZKUtil {
       }
       // Certain znodes are accessed directly by the client,
       // so they must be readable by non-authenticated clients
-      if (zkw.znodePaths.isClientReadable(node)) {
+      if (zkw.getZNodePaths().isClientReadable(node)) {
         acls.addAll(Ids.CREATOR_ALL_ACL);
         acls.addAll(Ids.READ_ACL_UNSAFE);
       } else {
@@ -1735,7 +1735,7 @@ public final class ZKUtil {
   public static String dump(ZKWatcher zkw) {
     StringBuilder sb = new StringBuilder();
     try {
-      sb.append("HBase is rooted at ").append(zkw.znodePaths.baseZNode);
+      sb.append("HBase is rooted at ").append(zkw.getZNodePaths().baseZNode);
       sb.append("\nActive master address: ");
       try {
         sb.append(MasterAddressTracker.getMasterAddress(zkw));
@@ -1743,7 +1743,8 @@ public final class ZKUtil {
         sb.append("<<FAILED LOOKUP: " + e.getMessage() + ">>");
       }
       sb.append("\nBackup master addresses:");
-      for (String child : listChildrenNoWatch(zkw, zkw.znodePaths.backupMasterAddressesZNode)) {
+      for (String child : listChildrenNoWatch(zkw, 
+              zkw.getZNodePaths().backupMasterAddressesZNode)) {
         sb.append("\n ").append(child);
       }
       sb.append("\nRegion server holding hbase:meta: "
@@ -1756,7 +1757,7 @@ public final class ZKUtil {
                     + new MetaTableLocator().getMetaRegionLocation(zkw, i));
       }
       sb.append("\nRegion servers:");
-      for (String child : listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode)) {
+      for (String child : listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode)) {
         sb.append("\n ").append(child);
       }
       try {
@@ -1799,7 +1800,7 @@ public final class ZKUtil {
    */
   private static void getReplicationZnodesDump(ZKWatcher zkw, StringBuilder sb)
       throws KeeperException {
-    String replicationZnode = zkw.znodePaths.replicationZNode;
+    String replicationZnode = zkw.getZNodePaths().replicationZNode;
 
     if (ZKUtil.checkExists(zkw, replicationZnode) == -1) {
       return;
@@ -1810,11 +1811,11 @@ public final class ZKUtil {
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, replicationZnode);
     for (String child : children) {
       String znode = ZNodePaths.joinZNode(replicationZnode, child);
-      if (znode.equals(zkw.znodePaths.peersZNode)) {
+      if (znode.equals(zkw.getZNodePaths().peersZNode)) {
         appendPeersZnodes(zkw, znode, sb);
-      } else if (znode.equals(zkw.znodePaths.queuesZNode)) {
+      } else if (znode.equals(zkw.getZNodePaths().queuesZNode)) {
         appendRSZnodes(zkw, znode, sb);
-      } else if (znode.equals(zkw.znodePaths.hfileRefsZNode)) {
+      } else if (znode.equals(zkw.getZNodePaths().hfileRefsZNode)) {
         appendHFileRefsZnodes(zkw, znode, sb);
       }
     }
@@ -1989,9 +1990,9 @@ public final class ZKUtil {
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
       (data == null? "null": data.length == 0? "empty": (
-          znode.startsWith(zkw.znodePaths.metaZNodePrefix)?
+          znode.startsWith(zkw.getZNodePaths().metaZNodePrefix)?
             getServerNameOrEmptyString(data):
-          znode.startsWith(zkw.znodePaths.backupMasterAddressesZNode)?
+          znode.startsWith(zkw.getZNodePaths().backupMasterAddressesZNode)?
             getServerNameOrEmptyString(data):
           StringUtils.abbreviate(Bytes.toStringBinary(data), 32)))));
   }

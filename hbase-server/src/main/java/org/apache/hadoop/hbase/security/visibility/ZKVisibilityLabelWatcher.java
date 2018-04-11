@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,8 +54,8 @@ public class ZKVisibilityLabelWatcher extends ZKListener {
     String labelZnodeParent = conf.get(VISIBILITY_LABEL_ZK_PATH, DEFAULT_VISIBILITY_LABEL_NODE);
     String userAuthsZnodeParent = conf.get(VISIBILITY_USER_AUTHS_ZK_PATH,
         DEFAULT_VISIBILITY_USER_AUTHS_NODE);
-    this.labelZnode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, labelZnodeParent);
-    this.userAuthsZnode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, userAuthsZnodeParent);
+    this.labelZnode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, labelZnodeParent);
+    this.userAuthsZnode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, userAuthsZnodeParent);
   }
 
   public void start() throws KeeperException {

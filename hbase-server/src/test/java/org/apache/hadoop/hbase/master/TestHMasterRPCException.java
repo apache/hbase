@@ -72,7 +72,7 @@ public class TestHMasterRPCException {
     testUtil.startMiniZKCluster();
 
     ZKWatcher watcher = testUtil.getZooKeeperWatcher();
-    ZKUtil.createWithParents(watcher, watcher.znodePaths.masterAddressZNode, Bytes.toBytes("fake:123"));
+    ZKUtil.createWithParents(watcher, watcher.getZNodePaths().masterAddressZNode, Bytes.toBytes("fake:123"));
     master = new HMaster(conf);
     rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
   }
@@ -109,7 +109,7 @@ public class TestHMasterRPCException {
         LOG.info("Expected exception: ", ie);
         if (!fakeZNodeDelete) {
           testUtil.getZooKeeperWatcher().getRecoverableZooKeeper()
-              .delete(testUtil.getZooKeeperWatcher().znodePaths.masterAddressZNode, -1);
+              .delete(testUtil.getZooKeeperWatcher().getZNodePaths().masterAddressZNode, -1);
           fakeZNodeDelete = true;
         }
       }

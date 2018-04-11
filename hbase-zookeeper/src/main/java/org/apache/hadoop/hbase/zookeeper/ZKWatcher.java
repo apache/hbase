@@ -76,7 +76,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // Used if abortable is null
   private boolean aborted = false;
 
-  public final ZNodePaths znodePaths;
+  private final ZNodePaths znodePaths;
 
   // listeners to be notified
   private final List<ZKListener> listeners = new CopyOnWriteArrayList<>();
@@ -158,7 +158,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     // handle the syncconnect event.
     this.identifier = identifier + "0x0";
     this.abortable = abortable;
-    this.znodePaths = new ZNodePaths(conf);
+    this.getZNodePaths() = new ZNodePaths(conf);
     PendingWatcher pendingWatcher = new PendingWatcher();
     this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, pendingWatcher, identifier);
     pendingWatcher.prepare(this);

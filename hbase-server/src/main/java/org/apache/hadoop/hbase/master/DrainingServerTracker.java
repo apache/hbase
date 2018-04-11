@@ -83,7 +83,7 @@ public class DrainingServerTracker extends ZKListener {
       }
     });
     List<String> servers =
-      ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.drainingZNode);
+      ZKUtil.listChildrenAndWatchThem(watcher, watcher.getZNodePaths().drainingZNode);
     add(servers);
   }
 
@@ -110,7 +110,7 @@ public class DrainingServerTracker extends ZKListener {
 
   @Override
   public void nodeDeleted(final String path) {
-    if(path.startsWith(watcher.znodePaths.drainingZNode)) {
+    if(path.startsWith(watcher.getZNodePaths().drainingZNode)) {
       final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(path));
       LOG.info("Draining RS node deleted, removing from list [" +
           sn + "]");
@@ -120,10 +120,10 @@ public class DrainingServerTracker extends ZKListener {
 
   @Override
   public void nodeChildrenChanged(final String path) {
-    if(path.equals(watcher.znodePaths.drainingZNode)) {
+    if(path.equals(watcher.getZNodePaths().drainingZNode)) {
       try {
         final List<String> newNodes =
-          ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.drainingZNode);
+          ZKUtil.listChildrenAndWatchThem(watcher, watcher.getZNodePaths().drainingZNode);
         add(newNodes);
       } catch (KeeperException e) {
         abortable.abort("Unexpected zk exception getting RS nodes", e);

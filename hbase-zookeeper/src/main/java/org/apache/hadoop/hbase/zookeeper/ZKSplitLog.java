@@ -47,7 +47,7 @@ public final class ZKSplitLog {
    * @param filename log file name (only the basename)
    */
   public static String getEncodedNodeName(ZKWatcher zkw, String filename) {
-    return ZNodePaths.joinZNode(zkw.znodePaths.splitLogZNode, encode(filename));
+    return ZNodePaths.joinZNode(zkw.getZNodePaths().splitLogZNode, encode(filename));
   }
 
   public static String getFileName(String node) {
@@ -72,7 +72,7 @@ public final class ZKSplitLog {
   }
 
   public static String getRescanNode(ZKWatcher zkw) {
-    return ZNodePaths.joinZNode(zkw.znodePaths.splitLogZNode, "RESCAN");
+    return ZNodePaths.joinZNode(zkw.getZNodePaths().splitLogZNode, "RESCAN");
   }
 
   /**

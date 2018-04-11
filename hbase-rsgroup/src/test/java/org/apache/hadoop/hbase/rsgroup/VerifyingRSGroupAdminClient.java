@@ -134,7 +134,7 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     Assert.assertEquals(Sets.newHashSet(groupMap.values()),
         Sets.newHashSet(wrapped.listRSGroups()));
     try {
-      String groupBasePath = ZNodePaths.joinZNode(zkw.znodePaths.baseZNode, "rsgroup");
+      String groupBasePath = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, "rsgroup");
       for(String znode: ZKUtil.listChildrenNoWatch(zkw, groupBasePath)) {
         byte[] data = ZKUtil.getData(zkw, ZNodePaths.joinZNode(groupBasePath, znode));
         if(data.length > 0) {

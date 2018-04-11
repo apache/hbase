@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -149,7 +149,7 @@ public class ZKTableArchiveClient extends Configured {
    * @return get the znode for long-term archival of a table for
    */
   public static String getArchiveZNode(Configuration conf, ZKWatcher zooKeeper) {
-    return ZNodePaths.joinZNode(zooKeeper.znodePaths.baseZNode, conf.get(
+    return ZNodePaths.joinZNode(zooKeeper.getZNodePaths().baseZNode, conf.get(
       ZOOKEEPER_ZNODE_HFILE_ARCHIVE_KEY, TableHFileArchiveTracker.HFILE_ARCHIVE_ZNODE_PARENT));
   }
 }

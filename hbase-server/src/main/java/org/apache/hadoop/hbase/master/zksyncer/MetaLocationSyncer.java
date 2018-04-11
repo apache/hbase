@@ -36,11 +36,11 @@ public class MetaLocationSyncer extends ClientZKSyncer {
 
   @Override
   boolean validate(String path) {
-    return watcher.znodePaths.isAnyMetaReplicaZNode(path);
+    return watcher.getZNodePaths().isAnyMetaReplicaZNode(path);
   }
 
   @Override
   Collection<String> getNodesToWatch() {
-    return watcher.znodePaths.metaReplicaZNodes.values();
+    return watcher.getZNodePaths().metaReplicaZNodes.values();
   }
 }

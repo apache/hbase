@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -67,7 +67,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
     super(watcher);
     this.authManager = authManager;
     String aclZnodeParent = conf.get("zookeeper.znode.acl.parent", ACL_NODE);
-    this.aclZNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, aclZnodeParent);
+    this.aclZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, aclZnodeParent);
     executor = Executors.newSingleThreadExecutor(
       new DaemonThreadFactory("zk-permission-watcher"));
   }
@@ -260,7 +260,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
    */
   public void writeToZookeeper(byte[] entry, byte[] permsData) {
     String entryName = Bytes.toString(entry);
-    String zkNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
     zkNode = ZNodePaths.joinZNode(zkNode, entryName);
 
     try {
@@ -278,7 +278,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
    * @param tableName
    */
   public void deleteTableACLNode(final TableName tableName) {
-    String zkNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
     zkNode = ZNodePaths.joinZNode(zkNode, tableName.getNameAsString());
 
     try {
@@ -295,7 +295,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
    * Delete the acl notify node of namespace
    */
   public void deleteNamespaceACLNode(final String namespace) {
-    String zkNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
     zkNode = ZNodePaths.joinZNode(zkNode, AccessControlLists.NAMESPACE_PREFIX + namespace);
 
     try {

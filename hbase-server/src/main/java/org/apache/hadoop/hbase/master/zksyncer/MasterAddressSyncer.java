@@ -35,7 +35,7 @@ public class MasterAddressSyncer extends ClientZKSyncer {
 
   public MasterAddressSyncer(ZKWatcher watcher, ZKWatcher clientZkWatcher, Server server) {
     super(watcher, clientZkWatcher, server);
-    masterAddressZNode = watcher.znodePaths.masterAddressZNode;
+    masterAddressZNode = watcher.getZNodePaths().masterAddressZNode;
   }
 
   @Override

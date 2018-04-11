@@ -39,7 +39,7 @@ public class LoadBalancerTracker extends ZKNodeTracker {
 
   public LoadBalancerTracker(ZKWatcher watcher,
       Abortable abortable) {
-    super(watcher, watcher.znodePaths.balancerZNode, abortable);
+    super(watcher, watcher.getZNodePaths().balancerZNode, abortable);
   }
 
   /**
@@ -67,11 +67,11 @@ public class LoadBalancerTracker extends ZKNodeTracker {
     byte [] upData = toByteArray(balancerOn);
 
     try {
-      ZKUtil.setData(watcher, watcher.znodePaths.balancerZNode, upData);
+      ZKUtil.setData(watcher, watcher.getZNodePaths().balancerZNode, upData);
     } catch(KeeperException.NoNodeException nne) {
-      ZKUtil.createAndWatch(watcher, watcher.znodePaths.balancerZNode, upData);
+      ZKUtil.createAndWatch(watcher, watcher.getZNodePaths().balancerZNode, upData);
     }
-    super.nodeDataChanged(watcher.znodePaths.balancerZNode);
+    super.nodeDataChanged(watcher.getZNodePaths().balancerZNode);
   }
 
   private byte [] toByteArray(boolean isBalancerOn) {

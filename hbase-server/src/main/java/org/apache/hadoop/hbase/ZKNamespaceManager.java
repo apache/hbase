@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.getZNodePaths();
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -55,7 +55,7 @@ public class ZKNamespaceManager extends ZKListener {
 
   public ZKNamespaceManager(ZKWatcher zkw) throws IOException {
     super(zkw);
-    nsZNode = zkw.znodePaths.namespaceZNode;
+    nsZNode = zkw.getZNodePaths().namespaceZNode;
     cache = new ConcurrentSkipListMap<>();
   }
 

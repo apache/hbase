@@ -65,7 +65,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
    * @param abortable abortable in case of fatal error
    */
   public MasterAddressTracker(ZKWatcher watcher, Abortable abortable) {
-    super(watcher, watcher.znodePaths.masterAddressZNode, abortable);
+    super(watcher, watcher.getZNodePaths().masterAddressZNode, abortable);
   }
 
   /**
@@ -101,7 +101,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
    * @return info port or 0 if timed out or exceptions
    */
   public int getBackupMasterInfoPort(final ServerName sn) {
-    String backupZNode = ZNodePaths.joinZNode(watcher.znodePaths.backupMasterAddressesZNode,
+    String backupZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().backupMasterAddressesZNode,
       sn.toString());
     try {
       byte[] data = ZKUtil.getData(watcher, backupZNode);
@@ -147,7 +147,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
           throws KeeperException, IOException {
     byte [] data;
     try {
-      data = ZKUtil.getData(zkw, zkw.znodePaths.masterAddressZNode);
+      data = ZKUtil.getData(zkw, zkw.getZNodePaths().masterAddressZNode);
     } catch (InterruptedException e) {
       throw new InterruptedIOException();
     }
@@ -178,7 +178,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
   public static int getMasterInfoPort(final ZKWatcher zkw) throws KeeperException, IOException {
     byte[] data;
     try {
-      data = ZKUtil.getData(zkw, zkw.znodePaths.masterAddressZNode);
+      data = ZKUtil.getData(zkw, zkw.getZNodePaths().masterAddressZNode);
     } catch (InterruptedException e) {
       throw new InterruptedIOException();
     }
@@ -265,10 +265,10 @@ public class MasterAddressTracker extends ZKNodeTracker {
 
     try {
       Stat stat = new Stat();
-      byte[] data = ZKUtil.getDataNoWatch(zkw, zkw.znodePaths.masterAddressZNode, stat);
+      byte[] data = ZKUtil.getDataNoWatch(zkw, zkw.getZNodePaths().masterAddressZNode, stat);
       ServerName sn = ProtobufUtil.parseServerNameFrom(data);
       if (sn != null && content.equals(sn.toString())) {
-        return (ZKUtil.deleteNode(zkw, zkw.znodePaths.masterAddressZNode, stat.getVersion()));
+        return (ZKUtil.deleteNode(zkw, zkw.getZNodePaths().masterAddressZNode, stat.getVersion()));
       }
     } catch (KeeperException e) {
       LOG.warn("Can't get or delete the master znode", e);
