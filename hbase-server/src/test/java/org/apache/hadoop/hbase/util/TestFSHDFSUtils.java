@@ -152,12 +152,14 @@ public class TestFSHDFSUtils {
   public void testIsSameHdfs() throws IOException {
     String hadoopVersion = org.apache.hadoop.util.VersionInfo.getVersion();
     LOG.info("hadoop version is: "  + hadoopVersion);
-    boolean isHadoop3 = hadoopVersion.startsWith("3.");
-    if (isHadoop3) {
-      // Hadoop 3.0.0 alpha1+ change default nn port to 9820. See HDFS-9427
+    boolean isHadoop3_0_0 = hadoopVersion.startsWith("3.0.0");
+    if (isHadoop3_0_0) {
+      // Hadoop 3.0.0 alpha1+ ~ 3.0.0 GA changed default nn port to 9820.
+      // See HDFS-9427
       testIsSameHdfs(9820);
     } else {
       // pre hadoop 3.0.0 defaults to port 8020
+      // Hadoop 3.0.1 changed it back to port 8020. See HDFS-12990
       testIsSameHdfs(8020);
     }
   }
