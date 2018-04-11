@@ -158,7 +158,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     // handle the syncconnect event.
     this.identifier = identifier + "0x0";
     this.abortable = abortable;
-    this.getZNodePaths() = new ZNodePaths(conf);
+    this.znodePaths = new ZNodePaths(conf);
     PendingWatcher pendingWatcher = new PendingWatcher();
     this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, pendingWatcher, identifier);
     pendingWatcher.prepare(this);
