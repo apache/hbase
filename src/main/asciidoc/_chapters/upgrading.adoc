@@ -430,6 +430,18 @@ The following metrics have been added:
 
 * 'totalRowActionRequestCount' is a count of region row actions summing reads and writes.
 
+[[upgrade2.0.logging]]
+.Changed logging
+HBase-2.0.0 now uses link:https://www.slf4j.org/[slf4j] as its logging frontend.
+Prevously, we used link:http://logging.apache.org/log4j/1.2/[log4j (1.2)].
+For most the transition should be seamless; slf4j does a good job interpreting
+_log4j.properties_ logging configuration files such that you should not notice
+any difference in your log system emissions.
+
+That said, your _log4j.properties_ may need freshening. See link:https://issues.apache.org/jira/browse/HBASE-20351[HBASE-20351]
+for example, where a stale log configuration file manifest as netty configuration
+being dumped at DEBUG level as preamble on every shell command invocation.
+
 [[upgrade2.0.zkconfig]]
 .ZooKeeper configs no longer read from zoo.cfg
 
