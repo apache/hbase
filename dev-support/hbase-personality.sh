@@ -365,6 +365,7 @@ function shadedjars_rebuild
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
     add_vote_table -1 shadedjars "${repostatus} has ${count} errors when building our shaded downstream artifacts."
+    add_footer_table shadedjars "@@BASE@@/${repostatus}-shadedjars.txt"
     return 1
   fi
 
