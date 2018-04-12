@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -50,13 +49,12 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,11 +65,6 @@ import org.slf4j.LoggerFactory;
  * All other tests should have their own classes and extend this one
  */
 public class TestReplicationBase {
-/*
-  {
-    ((Log4JLogger) ReplicationSource.LOG).getLogger().setLevel(Level.ALL);
-  }*/
-
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
 
   protected static Configuration conf1 = HBaseConfiguration.create();
@@ -100,13 +93,10 @@ public class TestReplicationBase {
   protected static final byte[] famName = Bytes.toBytes("f");
   protected static final byte[] row = Bytes.toBytes("row");
   protected static final byte[] noRepfamName = Bytes.toBytes("norep");
+  protected static final String PEER_ID2 = "2";
 
-  @Parameter
-  public static boolean seperateOldWALs;
-
-  @Parameters
-  public static List<Boolean> params() {
-    return Arrays.asList(false, true);
+  protected boolean isSerialPeer() {
+    return false;
   }
 
   protected final void cleanUp() throws IOException, InterruptedException {
@@ -197,9 +187,6 @@ public class TestReplicationBase {
     conf1.setBoolean("replication.source.eof.autorecovery", true);
     conf1.setLong("hbase.serial.replication.waiting.ms", 100);
 
-    // Parameter config
-    conf1.setBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR, seperateOldWALs);
-
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
@@ -227,10 +214,7 @@ public class TestReplicationBase {
     // as a component in deciding maximum number of parallel batches to send to the peer cluster.
     utility2.startMiniCluster(4);
 
-    ReplicationPeerConfig rpc =
-        ReplicationPeerConfig.newBuilder().setClusterKey(utility2.getClusterKey()).build();
     hbaseAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
-    hbaseAdmin.addReplicationPeer("2", rpc);
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
@@ -252,6 +236,26 @@ public class TestReplicationBase {
     utility2.waitUntilAllRegionsAssigned(tableName);
     htable1 = connection1.getTable(tableName);
     htable2 = connection2.getTable(tableName);
+  }
+
+  private boolean peerExist(String peerId) throws IOException {
+    return hbaseAdmin.listReplicationPeers().stream().anyMatch(p -> peerId.equals(p.getPeerId()));
+  }
+
+  @Before
+  public void setUpBase() throws IOException {
+    if (!peerExist(PEER_ID2)) {
+      ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+          .setClusterKey(utility2.getClusterKey()).setSerial(isSerialPeer()).build();
+      hbaseAdmin.addReplicationPeer(PEER_ID2, rpc);
+    }
+  }
+
+  @After
+  public void tearDownBase() throws IOException {
+    if (peerExist(PEER_ID2)) {
+      hbaseAdmin.removeReplicationPeer(PEER_ID2);
+    }
   }
 
   protected static void runSimplePutDeleteTest() throws IOException, InterruptedException {

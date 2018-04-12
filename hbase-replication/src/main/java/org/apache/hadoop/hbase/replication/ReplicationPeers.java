@@ -127,16 +127,9 @@ public class ReplicationPeers {
   }
 
   /**
-<<<<<<< 2bb2fd611d4b88c724a2b561f10433b56c6fd3dd
-   * Update the peerConfig for the a given peer cluster
-   * @param id a short that identifies the cluster
-   * @param peerConfig new config for the peer cluster
-   * @throws ReplicationException
-=======
    * Helper method to connect to a peer
    * @param peerId peer's identifier
    * @return object representing the peer
->>>>>>> HBASE-19622 Reimplement ReplicationPeers with the new replication storage interface
    */
   private ReplicationPeerImpl createPeer(String peerId) throws ReplicationException {
     ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);

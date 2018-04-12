@@ -96,12 +96,13 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin1.modifyTable(tableName, table);
     admin1.enableTable(tableName);
 
-
     admin1.disableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_LOCAL, fam.getScope());
     }
+
+    admin1.deleteColumnFamily(table.getTableName(), f.getName());
   }
 
   @Test
@@ -158,6 +159,9 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }
+
+    admin1.deleteColumnFamily(tableName, f.getName());
+    admin2.deleteColumnFamily(tableName, f.getName());
   }
 
   @Test
@@ -252,12 +256,14 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     rpc.getConfiguration().put("key1", "value2");
     admin.updatePeerConfig(peerId, rpc);
     if (!TestUpdatableReplicationEndpoint.hasCalledBack()) {
-      synchronized(TestUpdatableReplicationEndpoint.class) {
+      synchronized (TestUpdatableReplicationEndpoint.class) {
         TestUpdatableReplicationEndpoint.class.wait(2000L);
       }
     }
 
     assertEquals(true, TestUpdatableReplicationEndpoint.hasCalledBack());
+
+    admin.removePeer(peerId);
   }
 
   public static class TestUpdatableReplicationEndpoint extends BaseReplicationEndpoint {

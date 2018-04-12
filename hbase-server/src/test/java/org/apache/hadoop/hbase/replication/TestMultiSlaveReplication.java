@@ -58,7 +58,7 @@ public class TestMultiSlaveReplication {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMultiSlaveReplication.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiSlaveReplication.class);
 
   private static Configuration conf1;
   private static Configuration conf2;

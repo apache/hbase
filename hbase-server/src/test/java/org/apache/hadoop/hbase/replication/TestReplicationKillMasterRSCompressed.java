@@ -29,7 +29,7 @@ import org.junit.experimental.categories.Category;
  * Run the same test as TestReplicationKillMasterRS but with WAL compression enabled
  * Do not add other tests in this class.
  */
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationKillMasterRSCompressed extends TestReplicationKillMasterRS {
 
   @ClassRule

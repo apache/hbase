@@ -49,10 +49,17 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class})
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+
+@RunWith(Parameterized.class)
+@Category({ MediumTests.class })
 public class TestNamespaceReplication extends TestReplicationBase {
 
   @ClassRule
@@ -76,6 +83,19 @@ public class TestNamespaceReplication extends TestReplicationBase {
   private static Connection connection2;
   private static Admin admin1;
   private static Admin admin2;
+
+  @Parameter
+  public boolean serialPeer;
+
+  @Override
+  protected boolean isSerialPeer() {
+    return serialPeer;
+  }
+
+  @Parameters(name = "{index}: serialPeer={0}")
+  public static List<Boolean> parameters() {
+    return ImmutableList.of(true, false);
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -224,7 +244,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
           assertArrayEquals(val, res.value());
           break;
         }
-        Thread.sleep(SLEEP_TIME);
+        Thread.sleep(10 * SLEEP_TIME);
       }
     }
   }
@@ -244,7 +264,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
         } else {
           break;
         }
-        Thread.sleep(SLEEP_TIME);
+        Thread.sleep(10 * SLEEP_TIME);
       }
     }
   }

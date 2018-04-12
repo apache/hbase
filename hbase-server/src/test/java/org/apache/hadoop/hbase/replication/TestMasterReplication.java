@@ -90,7 +90,7 @@ public class TestMasterReplication {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMasterReplication.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterReplication.class);
 
   private Configuration baseConfiguration;
 

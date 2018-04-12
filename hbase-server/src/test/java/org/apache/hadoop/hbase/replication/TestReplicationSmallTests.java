@@ -55,9 +55,16 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+
+@RunWith(Parameterized.class)
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationSmallTests extends TestReplicationBase {
 
@@ -67,6 +74,19 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSmallTests.class);
   private static final String PEER_ID = "2";
+
+  @Parameter
+  public boolean serialPeer;
+
+  @Override
+  protected boolean isSerialPeer() {
+    return serialPeer;
+  }
+
+  @Parameters(name = "{index}: serialPeer={0}")
+  public static List<Boolean> parameters() {
+    return ImmutableList.of(true, false);
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -316,8 +336,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
             lastRow = currentRow;
           }
           LOG.error("Last row: " + lastRow);
-          fail("Waited too much time for normal batch replication, " + res.length + " instead of " +
-            NB_ROWS_IN_BIG_BATCH + "; waited=" + (System.currentTimeMillis() - start) + "ms");
+          fail("Waited too much time for normal batch replication, " + res.length + " instead of "
+              + NB_ROWS_IN_BIG_BATCH + "; waited=" + (System.currentTimeMillis() - start) + "ms");
         } else {
           LOG.info("Only got " + res.length + " rows... retrying");
           Thread.sleep(SLEEP_TIME);
