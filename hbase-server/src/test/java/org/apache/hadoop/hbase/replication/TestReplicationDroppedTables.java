@@ -119,6 +119,12 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
       admin2.createNamespace(NamespaceDescriptor.create("NS").build());
     }
     testEditsBehindDroppedTable(true, "NS:test_dropped");
+    try (Admin admin1 = connection1.getAdmin()) {
+      admin1.deleteNamespace("NS");
+    }
+    try (Admin admin2 = connection2.getAdmin()) {
+      admin2.deleteNamespace("NS");
+    }
   }
 
   private void testEditsBehindDroppedTable(boolean allowProceeding, String tName) throws Exception {

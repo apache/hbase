@@ -64,7 +64,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests ReplicationSource and ReplicationEndpoint interactions
  */
-@Category({ReplicationTests.class, MediumTests.class})
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationEndpoint extends TestReplicationBase {
 
   @ClassRule
@@ -78,7 +78,6 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestReplicationBase.setUpBeforeClass();
-    admin.removePeer("2");
     numRegionServers = utility1.getHBaseCluster().getRegionServerThreads().size();
   }
 
@@ -389,6 +388,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     static volatile List<Entry> lastEntries = null;
 
     public ReplicationEndpointForTest() {
+      replicateCount.set(0);
       contructedCount.incrementAndGet();
     }
 
@@ -432,6 +432,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
     static AtomicInteger replicateCount = new AtomicInteger();
     static boolean failedOnce;
+
+    public InterClusterReplicationEndpointForTest() {
+      replicateCount.set(0);
+    }
 
     @Override
     public boolean replicate(ReplicateContext replicateContext) {

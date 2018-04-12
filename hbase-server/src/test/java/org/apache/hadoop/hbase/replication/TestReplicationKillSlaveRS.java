@@ -23,15 +23,12 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 /**
  * Runs the TestReplicationKillRS test and selects the RS to kill in the slave cluster
  * Do not add other tests in this class.
  */
-@RunWith(Parameterized.class)
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
 
   @ClassRule
