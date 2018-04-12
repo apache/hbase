@@ -414,7 +414,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   /**
-   * {@link #listTables(boolean)}
+   * {@link #listTableDescriptors(boolean)}
    */
   @Override
   public CompletableFuture<List<TableDescriptor>> listTableDescriptors(Pattern pattern,
@@ -3465,6 +3465,69 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             }
           });
     });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> cloneTableSchema(TableName tableName, TableName newTableName,
+      boolean preserveSplits) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    tableExists(tableName).whenComplete(
+      (exist, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        if (!exist) {
+          future.completeExceptionally(new TableNotFoundException(tableName));
+          return;
+        }
+        tableExists(newTableName).whenComplete(
+          (exist1, err1) -> {
+            if (err1 != null) {
+              future.completeExceptionally(err1);
+              return;
+            }
+            if (exist1) {
+              future.completeExceptionally(new TableExistsException(newTableName));
+              return;
+            }
+            getDescriptor(tableName).whenComplete(
+              (tableDesc, err2) -> {
+                if (err2 != null) {
+                  future.completeExceptionally(err2);
+                  return;
+                }
+                TableDescriptor newTableDesc
+                    = TableDescriptorBuilder.copy(newTableName, tableDesc);
+                if (preserveSplits) {
+                  getTableSplits(tableName).whenComplete((splits, err3) -> {
+                    if (err3 != null) {
+                      future.completeExceptionally(err3);
+                    } else {
+                      createTable(newTableDesc, splits).whenComplete(
+                        (result, err4) -> {
+                          if (err4 != null) {
+                            future.completeExceptionally(err4);
+                          } else {
+                            future.complete(result);
+                          }
+                        });
+                    }
+                  });
+                } else {
+                  createTable(newTableDesc).whenComplete(
+                    (result, err5) -> {
+                      if (err5 != null) {
+                        future.completeExceptionally(err5);
+                      } else {
+                        future.complete(result);
+                      }
+                    });
+                }
+              });
+          });
+      });
     return future;
   }
 

@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -4137,5 +4138,17 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       numHFiles += region.getStore(family).getStorefilesCount();
     }
     return numHFiles;
+  }
+
+  public void verifyTableDescriptorIgnoreTableName(TableDescriptor ltd, TableDescriptor rtd) {
+    assertEquals(ltd.getValues().hashCode(), rtd.getValues().hashCode());
+    Collection<ColumnFamilyDescriptor> ltdFamilies = Arrays.asList(ltd.getColumnFamilies());
+    Collection<ColumnFamilyDescriptor> rtdFamilies = Arrays.asList(rtd.getColumnFamilies());
+    assertEquals(ltdFamilies.size(), rtdFamilies.size());
+    for (Iterator<ColumnFamilyDescriptor> it = ltdFamilies.iterator(), it2 =
+         rtdFamilies.iterator(); it.hasNext();) {
+      assertEquals(0,
+          ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next()));
+    }
   }
 }

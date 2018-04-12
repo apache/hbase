@@ -280,6 +280,7 @@ Shell.load_command_group(
     get_table
     locate_region
     list_regions
+    clone_table_schema
   ],
   aliases: {
     'describe' => ['desc']

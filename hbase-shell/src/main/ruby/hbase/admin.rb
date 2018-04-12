@@ -29,6 +29,7 @@ java_import org.apache.hadoop.hbase.TableName
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
 module Hbase
+  # rubocop:disable Metrics/ClassLength
   class Admin
     include HBaseConstants
 
@@ -1300,5 +1301,14 @@ module Hbase
     def list_liveservers
       @admin.getClusterStatus.getServers.to_a
     end
+
+    #---------------------------------------------------------------------------
+    # create a new table by cloning the existent table schema.
+    def clone_table_schema(table_name, new_table_name, preserve_splits = true)
+      @admin.cloneTableSchema(TableName.valueOf(table_name),
+                              TableName.valueOf(new_table_name),
+                              preserve_splits)
+    end
   end
+  # rubocop:enable Metrics/ClassLength
 end

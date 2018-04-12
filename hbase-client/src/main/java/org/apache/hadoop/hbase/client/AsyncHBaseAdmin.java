@@ -746,4 +746,10 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<CacheEvictionStats> clearBlockCache(TableName tableName) {
     return wrap(rawAdmin.clearBlockCache(tableName));
   }
+
+  @Override
+  public CompletableFuture<Void> cloneTableSchema(TableName tableName, TableName newTableName,
+      boolean preserveSplits) {
+    return wrap(rawAdmin.cloneTableSchema(tableName, newTableName, preserveSplits));
+  }
 }

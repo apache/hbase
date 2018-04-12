@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -1420,5 +1421,97 @@ public class TestAdmin1 {
     List<RegionInfo> allRegions = MetaTableAccessor.getTableRegions(
         this.admin.getConnection(), tableName, true);
     assertEquals(1, allRegions.size());
+  }
+
+  @Test
+  public void testCloneTableSchema() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
+    testCloneTableSchema(tableName, newTableName, false);
+  }
+
+  @Test
+  public void testCloneTableSchemaPreservingSplits() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
+    testCloneTableSchema(tableName, newTableName, true);
+  }
+
+  private void testCloneTableSchema(final TableName tableName,
+      final TableName newTableName, boolean preserveSplits) throws Exception {
+    byte[] FAMILY_0 = Bytes.toBytes("cf0");
+    byte[] FAMILY_1 = Bytes.toBytes("cf1");
+    byte[][] splitKeys = new byte[2][];
+    splitKeys[0] = Bytes.toBytes(4);
+    splitKeys[1] = Bytes.toBytes(8);
+    int NUM_FAMILYS = 2;
+    int NUM_REGIONS = 3;
+    int BLOCK_SIZE = 1024;
+    int TTL = 86400;
+    boolean BLOCK_CACHE = false;
+
+    // Create the table
+    TableDescriptor tableDesc = TableDescriptorBuilder
+        .newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder
+            .newBuilder(FAMILY_1)
+            .setBlocksize(BLOCK_SIZE)
+            .setBlockCacheEnabled(BLOCK_CACHE)
+            .setTimeToLive(TTL)
+            .build()
+        ).build();
+    admin.createTable(tableDesc, splitKeys);
+
+    assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
+    assertTrue("Table should be created with splitKyes + 1 rows in META",
+        admin.isTableAvailable(tableName, splitKeys));
+
+    // clone & Verify
+    admin.cloneTableSchema(tableName, newTableName, preserveSplits);
+    TableDescriptor newTableDesc = admin.getDescriptor(newTableName);
+
+    assertEquals(NUM_FAMILYS, newTableDesc.getColumnFamilyCount());
+    assertEquals(BLOCK_SIZE, newTableDesc.getColumnFamily(FAMILY_1).getBlocksize());
+    assertEquals(BLOCK_CACHE, newTableDesc.getColumnFamily(FAMILY_1).isBlockCacheEnabled());
+    assertEquals(TTL, newTableDesc.getColumnFamily(FAMILY_1).getTimeToLive());
+    TEST_UTIL.verifyTableDescriptorIgnoreTableName(tableDesc, newTableDesc);
+
+    if (preserveSplits) {
+      assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
+      assertTrue("New table should be created with splitKyes + 1 rows in META",
+          admin.isTableAvailable(newTableName, splitKeys));
+    } else {
+      assertEquals(1, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
+    }
+  }
+
+  @Test
+  public void testCloneTableSchemaWithNonExistentSourceTable() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
+    // test for non-existent source table
+    try {
+      admin.cloneTableSchema(tableName, newTableName, false);
+      fail("Should have failed to create a new table by cloning non-existent source table.");
+    } catch (TableNotFoundException ex) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testCloneTableSchemaWithExistentDestinationTable() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
+    byte[] FAMILY_0 = Bytes.toBytes("cf0");
+    TEST_UTIL.createTable(tableName, FAMILY_0);
+    TEST_UTIL.createTable(newTableName, FAMILY_0);
+    // test for existent destination table
+    try {
+      admin.cloneTableSchema(tableName, newTableName, false);
+      fail("Should have failed to create a existent table.");
+    } catch (TableExistsException ex) {
+      // expected
+    }
   }
 }

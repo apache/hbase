@@ -2727,4 +2727,15 @@ public interface Admin extends Abortable, Closeable {
    * @return List of servers that are not cleared
    */
   List<ServerName> clearDeadServers(final List<ServerName> servers) throws IOException;
+
+  /**
+   * Create a new table by cloning the existent table schema.
+   *
+   * @param tableName name of the table to be cloned
+   * @param newTableName name of the new table where the table will be created
+   * @param preserveSplits True if the splits should be preserved
+   * @throws IOException if a remote or network exception occurs
+   */
+  void cloneTableSchema(final TableName tableName, final TableName newTableName,
+      final boolean preserveSplits) throws IOException;
 }

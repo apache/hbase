@@ -4227,4 +4227,19 @@ public class HBaseAdmin implements Admin {
       }
     });
   }
+
+  @Override
+  public void cloneTableSchema(final TableName tableName, final TableName newTableName,
+      final boolean preserveSplits) throws IOException {
+    checkTableExists(tableName);
+    if (tableExists(newTableName)) {
+      throw new TableExistsException(newTableName);
+    }
+    TableDescriptor htd = TableDescriptorBuilder.copy(newTableName, getTableDescriptor(tableName));
+    if (preserveSplits) {
+      createTable(htd, getTableSplits(tableName));
+    } else {
+      createTable(htd);
+    }
+  }
 }

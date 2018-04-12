@@ -1230,4 +1230,14 @@ public interface AsyncAdmin {
    * @return CacheEvictionStats related to the eviction wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<CacheEvictionStats> clearBlockCache(final TableName tableName);
+
+  /**
+   * Create a new table by cloning the existent table schema.
+   *
+   * @param tableName name of the table to be cloned
+   * @param newTableName name of the new table where the table will be created
+   * @param preserveSplits True if the splits should be preserved
+   */
+  CompletableFuture<Void>  cloneTableSchema(final TableName tableName,
+      final TableName newTableName, final boolean preserveSplits);
 }
