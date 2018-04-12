@@ -415,22 +415,40 @@ use so we can freely change versions without upsetting any downstream project us
 
 The protobuf files are located in _hbase-protocol/src/main/protobuf_.
 For the change to be effective, you will need to regenerate the classes.
-You can use maven profile `compile-protobuf` to do this.
 
 [source,bourne]
 ----
-mvn compile -Pcompile-protobuf
+mvn package -pl hbase-protocol -am
 ----
 
-You may also want to define `protoc.path` for the protoc binary, using the following command:
+Similarly, protobuf definitions for internal use are located in the _hbase-protocol-shaded_ module.
 
 [source,bourne]
 ----
-
-mvn compile -Pcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
+mvn package -pl hbase-protocol-shaded -am
 ----
 
-Read the _hbase-protocol/README.txt_ for more details.
+Typically, protobuf code generation is done using the native `protoc` binary. In our build we use a maven plugin for
+convenience; however, the plugin may not be able to retrieve appropriate binaries for all platforms. If you find yourself
+on a platform where protoc fails, you will have to compile protoc from source, and run it independent of our maven build.
+You can disable the inline code generation by specifying `-Dprotoc.skip` in your maven arguments, allowing your build to proceed further.
+
+A similar failure relates to the stock CentOS 6 docker image providing a too old version of glibc for the version of protoc that we use.
+In this case, you would have to install glibc 2.14 and protoc 3.5.1 manually, then execute something like:
+
+[source,bourne]
+----
+cd hbase-protocol-shaded
+LD_LIBRARY_PATH=/opt/glibc-2.14/lib protoc \
+  --proto_path=src/main/protobuf \
+  --java_out=target/generated-sources/protobuf/java \
+  src/main/protobuf/*.proto
+----
+
+[NOTE]
+If you need to manually generate your protobuf files, you should not use `clean` in subsequent maven calls, as that will delete the newly generated files.
+
+Read the _hbase-protocol/README.txt_ for more details
 
 [[build.thrift]]
 ==== Build Thrift
