@@ -363,13 +363,7 @@ public class TestRowCounter {
       } catch (SecurityException e) {
         assertEquals(-1, newSecurityManager.getExitCode());
         assertTrue(data.toString().contains("Wrong number of parameters:"));
-        assertTrue(data.toString().contains(
-            "Usage: RowCounter [options] <tablename> " +
-            "[--starttime=[start] --endtime=[end] " +
-            "[--range=[startKey],[endKey][;[startKey],[endKey]...]] " +
-            "[<column1> <column2>...]"));
-        assertTrue(data.toString().contains("-Dhbase.client.scanner.caching=100"));
-        assertTrue(data.toString().contains("-Dmapreduce.map.speculative=false"));
+        assertUsageContent(data.toString());
       }
       data.reset();
       try {
@@ -383,18 +377,22 @@ public class TestRowCounter {
         assertTrue(data.toString().contains(
             "Please specify range in such format as \"--range=a,b\" or, with only one boundary," +
             " \"--range=,b\" or \"--range=a,\""));
-        assertTrue(data.toString().contains(
-            "Usage: RowCounter [options] <tablename> " +
-            "[--starttime=[start] --endtime=[end] " +
-            "[--range=[startKey],[endKey][;[startKey],[endKey]...]] " +
-            "[<column1> <column2>...]"));
+        assertUsageContent(data.toString());
       }
 
     } finally {
       System.setErr(oldPrintStream);
       System.setSecurityManager(SECURITY_MANAGER);
     }
+  }
 
+  private void assertUsageContent(String usage) {
+    assertTrue(usage.contains("Usage: hbase rowcounter [options] <tablename> "
+        + "[--starttime=<start> --endtime=<end>] "
+        + "[--range=[startKey],[endKey][;[startKey],[endKey]...]] [<column1> <column2>...]"));
+    assertTrue(usage.contains("For performance consider the following options:"));
+    assertTrue(usage.contains("-Dhbase.client.scanner.caching=100"));
+    assertTrue(usage.contains("-Dmapreduce.map.speculative=false"));
   }
 
 }

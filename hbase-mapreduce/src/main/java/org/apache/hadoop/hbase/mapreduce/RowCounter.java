@@ -221,9 +221,9 @@ public class RowCounter extends Configured implements Tool {
    * Note that we don't document --expected-count, because it's intended for test.
    */
   private static void printUsage() {
-    System.err.println("Usage: RowCounter [options] <tablename> " +
-        "[--starttime=[start] --endtime=[end] " +
-        "[--range=[startKey],[endKey][;[startKey],[endKey]...]] [<column1> <column2>...]");
+    System.err.println("Usage: hbase rowcounter [options] <tablename> "
+        + "[--starttime=<start> --endtime=<end>] "
+        + "[--range=[startKey],[endKey][;[startKey],[endKey]...]] [<column1> <column2>...]");
     System.err.println("For performance consider the following options:\n"
         + "-Dhbase.client.scanner.caching=100\n"
         + "-Dmapreduce.map.speculative=false");
