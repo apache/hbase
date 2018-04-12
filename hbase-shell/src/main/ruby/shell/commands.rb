@@ -104,6 +104,8 @@ module Shell
         @formatter = formatter
       end
 
+      # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
+      # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity
       def translate_hbase_exceptions(*args)
         yield
       rescue => cause
@@ -142,6 +144,8 @@ module Shell
           end
         end
         if cause.is_a?(org.apache.hadoop.hbase.TableExistsException)
+          strs = cause.to_s.split(' ')
+          raise "Table already exists: #{strs[0]}!" if strs.size == 1
           raise "Table already exists: #{args.first}!"
         end
         # To be safe, here only AccessDeniedException is considered. In future
@@ -157,6 +161,8 @@ module Shell
         # Throw the other exception which hasn't been handled above
         raise cause
       end
+      # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
+      # rubocop:enable Metrics/MethodLength, Metrics/PerceivedComplexity
     end
   end
 end

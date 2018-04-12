@@ -334,6 +334,89 @@ module Hbase
   end
 
   # Simple administration methods tests
+  class AdminCloneTableSchemaTest < Test::Unit::TestCase
+    include TestHelpers
+    def setup
+      setup_hbase
+      # Create table test table name
+      @source_table_name = 'hbase_shell_tests_source_table_name'
+      @destination_table_name = 'hbase_shell_tests_destination_table_name'
+    end
+
+    def teardown
+      shutdown
+    end
+
+    define_test "clone_table_schema should create a new table by cloning the
+                 existent table schema." do
+      drop_test_table(@source_table_name)
+      drop_test_table(@destination_table_name)
+      command(:create,
+              @source_table_name,
+              NAME => 'a',
+              CACHE_BLOOMS_ON_WRITE => 'TRUE',
+              CACHE_INDEX_ON_WRITE => 'TRUE',
+              EVICT_BLOCKS_ON_CLOSE => 'TRUE',
+              COMPRESSION_COMPACT => 'GZ')
+      command(:clone_table_schema,
+              @source_table_name,
+              @destination_table_name,
+              false)
+      assert_equal(['a:'],
+                   table(@source_table_name).get_all_columns.sort)
+      assert_match(/CACHE_BLOOMS_ON_WRITE/,
+                   admin.describe(@destination_table_name))
+      assert_match(/CACHE_INDEX_ON_WRITE/,
+                   admin.describe(@destination_table_name))
+      assert_match(/EVICT_BLOCKS_ON_CLOSE/,
+                   admin.describe(@destination_table_name))
+      assert_match(/GZ/,
+                   admin.describe(@destination_table_name))
+    end
+
+    define_test "clone_table_schema should maintain the source table's region
+                 boundaries when preserve_splits set to true" do
+      drop_test_table(@source_table_name)
+      drop_test_table(@destination_table_name)
+      command(:create,
+              @source_table_name,
+              'a',
+              NUMREGIONS => 10,
+              SPLITALGO => 'HexStringSplit')
+      splits = table(@source_table_name)._get_splits_internal
+      command(:clone_table_schema,
+              @source_table_name,
+              @destination_table_name,
+              true)
+      assert_equal(splits, table(@destination_table_name)._get_splits_internal)
+    end
+
+    define_test "clone_table_schema should have failed when source table
+                 doesn't exist." do
+      drop_test_table(@source_table_name)
+      drop_test_table(@destination_table_name)
+      assert_raise(RuntimeError) do
+        command(:clone_table_schema,
+                @source_table_name,
+                @destination_table_name)
+      end
+    end
+
+    define_test "clone_table_schema should have failed when destination
+                 table exists." do
+      drop_test_table(@source_table_name)
+      drop_test_table(@destination_table_name)
+      command(:create, @source_table_name, 'a')
+      command(:create, @destination_table_name, 'a')
+      assert_raise(RuntimeError) do
+        command(:clone_table_schema,
+                @source_table_name,
+                @destination_table_name)
+      end
+    end
+  end
+
+  # Simple administration methods tests
   class AdminRegionTest < Test::Unit::TestCase
     include TestHelpers
     def setup
@@ -362,6 +445,7 @@ module Hbase
   end
 
   # Simple administration methods tests
+  # rubocop:disable Metrics/ClassLength
   class AdminAlterTableTest < Test::Unit::TestCase
     include TestHelpers
 
@@ -417,18 +501,20 @@ module Hbase
       assert_equal(['x:', 'y:', 'z:'], table(@test_name).get_all_columns.sort)
     end
 
-    define_test "alter should support more than one alteration in one call" do
+    define_test 'alter should support more than one alteration in one call' do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      alterOutput = capture_stdout {
-        command(:alter, @test_name, { NAME => 'z' }, { METHOD => 'delete', NAME => 'y' },
-                'MAX_FILESIZE' => 12345678) }
+      alter_out_put = capture_stdout do
+        command(:alter, @test_name, { NAME => 'z' },
+                { METHOD => 'delete', NAME => 'y' },
+                'MAX_FILESIZE' => 12_345_678)
+      end
       command(:enable, @test_name)
-      assert_equal(1, /Updating all regions/.match(alterOutput).size,
-        "HBASE-15641 - Should only perform one table modification per alter.")
+      assert_equal(1, /Updating all regions/.match(alter_out_put).size,
+                   "HBASE-15641 - Should only perform one table
+                   modification per alter.")
       assert_equal(['x:', 'z:'], table(@test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@test_name))
     end
-
 
     define_test 'alter should support shortcut DELETE alter specs' do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
@@ -532,6 +618,7 @@ module Hbase
       table.close
     end
   end
+  # rubocop:enable Metrics/ClassLength
 
   # Tests for the `status` shell command
   class StatusTest < Test::Unit::TestCase
