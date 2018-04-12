@@ -262,4 +262,9 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    * @return True if cluster is up; false if cluster is not up (we are shutting down).
    */
   boolean isClusterUp();
+
+  /**
+   * @return Return the object that implements the replication source executorService.
+   */
+  ReplicationSourceService getReplicationSourceService();
 }
