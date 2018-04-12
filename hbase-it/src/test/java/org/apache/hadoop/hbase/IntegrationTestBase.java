@@ -100,7 +100,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
           monkeyProps.load(this.getClass().getClassLoader()
               .getResourceAsStream(chaosMonkeyPropsFile));
         } catch (IOException e) {
-          LOG.warn(e.toString(), e);
+          LOG.warn("Failed load of monkey properties {} from CLASSPATH", chaosMonkeyPropsFile, e);
           System.exit(EXIT_FAILURE);
         }
       }

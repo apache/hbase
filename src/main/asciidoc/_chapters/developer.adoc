@@ -1465,9 +1465,8 @@ HBase ships with several ChaosMonkey policies, available in the
 [[chaos.monkey.properties]]
 ==== Configuring Individual ChaosMonkey Actions
 
-Since HBase version 1.0.0 (link:https://issues.apache.org/jira/browse/HBASE-11348[HBASE-11348]),
 ChaosMonkey integration tests can be configured per test run.
-Create a Java properties file in the HBase classpath and pass it to ChaosMonkey using
+Create a Java properties file in the HBase CLASSPATH and pass it to ChaosMonkey using
 the `-monkeyProps` configuration flag. Configurable properties, along with their default
 values if applicable, are listed in the `org.apache.hadoop.hbase.chaos.factories.MonkeyConstants`
 class. For properties that have defaults, you can override them by including them
@@ -1480,7 +1479,9 @@ The following example uses a properties file called <<monkey.properties,monkey.p
 $ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties
 ----
 
-The above command will start the integration tests and chaos monkey passing the properties file _monkey.properties_.
+The above command will start the integration tests and chaos monkey. It will look for the
+properties file _monkey.properties_ on the HBase CLASSPATH; e.g. inside the HBASE _conf_ dir.
+
 Here is an example chaos monkey file:
 
 [[monkey.properties]]
@@ -1494,6 +1495,8 @@ move.regions.max.time=1000000
 move.regions.sleep.time=80000
 batch.restart.rs.ratio=0.4f
 ----
+
+Periods/time are expressed in milliseconds.
 
 HBase 1.0.2 and newer adds the ability to restart HBase's underlying ZooKeeper quorum or
 HDFS nodes. To use these actions, you need to configure some new properties, which
