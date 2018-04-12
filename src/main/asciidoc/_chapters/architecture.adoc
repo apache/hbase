@@ -1248,7 +1248,7 @@ dictionary because of an abrupt termination, a read of this last block may not b
 It is possible to set _durability_ on each Mutation or on a Table basis. Options include:
 
  * _SKIP_WAL_: Do not write Mutations to the WAL (See the next section, <<wal.disable>>).
- * _ASYNC_WAL_: Write the WAL asynchronously; do not hold-up clients waiting on the sync of their write to the filesystem but return immediately; the Mutation will be flushed to the WAL at a later time. This option currently may lose data. See HBASE-16689.
+ * _ASYNC_WAL_: Write the WAL asynchronously; do not hold-up clients waiting on the sync of their write to the filesystem but return immediately. The edit becomes visible. Meanwhile, in the background, the Mutation will be flushed to the WAL at some time later. This option currently may lose data. See HBASE-16689.
  * _SYNC_WAL_: The *default*. Each edit is sync'd to HDFS before we return success to the client.
  * _FSYNC_WAL_: Each edit is fsync'd to HDFS and the filesystem before we return success to the client.
 
