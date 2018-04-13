@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -396,6 +397,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     T act() throws IOException;
   }
 
+  /**
+   * Attemps to clean up a directory, its subdirectories, and files.
+   * Return value is true if everything was deleted. false on partial / total failures.
+   */
   private class CleanerTask extends RecursiveTask<Boolean> {
     private final Path dir;
     private final boolean root;
@@ -415,6 +420,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       List<FileStatus> subDirs;
       final List<FileStatus> files;
       try {
+        // if dir doesn't exist, we'll get null back for both of these
+        // which will fall through to succeeding.
         subDirs = FSUtils.listStatusWithStatusFilter(fs, dir, new FileStatusFilter() {
           @Override
           public boolean accept(FileStatus f) {
@@ -428,8 +435,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           }
         });
       } catch (IOException ioe) {
-        LOG.warn(dir + " doesn't exist, just skip it. ", ioe);
-        return true;
+        LOG.warn("failed to get FileStatus for contents of '" + dir + "'", ioe);
+        return false;
       }
 
       boolean nullSubDirs = subDirs == null;
@@ -487,8 +494,19 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       try {
         LOG.trace("Start deleting " + type + " under " + dir);
         deleted = deletion.act();
+      } catch (PathIsNotEmptyDirectoryException exception) {
+        // N.B. HDFS throws this exception when we try to delete a non-empty directory, but
+        // LocalFileSystem throws a bare IOException. So some test code will get the verbose
+        // message below.
+        LOG.debug("Couldn't delete '" + dir + "' yet because it isn't empty. Probably transient. " +
+            "exception details at TRACE.");
+        LOG.trace("Couldn't delete '" + dir + "' yet because it isn't empty w/exception.",
+            exception);
+        deleted = false;
       } catch (IOException ioe) {
-        LOG.warn("Could not delete " + type + " under " + dir, ioe);
+        LOG.info("Could not delete " + type + " under " + dir + ". might be transient; we'll " +
+            "retry. if it keeps happening, use following exception when asking on mailing list.",
+            ioe);
         deleted = false;
       }
       LOG.trace("Finish deleting " + type + " under " + dir + " deleted=" + deleted);
