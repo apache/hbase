@@ -720,46 +720,57 @@ if (withReplica) {
 Actions:
 <p>
 <center>
-<table class="table" width="95%" >
+<table class="table" style="border: 0;" width="95%" >
 <tr>
   <form method="get">
-  <input type="hidden" name="action" value="compact">
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
-  <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn"></td>
-  <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">Row Key (optional):<input type="text" name="key" size="40"></td>
-  <td style="border-style: none">This action will force a compaction of all
-  regions of the table, or, if a key is supplied, only the region containing the
-  given key.</td>
-  </form>
-</tr>
-<tr><td style="border-style: none" colspan="4">&nbsp;</td></tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="split">
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
-  <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn"></td>
-  <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">Row Key (optional):<input type="text" name="key" size="40"></td>
-  <td style="border-style: none">This action will force a split of all eligible
-  regions of the table, or, if a key is supplied, only the region containing the
-  given key. An eligible region is one that does not contain any references to
-  other regions. Split requests for noneligible regions will be ignored.</td>
+  <input type="hidden" name="action" value="compact" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
+  </td>
+  <td>
+    This action will force a compaction of all regions of the table, or,
+    if a key is supplied, only the region containing the
+    given key.
+  </td>
   </form>
 </tr>
 <tr>
   <form method="get">
-  <input type="hidden" name="action" value="merge">
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
-  <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn"></td>
-  <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">Region Key (Required):<input type="text" name="left" size="40">
-  Region Key (Required) :<input type="text" name="right" size="40"></td>
-  <td style="border-style: none">This action will merge two
-  regions of the table, Merge requests for noneligible regions will be ignored.</td>
+  <input type="hidden" name="action" value="split" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
+  </td>
+  <td>
+	  This action will force a split of all eligible
+	  regions of the table, or, if a key is supplied, only the region containing the
+	  given key. An eligible region is one that does not contain any references to
+	  other regions. Split requests for noneligible regions will be ignored.
+  </td>
+  </form>
+</tr>
+<tr>
+  <form method="get">
+  <input type="hidden" name="action" value="merge" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="left" size="40" placeholder="Region Key (required)" />
+    <input type="text" name="right" size="40" placeholder="Region Key (required)" />
+  </td>
+  <td>
+    This action will merge two regions of the table, Merge requests for
+    noneligible regions will be ignored.
+  </td>
   </form>
 </tr>
 </table>
