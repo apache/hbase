@@ -21,6 +21,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +40,7 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -171,8 +174,10 @@ public class TestThriftHttpServer {
       Thread.sleep(100);
     }
 
+    String url = "http://"+ HConstants.LOCALHOST + ":" + port;
     try {
-      talkToThriftServer(customHeaderSize);
+      checkHttpMethods(url);
+      talkToThriftServer(url, customHeaderSize);
     } catch (Exception ex) {
       clientSideException = ex;
     } finally {
@@ -189,11 +194,19 @@ public class TestThriftHttpServer {
     }
   }
 
+  private void checkHttpMethods(String url) throws Exception {
+    // HTTP TRACE method should be disabled for security
+    // See https://www.owasp.org/index.php/Cross_Site_Tracing
+    HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+    conn.setRequestMethod("TRACE");
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
+  }
+
   private static volatile boolean tableCreated = false;
 
-  private void talkToThriftServer(int customHeaderSize) throws Exception {
-    THttpClient httpClient = new THttpClient(
-        "http://"+ HConstants.LOCALHOST + ":" + port);
+  private void talkToThriftServer(String url, int customHeaderSize) throws Exception {
+    THttpClient httpClient = new THttpClient(url);
     httpClient.open();
 
     if (customHeaderSize > 0) {
