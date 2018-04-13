@@ -84,6 +84,7 @@ public class TestClientOperationTimeout {
   @BeforeClass
   public static void setUpClass() throws Exception {
     TESTING_UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 500);
+    TESTING_UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 500);
     TESTING_UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 500);
     TESTING_UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
 
