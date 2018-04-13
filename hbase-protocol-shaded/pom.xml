@@ -33,8 +33,10 @@
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <!--Version of protobuf that hbase uses internally (we shade our pb)
          Must match what is out in hbase-thirdparty include.
+         3.5.1-1 is the same as 3.5.1 except includes corrected binaries for el6
+         to work around https://github.com/google/protobuf/issues/4109
            -->
-    <internal.protobuf.version>3.5.1</internal.protobuf.version>
+    <internal.protobuf.version>3.5.1-1</internal.protobuf.version>
   </properties>
   <build>
     <resources>
