@@ -141,13 +141,19 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
           }
           steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 general checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+'''
             unstash 'yetus'
             dir('component') {
               checkout scm
             }
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
@@ -156,12 +162,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             // TODO roll this into the hbase_nightly_yetus script
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 general checks{color}' >> "${OUTPUT_DIR}/commentfile"
+                echo '(/) {color:green}+1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
               else
-                echo '(x) {color:red}-1 general checks{color}' >> "${OUTPUT_DIR}/commentfile"
+                echo '(x) {color:red}-1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
                 status=1
               fi
               echo "-- For more information [see general report|${BUILD_URL}/General_Nightly_Build_Report/]" >> "${OUTPUT_DIR}/commentfile"
@@ -203,13 +208,19 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             // On branches where we do jdk7 checks, jdk7 will be JAVA_HOME already.
           }
           steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk7 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+'''
             unstash 'yetus'
             dir('component') {
               checkout scm
             }
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
@@ -217,12 +228,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
 '''
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk7 checks{color}' >> "${OUTPUT_DIR}/commentfile"
+                echo '(/) {color:green}+1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
               else
-                echo '(x) {color:red}-1 jdk7 checks{color}' >> "${OUTPUT_DIR}/commentfile"
+                echo '(x) {color:red}-1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
                 status=1
               fi
               echo "-- For more information [see jdk7 report|${BUILD_URL}/JDK7_Nightly_Build_Report/]" >> "${OUTPUT_DIR}/commentfile"
@@ -278,13 +288,19 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
           }
           steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+'''
             unstash 'yetus'
             dir('component') {
               checkout scm
             }
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
@@ -292,12 +308,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
 '''
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk8 hadoop2 checks{color}' >> "${OUTPUT_DIR}/commentfile"
+                echo '(/) {color:green}+1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
               else
-                echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' >> "${OUTPUT_DIR}/commentfile"
+                echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
                 status=1
               fi
               echo "-- For more information [see jdk8 (hadoop2) report|${BUILD_URL}/JDK8_Nightly_Build_Report_(Hadoop2)/]" >> "${OUTPUT_DIR}/commentfile"
@@ -360,13 +375,19 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             HADOOP_PROFILE = '3.0'
           }
           steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+'''
             unstash 'yetus'
             dir('component') {
               checkout scm
             }
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
@@ -374,12 +395,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
 '''
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}/commentfile}"
               declare -i status=0
               if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk8 hadoop3 checks{color}' >> "${OUTPUT_DIR}/commentfile"
+                echo '(/) {color:green}+1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
               else
-                echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' >> "${OUTPUT_DIR}/commentfile"
+                echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
                 status=1
               fi
               echo "-- For more information [see jdk8 (hadoop3) report|${BUILD_URL}/JDK8_Nightly_Build_Report_(Hadoop3)/]" >> "${OUTPUT_DIR}/commentfile"
@@ -437,6 +457,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "unpacked_src_tarball" && mkdir "unpacked_src_tarball"
               rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
               rm -rf ".m2-for-src" && mkdir ".m2-for-src"
+              echo '(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console].' >output-srctarball/commentfile
 '''
             dir('component') {
               checkout scm
@@ -494,7 +515,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
            echo currentBuild.durationString
            def comment = "Results for branch ${env.BRANCH_NAME}\n"
            comment += "\t[build ${currentBuild.displayName} on builds.a.o|${env.BUILD_URL}]: "
-           if (currentBuild.result == "SUCCESS") {
+           if (currentBuild.result == null || currentBuild.result == "SUCCESS") {
               comment += "(/) *{color:green}+1 overall{color}*\n"
            } else {
               comment += "(x) *{color:red}-1 overall{color}*\n"
