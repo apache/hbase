@@ -289,6 +289,16 @@ public class TestFSUtils {
     }
   }
 
+  @Test
+  public void testFilteredStatusDoesNotThrowOnNotFound() throws Exception {
+    MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
+    try {
+      assertNull(FSUtils.listStatusWithStatusFilter(cluster.getFileSystem(), new Path("definitely/doesn't/exist"), null));
+    } finally {
+      cluster.shutdown();
+    }
+
+  }
 
   @Test
   public void testRenameAndSetModifyTime() throws Exception {
