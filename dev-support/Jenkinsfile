@@ -381,8 +381,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           post {
             always {
               stash name: 'hadoop3-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
-              // Not sure how two junit test reports will work. Disabling this for now.
-              // junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
               // zip surefire reports.
               sh '''#!/bin/bash -e
                 if [ -d "${OUTPUT_DIR}/archiver" ]; then
