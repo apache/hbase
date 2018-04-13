@@ -171,7 +171,7 @@ public class BloomFilterChunk implements BloomFilterBase {
   void add(byte [] buf, int offset, int len) {
     /*
      * For faster hashing, use combinatorial generation
-     * http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
+     * https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf
      */
     HashKey<byte[]> hashKey = new ByteArrayHashKey(buf, offset, len);
     int hash1 = this.hash.hash(hashKey, 0);
@@ -182,7 +182,7 @@ public class BloomFilterChunk implements BloomFilterBase {
   public void add(Cell cell) {
     /*
      * For faster hashing, use combinatorial generation
-     * http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
+     * https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf
      */
     int hash1;
     int hash2;
