@@ -1626,20 +1626,20 @@ Also see <<hfilev2>> for information about the HFile v2 format that was included
 [[hfile_tool]]
 ===== HFile Tool
 
-To view a textualized version of HFile content, you can use the `org.apache.hadoop.hbase.io.hfile.HFile` tool.
+To view a textualized version of HFile content, you can use the `hbase hfile` tool.
 Type the following to see usage:
 
 [source,bash]
 ----
-$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile
+$ ${HBASE_HOME}/bin/hbase hfile
 ----
 For example, to view the content of the file _hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475_, type the following:
 [source,bash]
 ----
- $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475
+ $ ${HBASE_HOME}/bin/hbase hfile -v -f hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475
 ----
 If you leave off the option -v to see just a summary on the HFile.
-See usage for other things to do with the `HFile` tool.
+See usage for other things to do with the `hfile` tool.
 
 [[store.file.dir]]
 ===== StoreFile Directory Structure on HDFS
