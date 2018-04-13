@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -391,6 +392,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     T act() throws IOException;
   }
 
+  /**
+   * Attemps to clean up a directory, its subdirectories, and files.
+   * Return value is true if everything was deleted. false on partial / total failures.
+   */
   private class CleanerTask extends RecursiveTask<Boolean> {
     private final Path dir;
     private final boolean root;
@@ -410,11 +415,13 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       List<FileStatus> subDirs;
       List<FileStatus> files;
       try {
+        // if dir doesn't exist, we'll get null back for both of these
+        // which will fall through to succeeding.
         subDirs = getFilteredStatus(status -> status.isDirectory());
         files = getFilteredStatus(status -> status.isFile());
       } catch (IOException ioe) {
-        LOG.warn(dir + " doesn't exist, just skip it. ", ioe);
-        return true;
+        LOG.warn("failed to get FileStatus for contents of '{}'", dir, ioe);
+        return false;
       }
 
       boolean nullSubDirs = subDirs == null;
@@ -452,8 +459,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
      * Pay attention that FSUtils #listStatusWithStatusFilter would return null,
      * even though status is empty but not null.
      * @param function a filter function
-     * @return filtered FileStatus
-     * @throws IOException if there's no such a directory
+     * @return filtered FileStatus or null if dir doesn't exist
+     * @throws IOException if there's an error other than dir not existing
      */
     private List<FileStatus> getFilteredStatus(Predicate<FileStatus> function) throws IOException {
       return FSUtils.listStatusWithStatusFilter(fs, dir, status -> function.test(status));
@@ -470,8 +477,18 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       try {
         LOG.trace("Start deleting {} under {}", type, dir);
         deleted = deletion.act();
+      } catch (PathIsNotEmptyDirectoryException exception) {
+        // N.B. HDFS throws this exception when we try to delete a non-empty directory, but
+        // LocalFileSystem throws a bare IOException. So some test code will get the verbose
+        // message below.
+        LOG.debug("Couldn't delete '{}' yet because it isn't empty. Probably transient. " +
+            "exception details at TRACE.", dir);
+        LOG.trace("Couldn't delete '{}' yet because it isn't empty w/exception.", dir, exception);
+        deleted = false;
       } catch (IOException ioe) {
-        LOG.warn("Could not delete {} under {}; {}", type, dir, ioe);
+        LOG.info("Could not delete {} under {}. might be transient; we'll retry. if it keeps " +
+                  "happening, use following exception when asking on mailing list.",
+                  type, dir, ioe);
         deleted = false;
       }
       LOG.trace("Finish deleting {} under {}, deleted=", type, dir, deleted);
