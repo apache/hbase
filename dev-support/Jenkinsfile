@@ -528,8 +528,14 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
            echo "[INFO] Comment:"
            echo comment
            echo ""
-           echo "[INFO] There are ${currentBuild.changeSets.size()} change sets."
-           getJirasToComment(currentBuild).each { currentIssue ->
+           echo "[DEBUG] checking to see if feature branch"
+           def jiras = getJirasToComment(env.BRANCH_NAME, [])
+           if (jiras.isEmpty()) {
+             echo "[DEBUG] non-feature branch, checking change messages for jira keys."
+             echo "[INFO] There are ${currentBuild.changeSets.size()} change sets."
+             jiras = getJirasToCommentFromChangesets(currentBuild)
+           }
+           jiras.each { currentIssue ->
              jiraComment issueKey: currentIssue, body: comment
            }
         } catch (Exception exception) {
@@ -542,7 +548,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
 }
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 @NonCPS
-List<String> getJirasToComment(RunWrapper thisBuild) {
+List<String> getJirasToCommentFromChangesets(RunWrapper thisBuild) {
   def seenJiras = []
   thisBuild.changeSets.each { cs ->
     cs.getItems().each { change ->
@@ -552,16 +558,21 @@ List<String> getJirasToComment(RunWrapper thisBuild) {
       echo "     ${change.commitId}"
       echo "     ${change.author}"
       echo ""
-      msg.eachMatch("HBASE-[0-9]+") { currentIssue ->
-        echo "[DEBUG] found jira key: ${currentIssue}"
-        if (currentIssue in seenJiras) {
-          echo "[DEBUG] already commented on ${currentIssue}."
-        } else {
-          echo "[INFO] commenting on ${currentIssue}."
-          seenJiras << currentIssue
-        }
-      }
+      seenJiras = getJirasToComment(msg, seenJiras)
     }
   }
   return seenJiras
+}
+@NonCPS
+List<String> getJirasToComment(CharSequence source, List<String> seen) {
+  source.eachMatch("HBASE-[0-9]+") { currentIssue ->
+    echo "[DEBUG] found jira key: ${currentIssue}"
+    if (currentIssue in seen) {
+      echo "[DEBUG] already commented on ${currentIssue}."
+    } else {
+      echo "[INFO] commenting on ${currentIssue}."
+      seen << currentIssue
+    }
+  }
+  return seen
 }
