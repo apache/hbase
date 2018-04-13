@@ -430,59 +430,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-        <version>3.2.0</version>
-        <configuration>
-          <charset>${project.build.sourceEncoding}</charset>
-          <scalaVersion>${scala.version}</scalaVersion>
-          <args>
-            <arg>-feature</arg>
-          </args>
-        </configuration>
-        <executions>
-          <execution>
-            <id>scala-compile-first</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>add-source</goal>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>scala-test-compile</id>
-            <phase>process-test-resources</phase>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
-        <version>1.0</version>
-        <configuration>
-          <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
-          <junitxml>.</junitxml>
-          <filereports>WDF TestSuite.txt</filereports>
-          <parallel>false</parallel>
-        </configuration>
-        <executions>
-          <execution>
-            <id>test</id>
-            <phase>test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
-            <configuration>
-              <argLine>-Xmx1536m -XX:ReservedCodeCacheSize=512m</argLine>
-              <parallel>false</parallel>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <!-- clover fails due to scala/java cross compile.  This guarantees that the scala is
              compiled before the java that will be evaluated by code coverage (scala will not be).
             https://confluence.atlassian.com/display/CLOVERKB/Java-+Scala+cross-compilation+error+-+cannot+find+symbol
@@ -691,6 +638,78 @@
           <scope>test</scope>
         </dependency>
       </dependencies>
+    </profile>
+    <!-- Attempt to skip scala-maven-plugin work, see
+      https://github.com/davidB/scala-maven-plugin/issues/198
+      -->
+    <!-- 'scala.skip' is used by the website generation script on jenkins to
+         mitigate the impact of unneeded build forks while building our javadocs.
+      -->
+    <profile>
+      <id>build-scala-sources</id>
+      <activation>
+        <property>
+          <name>scala.skip</name>
+          <value>!true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <configuration>
+          <charset>${project.build.sourceEncoding}</charset>
+          <scalaVersion>${scala.version}</scalaVersion>
+          <args>
+            <arg>-feature</arg>
+          </args>
+        </configuration>
+        <executions>
+          <execution>
+            <id>scala-compile-first</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>add-source</goal>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-test-compile</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+        <version>1.0</version>
+        <configuration>
+          <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+          <junitxml>.</junitxml>
+          <filereports>WDF TestSuite.txt</filereports>
+          <parallel>false</parallel>
+        </configuration>
+        <executions>
+          <execution>
+            <id>test</id>
+            <phase>test</phase>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <argLine>-Xmx1536m -XX:ReservedCodeCacheSize=512m</argLine>
+              <parallel>false</parallel>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>

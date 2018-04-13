@@ -173,20 +173,14 @@ echo "Building HBase"
 # But! some sunshine: because we're doing a full install before running site, we can skip all the
 # compiling in the forked executions. We have to do it awkwardly because MJAVADOC-444.
 if mvn \
-    -DskipTests \
-    -Dmaven.javadoc.skip=true \
     --batch-mode \
-    -Denforcer.skip=true \
-    -Dcheckstyle.skip=true \
-    -Dfindbugs.skip=true \
+    -Psite-install-step \
     --log-file="${working_dir}/hbase-install-log-${CURRENT_HBASE_COMMIT}.txt" \
     clean install \
   && mvn site \
     --batch-mode \
-    -Denforcer.skip=true \
-    -Dmaven.main.skip=true \
-    -Dmaven.test.skip=true \
-    -DskipTests \
+    -Dscala.skip=true \
+    -Psite-build-step \
     --log-file="${working_dir}/hbase-site-log-${CURRENT_HBASE_COMMIT}.txt"; then
   echo "Successfully built site."
 else
