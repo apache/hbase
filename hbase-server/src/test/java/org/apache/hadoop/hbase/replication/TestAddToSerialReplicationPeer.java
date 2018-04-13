@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.hadoop.fs.Path;
@@ -26,6 +28,8 @@ import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -184,6 +188,76 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     rollAllWALs();
     addPeer(true);
     UTIL.getAdmin().enableTable(tableName);
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      for (int i = 0; i < 100; i++) {
+        table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
+      }
+    }
+    waitUntilReplicationDone(100);
+    checkOrder(100);
+  }
+
+  @Test
+  public void testDisablingTable() throws Exception {
+    TableName tableName = createTable();
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      for (int i = 0; i < 100; i++) {
+        table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
+      }
+    }
+    UTIL.getAdmin().disableTable(tableName);
+    rollAllWALs();
+    TableStateManager tsm = UTIL.getMiniHBaseCluster().getMaster().getTableStateManager();
+    tsm.setTableState(tableName, TableState.State.DISABLING);
+    Thread t = new Thread(() -> {
+      try {
+        addPeer(true);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+    t.start();
+    Thread.sleep(5000);
+    // we will wait on the disabling table so the thread should still be alive.
+    assertTrue(t.isAlive());
+    tsm.setTableState(tableName, TableState.State.DISABLED);
+    t.join();
+    UTIL.getAdmin().enableTable(tableName);
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      for (int i = 0; i < 100; i++) {
+        table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
+      }
+    }
+    waitUntilReplicationDone(100);
+    checkOrder(100);
+  }
+
+  @Test
+  public void testEnablingTable() throws Exception {
+    TableName tableName = createTable();
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      for (int i = 0; i < 100; i++) {
+        table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
+      }
+    }
+    RegionInfo region = UTIL.getAdmin().getRegions(tableName).get(0);
+    HRegionServer rs = UTIL.getOtherRegionServer(UTIL.getRSForFirstRegionInTable(tableName));
+    moveRegionAndArchiveOldWals(region, rs);
+    TableStateManager tsm = UTIL.getMiniHBaseCluster().getMaster().getTableStateManager();
+    tsm.setTableState(tableName, TableState.State.ENABLING);
+    Thread t = new Thread(() -> {
+      try {
+        addPeer(true);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+    t.start();
+    Thread.sleep(5000);
+    // we will wait on the disabling table so the thread should still be alive.
+    assertTrue(t.isAlive());
+    tsm.setTableState(tableName, TableState.State.ENABLED);
+    t.join();
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));

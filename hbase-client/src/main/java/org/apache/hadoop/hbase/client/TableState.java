@@ -104,6 +104,13 @@ public class TableState {
   }
 
   /**
+   * @return True if table is {@link State#ENABLING}.
+   */
+  public boolean isEnabling() {
+    return isInStates(State.ENABLING);
+  }
+
+  /**
    * @return True if {@link State#ENABLED} or {@link State#ENABLING}
    */
   public boolean isEnabledOrEnabling() {
@@ -115,6 +122,13 @@ public class TableState {
    */
   public boolean isDisabled() {
     return isInStates(State.DISABLED);
+  }
+
+  /**
+   * @return True if table is disabling.
+   */
+  public boolean isDisabling() {
+    return isInStates(State.DISABLING);
   }
 
   /**

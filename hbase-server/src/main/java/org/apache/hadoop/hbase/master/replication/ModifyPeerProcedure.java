@@ -18,17 +18,16 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.TableStateManager.TableStateNotFoundException;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +53,9 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   private static final Logger LOG = LoggerFactory.getLogger(ModifyPeerProcedure.class);
 
   protected static final int UPDATE_LAST_SEQ_ID_BATCH_SIZE = 1000;
+
+  // The sleep interval when waiting table to be enabled or disabled.
+  protected static final int SLEEP_INTERVAL_MS = 1000;
 
   protected ModifyPeerProcedure() {
   }
@@ -126,6 +127,27 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     throw new UnsupportedOperationException();
   }
 
+  // If the table is in enabling state, we need to wait until it is enabled and then reopen all its
+  // regions.
+  private boolean needReopen(TableStateManager tsm, TableName tn) throws IOException {
+    for (;;) {
+      try {
+        TableState state = tsm.getTableState(tn);
+        if (state.isEnabled()) {
+          return true;
+        }
+        if (!state.isEnabling()) {
+          return false;
+        }
+        Thread.sleep(SLEEP_INTERVAL_MS);
+      } catch (TableStateNotFoundException e) {
+        return false;
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException(e.getMessage()).initCause(e);
+      }
+    }
+  }
+
   private void reopenRegions(MasterProcedureEnv env) throws IOException {
     ReplicationPeerConfig peerConfig = getNewPeerConfig();
     ReplicationPeerConfig oldPeerConfig = getOldPeerConfig();
@@ -142,15 +164,10 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         ReplicationUtils.contains(oldPeerConfig, tn)) {
         continue;
       }
-      try {
-        if (!tsm.getTableState(tn).isEnabled()) {
-          continue;
-        }
-      } catch (TableStateNotFoundException e) {
-        continue;
+      if (needReopen(tsm, tn)) {
+        addChildProcedure(env.getAssignmentManager().createReopenProcedures(
+          env.getAssignmentManager().getRegionStates().getRegionsOfTable(tn)));
       }
-      addChildProcedure(env.getAssignmentManager().createReopenProcedures(
-        env.getAssignmentManager().getRegionStates().getRegionsOfTable(tn)));
     }
   }
 
@@ -183,6 +200,26 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     }
   }
 
+  // If the table is currently disabling, then we need to wait until it is disabled.We will write
+  // replication barrier for a disabled table. And return whether we need to update the last pushed
+  // sequence id, if the table has been deleted already, i.e, we hit TableStateNotFoundException,
+  // then we do not need to update last pushed sequence id for this table.
+  private boolean needSetLastPushedSequenceId(TableStateManager tsm, TableName tn)
+      throws IOException {
+    for (;;) {
+      try {
+        if (!tsm.getTableState(tn).isDisabling()) {
+          return true;
+        }
+        Thread.sleep(SLEEP_INTERVAL_MS);
+      } catch (TableStateNotFoundException e) {
+        return false;
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException(e.getMessage()).initCause(e);
+      }
+    }
+  }
+
   // Will put the encodedRegionName->lastPushedSeqId pair into the map passed in, if the map is
   // large enough we will call queueStorage.setLastSequenceIds and clear the map. So the caller
   // should not forget to check whether the map is empty at last, if not you should call
@@ -192,26 +229,13 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     TableStateManager tsm = env.getMasterServices().getTableStateManager();
     ReplicationQueueStorage queueStorage = env.getReplicationPeerManager().getQueueStorage();
     Connection conn = env.getMasterServices().getConnection();
-    RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    boolean isTableEnabled;
-    try {
-      isTableEnabled = tsm.getTableState(tableName).isEnabled();
-    } catch (TableStateNotFoundException e) {
+    if (!needSetLastPushedSequenceId(tsm, tableName)) {
       return;
     }
-    if (isTableEnabled) {
-      for (Pair<String, Long> name2Barrier : MetaTableAccessor
-        .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
-        addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
-          queueStorage);
-      }
-    } else {
-      for (RegionInfo region : regionStates.getRegionsOfTable(tableName, true)) {
-        long maxSequenceId =
-          WALSplitter.getMaxRegionSequenceId(mfs.getFileSystem(), mfs.getRegionDir(region));
-        addToMap(lastSeqIds, region.getEncodedName(), maxSequenceId, queueStorage);
-      }
+    for (Pair<String, Long> name2Barrier : MetaTableAccessor
+      .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
+      addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
+        queueStorage);
     }
   }
 

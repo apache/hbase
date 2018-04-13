@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -107,7 +108,7 @@ public class DisableTableProcedure
           break;
         case DISABLE_TABLE_MARK_REGIONS_OFFLINE:
           addChildProcedure(env.getAssignmentManager().createUnassignProcedures(tableName));
-          setNextState(DisableTableState.DISABLE_TABLE_SET_DISABLED_TABLE_STATE);
+          setNextState(DisableTableState.DISABLE_TABLE_ADD_REPLICATION_BARRIER);
           break;
         case DISABLE_TABLE_ADD_REPLICATION_BARRIER:
           if (env.getMasterServices().getTableDescriptors().get(tableName)
@@ -119,7 +120,8 @@ public class DisableTableProcedure
                 .getRegionsOfTable(tableName)) {
                 long maxSequenceId =
                   WALSplitter.getMaxRegionSequenceId(mfs.getFileSystem(), mfs.getRegionDir(region));
-                mutator.mutate(MetaTableAccessor.makePutForReplicationBarrier(region, maxSequenceId,
+                long openSeqNum = maxSequenceId > 0 ? maxSequenceId + 1 : HConstants.NO_SEQNUM;
+                mutator.mutate(MetaTableAccessor.makePutForReplicationBarrier(region, openSeqNum,
                   EnvironmentEdgeManager.currentTime()));
               }
             }
