@@ -30,7 +30,12 @@ import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.OptionalLong;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -328,7 +333,7 @@ public class TestWALEntryStream {
     }
   }
 
-  private ReplicationSourceWALReader createReader(boolean recovered, Configuration conf) {
+  private ReplicationSource mockReplicationSource(boolean recovered, Configuration conf) {
     ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     Server mockServer = Mockito.mock(Server.class);
@@ -338,6 +343,12 @@ public class TestWALEntryStream {
     when(source.getWALFileLengthProvider()).thenReturn(log);
     when(source.getServer()).thenReturn(mockServer);
     when(source.isRecovered()).thenReturn(recovered);
+    return source;
+  }
+
+  private ReplicationSourceWALReader createReader(boolean recovered, Configuration conf) {
+    ReplicationSource source = mockReplicationSource(recovered, conf);
+    when(source.isPeerEnabled()).thenReturn(true);
     ReplicationSourceWALReader reader =
       new ReplicationSourceWALReader(fs, conf, walQueue, 0, getDummyFilter(), source);
     reader.start();
@@ -458,6 +469,52 @@ public class TestWALEntryStream {
     assertEquals(walPath3, entryBatch.getLastWalPath());
     assertEquals(10, entryBatch.getNbEntries());
     assertFalse(entryBatch.isEndOfFile());
+  }
+
+  @Test
+  public void testReplicationSourceWALReaderDisabled()
+      throws IOException, InterruptedException, ExecutionException {
+    appendEntriesToLogAndSync(3);
+    // get ending position
+    long position;
+    try (WALEntryStream entryStream =
+      new WALEntryStream(walQueue, fs, CONF, 0, log, null, new MetricsSource("1"))) {
+      entryStream.next();
+      entryStream.next();
+      entryStream.next();
+      position = entryStream.getPosition();
+    }
+
+    // start up a reader
+    Path walPath = walQueue.peek();
+    ReplicationSource source = mockReplicationSource(false, CONF);
+    AtomicInteger invokeCount = new AtomicInteger(0);
+    AtomicBoolean enabled = new AtomicBoolean(false);
+    when(source.isPeerEnabled()).then(i -> {
+      invokeCount.incrementAndGet();
+      return enabled.get();
+    });
+
+    ReplicationSourceWALReader reader =
+      new ReplicationSourceWALReader(fs, CONF, walQueue, 0, getDummyFilter(), source);
+    reader.start();
+    Future<WALEntryBatch> future = ForkJoinPool.commonPool().submit(() -> {
+      return reader.take();
+    });
+    // make sure that the isPeerEnabled has been called several times
+    TEST_UTIL.waitFor(30000, () -> invokeCount.get() >= 5);
+    // confirm that we can read nothing if the peer is disabled
+    assertFalse(future.isDone());
+    // then enable the peer, we should get the batch
+    enabled.set(true);
+    WALEntryBatch entryBatch = future.get();
+
+    // should've batched up our entries
+    assertNotNull(entryBatch);
+    assertEquals(3, entryBatch.getWalEntries().size());
+    assertEquals(position, entryBatch.getLastWalPosition());
+    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(3, entryBatch.getNbRowKeys());
   }
 
   private String getRow(WAL.Entry entry) {
