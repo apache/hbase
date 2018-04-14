@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.cleaner;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -93,8 +95,8 @@ public class TestReplicationBarrierCleaner {
   @After
   public void tearDown() throws IOException {
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
-        ResultScanner scanner = table.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY)
-          .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).setFilter(new FirstKeyOnlyFilter()))) {
+      ResultScanner scanner = table.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY)
+        .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).setFilter(new FirstKeyOnlyFilter()))) {
       for (;;) {
         Result result = scanner.next();
         if (result == null) {
@@ -144,7 +146,7 @@ public class TestReplicationBarrierCleaner {
     Put put = new Put(region.getRegionName(), EnvironmentEdgeManager.currentTime());
     for (int i = 0; i < barriers.length; i++) {
       put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER,
-        put.getTimeStamp() - barriers.length + i, Bytes.toBytes(barriers[i]));
+        put.getTimestamp() - barriers.length + i, Bytes.toBytes(barriers[i]));
     }
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.put(put);
@@ -260,15 +262,17 @@ public class TestReplicationBarrierCleaner {
     addBarrier(region, 40, 50, 60);
     fillCatalogFamily(region);
 
+    String peerId = "1";
     ReplicationQueueStorage queueStorage = create(59L);
     @SuppressWarnings("unchecked")
-    ReplicationPeerManager peerManager = create(queueStorage, Lists.newArrayList("1"));
+    ReplicationPeerManager peerManager = create(queueStorage, Lists.newArrayList(peerId));
     ReplicationBarrierCleaner cleaner = create(peerManager);
 
     // we have something in catalog family, so only delete 40
     cleaner.chore();
     assertArrayEquals(new long[] { 50, 60 },
       MetaTableAccessor.getReplicationBarrier(UTIL.getConnection(), region.getRegionName()));
+    verify(queueStorage, never()).removeLastSequenceIds(anyString(), anyList());
 
     // No catalog family, then we should remove the whole row
     clearCatalogFamily(region);
@@ -277,6 +281,8 @@ public class TestReplicationBarrierCleaner {
       assertFalse(table
         .exists(new Get(region.getRegionName()).addFamily(HConstants.REPLICATION_BARRIER_FAMILY)));
     }
+    verify(queueStorage, times(1)).removeLastSequenceIds(peerId,
+      Arrays.asList(region.getEncodedName()));
   }
 
   private static class WarnOnlyStoppable implements Stoppable {
