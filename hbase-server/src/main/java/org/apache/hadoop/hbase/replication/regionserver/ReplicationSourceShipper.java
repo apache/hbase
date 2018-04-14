@@ -87,12 +87,11 @@ public class ReplicationSourceShipper extends Thread {
     setWorkerState(WorkerState.RUNNING);
     // Loop until we close down
     while (isActive()) {
-      int sleepMultiplier = 1;
       // Sleep until replication is enabled again
       if (!source.isPeerEnabled()) {
-        if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
-          sleepMultiplier++;
-        }
+        // The peer enabled check is in memory, not expensive, so do not need to increase the
+        // sleep interval as it may cause a long lag when we enable the peer.
+        sleepForRetries("Replication is disabled", 1);
         continue;
       }
       try {
@@ -188,8 +187,8 @@ public class ReplicationSourceShipper extends Thread {
         }
         break;
       } catch (Exception ex) {
-        LOG.warn(source.getReplicationEndpoint().getClass().getName() + " threw unknown exception:"
-            + org.apache.hadoop.util.StringUtils.stringifyException(ex));
+        LOG.warn("{} threw unknown exception:",
+          source.getReplicationEndpoint().getClass().getName(), ex);
         if (sleepForRetries("ReplicationEndpoint threw exception", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -292,9 +291,7 @@ public class ReplicationSourceShipper extends Thread {
    */
   public boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(msg + ", sleeping " + sleepForRetries + " times " + sleepMultiplier);
-      }
+      LOG.trace("{}, sleeping {} times {}", msg, sleepForRetries, sleepMultiplier);
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
       LOG.debug("Interrupted while sleeping between retries");

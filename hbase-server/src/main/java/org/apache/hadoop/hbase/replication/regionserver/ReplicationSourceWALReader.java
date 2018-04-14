@@ -126,6 +126,10 @@ class ReplicationSourceWALReader extends Thread {
               source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
               source.getSourceMetrics())) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
+          if (!source.isPeerEnabled()) {
+            Threads.sleep(sleepForRetries);
+            continue;
+          }
           if (!checkQuota()) {
             continue;
           }
