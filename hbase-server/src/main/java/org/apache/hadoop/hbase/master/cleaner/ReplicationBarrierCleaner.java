@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +76,7 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
     long cleanedRows = 0;
     long deletedRows = 0;
     long deletedBarriers = 0;
+    long deletedLastPushedSeqIds = 0;
     TableName tableName = null;
     List<String> peerIds = null;
     try (Table metaTable = conn.getTable(TableName.META_TABLE_NAME);
@@ -123,11 +125,16 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
         } else {
           index++;
         }
-        // A special case for merged/split region, where we are in the last closed range and the
-        // pushedSeqId is the last barrier minus 1.
+        // A special case for merged/split region, and also deleted tables, where we are in the last
+        // closed range and the pushedSeqId is the last barrier minus 1.
         if (index == barriers.length - 1 && pushedSeqId == barriers[barriers.length - 1] - 1) {
           // check if the region has already been removed, i.e, no catalog family
           if (!metaTable.exists(new Get(regionName).addFamily(HConstants.CATALOG_FAMILY))) {
+            ReplicationQueueStorage queueStorage = peerManager.getQueueStorage();
+            for (String peerId: peerIds) {
+              queueStorage.removeLastSequenceIds(peerId, Arrays.asList(encodedRegionName));
+              deletedLastPushedSeqIds++;
+            }
             metaTable
               .delete(new Delete(regionName).addFamily(HConstants.REPLICATION_BARRIER_FAMILY));
             deletedRows++;
@@ -153,9 +160,9 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
     }
     if (totalRows > 0) {
       LOG.info(
-        "Cleanup replication barriers: " +
-          "totalRows {}, cleanedRows {}, deletedRows {}, deletedBarriers {}",
-        totalRows, cleanedRows, deletedRows, deletedBarriers);
+        "Cleanup replication barriers: totalRows {}, " +
+          "cleanedRows {}, deletedRows {}, deletedBarriers {}, deletedLastPushedSeqIds {}",
+        totalRows, cleanedRows, deletedRows, deletedBarriers, deletedLastPushedSeqIds);
     }
   }
 
