@@ -135,8 +135,12 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     LOG.debug("Checking for aborted procedures on node: '" + zkController.getAbortZnode() + "'");
     try {
       // this is the list of the currently aborted procedues
-      for (String node : ZKUtil.listChildrenAndWatchForNewChildren(zkController.getWatcher(),
-        zkController.getAbortZnode())) {
+      List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkController.getWatcher(),
+                   zkController.getAbortZnode());
+      if (children == null || children.isEmpty()) {
+        return;
+      }
+      for (String node : children) {
         String abortNode = ZNodePaths.joinZNode(zkController.getAbortZnode(), node);
         abort(abortNode);
       }
