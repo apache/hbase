@@ -139,6 +139,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
@@ -224,7 +225,7 @@ public class ThriftServerRunner implements Runnable {
   private final JvmPauseMonitor pauseMonitor;
 
   /** An enum of server implementation selections */
-  enum ImplType {
+  public enum ImplType {
     HS_HA("hsha", true, THsHaServer.class, true),
     NONBLOCKING("nonblocking", true, TNonblockingServer.class, true),
     THREAD_POOL("threadpool", false, TBoundedThreadPoolServer.class, true),
@@ -238,7 +239,7 @@ public class ThriftServerRunner implements Runnable {
     final Class<? extends TServer> serverClass;
     final boolean canSpecifyBindIP;
 
-    ImplType(String option, boolean isAlwaysFramed,
+    private ImplType(String option, boolean isAlwaysFramed,
         Class<? extends TServer> serverClass, boolean canSpecifyBindIP) {
       this.option = option;
       this.isAlwaysFramed = isAlwaysFramed;
@@ -255,7 +256,15 @@ public class ThriftServerRunner implements Runnable {
       return "-" + option;
     }
 
-    String getDescription() {
+    public String getOption() {
+      return option;
+    }
+
+    public boolean isAlwaysFramed() {
+      return isAlwaysFramed;
+    }
+
+    public String getDescription() {
       StringBuilder sb = new StringBuilder("Use the " +
           serverClass.getSimpleName());
       if (isAlwaysFramed) {
@@ -275,7 +284,7 @@ public class ThriftServerRunner implements Runnable {
       return group;
     }
 
-    static ImplType getServerImpl(Configuration conf) {
+    public static ImplType getServerImpl(Configuration conf) {
       String confType = conf.get(SERVER_TYPE_CONF_KEY, THREAD_POOL.option);
       for (ImplType t : values()) {
         if (confType.equals(t.option)) {
@@ -1979,13 +1988,14 @@ public class ThriftServerRunner implements Runnable {
 
   public static void registerFilters(Configuration conf) {
     String[] filters = conf.getStrings("hbase.thrift.filters");
+    Splitter splitter = Splitter.on(':');
     if(filters != null) {
       for(String filterClass: filters) {
-        String[] filterPart = filterClass.split(":");
-        if(filterPart.length != 2) {
+        List<String> filterPart = splitter.splitToList(filterClass);
+        if(filterPart.size() != 2) {
           LOG.warn("Invalid filter specification " + filterClass + " - skipping");
         } else {
-          ParseFilter.registerFilter(filterPart[0], filterPart[1]);
+          ParseFilter.registerFilter(filterPart.get(0), filterPart.get(1));
         }
       }
     }
