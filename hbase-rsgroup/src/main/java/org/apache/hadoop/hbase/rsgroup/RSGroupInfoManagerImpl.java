@@ -354,7 +354,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     //Overwrite any info stored by table, this takes precedence
     try {
       if(ZKUtil.checkExists(watcher, groupBasePath) != -1) {
-        for(String znode: ZKUtil.listChildrenAndWatchForNewChildren(watcher, groupBasePath)) {
+        List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(watcher, groupBasePath);
+        if (children == null) {
+          return RSGroupInfoList;
+        }
+        for(String znode: children) {
           byte[] data = ZKUtil.getData(watcher, ZNodePaths.joinZNode(groupBasePath, znode));
           if(data.length > 0) {
             ProtobufUtil.expectPBMagicPrefix(data);
