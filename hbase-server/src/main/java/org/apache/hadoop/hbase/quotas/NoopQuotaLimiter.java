@@ -36,7 +36,7 @@ class NoopQuotaLimiter implements QuotaLimiter {
 
   @Override
   public void checkQuota(long estimateWriteSize, long estimateReadSize)
-      throws ThrottlingException {
+      throws RpcThrottlingException {
     // no-op
   }
 

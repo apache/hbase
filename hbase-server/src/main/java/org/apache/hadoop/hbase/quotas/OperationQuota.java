@@ -41,10 +41,11 @@ public interface OperationQuota {
    * @param numWrites number of write operation that will be performed
    * @param numReads number of small-read operation that will be performed
    * @param numScans number of long-read operation that will be performed
-   * @throws ThrottlingException if the operation cannot be performed
+   * @throws RpcThrottlingException if the operation cannot be performed because
+   *   RPC quota is exceeded.
    */
   void checkQuota(int numWrites, int numReads, int numScans)
-    throws ThrottlingException;
+    throws RpcThrottlingException;
 
   /** Cleanup method on operation completion */
   void close();
