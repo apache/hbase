@@ -216,7 +216,7 @@ public class TestQuotaState {
     try {
       limiter.checkQuota(1, 1);
       fail("Should have thrown ThrottlingException");
-    } catch (ThrottlingException e) {
+    } catch (RpcThrottlingException e) {
       // expected
     }
   }
@@ -225,7 +225,7 @@ public class TestQuotaState {
     for (int i = 0; i < availReqs; ++i) {
       try {
         limiter.checkQuota(1, 1);
-      } catch (ThrottlingException e) {
+      } catch (RpcThrottlingException e) {
         fail("Unexpected ThrottlingException after " + i + " requests. limit=" + availReqs);
       }
       limiter.grabQuota(1, 1);

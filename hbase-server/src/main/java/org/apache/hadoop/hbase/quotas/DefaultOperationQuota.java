@@ -59,7 +59,7 @@ public class DefaultOperationQuota implements OperationQuota {
 
   @Override
   public void checkQuota(int numWrites, int numReads, int numScans)
-      throws ThrottlingException {
+      throws RpcThrottlingException {
     writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
     readConsumed  = estimateConsume(OperationType.GET, numReads, 100);
     readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
