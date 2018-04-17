@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.TableName;
