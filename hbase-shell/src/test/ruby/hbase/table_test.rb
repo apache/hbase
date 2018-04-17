@@ -199,6 +199,7 @@ module Hbase
   end
 
   # Complex data management methods tests
+  # rubocop:disable Metrics/ClassLength
   class TableComplexMethodsTest < Test::Unit::TestCase
     include TestHelpers
 
@@ -337,8 +338,9 @@ module Hbase
       assert_nil(res['x:a'])
       assert_not_nil(res['x:b'])
     end
-    
-     define_test "get should work with hash columns spec and TIMESTAMP and AUTHORIZATIONS" do
+
+    define_test 'get should work with hash columns spec and TIMESTAMP and' \
+                ' AUTHORIZATIONS' do
       res = @test_table._get_internal('1', TIMESTAMP => 1234, AUTHORIZATIONS=>['PRIVATE'])
       assert_nil(res)
     end
@@ -696,6 +698,19 @@ module Hbase
       assert_equal([], splits)
     end
 
+    define_test 'Split count for a table with region replicas' do
+      @test_table_name = 'tableWithRegionReplicas'
+      create_test_table_with_region_replicas(@test_table_name, 3,
+                                             SPLITS => ['10'])
+      @table = table(@test_table_name)
+      splits = @table._get_splits_internal
+      # In this case, total splits should be 1 even if the number of region
+      # replicas is 3.
+      assert_equal(1, splits.size)
+      assert_equal(['10'], splits)
+      drop_test_table(@test_table_name)
+    end
+
     define_test "scan should throw an exception on a disabled table" do
       @test_table.disable
       begin
@@ -707,4 +722,5 @@ module Hbase
       end
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end

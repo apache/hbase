@@ -112,6 +112,17 @@ module Hbase
       end
     end
 
+    def create_test_table_with_region_replicas(name, num_of_replicas, splits)
+      # Create the table if needed
+      unless admin.exists?(name)
+        command(:create, name, 'f1', { REGION_REPLICATION => num_of_replicas },
+                splits)
+      end
+
+      # Enable the table if needed
+      admin.enable(name) unless admin.enabled?(name)
+    end
+
     def drop_test_table(name)
       return unless admin.exists?(name)
       begin
