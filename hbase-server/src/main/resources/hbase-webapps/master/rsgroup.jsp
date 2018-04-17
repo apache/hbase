@@ -63,7 +63,7 @@
       <h1>RSGroups are not enabled</h1>
     </div>
   </div>
-  <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+  <jsp:include page="redirect.jsp" />
 <%
   } else if (rsGroupName == null || rsGroupName.isEmpty() ||
       (rsGroupInfo = RSGroupTableAccessor.getRSGroupInfo(
@@ -74,7 +74,7 @@
       <h1>RSGroup: <%= rsGroupName %> does not exist</h1>
     </div>
   </div>
-  <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+  <jsp:include page="redirect.jsp" />
 <%
   } else {
     List<Address> rsGroupServers = new ArrayList<>();

@@ -182,7 +182,7 @@ if ( fqtn != null ) {
     }
   }
 %>
-<p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+<jsp:include page="redirect.jsp" />
 </div>
 <%
   } else {
@@ -793,7 +793,7 @@ Actions:
         </div>
     </div>
 <p><hr><p>
-<p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+<jsp:include page="redirect.jsp" />
 </div>
 <% } %>
 
