@@ -33,11 +33,10 @@ import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.regionserver.PeerActionListener;
 import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
@@ -118,10 +117,10 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   }
 
   private DualAsyncFSWAL createWAL(String peerId, String remoteWALDir) throws IOException {
-    Path remoteWALDirPath = new Path(remoteWALDir);
-    FileSystem remoteFs = remoteWALDirPath.getFileSystem(conf);
-    return new DualAsyncFSWAL(CommonFSUtils.getWALFileSystem(conf), remoteFs,
-      CommonFSUtils.getWALRootDir(conf), new Path(remoteWALDirPath, peerId),
+    return new DualAsyncFSWAL(CommonFSUtils.getWALFileSystem(conf),
+      ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir),
+      CommonFSUtils.getWALRootDir(conf),
+      ReplicationUtils.getRemoteWALDirForPeer(remoteWALDir, peerId),
       getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
       conf, listeners, true, getLogPrefix(peerId), LOG_SUFFIX, eventLoopGroup, channelClass);
   }

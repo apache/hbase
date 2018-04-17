@@ -104,10 +104,17 @@ public interface ReplicationSourceInterface {
 
   /**
    * Get the id that the source is replicating to.
-   *
    * @return peer id
    */
-  String getPeerId();
+  default String getPeerId() {
+    return getPeer().getId();
+  }
+
+  /**
+   * Get the replication peer instance.
+   * @return the replication peer instance
+   */
+  ReplicationPeer getPeer();
 
   /**
    * Get a string representation of the current statistics
@@ -119,8 +126,16 @@ public interface ReplicationSourceInterface {
   /**
    * @return peer enabled or not
    */
-  boolean isPeerEnabled();
+  default boolean isPeerEnabled() {
+    return getPeer().isPeerEnabled();
+  }
 
+  /**
+   * @return whether this is sync replication peer.
+   */
+  default boolean isSyncReplication() {
+    return getPeer().getPeerConfig().isSyncReplication();
+  }
   /**
    * @return active or not
    */
