@@ -20,6 +20,7 @@
 include Java
 
 java_import org.apache.hadoop.hbase.util.Bytes
+java_import org.apache.hadoop.hbase.client.RegionReplicaUtil
 
 # Wrapper for org.apache.hadoop.hbase.client.Table
 
@@ -808,6 +809,7 @@ EOF
     def _get_splits_internal
       locator = @table.getRegionLocator
       locator.getAllRegionLocations
+             .select { |s| RegionReplicaUtil.isDefaultReplica(s.getRegion) }
              .map { |i| Bytes.toStringBinary(i.getRegionInfo.getStartKey) }
              .delete_if { |k| k == '' }
     ensure
