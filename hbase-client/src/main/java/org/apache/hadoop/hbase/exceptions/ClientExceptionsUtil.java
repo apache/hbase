@@ -39,7 +39,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
-import org.apache.hadoop.hbase.quotas.ThrottlingException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.ipc.RemoteException;
 
 @InterfaceAudience.Private
@@ -60,7 +60,7 @@ public final class ClientExceptionsUtil {
 
   public static boolean isSpecialException(Throwable cur) {
     return (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
-        || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException
+        || cur instanceof RegionTooBusyException || cur instanceof RpcThrottlingException
         || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
         || cur instanceof CallQueueTooBigException || cur instanceof CallDroppedException
         || cur instanceof NotServingRegionException || cur instanceof RequestTooBigException);
@@ -73,7 +73,7 @@ public final class ClientExceptionsUtil {
    * - nested exceptions
    *
    * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException /
-   *            ThrottlingException
+   *            RpcThrottlingException
    * @return null if we didn't find the exception, the exception otherwise.
    */
   public static Throwable findException(Object exception) {

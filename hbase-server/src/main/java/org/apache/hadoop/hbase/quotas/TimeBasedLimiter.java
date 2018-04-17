@@ -110,30 +110,30 @@ public class TimeBasedLimiter implements QuotaLimiter {
   }
 
   @Override
-  public void checkQuota(long writeSize, long readSize) throws ThrottlingException {
+  public void checkQuota(long writeSize, long readSize) throws RpcThrottlingException {
     if (!reqsLimiter.canExecute()) {
-      ThrottlingException.throwNumRequestsExceeded(reqsLimiter.waitInterval());
+      RpcThrottlingException.throwNumRequestsExceeded(reqsLimiter.waitInterval());
     }
     if (!reqSizeLimiter.canExecute(writeSize + readSize)) {
-      ThrottlingException.throwRequestSizeExceeded(reqSizeLimiter
+      RpcThrottlingException.throwRequestSizeExceeded(reqSizeLimiter
           .waitInterval(writeSize + readSize));
     }
 
     if (writeSize > 0) {
       if (!writeReqsLimiter.canExecute()) {
-        ThrottlingException.throwNumWriteRequestsExceeded(writeReqsLimiter.waitInterval());
+        RpcThrottlingException.throwNumWriteRequestsExceeded(writeReqsLimiter.waitInterval());
       }
       if (!writeSizeLimiter.canExecute(writeSize)) {
-        ThrottlingException.throwWriteSizeExceeded(writeSizeLimiter.waitInterval(writeSize));
+        RpcThrottlingException.throwWriteSizeExceeded(writeSizeLimiter.waitInterval(writeSize));
       }
     }
 
     if (readSize > 0) {
       if (!readReqsLimiter.canExecute()) {
-        ThrottlingException.throwNumReadRequestsExceeded(readReqsLimiter.waitInterval());
+        RpcThrottlingException.throwNumReadRequestsExceeded(readReqsLimiter.waitInterval());
       }
       if (!readSizeLimiter.canExecute(readSize)) {
-        ThrottlingException.throwReadSizeExceeded(readSizeLimiter.waitInterval(readSize));
+        RpcThrottlingException.throwReadSizeExceeded(readSizeLimiter.waitInterval(readSize));
       }
     }
   }

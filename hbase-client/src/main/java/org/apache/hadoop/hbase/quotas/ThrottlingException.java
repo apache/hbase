@@ -29,7 +29,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * TODO: At some point this will be handled on the client side to prevent
  * operation to go on the server if the waitInterval is grater than the one got
  * as result of this exception.
+ *
+ * @deprecated  replaced by {@link RpcThrottlingException} since hbase-2.0.0.
  */
+@Deprecated
 @InterfaceAudience.Public
 public class ThrottlingException extends QuotaExceededException {
   private static final long serialVersionUID = 1406576492085155743L;

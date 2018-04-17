@@ -520,7 +520,7 @@ public class TestQuotaThrottle {
         }
         count += tables.length;
       }
-    } catch (ThrottlingException e) {
+    } catch (RpcThrottlingException e) {
       LOG.error("put failed after nRetries=" + count, e);
     }
     return count;
@@ -536,7 +536,7 @@ public class TestQuotaThrottle {
         }
         count += tables.length;
       }
-    } catch (ThrottlingException e) {
+    } catch (RpcThrottlingException e) {
       LOG.error("get failed after nRetries=" + count, e);
     }
     return count;
