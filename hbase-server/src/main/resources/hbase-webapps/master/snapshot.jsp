@@ -72,7 +72,7 @@
       <h1>Snapshot "<%= snapshotName %>" does not exist</h1>
     </div>
   </div>
-  <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+  <jsp:include page="redirect.jsp" />
 <% } else { %>
   <div class="row">
       <div class="page-header">
