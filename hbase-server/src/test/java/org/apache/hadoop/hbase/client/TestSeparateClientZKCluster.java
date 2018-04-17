@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.File;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,9 +42,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Category(MediumTests.class)
 public class TestSeparateClientZKCluster {
-  private static final Log LOG = LogFactory.getLog(TestSeparateClientZKCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSeparateClientZKCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final File clientZkDir = new File("/tmp/TestSeparateClientZKCluster");
   private static final int ZK_SESSION_TIMEOUT = 5000;

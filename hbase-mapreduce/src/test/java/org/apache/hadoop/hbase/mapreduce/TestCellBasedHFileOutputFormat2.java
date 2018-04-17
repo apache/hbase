@@ -39,8 +39,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -108,6 +106,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple test for {@link HFileOutputFormat2}.
@@ -132,7 +132,7 @@ public class TestCellBasedHFileOutputFormat2  {
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(TestCellBasedHFileOutputFormat2.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCellBasedHFileOutputFormat2.class);
 
   /**
    * Simple mapper that makes KeyValue output.

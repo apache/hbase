@@ -34,8 +34,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -89,6 +87,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests the table import and table export MR job functionality
@@ -100,7 +100,7 @@ public class TestCellBasedImportExport2 {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCellBasedImportExport2.class);
 
-  private static final Log LOG = LogFactory.getLog(TestCellBasedImportExport2.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCellBasedImportExport2.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] ROW1 = Bytes.toBytesBinary("\\x32row1");
   private static final byte[] ROW2 = Bytes.toBytesBinary("\\x32row2");
