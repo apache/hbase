@@ -22,8 +22,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -45,6 +43,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestDisabledWAL {
 
@@ -55,7 +56,7 @@ public class TestDisabledWAL {
   @Rule
   public TestName name = new TestName();
 
-  private static final Log LOG = LogFactory.getLog(TestDisabledWAL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDisabledWAL.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Table table;
   private TableName tableName;

@@ -21,8 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.RegionTooBusyException;
@@ -31,7 +29,12 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 /**
  * StoreHotnessProtector is designed to help limit the concurrency of puts with dense columns, it
  * does best-effort to avoid exhausting all RS's handlers. When a lot of clients write requests with
@@ -60,7 +63,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  */
 @InterfaceAudience.Private
 public class StoreHotnessProtector {
-  private static final Log LOG = LogFactory.getLog(StoreHotnessProtector.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreHotnessProtector.class);
   private volatile int parallelPutToStoreThreadLimit;
 
   private volatile int parallelPreparePutToStoreThreadLimit;

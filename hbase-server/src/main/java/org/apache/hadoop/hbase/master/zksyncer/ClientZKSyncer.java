@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.util.Threads;
@@ -37,6 +35,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Tracks the target znode(s) on server ZK cluster and synchronize them to client ZK cluster if
  * changed
@@ -45,7 +46,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public abstract class ClientZKSyncer extends ZKListener {
-  private static final Log LOG = LogFactory.getLog(ClientZKSyncer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientZKSyncer.class);
   private final Server server;
   private final ZKWatcher clientZkWatcher;
   // We use queues and daemon threads to synchronize the data to client ZK cluster

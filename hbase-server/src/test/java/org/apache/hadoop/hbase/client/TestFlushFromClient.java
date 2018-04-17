@@ -25,8 +25,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -47,6 +45,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Category({MediumTests.class, ClientTests.class})
 public class TestFlushFromClient {
 
@@ -54,7 +55,7 @@ public class TestFlushFromClient {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestFlushFromClient.class);
 
-  private static final Log LOG = LogFactory.getLog(TestFlushFromClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFlushFromClient.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static AsyncConnection asyncConn;
   private static final byte[][] SPLITS = new byte[][]{Bytes.toBytes("3"), Bytes.toBytes("7")};

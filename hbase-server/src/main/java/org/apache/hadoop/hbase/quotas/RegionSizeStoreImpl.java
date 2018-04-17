@@ -20,12 +20,13 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link RegionSizeStore} implementation backed by a ConcurrentHashMap. We expected similar
@@ -34,7 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class RegionSizeStoreImpl implements RegionSizeStore {
-  private static final Log LOG = LogFactory.getLog(RegionSizeStoreImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionSizeStoreImpl.class);
   private static final long sizeOfEntry = ClassSize.align(
       ClassSize.CONCURRENT_HASHMAP_ENTRY
       + ClassSize.OBJECT + Bytes.SIZEOF_LONG

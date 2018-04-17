@@ -22,14 +22,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.BindException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestClusterPortAssignment {
@@ -38,7 +39,7 @@ public class TestClusterPortAssignment {
       HBaseClassTestRule.forClass(TestClusterPortAssignment.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestClusterPortAssignment.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestClusterPortAssignment.class);
 
   /**
    * Check that we can start an HBase cluster specifying a custom set of

@@ -23,8 +23,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -33,12 +31,15 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A Chore which sends the region size reports on this RegionServer to the Master.
  */
 @InterfaceAudience.Private
 public class RegionSizeReportingChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(RegionSizeReportingChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionSizeReportingChore.class);
 
   static final String REGION_SIZE_REPORTING_CHORE_PERIOD_KEY =
       "hbase.regionserver.quotas.region.size.reporting.chore.period";

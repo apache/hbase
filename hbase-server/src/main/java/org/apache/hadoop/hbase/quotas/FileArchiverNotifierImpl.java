@@ -35,8 +35,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,6 +52,9 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
@@ -69,7 +70,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
  */
 @InterfaceAudience.Private
 public class FileArchiverNotifierImpl implements FileArchiverNotifier {
-  private static final Log LOG = LogFactory.getLog(FileArchiverNotifierImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileArchiverNotifierImpl.class);
   private final Connection conn;
   private final Configuration conf;
   private final FileSystem fs;
