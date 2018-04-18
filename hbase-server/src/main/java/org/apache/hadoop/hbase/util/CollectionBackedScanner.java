@@ -116,13 +116,6 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
     return false;
   }
 
-  /**
-   * @see org.apache.hadoop.hbase.regionserver.KeyValueScanner#getScannerOrder()
-   */
-  @Override
-  public long getScannerOrder() {
-    return 0;
-  }
 
   @Override
   public void close() {

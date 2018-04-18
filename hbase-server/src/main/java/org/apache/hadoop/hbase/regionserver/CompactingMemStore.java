@@ -354,20 +354,16 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   @Override
-  /*
-   * Scanners are ordered from 0 (oldest) to newest in increasing order.
-   */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     MutableSegment activeTmp = active;
     List<? extends Segment> pipelineList = pipeline.getSegments();
     List<? extends Segment> snapshotList = snapshot.getAllSegments();
-    long order = 1L + pipelineList.size() + snapshotList.size();
+    long numberOfSegments = 1L + pipelineList.size() + snapshotList.size();
     // The list of elements in pipeline + the active element + the snapshot segment
-    // The order is the Segment ordinal
-    List<KeyValueScanner> list = createList((int) order);
-    order = addToScanners(activeTmp, readPt, order, list);
-    order = addToScanners(pipelineList, readPt, order, list);
-    addToScanners(snapshotList, readPt, order, list);
+    List<KeyValueScanner> list = createList((int) numberOfSegments);
+    addToScanners(activeTmp, readPt, list);
+    addToScanners(pipelineList, readPt, list);
+    addToScanners(snapshotList, readPt, list);
     return list;
   }
 

@@ -118,16 +118,8 @@ public abstract class Segment {
     return new SegmentScanner(this, readPoint);
   }
 
-  /**
-   * Creates the scanner for the given read point, and a specific order in a list
-   * @return a scanner for the given read point
-   */
-  public KeyValueScanner getScanner(long readPoint, long order) {
-    return new SegmentScanner(this, readPoint, order);
-  }
-
-  public List<KeyValueScanner> getScanners(long readPoint, long order) {
-    return Collections.singletonList(new SegmentScanner(this, readPoint, order));
+  public List<KeyValueScanner> getScanners(long readPoint) {
+    return Collections.singletonList(new SegmentScanner(this, readPoint));
   }
 
   /**

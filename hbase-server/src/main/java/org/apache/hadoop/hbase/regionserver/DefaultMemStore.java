@@ -125,9 +125,8 @@ public class DefaultMemStore extends AbstractMemStore {
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     List<KeyValueScanner> list = new ArrayList<>();
-    long order = snapshot.getNumOfSegments();
-    order = addToScanners(active, readPt, order, list);
-    addToScanners(snapshot.getAllSegments(), readPt, order, list);
+    addToScanners(active, readPt, list);
+    addToScanners(snapshot.getAllSegments(), readPt, list);
     return list;
   }
 

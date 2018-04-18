@@ -56,10 +56,7 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
     super(compactionKVMax);
 
     List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-    // create the list of scanners to traverse over all the data
-    // no dirty reads here as these are immutable segments
-    int order = segments.size();
-    AbstractMemStore.addToScanners(segments, Integer.MAX_VALUE, order, scanners);
+    AbstractMemStore.addToScanners(segments, Integer.MAX_VALUE, scanners);
     // build the scanner based on Query Matcher
     // reinitialize the compacting scanner for each instance of iterator
     compactingScanner = createScanner(store, scanners);
