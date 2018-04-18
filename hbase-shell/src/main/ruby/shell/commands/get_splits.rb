@@ -36,12 +36,14 @@ EOF
         get_splits(table(table))
       end
 
+      # Disable format string because it doesn't work in ruby 1.8
+      # rubocop:disable Style/FormatStringToken
       def get_splits(table)
         splits = table._get_splits_internal()
-        puts(format('Total number of splits = %<numsplits>d',
-                    numsplits: (splits.size + 1)))
+        puts(format('Total number of splits = %d', (splits.size + 1)))
         splits
       end
+      # rubocop:enable Style/FormatStringToken
     end
   end
 end

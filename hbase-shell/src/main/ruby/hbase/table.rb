@@ -718,14 +718,19 @@ EOF
 
     #----------------------------------------------------------------------------------------------
     # Get the split points for the table
+    # Disable multiline block chain because we need it to stay under width
+    # in ruby 1.8.
+    # rubocop:disable Style/MultilineBlockChain
     def _get_splits_internal()
-      locator = @table.getRegionLocator()
-      locator.getAllRegionLocations()
-             .map { |i| Bytes.toStringBinary(i.getRegionInfo().getStartKey) }
-             .delete_if { |k| k == "" }
+      locator = @table.getRegionLocator
+      locator.getAllRegionLocations.map do |i|
+        Bytes.toStringBinary(i.getRegionInfo.getStartKey)
+      end.delete_if { |k| k == '' }
     ensure
       locator.close()
     end
   end
+  # rubocop:enable Style/MultilineBlockChain
+
   # rubocop:enable Metrics/ClassLength
 end
