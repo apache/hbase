@@ -642,6 +642,12 @@ function hbaseanti_patchfile
     ((result=result+1))
   fi
 
+  warnings=$(${GREP} -cE 'org.apache.commons.logging.Log(Factory|;)' "${patchfile}")
+  if [[ ${warnings} -gt 0 ]]; then
+    add_vote_table -1 hbaseanti "" "The patch appears to use commons-logging instead of slf4j."
+    ((result=result+1))
+  fi
+
   if [[ ${result} -gt 0 ]]; then
     return 1
   fi
