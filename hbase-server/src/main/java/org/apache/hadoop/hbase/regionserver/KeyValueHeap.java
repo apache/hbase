@@ -415,13 +415,6 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return this.heap;
   }
 
-  /**
-   * @see KeyValueScanner#getScannerOrder()
-   */
-  @Override
-  public long getScannerOrder() {
-    return 0;
-  }
 
   @VisibleForTesting
   KeyValueScanner getCurrentForTesting() {

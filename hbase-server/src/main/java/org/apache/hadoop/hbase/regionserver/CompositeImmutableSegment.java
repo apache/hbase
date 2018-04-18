@@ -120,19 +120,11 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
-  /**
-   * Creates the scanner for the given read point, and a specific order in a list
-   * @return a scanner for the given read point
-   */
-  @Override
-  public KeyValueScanner getScanner(long readPoint, long order) {
-    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
-  }
 
   @Override
-  public List<KeyValueScanner> getScanners(long readPoint, long order) {
+  public List<KeyValueScanner> getScanners(long readPoint) {
     List<KeyValueScanner> list = new ArrayList<>(segments.size());
-    AbstractMemStore.addToScanners(segments, readPoint, order, list);
+    AbstractMemStore.addToScanners(segments, readPoint, list);
     return list;
   }
 

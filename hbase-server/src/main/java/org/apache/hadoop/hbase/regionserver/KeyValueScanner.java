@@ -73,13 +73,13 @@ public interface KeyValueScanner extends Shipper, Closeable {
   boolean reseek(Cell key) throws IOException;
 
   /**
-   * Get the order of this KeyValueScanner. This is only relevant for StoreFileScanners and
-   * MemStoreScanners (other scanners simply return 0). This is required for comparing multiple
-   * files to find out which one has the latest data. StoreFileScanners are ordered from 0
-   * (oldest) to newest in increasing order. MemStoreScanner gets LONG.max since it always
-   * contains freshest data.
+   * Get the order of this KeyValueScanner. This is only relevant for StoreFileScanners.
+   * This is required for comparing multiple files to find out which one has the latest
+   * data. StoreFileScanners are ordered from 0 (oldest) to newest in increasing order.
    */
-  long getScannerOrder();
+  default long getScannerOrder(){
+    return 0;
+  }
 
   /**
    * Close the KeyValue scanner.

@@ -35,12 +35,6 @@ import org.apache.hadoop.hbase.client.Scan;
 @InterfaceAudience.Private
 public class SegmentScanner implements KeyValueScanner {
 
-  /**
-   * Order of this scanner relative to other scanners. See
-   * {@link KeyValueScanner#getScannerOrder()}.
-   */
-  private long scannerOrder;
-  private static final long DEFAULT_SCANNER_ORDER = Long.MAX_VALUE;
 
   // the observed structure
   protected final Segment segment;
@@ -61,15 +55,11 @@ public class SegmentScanner implements KeyValueScanner {
   // flag to indicate if this scanner is closed
   protected boolean closed = false;
 
-  protected SegmentScanner(Segment segment, long readPoint) {
-    this(segment, readPoint, DEFAULT_SCANNER_ORDER);
-  }
 
   /**
-   * @param scannerOrder see {@link KeyValueScanner#getScannerOrder()}.
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
    */
-  protected SegmentScanner(Segment segment, long readPoint, long scannerOrder) {
+  protected SegmentScanner(Segment segment, long readPoint) {
     this.segment = segment;
     this.readPoint = readPoint;
     //increase the reference count so the underlying structure will not be de-allocated
@@ -77,7 +67,6 @@ public class SegmentScanner implements KeyValueScanner {
     iter = segment.iterator();
     // the initialization of the current is required for working with heap of SegmentScanners
     updateCurrent();
-    this.scannerOrder = scannerOrder;
     if (current == null) {
       // nothing to fetch from this scanner
       close();
@@ -252,13 +241,6 @@ public class SegmentScanner implements KeyValueScanner {
     }
   }
 
-  /**
-   * @see KeyValueScanner#getScannerOrder()
-   */
-  @Override
-  public long getScannerOrder() {
-    return scannerOrder;
-  }
 
   /**
    * Close the KeyValue scanner.
