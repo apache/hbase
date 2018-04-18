@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -84,13 +87,35 @@ public class TestSyncReplicationStandBy extends SyncReplicationTestBase {
       assertDisallow(table,
         t -> t.get(Arrays.asList(new Get(Bytes.toBytes("row")), new Get(Bytes.toBytes("row1")))));
       assertDisallow(table,
-        t -> t
-          .put(Arrays.asList(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")),
+        t -> t.put(
+          Arrays.asList(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")),
             new Put(Bytes.toBytes("row1")).addColumn(CF, CQ, Bytes.toBytes("row1")))));
       assertDisallow(table, t -> t.mutateRow(new RowMutations(Bytes.toBytes("row"))
-        .add((Mutation) new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")))));
+          .add((Mutation) new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")))));
     }
     // We should still allow replication writes
     writeAndVerifyReplication(UTIL1, UTIL2, 0, 100);
+
+    // Remove the peers in ACTIVE & STANDBY cluster.
+    FileSystem fs2 = remoteWALDir2.getFileSystem(UTIL2.getConfiguration());
+    Assert.assertTrue(fs2.exists(getRemoteWALDir(remoteWALDir2, PEER_ID)));
+
+    UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
+      SyncReplicationState.DOWNGRADE_ACTIVE);
+    Assert.assertFalse(fs2.exists(getRemoteWALDir(remoteWALDir2, PEER_ID)));
+    Assert.assertFalse(fs2.exists(getReplayRemoteWALs(remoteWALDir2, PEER_ID)));
+
+    UTIL1.getAdmin().removeReplicationPeer(PEER_ID);
+    verifyRemovedPeer(PEER_ID, remoteWALDir1, UTIL1);
+
+    // Peer remoteWAL dir will be renamed to replay WAL dir when transit from S to DA, and the
+    // replay WAL dir will be removed after replaying all WALs, so create a emtpy dir here to test
+    // whether the removeReplicationPeer would remove the remoteWAL dir.
+    fs2.create(getRemoteWALDir(remoteWALDir2, PEER_ID));
+    fs2.create(getReplayRemoteWALs(remoteWALDir2, PEER_ID));
+    Assert.assertTrue(fs2.exists(getRemoteWALDir(remoteWALDir2, PEER_ID)));
+    Assert.assertTrue(fs2.exists(getReplayRemoteWALs(remoteWALDir2, PEER_ID)));
+    UTIL2.getAdmin().removeReplicationPeer(PEER_ID);
+    verifyRemovedPeer(PEER_ID, remoteWALDir2, UTIL2);
   }
 }

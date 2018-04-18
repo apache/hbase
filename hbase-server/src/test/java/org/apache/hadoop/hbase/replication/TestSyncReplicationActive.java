@@ -58,7 +58,7 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     verifyNotReplicatedThroughRegion(UTIL2, 0, 100);
 
     // Ensure that there's no cluster id in remote log entries.
-    verifyNoClusterIdInRemoteLog(UTIL2, PEER_ID);
+    verifyNoClusterIdInRemoteLog(UTIL2, remoteWALDir2, PEER_ID);
 
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);
@@ -84,12 +84,9 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     write(UTIL2, 200, 300);
   }
 
-  private void verifyNoClusterIdInRemoteLog(HBaseTestingUtility utility, String peerId)
-      throws Exception {
+  private void verifyNoClusterIdInRemoteLog(HBaseTestingUtility utility, Path remoteDir,
+      String peerId) throws Exception {
     FileSystem fs2 = utility.getTestFileSystem();
-    Path remoteDir =
-        new Path(utility.getMiniHBaseCluster().getMaster().getMasterFileSystem().getRootDir(),
-            "remoteWALs").makeQualified(fs2.getUri(), fs2.getWorkingDirectory());
     FileStatus[] files = fs2.listStatus(new Path(remoteDir, peerId));
     Assert.assertTrue(files.length > 0);
     for (FileStatus file : files) {

@@ -115,6 +115,14 @@ public class ReplaySyncReplicationWALManager {
     }
   }
 
+  public void removePeerRemoteWALs(String peerId) throws IOException {
+    Path remoteWALDir = getPeerRemoteWALDir(peerId);
+    if (fs.exists(remoteWALDir) && !fs.delete(remoteWALDir, true)) {
+      throw new IOException(
+          "Failed to remove remote WALs dir " + remoteWALDir + " for peer id=" + peerId);
+    }
+  }
+
   public void initPeerWorkers(String peerId) {
     BlockingQueue<ServerName> servers = new LinkedBlockingQueue<>();
     services.getServerManager().getOnlineServers().keySet()

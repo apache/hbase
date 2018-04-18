@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,6 +72,10 @@ public class SyncReplicationTestBase {
 
   protected static String PEER_ID = "1";
 
+  protected static Path remoteWALDir1;
+
+  protected static Path remoteWALDir2;
+
   private static void initTestingUtility(HBaseTestingUtility util, String zkParent) {
     util.setZkCluster(ZK_UTIL.getZkCluster());
     Configuration conf = util.getConfiguration();
@@ -104,11 +109,11 @@ public class SyncReplicationTestBase {
     UTIL2.getAdmin().createTable(td);
     FileSystem fs1 = UTIL1.getTestFileSystem();
     FileSystem fs2 = UTIL2.getTestFileSystem();
-    Path remoteWALDir1 =
-      new Path(UTIL1.getMiniHBaseCluster().getMaster().getMasterFileSystem().getRootDir(),
+    remoteWALDir1 =
+      new Path(UTIL1.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
         "remoteWALs").makeQualified(fs1.getUri(), fs1.getWorkingDirectory());
-    Path remoteWALDir2 =
-      new Path(UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem().getRootDir(),
+    remoteWALDir2 =
+      new Path(UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
         "remoteWALs").makeQualified(fs2.getUri(), fs2.getWorkingDirectory());
     UTIL1.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
@@ -188,7 +193,37 @@ public class SyncReplicationTestBase {
 
   protected final Path getRemoteWALDir(MasterFileSystem mfs, String peerId) {
     Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
-    return new Path(remoteWALDir, PEER_ID);
+    return getRemoteWALDir(remoteWALDir, peerId);
+  }
+
+  protected Path getRemoteWALDir(Path remoteWALDir, String peerId) {
+    return new Path(remoteWALDir, peerId);
+  }
+
+  protected Path getReplayRemoteWALs(Path remoteWALDir, String peerId) {
+    return new Path(remoteWALDir, peerId + "-replay");
+  }
+
+  protected void verifyRemovedPeer(String peerId, Path remoteWALDir, HBaseTestingUtility utility)
+      throws Exception {
+    ReplicationPeerStorage rps = ReplicationStorageFactory
+        .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
+    try {
+      rps.getPeerSyncReplicationState(peerId);
+      fail("Should throw exception when get the sync replication state of a removed peer.");
+    } catch (NullPointerException e) {
+      // ignore.
+    }
+    try {
+      rps.getPeerNewSyncReplicationState(peerId);
+      fail("Should throw exception when get the new sync replication state of a removed peer");
+    } catch (NullPointerException e) {
+      // ignore.
+    }
+    try (FileSystem fs = utility.getTestFileSystem()) {
+      Assert.assertFalse(fs.exists(getRemoteWALDir(remoteWALDir, peerId)));
+      Assert.assertFalse(fs.exists(getReplayRemoteWALs(remoteWALDir, peerId)));
+    }
   }
 
   protected void verifyReplicationRequestRejection(HBaseTestingUtility utility,
