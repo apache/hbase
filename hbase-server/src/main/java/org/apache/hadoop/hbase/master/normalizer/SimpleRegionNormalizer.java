@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -61,11 +62,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 public class SimpleRegionNormalizer implements RegionNormalizer {
 
   private static final Logger LOG = LoggerFactory.getLogger(SimpleRegionNormalizer.class);
-  private static final int MIN_REGION_COUNT = 3;
+  private int minRegionCount;
   private MasterServices masterServices;
   private MasterRpcServices masterRpcServices;
   private static long[] skippedCount = new long[NormalizationPlan.PlanType.values().length];
 
+  public SimpleRegionNormalizer() {
+    minRegionCount = HBaseConfiguration.create().getInt("hbase.normalizer.min.region.count", 3);
+  }
   /**
    * Set the master service.
    * @param masterServices inject instance of MasterServices
@@ -131,10 +135,10 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       getRegionsOfTable(table);
 
     //TODO: should we make min number of regions a config param?
-    if (tableRegions == null || tableRegions.size() < MIN_REGION_COUNT) {
+    if (tableRegions == null || tableRegions.size() < minRegionCount) {
       int nrRegions = tableRegions == null ? 0 : tableRegions.size();
       LOG.debug("Table " + table + " has " + nrRegions + " regions, required min number"
-        + " of regions for normalizer to run is " + MIN_REGION_COUNT + ", not running normalizer");
+        + " of regions for normalizer to run is " + minRegionCount + ", not running normalizer");
       return null;
     }
 

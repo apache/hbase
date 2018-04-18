@@ -617,6 +617,11 @@ possible configurations would overwhelm and obscure the important.
     <description>Period at which the region normalizer runs in the Master.</description>
   </property>
   <property>
+    <name>hbase.normalizer.min.region.count</name>
+    <value>3</value>
+    <description>configure the minimum number of regions</description>
+  </property>
+  <property>
     <name>hbase.regions.slop</name>
     <value>0.001</value>
     <description>Rebalance if any regionserver has average + (average * slop) regions.
