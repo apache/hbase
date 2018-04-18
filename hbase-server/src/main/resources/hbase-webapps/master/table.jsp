@@ -764,8 +764,8 @@ Actions:
     <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn" />
   </td>
   <td style="text-align: center;">
-    <input type="text" name="left" size="40" placeholder="Region Key (required)" />
-    <input type="text" name="right" size="40" placeholder="Region Key (required)" />
+    <input type="text" name="left" size="40" required="required" placeholder="Region Key (required)" />
+    <input type="text" name="right" size="40" required="required" placeholder="Region Key (required)" />
   </td>
   <td>
     This action will merge two regions of the table, Merge requests for
