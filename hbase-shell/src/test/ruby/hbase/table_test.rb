@@ -186,7 +186,19 @@ module Hbase
       @test_table.append("123", 'x:cnt2', '123')
       assert_equal("123123", @test_table._append_internal("123", 'x:cnt2', '123'))
     end
+
+    define_test 'append should work without qualifier' do
+      @test_table.append('1001', 'x', '123')
+      assert_equal('123321', @test_table._append_internal('1001', 'x', '321'))
+    end
+
     #-------------------------------------------------------------------------------
+    define_test 'incr should work without qualifier' do
+      @test_table.incr('1010', 'x', 123)
+      assert_equal(123, @test_table._get_counter_internal('1010', 'x'))
+      @test_table.incr('1010', 'x', 123)
+      assert_equal(246, @test_table._get_counter_internal('1010', 'x'))
+    end
 
     define_test "get_counter should work with integer keys" do
       @test_table.incr(12345, 'x:cnt')
