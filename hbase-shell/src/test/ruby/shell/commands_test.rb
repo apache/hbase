@@ -37,6 +37,24 @@ class ShellCommandsTest < Test::Unit::TestCase
 end
 
 ##
+# Tests whether erroneous command input suggests the right way to invoke
+# help method of the command
+class ShellCommandsErrorTest < Test::Unit::TestCase
+  include Hbase::TestHelpers
+
+  def setup
+    setup_hbase
+    @shell.interactive = true
+  end
+
+  define_test 'Erroneous command input should suggest help' do
+    name = :create
+    output = capture_stdout { @shell.command(name) }
+    assert_match(/For usage try 'help "#{name}"'/, output)
+  end
+end
+
+##
 # Tests commands from the point of view of the shell to validate
 # that the error messages returned to the user are correct
 

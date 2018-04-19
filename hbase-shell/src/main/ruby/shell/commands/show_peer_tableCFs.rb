@@ -34,6 +34,10 @@ module Shell
         puts peer_table_cfs
         peer_table_cfs
       end
+
+      def command_name
+        'show_peer_tableCFs'
+      end
     end
   end
 end
