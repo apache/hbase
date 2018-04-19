@@ -35,6 +35,12 @@ public interface MetricsHBaseServerWrapper {
 
   int getActiveRpcHandlerCount();
 
+  int getActiveGeneralRpcHandlerCount();
+
+  int getActivePriorityRpcHandlerCount();
+
+  int getActiveReplicationRpcHandlerCount();
+
   long getNumGeneralCallsDropped();
 
   long getNumLifoModeSwitches();

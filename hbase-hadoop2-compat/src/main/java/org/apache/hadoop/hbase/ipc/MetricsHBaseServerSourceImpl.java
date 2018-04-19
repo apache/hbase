@@ -156,6 +156,14 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
               NUM_OPEN_CONNECTIONS_DESC), wrapper.getNumOpenConnections())
           .addGauge(Interns.info(NUM_ACTIVE_HANDLER_NAME,
               NUM_ACTIVE_HANDLER_DESC), wrapper.getActiveRpcHandlerCount())
+          .addGauge(Interns.info(NUM_ACTIVE_GENERAL_HANDLER_NAME, NUM_ACTIVE_GENERAL_HANDLER_DESC),
+            wrapper.getActiveGeneralRpcHandlerCount())
+          .addGauge(
+            Interns.info(NUM_ACTIVE_PRIORITY_HANDLER_NAME, NUM_ACTIVE_PRIORITY_HANDLER_DESC),
+            wrapper.getActivePriorityRpcHandlerCount())
+          .addGauge(
+            Interns.info(NUM_ACTIVE_REPLICATION_HANDLER_NAME, NUM_ACTIVE_REPLICATION_HANDLER_DESC),
+            wrapper.getActiveReplicationRpcHandlerCount())
           .addCounter(Interns.info(NUM_GENERAL_CALLS_DROPPED_NAME,
               NUM_GENERAL_CALLS_DROPPED_DESC), wrapper.getNumGeneralCallsDropped())
           .addCounter(Interns.info(NUM_LIFO_MODE_SWITCHES_NAME,

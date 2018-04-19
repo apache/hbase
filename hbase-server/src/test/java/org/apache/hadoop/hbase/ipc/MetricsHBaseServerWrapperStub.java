@@ -50,6 +50,21 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   }
 
   @Override
+  public int getActiveGeneralRpcHandlerCount() {
+    return 201;
+  }
+
+  @Override
+  public int getActivePriorityRpcHandlerCount() {
+    return 202;
+  }
+
+  @Override
+  public int getActiveReplicationRpcHandlerCount() {
+    return 203;
+  }
+
+  @Override
   public long getNumGeneralCallsDropped() {
     return 3;
   }
