@@ -21,14 +21,25 @@ require 'shell/formatter'
 
 module Shell
   module Commands
+    # rubocop:disable Metrics/ClassLength
     class Command
       def initialize(shell)
         @shell = shell
       end
 
+      # gets the name that an operator would type into the shell
+
+      def command_name
+        klass_name = self.class.name.split('::').last
+        command = klass_name.gsub(/([^\^])([A-Z])/, '\1_\2').downcase
+        command
+      end
+
       # wrap an execution of cmd to catch hbase exceptions
       # cmd - command name to execute
       # args - arguments to pass to the command
+
+      # rubocop:disable Metrics/AbcSize
       def command_safe(debug, cmd = :command, *args)
         # Commands can overwrite start_time to skip time used in some kind of setup.
         # See count.rb for example.
@@ -48,7 +59,7 @@ module Shell
           puts "ERROR: #{rootCause}"
           puts "Backtrace: #{rootCause.backtrace.join("\n           ")}" if debug
           puts
-          puts help
+          puts "For usage try 'help \"#{command_name}\"'"
           puts
         else
           raise rootCause
@@ -58,6 +69,7 @@ module Shell
         @end_time ||= Time.now
         formatter.output_str(format('Took %.4f seconds', @end_time - @start_time))
       end
+      # rubocop:enable Metrics/AbcSize
 
       # Convenience functions to get different admins
       # Returns HBase::Admin ruby class.
@@ -164,5 +176,6 @@ module Shell
       # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
       # rubocop:enable Metrics/MethodLength, Metrics/PerceivedComplexity
     end
+    # rubocop:enable Metrics/ClassLength
   end
 end

@@ -35,6 +35,10 @@ EOF
       def command(id, table_cfs)
         replication_admin.remove_peer_tableCFs(id, table_cfs)
       end
+
+      def command_name
+        'remove_peer_tableCFs'
+      end
     end
   end
 end

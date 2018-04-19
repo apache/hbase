@@ -46,6 +46,10 @@ module Shell
       def command(id, exclude_peer_table_cfs = nil)
         replication_admin.set_peer_exclude_tableCFs(id, exclude_peer_table_cfs)
       end
+
+      def command_name
+        'set_peer_exclude_tableCFs'
+      end
     end
   end
 end

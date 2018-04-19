@@ -34,6 +34,10 @@ EOF
       def command(id, table_cfs)
         replication_admin.append_peer_tableCFs(id, table_cfs)
       end
+
+      def command_name
+        'append_peer_tableCFs'
+      end
     end
   end
 end
