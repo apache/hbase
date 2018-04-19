@@ -34,7 +34,8 @@
 # export HBASE_HEAPSIZE=1G
 
 # Uncomment below if you intend to use off heap cache. For example, to allocate 8G of 
-# offheap, set the value to "8G".
+# offheap, set the value to "8G". See http://hbase.apache.org/book.html#direct.memory
+# in the refguide for guidance setting this config.
 # export HBASE_OFFHEAPSIZE=1G
 
 # Extra Java runtime options.
