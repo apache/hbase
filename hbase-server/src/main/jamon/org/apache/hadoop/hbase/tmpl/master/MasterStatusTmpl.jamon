@@ -332,6 +332,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     <td>Root node of this cluster in ZK.</td>
                 </tr>
                 <tr>
+                    <td>Cluster Key</td>
+                    <td> <% formatZKString() %>:<% master.getZooKeeper().getZNodePaths().baseZNode %></td>
+                    <td>Key to add this cluster as a peer for replication. Use 'help "add_peer"' in the shell for details.</td>
+                </tr>
+                <tr>
                     <td>HBase Root Directory</td>
                     <td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td>
                     <td>Location of HBase home directory</td>
