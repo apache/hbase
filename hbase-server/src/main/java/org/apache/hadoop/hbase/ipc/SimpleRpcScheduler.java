@@ -175,9 +175,23 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
   @Override
   public int getActiveRpcHandlerCount() {
-    return callExecutor.getActiveHandlerCount() +
-           (priorityExecutor == null ? 0 : priorityExecutor.getActiveHandlerCount()) +
-           (replicationExecutor == null ? 0 : replicationExecutor.getActiveHandlerCount());
+    return callExecutor.getActiveHandlerCount() + getActivePriorityRpcHandlerCount()
+        + getActiveReplicationRpcHandlerCount();
+  }
+
+  @Override
+  public int getActiveGeneralRpcHandlerCount() {
+    return callExecutor.getActiveHandlerCount();
+  }
+
+  @Override
+  public int getActivePriorityRpcHandlerCount() {
+    return (priorityExecutor == null ? 0 : priorityExecutor.getActiveHandlerCount());
+  }
+
+  @Override
+  public int getActiveReplicationRpcHandlerCount() {
+    return (replicationExecutor == null ? 0 : replicationExecutor.getActiveHandlerCount());
   }
 
   @Override

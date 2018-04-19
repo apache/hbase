@@ -72,7 +72,13 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String NUM_OPEN_CONNECTIONS_NAME = "numOpenConnections";
   String NUM_OPEN_CONNECTIONS_DESC = "Number of open connections.";
   String NUM_ACTIVE_HANDLER_NAME = "numActiveHandler";
-  String NUM_ACTIVE_HANDLER_DESC = "Number of active rpc handlers.";
+  String NUM_ACTIVE_HANDLER_DESC = "Total number of active rpc handlers.";
+  String NUM_ACTIVE_GENERAL_HANDLER_NAME = "numActiveGeneralHandler";
+  String NUM_ACTIVE_GENERAL_HANDLER_DESC = "Number of active general rpc handlers.";
+  String NUM_ACTIVE_PRIORITY_HANDLER_NAME = "numActivePriorityHandler";
+  String NUM_ACTIVE_PRIORITY_HANDLER_DESC = "Number of active priority rpc handlers.";
+  String NUM_ACTIVE_REPLICATION_HANDLER_NAME = "numActiveReplicationHandler";
+  String NUM_ACTIVE_REPLICATION_HANDLER_DESC = "Number of active replication rpc handlers.";
   String NUM_ACTIVE_WRITE_HANDLER_NAME = "numActiveWriteHandler";
   String NUM_ACTIVE_WRITE_HANDLER_DESC = "Number of active write rpc handlers.";
   String NUM_ACTIVE_READ_HANDLER_NAME = "numActiveReadHandler";

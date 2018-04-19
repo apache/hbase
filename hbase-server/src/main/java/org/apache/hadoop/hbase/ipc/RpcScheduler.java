@@ -74,8 +74,17 @@ public abstract class RpcScheduler {
   /** Retrieves length of the replication queue for metrics. */
   public abstract int getReplicationQueueLength();
 
-  /** Retrieves the number of active handler. */
+  /** Retrieves the total number of active handler. */
   public abstract int getActiveRpcHandlerCount();
+
+  /** Retrieves the number of active general handler. */
+  public abstract int getActiveGeneralRpcHandlerCount();
+
+  /** Retrieves the number of active priority handler. */
+  public abstract int getActivePriorityRpcHandlerCount();
+
+  /** Retrieves the number of active replication handler. */
+  public abstract int getActiveReplicationRpcHandlerCount();
 
   /**
    * If CoDel-based RPC executors are used, retrieves the number of Calls that were dropped
