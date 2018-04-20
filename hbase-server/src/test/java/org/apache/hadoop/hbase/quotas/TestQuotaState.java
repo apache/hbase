@@ -203,6 +203,34 @@ public class TestQuotaState {
     assertNoopLimiter(quotaInfo.getTableLimiter(UNKNOWN_TABLE_NAME));
   }
 
+  @Test(timeout = 60000)
+  public void testTableThrottleWithBatch() {
+    final TableName TABLE_A = TableName.valueOf("TableA");
+    final int TABLE_A_THROTTLE_1 = 3;
+    final long LAST_UPDATE_1 = 10;
+
+    UserQuotaState quotaInfo = new UserQuotaState();
+    assertEquals(0, quotaInfo.getLastUpdate());
+    assertTrue(quotaInfo.isBypass());
+
+    // Add A table limiters
+    UserQuotaState otherQuotaState = new UserQuotaState(LAST_UPDATE_1);
+    otherQuotaState.setQuotas(TABLE_A, buildReqNumThrottle(TABLE_A_THROTTLE_1));
+    assertEquals(LAST_UPDATE_1, otherQuotaState.getLastUpdate());
+    assertFalse(otherQuotaState.isBypass());
+
+    quotaInfo.update(otherQuotaState);
+    assertEquals(LAST_UPDATE_1, quotaInfo.getLastUpdate());
+    assertFalse(quotaInfo.isBypass());
+    QuotaLimiter limiter = quotaInfo.getTableLimiter(TABLE_A);
+    try {
+      limiter.checkQuota(TABLE_A_THROTTLE_1 + 1, TABLE_A_THROTTLE_1 + 1, 0, 0);
+      fail("Should have thrown RpcThrottlingException");
+    } catch (RpcThrottlingException e) {
+      // expected
+    }
+  }
+
   private Quotas buildReqNumThrottle(final long limit) {
     return Quotas.newBuilder()
             .setThrottle(Throttle.newBuilder()
@@ -214,8 +242,8 @@ public class TestQuotaState {
   private void assertThrottleException(final QuotaLimiter limiter, final int availReqs) {
     assertNoThrottleException(limiter, availReqs);
     try {
-      limiter.checkQuota(1, 1);
-      fail("Should have thrown ThrottlingException");
+      limiter.checkQuota(1, 1, 0, 0);
+      fail("Should have thrown RpcThrottlingException");
     } catch (RpcThrottlingException e) {
       // expected
     }
@@ -224,11 +252,11 @@ public class TestQuotaState {
   private void assertNoThrottleException(final QuotaLimiter limiter, final int availReqs) {
     for (int i = 0; i < availReqs; ++i) {
       try {
-        limiter.checkQuota(1, 1);
+        limiter.checkQuota(1, 1, 0, 0);
       } catch (RpcThrottlingException e) {
-        fail("Unexpected ThrottlingException after " + i + " requests. limit=" + availReqs);
+        fail("Unexpected RpcThrottlingException after " + i + " requests. limit=" + availReqs);
       }
-      limiter.grabQuota(1, 1);
+      limiter.grabQuota(1, 1, 0, 0);
     }
   }
 
