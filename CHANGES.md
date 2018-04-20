@@ -1104,6 +1104,10 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-20464](https://issues.apache.org/jira/browse/HBASE-20464) | Disable IMC |  Major | in-memory-compaction |
+| [HBASE-20442](https://issues.apache.org/jira/browse/HBASE-20442) | clean up incorrect use of commons-collections 3 |  Major | dependencies, thirdparty |
+| [HBASE-20440](https://issues.apache.org/jira/browse/HBASE-20440) | Clean up incorrect use of commons-lang 2.y |  Major | dependencies |
+| [HBASE-20439](https://issues.apache.org/jira/browse/HBASE-20439) | Clean up incorrect use of commons-logging in hbase-server |  Minor | dependencies, logging |
 | [HBASE-20398](https://issues.apache.org/jira/browse/HBASE-20398) | Redirect doesn't work on web UI |  Major | UI |
 | [HBASE-20399](https://issues.apache.org/jira/browse/HBASE-20399) | Fix merge layout |  Minor | UI |
 | [HBASE-20233](https://issues.apache.org/jira/browse/HBASE-20233) | [metrics] Ill-formatted numRegions metric in "Hadoop:service=HBase,name=RegionServer,sub=Regions" mbean |  Trivial | metrics, Operability |
