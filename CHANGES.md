@@ -41,13 +41,12 @@ may have to bulk import old-style CHANGES.txt on to the end in a code
 comment to preserve continuity of the CHANGELOG.
 -->
 
-## Release 2.0.0 - Unreleased (as of 2018-04-06)
+## Release 2.0.0 - Unreleased (as of 2018-04-20)
 
 ### INCOMPATIBLE CHANGES:
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
-| [HBASE-20149](https://issues.apache.org/jira/browse/HBASE-20149) | Purge dev javadoc from bin tarball (or make a separate tarball of javadoc) | Critical | build, community, documentation |
 | [HBASE-20276](https://issues.apache.org/jira/browse/HBASE-20276) | [shell] Revert shell REPL change and document |  Blocker | documentation, shell |
 | [HBASE-16459](https://issues.apache.org/jira/browse/HBASE-16459) | Remove unused hbase shell --format option |  Trivial | shell |
 | [HBASE-19128](https://issues.apache.org/jira/browse/HBASE-19128) | Purge Distributed Log Replay from codebase, configurations, text; mark the feature as unsupported, broken. |  Major | documentation |
@@ -321,6 +320,11 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-19994](https://issues.apache.org/jira/browse/HBASE-19994) | Create a new class for RPC throttling exception, make it retryable. |  Major | . |
+| [HBASE-20409](https://issues.apache.org/jira/browse/HBASE-20409) | Set hbase.client.meta.operation.timeout in TestClientOperationTimeout |  Trivial | test |
+| [HBASE-17449](https://issues.apache.org/jira/browse/HBASE-17449) | Add explicit document on different timeout settings |  Critical | documentation |
+| [HBASE-18784](https://issues.apache.org/jira/browse/HBASE-18784) | Use of filesystem that requires hflush / hsync / append / etc should query outputstream capabilities |  Major | Filesystem Integration |
+| [HBASE-15466](https://issues.apache.org/jira/browse/HBASE-15466) | precommit should not run all java goals when given a docs-only patch |  Major | build |
 | [HBASE-20135](https://issues.apache.org/jira/browse/HBASE-20135) | NullPointerException during reading bloom filter when upgraded from hbase-1 to hbase-2 |  Minor | . |
 | [HBASE-17165](https://issues.apache.org/jira/browse/HBASE-17165) | Add retry to LoadIncrementalHFiles tool |  Critical | hbase, HFile, tooling |
 | [HBASE-18467](https://issues.apache.org/jira/browse/HBASE-18467) | nightly job needs to run all stages and then comment on jira |  Critical | community, test |
@@ -1100,6 +1104,28 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-20398](https://issues.apache.org/jira/browse/HBASE-20398) | Redirect doesn't work on web UI |  Major | UI |
+| [HBASE-20399](https://issues.apache.org/jira/browse/HBASE-20399) | Fix merge layout |  Minor | UI |
+| [HBASE-20233](https://issues.apache.org/jira/browse/HBASE-20233) | [metrics] Ill-formatted numRegions metric in "Hadoop:service=HBase,name=RegionServer,sub=Regions" mbean |  Trivial | metrics, Operability |
+| [HBASE-20410](https://issues.apache.org/jira/browse/HBASE-20410) | upgrade protoc compiler to 3.5.1-1 |  Critical | build, dependencies, Protobufs |
+| [HBASE-20224](https://issues.apache.org/jira/browse/HBASE-20224) | Web UI is broken in standalone mode |  Blocker | UI, Usability |
+| [HBASE-20394](https://issues.apache.org/jira/browse/HBASE-20394) | HBase over rides the value of HBASE\_OPTS (if any) set by client |  Minor | Operability |
+| [HBASE-20397](https://issues.apache.org/jira/browse/HBASE-20397) | Make it more explicit that monkey.properties is found on CLASSPATH |  Trivial | . |
+| [HBASE-20376](https://issues.apache.org/jira/browse/HBASE-20376) | RowCounter and CellCounter documentations are incorrect |  Minor | documentation, mapreduce |
+| [HBASE-20330](https://issues.apache.org/jira/browse/HBASE-20330) | ProcedureExecutor.start() gets stuck in recover lease on store. |  Major | proc-v2 |
+| [HBASE-20350](https://issues.apache.org/jira/browse/HBASE-20350) | NullPointerException in Scanner during close() |  Blocker | . |
+| [HBASE-20280](https://issues.apache.org/jira/browse/HBASE-20280) | Fix possibility of deadlocking in refreshFileConnections when prefetch is enabled |  Major | BucketCache |
+| [HBASE-20310](https://issues.apache.org/jira/browse/HBASE-20310) | [hbck] bin/hbase hbck -metaonly shows false inconsistency on HBase 2 |  Major | hbck |
+| [HBASE-20219](https://issues.apache.org/jira/browse/HBASE-20219) | An error occurs when scanning with reversed=true and loadColumnFamiliesOnDemand=true |  Critical | phoenix |
+| [HBASE-20358](https://issues.apache.org/jira/browse/HBASE-20358) | Fix bin/hbase thrift usage text |  Minor | . |
+| [HBASE-20382](https://issues.apache.org/jira/browse/HBASE-20382) | If RSGroups not enabled, rsgroup.jsp prints stack trace |  Major | rsgroup, UI |
+| [HBASE-20385](https://issues.apache.org/jira/browse/HBASE-20385) | Purge md5-making from our little make\_rc.sh script |  Minor | . |
+| [HBASE-20384](https://issues.apache.org/jira/browse/HBASE-20384) | [AMv2] Logging format improvements; use encoded name rather than full region name marking  transitions |  Minor | . |
+| [HBASE-20182](https://issues.apache.org/jira/browse/HBASE-20182) | Can not locate region after split and merge |  Blocker | Region Assignment |
+| [HBASE-20363](https://issues.apache.org/jira/browse/HBASE-20363) | TestNamespaceAuditor.testRegionMerge is flaky |  Major | test |
+| [HBASE-20362](https://issues.apache.org/jira/browse/HBASE-20362) | TestMasterShutdown.testMasterShutdownBeforeStartingAnyRegionServer is flaky |  Major | test |
+| [HBASE-20295](https://issues.apache.org/jira/browse/HBASE-20295) | TableOutputFormat.checkOutputSpecs throw NullPointerException Exception |  Major | mapreduce |
+| [HBASE-20343](https://issues.apache.org/jira/browse/HBASE-20343) | [DOC] fix log directory paths |  Critical | documentation |
 | [HBASE-16499](https://issues.apache.org/jira/browse/HBASE-16499) | slow replication for small HBase clusters |  Critical | Replication |
 | [HBASE-17518](https://issues.apache.org/jira/browse/HBASE-17518) | HBase Reference Guide has a syntax error |  Minor | documentation |
 | [HBASE-20231](https://issues.apache.org/jira/browse/HBASE-20231) | Not able to delete column family from a row using RemoteHTable |  Major | REST |
@@ -1114,7 +1140,6 @@ comment to preserve continuity of the CHANGELOG.
 | [HBASE-20111](https://issues.apache.org/jira/browse/HBASE-20111) | Able to split region explicitly even on shouldSplit return false from split policy |  Critical | . |
 | [HBASE-20292](https://issues.apache.org/jira/browse/HBASE-20292) | Wrong URLs in the descriptions for update\_all\_config and update\_config commands in shell |  Trivial | shell |
 | [HBASE-13300](https://issues.apache.org/jira/browse/HBASE-13300) | Fix casing in getTimeStamp() and setTimestamp() for Mutations |  Critical | API |
-| [HBASE-20224](https://issues.apache.org/jira/browse/HBASE-20224) | Web UI is broken in standalone mode |  Blocker | UI, Usability |
 | [HBASE-20237](https://issues.apache.org/jira/browse/HBASE-20237) | Put back getClosestRowBefore and throw UnknownProtocolException instead... for asynchbase client |  Critical | compatibility, Operability |
 | [HBASE-20090](https://issues.apache.org/jira/browse/HBASE-20090) | Properly handle Preconditions check failure in MemStoreFlusher$FlushHandler.run |  Major | . |
 | [HBASE-19639](https://issues.apache.org/jira/browse/HBASE-19639) | ITBLL can't go big because RegionTooBusyException... Above memstore limit |  Blocker | . |
@@ -1253,7 +1278,7 @@ comment to preserve continuity of the CHANGELOG.
 | [HBASE-19721](https://issues.apache.org/jira/browse/HBASE-19721) | Unnecessary stubbings detected in test class: TestReversedScannerCallable |  Major | test |
 | [HBASE-19714](https://issues.apache.org/jira/browse/HBASE-19714) | \`status 'detailed'\` invokes nonexistent "getRegionsInTransition" method on ClusterStatus |  Critical | shell |
 | [HBASE-19709](https://issues.apache.org/jira/browse/HBASE-19709) | Guard against a ThreadPool size of 0 in CleanerChore |  Critical | . |
-| [HBASE-19383](https://issues.apache.org/jira/browse/HBASE-19383) | [1.2] java.lang.AssertionError: expected:\<2\> but was:\<1\> at org.apache.hadoop.hbase.TestChoreService.testTriggerNowFailsWhenNotScheduled(TestChoreService.java:707) |  Major | test |
+| [HBASE-19383](https://issues.apache.org/jira/browse/HBASE-19383) | [1.2] java.lang.AssertionError: expected:\<2\> but was:\<1\> 	at org.apache.hadoop.hbase.TestChoreService.testTriggerNowFailsWhenNotScheduled(TestChoreService.java:707) |  Major | test |
 | [HBASE-19688](https://issues.apache.org/jira/browse/HBASE-19688) | TimeToLiveProcedureWALCleaner should extends BaseLogCleanerDelegate |  Minor | . |
 | [HBASE-18452](https://issues.apache.org/jira/browse/HBASE-18452) | VerifyReplication by Snapshot should cache HDFS token before submit job for kerberos env. |  Major | . |
 | [HBASE-19588](https://issues.apache.org/jira/browse/HBASE-19588) | Additional jar dependencies needed for mapreduce PerformanceEvaluation |  Minor | test |
@@ -2945,6 +2970,7 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-20228](https://issues.apache.org/jira/browse/HBASE-20228) | [Umbrella] Verify 1.2.7 shell works against 2.0.0 server |  Blocker | shell |
 | [HBASE-20272](https://issues.apache.org/jira/browse/HBASE-20272) | TestAsyncTable#testCheckAndMutateWithTimeRange fails due to TableExistsException |  Major | . |
 | [HBASE-20107](https://issues.apache.org/jira/browse/HBASE-20107) | Add a test case for HBASE-14317 |  Minor | wal |
 | [HBASE-20052](https://issues.apache.org/jira/browse/HBASE-20052) | TestRegionOpen#testNonExistentRegionReplica fails due to NPE |  Major | . |
@@ -3035,6 +3061,18 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-20059](https://issues.apache.org/jira/browse/HBASE-20059) | Make sure documentation is updated for the offheap Bucket cache usage |  Critical | documentation |
+| [HBASE-20454](https://issues.apache.org/jira/browse/HBASE-20454) | [DOC] Add note on perf to upgrade section |  Major | . |
+| [HBASE-20347](https://issues.apache.org/jira/browse/HBASE-20347) | [DOC] upgrade section should warn about logging changes |  Critical | documentation, logging |
+| [HBASE-20349](https://issues.apache.org/jira/browse/HBASE-20349) | [DOC] upgrade guide should call out removal of prefix-tree data block encoding |  Critical | documentation |
+| [HBASE-17554](https://issues.apache.org/jira/browse/HBASE-17554) | Figure 2.0.0 Hadoop Version Support; update refguide |  Blocker | documentation |
+| [HBASE-20253](https://issues.apache.org/jira/browse/HBASE-20253) | Error message is missing for restore\_snapshot |  Minor | shell |
+| [HBASE-20380](https://issues.apache.org/jira/browse/HBASE-20380) | Put up 2.0.0RC0 |  Major | . |
+| [HBASE-20149](https://issues.apache.org/jira/browse/HBASE-20149) | Purge dev javadoc from bin tarball (or make a separate tarball of javadoc) |  Critical | build, community, documentation |
+| [HBASE-18828](https://issues.apache.org/jira/browse/HBASE-18828) | [2.0] Generate CHANGES.txt |  Blocker | . |
+| [HBASE-20287](https://issues.apache.org/jira/browse/HBASE-20287) | After cluster startup list\_regions command fails on disabled table |  Minor | shell |
+| [HBASE-20258](https://issues.apache.org/jira/browse/HBASE-20258) | Shell hangs when scanning a disabled table |  Major | . |
+| [HBASE-20354](https://issues.apache.org/jira/browse/HBASE-20354) | [DOC] quickstart guide needs to include note about durability checks for standalone mode |  Blocker | documentation, hadoop3 |
 | [HBASE-17730](https://issues.apache.org/jira/browse/HBASE-17730) | [DOC] Migration to 2.0 for coprocessors |  Blocker | documentation, migration |
 | [HBASE-20337](https://issues.apache.org/jira/browse/HBASE-20337) | Update the doc on how to setup shortcircuit reads; its stale |  Major | . |
 | [HBASE-20298](https://issues.apache.org/jira/browse/HBASE-20298) | Doc change in read/write/total accounting metrics |  Critical | documentation |
@@ -4130,6 +4168,10 @@ comment to preserve continuity of the CHANGELOG.
 | [HBASE-13747](https://issues.apache.org/jira/browse/HBASE-13747) | Promote Java 8 to "yes" in support matrix |  Critical | java |
 | [HBASE-7781](https://issues.apache.org/jira/browse/HBASE-7781) | Update security unit tests to use a KDC if available |  Blocker | security, test |
 | [HBASE-12859](https://issues.apache.org/jira/browse/HBASE-12859) | New master API to track major compaction completion |  Major | . |
+| [HBASE-18792](https://issues.apache.org/jira/browse/HBASE-18792) | hbase-2 needs to defend against hbck operations |  Blocker | hbck |
+| [HBASE-19963](https://issues.apache.org/jira/browse/HBASE-19963) | TestFSHDFSUtils assumes wrong default port for Hadoop 3.0.1+ |  Major | test |
+| [HBASE-20386](https://issues.apache.org/jira/browse/HBASE-20386) | [DOC] Align WALPlayer help text and refguide |  Minor | documentation |
+| [HBASE-20365](https://issues.apache.org/jira/browse/HBASE-20365) | start branch-2.0 specific website section |  Critical | documentation, website |
 | [HBASE-14175](https://issues.apache.org/jira/browse/HBASE-14175) | Adopt releasedocmaker for better generated release notes |  Critical | . |
 | [HBASE-14348](https://issues.apache.org/jira/browse/HBASE-14348) | Update download mirror link |  Major | documentation, website |
 | [HBASE-20299](https://issues.apache.org/jira/browse/HBASE-20299) | Update MOB in hbase refguide |  Minor | mob |
@@ -4257,7 +4299,6 @@ comment to preserve continuity of the CHANGELOG.
 | [HBASE-16869](https://issues.apache.org/jira/browse/HBASE-16869) | Typo in "Disabling Blockcache" doc |  Trivial | documentation |
 | [HBASE-17272](https://issues.apache.org/jira/browse/HBASE-17272) | Doc how to run Standalone HBase over an HDFS instance; all daemons in one JVM but persisting to an HDFS instance |  Major | documentation |
 | [HBASE-17121](https://issues.apache.org/jira/browse/HBASE-17121) | Undo the building of xref as part of site build |  Major | . |
-| [HBASE-17121](https://issues.apache.org/jira/browse/HBASE-17121) | Undo the building of xref as part of site build |  Major | . |
 | [HBASE-16335](https://issues.apache.org/jira/browse/HBASE-16335) | update to latest apache parent pom |  Major | build, dependencies |
 | [HBASE-17046](https://issues.apache.org/jira/browse/HBASE-17046) | Add 1.1 doc to hbase.apache.org |  Major | website |
 | [HBASE-16955](https://issues.apache.org/jira/browse/HBASE-16955) | Fixup precommit protoc check to do new distributed protos and pb 3.1.0 build |  Major | build, Protobufs |
@@ -4376,6 +4417,7 @@ comment to preserve continuity of the CHANGELOG.
 | [HBASE-10398](https://issues.apache.org/jira/browse/HBASE-10398) | HBase book updates for Replication after HBASE-10322 |  Major | documentation |
 | [HBASE-11459](https://issues.apache.org/jira/browse/HBASE-11459) | Add more doc on compression codecs, how to hook up native lib, lz4, etc. |  Minor | documentation |
 | [HBASE-8450](https://issues.apache.org/jira/browse/HBASE-8450) | Update hbase-default.xml and general recommendations to better suit current hw, h2, experience, etc. |  Critical | Usability |
+
 
 > NOTE: Below pre-2.0.0 changes were generated otherwise. Imported as-is, unaltered.
 
