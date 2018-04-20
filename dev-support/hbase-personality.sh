@@ -125,7 +125,8 @@ function personality_modules
   # If BUILDMODE is 'patch', for unit and compile testtypes, there is no need to run individual
   # modules if root is included. HBASE-18505
   if [[ "${BUILDMODE}" == "full" ]] || \
-     [[ ( "${testtype}" == unit || "${testtype}" == compile ) && "${MODULES[*]}" =~ \. ]]; then
+     ( ( [[ "${testtype}" == unit ]] || [[ "${testtype}" == compile ]] || [[ "${testtype}" == checkstyle ]] ) && \
+     [[ "${MODULES[*]}" =~ \. ]] ); then
     MODULES=(.)
   fi
 
