@@ -66,6 +66,7 @@ public class TestEnableRSGroup {
   @Test
   public void testEnableRSGroup() throws IOException, InterruptedException {
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
+    TEST_UTIL.getMiniHBaseCluster().waitOnMaster(0);
 
     LOG.info("stopped master...");
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, RSGroupAdminEndpoint.class.getName());
