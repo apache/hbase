@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RawCellBuilder;
 import org.apache.hadoop.hbase.RawCellBuilderFactory;
 import org.apache.hadoop.hbase.ServerName;
@@ -350,7 +351,16 @@ public class RegionCoprocessorHost
           cl = CoprocessorHost.class.getClassLoader();
         }
         Thread.currentThread().setContextClassLoader(cl);
-        cl.loadClass(attr.getClassName());
+        if (cl instanceof CoprocessorClassLoader) {
+          String[] includedClassPrefixes = null;
+          if (conf.get(HConstants.CP_HTD_ATTR_INCLUSION_KEY) != null) {
+            String prefixes = attr.conf.get(HConstants.CP_HTD_ATTR_INCLUSION_KEY);
+            includedClassPrefixes = prefixes.split(";");
+          }
+          ((CoprocessorClassLoader)cl).loadClass(attr.getClassName(), includedClassPrefixes);
+        } else {
+          cl.loadClass(attr.getClassName());
+        }
       } catch (ClassNotFoundException e) {
         throw new IOException("Class " + attr.getClassName() + " cannot be loaded", e);
       } finally {
