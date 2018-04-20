@@ -69,13 +69,13 @@ public class DefaultOperationQuota implements OperationQuota {
     for (final QuotaLimiter limiter: limiters) {
       if (limiter.isBypass()) continue;
 
-      limiter.checkQuota(writeConsumed, readConsumed);
+      limiter.checkQuota(numWrites, writeConsumed, numReads + numScans, readConsumed);
       readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
       writeAvailable = Math.min(writeAvailable, limiter.getWriteAvailable());
     }
 
     for (final QuotaLimiter limiter: limiters) {
-      limiter.grabQuota(writeConsumed, readConsumed);
+      limiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed);
     }
   }
 
