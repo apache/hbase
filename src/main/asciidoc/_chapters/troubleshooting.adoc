@@ -102,9 +102,9 @@ To disable, set the logging level back to `INFO` level.
 === JVM Garbage Collection Logs
 
 [NOTE]
-----
+====
 All example Garbage Collection logs in this section are based on Java 8 output. The introduction of Unified Logging in Java 9 and newer will result in very different looking logs.
-----
+====
 
 HBase is memory intensive, and using the default GC you can see long pauses in all threads including the _Juliet Pause_ aka "GC of Death". To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.
 

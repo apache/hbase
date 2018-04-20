@@ -1086,7 +1086,6 @@ public static void revokeFromTable(final HBaseTestingUtility util, final String 
 . Showing a User's Effective Permissions
 +
 .HBase Shell
-====
 ----
 hbase> user_permission 'user'
 
@@ -1094,7 +1093,6 @@ hbase> user_permission '.*'
 
 hbase> user_permission JAVA_REGEX
 ----
-====
 
 .API
 ====
@@ -1234,11 +1232,9 @@ Refer to the official API for usage instructions.
 . Define the List of Visibility Labels
 +
 .HBase Shell
-====
 ----
 hbase> add_labels [ 'admin', 'service', 'developer', 'test' ]
 ----
-====
 +
 .Java API
 ====
@@ -1265,7 +1261,6 @@ public static void addLabels() throws Exception {
 . Associate Labels with Users
 +
 .HBase Shell
-====
 ----
 hbase> set_auths 'service', [ 'service' ]
 ----
@@ -1281,7 +1276,6 @@ hbase> set_auths 'qa', [ 'test', 'developer' ]
 ----
 hbase> set_auths '@qagroup', [ 'test' ]
 ----
-====
 +
 .Java API
 ====
@@ -1305,7 +1299,6 @@ public void testSetAndGetUserAuths() throws Throwable {
 . Clear Labels From Users
 +
 .HBase Shell
-====
 ----
 hbase> clear_auths 'service', [ 'service' ]
 ----
@@ -1321,7 +1314,6 @@ hbase> clear_auths 'qa', [ 'test', 'developer' ]
 ----
 hbase> clear_auths '@qagroup', [ 'test', 'developer' ]
 ----
-====
 +
 .Java API
 ====
@@ -1345,7 +1337,6 @@ The label is only applied when data is written.
 The label is associated with a given version of the cell.
 +
 .HBase Shell
-====
 ----
 hbase> set_visibility 'user', 'admin|service|developer', { COLUMNS => 'i' }
 ----
@@ -1357,7 +1348,6 @@ hbase> set_visibility 'user', 'admin|service', { COLUMNS => 'pii' }
 ----
 hbase> set_visibility 'user', 'test', { COLUMNS => [ 'i', 'pii' ], FILTER => "(PrefixFilter ('test'))" }
 ----
-====
 +
 NOTE: HBase Shell support for applying labels or permissions to cells is for testing and verification support, and should not be employed for production use because it won't apply the labels to cells that don't exist yet.
 The correct way to apply cell level labels is to do so in the application code when storing the values.
@@ -1408,12 +1398,10 @@ set as an additional filter. It will further filter your results, rather than
 giving you additional authorization.
 
 .HBase Shell
-====
 ----
 hbase> get_auths 'myUser'
 hbase> scan 'table1', AUTHORIZATIONS => ['private']
 ----
-====
 
 .Java API
 ====

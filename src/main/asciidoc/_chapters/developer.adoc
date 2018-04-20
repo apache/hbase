@@ -415,22 +415,28 @@ use so we can freely change versions without upsetting any downstream project us
 
 The protobuf files are located in _hbase-protocol/src/main/protobuf_.
 For the change to be effective, you will need to regenerate the classes.
-You can use maven profile `compile-protobuf` to do this.
 
 [source,bourne]
 ----
-mvn compile -Pcompile-protobuf
+mvn package -pl hbase-protocol -am
 ----
 
-You may also want to define `protoc.path` for the protoc binary, using the following command:
+Similarly, protobuf definitions for internal use are located in the _hbase-protocol-shaded_ module.
 
 [source,bourne]
 ----
-
-mvn compile -Pcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
+mvn package -pl hbase-protocol-shaded -am
 ----
 
-Read the _hbase-protocol/README.txt_ for more details.
+Typically, protobuf code generation is done using the native `protoc` binary. In our build we use a maven plugin for
+convenience; however, the plugin may not be able to retrieve appropriate binaries for all platforms. If you find yourself
+on a platform where protoc fails, you will have to compile protoc from source, and run it independent of our maven build.
+You can disable the inline code generation by specifying `-Dprotoc.skip` in your maven arguments, allowing your build to proceed further.
+
+[NOTE]
+If you need to manually generate your protobuf files, you should not use `clean` in subsequent maven calls, as that will delete the newly generated files.
+
+Read the _hbase-protocol/README.txt_ for more details
 
 [[build.thrift]]
 ==== Build Thrift
@@ -1465,9 +1471,8 @@ HBase ships with several ChaosMonkey policies, available in the
 [[chaos.monkey.properties]]
 ==== Configuring Individual ChaosMonkey Actions
 
-Since HBase version 1.0.0 (link:https://issues.apache.org/jira/browse/HBASE-11348[HBASE-11348]),
 ChaosMonkey integration tests can be configured per test run.
-Create a Java properties file in the HBase classpath and pass it to ChaosMonkey using
+Create a Java properties file in the HBase CLASSPATH and pass it to ChaosMonkey using
 the `-monkeyProps` configuration flag. Configurable properties, along with their default
 values if applicable, are listed in the `org.apache.hadoop.hbase.chaos.factories.MonkeyConstants`
 class. For properties that have defaults, you can override them by including them
@@ -1480,7 +1485,9 @@ The following example uses a properties file called <<monkey.properties,monkey.p
 $ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties
 ----
 
-The above command will start the integration tests and chaos monkey passing the properties file _monkey.properties_.
+The above command will start the integration tests and chaos monkey. It will look for the
+properties file _monkey.properties_ on the HBase CLASSPATH; e.g. inside the HBASE _conf_ dir.
+
 Here is an example chaos monkey file:
 
 [[monkey.properties]]
@@ -1494,6 +1501,8 @@ move.regions.max.time=1000000
 move.regions.sleep.time=80000
 batch.restart.rs.ratio=0.4f
 ----
+
+Periods/time are expressed in milliseconds.
 
 HBase 1.0.2 and newer adds the ability to restart HBase's underlying ZooKeeper quorum or
 HDFS nodes. To use these actions, you need to configure some new properties, which
@@ -2155,6 +2164,12 @@ When the amending author is different from the original committer, add notice of
                                 <committer&apache>` See discussion at link:http://search-hadoop.com/m/DHED4wHGYS[HBase, mail # dev
                                 - [DISCUSSION] Best practice when amending commits cherry picked
                                 from master to branch].
+
+====== Close related GitHub PRs
+
+As a project we work to ensure there's a JIRA associated with each change, but we don't mandate any particular tool be used for reviews. Due to implementation details of the ASF's integration between hosted git repositories and GitHub, the PMC has no ability to directly close PRs on our GitHub repo. In the event that a contributor makes a Pull Request on GitHub, either because the contributor finds that easier than attaching a patch to JIRA or because a reviewer prefers that UI for examining changes, it's important to make note of the PR in the commit that goes to the master branch so that PRs are kept up to date.
+
+To read more about the details of what kinds of commit messages will work with the GitHub "close via keyword in commit" mechanism see link:https://help.github.com/articles/closing-issues-using-keywords/[the GitHub documentation for "Closing issues using keywords"]. In summary, you should include a line with the phrase "closes #XXX", where the XXX is the pull request id. The pull request id is usually given in the GitHub UI in grey at the end of the subject heading.
 
 [[committer.tests]]
 ====== Committers are responsible for making sure commits do not break the build or tests
