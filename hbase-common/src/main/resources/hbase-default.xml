@@ -316,12 +316,26 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.hregion.compacting.memstore.type</name>
+    <value>NONE</value>
+    <description>Determines the type of memstore to be used by user tables on
+      creation. By default it is NONE and so we use the default memstore. To enable
+      compacting memstore on creation of new user tables, set this property to
+      BASIC/EAGER/ADAPTIVE. All subsequent table creations will have the
+      new value of this attribute.
+      See http://hbase.apache.org/book.html#inmemory_compaction for more on
+      In-memory Compaction.
+    </description>
+  </property>
+  <property>
     <name>hbase.systemtables.compacting.memstore.type</name>
     <value>NONE</value>
     <description>Determines the type of memstore to be used for system tables like
-      META, namespace tables etc. By default NONE is the type and hence we use the
-      default memstore for all the system tables. If we need to use compacting
-      memstore for system tables then set this property to BASIC/EAGER
+      META, namespace tables etc., on creation. By default NONE is the type and hence
+      we use the default memstore for all the system tables. If we need to have compacting
+      memstore on creation of system tables then set this property to BASIC/EAGER
+      See http://hbase.apache.org/book.html#inmemory_compaction for more on
+      In-memory Compaction.
     </description>
   </property>
   <property>

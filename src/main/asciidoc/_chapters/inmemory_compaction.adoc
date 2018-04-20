@@ -54,7 +54,7 @@ To enable in-memory compactions, set the _IN_MEMORY_COMPACTION_ attribute
 on per column family where you want the behavior. The _IN_MEMORY_COMPACTION_
 attribute can have one of three values.
 
- * _NONE_: No in-memory compaction.
+ * _NONE_: No in-memory compaction. The default.
  * _BASIC_: Basic policy enables flushing and keeps a pipeline of flushes until we trip the pipeline maximum threshold and then we flush to disk. No in-memory compaction but can help throughput as data is moved from the profligate, native ConcurrentSkipListMap data-type to more compact (and efficient) data types.
  * _EAGER_: This is _BASIC_ policy plus in-memory compaction of flushes (much like the on-disk compactions done to hfiles); on compaction we apply on-disk rules eliminating versions, duplicates, ttl'd cells, etc.
  * _ADAPTIVE_: Adaptive compaction adapts to the workload. It applies either index compaction or data compaction based on the ratio of duplicate cells in the data.  Experimental.
@@ -84,13 +84,12 @@ Note how the IN_MEMORY_COMPACTION attribute shows as part of the _METADATA_ map.
 
 There is also a global configuration, _hbase.hregion.compacting.memstore.type_ which you can set in your _hbase-site.xml_ file. Use it to set the
 default on creation of a new table (On creation of a column family Store, we look first to the column family configuration looking for the
-_IN_MEMORY_COMPACTION_ setting, and if none, we then consult the _hbase.hregion.compacting.memstore.type_ value using its content; default is
-_BASIC_).
+_IN_MEMORY_COMPACTION_ setting, and if none, we then consult the _hbase.hregion.compacting.memstore.type_ value using its content).
 
-By default, new hbase system tables will have _BASIC_ in-memory compaction set.  To specify otherwise,
-on new table-creation, set _hbase.hregion.compacting.memstore.type_ to _NONE_ (Note, setting this value
+By default, new hbase system tables will have _NONE_ in-memory compaction set.  To specify otherwise,
+on new table-creation, set _hbase.hregion.compacting.memstore.type_ to _BASIC_ (Note, setting this value
 post-creation of system tables will not have a retroactive effect; you will have to alter your tables
-to set the in-memory attribute to _NONE_).
+to set the in-memory attribute).
 
 When an in-memory flush happens is calculated by dividing the configured region flush size (Set in the table descriptor
 or read from _hbase.hregion.memstore.flush.size_) by the number of column families and then multiplying by
