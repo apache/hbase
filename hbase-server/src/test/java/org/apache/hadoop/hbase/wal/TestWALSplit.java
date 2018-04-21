@@ -130,6 +130,7 @@ public class TestWALSplit {
   private Path OLDLOGDIR;
   private Path CORRUPTDIR;
   private Path TABLEDIR;
+  private String TMPDIRNAME;
 
   private static final int NUM_WRITERS = 10;
   private static final int ENTRIES = 10; // entries per writer per region
@@ -191,6 +192,8 @@ public class TestWALSplit {
     OLDLOGDIR = new Path(HBASELOGDIR, HConstants.HREGION_OLDLOGDIR_NAME);
     CORRUPTDIR = new Path(HBASELOGDIR, HConstants.CORRUPT_DIR_NAME);
     TABLEDIR = FSUtils.getTableDir(HBASEDIR, TABLE_NAME);
+    TMPDIRNAME = conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
+      HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
     REGIONS.clear();
     Collections.addAll(REGIONS, "bbb", "ccc");
     InstrumentedLogWriter.activateFailure = false;
@@ -391,7 +394,7 @@ public class TestWALSplit {
             TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
             new WALEdit());
     Path p = WALSplitter.getRegionSplitEditsPath(entry,
-        FILENAME_BEING_SPLIT, conf);
+        FILENAME_BEING_SPLIT, TMPDIRNAME, conf);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
   }
@@ -417,7 +420,7 @@ public class TestWALSplit {
     fs.createNewFile(parent); // create a recovered.edits file
 
     Path p = WALSplitter.getRegionSplitEditsPath(entry,
-        FILENAME_BEING_SPLIT, conf);
+        FILENAME_BEING_SPLIT, TMPDIRNAME, conf);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     WALFactory.createRecoveredEditsWriter(fs, p, conf).close();
