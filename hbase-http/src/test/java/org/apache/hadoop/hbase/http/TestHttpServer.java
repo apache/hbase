@@ -605,6 +605,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     myServer.stop();
   }
 
+
+
   @Test
   public void testNoCacheHeader() throws Exception {
     URL url = new URL(baseUrl, "/echo?a=b&c=d");
@@ -616,16 +618,5 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertNotNull(conn.getHeaderField("Date"));
     assertEquals(conn.getHeaderField("Expires"), conn.getHeaderField("Date"));
     assertEquals("DENY", conn.getHeaderField("X-Frame-Options"));
-  }
-
-  @Test
-  public void testHttpMethods() throws Exception {
-    // HTTP TRACE method should be disabled for security
-    // See https://www.owasp.org/index.php/Cross_Site_Tracing
-    URL url = new URL(baseUrl, "/echo?a=b");
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    conn.setRequestMethod("TRACE");
-    conn.connect();
-    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
   }
 }
