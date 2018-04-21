@@ -541,6 +541,7 @@ public class WALSplitter {
    * creating it if necessary.
    * @param logEntry
    * @param fileNameBeingSplit the file being split currently. Used to generate tmp file name.
+   * @param tmpDirName of the directory used to sideline old recovered edits file
    * @param conf
    * @return Path to file into which to dump split log edits.
    * @throws IOException
@@ -548,8 +549,7 @@ public class WALSplitter {
   @SuppressWarnings("deprecation")
   @VisibleForTesting
   static Path getRegionSplitEditsPath(final Entry logEntry, String fileNameBeingSplit,
-      Configuration conf)
-  throws IOException {
+      String tmpDirName, Configuration conf) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     Path rootDir = FSUtils.getRootDir(conf);
     Path tableDir = FSUtils.getTableDir(rootDir, logEntry.getKey().getTablename());
@@ -564,7 +564,7 @@ public class WALSplitter {
       return null;
     }
     if (fs.exists(dir) && fs.isFile(dir)) {
-      Path tmp = new Path("/tmp");
+      Path tmp = new Path(tmpDirName);
       if (!fs.exists(tmp)) {
         fs.mkdirs(tmp);
       }
@@ -1589,8 +1589,10 @@ public class WALSplitter {
      * @return a path with a write for that path. caller should close.
      */
     WriterAndPath createWAP(byte[] region, Entry entry) throws IOException {
+      String tmpDirName = conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
+        HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
       Path regionedits = getRegionSplitEditsPath(entry,
-          fileBeingSplit.getPath().getName(), conf);
+          fileBeingSplit.getPath().getName(), tmpDirName, conf);
       if (regionedits == null) {
         return null;
       }
