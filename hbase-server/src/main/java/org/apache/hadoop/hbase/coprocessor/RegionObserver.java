@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -199,7 +197,6 @@ public interface RegionObserver {
    * @param scanner the scanner over existing data used in the memstore segments being compact
    * @return the scanner to use during in memory compaction. Must be non-null.
    */
-  @NonNull
   default InternalScanner preMemStoreCompactionCompact(
       ObserverContext<RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
       throws IOException {
