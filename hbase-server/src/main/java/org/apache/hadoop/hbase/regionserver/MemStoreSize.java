@@ -95,7 +95,10 @@ public class MemStoreSize {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || getClass() != obj.getClass()) {
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof MemStoreSize)) {
       return false;
     }
     MemStoreSize other = (MemStoreSize) obj;
