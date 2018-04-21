@@ -141,7 +141,7 @@ public class ClassSize {
     }
 
     long sizeOf(byte[] b, int len) {
-      return align(arrayHeaderSize() + len);
+      return align(ARRAY + len);
     }
   }
 
@@ -186,7 +186,7 @@ public class ClassSize {
     @Override
     @SuppressWarnings("static-access")
     long sizeOf(byte[] b, int len) {
-      return align(arrayHeaderSize() + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
+      return align(ARRAY + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
     }
   }
 
