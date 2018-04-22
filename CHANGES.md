@@ -41,7 +41,7 @@ may have to bulk import old-style CHANGES.txt on to the end in a code
 comment to preserve continuity of the CHANGELOG.
 -->
 
-## Release 2.0.0 - Unreleased (as of 2018-04-20)
+## Release 2.0.0 - Unreleased (as of 2018-04-22)
 
 ### INCOMPATIBLE CHANGES:
 
@@ -1104,6 +1104,8 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-19924](https://issues.apache.org/jira/browse/HBASE-19924) | hbase rpc throttling does not work for multi() with request count rater. |  Major | rpc |
+| [HBASE-20293](https://issues.apache.org/jira/browse/HBASE-20293) | get\_splits returns duplicate split points when region replication is on |  Minor | shell |
 | [HBASE-20464](https://issues.apache.org/jira/browse/HBASE-20464) | Disable IMC |  Major | in-memory-compaction |
 | [HBASE-20442](https://issues.apache.org/jira/browse/HBASE-20442) | clean up incorrect use of commons-collections 3 |  Major | dependencies, thirdparty |
 | [HBASE-20440](https://issues.apache.org/jira/browse/HBASE-20440) | Clean up incorrect use of commons-lang 2.y |  Major | dependencies |
@@ -1221,6 +1223,7 @@ comment to preserve continuity of the CHANGELOG.
 | [HBASE-19941](https://issues.apache.org/jira/browse/HBASE-19941) | Flaky TestCreateTableProcedure times out in nightly, needs to LargeTests |  Major | test |
 | [HBASE-19934](https://issues.apache.org/jira/browse/HBASE-19934) | HBaseSnapshotException when read replicas is enabled and online snapshot is taken after region splitting |  Major | snapshots |
 | [HBASE-19939](https://issues.apache.org/jira/browse/HBASE-19939) | TestSplitTableRegionProcedure#testSplitWithoutPONR() and testRecoveryAndDoubleExecution() are failing with NPE |  Major | amv2 |
+| [HBASE-19907](https://issues.apache.org/jira/browse/HBASE-19907) | TestMetaWithReplicas still flakey |  Major | . |
 | [HBASE-19907](https://issues.apache.org/jira/browse/HBASE-19907) | TestMetaWithReplicas still flakey |  Major | . |
 | [HBASE-19926](https://issues.apache.org/jira/browse/HBASE-19926) | Use a separated class to implement the WALActionListener for Replication |  Major | Replication, wal |
 | [HBASE-19703](https://issues.apache.org/jira/browse/HBASE-19703) | Functionality added as part of HBASE-12583 is not working after moving the split code to master |  Major | . |

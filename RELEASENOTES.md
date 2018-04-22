@@ -43,13 +43,18 @@ comment to preserve continuity of the CHANGELOG.
 
 -->
 
+
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
 
 ---
 
 * [HBASE-20464](https://issues.apache.org/jira/browse/HBASE-20464) | *Major* | **Disable IMC**
 
 Change the default so that on creation of new tables, In-Memory Compaction BASIC is NOT enabled.
+
+This change is in branch-2.0 only, not in branch-2.
+
 
 ---
 
@@ -61,6 +66,7 @@ The HBase shell now behaves as it did prior to the changes that started in HBASE
 The command line option `--return-values` is no longer acted on by the shell since it now always behaves as it did when passed this parameter. Passing the option results in a harmless warning about this change.
 
 Users who wish to maintain the behavior seen in the 1.4.0-1.4.2 releases of the HBase shell should refer to the section _irbrc_ in the reference guide for how to configure their IRB session to avoid echoing expression results to the console.
+
 
 ---
 
