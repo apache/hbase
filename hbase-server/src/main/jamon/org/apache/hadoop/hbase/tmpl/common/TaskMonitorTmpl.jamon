@@ -34,10 +34,10 @@ String format = "html";
 
   <div class="tabbable">
       <ul class="nav nav-pills">
-        <li class="active">
+        <li class="">
             <a href="#tab_alltasks" data-toggle="tab">Show All Monitored Tasks</a>
         </li>
-        <li class="">
+        <li class="active">
             <a href="#tab_generaltasks" data-toggle="tab">Show non-RPC Tasks</a>
         </li>
         <li class="">
@@ -51,11 +51,11 @@ String format = "html";
         </li>
       </ul>
       <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="tab_alltasks">
+        <div class="tab-pane" id="tab_alltasks">
             <& jsonView; filter="all" &>
             <& renderTasks; filter="all" &>
         </div>
-        <div class="tab-pane" id="tab_generaltasks">
+        <div class="tab-pane active" id="tab_generaltasks">
             <& jsonView; filter="general" &>
             <& renderTasks; filter="general" &>
         </div>
