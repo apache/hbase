@@ -473,4 +473,13 @@ public abstract class AbstractTestFSWAL {
       assertNull(key.getWriteEntry());
     }
   }
+
+  @Test(expected = WALClosedException.class)
+  public void testRollWriterForClosedWAL() throws IOException {
+    String testName = currentTest.getMethodName();
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
+      CONF, null, true, null, null);
+    wal.close();
+    wal.rollWriter();
+  }
 }

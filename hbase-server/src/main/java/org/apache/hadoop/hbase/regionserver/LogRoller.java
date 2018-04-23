@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALClosedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -177,17 +180,24 @@ public class LogRoller extends HasThread implements Closeable {
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
-        for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+        for (Iterator<Entry<WAL, Boolean>> iter = walNeedsRoll.entrySet().iterator(); iter
+            .hasNext();) {
+          Entry<WAL, Boolean> entry = iter.next();
           final WAL wal = entry.getKey();
           // Force the roll if the logroll.period is elapsed or if a roll was requested.
           // The returned value is an array of actual region names.
-          final byte [][] regionsToFlush = wal.rollWriter(periodic ||
-              entry.getValue().booleanValue());
-          walNeedsRoll.put(wal, Boolean.FALSE);
-          if (regionsToFlush != null) {
-            for (byte[] r : regionsToFlush) {
-              scheduleFlush(r);
+          try {
+            final byte[][] regionsToFlush =
+                wal.rollWriter(periodic || entry.getValue().booleanValue());
+            walNeedsRoll.put(wal, Boolean.FALSE);
+            if (regionsToFlush != null) {
+              for (byte[] r : regionsToFlush) {
+                scheduleFlush(r);
+              }
             }
+          } catch (WALClosedException e) {
+            LOG.warn("WAL has been closed. Skipping rolling of writer and just remove it", e);
+            iter.remove();
           }
         }
       } catch (FailedLogCloseException e) {
@@ -251,5 +261,10 @@ public class LogRoller extends HasThread implements Closeable {
   public void close() {
     running = false;
     interrupt();
+  }
+
+  @VisibleForTesting
+  Map<WAL, Boolean> getWalNeedsRoll() {
+    return this.walNeedsRoll;
   }
 }
