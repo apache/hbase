@@ -1,5 +1,37 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.4 4/30/2018
+
+** Sub-task
+    * [HBASE-20276] - [shell] Revert shell REPL change and document
+
+** Bug
+    * [HBASE-15291] - FileSystem not closed in secure bulkLoad
+    * [HBASE-17631] - Canary interval too low
+    * [HBASE-19343] - Restore snapshot makes split parent region online 
+    * [HBASE-20068] - Hadoopcheck project health check uses default maven repo instead of yetus managed ones
+    * [HBASE-20231] - Not able to delete column family from a row using RemoteHTable
+    * [HBASE-20280] - Fix possibility of deadlocking in refreshFileConnections when prefetch is enabled
+    * [HBASE-20292] - Wrong URLs in the descriptions for update_all_config and update_config commands in shell
+    * [HBASE-20293] - get_splits returns duplicate split points when region replication is on
+    * [HBASE-20301] - Remove the meaningless plus sign from table.jsp
+    * [HBASE-20302] - CatalogJanitor should log the reason why it is disabled
+    * [HBASE-20322] - CME in StoreScanner causes region server crash
+    * [HBASE-20335] - nightly jobs no longer contain machine information
+    * [HBASE-20364] - nightly job gives old results or no results for stages that timeout on SCM
+    * [HBASE-20404] - Ugly cleanerchore complaint that dir is not empty
+    * [HBASE-20463] - Fix breakage introduced on branch-1 by HBASE-20276 "[shell] Revert shell REPL change and document"
+
+** Improvement
+    * [HBASE-15466] - precommit should not run all java goals when given a docs-only patch
+    * [HBASE-20352] - [Chore] Backport HBASE-18309 to branch-1
+    * [HBASE-20379] - shadedjars yetus plugin should add a footer link
+    * [HBASE-20459] - Majority of scan CPU time in HBase-1 spent in size estimation
+
+** Task
+    * [HBASE-20112] - Include test results from nightly hadoop3 tests in jenkins test results
+
+
 Release Notes - HBase - Version 1.4.3 3/30/2018
 
 ** Sub-task
