@@ -48,6 +48,11 @@
       <artifactId>hbase-shaded-mapreduce</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <!-- parent pom defines these for children. :( :( :( -->
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
