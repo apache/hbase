@@ -39,6 +39,7 @@
       <shaded.prefix>org.apache.hadoop.hbase.shaded</shaded.prefix>
     </properties>
     <modules>
+        <module>hbase-shaded-client-byo-hadoop</module>
         <module>hbase-shaded-client</module>
         <module>hbase-shaded-mapreduce</module>
         <module>hbase-shaded-check-invariants</module>
@@ -131,6 +132,11 @@
                                 <shadeTestJar>false</shadeTestJar>
                                 <artifactSet>
                                     <excludes>
+                                        <!-- default to excluding Hadoop, have module that want
+                                             to include it redefine the exclude list -->
+                                        <exclude>org.apache.hadoop:*</exclude>
+                                        <!-- the rest of this needs to be kept in sync with any
+                                             hadoop-including module -->
                                         <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
                                         <exclude>org.slf4j:*</exclude>
                                         <exclude>com.google.code.findbugs:*</exclude>

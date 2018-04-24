@@ -169,32 +169,10 @@
             <id>release</id>
             <build>
                 <plugins>
-                <!-- Tell the shade plugin we want to leave Hadoop as a dependency -->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-shade-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <id>aggregate-into-a-jar-with-relocated-third-parties</id>
-                            <configuration>
-                                <artifactSet>
-                                    <excludes>
-                                        <exclude>org.apache.hadoop:*</exclude>
-                                        <!-- The rest of these should be kept in sync with the parent pom -->
-                                        <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
-                                        <exclude>org.slf4j:*</exclude>
-                                        <exclude>com.google.code.findbugs:*</exclude>
-                                        <exclude>com.github.stephenc.findbugs:*</exclude>
-                                        <exclude>org.apache.htrace:*</exclude>
-                                        <exclude>org.apache.yetus:*</exclude>
-                                        <exclude>log4j:*</exclude>
-                                        <exclude>commons-logging:*</exclude>
-                                    </excludes>
-                                </artifactSet>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                    </plugin>
                 </plugins>
             </build>
         </profile>
