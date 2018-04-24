@@ -51,13 +51,13 @@ public class ReplicationSourceShipper extends Thread {
   public enum WorkerState {
     RUNNING,
     STOPPED,
-    FINISHED,  // The worker is done processing a recovered queue
+    FINISHED,  // The worker is done processing a queue
   }
 
   private final Configuration conf;
   protected final String walGroupId;
   protected final PriorityBlockingQueue<Path> queue;
-  private final ReplicationSourceInterface source;
+  private final ReplicationSource source;
 
   // Last position in the log that we sent to ZooKeeper
   // It will be accessed by the stats thread so make it volatile
@@ -74,7 +74,7 @@ public class ReplicationSourceShipper extends Thread {
   protected final int maxRetriesMultiplier;
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId,
-      PriorityBlockingQueue<Path> queue, ReplicationSourceInterface source) {
+      PriorityBlockingQueue<Path> queue, ReplicationSource source) {
     this.conf = conf;
     this.walGroupId = walGroupId;
     this.queue = queue;
@@ -99,7 +99,7 @@ public class ReplicationSourceShipper extends Thread {
       }
       try {
         WALEntryBatch entryBatch = entryReader.take();
-        // the NO_MORE_DATA instance has no path so do not all shipEdits
+        // the NO_MORE_DATA instance has no path so do not call shipEdits
         if (entryBatch == WALEntryBatch.NO_MORE_DATA) {
           noMoreData();
         } else {
@@ -114,12 +114,20 @@ public class ReplicationSourceShipper extends Thread {
     if (!isFinished()) {
       setWorkerState(WorkerState.STOPPED);
     } else {
+      source.removeWorker(this);
       postFinish();
     }
   }
 
-  // To be implemented by recovered shipper
-  protected void noMoreData() {
+  private void noMoreData() {
+    if (source.isRecovered()) {
+      LOG.debug("Finished recovering queue for group {} of peer {}", walGroupId,
+        source.getQueueId());
+      source.getSourceMetrics().incrCompletedRecoveryQueue();
+    } else {
+      LOG.debug("Finished queue for group {} of peer {}", walGroupId, source.getQueueId());
+    }
+    setWorkerState(WorkerState.FINISHED);
   }
 
   // To be implemented by recovered shipper

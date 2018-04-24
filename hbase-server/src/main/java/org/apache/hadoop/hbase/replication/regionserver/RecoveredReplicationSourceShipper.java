@@ -48,13 +48,6 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   }
 
   @Override
-  protected void noMoreData() {
-    LOG.debug("Finished recovering queue for group {} of peer {}", walGroupId, source.getQueueId());
-    source.getSourceMetrics().incrCompletedRecoveryQueue();
-    setWorkerState(WorkerState.FINISHED);
-  }
-
-  @Override
   protected void postFinish() {
     source.tryFinish();
   }

@@ -444,12 +444,25 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Clear the metrics and related replication queue of the specified old source
    * @param src source to clear
    */
-  void removeRecoveredSource(ReplicationSourceInterface src) {
-    LOG.info("Done with the recovered queue " + src.getQueueId());
-    this.oldsources.remove(src);
+  private boolean removeRecoveredSource(ReplicationSourceInterface src) {
+    if (!this.oldsources.remove(src)) {
+      return false;
+    }
+    LOG.info("Done with the recovered queue {}", src.getQueueId());
     // Delete queue from storage and memory
     deleteQueue(src.getQueueId());
     this.walsByIdRecoveredQueues.remove(src.getQueueId());
+    return true;
+  }
+
+  void finishRecoveredSource(ReplicationSourceInterface src) {
+    synchronized (oldsources) {
+      if (!removeRecoveredSource(src)) {
+        return;
+      }
+    }
+    LOG.info("Finished recovering queue {} with the following stats: {}", src.getQueueId(),
+      src.getStats());
   }
 
   /**

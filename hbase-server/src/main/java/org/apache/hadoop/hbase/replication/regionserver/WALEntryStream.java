@@ -304,7 +304,8 @@ class WALEntryStream implements Closeable {
         return true;
       }
     } else {
-      // no more files in queue, this could only happen for recovered queue.
+      // no more files in queue, this could happen for recovered queue, or for a wal group of a sync
+      // replication peer which has already been transited to DA or S.
       setCurrentPath(null);
     }
     return false;

@@ -682,6 +682,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   protected void doShutdown() throws IOException {
     waitForSafePoint();
     closeWriter(this.writer);
+    this.writer = null;
     closeExecutor.shutdown();
     try {
       if (!closeExecutor.awaitTermination(waitOnShutdownInSeconds, TimeUnit.SECONDS)) {

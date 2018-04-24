@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -144,15 +143,9 @@ public class RecoveredReplicationSource extends ReplicationSource {
   }
 
   void tryFinish() {
-    // use synchronize to make sure one last thread will clean the queue
-    synchronized (workerThreads) {
-      Threads.sleep(100);// wait a short while for other worker thread to fully exit
-      boolean allTasksDone = workerThreads.values().stream().allMatch(w -> w.isFinished());
-      if (allTasksDone) {
-        this.getSourceMetrics().clear();
-        manager.removeRecoveredSource(this);
-        LOG.info("Finished recovering queue {} with the following stats: {}", queueId, getStats());
-      }
+    if (workerThreads.isEmpty()) {
+      this.getSourceMetrics().clear();
+      manager.finishRecoveredSource(this);
     }
   }
 

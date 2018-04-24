@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -393,8 +394,8 @@ public abstract class TestReplicationSourceManager {
     // populate some znodes in the peer znode
     SortedSet<String> files = new TreeSet<>();
     String group = "testgroup";
-    String file1 = group + ".log1";
-    String file2 = group + ".log2";
+    String file1 = group + "." + EnvironmentEdgeManager.currentTime() + ".log1";
+    String file2 = group + "." + EnvironmentEdgeManager.currentTime() + ".log2";
     files.add(file1);
     files.add(file2);
     for (String file : files) {

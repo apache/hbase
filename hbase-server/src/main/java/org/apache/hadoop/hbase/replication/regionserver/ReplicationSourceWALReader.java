@@ -143,7 +143,7 @@ class ReplicationSourceWALReader extends Thread {
             entryBatchQueue.put(batch);
             sleepMultiplier = 1;
           } else { // got no entries and didn't advance position in WAL
-            handleEmptyWALEntryBatch(entryStream.getCurrentPath());
+            handleEmptyWALEntryBatch();
             entryStream.reset(); // reuse stream
           }
         }
@@ -227,10 +227,11 @@ class ReplicationSourceWALReader extends Thread {
     return batch;
   }
 
-  private void handleEmptyWALEntryBatch(Path currentPath) throws InterruptedException {
+  private void handleEmptyWALEntryBatch() throws InterruptedException {
     LOG.trace("Didn't read any new entries from WAL");
-    if (source.isRecovered()) {
-      // we're done with queue recovery, shut ourself down
+    if (logQueue.isEmpty()) {
+      // we're done with current queue, either this is a recovered queue, or it is the special group
+      // for a sync replication peer and the peer has been transited to DA or S state.
       setReaderRunning(false);
       // shuts down shipper thread immediately
       entryBatchQueue.put(WALEntryBatch.NO_MORE_DATA);

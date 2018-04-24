@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWALArchiveDirectoryName;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWALDirectoryName;
 
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.regionserver.PeerActionListener;
 import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -113,8 +113,12 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     channelClass = eventLoopGroupAndChannelClass.getSecond();
   }
 
+  // Use a timestamp to make it identical. That means, after we transit the peer to DA/S and then
+  // back to A, the log prefix will be changed. This is used to simplify the implementation for
+  // replication source, where we do not need to consider that a terminated shipper could be added
+  // back.
   private String getLogPrefix(String peerId) {
-    return factory.factoryId + WAL_FILE_NAME_DELIMITER + peerId;
+    return factory.factoryId + "-" + EnvironmentEdgeManager.currentTime() + "-" + peerId;
   }
 
   private DualAsyncFSWAL createWAL(String peerId, String remoteWALDir) throws IOException {
@@ -250,7 +254,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   @Override
   public void peerSyncReplicationStateChange(String peerId, SyncReplicationState from,
       SyncReplicationState to, int stage) {
-    if (from == SyncReplicationState.ACTIVE && to == SyncReplicationState.DOWNGRADE_ACTIVE) {
+    if (from == SyncReplicationState.ACTIVE) {
       if (stage == 0) {
         Lock lock = createLock.acquireLock(peerId);
         try {
