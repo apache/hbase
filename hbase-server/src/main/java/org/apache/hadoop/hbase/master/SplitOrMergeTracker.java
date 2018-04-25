@@ -36,7 +36,6 @@ import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the switch of split and merge states in ZK
- *
  */
 @InterfaceAudience.Private
 public class SplitOrMergeTracker {
