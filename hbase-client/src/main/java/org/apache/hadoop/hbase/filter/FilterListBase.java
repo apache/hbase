@@ -56,8 +56,8 @@ public abstract class FilterListBase extends FilterBase {
     if (rowFilters.isEmpty()) {
       return defaultValue;
     }
-    Boolean retValue = rowFilters.get(0).isReversed();
-    boolean allEqual = rowFilters.stream().map(Filter::isReversed).allMatch(retValue::equals);
+    boolean retValue = rowFilters.get(0).isReversed();
+    boolean allEqual = rowFilters.stream().allMatch(f -> f.isReversed() == retValue);
     if (!allEqual) {
       throw new IllegalArgumentException("Filters in the list must have the same reversed flag");
     }
