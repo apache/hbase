@@ -1499,7 +1499,7 @@ See <<Serial Replication,Serial Replication>>
 add_peer <ID> <CLUSTER_KEY>::
   Adds a replication relationship between two clusters. +
   * ID -- a unique string, which must not contain a hyphen.
-  * CLUSTER_KEY: composed using the following template, with appropriate place-holders: `hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent`
+  * CLUSTER_KEY: composed using the following template, with appropriate place-holders: `hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent`. This value can be found on the Master UI info page.
   * STATE(optional): ENABLED or DISABLED, default value is ENABLED
 list_peers:: list all replication relationships known by this cluster
 enable_peer <ID>::
