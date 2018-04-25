@@ -279,6 +279,8 @@ public class Scan extends Query {
     this.limit = scan.getLimit();
     this.needCursorResult = scan.isNeedCursorResult();
     setPriority(scan.getPriority());
+    readType = scan.getReadType();
+    super.setReplicaId(scan.getReplicaId());
   }
 
   /**
@@ -310,6 +312,7 @@ public class Scan extends Query {
     }
     this.mvccReadPoint = -1L;
     setPriority(get.getPriority());
+    super.setReplicaId(get.getReplicaId());
   }
 
   public boolean isGetScan() {
