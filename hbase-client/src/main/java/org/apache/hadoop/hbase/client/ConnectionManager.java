@@ -1105,6 +1105,9 @@ class ConnectionManager {
       NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(this, tableName);
       final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
       for (HRegionInfo regionInfo : regions.keySet()) {
+        if (!RegionReplicaUtil.isDefaultReplica(regionInfo)) {
+          continue;
+        }
         RegionLocations list = locateRegion(tableName, regionInfo.getStartKey(), useCache, true);
         if (list != null) {
           for (HRegionLocation loc : list.getRegionLocations()) {
