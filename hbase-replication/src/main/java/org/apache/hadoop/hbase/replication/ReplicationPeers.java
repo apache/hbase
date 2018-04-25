@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -101,6 +102,10 @@ public class ReplicationPeers {
    */
   public Set<String> getAllPeerIds() {
     return Collections.unmodifiableSet(peerCache.keySet());
+  }
+
+  public Map<String, ReplicationPeerImpl> getPeerCache() {
+    return Collections.unmodifiableMap(peerCache);
   }
 
   public PeerState refreshPeerState(String peerId) throws ReplicationException {
