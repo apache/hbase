@@ -517,6 +517,14 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     listeners.add(listener);
   }
 
+  private static String getWALNameGroupFromWALName(String name, int group) {
+    Matcher matcher = WAL_FILE_NAME_PATTERN.matcher(name);
+    if (matcher.matches()) {
+      return matcher.group(group);
+    } else {
+      throw new IllegalArgumentException(name + " is not a valid wal file name");
+    }
+  }
   /**
    * Get prefix of the log from its name, assuming WAL name in format of
    * log_prefix.filenumber.log_suffix
@@ -526,11 +534,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @see AbstractFSWAL#getCurrentFileName()
    */
   public static String getWALPrefixFromWALName(String name) {
-    Matcher matcher = WAL_FILE_NAME_PATTERN.matcher(name);
-    if (matcher.matches()) {
-      return matcher.group(1);
-    } else {
-      throw new IllegalArgumentException(name + " is not a valid wal file name");
-    }
+    return getWALNameGroupFromWALName(name, 1);
+  }
+
+  public static long getWALStartTimeFromWALName(String name) {
+    return Long.parseLong(getWALNameGroupFromWALName(name, 2));
   }
 }

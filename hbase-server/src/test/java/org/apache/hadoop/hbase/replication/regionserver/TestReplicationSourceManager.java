@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -592,27 +593,10 @@ public abstract class TestReplicationSourceManager {
     }
   }
 
-  @Test
-  public void testRemoveRemoteWALs() throws IOException {
-    // make sure that we can deal with files which does not exist
-    String walNameNotExists = "remoteWAL.0";
-    Path wal = new Path(logDir, walNameNotExists);
-    manager.preLogRoll(wal);
-    manager.postLogRoll(wal);
-
-    Path remoteLogDirForPeer = new Path(remoteLogDir, slaveId);
-    fs.mkdirs(remoteLogDirForPeer);
-    String walName = "remoteWAL.1";
-    Path remoteWAL =
-      new Path(remoteLogDirForPeer, walName).makeQualified(fs.getUri(), fs.getWorkingDirectory());
-    fs.create(remoteWAL).close();
-    wal = new Path(logDir, walName);
-    manager.preLogRoll(wal);
-    manager.postLogRoll(wal);
-
+  private ReplicationSourceInterface mockReplicationSource(String peerId) {
     ReplicationSourceInterface source = mock(ReplicationSourceInterface.class);
-    when(source.getPeerId()).thenReturn(slaveId);
-    when(source.getQueueId()).thenReturn(slaveId);
+    when(source.getPeerId()).thenReturn(peerId);
+    when(source.getQueueId()).thenReturn(peerId);
     when(source.isRecovered()).thenReturn(false);
     when(source.isSyncReplication()).thenReturn(true);
     ReplicationPeerConfig config = mock(ReplicationPeerConfig.class);
@@ -621,17 +605,51 @@ public abstract class TestReplicationSourceManager {
     ReplicationPeer peer = mock(ReplicationPeer.class);
     when(peer.getPeerConfig()).thenReturn(config);
     when(source.getPeer()).thenReturn(peer);
-    manager.cleanOldLogs(walName, true, source);
+    return source;
+  }
 
-    assertFalse(fs.exists(remoteWAL));
+  @Test
+  public void testRemoveRemoteWALs() throws Exception {
+    String peerId2 = slaveId + "_2";
+    addPeerAndWait(peerId2,
+      ReplicationPeerConfig.newBuilder()
+        .setClusterKey("localhost:" + utility.getZkCluster().getClientPort() + ":/hbase").build(),
+      true);
+    try {
+      // make sure that we can deal with files which does not exist
+      String walNameNotExists =
+        "remoteWAL-12345-" + slaveId + ".12345" + SyncReplicationWALProvider.LOG_SUFFIX;
+      Path wal = new Path(logDir, walNameNotExists);
+      manager.preLogRoll(wal);
+      manager.postLogRoll(wal);
+
+      Path remoteLogDirForPeer = new Path(remoteLogDir, slaveId);
+      fs.mkdirs(remoteLogDirForPeer);
+      String walName =
+        "remoteWAL-12345-" + slaveId + ".23456" + SyncReplicationWALProvider.LOG_SUFFIX;
+      Path remoteWAL =
+        new Path(remoteLogDirForPeer, walName).makeQualified(fs.getUri(), fs.getWorkingDirectory());
+      fs.create(remoteWAL).close();
+      wal = new Path(logDir, walName);
+      manager.preLogRoll(wal);
+      manager.postLogRoll(wal);
+
+      ReplicationSourceInterface source = mockReplicationSource(peerId2);
+      manager.cleanOldLogs(walName, true, source);
+      // still there if peer id does not match
+      assertTrue(fs.exists(remoteWAL));
+
+      source = mockReplicationSource(slaveId);
+      manager.cleanOldLogs(walName, true, source);
+      assertFalse(fs.exists(remoteWAL));
+    } finally {
+      removePeerAndWait(peerId2);
+    }
   }
 
   /**
    * Add a peer and wait for it to initialize
-   * @param peerId
-   * @param peerConfig
    * @param waitForSource Whether to wait for replication source to initialize
-   * @throws Exception
    */
   private void addPeerAndWait(final String peerId, final ReplicationPeerConfig peerConfig,
       final boolean waitForSource) throws Exception {

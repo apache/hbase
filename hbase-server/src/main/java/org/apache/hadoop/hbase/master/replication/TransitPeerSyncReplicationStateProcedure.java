@@ -211,7 +211,7 @@ public class TransitPeerSyncReplicationStateProcedure
       case CREATE_DIR_FOR_REMOTE_WAL:
         MasterFileSystem mfs = env.getMasterFileSystem();
         Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
-        Path remoteWALDirForPeer = new Path(remoteWALDir, peerId);
+        Path remoteWALDirForPeer = ReplicationUtils.getRemoteWALDirForPeer(remoteWALDir, peerId);
         FileSystem walFs = mfs.getWALFileSystem();
         try {
           if (walFs.exists(remoteWALDirForPeer)) {

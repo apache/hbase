@@ -191,6 +191,10 @@ public final class ReplicationUtils {
     return new Path(remoteWALDir, peerId);
   }
 
+  public static Path getRemoteWALDirForPeer(Path remoteWALDir, String peerId) {
+    return new Path(remoteWALDir, peerId);
+  }
+
   /**
    * Do the sleeping logic
    * @param msg Why we sleep

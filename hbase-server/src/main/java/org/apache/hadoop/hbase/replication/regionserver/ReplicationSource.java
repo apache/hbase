@@ -570,14 +570,17 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     /**
+     * <p>
      * Split a path to get the start time
+     * </p>
+     * <p>
      * For example: 10.20.20.171%3A60020.1277499063250
+     * </p>
      * @param p path to split
      * @return start time
      */
     private static long getTS(Path p) {
-      int tsIndex = p.getName().lastIndexOf('.') + 1;
-      return Long.parseLong(p.getName().substring(tsIndex));
+      return AbstractFSWALProvider.getWALStartTimeFromWALName(p.getName());
     }
   }
 

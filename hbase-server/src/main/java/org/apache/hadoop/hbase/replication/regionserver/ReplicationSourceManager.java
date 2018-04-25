@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -561,20 +563,40 @@ public class ReplicationSourceManager implements ReplicationListener {
     if (source.isRecovered()) {
       NavigableSet<String> wals = walsByIdRecoveredQueues.get(source.getQueueId()).get(logPrefix);
       if (wals != null) {
-        cleanOldLogs(wals, log, inclusive, source);
+        NavigableSet<String> walsToRemove = wals.headSet(log, inclusive);
+        if (walsToRemove.isEmpty()) {
+          return;
+        }
+        cleanOldLogs(walsToRemove, source);
+        walsToRemove.clear();
       }
     } else {
+      NavigableSet<String> wals;
+      NavigableSet<String> walsToRemove;
       // synchronized on walsById to avoid race with preLogRoll
       synchronized (this.walsById) {
-        NavigableSet<String> wals = walsById.get(source.getQueueId()).get(logPrefix);
-        if (wals != null) {
-          cleanOldLogs(wals, log, inclusive, source);
+        wals = walsById.get(source.getQueueId()).get(logPrefix);
+        if (wals == null) {
+          return;
         }
+        walsToRemove = wals.headSet(log, inclusive);
+        if (walsToRemove.isEmpty()) {
+          return;
+        }
+        walsToRemove = new TreeSet<>(walsToRemove);
+      }
+      // cleanOldLogs may spend some time, especially for sync replication where we may want to
+      // remove remote wals as the remote cluster may have already been down, so we do it outside
+      // the lock to avoid block preLogRoll
+      cleanOldLogs(walsToRemove, source);
+      // now let's remove the files in the set
+      synchronized (this.walsById) {
+        wals.removeAll(walsToRemove);
       }
     }
   }
 
-  private void removeRemoteWALs(String peerId, String remoteWALDir, Set<String> wals)
+  private void removeRemoteWALs(String peerId, String remoteWALDir, Collection<String> wals)
       throws IOException {
     Path remoteWALDirForPeer = ReplicationUtils.getRemoteWALDirForPeer(remoteWALDir, peerId);
     FileSystem fs = ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir);
@@ -594,13 +616,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  private void cleanOldLogs(NavigableSet<String> wals, String key, boolean inclusive,
-      ReplicationSourceInterface source) {
-    NavigableSet<String> walSet = wals.headSet(key, inclusive);
-    if (walSet.isEmpty()) {
-      return;
-    }
-    LOG.debug("Removing {} logs in the list: {}", walSet.size(), walSet);
+  private void cleanOldLogs(NavigableSet<String> wals, ReplicationSourceInterface source) {
+    LOG.debug("Removing {} logs in the list: {}", wals.size(), wals);
     // The intention here is that, we want to delete the remote wal files ASAP as it may effect the
     // failover time if you want to transit the remote cluster from S to A. And the infinite retry
     // is not a problem, as if we can not contact with the remote HDFS cluster, then usually we can
@@ -608,32 +625,39 @@ public class ReplicationSourceManager implements ReplicationListener {
     if (source.isSyncReplication()) {
       String peerId = source.getPeerId();
       String remoteWALDir = source.getPeer().getPeerConfig().getRemoteWALDir();
-      LOG.debug("Removing {} logs from remote dir {} in the list: {}", walSet.size(), remoteWALDir,
-        walSet);
-      for (int sleepMultiplier = 0;;) {
-        try {
-          removeRemoteWALs(peerId, remoteWALDir, walSet);
-          break;
-        } catch (IOException e) {
-          LOG.warn("Failed to delete remote wals from remote dir {} for peer {}", remoteWALDir,
-            peerId);
-        }
-        if (!source.isSourceActive()) {
-          // skip the following operations
-          return;
-        }
-        if (ReplicationUtils.sleepForRetries("Failed to delete remote wals", sleepForRetries,
-          sleepMultiplier, maxRetriesMultiplier)) {
-          sleepMultiplier++;
+      // Filter out the wals need to be removed from the remote directory. Its name should be the
+      // special format, and also, the peer id in its name should match the peer id for the
+      // replication source.
+      List<String> remoteWals = wals.stream().filter(w -> SyncReplicationWALProvider
+        .getSyncReplicationPeerIdFromWALName(w).map(peerId::equals).orElse(false))
+        .collect(Collectors.toList());
+      LOG.debug("Removing {} logs from remote dir {} in the list: {}", remoteWals.size(),
+        remoteWALDir, remoteWals);
+      if (!remoteWals.isEmpty()) {
+        for (int sleepMultiplier = 0;;) {
+          try {
+            removeRemoteWALs(peerId, remoteWALDir, remoteWals);
+            break;
+          } catch (IOException e) {
+            LOG.warn("Failed to delete remote wals from remote dir {} for peer {}", remoteWALDir,
+              peerId);
+          }
+          if (!source.isSourceActive()) {
+            // skip the following operations
+            return;
+          }
+          if (ReplicationUtils.sleepForRetries("Failed to delete remote wals", sleepForRetries,
+            sleepMultiplier, maxRetriesMultiplier)) {
+            sleepMultiplier++;
+          }
         }
       }
     }
     String queueId = source.getQueueId();
-    for (String wal : walSet) {
+    for (String wal : wals) {
       interruptOrAbortWhenFail(
         () -> this.queueStorage.removeWAL(server.getServerName(), queueId, wal));
     }
-    walSet.clear();
   }
 
   // public because of we call it in TestReplicationEmptyWALRecovery

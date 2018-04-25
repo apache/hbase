@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.function.BiPredicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -48,6 +50,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Streams;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -64,7 +67,8 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   private static final Logger LOG = LoggerFactory.getLogger(SyncReplicationWALProvider.class);
 
-  private static final String LOG_SUFFIX = ".syncrep";
+  @VisibleForTesting
+  public static final String LOG_SUFFIX = ".syncrep";
 
   private final WALProvider provider;
 
@@ -286,6 +290,30 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     public boolean checkState(TableName table,
         BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
       return false;
+    }
+  }
+
+  private static final Pattern LOG_PREFIX_PATTERN = Pattern.compile(".*-\\d+-(.+)");
+
+  /**
+   * <p>
+   * Returns the peer id if the wal file name is in the special group for a sync replication peer.
+   * </p>
+   * <p>
+   * The prefix format is &lt;factoryId&gt;-&lt;ts&gt;-&lt;peerId&gt;.
+   * </p>
+   */
+  public static Optional<String> getSyncReplicationPeerIdFromWALName(String name) {
+    if (!name.endsWith(LOG_SUFFIX)) {
+      // fast path to return earlier if the name is not for a sync replication peer.
+      return Optional.empty();
+    }
+    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(name);
+    Matcher matcher = LOG_PREFIX_PATTERN.matcher(logPrefix);
+    if (matcher.matches()) {
+      return Optional.of(matcher.group(1));
+    } else {
+      return Optional.empty();
     }
   }
 }
