@@ -24,10 +24,11 @@
   import="java.util.Collection"
   import="java.util.Collections"
   import="java.util.Comparator"
+  import="java.util.HashMap"
   import="java.util.LinkedHashMap"
   import="java.util.List"
   import="java.util.Map"
-  import="java.util.HashMap"
+  import="java.util.Objects"
   import="java.util.TreeMap"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
@@ -445,7 +446,7 @@ if ( fqtn != null ) {
 <h2>Table Regions</h2>
 Sort As
 <select id="sel" style="margin-right: 10px">
-<option value="regionName">RegionName</option>
+<option value="regionname">RegionName</option>
 <option value="readrequest">ReadRequest</option>
 <option value="writerequest">WriteRequest</option>
 <option value="size">StorefileSize</option>
@@ -482,93 +483,87 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 
 <%
   List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
-  if(sortKey != null) {
-    if (sortKey.equals("readrequest")) {
-      Collections.sort(entryList, (entry1, entry2) -> {
-        if (entry1 == null || entry1.getValue() == null) {
-          return -1;
-        } else if (entry2 == null || entry2.getValue() == null) {
-          return 1;
-        }
-        int result = Long.compare(entry1.getValue().getReadRequestCount(),
-                entry2.getValue().getReadRequestCount());
-        if (reverseOrder) {
-          result = -1 * result;
-        }
-        return result;
-      });
-    } else if (sortKey.equals("writerequest")) {
-      Collections.sort(entryList, (entry1, entry2) -> {
-        if (entry1 == null || entry1.getValue() == null) {
-          return -1;
-        } else if (entry2 == null || entry2.getValue() == null) {
-          return 1;
-        }
-        int result = Long.compare(entry1.getValue().getWriteRequestCount(),
-                entry2.getValue().getWriteRequestCount());
-        if (reverseOrder) {
-          result = -1 * result;
-        }
-        return result;
-      });
-    } else if (sortKey.equals("size")) {
-      Collections.sort(entryList, (entry1, entry2) -> {
-        if (entry1 == null || entry1.getValue() == null) {
-          return -1;
-        } else if (entry2 == null || entry2.getValue() == null) {
-          return 1;
-        }
-        int result = Double.compare(entry1.getValue().getStoreFileSize().get(),
-                entry2.getValue().getStoreFileSize().get());
-        if (reverseOrder) {
-          result = -1 * result;
-        }
-        return result;
-      });
-    } else if (sortKey.equals("filecount")) {
-      Collections.sort(entryList, (entry1, entry2) -> {
-        if (entry1 == null || entry1.getValue() == null) {
-          return -1;
-        } else if (entry2 == null || entry2.getValue() == null) {
-          return 1;
-        }
-        int result = Integer.compare(entry1.getValue().getStoreCount(),
-                entry2.getValue().getStoreCount());
-        if (reverseOrder) {
-          result = -1 * result;
-        }
-        return result;
-      });
-    } else if (sortKey.equals("memstore")) {
-      Collections.sort(entryList, (entry1, entry2) -> {
-        if (entry1 == null || entry1.getValue() == null) {
-          return -1;
-        } else if (entry2 == null || entry2.getValue() == null) {
-          return 1;
-        }
-        int result = Double.compare(entry1.getValue().getMemStoreSize().get(),
-                entry2.getValue().getMemStoreSize().get());
-        if (reverseOrder) {
-          result = -1 * result;
-        }
-        return result;
-      });
-    } else if (sortKey.equals("locality")) {
-      Collections.sort(entryList, (entry1, entry2) -> {
-        if (entry1 == null || entry1.getValue() == null) {
-          return -1;
-        } else if (entry2 == null || entry2.getValue() == null) {
-          return 1;
-        }
-        int result = Double.compare(entry1.getValue().getDataLocality(),
-                entry2.getValue().getDataLocality());
-        if (reverseOrder) {
-          result = -1 * result;
-        }
-        return result;
-      });
-    }
+  if (Objects.equals(sortKey, "regionname")) {
+    Collections.sort(entryList, (entry1, entry2) -> {
+      if (entry1 == null || entry1.getValue() == null) {
+        return -1;
+      } else if (entry2 == null || entry2.getValue() == null) {
+        return 1;
+      }
+      RegionInfo regionInfo1 = entry1.getKey();
+      RegionInfo regionInfo2 = entry2.getKey();
+      String name1 = showWhole ? Bytes.toStringBinary(regionInfo1.getRegionName())
+          : regionInfo1.getEncodedName();
+      String name2 = showWhole ? Bytes.toStringBinary(regionInfo2.getRegionName())
+          : regionInfo2.getEncodedName();
+      return name1.compareTo(name2);
+    });
+  } else if (Objects.equals(sortKey, "readrequest")) {
+    Collections.sort(entryList, (entry1, entry2) -> {
+      if (entry1 == null || entry1.getValue() == null) {
+        return -1;
+      } else if (entry2 == null || entry2.getValue() == null) {
+        return 1;
+      }
+      return Long.compare(entry1.getValue().getReadRequestCount(),
+          entry2.getValue().getReadRequestCount());
+    });
+  } else if (Objects.equals(sortKey, "writerequest")) {
+    Collections.sort(entryList, (entry1, entry2) -> {
+      if (entry1 == null || entry1.getValue() == null) {
+        return -1;
+      } else if (entry2 == null || entry2.getValue() == null) {
+        return 1;
+      }
+      return Long.compare(entry1.getValue().getWriteRequestCount(),
+          entry2.getValue().getWriteRequestCount());
+    });
+  } else if (Objects.equals(sortKey, "size")) {
+    Collections.sort(entryList, (entry1, entry2) -> {
+      if (entry1 == null || entry1.getValue() == null) {
+        return -1;
+      } else if (entry2 == null || entry2.getValue() == null) {
+        return 1;
+      }
+      return Double.compare(entry1.getValue().getStoreFileSize().get(),
+          entry2.getValue().getStoreFileSize().get());
+    });
+  } else if (Objects.equals(sortKey, "filecount")) {
+    Collections.sort(entryList, (entry1, entry2) -> {
+      if (entry1 == null || entry1.getValue() == null) {
+        return -1;
+      } else if (entry2 == null || entry2.getValue() == null) {
+        return 1;
+      }
+      return Integer.compare(entry1.getValue().getStoreCount(),
+          entry2.getValue().getStoreCount());
+    });
+  } else if (Objects.equals(sortKey, "memstore")) {
+    Collections.sort(entryList, (entry1, entry2) -> {
+      if (entry1 == null || entry1.getValue() == null) {
+        return -1;
+      } else if (entry2 == null || entry2.getValue() == null) {
+        return 1;
+      }
+      return Double.compare(entry1.getValue().getMemStoreSize().get(),
+          entry2.getValue().getMemStoreSize().get());
+    });
+  } else if (Objects.equals(sortKey, "locality")) {
+    Collections.sort(entryList, (entry1, entry2) -> {
+      if (entry1 == null || entry1.getValue() == null) {
+        return -1;
+      } else if (entry2 == null || entry2.getValue() == null) {
+        return 1;
+      }
+      return Double.compare(entry1.getValue().getDataLocality(),
+          entry2.getValue().getDataLocality());
+    });
   }
+
+  if (reverseOrder) {
+    Collections.reverse(entryList);
+  }
+
   numRegions = regions.size();
   int numRegionsRendered = 0;
   // render all regions
@@ -838,7 +833,7 @@ if(showWhole=='true')document.getElementById("showWhole").checked=true;
 
 function reloadAsSort(){
   var url="?name="+'<%= URLEncoder.encode(fqtn) %>';
-  if(document.getElementById("sel").selectedIndex>0){
+  if(document.getElementById("sel").selectedIndex>=0){
     url=url+"&sort="+document.getElementById("sel").value;
   }
   if(document.getElementById("ascending").checked){
