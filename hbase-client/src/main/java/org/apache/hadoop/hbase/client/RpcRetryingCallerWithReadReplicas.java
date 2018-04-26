@@ -279,6 +279,7 @@ public class RpcRetryingCallerWithReadReplicas {
       throws RetriesExhaustedException, DoNotRetryIOException {
     Throwable t = e.getCause();
     assert t != null; // That's what ExecutionException is about: holding an exception
+    t.printStackTrace();
 
     if (t instanceof RetriesExhaustedException) {
       throw (RetriesExhaustedException) t;

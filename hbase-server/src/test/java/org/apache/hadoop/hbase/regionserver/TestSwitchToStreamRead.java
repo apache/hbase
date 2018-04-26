@@ -34,13 +34,17 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
+import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -49,7 +53,7 @@ public class TestSwitchToStreamRead {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSwitchToStreamRead.class);
+    HBaseClassTestRule.forClass(TestSwitchToStreamRead.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -73,18 +77,18 @@ public class TestSwitchToStreamRead {
     VALUE_PREFIX = sb.append("-").toString();
     REGION = UTIL.createLocalHRegion(
       TableDescriptorBuilder.newBuilder(TABLE_NAME)
-          .setColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBlocksize(1024).build())
-          .build(),
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBlocksize(1024).build())
+        .build(),
       null, null);
     for (int i = 0; i < 900; i++) {
       REGION
-          .put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(VALUE_PREFIX + i)));
+        .put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(VALUE_PREFIX + i)));
     }
     REGION.flush(true);
     for (int i = 900; i < 1000; i++) {
       REGION
-          .put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(VALUE_PREFIX + i)));
+        .put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(VALUE_PREFIX + i)));
     }
   }
 
@@ -97,8 +101,8 @@ public class TestSwitchToStreamRead {
   @Test
   public void test() throws IOException {
     try (RegionScannerImpl scanner = REGION.getScanner(new Scan())) {
-      StoreScanner storeScanner = (StoreScanner) (scanner)
-          .getStoreHeapForTesting().getCurrentForTesting();
+      StoreScanner storeScanner =
+        (StoreScanner) (scanner).getStoreHeapForTesting().getCurrentForTesting();
       for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
@@ -133,5 +137,126 @@ public class TestSwitchToStreamRead {
     for (HStoreFile sf : REGION.getStore(FAMILY).getStorefiles()) {
       assertFalse(sf.isReferencedInReads());
     }
+  }
+
+  public static final class MatchLastRowKeyFilter extends FilterBase {
+
+    @Override
+    public boolean filterRowKey(Cell cell) throws IOException {
+      return Bytes.toInt(cell.getRowArray(), cell.getRowOffset()) != 999;
+    }
+  }
+
+  private void testFilter(Filter filter) throws IOException {
+    try (RegionScannerImpl scanner = REGION.getScanner(new Scan().setFilter(filter))) {
+      StoreScanner storeScanner =
+        (StoreScanner) (scanner).getStoreHeapForTesting().getCurrentForTesting();
+      for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
+        if (kvs instanceof StoreFileScanner) {
+          StoreFileScanner sfScanner = (StoreFileScanner) kvs;
+          // starting from pread so we use shared reader here.
+          assertTrue(sfScanner.getReader().shared);
+        }
+      }
+      List<Cell> cells = new ArrayList<>();
+      // should return before finishing the scan as we want to switch from pread to stream
+      assertTrue(scanner.next(cells,
+        ScannerContext.newBuilder().setTimeLimit(LimitScope.BETWEEN_CELLS, -1).build()));
+      assertTrue(cells.isEmpty());
+      scanner.shipped();
+
+      for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
+        if (kvs instanceof StoreFileScanner) {
+          StoreFileScanner sfScanner = (StoreFileScanner) kvs;
+          // we should have convert to use stream read now.
+          assertFalse(sfScanner.getReader().shared);
+        }
+      }
+      assertFalse(scanner.next(cells,
+        ScannerContext.newBuilder().setTimeLimit(LimitScope.BETWEEN_CELLS, -1).build()));
+      Result result = Result.create(cells);
+      assertEquals(VALUE_PREFIX + 999, Bytes.toString(result.getValue(FAMILY, QUAL)));
+      cells.clear();
+      scanner.shipped();
+    }
+    // make sure all scanners are closed.
+    for (HStoreFile sf : REGION.getStore(FAMILY).getStorefiles()) {
+      assertFalse(sf.isReferencedInReads());
+    }
+  }
+
+  // We use a different logic to implement filterRowKey, where we will keep calling kvHeap.next
+  // until the row key is changed. And there we can only use NoLimitScannerContext so we can not
+  // make the upper layer return immediately. Simply do not use NoLimitScannerContext will lead to
+  // an infinite loop. Need to dig more, the code are way too complicated...
+  @Ignore
+  @Test
+  public void testFilterRowKey() throws IOException {
+    testFilter(new MatchLastRowKeyFilter());
+  }
+
+  public static final class MatchLastRowCellNextColFilter extends FilterBase {
+
+    @Override
+    public ReturnCode filterCell(Cell c) throws IOException {
+      if (Bytes.toInt(c.getRowArray(), c.getRowOffset()) == 999) {
+        return ReturnCode.INCLUDE;
+      } else {
+        return ReturnCode.NEXT_COL;
+      }
+    }
+  }
+
+  @Test
+  public void testFilterCellNextCol() throws IOException {
+    testFilter(new MatchLastRowCellNextColFilter());
+  }
+
+  public static final class MatchLastRowCellNextRowFilter extends FilterBase {
+
+    @Override
+    public ReturnCode filterCell(Cell c) throws IOException {
+      if (Bytes.toInt(c.getRowArray(), c.getRowOffset()) == 999) {
+        return ReturnCode.INCLUDE;
+      } else {
+        return ReturnCode.NEXT_ROW;
+      }
+    }
+  }
+
+  @Test
+  public void testFilterCellNextRow() throws IOException {
+    testFilter(new MatchLastRowCellNextRowFilter());
+  }
+
+  public static final class MatchLastRowFilterRowFilter extends FilterBase {
+
+    private boolean exclude;
+
+    @Override
+    public void filterRowCells(List<Cell> kvs) throws IOException {
+      Cell c = kvs.get(0);
+      exclude = Bytes.toInt(c.getRowArray(), c.getRowOffset()) != 999;
+    }
+
+    @Override
+    public void reset() throws IOException {
+      exclude = false;
+    }
+
+    @Override
+    public boolean filterRow() throws IOException {
+      return exclude;
+    }
+
+    @Override
+    public boolean hasFilterRow() {
+      return true;
+    }
+  }
+
+  @Test
+  public void testFilterRow() throws IOException {
+    testFilter(new MatchLastRowFilterRowFilter());
   }
 }
