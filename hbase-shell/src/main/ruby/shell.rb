@@ -152,6 +152,7 @@ module Shell
       puts 'HBase Shell'
       puts 'Use "help" to get list of supported commands.'
       puts 'Use "exit" to quit this interactive shell.'
+      puts 'For Reference, please visit: http://hbase.apache.org/book.html#shell'
       print 'Version '
       command('version')
       puts
