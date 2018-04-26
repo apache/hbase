@@ -53,9 +53,11 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, LargeTests.class })
+@Ignore("See HBASE-20496")
 public class TestGlobalThrottler {
   private static final Log LOG = LogFactory.getLog(TestGlobalThrottler.class);
   private static Configuration conf1;
