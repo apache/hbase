@@ -85,12 +85,7 @@
           org.apache.commons.collections4,
           org.apache.commons.lang,
           org.apache.curator.shaded,
-          org.apache.hadoop.classification,
-          org.apache.htrace.shaded,
-          org.codehaus.jackson"/>
-      <property name="illegalClasses" value="
-          org.apache.commons.logging.Log,
-          org.apache.commons.logging.LogFactory"/>
+          org.apache.htrace.shaded"/>
     </module>
     <!-- Javadoc Checks
     http://checkstyle.sourceforge.net/config_javadoc.html -->
