@@ -553,7 +553,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     LOOP: do {
       // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
-      if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
+      // Or if the preadMaxBytes is reached and we may want to return so we can switch to stream in
+      // the shipped method below.
+      if (kvsScanned % cellsPerHeartbeatCheck == 0 || (scanUsePread &&
+        scan.getReadType() == Scan.ReadType.DEFAULT && bytesRead > preadMaxBytes)) {
         if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
           return scannerContext.setScannerState(NextState.TIME_LIMIT_REACHED).hasMoreValues();
         }
@@ -565,6 +568,18 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       checkScanOrder(prevCell, cell, comparator);
       int cellSize = PrivateCellUtil.estimatedSerializedSizeOf(cell);
       bytesRead += cellSize;
+      if (scanUsePread && scan.getReadType() == Scan.ReadType.DEFAULT &&
+        bytesRead > preadMaxBytes) {
+        // return immediately if we want to switch from pread to stream. We need this because we can
+        // only switch in the shipped method, if user use a filter to filter out everything and rpc
+        // timeout is very large then the shipped method will never be called until the whole scan
+        // is finished, but at that time we have already scan all the data...
+        // See HBASE-20457 for more details.
+        // And there is still a scenario that can not be handled. If we have a very large row, which
+        // have millions of qualifiers, and filter.filterRow is used, then even if we set the flag
+        // here, we still need to scan all the qualifiers before returning...
+        scannerContext.returnImmediately();
+      }
       prevCell = cell;
       scannerContext.setLastPeekedCell(cell);
       topChanged = false;
