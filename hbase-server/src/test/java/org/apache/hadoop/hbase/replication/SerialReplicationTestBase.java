@@ -119,6 +119,7 @@ public class SerialReplicationTestBase {
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setInt("replication.source.nb.capacity", 10);
     UTIL.getConfiguration().setLong("replication.sleep.before.failover", 1000);
+    UTIL.getConfiguration().setLong("hbase.serial.replication.waiting.ms", 100);
     UTIL.startMiniCluster(3);
     // disable balancer
     UTIL.getAdmin().balancerSwitch(false, true);
