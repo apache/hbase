@@ -38,7 +38,7 @@ public interface OperationQuota {
    * @param numScans number of long-read operation that will be performed
    * @throws ThrottlingException if the operation cannot be performed
    */
-  void checkQuota(int numWrites, int numReads, int numScans) throws ThrottlingException;
+  void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException;
 
   /** Cleanup method on operation completion */
   void close();

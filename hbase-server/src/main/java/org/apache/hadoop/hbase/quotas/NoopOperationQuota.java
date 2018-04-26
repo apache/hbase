@@ -35,7 +35,7 @@ final class NoopOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void checkQuota(int numWrites, int numReads, int numScans) throws ThrottlingException {
+  public void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException {
     // no-op
   }
 

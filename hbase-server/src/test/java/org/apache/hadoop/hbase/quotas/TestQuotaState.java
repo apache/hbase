@@ -18,6 +18,7 @@ import static org.junit.Assert.fail;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
@@ -207,7 +208,7 @@ public class TestQuotaState {
     try {
       limiter.checkQuota(TABLE_A_THROTTLE_1 + 1, TABLE_A_THROTTLE_1 + 1, 0, 0);
       fail("Should have thrown ThrottlingException");
-    } catch (ThrottlingException e) {
+    } catch (HBaseIOException e) {
       // expected
     }
   }
@@ -226,7 +227,7 @@ public class TestQuotaState {
     try {
       limiter.checkQuota(1, 1, 0, 0);
       fail("Should have thrown ThrottlingException");
-    } catch (ThrottlingException e) {
+    } catch (HBaseIOException e) {
       // expected
     }
   }
@@ -235,7 +236,7 @@ public class TestQuotaState {
     for (int i = 0; i < availReqs; ++i) {
       try {
         limiter.checkQuota(1, 1, 0, 0);
-      } catch (ThrottlingException e) {
+      } catch (HBaseIOException e) {
         fail("Unexpected ThrottlingException after " + i + " requests. limit=" + availReqs);
       }
       limiter.grabQuota(1, 1, 0, 0);

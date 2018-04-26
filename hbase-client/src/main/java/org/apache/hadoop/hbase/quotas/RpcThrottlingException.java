@@ -13,20 +13,20 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Describe the throttling result. TODO: At some point this will be handled on the client side to
- * prevent operation to go on the server if the waitInterval is grater than the one got as result of
- * this exception.
- * @deprecated  replaced by {@link RpcThrottlingException}
+ * prevent operation to go on the server if the waitInterval is greater than the one got as result
+ * of this exception.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ThrottlingException extends QuotaExceededException {
-  private static final long serialVersionUID = 1406576492085155743L;
+public class RpcThrottlingException extends HBaseIOException {
+  private static final long serialVersionUID = 1L;
 
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
@@ -37,15 +37,15 @@ public class ThrottlingException extends QuotaExceededException {
 
   private static final String[] MSG_TYPE =
       new String[] { "number of requests exceeded", "request size limit exceeded",
-          "number of read requests exceeded", "number of write requests exceeded",
-          "write size limit exceeded", "read size limit exceeded", };
+        "number of read requests exceeded", "number of write requests exceeded",
+        "write size limit exceeded", "read size limit exceeded", };
 
   private static final String MSG_WAIT = " - wait ";
 
   private long waitInterval;
   private Type type;
 
-  public ThrottlingException(String msg) {
+  public RpcThrottlingException(String msg) {
     super(msg);
 
     // Dirty workaround to get the information after
@@ -61,7 +61,7 @@ public class ThrottlingException extends QuotaExceededException {
     }
   }
 
-  public ThrottlingException(final Type type, final long waitInterval, final String msg) {
+  public RpcThrottlingException(final Type type, final long waitInterval, final String msg) {
     super(msg);
     this.waitInterval = waitInterval;
     this.type = type;
@@ -75,57 +75,38 @@ public class ThrottlingException extends QuotaExceededException {
     return this.waitInterval;
   }
 
-  public static void throwNumRequestsExceeded(final long waitInterval) throws ThrottlingException {
+  public static void throwNumRequestsExceeded(final long waitInterval) throws
+      RpcThrottlingException {
     throwThrottlingException(Type.NumRequestsExceeded, waitInterval);
   }
-  
+
   public static void throwRequestSizeExceeded(final long waitInterval)
-      throws ThrottlingException {
+      throws RpcThrottlingException {
     throwThrottlingException(Type.RequestSizeExceeded, waitInterval);
   }
 
   public static void throwNumReadRequestsExceeded(final long waitInterval)
-      throws ThrottlingException {
+      throws RpcThrottlingException {
     throwThrottlingException(Type.NumReadRequestsExceeded, waitInterval);
   }
 
   public static void throwNumWriteRequestsExceeded(final long waitInterval)
-      throws ThrottlingException {
+      throws RpcThrottlingException {
     throwThrottlingException(Type.NumWriteRequestsExceeded, waitInterval);
   }
 
-  public static void throwWriteSizeExceeded(final long waitInterval) throws ThrottlingException {
+  public static void throwWriteSizeExceeded(final long waitInterval) throws RpcThrottlingException {
     throwThrottlingException(Type.WriteSizeExceeded, waitInterval);
   }
 
-  public static void throwReadSizeExceeded(final long waitInterval) throws ThrottlingException {
+  public static void throwReadSizeExceeded(final long waitInterval) throws RpcThrottlingException {
     throwThrottlingException(Type.ReadSizeExceeded, waitInterval);
   }
 
   private static void throwThrottlingException(final Type type, final long waitInterval)
-      throws ThrottlingException {
-    String msg = MSG_TYPE[type.ordinal()] + MSG_WAIT + formatTime(waitInterval);
-    throw new ThrottlingException(type, waitInterval, msg);
-  }
-
-  public static String formatTime(long timeDiff) {
-    StringBuilder buf = new StringBuilder();
-    long hours = timeDiff / (60 * 60 * 1000);
-    long rem = (timeDiff % (60 * 60 * 1000));
-    long minutes = rem / (60 * 1000);
-    rem = rem % (60 * 1000);
-    float seconds = rem / 1000.0f;
-
-    if (hours != 0) {
-      buf.append(hours);
-      buf.append("hrs, ");
-    }
-    if (minutes != 0) {
-      buf.append(minutes);
-      buf.append("mins, ");
-    }
-    buf.append(String.format("%.2fsec", seconds));
-    return buf.toString();
+      throws RpcThrottlingException {
+    String msg = MSG_TYPE[type.ordinal()] + MSG_WAIT + StringUtils.formatTime(waitInterval);
+    throw new RpcThrottlingException(type, waitInterval, msg);
   }
 
   private static long timeFromString(String timeDiff) {

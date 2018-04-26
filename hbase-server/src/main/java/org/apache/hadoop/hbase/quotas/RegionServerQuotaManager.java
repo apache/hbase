@@ -16,6 +16,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -43,6 +44,7 @@ public class RegionServerQuotaManager {
   private final RegionServerServices rsServices;
 
   private QuotaCache quotaCache = null;
+  private boolean useRetryableThrottlingException;
 
   public RegionServerQuotaManager(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
@@ -59,6 +61,10 @@ public class RegionServerQuotaManager {
     // Initialize quota cache
     quotaCache = new QuotaCache(rsServices);
     quotaCache.start();
+
+    useRetryableThrottlingException = rsServices.getConfiguration()
+        .getBoolean(QuotaUtil.QUOTA_RETRYABLE_THROTTING_EXCEPTION_CONF_KEY,
+            QuotaUtil.QUOTA_RETRYABLE_THROTTING_EXCEPTION_DEFAULT);
   }
 
   public void stop() {
@@ -119,7 +125,7 @@ public class RegionServerQuotaManager {
    * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   public OperationQuota checkQuota(final Region region, final OperationQuota.OperationType type)
-      throws IOException, ThrottlingException {
+      throws IOException {
     switch (type) {
     case SCAN:
       return checkQuota(region, 0, 0, 1);
@@ -141,7 +147,7 @@ public class RegionServerQuotaManager {
    * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   public OperationQuota checkQuota(final Region region, final List<ClientProtos.Action> actions)
-      throws IOException, ThrottlingException {
+      throws IOException {
     int numWrites = 0;
     int numReads = 0;
     for (final ClientProtos.Action action : actions) {
@@ -165,7 +171,7 @@ public class RegionServerQuotaManager {
    * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   private OperationQuota checkQuota(final Region region, final int numWrites, final int numReads,
-      final int numScans) throws IOException, ThrottlingException {
+      final int numScans) throws IOException {
     User user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
     if (user != null) {
@@ -178,11 +184,28 @@ public class RegionServerQuotaManager {
     OperationQuota quota = getQuota(ugi, table);
     try {
       quota.checkQuota(numWrites, numReads, numScans);
-    } catch (ThrottlingException e) {
+    } catch (HBaseIOException e) {
       LOG.debug("Throttling exception for user=" + ugi.getUserName() + " table=" + table
           + " numWrites=" + numWrites + " numReads=" + numReads + " numScans=" + numScans + ": "
           + e.getMessage());
-      throw e;
+      // Depending on whether we are supposed to throw a retryable IO exeption or not, choose
+      // the correct exception type to (re)throw
+      if (e instanceof ThrottlingException) {
+        if (useRetryableThrottlingException) {
+          throw new RpcThrottlingException(e.getMessage());
+        } else {
+          throw e;
+        }
+      } else if (e instanceof RpcThrottlingException) {
+        if (useRetryableThrottlingException) {
+          throw e;
+        } else {
+          throw new ThrottlingException(e.getMessage());
+        }
+      } else {
+        LOG.warn("Unexpected exception from quota check", e);
+        throw e;
+      }
     }
     return quota;
   }

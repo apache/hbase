@@ -50,6 +50,10 @@ public class QuotaUtil extends QuotaTableUtil {
   public static final String QUOTA_CONF_KEY = "hbase.quota.enabled";
   private static final boolean QUOTA_ENABLED_DEFAULT = false;
 
+  public static final String QUOTA_RETRYABLE_THROTTING_EXCEPTION_CONF_KEY =
+      "hbase.quota.retryable.throttlingexception";
+  public static final boolean QUOTA_RETRYABLE_THROTTING_EXCEPTION_DEFAULT = false;
+
   /** Table descriptor for Quota internal table */
   public static final HTableDescriptor QUOTA_TABLE_DESC = new HTableDescriptor(QUOTA_TABLE_NAME);
   static {
