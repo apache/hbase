@@ -87,7 +87,7 @@ public class TestReplicationBase {
   protected static final int NB_ROWS_IN_BIG_BATCH =
       NB_ROWS_IN_BATCH * 10;
   protected static final long SLEEP_TIME = 500;
-  protected static final int NB_RETRIES = 10;
+  protected static final int NB_RETRIES = 50;
 
   protected static final TableName tableName = TableName.valueOf("test");
   protected static final byte[] famName = Bytes.toBytes("f");
@@ -185,6 +185,7 @@ public class TestReplicationBase {
     conf1.setInt("replication.source.maxretriesmultiplier", 10);
     conf1.setFloat("replication.source.ratio", 1.0f);
     conf1.setBoolean("replication.source.eof.autorecovery", true);
+    conf1.setLong("hbase.serial.replication.waiting.ms", 100);
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
