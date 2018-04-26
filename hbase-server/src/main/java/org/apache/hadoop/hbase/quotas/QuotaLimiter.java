@@ -31,11 +31,13 @@ public interface QuotaLimiter {
   /**
    * Checks if it is possible to execute the specified operation.
    *
+   * @param writeReqs the write requests that will be checked against the available quota
    * @param estimateWriteSize the write size that will be checked against the available quota
+   * @param readReqs the read requests that will be checked against the available quota
    * @param estimateReadSize the read size that will be checked against the available quota
    * @throws ThrottlingException thrown if not enough avialable resources to perform operation.
    */
-  void checkQuota(long estimateWriteSize, long estimateReadSize)
+  void checkQuota(long writeReqs, long estimateWriteSize, long readReqs, long estimateReadSize)
     throws ThrottlingException;
 
   /**
@@ -43,10 +45,12 @@ public interface QuotaLimiter {
    * At this point the write and read amount will be an estimate,
    * that will be later adjusted with a consumeWrite()/consumeRead() call.
    *
+   * @param writeReqs the write requests that will be removed from the current quota
    * @param writeSize the write size that will be removed from the current quota
+   * @param readReqs the read requests that will be removed from the current quota
    * @param readSize the read size that will be removed from the current quota
    */
-  void grabQuota(long writeSize, long readSize);
+  void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize);
 
   /**
    * Removes or add back some write amount to the quota.
