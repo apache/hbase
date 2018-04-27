@@ -38,10 +38,10 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * Base class for HBase integration tests that want to use the Chaos Monkey.
- * Usage: bin/hbase <sub_class_of_IntegrationTestBase> <options>
+ * Usage: bin/hbase &lt;sub_class_of_IntegrationTestBase> &lt;options>
  * Options: -h,--help Show usage
- *          -m,--monkey <arg> Which chaos monkey to run
- *          -monkeyProps <arg> The properties file for specifying chaos monkey properties.
+ *          -m,--monkey &lt;arg> Which chaos monkey to run
+ *          -monkeyProps &lt;arg> The properties file for specifying chaos monkey properties.
  *          -ncc Option to not clean up the cluster at the end.
  */
 public abstract class IntegrationTestBase extends AbstractHBaseTool {

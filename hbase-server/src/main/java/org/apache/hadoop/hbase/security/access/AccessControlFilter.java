@@ -165,7 +165,7 @@ class AccessControlFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link AccessControlFilter} instance
    * @return An instance of {@link AccessControlFilter} made from <code>bytes</code>
    * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public static AccessControlFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

@@ -401,7 +401,7 @@ public class TestRegionPlacement {
   /**
    * Verify the number of user regions is assigned to the primary
    * region server based on the plan is expected
-   * @param expectedNum.
+   * @param expectedNum the expected number of assigned regions
    * @throws IOException
    */
   private void verifyRegionOnPrimaryRS(int expectedNum)
@@ -536,9 +536,8 @@ public class TestRegionPlacement {
 
   /**
    * Create a table with specified table name and region number.
-   * @param tablename
-   * @param regionNum
-   * @return
+   * @param tableName the name of the table to be created
+   * @param regionNum number of regions to create
    * @throws IOException
    */
   private static void createTable(TableName tableName, int regionNum)

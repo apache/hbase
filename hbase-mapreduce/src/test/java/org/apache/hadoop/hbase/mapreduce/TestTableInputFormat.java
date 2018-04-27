@@ -105,7 +105,7 @@ public class TestTableInputFormat {
    * Setup a table with two rows and values.
    *
    * @param tableName
-   * @return
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public static Table createTable(byte[] tableName) throws IOException {
@@ -116,7 +116,7 @@ public class TestTableInputFormat {
    * Setup a table with two rows and values per column family.
    *
    * @param tableName
-   * @return
+   * @return A Table instance for the created table.
    * @throws IOException
    */
   public static Table createTable(byte[] tableName, byte[][] families) throws IOException {

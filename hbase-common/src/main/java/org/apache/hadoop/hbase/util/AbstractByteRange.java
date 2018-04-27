@@ -315,6 +315,20 @@ public abstract class AbstractByteRange implements ByteRange {
     hash = UNSET_HASH_VALUE;
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof ByteRange)) {
+      return false;
+    }
+    return compareTo((ByteRange) obj) == 0;
+  }
+
   /**
    * Bitwise comparison of each byte in the array. Unsigned comparison, not
    * paying attention to java's signed bytes.

@@ -57,7 +57,7 @@ interface StoreFlushContext {
    *
    * A very short operation
    *
-   * @return
+   * @return whether compaction is required
    * @throws IOException
    */
   boolean commit(MonitoredTask status) throws IOException;

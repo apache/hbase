@@ -1026,7 +1026,7 @@ public final class RequestConverter {
   }
 
   /**
-   * @see {@link #buildRollWALWriterRequest()}
+   * @see #buildRollWALWriterRequest()
    */
   private static RollWALWriterRequest ROLL_WAL_WRITER_REQUEST = RollWALWriterRequest.newBuilder()
       .build();
@@ -1040,7 +1040,7 @@ public final class RequestConverter {
   }
 
   /**
-   * @see {@link #buildGetServerInfoRequest()}
+   * @see #buildGetServerInfoRequest()
    */
   private static GetServerInfoRequest GET_SERVER_INFO_REQUEST = GetServerInfoRequest.newBuilder()
       .build();
@@ -1522,7 +1522,7 @@ public final class RequestConverter {
   }
 
   /**
-   * @see {@link #buildCatalogScanRequest}
+   * @see #buildCatalogScanRequest
    */
   private static final RunCatalogScanRequest CATALOG_SCAN_REQUEST =
     RunCatalogScanRequest.newBuilder().build();
@@ -1544,7 +1544,7 @@ public final class RequestConverter {
   }
 
   /**
-   * @see {@link #buildIsCatalogJanitorEnabledRequest()}
+   * @see #buildIsCatalogJanitorEnabledRequest()
    */
   private static final IsCatalogJanitorEnabledRequest IS_CATALOG_JANITOR_ENABLED_REQUEST =
     IsCatalogJanitorEnabledRequest.newBuilder().build();
@@ -1558,7 +1558,7 @@ public final class RequestConverter {
   }
 
   /**
-   * @see {@link #buildCleanerChoreRequest}
+   * @see #buildRunCleanerChoreRequest()
    */
   private static final RunCleanerChoreRequest CLEANER_CHORE_REQUEST =
     RunCleanerChoreRequest.newBuilder().build();
@@ -1580,7 +1580,7 @@ public final class RequestConverter {
   }
 
   /**
-   * @see {@link #buildIsCleanerChoreEnabledRequest()}
+   * @see #buildIsCleanerChoreEnabledRequest()
    */
   private static final IsCleanerChoreEnabledRequest IS_CLEANER_CHORE_ENABLED_REQUEST =
     IsCleanerChoreEnabledRequest.newBuilder().build();

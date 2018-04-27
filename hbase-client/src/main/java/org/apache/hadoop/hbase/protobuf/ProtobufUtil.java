@@ -1561,7 +1561,7 @@ public final class ProtobufUtil {
 
 
   /**
-   * @see {@link #buildGetServerInfoRequest()}
+   * @see #buildGetServerInfoRequest()
    */
   private static GetServerInfoRequest GET_SERVER_INFO_REQUEST =
     GetServerInfoRequest.newBuilder().build();

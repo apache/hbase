@@ -95,6 +95,9 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
     done.run(null);
   }
 
+  /**
+   *  Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
+   */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest
     convert(PrepareBulkLoadRequest request)
   throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
@@ -121,8 +124,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
   }
 
   /**
-   * Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
-   * @throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException
+   *  Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
    */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest
   convert(CleanupBulkLoadRequest request)
@@ -153,6 +155,9 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
     done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(loaded).build());
   }
 
+  /**
+   *  Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
+   */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest
   convert(BulkLoadHFileRequest request)
       throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {

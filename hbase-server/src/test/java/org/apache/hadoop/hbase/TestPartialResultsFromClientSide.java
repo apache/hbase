@@ -603,12 +603,12 @@ public class TestPartialResultsFromClientSide {
 
   /**
    * Make puts to put the input value into each combination of row, family, and qualifier
-   * @param rows
-   * @param families
-   * @param qualifiers
-   * @param value
-   * @return
-   * @throws IOException
+   * @param rows the rows to use
+   * @param families the families to use
+   * @param qualifiers the qualifiers to use
+   * @param value the values to use
+   * @return the dot product of the given rows, families, qualifiers, and values
+   * @throws IOException if there is a problem creating one of the Put objects
    */
   static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
       byte[] value) throws IOException {
@@ -632,11 +632,11 @@ public class TestPartialResultsFromClientSide {
   /**
    * Make key values to represent each possible combination of family and qualifier in the specified
    * row.
-   * @param row
-   * @param families
-   * @param qualifiers
-   * @param value
-   * @return
+   * @param row the row to use
+   * @param families the families to use
+   * @param qualifiers the qualifiers to use
+   * @param value the values to use
+   * @return the dot product of the given families, qualifiers, and values for a given row
    */
   static ArrayList<Cell> createKeyValuesForRow(byte[] row, byte[][] families, byte[][] qualifiers,
       byte[] value) {
@@ -772,9 +772,9 @@ public class TestPartialResultsFromClientSide {
   /**
    * Exhausts the scanner by calling next repetitively. Once completely exhausted, close scanner and
    * return total cell count
-   * @param scanner
-   * @return
-   * @throws Exception
+   * @param scanner the scanner to exhaust
+   * @return the number of cells counted
+   * @throws Exception if there is a problem retrieving cells from the scanner
    */
   private int countCellsFromScanner(ResultScanner scanner) throws Exception {
     Result result = null;

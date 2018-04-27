@@ -423,7 +423,7 @@ public class TestRegionSplitter {
     }
 
     /**
-     * List.indexOf() doesn't really work for a List &lt;byte[]&gt;, because byte[]
+     * List.indexOf() doesn't really work for a List&lt;byte[]>, because byte[]
      * doesn't override equals(). This method checks whether a list contains
      * a given element by checking each element using the byte array
      * comparator.

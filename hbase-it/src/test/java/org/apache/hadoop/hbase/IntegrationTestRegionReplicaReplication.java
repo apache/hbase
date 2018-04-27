@@ -50,7 +50,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * with the replication of the edits before read_delay_ms to the given region replica id so that
  * the read and verify will not fail.
  *
- * The job will run for <b>at least<b> given runtime (default 10min) by running a concurrent
+ * The job will run for <b>at least</b> given runtime (default 10min) by running a concurrent
  * writer and reader workload followed by a concurrent updater and reader workload for
  * num_keys_per_server.
  * <p>
