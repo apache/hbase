@@ -124,7 +124,7 @@ public class TestCompoundBloomFilter {
   private FileSystem fs;
   private BlockCache blockCache;
 
-  /** A message of the form "in test#<number>:" to include in logging. */
+  /** A message of the form "in test#&lt;number>:" to include in logging. */
   private String testIdMsg;
 
   private static final int GENERATION_SEED = 2319;

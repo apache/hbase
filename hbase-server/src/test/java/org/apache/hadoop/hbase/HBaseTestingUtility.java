@@ -590,7 +590,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Start a minidfscluster.
    * @param servers How many DNs to start.
    * @throws Exception
-   * @see {@link #shutdownMiniDFSCluster()}
+   * @see #shutdownMiniDFSCluster()
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(int servers) throws Exception {
@@ -605,7 +605,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * datanodes will have the same host name.
    * @param hosts hostnames DNs to run on.
    * @throws Exception
-   * @see {@link #shutdownMiniDFSCluster()}
+   * @see #shutdownMiniDFSCluster()
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(final String hosts[])
@@ -623,7 +623,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param servers How many DNs to start.
    * @param hosts hostnames DNs to run on.
    * @throws Exception
-   * @see {@link #shutdownMiniDFSCluster()}
+   * @see #shutdownMiniDFSCluster()
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(int servers, final String hosts[])
@@ -767,7 +767,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Start up a minicluster of hbase, dfs, and zookeeper.
    * @throws Exception
    * @return Mini hbase cluster instance created.
-   * @see {@link #shutdownMiniDFSCluster()}
+   * @see #shutdownMiniDFSCluster()
    */
   public MiniHBaseCluster startMiniCluster() throws Exception {
     return startMiniCluster(1, 1);
@@ -777,7 +777,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Start up a minicluster of hbase, dfs, and zookeeper where WAL's walDir is created separately.
    * @throws Exception
    * @return Mini hbase cluster instance created.
-   * @see {@link #shutdownMiniDFSCluster()}
+   * @see #shutdownMiniDFSCluster()
    */
   public MiniHBaseCluster startMiniCluster(boolean withWALDir) throws Exception {
     return startMiniCluster(1, 1, 1, null, null, null, false, withWALDir);
@@ -789,7 +789,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * (will overwrite if dir already exists)
    * @throws Exception
    * @return Mini hbase cluster instance created.
-   * @see {@link #shutdownMiniDFSCluster()}
+   * @see #shutdownMiniDFSCluster()
    */
   public MiniHBaseCluster startMiniCluster(final int numSlaves, boolean create)
   throws Exception {
@@ -806,7 +806,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
    * bind errors.
    * @throws Exception
-   * @see {@link #shutdownMiniCluster()}
+   * @see #shutdownMiniCluster()
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numSlaves)
@@ -823,7 +823,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Start minicluster. Whether to create a new root or data dir path even if such a path
    * has been created earlier is decided based on flag <code>create</code>
    * @throws Exception
-   * @see {@link #shutdownMiniCluster()}
+   * @see #shutdownMiniCluster()
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
@@ -835,7 +835,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * start minicluster
    * @throws Exception
-   * @see {@link #shutdownMiniCluster()}
+   * @see #shutdownMiniCluster()
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
@@ -872,7 +872,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * If you start MiniDFSCluster without host names,
    * all instances of the datanodes will have the same host name.
    * @throws Exception
-   * @see {@link #shutdownMiniCluster()}
+   * @see #shutdownMiniCluster()
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
@@ -914,7 +914,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param regionserverClass The class to use as HRegionServer, or null for
    * default
    * @throws Exception
-   * @see {@link #shutdownMiniCluster()}
+   * @see #shutdownMiniCluster()
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
@@ -1003,7 +1003,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @return Reference to the hbase mini hbase cluster.
    * @throws IOException
    * @throws InterruptedException
-   * @see {@link #startMiniCluster()}
+   * @see #startMiniCluster()
    */
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
         final int numSlaves, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
@@ -1088,7 +1088,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Stops mini hbase, zk, and hdfs clusters.
    * @throws IOException
-   * @see {@link #startMiniCluster(int)}
+   * @see #startMiniCluster(int)
    */
   public void shutdownMiniCluster() throws Exception {
     LOG.info("Shutting down minicluster");
@@ -1746,10 +1746,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Create an HRegion that writes to the local tmp dirs
-   * @param desc
-   * @param startKey
-   * @param endKey
-   * @return
+   * @param desc a table descriptor indicating which table the region belongs to
+   * @param startKey the start boundary of the region
+   * @param endKey the end boundary of the region
+   * @return a region that writes to local dir for testing
    * @throws IOException
    */
   public HRegion createLocalHRegion(TableDescriptor desc, byte [] startKey,

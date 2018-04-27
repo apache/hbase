@@ -537,9 +537,9 @@ public class TestImportExport {
   }
 
   /**
-   * Count the number of keyvalues in the specified table for the given timerange
-   * @param table
-   * @return
+   * Count the number of keyvalues in the specified table with the given filter
+   * @param table the table to scan
+   * @return the number of keyvalues found
    * @throws IOException
    */
   private int getCount(Table table, Filter filter) throws IOException {

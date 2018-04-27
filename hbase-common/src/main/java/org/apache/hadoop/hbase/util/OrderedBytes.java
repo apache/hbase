@@ -339,7 +339,7 @@ public class OrderedBytes {
 
   /**
    * Perform unsigned comparison between two long values. Conforms to the same interface as
-   * {@link org.apache.hadoop.hbase.CellComparator#COMPARATOR#compare(Object, Object)}.
+   * {@link org.apache.hadoop.hbase.CellComparator}.
    */
   private static int unsignedCmp(long x1, long x2) {
     int cmp;

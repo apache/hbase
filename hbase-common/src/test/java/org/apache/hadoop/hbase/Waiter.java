@@ -83,7 +83,7 @@ public final class Waiter {
   /**
    * A predicate 'closure' used by the {@link Waiter#waitFor(Configuration, long, Predicate)} and
    * {@link Waiter#waitFor(Configuration, long, Predicate)} and
-   * {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate) methods.
+   * {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)} methods.
    */
   @InterfaceAudience.Private
   public interface Predicate<E extends Exception> {

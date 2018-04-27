@@ -77,7 +77,7 @@ public class RestoreTablesClient {
   /**
    * Validate target tables.
    *
-   * @param tTableArray: target tables
+   * @param tTableArray target tables
    * @param isOverwrite overwrite existing table
    * @throws IOException exception
    */
@@ -123,10 +123,10 @@ public class RestoreTablesClient {
   /**
    * Restore operation handle each backupImage in array.
    *
-   * @param images: array BackupImage
-   * @param sTable: table to be restored
-   * @param tTable: table to be restored to
-   * @param truncateIfExists: truncate table
+   * @param images array BackupImage
+   * @param sTable table to be restored
+   * @param tTable table to be restored to
+   * @param truncateIfExists truncate table
    * @throws IOException exception
    */
 

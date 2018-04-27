@@ -425,9 +425,9 @@ public class TestHFileArchiving {
 
   /**
    * Get the names of all the files below the given directory
-   * @param fs
-   * @param archiveDir
-   * @return
+   * @param fs the file system to inspect
+   * @param archiveDir the directory in which to look
+   * @return a list of all files in the directory and sub-directories
    * @throws IOException
    */
   private List<String> getAllFileNames(final FileSystem fs, Path archiveDir) throws IOException {

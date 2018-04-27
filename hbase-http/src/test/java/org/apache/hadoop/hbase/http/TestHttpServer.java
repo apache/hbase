@@ -322,10 +322,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * will be accessed as the passed user, by sending user.name request
    * parameter.
    *
-   * @param urlstring
-   * @param userName
-   * @return
-   * @throws IOException
+   * @param urlstring The url to access
+   * @param userName The user to perform access as
+   * @return The HTTP response code
+   * @throws IOException if there is a problem communicating with the server
    */
   static int getHttpStatusCode(String urlstring, String userName)
       throws IOException {

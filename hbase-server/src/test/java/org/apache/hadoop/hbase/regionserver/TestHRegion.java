@@ -5925,7 +5925,7 @@ public class TestHRegion {
   /**
    * Utility method to setup a WAL mock.
    * Needs to do the bit where we close latch on the WALKeyImpl on append else test hangs.
-   * @return
+   * @return a mock WAL
    * @throws IOException
    */
   private WAL mockWAL() throws IOException {

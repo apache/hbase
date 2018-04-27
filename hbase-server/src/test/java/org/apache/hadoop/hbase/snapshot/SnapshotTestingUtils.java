@@ -274,9 +274,9 @@ public final class SnapshotTestingUtils {
    * Helper method for testing async snapshot operations. Just waits for the
    * given snapshot to complete on the server by repeatedly checking the master.
    *
-   * @param master: the master running the snapshot
-   * @param snapshot: the snapshot to check
-   * @param sleep: amount to sleep between checks to see if the snapshot is done
+   * @param master the master running the snapshot
+   * @param snapshot the snapshot to check
+   * @param sleep amount to sleep between checks to see if the snapshot is done
    * @throws ServiceException if the snapshot fails
    * @throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
    */
@@ -357,7 +357,7 @@ public final class SnapshotTestingUtils {
   /**
    * List all the HFiles in the given table
    *
-   * @param fs: FileSystem where the table lives
+   * @param fs FileSystem where the table lives
    * @param tableDir directory of the table
    * @return array of the current HFiles in the table (could be a zero-length array)
    * @throws IOException on unexecpted error reading the FS

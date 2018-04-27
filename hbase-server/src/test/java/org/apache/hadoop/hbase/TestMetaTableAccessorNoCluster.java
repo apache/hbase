@@ -122,7 +122,7 @@ public class TestMetaTableAccessorNoCluster {
   /**
    * Test that MetaTableAccessor will ride over server throwing
    * "Server not running" IOEs.
-   * @see @link {https://issues.apache.org/jira/browse/HBASE-3446}
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-3446">HBASE-3446</a>
    * @throws IOException
    * @throws InterruptedException
    */

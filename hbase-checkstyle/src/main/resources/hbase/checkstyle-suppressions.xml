@@ -37,4 +37,5 @@
   <suppress checks="VisibilityModifier" files=".*/src/test/.*\.java"/>
   <suppress checks="InterfaceIsTypeCheck" files=".*/src/main/.*\.java"/>
   <suppress checks="EmptyBlockCheck" files="TBoundedThreadPoolServer.java"/>
+  <suppress checks="EqualsHashCode" files="StartcodeAgnosticServerName.java"/>
 </suppressions>

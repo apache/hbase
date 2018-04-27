@@ -1481,7 +1481,7 @@ public class HFileBlockIndex {
      * The same as {@link #add(byte[], long, int, long)} but does not take the
      * key/value into account. Used for single-level indexes.
      *
-     * @see {@link #add(byte[], long, int, long)}
+     * @see #add(byte[], long, int, long)
      */
     public void add(byte[] firstKey, long blockOffset, int onDiskDataSize) {
       add(firstKey, blockOffset, onDiskDataSize, -1);

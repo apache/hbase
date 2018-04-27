@@ -63,4 +63,8 @@ class StartcodeAgnosticServerName extends ServerName {
   public int hashCode() {
     return getHostAndPort().hashCode();
   }
+
+  // Do not need @Override #equals() because super.equals() delegates to compareTo(), which ends
+  // up doing the right thing. We have a test for it, so the checkstyle warning here would be a
+  // false positive.
 }

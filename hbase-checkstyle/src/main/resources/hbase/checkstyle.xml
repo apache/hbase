@@ -51,6 +51,7 @@
     <module name="VisibilityModifier">
       <property name="packageAllowed" value="true"/>
       <property name="protectedAllowed" value="true"/>
+      <property name="allowPublicImmutableFields" value="true"/>
     </module>
 
     <!-- Coding Checks
@@ -85,7 +86,12 @@
           org.apache.commons.collections4,
           org.apache.commons.lang,
           org.apache.curator.shaded,
-          org.apache.htrace.shaded"/>
+          org.apache.hadoop.classification,
+          org.apache.htrace.shaded,
+          org.codehaus.jackson"/>
+      <property name="illegalClasses" value="
+          org.apache.commons.logging.Log,
+          org.apache.commons.logging.LogFactory"/>
     </module>
     <!-- Javadoc Checks
     http://checkstyle.sourceforge.net/config_javadoc.html -->

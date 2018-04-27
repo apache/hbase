@@ -86,7 +86,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  *   <tr><td>u.&lt;user&gt;</td><td>q:s</td><td>&lt;global-quotas&gt;</td></tr>
  *   <tr><td>u.&lt;user&gt;</td><td>q:s.&lt;table&gt;</td><td>&lt;table-quotas&gt;</td></tr>
  *   <tr><td>u.&lt;user&gt;</td><td>q:s.&lt;ns&gt;</td><td>&lt;namespace-quotas&gt;</td></tr>
- * </table
+ * </table>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

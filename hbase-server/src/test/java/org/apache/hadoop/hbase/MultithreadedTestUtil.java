@@ -163,26 +163,25 @@ public abstract class MultithreadedTestUtil {
    * Verify that no assertions have failed inside a future.
    * Used for unit tests that spawn threads. E.g.,
    * <p>
-   * <code>
-   *   List<Future<Void>> results = Lists.newArrayList();
-   *   Future<Void> f = executor.submit(new Callable<Void> {
+   * <pre>
+   *   List&lt;Future&lt;Void>> results = Lists.newArrayList();
+   *   Future&lt;Void> f = executor.submit(new Callable&lt;Void> {
    *     public Void call() {
    *       assertTrue(someMethod());
    *     }
    *   });
    *   results.add(f);
    *   assertOnFutures(results);
-   * </code>
+   * </pre>
    * @param threadResults A list of futures
-   * @param <T>
    * @throws InterruptedException If interrupted when waiting for a result
    *                              from one of the futures
    * @throws ExecutionException If an exception other than AssertionError
    *                            occurs inside any of the futures
    */
-  public static <T> void assertOnFutures(List<Future<T>> threadResults)
+  public static void assertOnFutures(List<Future<?>> threadResults)
   throws InterruptedException, ExecutionException {
-    for (Future<T> threadResult : threadResults) {
+    for (Future<?> threadResult : threadResults) {
       try {
         threadResult.get();
       } catch (ExecutionException e) {

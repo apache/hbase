@@ -820,10 +820,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   /**
    * When NUM_TABLES is specified, the function starts multiple worker threads
    * which individually start a LoadTestTool instance to load a table. Each
-   * table name is in format <tn>_<index>. For example, "-tn test -num_tables 2"
+   * table name is in format &lt;tn>_&lt;index>. For example, "-tn test -num_tables 2"
    * , table names will be "test_1", "test_2"
    *
-   * @throws IOException
+   * @throws IOException if one of the load tasks is unable to complete
    */
   private int parallelLoadTables()
       throws IOException {
