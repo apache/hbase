@@ -235,8 +235,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     }
     for (Pair<String, Long> name2Barrier : MetaTableAccessor
       .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
-      // XXX: for debug only, change to trace after find out the real issues
-      LOG.debug("Update last pushed sequence id for {}, {}", tableName, name2Barrier);
+      LOG.trace("Update last pushed sequence id for {}, {}", tableName, name2Barrier);
       addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
         queueStorage);
     }
