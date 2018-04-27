@@ -486,8 +486,12 @@ public abstract class RpcExecutor {
    */
   public void resizeQueues(Configuration conf) {
     String configKey = RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH;
-    if (name != null && name.toLowerCase(Locale.ROOT).contains("priority")) {
-      configKey = RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH;
+    if (name != null) {
+      if (name.toLowerCase(Locale.ROOT).contains("priority")) {
+        configKey = RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH;
+      } else if (name.toLowerCase(Locale.ROOT).contains("replication")) {
+        configKey = RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH;
+      }
     }
     currentQueueLimit = conf.getInt(configKey, currentQueueLimit);
   }

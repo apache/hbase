@@ -65,8 +65,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
-    int maxPriorityQueueLength =
-        conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, maxQueueLength);
+    int maxPriorityQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH,
+      priorityHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+    int maxReplicationQueueLength =
+        conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH,
+          replicationHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
 
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
@@ -94,9 +97,12 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     this.priorityExecutor = priorityHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
         "priority.FPBQ", priorityHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
         maxPriorityQueueLength, priority, conf, abortable) : null;
-    this.replicationExecutor = replicationHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
-        "replication.FPBQ", replicationHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
-        maxQueueLength, priority, conf, abortable) : null;
+    this.replicationExecutor =
+        replicationHandlerCount > 0
+            ? new FastPathBalancedQueueRpcExecutor("replication.FPBQ", replicationHandlerCount,
+                RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxReplicationQueueLength, priority,
+                conf, abortable)
+            : null;
   }
 
 

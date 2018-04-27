@@ -35,6 +35,8 @@ public abstract class RpcScheduler {
       "hbase.ipc.server.max.callqueue.length";
   public static final String IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH =
       "hbase.ipc.server.priority.max.callqueue.length";
+  public static final String IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH =
+      "hbase.ipc.server.replication.max.callqueue.length";
 
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
   public static abstract class Context {
