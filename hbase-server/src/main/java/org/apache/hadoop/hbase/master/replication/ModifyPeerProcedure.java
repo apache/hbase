@@ -230,10 +230,13 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     ReplicationQueueStorage queueStorage = env.getReplicationPeerManager().getQueueStorage();
     Connection conn = env.getMasterServices().getConnection();
     if (!needSetLastPushedSequenceId(tsm, tableName)) {
+      LOG.debug("Skip settting last pushed sequence id for {}", tableName);
       return;
     }
     for (Pair<String, Long> name2Barrier : MetaTableAccessor
       .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
+      // XXX: for debug only, change to trace after find out the real issues
+      LOG.debug("Update last pushed sequence id for {}, {}", tableName, name2Barrier);
       addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
         queueStorage);
     }

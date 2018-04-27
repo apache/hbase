@@ -166,6 +166,7 @@ public class RegionStateStore {
       if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID &&
         hasGlobalReplicationScope(regionInfo.getTable())) {
         MetaTableAccessor.addReplicationBarrier(put, openSeqNum);
+        info.append(", repBarrier=").append(openSeqNum);
       }
       info.append(", openSeqNum=").append(openSeqNum);
       info.append(", regionLocation=").append(regionLocation);
