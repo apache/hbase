@@ -60,7 +60,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   }
 
   @Override
-  long getStartPosition() {
+  public long getStartPosition() {
     long startPosition = getRecoveredQueueStartPos();
     int numRetries = 0;
     while (numRetries <= maxRetriesMultiplier) {
@@ -79,32 +79,30 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   // normally has a position (unless the RS failed between 2 logs)
   private long getRecoveredQueueStartPos() {
     long startPosition = 0;
-    String peerClusterZnode = source.getQueueId();
+    String peerClusterZNode = source.getQueueId();
     try {
-      startPosition = this.replicationQueues.getWALPosition(source.getServerWALsBelongTo(),
-        peerClusterZnode, this.queue.peek().getName());
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Recovered queue started with log " + this.queue.peek() + " at position " +
-          startPosition);
-      }
+      startPosition = this.replicationQueues.getWALPosition(source.getServer().getServerName(),
+        peerClusterZNode, this.queue.peek().getName());
+      LOG.trace("Recovered queue started with log {} at position {}", this.queue.peek(),
+        startPosition);
     } catch (ReplicationException e) {
-      terminate("Couldn't get the position of this recovered queue " + peerClusterZnode, e);
+      terminate("Couldn't get the position of this recovered queue " + peerClusterZNode, e);
     }
     return startPosition;
   }
 
   private void terminate(String reason, Exception cause) {
     if (cause == null) {
-      LOG.info("Closing worker for wal group " + this.walGroupId + " because: " + reason);
-
+      LOG.info("Closing worker for wal group {} because: {}", this.walGroupId, reason);
     } else {
-      LOG.error("Closing worker for wal group " + this.walGroupId
-          + " because an error occurred: " + reason, cause);
+      LOG.error(
+        "Closing worker for wal group " + this.walGroupId + " because an error occurred: " + reason,
+        cause);
     }
     entryReader.interrupt();
     Threads.shutdown(entryReader, sleepForRetries);
     this.interrupt();
     Threads.shutdown(this, sleepForRetries);
-    LOG.info("ReplicationSourceWorker " + this.getName() + " terminated");
+    LOG.info("ReplicationSourceWorker {} terminated", this.getName());
   }
 }
