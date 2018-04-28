@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -133,7 +134,9 @@ public class RegionStateStore {
           regionStateNode.getOpenSeqNum() : HConstants.NO_SEQNUM;
       updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
           regionStateNode.getRegionLocation(), regionStateNode.getLastHost(), openSeqNum,
-          regionStateNode.getProcedure().getProcId());
+          // The regionStateNode may have no procedure in a test scenario; allow for this.
+          regionStateNode.getProcedure() != null?
+              regionStateNode.getProcedure().getProcId(): Procedure.NO_PROC_ID);
     }
   }
 

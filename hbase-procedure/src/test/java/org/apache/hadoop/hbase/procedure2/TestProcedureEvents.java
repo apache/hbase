@@ -80,6 +80,13 @@ public class TestProcedureEvents {
     fs.delete(logDir, true);
   }
 
+  /**
+   * Tests being able to suspend a Procedure for N timeouts and then failing.s
+   * Resets the timeout after each elapses. See {@link TestTimeoutEventProcedure} for example
+   * of how to do this sort of trickery with the ProcedureExecutor; i.e. suspend for a while,
+   * check for a condition and if not set, suspend again, etc., ultimately failing or succeeding
+   * eventually.
+   */
   @Test
   public void testTimeoutEventProcedure() throws Exception {
     final int NTIMEOUTS = 5;

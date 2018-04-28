@@ -134,6 +134,9 @@ public class AssignProcedure extends RegionTransitionProcedure {
     if (this.targetServer != null) {
       state.setTargetServer(ProtobufUtil.toServerName(this.targetServer));
     }
+    if (getAttempt() > 0) {
+      state.setAttempt(getAttempt());
+    }
     serializer.serialize(state.build());
   }
 
@@ -146,6 +149,9 @@ public class AssignProcedure extends RegionTransitionProcedure {
     forceNewPlan = state.getForceNewPlan();
     if (state.hasTargetServer()) {
       this.targetServer = ProtobufUtil.toServerName(state.getTargetServer());
+    }
+    if (state.hasAttempt()) {
+      setAttempt(state.getAttempt());
     }
   }
 
@@ -185,10 +191,12 @@ public class AssignProcedure extends RegionTransitionProcedure {
       return false;
     }
 
-    // Send assign (add into assign-pool). Region is now in OFFLINE state. Setting offline state
-    // scrubs what was the old region location. Setting a new regionLocation here is how we retain
+    // Send assign (add into assign-pool). We call regionNode.offline below to set state to
+    // OFFLINE and to clear the region location. Setting a new regionLocation here is how we retain
     // old assignment or specify target server if a move or merge. See
     // AssignmentManager#processAssignQueue. Otherwise, balancer gives us location.
+    // TODO: Region will be set into OFFLINE state below regardless of what its previous state was
+    // This is dangerous? Wrong? What if region was in an unexpected state?
     ServerName lastRegionLocation = regionNode.offline();
     boolean retain = false;
     if (!forceNewPlan) {
