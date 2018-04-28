@@ -324,6 +324,8 @@ message AssignRegionStateData {
   required RegionInfo region_info = 2;
   optional bool force_new_plan = 3 [default = false];
   optional ServerName target_server = 4;
+  // Current attempt index used for expotential backoff when stuck
+  optional int32 attempt = 5;
 }
 
 message UnassignRegionStateData {
@@ -337,6 +339,8 @@ message UnassignRegionStateData {
   optional ServerName hosting_server = 5;
   optional bool force = 4 [default = false];
   optional bool remove_after_unassigning = 6 [default = false];
+  // Current attempt index used for expotential backoff when stuck
+  optional int32 attempt = 7;
 }
 
 enum MoveRegionState {

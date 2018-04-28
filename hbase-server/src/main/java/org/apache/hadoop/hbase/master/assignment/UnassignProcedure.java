@@ -153,6 +153,9 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     if (removeAfterUnassigning) {
       state.setRemoveAfterUnassigning(true);
     }
+    if (getAttempt() > 0) {
+      state.setAttempt(getAttempt());
+    }
     serializer.serialize(state.build());
   }
 
@@ -169,6 +172,9 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       this.destinationServer = ProtobufUtil.toServerName(state.getDestinationServer());
     }
     removeAfterUnassigning = state.getRemoveAfterUnassigning();
+    if (state.hasAttempt()) {
+      setAttempt(state.getAttempt());
+    }
   }
 
   @Override
