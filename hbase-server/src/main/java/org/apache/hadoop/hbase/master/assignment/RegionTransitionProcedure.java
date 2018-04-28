@@ -28,10 +28,15 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,11 +80,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * intentionally not implemented. It is a 'one shot' procedure. See its class doc for how it
  * handles failure.
  * </li>
+ * <li>If we find a region in an 'unexpected' state, we'll complain and retry with backoff forever.
+ * The 'unexpected' state needs to be fixed either by another running Procedure or by operator
+ * intervention (Regions in 'unexpected' state indicates bug or unexpected transition type).
+ * For this to work, subclasses need to persist the 'attempt' counter kept in this class when
+ * they do serializeStateData and restore it inside their deserializeStateData, just as they do
+ * for {@link #regionInfo}.
+ * </li>
  * </ul>
  * </p>
  *
- * <p>TODO: Considering it is a priority doing all we can to get make a region available as soon as possible,
- * re-attempting with any target makes sense if specified target fails in case of
+ * <p>TODO: Considering it is a priority doing all we can to get make a region available as soon as
+ * possible, re-attempting with any target makes sense if specified target fails in case of
  * {@link AssignProcedure}. For {@link UnassignProcedure}, our concern is preventing data loss
  * on failed unassign. See class doc for explanation.
  */
@@ -93,7 +105,19 @@ public abstract class RegionTransitionProcedure
   protected final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private RegionTransitionState transitionState = RegionTransitionState.REGION_TRANSITION_QUEUE;
+  /**
+   * This data member must be persisted. Expectation is that it is done by subclasses in their
+   * {@link #serializeStateData(ProcedureStateSerializer)} call, restoring {@link #regionInfo}
+   * in their {@link #deserializeStateData(ProcedureStateSerializer)} method.
+   */
   private RegionInfo regionInfo;
+
+  /**
+   * Like {@link #regionInfo}, the expectation is that subclasses persist the value of this
+   * data member. It is used doing backoff when Procedure gets stuck.
+   */
+  private int attempt;
+
   private volatile boolean lock = false;
 
   // Required by the Procedure framework to create the procedure on replay
@@ -108,9 +132,28 @@ public abstract class RegionTransitionProcedure
     return regionInfo;
   }
 
+  /**
+   * This setter is for subclasses to call in their
+   * {@link #deserializeStateData(ProcedureStateSerializer)} method. Expectation is that
+   * subclasses will persist `regioninfo` in their
+   * {@link #serializeStateData(ProcedureStateSerializer)} method and then restore `regionInfo` on
+   * deserialization by calling.
+   */
   protected void setRegionInfo(final RegionInfo regionInfo) {
-    // Setter is for deserialization.
     this.regionInfo = regionInfo;
+  }
+
+  /**
+   * This setter is for subclasses to call in their
+   * {@link #deserializeStateData(ProcedureStateSerializer)} method.
+   * @see #setRegionInfo(RegionInfo)
+   */
+  protected void setAttempt(int attempt) {
+    this.attempt = attempt;
+  }
+
+  protected int getAttempt() {
+    return this.attempt;
   }
 
   @Override
@@ -323,12 +366,38 @@ public abstract class RegionTransitionProcedure
             return null;
         }
       } while (retry);
+      // If here, success so clear out the attempt counter so we start fresh each time we get stuck.
+      this.attempt = 0;
     } catch (IOException e) {
-      LOG.warn("Retryable error trying to transition: " +
-          this + "; " + regionNode.toShortString(), e);
+      long backoff = getBackoffTime(this.attempt++);
+      LOG.warn("Failed transition, suspend {}secs {}; {}; waiting on rectified condition fixed " +
+              "by other Procedure or operator intervention", backoff / 1000, this,
+          regionNode.toShortString(), e);
+      getRegionState(env).getProcedureEvent().suspend();
+      if (getRegionState(env).getProcedureEvent().suspendIfNotReady(this)) {
+        setTimeout(Math.toIntExact(backoff));
+        setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+        throw new ProcedureSuspendedException();
+      }
     }
 
     return new Procedure[] {this};
+  }
+
+  private long getBackoffTime(int attempts) {
+    long backoffTime = (long)(1000 * Math.pow(2, attempts));
+    long maxBackoffTime = 60 * 60 * 1000; // An hour. Hard-coded for for now.
+    return backoffTime < maxBackoffTime? backoffTime: maxBackoffTime;
+  }
+
+  /**
+   * At end of timeout, wake ourselves up so we run again.
+   */
+  @Override
+  protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
+    setState(ProcedureProtos.ProcedureState.RUNNABLE);
+    getRegionState(env).getProcedureEvent().wake(env.getProcedureScheduler());
+    return false; // 'false' means that this procedure handled the timeout
   }
 
   @Override

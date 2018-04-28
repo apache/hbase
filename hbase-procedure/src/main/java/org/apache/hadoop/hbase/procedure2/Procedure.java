@@ -75,11 +75,16 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * during the execute() step. In case of failure and restart, rollback() may be
  * called multiple times, so again the code must be idempotent.
  *
- * <p>Procedure can be made respect a locking regime. It has acqure/release methods as
+ * <p>Procedure can be made respect a locking regime. It has acquire/release methods as
  * well as an {@link #hasLock(Object)}. The lock implementation is up to the implementor.
  * If an entity needs to be locked for the life of a procedure -- not just the calls to
  * execute -- then implementations should say so with the {@link #holdLock(Object)}
  * method.
+ *
+ * <p>Procedures can be suspended or put in wait state with a callback that gets executed on
+ * Procedure-specified timeout. See {@link #setTimeout(int)}}, and
+ * {@link #setTimeoutFailure(Object)}. See TestProcedureEvents and the
+ * TestTimeoutEventProcedure class for an example usage.</p>
  *
  * <p>There are hooks for collecting metrics on submit of the procedure and on finish.
  * See {@link #updateMetricsOnSubmit(Object)} and
