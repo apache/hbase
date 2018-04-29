@@ -800,8 +800,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         } else {
           throw e.unwrapRemoteException();
         }
-      } catch (NameNodeException e) {
-        throw e;
       } catch (IOException e) {
         LOG.warn("create fan-out dfs output {} failed, retry = {}", src, retry, e);
         if (retry >= createMaxRetries) {
@@ -830,7 +828,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
             }
           }
           endFileLease(client, stat.getFileId());
-          fsUtils.recoverFileLease(dfs, new Path(src), conf, new CancelOnClose(client));
         }
       }
     }
