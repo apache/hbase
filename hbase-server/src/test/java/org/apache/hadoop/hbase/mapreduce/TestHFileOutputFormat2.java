@@ -116,9 +116,11 @@ public class TestHFileOutputFormat2  {
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   private final static int ROWSPERSPLIT = 1024;
 
-  private static final byte[][] FAMILIES
-    = { Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A"))
-      , Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B"))};
+  private static final byte[] FAMILY_NAME = Bytes.toBytes("info");
+  private static final byte[][] FAMILIES = {
+      Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")),
+      Bytes.add(FAMILY_NAME, Bytes.toBytes("-B"))
+    };
   private static final TableName TABLE_NAME =
       TableName.valueOf("TestTable");
 
