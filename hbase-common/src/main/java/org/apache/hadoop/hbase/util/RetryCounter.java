@@ -24,9 +24,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Operation retry accounting.
+ * Use to calculate wait period, {@link #getBackoffTimeAndIncrementAttempts()}}, or for performing
+ * wait, {@link #sleepUntilNextRetry()}, in accordance with a {@link RetryConfig}, initial
+ * settings, and a Retry Policy, (See org.apache.hadoop.io.retry.RetryPolicy).
+ * Like <a href=https://github.com/rholder/guava-retrying>guava-retrying</a>.
+ * @since 0.92.0
+ * @see RetryCounterFactory
+ */
 @InterfaceAudience.Private
 public class RetryCounter {
-
   /**
    *  Configuration for a retry counter
    */
@@ -151,10 +159,8 @@ public class RetryCounter {
    */
   public void sleepUntilNextRetry() throws InterruptedException {
     int attempts = getAttemptTimes();
-    long sleepTime = retryConfig.backoffPolicy.getBackoffTime(retryConfig, attempts);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Sleeping " + sleepTime + "ms before retry #" + attempts + "...");
-    }
+    long sleepTime = getBackoffTime();
+    LOG.trace("Sleeping {} ms before retry #{}...", sleepTime, attempts);
     retryConfig.getTimeUnit().sleep(sleepTime);
     useRetry();
   }
@@ -173,5 +179,15 @@ public class RetryCounter {
 
   public int getAttemptTimes() {
     return attempts;
+  }
+
+  public long getBackoffTime() {
+    return this.retryConfig.backoffPolicy.getBackoffTime(this.retryConfig, getAttemptTimes());
+  }
+
+  public long getBackoffTimeAndIncrementAttempts() {
+    long backoffTime = getBackoffTime();
+    useRetry();
+    return backoffTime;
   }
 }
