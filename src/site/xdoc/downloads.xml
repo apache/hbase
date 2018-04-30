@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Apache HBase Downloads</title>
+  </properties>
+
+<body>
+<section name="Downloads">
+  <p>The below table lists mirrored release artifacts and their associated hashes and signatures
+  available ONLY at apache.org. The keys used to sign releases can be found in our published
+  <a href="http://www.apache.org/dist/hbase/KEYS">KEYS</a> file. See
+  <a href="https://www.apache.org/dyn/closer.cgi#verify">Verify The Integrity Of The Files</a> for
+  how to verify your mirrored downloads.
+  </p>
+  <section name="Releases">
+  <table>
+    <tr>
+      <th>Version</th>
+      <th>Release Date</th>
+      <th>Compatiblity Report</th>
+      <th>Release Notes</th>
+      <th>Commit</th>
+      <th>Download</th>
+    </tr>
+    <tr>
+      <td style="test-align: left">
+        2.0.0
+      </td>
+      <td style="test-align: left">
+        2018/04/29
+      </td>
+      <td style="test-align: left">
+        <a href="http://apache.org/dist/hbase/2.0.0/compatibiliity_report_1.2.6vs2.0.0.html">1.2.6 vs 2.0.0</a>
+      </td>
+      <td style="test-align: left">
+        <a href="http://apache.org/dist/hbase/2.0.0/RELEASENOTES.md">2.0.0 Release Notes</a>
+      </td>
+      <td style="test-align: left">
+        <a href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=commit;h=7483b111e4da77adbfc8062b3b22cbe7c2cb91c1">7483b111e4da77adbfc8062b3b22cbe7c2cb91c1</a>
+      </td>
+      <td style="test-align: left">
+        <a href="http://www.apache.org/dyn/closer.lua/hbase/2.0.0/hbase-2.0.0-src.tar.gz"></a> (<a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-src.tar.gz.sha512">sha512</a> <a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-src.tar.gz.asc">asc</a>) <br />
+        <a href="http://www.apache.org/dyn/closer.lua/hbase/2.0.0/hbase-2.0.0-bin.tar.gz"></a> (<a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-bin.tar.gz.sha512">sha512</a> <a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-bin.tar.gz.asc">asc</a>)
+      </td>
+    </tr>
+  </table>
+  </section>
+
+
+  <p>If you are looking for an old release that is not present here or on the
+  mirror, check the <a href="http://archive.apache.org/dist/hbase/">Apache Archive</a>.
+  </p>
+</section>
+</body>
+</document>

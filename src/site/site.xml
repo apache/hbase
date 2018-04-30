@@ -70,7 +70,7 @@
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
       <item name="License" href="license.html"/>
-      <item name="Downloads" href="http://www.apache.org/dyn/closer.lua/hbase/"/>
+      <item name="Downloads" href="downloads.html"/>
       <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel#selectedTab=com.atlassian.jira.plugin.system.project%3Achangelog-panel" />
       <item name="Code Of Conduct" href="coc.html"/>
       <item name="Blog" href="http://blogs.apache.org/hbase/"/>
