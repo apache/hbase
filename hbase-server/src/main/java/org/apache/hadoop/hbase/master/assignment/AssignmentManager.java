@@ -1257,9 +1257,10 @@ public class AssignmentManager implements ServerListener {
             } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
               regionStates.addToOfflineRegions(regionNode);
             } else if (localState == State.CLOSED && getTableStateManager().
-                isTableState(regionNode.getTable(), TableState.State.DISABLED)) {
-              // The region is CLOSED and the table is DISABLED, there is nothing to schedule;
-              // the region is inert.
+                isTableState(regionNode.getTable(), TableState.State.DISABLED,
+                TableState.State.DISABLING)) {
+              // The region is CLOSED and the table is DISABLED/ DISABLING, there is nothing to
+              // schedule; the region is inert.
             } else {
               // These regions should have a procedure in replay
               regionStates.addRegionInTransition(regionNode, null);
