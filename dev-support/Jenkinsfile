@@ -60,54 +60,109 @@ pipeline {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
   stages {
-    stage ('yetus install') {
+    stage ('scm-checkout') {
       steps {
-        sh  '''#!/usr/bin/env bash
-set -e
-echo "Ensure we have a copy of Apache Yetus."
-if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
-  YETUS_DIR="${WORKSPACE}/yetus-${YETUS_RELEASE}"
-  echo "Checking for Yetus ${YETUS_RELEASE} in '${YETUS_DIR}'"
-  if [ ! -d "${YETUS_DIR}" ]; then
-    echo "New download of Apache Yetus version ${YETUS_RELEASE}."
-    rm -rf "${WORKSPACE}/.gpg"
-    mkdir -p "${WORKSPACE}/.gpg"
-    chmod -R 700 "${WORKSPACE}/.gpg"
-
-    echo "install yetus project KEYS"
-    curl -L --fail -o "${WORKSPACE}/KEYS_YETUS" https://dist.apache.org/repos/dist/release/yetus/KEYS
-    gpg --homedir "${WORKSPACE}/.gpg" --import "${WORKSPACE}/KEYS_YETUS"
-
-    echo "download yetus release ${YETUS_RELEASE}"
-    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz"
-    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
-    echo "verifying yetus release"
-    gpg --homedir "${WORKSPACE}/.gpg" --verify "yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
-    mv "yetus-${YETUS_RELEASE}-bin.tar.gz" yetus.tar.gz
-  else
-    echo "Reusing cached download of Apache Yetus version ${YETUS_RELEASE}."
-  fi
-else
-  YETUS_DIR="${WORKSPACE}/yetus-git"
-  rm -rf "${YETUS_DIR}"
-  echo "downloading from github"
-  curl -L --fail https://api.github.com/repos/apache/yetus/tarball/HEAD -o yetus.tar.gz
-fi
-if [ ! -d "${YETUS_DIR}" ]; then
-  echo "unpacking yetus into '${YETUS_DIR}'"
-  mkdir -p "${YETUS_DIR}"
-  gunzip -c yetus.tar.gz | tar xpf - -C "${YETUS_DIR}" --strip-components 1
-fi
-        '''
-        // Set up the file we need at PERSONALITY_FILE location
-        dir ("tools") {
-          sh """#!/usr/bin/env bash
-set -e
-echo "Downloading Project personality."
-curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
-          """
+            dir('component') {
+              checkout scm
+            }
+      }
+    }
+    stage ('thirdparty installs') {
+      parallel {
+        stage ('yetus install') {
+          steps {
+            // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
+            dir('downloads-yetus') {
+              // can't just do a simple echo or the directory won't be created. :(
+              sh '''#!/usr/bin/env bash
+                echo "Make sure we have a directory for downloading dependencies: $(pwd)"
+'''
+            }
+            sh  '''#!/usr/bin/env bash
+              set -e
+              echo "Ensure we have a copy of Apache Yetus."
+              if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
+                YETUS_DIR="${WORKSPACE}/yetus-${YETUS_RELEASE}"
+                echo "Checking for Yetus ${YETUS_RELEASE} in '${YETUS_DIR}'"
+                if [ ! -d "${YETUS_DIR}" ]; then
+                  "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
+                      --working-dir "${WORKSPACE}/downloads-yetus" \
+                      --keys 'https://www.apache.org/dist/yetus/KEYS' \
+                      "${WORKSPACE}/yetus-${YETUS_RELEASE}-bin.tar.gz" \
+                      "yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz"
+                  mv "yetus-${YETUS_RELEASE}-bin.tar.gz" yetus.tar.gz
+                else
+                  echo "Reusing cached install of Apache Yetus version ${YETUS_RELEASE}."
+                fi
+              else
+                YETUS_DIR="${WORKSPACE}/yetus-git"
+                rm -rf "${YETUS_DIR}"
+                echo "downloading from github"
+                curl -L --fail https://api.github.com/repos/apache/yetus/tarball/HEAD -o yetus.tar.gz
+              fi
+              if [ ! -d "${YETUS_DIR}" ]; then
+                echo "unpacking yetus into '${YETUS_DIR}'"
+                mkdir -p "${YETUS_DIR}"
+                gunzip -c yetus.tar.gz | tar xpf - -C "${YETUS_DIR}" --strip-components 1
+              fi
+            '''
+            // Set up the file we need at PERSONALITY_FILE location
+            dir ("tools") {
+              sh """#!/usr/bin/env bash
+                set -e
+                echo "Downloading Project personality."
+                curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
+              """
+            }
+            stash name: 'yetus', includes: "yetus-*/*,yetus-*/**/*,tools/personality.sh"
+          }
         }
-        stash name: 'yetus', includes: "yetus-*/*,yetus-*/**/*,tools/personality.sh"
+        stage ('hadoop 2 cache') {
+          environment {
+            HADOOP2_VERSION="2.7.1"
+          }
+          steps {
+            // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
+            dir('downloads-hadoop-2') {
+              sh '''#!/usr/bin/env bash
+                echo "Make sure we have a directory for downloading dependencies: $(pwd)"
+'''
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              echo "Ensure we have a copy of Hadoop ${HADOOP2_VERSION}"
+              "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
+                  --working-dir "${WORKSPACE}/downloads-hadoop-2" \
+                  --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  "${WORKSPACE}/hadoop-${HADOOP2_VERSION}-bin.tar.gz" \
+                  "hadoop/common/hadoop-${HADOOP2_VERSION}/hadoop-${HADOOP2_VERSION}.tar.gz"
+            '''
+            stash name: 'hadoop-2', includes: "hadoop-${HADOOP2_VERSION}-bin.tar.gz"
+          }
+        }
+        stage ('hadoop 3 cache') {
+          environment {
+            HADOOP3_VERSION="3.0.0"
+          }
+          steps {
+            // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
+            dir('downloads-hadoop-3') {
+              sh '''#!/usr/bin/env bash
+                echo "Make sure we have a directory for downloading dependencies: $(pwd)"
+'''
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              echo "Ensure we have a copy of Hadoop ${HADOOP3_VERSION}"
+              "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
+                  --working-dir "${WORKSPACE}/downloads-hadoop-3" \
+                  --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  "${WORKSPACE}/hadoop-${HADOOP3_VERSION}-bin.tar.gz" \
+                  "hadoop/common/hadoop-${HADOOP3_VERSION}/hadoop-${HADOOP3_VERSION}.tar.gz"
+            '''
+            stash name: 'hadoop-3', includes: "hadoop-${HADOOP3_VERSION}-bin.tar.gz"
+          }
+        }
       }
     }
     stage ('init health results') {
@@ -149,6 +204,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
 '''
             unstash 'yetus'
+            // since we have a new node definition we need to re-do the scm checkout
             dir('component') {
               checkout scm
             }
@@ -441,7 +497,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
         }
         // This is meant to mimic what a release manager will do to create RCs.
         // See http://hbase.apache.org/book.html#maven.release
-        stage ('create source tarball') {
+        stage ('packaging and integration') {
           tools {
             maven 'Maven (latest)'
             // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
@@ -454,14 +510,17 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             sh '''#!/bin/bash -e
               echo "Setting up directories"
               rm -rf "output-srctarball" && mkdir "output-srctarball"
+              rm -rf "output-integration" && mkdir "output-integration" "output-integration/hadoop-2" "output-integration/hadoop-3" "output-integration/hadoop-3-shaded"
               rm -rf "unpacked_src_tarball" && mkdir "unpacked_src_tarball"
+              rm -rf "hbase-install" && mkdir "hbase-install"
+              rm -rf "hbase-client" && mkdir "hbase-client"
+              rm -rf "hadoop-2" && mkdir "hadoop-2"
+              rm -rf "hadoop-3" && mkdir "hadoop-3"
               rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
               rm -rf ".m2-for-src" && mkdir ".m2-for-src"
-              echo '(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console].' >output-srctarball/commentfile
+              echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
+              echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
 '''
-            dir('component') {
-              checkout scm
-            }
             sh '''#!/usr/bin/env bash
               set -e
               rm -rf "output-srctarball/machine" && mkdir "output-srctarball/machine"
@@ -470,6 +529,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               ls -lh "output-srctarball/machine"
 '''
             sh """#!/bin/bash -e
+              echo "Checking the steps for an RM to make a source artifact, then a binary artifact."
               if "${env.BASEDIR}/dev-support/hbase_nightly_source-artifact.sh" \
                   --intermediate-file-dir output-srctarball \
                   --unpack-temp-dir unpacked_src_tarball \
@@ -483,12 +543,78 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 exit 1
               fi
 """
+            echo "unpacking the hbase bin tarball into 'hbase-install' and the client tarball into 'hbase-client'"
+            sh '''#!/bin/bash -e
+              if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | wc -l) ]; then
+                echo '(x) {color:red}-1 testing binary artifact{color}\n-- source tarball did not produce the expected binaries.' >>output-srctarball/commentfile
+                exit 1
+              fi
+              install_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | head -n 1)
+              tar --strip-component=1 -xzf "${install_artifact}" -C "hbase-install"
+              client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | tail -n 1)
+              tar --strip-component=1 -xzf "${client_artifact}" -C "hbase-client"
+'''
+            unstash 'hadoop-2'
+            echo "Attempting to use run an instance on top of Hadoop 2."
+            sh '''#!/bin/bash -xe
+              artifact=$(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | head -n 1)
+              tar --strip-components=1 -xzf "${artifact}" -C "hadoop-2"
+              if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                  --single-process \
+                  --working-dir output-integration/hadoop-2 \
+                  --hbase-client-install "hbase-client" \
+                  "hbase-install" \
+                  "hadoop-2/bin/hadoop" \
+                  hadoop-2/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                  hadoop-2/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                  >output-integration/hadoop-2.log 2>&1 ; then
+                echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 2. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-2.log]. (note that this means we didn't run on Hadoop 3)" >output-integration/commentfile
+                exit 2
+              fi
+'''
+            unstash 'hadoop-3'
+            echo "Attempting to use run an instance on top of Hadoop 3."
+            sh '''#!/bin/bash -e
+              artifact=$(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | head -n 1)
+              tar --strip-components=1 -xzf "${artifact}" -C "hadoop-3"
+              if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                  --single-process \
+                  --working-dir output-integration/hadoop-3 \
+                  --hbase-client-install hbase-client \
+                  hbase-install \
+                  hadoop-3/bin/hadoop \
+                  hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                  hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                  >output-integration/hadoop-3.log 2>&1 ; then
+                echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3.log]. (note that this means we didn't check the Hadoop 3 shaded client)" >output-integration/commentfile
+                exit 2
+              fi
+              echo "Attempting to use run an instance on top of Hadoop 3, relying on the Hadoop client artifacts for the example client program."
+              if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                  --single-process \
+                  --hadoop-client-classpath hadoop-3/share/hadoop/client/hadoop-client-api-*.jar:hadoop-3/share/hadoop/client/hadoop-client-runtime-*.jar \
+                  --working-dir output-integration/hadoop-3-shaded \
+                  --hbase-client-install hbase-client \
+                  hbase-install \
+                  hadoop-3/bin/hadoop \
+                  hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                  hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                  >output-integration/hadoop-3-shaded.log 2>&1 ; then
+                echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3 using Hadoop's shaded client. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3-shaded.log]." >output-integration/commentfile
+                exit 2
+              fi
+              echo "(/) {color:green}+1 client integration test{color}" >output-integration/commentfile
+'''
+
+
           }
           post {
             always {
-              stash name: 'srctarball-result', includes: "output-srctarball/commentfile"
+              stash name: 'srctarball-result', includes: "output-srctarball/commentfile,output-integration/commentfile"
               archive 'output-srctarball/*'
               archive 'output-srctarball/**/*'
+              archive 'output-integration/*'
+              archive 'output-integration/**/*'
             }
           }
         }
@@ -509,7 +635,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                           "${env.OUTPUT_DIR_RELATIVE_JDK7}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_HADOOP2}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_HADOOP3}/commentfile",
-                          'output-srctarball/commentfile']
+                          'output-srctarball/commentfile',
+                          'output-integration/commentfile']
            echo env.BRANCH_NAME
            echo env.BUILD_URL
            echo currentBuild.result
