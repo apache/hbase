@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -91,6 +92,8 @@ public class TestAssignmentManagerMetrics {
     // set a small interval for updating rit metrics
     conf.setInt(AssignmentManager.RIT_CHORE_INTERVAL_MSEC_CONF_KEY, MSG_INTERVAL);
 
+    // keep rs online so it can report the failed opens.
+    conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     TEST_UTIL.startMiniCluster(1);
     CLUSTER = TEST_UTIL.getHBaseCluster();
     MASTER = CLUSTER.getMaster();
@@ -148,6 +151,9 @@ public class TestAssignmentManagerMetrics {
       }
 
       // Sleep 3 seconds, wait for doMetrics chore catching up
+      // the rit count consists of rit and failed opens. see RegionInTransitionStat#update
+      // Waiting for the completion of rit makes the assert stable.
+      TEST_UTIL.waitUntilNoRegionsInTransition();
       Thread.sleep(MSG_INTERVAL * 3);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 1, amSource);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 1,
