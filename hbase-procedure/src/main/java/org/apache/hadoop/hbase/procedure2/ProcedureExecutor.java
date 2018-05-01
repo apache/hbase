@@ -264,9 +264,31 @@ public class ProcedureExecutor<TEnvironment> {
   private final CopyOnWriteArrayList<ProcedureExecutorListener> listeners = new CopyOnWriteArrayList<>();
 
   private Configuration conf;
+
+  /**
+   * Created in the {@link #start(int, boolean)} method. Destroyed in {@link #join()} (FIX! Doing
+   * resource handling rather than observing in a #join is unexpected).
+   * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
+   * (Should be ok).
+   */
   private ThreadGroup threadGroup;
+
+  /**
+   * Created in the {@link #start(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
+   * resource handling rather than observing in a #join is unexpected).
+   * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
+   * (Should be ok).
+   */
   private CopyOnWriteArrayList<WorkerThread> workerThreads;
+
+  /**
+   * Created in the {@link #start(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
+   * resource handling rather than observing in a #join is unexpected).
+   * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
+   * (Should be ok).
+   */
   private TimeoutExecutorThread timeoutExecutor;
+
   private int corePoolSize;
   private int maxPoolSize;
 
@@ -299,6 +321,7 @@ public class ProcedureExecutor<TEnvironment> {
     this.conf = conf;
     this.checkOwnerSet = conf.getBoolean(CHECK_OWNER_SET_CONF_KEY, DEFAULT_CHECK_OWNER_SET);
     refreshConfiguration(conf);
+
   }
 
   private void load(final boolean abortOnCorruption) throws IOException {
@@ -510,11 +533,8 @@ public class ProcedureExecutor<TEnvironment> {
     LOG.info("Starting {} core workers (bigger of cpus/4 or 16) with max (burst) worker count={}",
         corePoolSize, maxPoolSize);
 
-    // Create the Thread Group for the executors
-    threadGroup = new ThreadGroup("PEWorkerGroup");
-
-    // Create the timeout executor
-    timeoutExecutor = new TimeoutExecutorThread(this, threadGroup);
+    this.threadGroup = new ThreadGroup("PEWorkerGroup");
+    this.timeoutExecutor = new TimeoutExecutorThread(this, threadGroup);
 
     // Create the workers
     workerId.set(0);
@@ -576,22 +596,21 @@ public class ProcedureExecutor<TEnvironment> {
 
     // stop the timeout executor
     timeoutExecutor.awaitTermination();
-    timeoutExecutor = null;
 
     // stop the worker threads
     for (WorkerThread worker: workerThreads) {
       worker.awaitTermination();
     }
-    workerThreads = null;
 
     // Destroy the Thread Group for the executors
+    // TODO: Fix. #join is not place to destroy resources.
     try {
       threadGroup.destroy();
     } catch (IllegalThreadStateException e) {
-      LOG.error("ThreadGroup " + threadGroup + " contains running threads; " + e.getMessage());
-      threadGroup.list();
-    } finally {
-      threadGroup = null;
+      LOG.error("ThreadGroup {} contains running threads; {}: See STDOUT",
+          this.threadGroup, e.getMessage());
+      // This dumps list of threads on STDOUT.
+      this.threadGroup.list();
     }
 
     // reset the in-memory state for testing
