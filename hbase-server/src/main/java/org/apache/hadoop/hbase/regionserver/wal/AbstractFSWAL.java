@@ -178,6 +178,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   // If > than this size, roll the log.
   protected final long logrollsize;
 
+  /**
+   * Block size to use writing files.
+   */
+  protected final long blocksize;
+
   /*
    * If more than this many logs, force flush of oldest region to oldest edit goes to disk. If too
    * many and we crash, then will take forever replaying. Keep the number of logs tidy.
@@ -405,10 +410,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // size as those made in hbase-1 (to prevent surprise), we now have default block size as
     // 2 times the DFS default: i.e. 2 * DFS default block size rolling at 50% full will generally
     // make similar size logs to 1 * DFS default block size rolling at 95% full. See HBASE-19148.
-    final long blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
-      CommonFSUtils.getDefaultBlockSize(this.fs, this.walDir) * 2);
-    this.logrollsize =
-      (long) (blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.5f));
+    this.blocksize = WALUtil.getWALBlockSize(this.conf, this.fs, this.walDir);
+    float multiplier = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.5f);
+    this.logrollsize = (long)(this.blocksize * multiplier);
 
     boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
     if (maxLogsDefined) {

@@ -270,7 +270,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    */
   @Override
   protected Writer createWriterInstance(final Path path) throws IOException {
-    Writer writer = FSHLogProvider.createWriter(conf, fs, path, false);
+    Writer writer = FSHLogProvider.createWriter(conf, fs, path, false, this.blocksize);
     if (writer instanceof ProtobufLogWriter) {
       preemptiveSync((ProtobufLogWriter) writer);
     }

@@ -609,8 +609,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   @Override
   protected AsyncWriter createWriterInstance(Path path) throws IOException {
-    return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, eventLoopGroup,
-      channelClass);
+    return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false,
+        this.blocksize, eventLoopGroup, channelClass);
   }
 
   private void waitForSafePoint() {
