@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.util.Pair;
@@ -54,7 +55,7 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
      *         meet the needs of the given Writer implementation.
      */
-    void init(FileSystem fs, Path path, Configuration c, boolean overwritable)
+    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize)
         throws IOException, CommonFSUtils.StreamLacksCapabilityException;
   }
 
@@ -85,18 +86,28 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
   }
 
   /**
-   * public because of AsyncFSWAL. Should be package-private
+   * Public because of AsyncFSWAL. Should be package-private
    */
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
-      boolean overwritable, EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass)
-      throws IOException {
+      boolean overwritable, EventLoopGroup eventLoopGroup,
+      Class<? extends Channel> channelClass) throws IOException {
+    return createAsyncWriter(conf, fs, path, overwritable, WALUtil.getWALBlockSize(conf, fs, path),
+        eventLoopGroup, channelClass);
+  }
+
+  /**
+   * Public because of AsyncFSWAL. Should be package-private
+   */
+  public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
+      boolean overwritable, long blocksize, EventLoopGroup eventLoopGroup,
+      Class<? extends Channel> channelClass) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends AsyncWriter> logWriterClass = conf.getClass(
       "hbase.regionserver.hlog.async.writer.impl", AsyncProtobufLogWriter.class, AsyncWriter.class);
     try {
       AsyncWriter writer = logWriterClass.getConstructor(EventLoopGroup.class, Class.class)
           .newInstance(eventLoopGroup, channelClass);
-      writer.init(fs, path, conf, overwritable);
+      writer.init(fs, path, conf, overwritable, blocksize);
       return writer;
     } catch (Exception e) {
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {

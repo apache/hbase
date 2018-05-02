@@ -378,7 +378,7 @@ The following configuration settings changed their default value. Where applicab
 * hbase.client.retries.number is now set to 10. Previously it was 35. Downstream users are advised to use client timeouts as described in section <<config_timeouts>> instead.
 * hbase.client.serverside.retries.multiplier is now set to 3. Previously it was 10. Downstream users are advised to use client timesout as describe in section <<config_timeouts>> instead.
 * hbase.master.fileSplitTimeout is now set to 10 minutes. Previously it was 30 seconds.
-* hbase.regionserver.logroll.multiplier is now set to 0.5. Previously it was 0.95.
+* hbase.regionserver.logroll.multiplier is now set to 0.5. Previously it was 0.95. This change is tied with the following doubling of block size. Combined, these two configuration changes should make for WALs of about the same size as those in hbase-1.x but there should be less incidence of small blocks because we fail to roll the WAL before we hit the blocksize threshold. See link:https://issues.apache.org/jira/browse/HBASE-19148[HBASE-19148] for discussion.
 * hbase.regionserver.hlog.blocksize defaults to 2x the HDFS default block size for the WAL dir. Previously it was equal to the HDFS default block size for the WAL dir.
 * hbase.client.start.log.errors.counter changed to 5. Previously it was 9.
 * hbase.ipc.server.callqueue.type changed to 'fifo'. In HBase versions 1.0 - 1.2 it was 'deadline'. In prior and later 1.x versions it already defaults to 'fifo'.
