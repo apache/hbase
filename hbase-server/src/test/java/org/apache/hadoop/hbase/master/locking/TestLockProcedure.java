@@ -300,6 +300,7 @@ public class TestLockProcedure {
     // Acquire namespace lock, then queue other locks.
     long nsProcId = queueLock(nsLock);
     assertTrue(awaitForLocked(nsProcId, 2000));
+    long start = System.currentTimeMillis();
     sendHeartbeatAndCheckLocked(nsProcId, true);
     long table1ProcId = queueLock(tableLock1);
     long table2ProcId = queueLock(tableLock2);
@@ -307,7 +308,9 @@ public class TestLockProcedure {
     long regions2ProcId = queueLock(regionsLock2);
 
     // Assert tables & region locks are waiting because of namespace lock.
-    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
+    long now = System.currentTimeMillis();
+    // leave extra 10 msec in case more than half the HEARTBEAT_TIMEOUT has passed
+    Thread.sleep(Math.min(HEARTBEAT_TIMEOUT / 2, Math.max(HEARTBEAT_TIMEOUT-(now-start)-10, 0)));
     sendHeartbeatAndCheckLocked(nsProcId, true);
     sendHeartbeatAndCheckLocked(table1ProcId, false);
     sendHeartbeatAndCheckLocked(table2ProcId, false);
