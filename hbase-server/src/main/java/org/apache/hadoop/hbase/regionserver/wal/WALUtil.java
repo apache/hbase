@@ -22,8 +22,12 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.util.NavigableMap;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -162,5 +166,17 @@ public class WALUtil {
       throw ioe;
     }
     return walKey;
+  }
+
+  /**
+   * Blocksize returned here is 2x the default HDFS blocksize unless explicitly set in
+   * Configuration. Works in tandem with hbase.regionserver.logroll.multiplier. See comment in
+   * AbstractFSWAL in Constructor where we set blocksize and logrollsize for why.
+   * @return Blocksize to use writing WALs.
+   */
+  public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir)
+      throws IOException {
+    return conf.getLong("hbase.regionserver.hlog.blocksize",
+        CommonFSUtils.getDefaultBlockSize(fs, dir) * 2);
   }
 }

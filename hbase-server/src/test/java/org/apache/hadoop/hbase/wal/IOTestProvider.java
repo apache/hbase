@@ -92,7 +92,6 @@ public class IOTestProvider implements WALProvider {
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
-   * @param listeners may be null
    * @param providerId differentiate between providers from one facotry, used for FS layout. may be
    *                   null
    */
@@ -210,7 +209,7 @@ public class IOTestProvider implements WALProvider {
         LOG.info("creating new writer instance.");
         final ProtobufLogWriter writer = new IOTestWriter();
         try {
-          writer.init(fs, path, conf, false);
+          writer.init(fs, path, conf, false, this.blocksize);
         } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
           throw new IOException("Can't create writer instance because underlying FileSystem " +
               "doesn't support needed stream capabilities.", exception);
@@ -237,8 +236,8 @@ public class IOTestProvider implements WALProvider {
     private boolean doSyncs;
 
     @Override
-    public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable)
-        throws IOException, CommonFSUtils.StreamLacksCapabilityException {
+    public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
+        long blocksize) throws IOException, CommonFSUtils.StreamLacksCapabilityException {
       Collection<String> operations = conf.getStringCollection(ALLOWED_OPERATIONS);
       if (operations.isEmpty() || operations.contains(AllowedOperations.all.name())) {
         doAppends = doSyncs = true;
@@ -250,7 +249,7 @@ public class IOTestProvider implements WALProvider {
       }
       LOG.info("IOTestWriter initialized with appends " + (doAppends ? "enabled" : "disabled") +
           " and syncs " + (doSyncs ? "enabled" : "disabled"));
-      super.init(fs, path, conf, overwritable);
+      super.init(fs, path, conf, overwritable, blocksize);
     }
 
     @Override

@@ -335,18 +335,19 @@ public class WALFactory {
 
   /**
    * Create a writer for the WAL.
+   * Uses defaults.
    * <p>
-   * should be package-private. public only for tests and
+   * Should be package-private. public only for tests and
    * {@link org.apache.hadoop.hbase.regionserver.wal.Compressor}
    * @return A WAL writer. Close when done with it.
-   * @throws IOException
    */
   public Writer createWALWriter(final FileSystem fs, final Path path) throws IOException {
     return FSHLogProvider.createWriter(conf, fs, path, false);
   }
 
   /**
-   * should be package-private, visible for recovery testing.
+   * Should be package-private, visible for recovery testing.
+   * Uses defaults.
    * @return an overwritable writer for recovered edits. caller should close.
    */
   @VisibleForTesting
@@ -362,7 +363,7 @@ public class WALFactory {
   private static final AtomicReference<WALFactory> singleton = new AtomicReference<>();
   private static final String SINGLETON_ID = WALFactory.class.getName();
   
-  // public only for FSHLog
+  // Public only for FSHLog
   public static WALFactory getInstance(Configuration configuration) {
     WALFactory factory = singleton.get();
     if (null == factory) {
@@ -415,6 +416,7 @@ public class WALFactory {
 
   /**
    * If you already have a WALFactory, you should favor the instance method.
+   * Uses defaults.
    * @return a Writer that will overwrite files. Caller must close.
    */
   static Writer createRecoveredEditsWriter(final FileSystem fs, final Path path,
@@ -425,6 +427,7 @@ public class WALFactory {
 
   /**
    * If you already have a WALFactory, you should favor the instance method.
+   * Uses defaults.
    * @return a writer that won't overwrite files. Caller must close.
    */
   @VisibleForTesting
