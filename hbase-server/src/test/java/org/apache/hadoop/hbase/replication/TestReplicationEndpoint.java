@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -447,40 +448,15 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     @Override
-    protected Replicator createReplicator(List<Entry> entries, int ordinal) {
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal) {
       // Fail only once, we don't want to slow down the test.
       if (failedOnce) {
-        return new DummyReplicator(entries, ordinal);
+        return () -> ordinal;
       } else {
         failedOnce = true;
-        return new FailingDummyReplicator(entries, ordinal);
-      }
-    }
-
-    protected class DummyReplicator extends Replicator {
-
-      private int ordinal;
-
-      public DummyReplicator(List<Entry> entries, int ordinal) {
-        super(entries, ordinal);
-        this.ordinal = ordinal;
-      }
-
-      @Override
-      public Integer call() throws IOException {
-        return ordinal;
-      }
-    }
-
-    protected class FailingDummyReplicator extends DummyReplicator {
-
-      public FailingDummyReplicator(List<Entry> entries, int ordinal) {
-        super(entries, ordinal);
-      }
-
-      @Override
-      public Integer call() throws IOException {
-        throw new IOException("Sample Exception: Failed to replicate.");
+        return () -> {
+          throw new IOException("Sample Exception: Failed to replicate.");
+        };
       }
     }
   }
