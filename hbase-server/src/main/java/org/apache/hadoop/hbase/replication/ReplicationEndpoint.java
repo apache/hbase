@@ -117,7 +117,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
   /**
    * Initialize the replication endpoint with the given context.
    * @param context replication context
-   * @throws IOException
+   * @throws IOException error occur when initialize the endpoint.
    */
   void init(Context context) throws IOException;
 
