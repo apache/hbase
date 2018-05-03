@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -95,6 +96,8 @@ public class TestOverwriteFileUnderConstruction {
       out1.close();
       // a successful close is also OK for us so no assertion here, we just need to confirm that the
       // data in the file are correct.
+    } catch (FileNotFoundException fnfe) {
+      // hadoop3 throws one of these.
     } catch (RemoteException e) {
       // expected
       assertThat(e.unwrapRemoteException(), instanceOf(LeaseExpiredException.class));
