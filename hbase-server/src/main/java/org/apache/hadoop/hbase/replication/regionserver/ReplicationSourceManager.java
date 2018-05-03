@@ -418,7 +418,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   void removeRecoveredSource(ReplicationSourceInterface src) {
     LOG.info("Done with the recovered queue " + src.getQueueId());
-    src.getSourceMetrics().clear();
     this.oldsources.remove(src);
     // Delete queue from storage and memory
     deleteQueue(src.getQueueId());
@@ -431,7 +430,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   void removeSource(ReplicationSourceInterface src) {
     LOG.info("Done with the queue " + src.getQueueId());
-    src.getSourceMetrics().clear();
     this.sources.remove(src.getPeerId());
     // Delete queue from storage and memory
     deleteQueue(src.getQueueId());
