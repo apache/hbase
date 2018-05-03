@@ -519,6 +519,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         }
       }
     }
+    this.metrics.clear();
   }
 
   @Override
