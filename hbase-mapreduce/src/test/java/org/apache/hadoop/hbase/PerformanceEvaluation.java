@@ -139,7 +139,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
   public static final String TABLE_NAME = "TestTable";
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
   public static final byte [] COLUMN_ZERO = Bytes.toBytes("" + 0);
-  public static final byte [] QUALIFIER_NAME = COLUMN_ZERO;
   public static final int DEFAULT_VALUE_LENGTH = 1000;
   public static final int ROW_LENGTH = 26;
 
@@ -1341,7 +1340,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       Get get = new Get(getRandomRow(this.rand, opts.totalRows));
       if (opts.addColumns) {
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          get.addColumn(FAMILY_NAME, qualifier);
+        }
       } else {
         get.addFamily(FAMILY_NAME);
       }
@@ -1466,7 +1468,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
                 .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
                 .setReadType(opts.scanReadType);
         if (opts.addColumns) {
-          scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+          for (int column = 0; column < opts.columns; column++) {
+            byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+            scan.addColumn(FAMILY_NAME, qualifier);
+          }
         } else {
           scan.addFamily(FAMILY_NAME);
         }
@@ -1489,7 +1494,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException, InterruptedException {
       Get get = new Get(format(i));
       if (opts.addColumns) {
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          get.addColumn(FAMILY_NAME, qualifier);
+        }
       }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
@@ -1572,7 +1580,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
           .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType);
       FilterList list = new FilterList();
       if (opts.addColumns) {
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          scan.addColumn(FAMILY_NAME, qualifier);
+        }
       } else {
         scan.addFamily(FAMILY_NAME);
       }
@@ -1612,7 +1623,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
         scan.setFilter(new FilterAllFilter());
       }
       if (opts.addColumns) {
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          scan.addColumn(FAMILY_NAME, qualifier);
+        }
       } else {
         scan.addFamily(FAMILY_NAME);
       }
@@ -1712,7 +1726,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       Get get = new Get(getRandomRow(this.rand, opts.totalRows));
       if (opts.addColumns) {
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          get.addColumn(FAMILY_NAME, qualifier);
+        }
       } else {
         get.addFamily(FAMILY_NAME);
       }
@@ -1809,7 +1826,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
             .setCacheBlocks(opts.cacheBlocks).setAsyncPrefetch(opts.asyncPrefetch)
             .setReadType(opts.scanReadType);
         if (opts.addColumns) {
-          scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+          for (int column = 0; column < opts.columns; column++) {
+            byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+            scan.addColumn(FAMILY_NAME, qualifier);
+          }
         } else {
           scan.addFamily(FAMILY_NAME);
         }
@@ -1944,7 +1964,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException {
       Get get = new Get(format(i));
       if (opts.addColumns) {
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          get.addColumn(FAMILY_NAME, qualifier);
+        }
       }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
@@ -2025,7 +2048,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       Scan scan = new Scan().setCaching(opts.caching).setCacheBlocks(opts.cacheBlocks)
           .setAsyncPrefetch(opts.asyncPrefetch).setReadType(opts.scanReadType);
       if (opts.addColumns) {
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        for (int column = 0; column < opts.columns; column++) {
+          byte [] qualifier = column == 0? COLUMN_ZERO: Bytes.toBytes("" + column);
+          scan.addColumn(FAMILY_NAME, qualifier);
+        }
       } else {
         scan.addFamily(FAMILY_NAME);
       }
