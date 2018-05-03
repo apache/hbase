@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -192,9 +193,9 @@ public class ReplicationPeerManager {
   }
 
   /**
-   * @return the old state.
+   * @return the old state, and whether the peer is enabled.
    */
-  public SyncReplicationState preTransitPeerSyncReplicationState(String peerId,
+  Pair<SyncReplicationState, Boolean> preTransitPeerSyncReplicationState(String peerId,
       SyncReplicationState state) throws DoNotRetryIOException {
     ReplicationPeerDescription desc = checkPeerExists(peerId);
     SyncReplicationState fromState = desc.getSyncReplicationState();
@@ -203,7 +204,7 @@ public class ReplicationPeerManager {
       throw new DoNotRetryIOException("Can not transit current cluster state from " + fromState +
         " to " + state + " for peer id=" + peerId);
     }
-    return fromState;
+    return Pair.newPair(fromState, desc.isEnabled());
   }
 
   public void addPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
@@ -303,7 +304,7 @@ public class ReplicationPeerManager {
     }
   }
 
-  public void removeAllQueuesAndHFileRefs(String peerId) throws ReplicationException {
+  public void removeAllQueues(String peerId) throws ReplicationException {
     // Here we need two passes to address the problem of claimQueue. Maybe a claimQueue is still
     // on-going when the refresh peer config procedure is done, if a RS which has already been
     // scanned claims the queue of a RS which has not been scanned yet, we will miss that queue in
@@ -317,6 +318,10 @@ public class ReplicationPeerManager {
     // unless it has already been removed by others.
     ReplicationUtils.removeAllQueues(queueStorage, peerId);
     ReplicationUtils.removeAllQueues(queueStorage, peerId);
+  }
+
+  public void removeAllQueuesAndHFileRefs(String peerId) throws ReplicationException {
+    removeAllQueues(peerId);
     queueStorage.removePeerFromHFileRefs(peerId);
   }
 

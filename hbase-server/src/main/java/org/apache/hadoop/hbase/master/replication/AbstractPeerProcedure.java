@@ -106,4 +106,8 @@ public abstract class AbstractPeerProcedure<TState>
     throw new UnsupportedOperationException();
   }
 
+  protected final void refreshPeer(MasterProcedureEnv env, PeerOperationType type) {
+    addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
+      .map(sn -> new RefreshPeerProcedure(peerId, type, sn)).toArray(RefreshPeerProcedure[]::new));
+  }
 }

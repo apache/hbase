@@ -109,12 +109,6 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     throw new UnsupportedOperationException();
   }
 
-  private void refreshPeer(MasterProcedureEnv env, PeerOperationType type) {
-    addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
-      .map(sn -> new RefreshPeerProcedure(peerId, type, sn))
-      .toArray(RefreshPeerProcedure[]::new));
-  }
-
   protected ReplicationPeerConfig getOldPeerConfig() {
     return null;
   }

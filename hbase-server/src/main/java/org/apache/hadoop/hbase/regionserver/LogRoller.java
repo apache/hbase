@@ -244,10 +244,8 @@ public class LogRoller extends HasThread implements Closeable {
   }
 
   /**
-   * For testing only
    * @return true if all WAL roll finished
    */
-  @VisibleForTesting
   public boolean walRollFinished() {
     for (boolean needRoll : walNeedsRoll.values()) {
       if (needRoll) {
@@ -255,6 +253,15 @@ public class LogRoller extends HasThread implements Closeable {
       }
     }
     return true;
+  }
+
+  /**
+   * Wait until all wals have been rolled after calling {@link #requestRollAll()}.
+   */
+  public void waitUntilWalRollFinished() throws InterruptedException {
+    while (!walRollFinished()) {
+      Thread.sleep(100);
+    }
   }
 
   @Override

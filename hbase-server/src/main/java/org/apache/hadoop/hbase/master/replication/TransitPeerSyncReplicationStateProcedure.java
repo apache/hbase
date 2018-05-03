@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,8 @@ public class TransitPeerSyncReplicationStateProcedure
   private SyncReplicationState fromState;
 
   private SyncReplicationState toState;
+
+  private boolean enabled;
 
   public TransitPeerSyncReplicationStateProcedure() {
   }
@@ -110,7 +113,10 @@ public class TransitPeerSyncReplicationStateProcedure
     if (cpHost != null) {
       cpHost.preTransitReplicationPeerSyncReplicationState(peerId, toState);
     }
-    fromState = env.getReplicationPeerManager().preTransitPeerSyncReplicationState(peerId, toState);
+    Pair<SyncReplicationState, Boolean> pair =
+      env.getReplicationPeerManager().preTransitPeerSyncReplicationState(peerId, toState);
+    fromState = pair.getFirst();
+    enabled = pair.getSecond();
   }
 
   private void postTransit(MasterProcedureEnv env) throws IOException {
@@ -129,6 +135,21 @@ public class TransitPeerSyncReplicationStateProcedure
       .stream()
       .flatMap(tn -> env.getAssignmentManager().getRegionStates().getRegionsOfTable(tn).stream())
       .collect(Collectors.toList());
+  }
+
+  private void createDirForRemoteWAL(MasterProcedureEnv env)
+      throws ProcedureYieldException, IOException {
+    MasterFileSystem mfs = env.getMasterFileSystem();
+    Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
+    Path remoteWALDirForPeer = ReplicationUtils.getRemoteWALDirForPeer(remoteWALDir, peerId);
+    FileSystem walFs = mfs.getWALFileSystem();
+    if (walFs.exists(remoteWALDirForPeer)) {
+      LOG.warn("Wal dir {} already exists, usually this should not happen, continue anyway",
+        remoteWALDirForPeer);
+    } else if (!walFs.mkdirs(remoteWALDirForPeer)) {
+      LOG.warn("Can not create remote wal dir {}", remoteWALDirForPeer);
+      throw new ProcedureYieldException();
+    }
   }
 
   @Override
@@ -151,6 +172,13 @@ public class TransitPeerSyncReplicationStateProcedure
       case SET_PEER_NEW_SYNC_REPLICATION_STATE:
         try {
           env.getReplicationPeerManager().setPeerNewSyncReplicationState(peerId, toState);
+          if (toState.equals(SyncReplicationState.STANDBY) && enabled) {
+            // disable the peer if we are going to transit to STANDBY state, as we need to remove
+            // all the pending replication files. If we do not disable the peer and delete the wal
+            // queues on zk directly, RS will get NoNode exception when updating the wal position
+            // and crash.
+            env.getReplicationPeerManager().disablePeer(peerId);
+          }
         } catch (ReplicationException e) {
           LOG.warn("Failed to update peer storage for peer {} when starting transiting sync " +
             "replication peer state from {} to {}, retry", peerId, fromState, toState, e);
@@ -163,16 +191,35 @@ public class TransitPeerSyncReplicationStateProcedure
         addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
           .map(sn -> new RefreshPeerProcedure(peerId, getPeerOperationType(), sn, 0))
           .toArray(RefreshPeerProcedure[]::new));
-        if (fromState == SyncReplicationState.STANDBY &&
-          toState == SyncReplicationState.DOWNGRADE_ACTIVE) {
-          setNextState(PeerSyncReplicationStateTransitionState.REPLAY_REMOTE_WAL_IN_PEER);
+        if (fromState.equals(SyncReplicationState.ACTIVE)) {
+          setNextState(toState.equals(SyncReplicationState.STANDBY)
+            ? PeerSyncReplicationStateTransitionState.REMOVE_ALL_REPLICATION_QUEUES_IN_PEER
+            : PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
+        } else if (fromState.equals(SyncReplicationState.DOWNGRADE_ACTIVE)) {
+          setNextState(toState.equals(SyncReplicationState.STANDBY)
+            ? PeerSyncReplicationStateTransitionState.REMOVE_ALL_REPLICATION_QUEUES_IN_PEER
+            : PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
         } else {
-          setNextState(PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
+          assert toState.equals(SyncReplicationState.DOWNGRADE_ACTIVE);
+          setNextState(PeerSyncReplicationStateTransitionState.REPLAY_REMOTE_WAL_IN_PEER);
         }
         return Flow.HAS_MORE_STATE;
       case REPLAY_REMOTE_WAL_IN_PEER:
         addChildProcedure(new RecoverStandbyProcedure(peerId));
-        setNextState(PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
+        setNextState(
+          PeerSyncReplicationStateTransitionState.TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE);
+        return Flow.HAS_MORE_STATE;
+      case REMOVE_ALL_REPLICATION_QUEUES_IN_PEER:
+        try {
+          env.getReplicationPeerManager().removeAllQueues(peerId);
+        } catch (ReplicationException e) {
+          LOG.warn("Failed to remove all replication queues peer {} when starting transiting" +
+            " sync replication peer state from {} to {}, retry", peerId, fromState, toState, e);
+          throw new ProcedureYieldException();
+        }
+        setNextState(fromState.equals(SyncReplicationState.ACTIVE)
+          ? PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER
+          : PeerSyncReplicationStateTransitionState.TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE);
         return Flow.HAS_MORE_STATE;
       case REOPEN_ALL_REGIONS_IN_PEER:
         try {
@@ -202,27 +249,35 @@ public class TransitPeerSyncReplicationStateProcedure
           .map(sn -> new RefreshPeerProcedure(peerId, getPeerOperationType(), sn, 1))
           .toArray(RefreshPeerProcedure[]::new));
         if (toState == SyncReplicationState.STANDBY) {
-          setNextState(PeerSyncReplicationStateTransitionState.CREATE_DIR_FOR_REMOTE_WAL);
+          setNextState(
+            enabled ? PeerSyncReplicationStateTransitionState.SYNC_REPLICATION_SET_PEER_ENABLED
+              : PeerSyncReplicationStateTransitionState.CREATE_DIR_FOR_REMOTE_WAL);
         } else {
           setNextState(
             PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
         }
         return Flow.HAS_MORE_STATE;
-      case CREATE_DIR_FOR_REMOTE_WAL:
-        MasterFileSystem mfs = env.getMasterFileSystem();
-        Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
-        Path remoteWALDirForPeer = ReplicationUtils.getRemoteWALDirForPeer(remoteWALDir, peerId);
-        FileSystem walFs = mfs.getWALFileSystem();
+      case SYNC_REPLICATION_SET_PEER_ENABLED:
         try {
-          if (walFs.exists(remoteWALDirForPeer)) {
-            LOG.warn("Wal dir {} already exists, usually this should not happen, continue anyway",
-              remoteWALDirForPeer);
-          } else if (!walFs.mkdirs(remoteWALDirForPeer)) {
-            LOG.warn("Can not create remote wal dir {}", remoteWALDirForPeer);
-            throw new ProcedureYieldException();
-          }
+          env.getReplicationPeerManager().enablePeer(peerId);
+        } catch (ReplicationException e) {
+          LOG.warn("Failed to set peer enabled for peer {} when transiting sync replication peer " +
+            "state from {} to {}, retry", peerId, fromState, toState, e);
+          throw new ProcedureYieldException();
+        }
+        setNextState(
+          PeerSyncReplicationStateTransitionState.SYNC_REPLICATION_ENABLE_PEER_REFRESH_PEER_ON_RS);
+        return Flow.HAS_MORE_STATE;
+      case SYNC_REPLICATION_ENABLE_PEER_REFRESH_PEER_ON_RS:
+        refreshPeer(env, PeerOperationType.ENABLE);
+        setNextState(PeerSyncReplicationStateTransitionState.CREATE_DIR_FOR_REMOTE_WAL);
+        return Flow.HAS_MORE_STATE;
+      case CREATE_DIR_FOR_REMOTE_WAL:
+        try {
+          createDirForRemoteWAL(env);
         } catch (IOException e) {
-          LOG.warn("Failed to create remote wal dir {}", remoteWALDirForPeer, e);
+          LOG.warn("Failed to create remote wal dir for peer {} when transiting sync replication " +
+            "peer state from {} to {}, retry", peerId, fromState, toState, e);
           throw new ProcedureYieldException();
         }
         setNextState(
@@ -242,5 +297,4 @@ public class TransitPeerSyncReplicationStateProcedure
         throw new UnsupportedOperationException("unhandled state=" + state);
     }
   }
-
 }
