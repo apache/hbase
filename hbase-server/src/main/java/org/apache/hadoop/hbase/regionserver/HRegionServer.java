@@ -1052,15 +1052,6 @@ public class HRegionServer extends HasThread implements
     if (this.storefileRefresher != null) this.storefileRefresher.cancel(true);
     sendShutdownInterrupt();
 
-    // Stop the quota manager
-    if (rsQuotaManager != null) {
-      rsQuotaManager.stop();
-    }
-    if (rsSpaceQuotaManager != null) {
-      rsSpaceQuotaManager.stop();
-      rsSpaceQuotaManager = null;
-    }
-
     // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
     if (rspmHost != null) {
       rspmHost.stop(this.abortRequested || this.killed);
@@ -1104,6 +1095,15 @@ public class HRegionServer extends HasThread implements
     if (!this.killed && this.fsOk) {
       waitOnAllRegionsToClose(abortRequested);
       LOG.info("stopping server " + this.serverName + "; all regions closed.");
+    }
+
+    // Stop the quota manager
+    if (rsQuotaManager != null) {
+      rsQuotaManager.stop();
+    }
+    if (rsSpaceQuotaManager != null) {
+      rsSpaceQuotaManager.stop();
+      rsSpaceQuotaManager = null;
     }
 
     //fsOk flag may be changed when closing regions throws exception.
@@ -3697,9 +3697,9 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public boolean reportFileArchivalForQuotas(TableName tableName,
-      Collection<Entry<String,Long>> archivedFiles) {
+      Collection<Entry<String, Long>> archivedFiles) {
     RegionServerStatusService.BlockingInterface rss = rssStub;
-    if (rss == null) {
+    if (rss == null || rsSpaceQuotaManager == null) {
       // the current server could be stopping.
       LOG.trace("Skipping file archival reporting to HMaster as stub is null");
       return false;
