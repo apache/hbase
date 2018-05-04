@@ -174,9 +174,9 @@ implements Configurable {
   @Override
   public void checkOutputSpecs(JobContext context) throws IOException,
       InterruptedException {
-    Configuration hConf = context.getConfiguration();
+    Configuration hConf = getConf();
     if (hConf == null) {
-      hConf = this.conf;
+      hConf = context.getConfiguration();
     }
 
     try (Admin admin = ConnectionFactory.createConnection(hConf).getAdmin()) {
