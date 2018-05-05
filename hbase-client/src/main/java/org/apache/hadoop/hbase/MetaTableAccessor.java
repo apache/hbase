@@ -137,16 +137,6 @@ public class MetaTableAccessor {
   private static final Logger LOG = LoggerFactory.getLogger(MetaTableAccessor.class);
   private static final Logger METALOG = LoggerFactory.getLogger("org.apache.hadoop.hbase.META");
 
-  static final byte [] META_REGION_PREFIX;
-  static {
-    // Copy the prefix from FIRST_META_REGIONINFO into META_REGION_PREFIX.
-    // FIRST_META_REGIONINFO == 'hbase:meta,,1'.  META_REGION_PREFIX == 'hbase:meta,'
-    int len = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName().length - 2;
-    META_REGION_PREFIX = new byte [len];
-    System.arraycopy(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), 0,
-      META_REGION_PREFIX, 0, len);
-  }
-
   /**
    * Lists all of the table regions currently in META.
    * Deprecated, keep there until some test use this.
