@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -41,8 +39,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +53,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * 6 Incremental backup t1
  */
 @Category(LargeTests.class)
-@RunWith(Parameterized.class)
 public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
   @ClassRule
@@ -65,17 +60,6 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
       HBaseClassTestRule.forClass(TestIncrementalBackupWithBulkLoad.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupDeleteTable.class);
-
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
-    secure = true;
-    List<Object[]> params = new ArrayList<>();
-    params.add(new Object[] {Boolean.TRUE});
-    return params;
-  }
-
-  public TestIncrementalBackupWithBulkLoad(Boolean b) {
-  }
 
   // implement all test cases in 1 test since incremental backup/restore has dependencies
   @Test
