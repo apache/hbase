@@ -553,9 +553,6 @@ public class ScannerContext {
 
     /**
      * Set all fields together.
-     * @param batch
-     * @param sizeScope
-     * @param dataSize
      */
     void setFields(int batch, LimitScope sizeScope, long dataSize, long heapSize,
         LimitScope timeScope, long time) {

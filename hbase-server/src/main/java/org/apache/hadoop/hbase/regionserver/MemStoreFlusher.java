@@ -555,8 +555,9 @@ class MemStoreFlusher implements FlushRequester {
         // If this is first time we've been put off, then emit a log message.
         if (fqe.getRequeueCount() <= 0) {
           // Note: We don't impose blockingStoreFiles constraint on meta regions
-          LOG.warn("Region " + region.getRegionInfo().getEncodedName() + " has too many " +
-            "store files; delaying flush up to " + this.blockingWaitTime + "ms");
+          LOG.warn("{} has too many store files({}); delaying flush up to {} ms",
+              region.getRegionInfo().getEncodedName(), getStoreFileCount(region),
+              this.blockingWaitTime);
           if (!this.server.compactSplitThread.requestSplit(region)) {
             try {
               this.server.compactSplitThread.requestSystemCompaction(region,
@@ -677,6 +678,14 @@ class MemStoreFlusher implements FlushRequester {
     return false;
   }
 
+  private int getStoreFileCount(Region region) {
+    int count = 0;
+    for (Store store : region.getStores()) {
+      count += store.getStorefilesCount();
+    }
+    return count;
+  }
+
   /**
    * Check if the regionserver's memstore memory usage is greater than the
    * limit. If so, flush regions with the biggest memstores until we're down
@@ -760,10 +769,10 @@ class MemStoreFlusher implements FlushRequester {
     }
   }
 
-  private void logMsg(String string1, long val, long max) {
-    LOG.info("Blocking updates on " + server.toString() + ": " + string1 + " "
-        + TraditionalBinaryPrefix.long2String(val, "", 1) + " is >= than blocking "
-        + TraditionalBinaryPrefix.long2String(max, "", 1) + " size");
+  private void logMsg(String type, long val, long max) {
+    LOG.info("Blocking updates: {} {} is >= blocking {}", type,
+        TraditionalBinaryPrefix.long2String(val, "", 1),
+        TraditionalBinaryPrefix.long2String(max, "", 1));
   }
 
   @Override

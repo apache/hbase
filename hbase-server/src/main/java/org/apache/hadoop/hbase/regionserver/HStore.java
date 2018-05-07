@@ -2272,7 +2272,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       this.cacheFlushCount = snapshot.getCellsCount();
       this.cacheFlushSize = snapshot.getDataSize();
       committedFiles = new ArrayList<>(1);
-      return new MemStoreSize(snapshot.getMemStoreSize());
+      return snapshot.getMemStoreSize();
     }
 
     @Override

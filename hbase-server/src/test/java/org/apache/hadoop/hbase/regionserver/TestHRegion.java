@@ -361,8 +361,9 @@ public class TestHRegion {
     } finally {
       assertTrue("The regionserver should have thrown an exception", threwIOE);
     }
-    long sz = store.getFlushableSize().getDataSize();
-    assertTrue("flushable size should be zero, but it is " + sz, sz == 0);
+    MemStoreSize mss = store.getFlushableSize();
+    assertTrue("flushable size should be zero, but it is " + mss,
+        mss.getDataSize() == 0);
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
@@ -414,9 +415,10 @@ public class TestHRegion {
     } catch (IOException expected) {
     }
     long expectedSize = onePutSize * 2;
-    assertEquals("memstoreSize should be incremented", expectedSize, region.getMemStoreDataSize());
-    assertEquals("flushable size should be incremented", expectedSize,
-        store.getFlushableSize().getDataSize());
+    assertEquals("memstoreSize should be incremented",
+        expectedSize, region.getMemStoreDataSize());
+    assertEquals("flushable size should be incremented",
+        expectedSize, store.getFlushableSize().getDataSize());
 
     region.setCoprocessorHost(null);
     HBaseTestingUtility.closeRegionAndWAL(region);

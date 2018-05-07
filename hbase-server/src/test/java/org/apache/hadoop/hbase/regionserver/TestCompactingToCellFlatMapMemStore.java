@@ -132,9 +132,9 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
       counter += s.getCellsCount();
     }
     assertEquals(3, counter);
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    region.decrMemStoreSize(mss);  // simulate flusher
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(3, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -194,9 +194,10 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     totalHeapSize2 = 1 * cellAfterFlushSize;
     assertEquals(totalHeapSize1 + totalHeapSize2, ((CompactingMemStore) memstore).heapSize());
 
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss);
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(4, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -224,7 +225,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     assertEquals(totalCellsLen1, region.getMemStoreDataSize());
     assertEquals(totalHeapSize1, ((CompactingMemStore) memstore).heapSize());
 
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     ((CompactingMemStore) memstore).flushInMemory(); // push keys to pipeline and compact
 
     assertEquals(0, memstore.getSnapshot().getCellsCount());
@@ -245,7 +246,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     assertEquals(totalHeapSize1 + totalHeapSize2, ((CompactingMemStore) memstore).heapSize());
 
     ((MyCompactingMemStore) memstore).disableCompaction();
-    size = memstore.getFlushableSize();
+    mss = memstore.getFlushableSize();
     ((CompactingMemStore) memstore).flushInMemory(); // push keys to pipeline without compaction
     totalHeapSize2 = totalHeapSize2 + CSLMImmutableSegment.DEEP_OVERHEAD_CSLM;
     assertEquals(0, memstore.getSnapshot().getCellsCount());
@@ -260,7 +261,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         ((CompactingMemStore) memstore).heapSize());
 
     ((MyCompactingMemStore) memstore).enableCompaction();
-    size = memstore.getFlushableSize();
+    mss = memstore.getFlushableSize();
     ((CompactingMemStore) memstore).flushInMemory(); // push keys to pipeline and compact
     while (((CompactingMemStore) memstore).isMemStoreFlushingInMemory()) {
       Threads.sleep(10);
@@ -279,9 +280,10 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         CellArrayImmutableSegment.DEEP_OVERHEAD_CAM);
     assertEquals(totalHeapSize4, ((CompactingMemStore) memstore).heapSize());
 
-    size = memstore.getFlushableSize();
+    mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(4, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -653,9 +655,10 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     assertEquals(totalCellsLen, regionServicesForStores.getMemStoreSize());
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
 
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss);
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(numOfCells, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -725,9 +728,10 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     assertEquals(totalCellsLen, regionServicesForStores.getMemStoreSize());
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
 
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss);
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(numOfCells, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -799,9 +803,10 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     assertEquals(totalCellsLen, regionServicesForStores.getMemStoreSize());
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
 
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss);
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(numOfCells, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -893,7 +898,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   private long addRowsByKeysDataSize(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");
-    MemStoreSizing memstoreSizing = new MemStoreSizing();
+    MemStoreSizing memstoreSizing = new NonThreadSafeMemStoreSizing();
     for (int i = 0; i < keys.length; i++) {
       long timestamp = System.currentTimeMillis();
       Threads.sleep(1); // to make sure each kv gets a different ts
@@ -903,8 +908,10 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
       hmc.add(kv, memstoreSizing);
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp" + kv.getTimestamp());
     }
-    regionServicesForStores.addMemStoreSize(memstoreSizing);
-    return memstoreSizing.getDataSize();
+    MemStoreSize mss = memstoreSizing.getMemStoreSize();
+    regionServicesForStores.addMemStoreSize(mss.getDataSize(), mss.getHeapSize(),
+        mss.getOffHeapSize());
+    return mss.getDataSize();
   }
 
   private long cellBeforeFlushSize() {

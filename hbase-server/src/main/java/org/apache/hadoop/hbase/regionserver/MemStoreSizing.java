@@ -21,61 +21,96 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Accounting of current heap and data sizes.
- * Allows read/write on data/heap size as opposed to {@Link MemStoreSize} which is read-only.
- * For internal use.
- * @see MemStoreSize
+ * Tracks 3 sizes:
+ * <ol>
+ * <li></li>data size: the aggregated size of all key-value not including meta data such as
+ * index, time range etc.
+ * </li>
+ * <li>heap size: the aggregated size of all data that is allocated on-heap including all
+ * key-values that reside on-heap and the metadata that resides on-heap
+ * </li>
+ * <li></li>off-heap size: the aggregated size of all data that is allocated off-heap including all
+ * key-values that reside off-heap and the metadata that resides off-heap
+ * </li>
+ * </ol>
+ *
+ * 3 examples to illustrate their usage:
+ * <p>
+ * Consider a store with 100MB of key-values allocated on-heap and 20MB of metadata allocated
+ * on-heap. The counters are <100MB, 120MB, 0>, respectively.
+ * </p>
+ * <p>Consider a store with 100MB of key-values allocated off-heap and 20MB of metadata
+ * allocated on-heap (e.g, CAM index). The counters are <100MB, 20MB, 100MB>, respectively.
+ * </p>
+ * <p>
+ * Consider a store with 100MB of key-values from which 95MB are allocated off-heap and 5MB
+ * are allocated on-heap (e.g., due to upserts) and 20MB of metadata from which 15MB allocated
+ * off-heap (e.g, CCM index) and 5MB allocated on-heap (e.g, CSLM index in active).
+ * The counters are <100MB, 10MB, 110MB>, respectively.
+ * </p>
+ *
+ * Like {@link TimeRangeTracker}, it has thread-safe and non-thread-safe implementations.
  */
 @InterfaceAudience.Private
-public class MemStoreSizing extends MemStoreSize {
-  public static final MemStoreSizing DUD = new MemStoreSizing() {
+public interface MemStoreSizing {
+  static final MemStoreSizing DUD = new MemStoreSizing() {
+    private final MemStoreSize mss = new MemStoreSize();
 
-    @Override public void incMemStoreSize(long dataSizeDelta, long heapSizeDelta,
-        long offHeapSizeDelta) {
-      throw new RuntimeException("I'm a dud, you can't use me!");
+    @Override
+    public MemStoreSize getMemStoreSize() {
+      return this.mss;
     }
 
-    @Override public void decMemStoreSize(long dataSizeDelta, long heapSizeDelta,
+    @Override
+    public long getDataSize() {
+      return this.mss.getDataSize();
+    }
+
+    @Override
+    public long getHeapSize() {
+      return this.mss.getHeapSize();
+    }
+
+    @Override
+    public long getOffHeapSize() {
+      return this.mss.getOffHeapSize();
+    }
+
+    @Override
+    public long incMemStoreSize(long dataSizeDelta, long heapSizeDelta,
         long offHeapSizeDelta) {
-      throw new RuntimeException("I'm a dud, you can't use me!");
+      throw new RuntimeException("I'm a DUD, you can't use me!");
     }
   };
 
-  public MemStoreSizing() {
-    super();
+  /**
+   * @return The new dataSize ONLY as a convenience
+   */
+  long incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta);
+
+  default long incMemStoreSize(MemStoreSize delta) {
+    return incMemStoreSize(delta.getDataSize(), delta.getHeapSize(), delta.getOffHeapSize());
   }
 
-  public MemStoreSizing(long dataSize, long heapSize, long offHeapSize) {
-    super(dataSize, heapSize, offHeapSize);
+  /**
+   * @return The new dataSize ONLY as a convenience
+   */
+  default long decMemStoreSize(long dataSizeDelta, long heapSizeDelta,
+      long offHeapSizeDelta) {
+    return incMemStoreSize(-dataSizeDelta, -heapSizeDelta, -offHeapSizeDelta);
   }
 
-  public MemStoreSizing(MemStoreSize memStoreSize) {
-    super(memStoreSize);
+  default long decMemStoreSize(MemStoreSize delta) {
+    return incMemStoreSize(-delta.getDataSize(), -delta.getHeapSize(), -delta.getOffHeapSize());
   }
 
-  public void incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
-    this.dataSize += dataSizeDelta;
-    this.heapSize += heapSizeDelta;
-    this.offHeapSize += offHeapSizeDelta;
-  }
+  long getDataSize();
+  long getHeapSize();
+  long getOffHeapSize();
 
-  public void incMemStoreSize(MemStoreSize delta) {
-    incMemStoreSize(delta.getDataSize(), delta.getHeapSize(), delta.getOffHeapSize());
-  }
-
-  public void decMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
-    this.dataSize -= dataSizeDelta;
-    this.heapSize -= heapSizeDelta;
-    this.offHeapSize -= offHeapSizeDelta;
-  }
-
-  public void decMemStoreSize(MemStoreSize delta) {
-    decMemStoreSize(delta.getDataSize(), delta.getHeapSize(), delta.getOffHeapSize());
-  }
-
-  public void empty() {
-    this.dataSize = 0L;
-    this.heapSize = 0L;
-    this.offHeapSize = 0L;
-  }
-
+  /**
+   * @return Use this datastructure to return all three settings, {@link #getDataSize()},
+   * {@link #getHeapSize()}, and {@link #getOffHeapSize()}, in the one go.
+   */
+  MemStoreSize getMemStoreSize();
 }
