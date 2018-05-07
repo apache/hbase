@@ -59,8 +59,8 @@ under the License.
         <a href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=commit;h=7483b111e4da77adbfc8062b3b22cbe7c2cb91c1">7483b111e4da77adbfc8062b3b22cbe7c2cb91c1</a>
       </td>
       <td style="test-align: left">
-        <a href="http://www.apache.org/dyn/closer.lua/hbase/2.0.0/hbase-2.0.0-src.tar.gz"></a> (<a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-src.tar.gz.sha512">sha512</a> <a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-src.tar.gz.asc">asc</a>) <br />
-        <a href="http://www.apache.org/dyn/closer.lua/hbase/2.0.0/hbase-2.0.0-bin.tar.gz"></a> (<a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-bin.tar.gz.sha512">sha512</a> <a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-bin.tar.gz.asc">asc</a>)
+        <a href="http://www.apache.org/dyn/closer.lua/hbase/2.0.0/hbase-2.0.0-src.tar.gz">src</a> (<a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-src.tar.gz.sha512">sha512</a> <a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-src.tar.gz.asc">asc</a>) <br />
+        <a href="http://www.apache.org/dyn/closer.lua/hbase/2.0.0/hbase-2.0.0-bin.tar.gz">bin</a> (<a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-bin.tar.gz.sha512">sha512</a> <a href="http://apache.org/dist/hbase/2.0.0/hbase-2.0.0-bin.tar.gz.asc">asc</a>)
       </td>
     </tr>
   </table>
