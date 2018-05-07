@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -35,14 +36,22 @@ public class TestRegionServerAccounting {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionServerAccounting.class);
 
+  private final static float DEFAULT_MEMSTORE_SIZE = 0.2f;
+
+  private static Configuration conf;
+
+  @Before
+  public void setUpConf() {
+    conf = HBaseConfiguration.create();
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, DEFAULT_MEMSTORE_SIZE);
+  }
+
   @Test
   public void testOnheapMemstoreHigherWaterMarkLimits() {
-    Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.2f);
-    // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
+    long dataSize = regionServerAccounting.getGlobalMemStoreLimit();
     MemStoreSize memstoreSize =
-        new MemStoreSize((3L * 1024L * 1024L * 1024L), (1L * 1024L * 1024L * 1024L), 0);
+        new MemStoreSize(dataSize, dataSize, 0);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_ONHEAP_HIGHER_MARK,
       regionServerAccounting.isAboveHighWaterMark());
@@ -50,12 +59,10 @@ public class TestRegionServerAccounting {
 
   @Test
   public void testOnheapMemstoreLowerWaterMarkLimits() {
-    Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.2f);
-    // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
+    long dataSize = regionServerAccounting.getGlobalMemStoreLimit();
     MemStoreSize memstoreSize =
-        new MemStoreSize((3L * 1024L * 1024L * 1024L), (1L * 1024L * 1024L * 1024L), 0);
+        new MemStoreSize(dataSize, dataSize, 0);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_ONHEAP_LOWER_MARK,
       regionServerAccounting.isAboveLowWaterMark());
@@ -63,7 +70,6 @@ public class TestRegionServerAccounting {
 
   @Test
   public void testOffheapMemstoreHigherWaterMarkLimitsDueToDataSize() {
-    Configuration conf = HBaseConfiguration.create();
     // setting 1G as offheap data size
     conf.setLong(MemorySizeUtil.OFFHEAP_MEMSTORE_SIZE_KEY, (1L * 1024L));
     // try for default cases
@@ -78,15 +84,14 @@ public class TestRegionServerAccounting {
 
   @Test
   public void testOffheapMemstoreHigherWaterMarkLimitsDueToHeapSize() {
-    Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.2f);
     // setting 1G as offheap data size
     conf.setLong(MemorySizeUtil.OFFHEAP_MEMSTORE_SIZE_KEY, (1L * 1024L));
     // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach higher limit as heap size is higher and not due to offheap size
+    long dataSize = regionServerAccounting.getGlobalOnHeapMemStoreLimit();
     MemStoreSize memstoreSize =
-        new MemStoreSize((3L * 1024L * 1024L), (2L * 1024L * 1024L * 1024L), 0);
+        new MemStoreSize(dataSize, dataSize, 0);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_ONHEAP_HIGHER_MARK,
       regionServerAccounting.isAboveHighWaterMark());
@@ -94,7 +99,6 @@ public class TestRegionServerAccounting {
 
   @Test
   public void testOffheapMemstoreLowerWaterMarkLimitsDueToDataSize() {
-    Configuration conf = HBaseConfiguration.create();
     // setting 1G as offheap data size
     conf.setLong(MemorySizeUtil.OFFHEAP_MEMSTORE_SIZE_KEY, (1L * 1024L));
     // try for default cases
@@ -109,15 +113,14 @@ public class TestRegionServerAccounting {
 
   @Test
   public void testOffheapMemstoreLowerWaterMarkLimitsDueToHeapSize() {
-    Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.2f);
     // setting 1G as offheap data size
     conf.setLong(MemorySizeUtil.OFFHEAP_MEMSTORE_SIZE_KEY, (1L * 1024L));
     // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach higher limit as heap size is higher and not due to offheap size
+    long dataSize = regionServerAccounting.getGlobalOnHeapMemStoreLimit();
     MemStoreSize memstoreSize =
-        new MemStoreSize((3L * 1024L * 1024L), (2L * 1024L * 1024L * 1024L), 0);
+        new MemStoreSize(dataSize, dataSize, 0);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_ONHEAP_LOWER_MARK,
       regionServerAccounting.isAboveLowWaterMark());
