@@ -167,13 +167,7 @@ public abstract class AbstractMemStore implements MemStore {
 
   @Override
   public MemStoreSize getSnapshotSize() {
-    return getSnapshotSizing();
-  }
-
-  MemStoreSizing getSnapshotSizing() {
-    return new MemStoreSizing(this.snapshot.keySize(),
-        this.snapshot.heapSize(),
-        this.snapshot.offHeapSize());
+    return this.snapshot.getMemStoreSize();
   }
 
   @Override

@@ -48,7 +48,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     for (ImmutableSegment s : segments) {
       this.timeRangeTracker.includeTimestamp(s.getTimeRangeTracker().getMax());
       this.timeRangeTracker.includeTimestamp(s.getTimeRangeTracker().getMin());
-      this.keySize += s.keySize();
+      this.keySize += s.getDataSize();
     }
   }
 
@@ -178,7 +178,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * @return Sum of all cell sizes.
    */
   @Override
-  public long keySize() {
+  public long getDataSize() {
     return this.keySize;
   }
 
@@ -186,10 +186,10 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * @return The heap size of this segment.
    */
   @Override
-  public long heapSize() {
+  public long getHeapSize() {
     long result = 0;
     for (ImmutableSegment s : segments) {
-      result += s.heapSize();
+      result += s.getHeapSize();
     }
     return result;
   }
@@ -198,7 +198,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * Updates the heap size counter of the segment by the given delta
    */
   @Override
-  protected void incSize(long delta, long heapOverhead, long offHeapOverhead) {
+  public long incMemStoreSize(long delta, long heapOverhead, long offHeapOverhead) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 

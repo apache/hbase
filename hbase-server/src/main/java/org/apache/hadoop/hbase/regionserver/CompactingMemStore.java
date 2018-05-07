@@ -155,12 +155,12 @@ public class CompactingMemStore extends AbstractMemStore {
    */
   @Override
   public MemStoreSize size() {
-    MemStoreSizing memstoreSizing = new MemStoreSizing();
+    MemStoreSizing memstoreSizing = new NonThreadSafeMemStoreSizing();
     memstoreSizing.incMemStoreSize(active.getMemStoreSize());
     for (Segment item : pipeline.getSegments()) {
       memstoreSizing.incMemStoreSize(item.getMemStoreSize());
     }
-    return memstoreSizing;
+    return memstoreSizing.getMemStoreSize();
   }
 
   /**
@@ -216,42 +216,38 @@ public class CompactingMemStore extends AbstractMemStore {
     return new MemStoreSnapshot(snapshotId, this.snapshot);
   }
 
-  /**
-   * On flush, how much memory we will clear.
-   * @return size of data that is going to be flushed
-   */
   @Override
   public MemStoreSize getFlushableSize() {
-    MemStoreSizing snapshotSizing = getSnapshotSizing();
-    if (snapshotSizing.getDataSize() == 0) {
+    MemStoreSize mss = getSnapshotSize();
+    if (mss.getDataSize() == 0) {
       // if snapshot is empty the tail of the pipeline (or everything in the memstore) is flushed
       if (compositeSnapshot) {
-        snapshotSizing = pipeline.getPipelineSizing();
-        snapshotSizing.incMemStoreSize(active.getMemStoreSize());
+        MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing(pipeline.getPipelineSize());
+        memStoreSizing.incMemStoreSize(this.active.getMemStoreSize());
+        mss = memStoreSizing.getMemStoreSize();
       } else {
-        snapshotSizing = pipeline.getTailSizing();
+        mss = pipeline.getTailSize();
       }
     }
-    return snapshotSizing.getDataSize() > 0 ? snapshotSizing
-        : new MemStoreSize(active.getMemStoreSize());
+    return mss.getDataSize() > 0? mss: this.active.getMemStoreSize();
   }
 
   @Override
   protected long keySize() {
-    // Need to consider keySize of all segments in pipeline and active
-    long k = this.active.keySize();
+    // Need to consider dataSize/keySize of all segments in pipeline and active
+    long keySize = this.active.getDataSize();
     for (Segment segment : this.pipeline.getSegments()) {
-      k += segment.keySize();
+      keySize += segment.getDataSize();
     }
-    return k;
+    return keySize;
   }
 
   @Override
   protected long heapSize() {
     // Need to consider heapOverhead of all segments in pipeline and active
-    long h = this.active.heapSize();
+    long h = this.active.getHeapSize();
     for (Segment segment : this.pipeline.getSegments()) {
-      h += segment.heapSize();
+      h += segment.getHeapSize();
     }
     return h;
   }
@@ -451,7 +447,7 @@ public class CompactingMemStore extends AbstractMemStore {
 
   @VisibleForTesting
   protected boolean shouldFlushInMemory() {
-    if (this.active.keySize() > inmemoryFlushSize) { // size above flush threshold
+    if (this.active.getDataSize() > inmemoryFlushSize) { // size above flush threshold
       if (inWalReplay) {  // when replaying edits from WAL there is no need in in-memory flush
         return false;     // regardless the size
       }
@@ -575,7 +571,7 @@ public class CompactingMemStore extends AbstractMemStore {
 
   // debug method
   public void debug() {
-    String msg = "active size=" + this.active.keySize();
+    String msg = "active size=" + this.active.getDataSize();
     msg += " in-memory flush size is "+ inmemoryFlushSize;
     msg += " allow compaction is "+ (allowCompaction.get() ? "true" : "false");
     msg += " inMemoryFlushInProgress is "+ (inMemoryFlushInProgress.get() ? "true" : "false");

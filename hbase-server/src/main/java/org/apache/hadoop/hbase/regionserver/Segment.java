@@ -45,7 +45,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * segments from active set to snapshot set in the default implementation.
  */
 @InterfaceAudience.Private
-public abstract class Segment {
+public abstract class Segment implements MemStoreSizing {
 
   public final static long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
       + 5 * ClassSize.REFERENCE // cellSet, comparator, memStoreLAB, memStoreSizing,
@@ -59,9 +59,9 @@ public abstract class Segment {
   private final CellComparator comparator;
   protected long minSequenceId;
   private MemStoreLAB memStoreLAB;
-  // Sum of sizes of all Cells added to this Segment. Cell's heapSize is considered. This is not
+  // Sum of sizes of all Cells added to this Segment. Cell's HeapSize is considered. This is not
   // including the heap overhead of this class.
-  protected final MemStoreSizing segmentSize;
+  protected final MemStoreSizing memStoreSizing;
   protected final TimeRangeTracker timeRangeTracker;
   protected volatile boolean tagsPresent;
 
@@ -69,7 +69,9 @@ public abstract class Segment {
   // and there is no need in true Segments state
   protected Segment(CellComparator comparator, TimeRangeTracker trt) {
     this.comparator = comparator;
-    this.segmentSize = new MemStoreSizing();
+    // Do we need to be thread safe always? What if ImmutableSegment?
+    // DITTO for the TimeRangeTracker below.
+    this.memStoreSizing = new ThreadSafeMemStoreSizing();
     this.timeRangeTracker = trt;
   }
 
@@ -85,7 +87,9 @@ public abstract class Segment {
       OffHeapSize += memStoreSize.getOffHeapSize();
     }
     this.comparator = comparator;
-    this.segmentSize = new MemStoreSizing(dataSize, heapSize, OffHeapSize);
+    // Do we need to be thread safe always? What if ImmutableSegment?
+    // DITTO for the TimeRangeTracker below.
+    this.memStoreSizing = new ThreadSafeMemStoreSizing(dataSize, heapSize, OffHeapSize);
     this.timeRangeTracker = trt;
   }
 
@@ -95,7 +99,9 @@ public abstract class Segment {
     this.comparator = comparator;
     this.minSequenceId = Long.MAX_VALUE;
     this.memStoreLAB = memStoreLAB;
-    this.segmentSize = new MemStoreSizing();
+    // Do we need to be thread safe always? What if ImmutableSegment?
+    // DITTO for the TimeRangeTracker below.
+    this.memStoreSizing = new ThreadSafeMemStoreSizing();
     this.tagsPresent = false;
     this.timeRangeTracker = trt;
   }
@@ -105,7 +111,7 @@ public abstract class Segment {
     this.comparator = segment.getComparator();
     this.minSequenceId = segment.getMinSequenceId();
     this.memStoreLAB = segment.getMemStoreLAB();
-    this.segmentSize = new MemStoreSizing(segment.getMemStoreSize());
+    this.memStoreSizing = new ThreadSafeMemStoreSizing(segment.memStoreSizing.getMemStoreSize());
     this.tagsPresent = segment.isTagsPresent();
     this.timeRangeTracker = segment.getTimeRangeTracker();
   }
@@ -221,39 +227,29 @@ public abstract class Segment {
     return this;
   }
 
+  @Override
   public MemStoreSize getMemStoreSize() {
-    return this.segmentSize;
+    return this.memStoreSizing.getMemStoreSize();
   }
 
-  /**
-   * @return Sum of all cell's size.
-   */
-  public long keySize() {
-    return this.segmentSize.getDataSize();
+  @Override
+  public long getDataSize() {
+    return this.memStoreSizing.getDataSize();
   }
 
-  /**
-   * @return The heap size of this segment.
-   */
-  public long heapSize() {
-    return this.segmentSize.getHeapSize();
+  @Override
+  public long getHeapSize() {
+    return this.memStoreSizing.getHeapSize();
   }
 
-  /**
-   * @return The off-heap size of this segment.
-   */
-  public long offHeapSize() {
-    return this.segmentSize.getOffHeapSize();
+  @Override
+  public long getOffHeapSize() {
+    return this.memStoreSizing.getOffHeapSize();
   }
 
-  /**
-   * Updates the size counters of the segment by the given delta
-   */
-  //TODO
-  protected void incSize(long delta, long heapOverhead, long offHeapOverhead) {
-    synchronized (this) {
-      this.segmentSize.incMemStoreSize(delta, heapOverhead, offHeapOverhead);
-    }
+  @Override
+  public long incMemStoreSize(long delta, long heapOverhead, long offHeapOverhead) {
+    return this.memStoreSizing.incMemStoreSize(delta, heapOverhead, offHeapOverhead);
   }
 
   public long getMinSequenceId() {
@@ -316,7 +312,7 @@ public abstract class Segment {
     }
     long heapSize = heapSizeChange(cellToAdd, succ);
     long offHeapSize = offHeapSizeChange(cellToAdd, succ);
-    incSize(cellSize, heapSize, offHeapSize);
+    incMemStoreSize(cellSize, heapSize, offHeapSize);
     if (memstoreSizing != null) {
       memstoreSizing.incMemStoreSize(cellSize, heapSize, offHeapSize);
     }
@@ -416,8 +412,8 @@ public abstract class Segment {
     String res = "type=" + this.getClass().getSimpleName() + ", ";
     res += "empty=" + (isEmpty()? "yes": "no") + ", ";
     res += "cellCount=" + getCellsCount() + ", ";
-    res += "cellSize=" + keySize() + ", ";
-    res += "totalHeapSize=" + heapSize() + ", ";
+    res += "cellSize=" + getDataSize() + ", ";
+    res += "totalHeapSize=" + getHeapSize() + ", ";
     res += "min timestamp=" + timeRangeTracker.getMin() + ", ";
     res += "max timestamp=" + timeRangeTracker.getMax();
     return res;

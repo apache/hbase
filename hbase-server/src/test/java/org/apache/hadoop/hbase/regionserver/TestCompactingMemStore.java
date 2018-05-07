@@ -355,7 +355,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   private long runSnapshot(final AbstractMemStore hmc, boolean useForce)
       throws IOException {
     // Save off old state.
-    long oldHistorySize = hmc.getSnapshot().keySize();
+    long oldHistorySize = hmc.getSnapshot().getDataSize();
     long prevTimeStamp = hmc.timeOfOldestEdit();
 
     hmc.snapshot();
@@ -616,9 +616,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     assertEquals(totalCellsLen, regionServicesForStores.getMemStoreSize());
     assertEquals(totalHeapSize, ((CompactingMemStore)memstore).heapSize());
 
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss);
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(4, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -667,7 +668,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     assertEquals(totalCellsLen1 + totalCellsLen2, regionServicesForStores.getMemStoreSize());
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
 
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     ((CompactingMemStore)memstore).flushInMemory(); // push keys to pipeline and compact
     assertEquals(0, memstore.getSnapshot().getCellsCount());
     assertEquals(totalCellsLen1 + totalCellsLen2, regionServicesForStores.getMemStoreSize());
@@ -675,9 +676,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
         + 7 * oneCellOnCAHeapSize;
     assertEquals(totalHeapSize, ((CompactingMemStore)memstore).heapSize());
 
-    size = memstore.getFlushableSize();
+    mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(7, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -722,7 +724,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     assertEquals(totalHeapSize2, ((CompactingMemStore) memstore).heapSize());
 
     ((MyCompactingMemStore) memstore).disableCompaction();
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     ((CompactingMemStore)memstore).flushInMemory(); // push keys to pipeline without compaction
     assertEquals(0, memstore.getSnapshot().getCellsCount());
     // No change in the cells data size. ie. memstore size. as there is no compaction.
@@ -738,7 +740,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     assertEquals(totalHeapSize3, ((CompactingMemStore) memstore).heapSize());
 
     ((MyCompactingMemStore)memstore).enableCompaction();
-    size = memstore.getFlushableSize();
+    mss = memstore.getFlushableSize();
     ((CompactingMemStore)memstore).flushInMemory(); // push keys to pipeline and compact
     assertEquals(0, memstore.getSnapshot().getCellsCount());
     // active flushed to pipeline and all 3 segments compacted. Will get rid of duplicated cells.
@@ -751,9 +753,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     assertEquals(4 * oneCellOnCAHeapSize + MutableSegment.DEEP_OVERHEAD
         + CellArrayImmutableSegment.DEEP_OVERHEAD_CAM, ((CompactingMemStore) memstore).heapSize());
 
-    size = memstore.getFlushableSize();
+    mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(4, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -811,9 +814,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     assertTrue(4 == numCells || 11 == numCells);
     assertEquals(0, memstore.getSnapshot().getCellsCount());
 
-    MemStoreSize size = memstore.getFlushableSize();
+    MemStoreSize mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
+    // simulate flusher
+    region.decrMemStoreSize(mss);
     ImmutableSegment s = memstore.getSnapshot();
     numCells = s.getCellsCount();
     assertTrue(4 == numCells || 11 == numCells);
@@ -825,8 +829,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   protected int addRowsByKeys(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");
-    long size = hmc.getActive().keySize();
-    long heapOverhead = hmc.getActive().heapSize();
+    long size = hmc.getActive().getDataSize();
+    long heapOverhead = hmc.getActive().getHeapSize();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
       long timestamp = System.currentTimeMillis();
@@ -838,8 +842,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       hmc.add(kv, null);
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
     }
-    regionServicesForStores.addMemStoreSize(new MemStoreSize(hmc.getActive().keySize() - size,
-        hmc.getActive().heapSize() - heapOverhead, 0));
+    regionServicesForStores.addMemStoreSize(hmc.getActive().getDataSize() - size,
+        hmc.getActive().getHeapSize() - heapOverhead, 0);
     return totalLen;
   }
 
@@ -847,8 +851,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   protected int addRowsByKeys(final AbstractMemStore hmc, String[] keys, byte[] val) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");
-    long size = hmc.getActive().keySize();
-    long heapOverhead = hmc.getActive().heapSize();
+    long size = hmc.getActive().getDataSize();
+    long heapOverhead = hmc.getActive().getHeapSize();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
       long timestamp = System.currentTimeMillis();
@@ -859,8 +863,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       hmc.add(kv, null);
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
     }
-    regionServicesForStores.addMemStoreSize(new MemStoreSize(hmc.getActive().keySize() - size,
-            hmc.getActive().heapSize() - heapOverhead, 0));
+    regionServicesForStores.addMemStoreSize(hmc.getActive().getDataSize() - size,
+            hmc.getActive().getHeapSize() - heapOverhead, 0);
     return totalLen;
   }
 

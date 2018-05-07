@@ -44,7 +44,7 @@ public class MutableSegment extends Segment {
 
   protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
     super(cellSet, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.SYNC));
-    incSize(0, DEEP_OVERHEAD, 0); // update the mutable segment metadata
+    incMemStoreSize(0, DEEP_OVERHEAD, 0); // update the mutable segment metadata
   }
 
   /**
@@ -89,7 +89,7 @@ public class MutableSegment extends Segment {
             int cellLen = getCellLength(cur);
             long heapSize = heapSizeChange(cur, true);
             long offHeapSize = offHeapSizeChange(cur, true);
-            this.incSize(-cellLen, -heapSize, -offHeapSize);
+            incMemStoreSize(-cellLen, -heapSize, -offHeapSize);
             if (memStoreSizing != null) {
               memStoreSizing.decMemStoreSize(cellLen, heapSize, offHeapSize);
             }

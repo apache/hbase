@@ -239,8 +239,7 @@ public class TestHStore {
    */
   @Test
   public void testFlushSizeSizing() throws Exception {
-    LOG.info("Setting up a faulty file system that cannot write in " +
-      this.name.getMethodName());
+    LOG.info("Setting up a faulty file system that cannot write in " + this.name.getMethodName());
     final Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     // Only retry once.
     conf.setInt("hbase.hstore.flush.retries.number", 1);
@@ -259,15 +258,15 @@ public class TestHStore {
         // Initialize region
         init(name.getMethodName(), conf);
 
-        MemStoreSize size = store.memstore.getFlushableSize();
-        assertEquals(0, size.getDataSize());
+        MemStoreSize mss = store.memstore.getFlushableSize();
+        assertEquals(0, mss.getDataSize());
         LOG.info("Adding some data");
-        MemStoreSizing kvSize = new MemStoreSizing();
+        MemStoreSizing kvSize = new NonThreadSafeMemStoreSizing();
         store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), kvSize);
         // add the heap size of active (mutable) segment
         kvSize.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0);
-        size = store.memstore.getFlushableSize();
-        assertEquals(kvSize, size);
+        mss = store.memstore.getFlushableSize();
+        assertEquals(kvSize.getMemStoreSize(), mss);
         // Flush.  Bug #1 from HBASE-10466.  Make sure size calculation on failed flush is right.
         try {
           LOG.info("Flushing");
@@ -279,23 +278,23 @@ public class TestHStore {
         // due to snapshot, change mutable to immutable segment
         kvSize.incMemStoreSize(0,
             CSLMImmutableSegment.DEEP_OVERHEAD_CSLM-MutableSegment.DEEP_OVERHEAD, 0);
-        size = store.memstore.getFlushableSize();
-        assertEquals(kvSize, size);
-        MemStoreSizing kvSize2 = new MemStoreSizing();
+        mss = store.memstore.getFlushableSize();
+        assertEquals(kvSize.getMemStoreSize(), mss);
+        MemStoreSizing kvSize2 = new NonThreadSafeMemStoreSizing();
         store.add(new KeyValue(row, family, qf2, 2, (byte[])null), kvSize2);
         kvSize2.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0);
         // Even though we add a new kv, we expect the flushable size to be 'same' since we have
         // not yet cleared the snapshot -- the above flush failed.
-        assertEquals(kvSize, size);
+        assertEquals(kvSize.getMemStoreSize(), mss);
         ffs.fault.set(false);
         flushStore(store, id++);
-        size = store.memstore.getFlushableSize();
+        mss = store.memstore.getFlushableSize();
         // Size should be the foreground kv size.
-        assertEquals(kvSize2, size);
+        assertEquals(kvSize2.getMemStoreSize(), mss);
         flushStore(store, id++);
-        size = store.memstore.getFlushableSize();
-        assertEquals(0, size.getDataSize());
-        assertEquals(MutableSegment.DEEP_OVERHEAD, size.getHeapSize());
+        mss = store.memstore.getFlushableSize();
+        assertEquals(0, mss.getDataSize());
+        assertEquals(MutableSegment.DEEP_OVERHEAD, mss.getHeapSize());
         return null;
       }
     });
@@ -1225,7 +1224,7 @@ public class TestHStore {
     byte[] value0 = Bytes.toBytes("value0");
     byte[] value1 = Bytes.toBytes("value1");
     byte[] value2 = Bytes.toBytes("value2");
-    MemStoreSizing memStoreSizing = new MemStoreSizing();
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
     init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
@@ -1284,7 +1283,7 @@ public class TestHStore {
     init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
         .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("value");
-    MemStoreSizing memStoreSizing = new MemStoreSizing();
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
     // older data whihc shouldn't be "seen" by client
@@ -1362,7 +1361,7 @@ public class TestHStore {
     });
     byte[] oldValue = Bytes.toBytes("oldValue");
     byte[] currentValue = Bytes.toBytes("currentValue");
-    MemStoreSizing memStoreSizing = new MemStoreSizing();
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
     // older data whihc shouldn't be "seen" by client
@@ -1478,7 +1477,7 @@ public class TestHStore {
     init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
         .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("thisisavarylargevalue");
-    MemStoreSizing memStoreSizing = new MemStoreSizing();
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
     // older data whihc shouldn't be "seen" by client
@@ -1600,7 +1599,7 @@ public class TestHStore {
     conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 0);
     // Set the lower threshold to invoke the "MERGE" policy
     MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {});
-    MemStoreSizing memStoreSizing = new MemStoreSizing();
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     long ts = System.currentTimeMillis();
     long seqID = 1L;
     // Add some data to the region and do some flushes

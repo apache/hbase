@@ -367,7 +367,7 @@ public class TestHRegionReplayEvents {
         HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
         long storeMemstoreSize = store.getMemStoreSize().getHeapSize();
         long regionMemstoreSize = secondaryRegion.getMemStoreDataSize();
-        long storeFlushableSize = store.getFlushableSize().getHeapSize();
+        MemStoreSize mss = store.getFlushableSize();
         long storeSize = store.getSize();
         long storeSizeUncompressed = store.getStoreSizeUncompressed();
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
@@ -391,8 +391,8 @@ public class TestHRegionReplayEvents {
           for (HStore s : secondaryRegion.getStores()) {
             assertEquals(expectedStoreFileCount, s.getStorefilesCount());
           }
-          long newFlushableSize = store.getFlushableSize().getHeapSize();
-          assertTrue(storeFlushableSize > newFlushableSize);
+          MemStoreSize newMss = store.getFlushableSize();
+          assertTrue(mss.getHeapSize() > newMss.getHeapSize());
 
           // assert that the region memstore is smaller now
           long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
@@ -466,7 +466,7 @@ public class TestHRegionReplayEvents {
         HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
         long storeMemstoreSize = store.getMemStoreSize().getHeapSize();
         long regionMemstoreSize = secondaryRegion.getMemStoreDataSize();
-        long storeFlushableSize = store.getFlushableSize().getHeapSize();
+        MemStoreSize mss = store.getFlushableSize();
 
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           startFlushDesc = flushDesc;
@@ -475,7 +475,7 @@ public class TestHRegionReplayEvents {
           assertNull(result.result);
           assertEquals(result.flushOpSeqId, startFlushDesc.getFlushSequenceNumber());
           assertTrue(regionMemstoreSize > 0);
-          assertTrue(storeFlushableSize > 0);
+          assertTrue(mss.getHeapSize() > 0);
 
           // assert that the store memstore is smaller now
           long newStoreMemstoreSize = store.getMemStoreSize().getHeapSize();
@@ -616,8 +616,8 @@ public class TestHRegionReplayEvents {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newFlushableSize = store.getFlushableSize().getHeapSize();
-    assertTrue(newFlushableSize > 0); // assert that the memstore is not dropped
+    MemStoreSize mss = store.getFlushableSize();
+    assertTrue(mss.getHeapSize() > 0); // assert that the memstore is not dropped
 
     // assert that the region memstore is same as before
     long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
@@ -706,8 +706,8 @@ public class TestHRegionReplayEvents {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newFlushableSize = store.getFlushableSize().getHeapSize();
-    assertTrue(newFlushableSize > 0); // assert that the memstore is not dropped
+    MemStoreSize mss = store.getFlushableSize();
+    assertTrue(mss.getHeapSize() > 0); // assert that the memstore is not dropped
 
     // assert that the region memstore is smaller than before, but not empty
     long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
@@ -811,12 +811,12 @@ public class TestHRegionReplayEvents {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newFlushableSize = store.getFlushableSize().getHeapSize();
+    MemStoreSize mss = store.getFlushableSize();
     if (droppableMemstore) {
       // assert that the memstore is dropped
-      assertTrue(newFlushableSize == MutableSegment.DEEP_OVERHEAD);
+      assertTrue(mss.getHeapSize() == MutableSegment.DEEP_OVERHEAD);
     } else {
-      assertTrue(newFlushableSize > 0); // assert that the memstore is not dropped
+      assertTrue(mss.getHeapSize() > 0); // assert that the memstore is not dropped
     }
 
     // assert that the region memstore is same as before (we could not drop)
@@ -903,8 +903,8 @@ public class TestHRegionReplayEvents {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newFlushableSize = store.getFlushableSize().getHeapSize();
-    assertTrue(newFlushableSize == MutableSegment.DEEP_OVERHEAD);
+    MemStoreSize mss = store.getFlushableSize();
+    assertTrue(mss.getHeapSize() == MutableSegment.DEEP_OVERHEAD);
 
     // assert that the region memstore is empty
     long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
