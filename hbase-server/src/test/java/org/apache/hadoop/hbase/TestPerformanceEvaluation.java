@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -41,5 +42,15 @@ public class TestPerformanceEvaluation {
     PerformanceEvaluation.TestOptions optionsDeserialized =
         mapper.readValue(optionsString, PerformanceEvaluation.TestOptions.class);
     assertTrue(optionsDeserialized.isAutoFlush());
+  }
+
+  @Test
+  public void testSetBufferSizeOption() {
+    PerformanceEvaluation.TestOptions opts = new PerformanceEvaluation.TestOptions();
+    long bufferSize = opts.getBufferSize();
+    assertEquals(bufferSize, 2l * 1024l * 1024l);
+    opts.setBufferSize(64l * 1024l);
+    bufferSize = opts.getBufferSize();
+    assertEquals(bufferSize, 64l * 1024l);
   }
 }

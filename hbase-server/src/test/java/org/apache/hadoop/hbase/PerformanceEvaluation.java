@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -621,6 +622,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int families = 1;
     int caching = 30;
     boolean addColumns = true;
+    long bufferSize = 2l * 1024l * 1024l;
 
     public TestOptions() {}
 
@@ -664,6 +666,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.columns = that.columns;
       this.families = that.families;
       this.caching = that.caching;
+      this.bufferSize = that.bufferSize;
     }
 
     public int getCaching() {
@@ -828,6 +831,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public void setValueSize(int valueSize) {
       this.valueSize = valueSize;
+    }
+
+    public void setBufferSize(long bufferSize) {
+      this.bufferSize = bufferSize;
+    }
+
+    public long getBufferSize() {
+      return this.bufferSize;
     }
 
     public void setPeriod(int period) {
@@ -1251,7 +1262,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void onStartup() throws IOException {
-      this.mutator = connection.getBufferedMutator(TableName.valueOf(opts.tableName));
+      BufferedMutatorParams p = new BufferedMutatorParams(TableName.valueOf(opts.tableName));
+      p.writeBufferSize(opts.bufferSize);
+      this.mutator = connection.getBufferedMutator(p);
     }
 
     @Override
@@ -2004,6 +2017,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" columns         Columns to write per row. Default: 1");
     System.err.println(" families        Specify number of column families for the table. Default: 1");
     System.err.println(" caching         Scan caching to use. Default: 30");
+    System.err.println(" bufferSize      Set the value of client side buffering. Default: 2MB");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
@@ -2237,6 +2251,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String caching = "--caching=";
       if (cmd.startsWith(caching)) {
         opts.caching = Integer.parseInt(cmd.substring(caching.length()));
+        continue;
+      }
+
+      final String bufferSize = "--bufferSize=";
+      if (cmd.startsWith(bufferSize)) {
+        opts.bufferSize = Long.parseLong(cmd.substring(bufferSize.length()));
         continue;
       }
 
