@@ -87,4 +87,14 @@ public class TestPerformanceEvaluation {
       assertTrue(e.getCause() instanceof NoSuchElementException);
     }
   }
+
+  @Test
+  public void testSetBufferSizeOption() {
+    PerformanceEvaluation.TestOptions opts = new PerformanceEvaluation.TestOptions();
+    long bufferSize = opts.getBufferSize();
+    assertEquals(bufferSize, 2l * 1024l * 1024l);
+    opts.setBufferSize(64l * 1024l);
+    bufferSize = opts.getBufferSize();
+    assertEquals(bufferSize, 64l * 1024l);
+  }
 }
