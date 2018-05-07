@@ -40,7 +40,7 @@ public class CSLMImmutableSegment extends ImmutableSegment {
     super(segment);
     // update the segment metadata heap size
     long indexOverhead = -MutableSegment.DEEP_OVERHEAD + DEEP_OVERHEAD_CSLM;
-    incSize(0, indexOverhead, 0); // CSLM is always on-heap
+    incMemStoreSize(0, indexOverhead, 0); // CSLM is always on-heap
   }
 
   @Override

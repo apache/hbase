@@ -129,17 +129,18 @@ public class TestDefaultMemStore {
   public void testPutSameCell() {
     byte[] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
-    MemStoreSizing sizeChangeForFirstCell = new MemStoreSizing();
+    MemStoreSizing sizeChangeForFirstCell = new NonThreadSafeMemStoreSizing();
     this.memstore.add(kv, sizeChangeForFirstCell);
-    MemStoreSizing sizeChangeForSecondCell = new MemStoreSizing();
+    MemStoreSizing sizeChangeForSecondCell = new NonThreadSafeMemStoreSizing();
     this.memstore.add(kv, sizeChangeForSecondCell);
     // make sure memstore size increase won't double-count MSLAB chunk size
-    assertEquals(Segment.getCellLength(kv), sizeChangeForFirstCell.getDataSize());
+    assertEquals(Segment.getCellLength(kv), sizeChangeForFirstCell.getMemStoreSize().getDataSize());
     Segment segment = this.memstore.getActive();
     MemStoreLAB msLab = segment.getMemStoreLAB();
     if (msLab != null) {
       // make sure memstore size increased even when writing the same cell, if using MSLAB
-      assertEquals(Segment.getCellLength(kv), sizeChangeForSecondCell.getDataSize());
+      assertEquals(Segment.getCellLength(kv),
+          sizeChangeForSecondCell.getMemStoreSize().getDataSize());
       // make sure chunk size increased even when writing the same cell, if using MSLAB
       if (msLab instanceof MemStoreLABImpl) {
         // since we add the chunkID at the 0th offset of the chunk and the
@@ -149,8 +150,8 @@ public class TestDefaultMemStore {
       }
     } else {
       // make sure no memstore size change w/o MSLAB
-      assertEquals(0, sizeChangeForSecondCell.getDataSize());
-      assertEquals(0, sizeChangeForSecondCell.getHeapSize());
+      assertEquals(0, sizeChangeForSecondCell.getMemStoreSize().getDataSize());
+      assertEquals(0, sizeChangeForSecondCell.getMemStoreSize().getHeapSize());
     }
   }
 

@@ -131,20 +131,20 @@ public class RegionServerAccounting {
     return this.globalMemStoreOffHeapSize.sum();
   }
 
-  /**
-   * @param memStoreSize the Memstore size will be added to
-   *        the global Memstore size
-   */
-  public void incGlobalMemStoreSize(MemStoreSize memStoreSize) {
-    globalMemStoreDataSize.add(memStoreSize.getDataSize());
-    globalMemStoreHeapSize.add(memStoreSize.getHeapSize());
-    globalMemStoreOffHeapSize.add(memStoreSize.getOffHeapSize());
+  void incGlobalMemStoreSize(MemStoreSize mss) {
+    incGlobalMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
   }
 
-  public void decGlobalMemStoreSize(MemStoreSize memStoreSize) {
-    globalMemStoreDataSize.add(-memStoreSize.getDataSize());
-    globalMemStoreHeapSize.add(-memStoreSize.getHeapSize());
-    globalMemStoreOffHeapSize.add(-memStoreSize.getOffHeapSize());
+  public void incGlobalMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
+    globalMemStoreDataSize.add(dataSizeDelta);
+    globalMemStoreHeapSize.add(heapSizeDelta);
+    globalMemStoreOffHeapSize.add(offHeapSizeDelta);
+  }
+
+  public void decGlobalMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
+    globalMemStoreDataSize.add(-dataSizeDelta);
+    globalMemStoreHeapSize.add(-heapSizeDelta);
+    globalMemStoreOffHeapSize.add(-offHeapSizeDelta);
   }
 
   /**
@@ -231,7 +231,7 @@ public class RegionServerAccounting {
     // the region open operation. No need to handle multi thread issues on one region's entry in
     // this Map.
     if (replayEdistsSize == null) {
-      replayEdistsSize = new MemStoreSizing();
+      replayEdistsSize = new ThreadSafeMemStoreSizing();
       replayEditsPerRegion.put(regionName, replayEdistsSize);
     }
     replayEdistsSize.incMemStoreSize(memStoreSize);
@@ -244,10 +244,11 @@ public class RegionServerAccounting {
    * @param regionName the region which could not open.
    */
   public void rollbackRegionReplayEditsSize(byte[] regionName) {
-    MemStoreSize replayEditsSize = replayEditsPerRegion.get(regionName);
-    if (replayEditsSize != null) {
+    MemStoreSizing replayEditsSizing = replayEditsPerRegion.get(regionName);
+    if (replayEditsSizing != null) {
       clearRegionReplayEditsSize(regionName);
-      decGlobalMemStoreSize(replayEditsSize);
+      decGlobalMemStoreSize(replayEditsSizing.getDataSize(), replayEditsSizing.getHeapSize(),
+          replayEditsSizing.getOffHeapSize());
     }
   }
 

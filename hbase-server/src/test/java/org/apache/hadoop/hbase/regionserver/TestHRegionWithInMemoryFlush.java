@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  */
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
-public class TestHRegionWithInMemoryFlush extends TestHRegion{
+public class TestHRegionWithInMemoryFlush extends TestHRegion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

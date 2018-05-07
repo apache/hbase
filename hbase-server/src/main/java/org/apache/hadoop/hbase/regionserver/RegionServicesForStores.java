@@ -65,8 +65,8 @@ public class RegionServicesForStores {
     region.unblockUpdates();
   }
 
-  public void addMemStoreSize(MemStoreSize size) {
-    region.incMemStoreSize(size);
+  public void addMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
+    region.incMemStoreSize(dataSizeDelta, heapSizeDelta, offHeapSizeDelta);
   }
 
   public RegionInfo getRegionInfo() {
