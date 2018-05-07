@@ -179,6 +179,16 @@ public class TestPerformanceEvaluation {
   }
 
   @Test
+  public void testSetBufferSizeOption() {
+    TestOptions opts = new PerformanceEvaluation.TestOptions();
+    long bufferSize = opts.getBufferSize();
+    assertEquals(bufferSize, 2l * 1024l * 1024l);
+    opts.setBufferSize(64l * 1024l);
+    bufferSize = opts.getBufferSize();
+    assertEquals(bufferSize, 64l * 1024l);
+  }
+
+  @Test
   public void testParseOptsWithThreads() {
     Queue<String> opts = new LinkedList<>();
     String cmdName = "sequentialWrite";
