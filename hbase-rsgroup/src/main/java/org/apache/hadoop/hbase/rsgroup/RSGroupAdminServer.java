@@ -139,8 +139,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
       }
 
-      if(srcGrp.getServers().size() <= servers.size() &&
-          srcGrp.getTables().size() > 0) {
+      if (RSGroupInfo.DEFAULT_GROUP.equals(srcGrp.getName()) && srcGrp.getServers().size() <=
+          servers.size()) {
+        throw new ConstraintException("Should keep at least one server in 'default' RSGroup ");
+      }
+
+      if(srcGrp.getServers().size() <= servers.size() && srcGrp.getTables().size() > 0) {
         throw new ConstraintException("Cannot leave a group "+srcGrp.getName()+
             " that contains tables " +"without servers.");
       }
