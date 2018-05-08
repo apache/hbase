@@ -243,7 +243,7 @@ public class TestReplicationBase {
   }
 
   @Before
-  public void setUpBase() throws IOException {
+  public void setUpBase() throws Exception {
     if (!peerExist(PEER_ID2)) {
       ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
           .setClusterKey(utility2.getClusterKey()).setSerial(isSerialPeer()).build();
@@ -252,7 +252,7 @@ public class TestReplicationBase {
   }
 
   @After
-  public void tearDownBase() throws IOException {
+  public void tearDownBase() throws Exception {
     if (peerExist(PEER_ID2)) {
       hbaseAdmin.removeReplicationPeer(PEER_ID2);
     }
