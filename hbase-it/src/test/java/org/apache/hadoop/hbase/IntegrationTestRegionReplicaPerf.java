@@ -61,6 +61,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
   private static final Log LOG = LogFactory.getLog(IntegrationTestRegionReplicaPerf.class);
 
+  private static final byte[] FAMILY_NAME = Bytes.toBytes("info");
   private static final String SLEEP_TIME_KEY = "sleeptime";
   // short default interval because tests don't run very long.
   private static final String SLEEP_TIME_DEFAULT = "" + (10 * 1000l);
@@ -236,7 +237,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
   @Override
   protected Set<String> getColumnFamilies() {
-    return Sets.newHashSet(Bytes.toString(PerformanceEvaluation.FAMILY_NAME));
+    return Sets.newHashSet(Bytes.toString(FAMILY_NAME));
   }
 
   /** Compute the mean of the given {@code stat} from a timing results. */
