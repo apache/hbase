@@ -1563,6 +1563,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     // after the cluster restart.
     Set<String> oldHostsNoLongerPresent = Sets.newTreeSet();
 
+    // If the old servers aren't present, lets assign those regions later.
+    List<HRegionInfo> randomAssignRegions = Lists.newArrayList();
+
     int numRandomAssignments = 0;
     int numRetainedAssigments = 0;
 
@@ -1576,37 +1579,51 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         localServers = serversByHostname.get(oldServerName.getHostname());
       }
       if (localServers.isEmpty()) {
-        // No servers on the new cluster match up with this hostname,
-        // assign randomly.
-        ServerName randomServer = randomAssignment(cluster, region, servers);
-        assignments.get(randomServer).add(region);
-        numRandomAssignments++;
-        if (oldServerName != null) oldHostsNoLongerPresent.add(oldServerName.getHostname());
+        // No servers on the new cluster match up with this hostname, assign randomly, later.
+        randomAssignRegions.add(region);
+        if (oldServerName != null) {
+          oldHostsNoLongerPresent.add(oldServerName.getHostname());
+        }
       } else if (localServers.size() == 1) {
         // the usual case - one new server on same host
         ServerName target = localServers.get(0);
         assignments.get(target).add(region);
-        cluster.doAssignRegion(region, target);
         numRetainedAssigments++;
       } else {
         // multiple new servers in the cluster on this same host
         if (localServers.contains(oldServerName)) {
           assignments.get(oldServerName).add(region);
-          cluster.doAssignRegion(region, oldServerName);
+          numRetainedAssigments++;
         } else {
           ServerName target = null;
-          for (ServerName tmp: localServers) {
+          for (ServerName tmp : localServers) {
             if (tmp.getPort() == oldServerName.getPort()) {
               target = tmp;
+              assignments.get(tmp).add(region);
+              numRetainedAssigments++;
               break;
             }
           }
           if (target == null) {
-            target = randomAssignment(cluster, region, localServers);
+            randomAssignRegions.add(region);
           }
-          assignments.get(target).add(region);
         }
-        numRetainedAssigments++;
+      }
+    }
+
+    // If servers from prior assignment aren't present, then lets do randomAssignment on regions.
+    if (randomAssignRegions.size() > 0) {
+      for (Map.Entry<ServerName, List<HRegionInfo>> entry : assignments.entrySet()) {
+        ServerName sn = entry.getKey();
+        for (HRegionInfo region : entry.getValue()) {
+          cluster.doAssignRegion(region, sn);
+        }
+      }
+      for (HRegionInfo region : randomAssignRegions) {
+        ServerName target = randomAssignment(cluster, region, servers);
+        assignments.get(target).add(region);
+        cluster.doAssignRegion(region, target);
+        numRandomAssignments++;
       }
     }
 
