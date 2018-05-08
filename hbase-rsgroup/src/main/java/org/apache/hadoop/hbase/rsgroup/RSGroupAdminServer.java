@@ -56,6 +56,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 @InterfaceAudience.Private
 public class RSGroupAdminServer implements RSGroupAdmin {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupAdminServer.class);
+  public static final String KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE = "should keep at least " +
+          "one server in 'default' RSGroup.";
 
   private MasterServices master;
   private final RSGroupInfoManager rsGroupInfoManager;
@@ -307,6 +309,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       // Only move online servers (when moving from 'default') or servers from other
       // groups. This prevents bogus servers from entering groups
       if (RSGroupInfo.DEFAULT_GROUP.equals(srcGrp.getName())) {
+        if (srcGrp.getServers().size() <= servers.size()) {
+          throw new ConstraintException(KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE);
+        }
         checkOnlineServersOnly(servers);
       }
       // Ensure all servers are of same rsgroup.
