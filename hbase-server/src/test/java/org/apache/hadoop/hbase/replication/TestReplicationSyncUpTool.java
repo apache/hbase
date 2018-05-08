@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -102,7 +101,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
   }
 
   @After
-  public void tearDownBase() throws IOException {
+  public void tearDownBase() throws Exception {
     // Do nothing, just replace the super tearDown. because the super tearDown will use the
     // out-of-data HBase admin to remove replication peer, which will be result in failure.
   }
