@@ -62,22 +62,28 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
   private static final Logger LOG =
       LoggerFactory.getLogger(TestReplicationChangingPeerRegionservers.class);
 
-  @Parameter
+  @Parameter(0)
   public boolean serialPeer;
+
+  @Parameter(1)
+  public boolean syncPeer;
 
   @Override
   protected boolean isSerialPeer() {
     return serialPeer;
   }
 
-  @Parameters(name = "{index}: serialPeer={0}")
-  public static List<Boolean> parameters() {
-    return ImmutableList.of(true, false);
+  @Override
+  protected boolean isSyncPeer() {
+    return syncPeer;
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
+  @Parameters(name = "{index}: serialPeer={0}, syncPeer={1}")
+  public static List<Object[]> parameters() {
+    return ImmutableList.of(new Object[] { false, false }, new Object[] { false, true },
+      new Object[] { true, false }, new Object[] { true, true });
+  }
+
   @Before
   public void setUp() throws Exception {
     // Starting and stopping replication can make us miss new logs,

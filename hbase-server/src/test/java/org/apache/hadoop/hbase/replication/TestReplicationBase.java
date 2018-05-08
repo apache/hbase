@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,6 +27,8 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,6 +58,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * This class is only a base for other integration-level replication tests.
@@ -96,6 +100,10 @@ public class TestReplicationBase {
   protected static final String PEER_ID2 = "2";
 
   protected boolean isSerialPeer() {
+    return false;
+  }
+
+  protected boolean isSyncPeer() {
     return false;
   }
 
@@ -245,9 +253,19 @@ public class TestReplicationBase {
   @Before
   public void setUpBase() throws Exception {
     if (!peerExist(PEER_ID2)) {
-      ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-          .setClusterKey(utility2.getClusterKey()).setSerial(isSerialPeer()).build();
-      hbaseAdmin.addReplicationPeer(PEER_ID2, rpc);
+      ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
+        .setClusterKey(utility2.getClusterKey()).setSerial(isSerialPeer());
+      if (isSyncPeer()) {
+        FileSystem fs2 = utility2.getTestFileSystem();
+        // The remote wal dir is not important as we do not use it in DA state, here we only need to
+        // confirm that a sync peer in DA state can still replicate data to remote cluster
+        // asynchronously.
+        builder.setReplicateAllUserTables(false)
+          .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of()))
+          .setRemoteWALDir(new Path("/RemoteWAL")
+            .makeQualified(fs2.getUri(), fs2.getWorkingDirectory()).toUri().toString());
+      }
+      hbaseAdmin.addReplicationPeer(PEER_ID2, builder.build());
     }
   }
 
