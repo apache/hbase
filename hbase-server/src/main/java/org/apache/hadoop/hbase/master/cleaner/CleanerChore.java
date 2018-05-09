@@ -223,16 +223,22 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   protected void chore() {
     if (getEnabled()) {
       if (runCleaner()) {
-        LOG.debug("Cleaned all WALs under {}",  oldFileDir);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Cleaned all WALs under {}", oldFileDir);
+        }
       } else {
-        LOG.warn("WALs outstanding under {}", oldFileDir);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("WALs outstanding under {}", oldFileDir);
+        }
       }
       // After each clean chore, checks if receives reconfigure notification while cleaning
       if (reconfig.compareAndSet(true, false)) {
         updateChorePoolSize(CHOREPOOLSIZE);
       }
     } else {
-      LOG.debug("Cleaner chore disabled! Not cleaning.");
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Cleaner chore disabled! Not cleaning.");
+      }
     }
   }
 
