@@ -273,9 +273,13 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       try {
         POOL.latchCountUp();
         if (runCleaner()) {
-          LOG.debug("Cleaned all WALs under " + oldFileDir);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Cleaned all WALs under " + oldFileDir);
+          }
         } else {
-          LOG.warn("WALs outstanding under " + oldFileDir);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("WALs outstanding under " + oldFileDir);
+          }
         }
       } finally {
         POOL.latchCountDown();
@@ -288,7 +292,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         POOL.updatePool((long) (0.8 * getTimeUnit().toMillis(getPeriod())));
       }
     } else {
-      LOG.debug("Cleaner chore disabled! Not cleaning.");
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Cleaner chore disabled! Not cleaning.");
+      }
     }
   }
 
