@@ -57,6 +57,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
  * interface and talk to it from client side.
  */
 @Category({ClientTests.class, LargeTests.class})
+
 public class TestThriftHttpServer {
 
   @ClassRule
@@ -117,14 +118,18 @@ public class TestThriftHttpServer {
     LOG.info("Starting HBase Thrift server with HTTP server: " + Joiner.on(" ").join(args));
 
     httpServerException = null;
-    httpServerThread = new Thread(() -> {
-      try {
-        thriftServer.doMain(args);
-      } catch (Exception e) {
-        httpServerException = e;
+    httpServerThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          thriftServer.doMain(args);
+        } catch (Exception e) {
+          httpServerException = e;
+        }
       }
     });
-    httpServerThread.setName(ThriftServer.class.getSimpleName() + "-httpServer");
+    httpServerThread.setName(ThriftServer.class.getSimpleName() +
+        "-httpServer");
     httpServerThread.start();
   }
 
@@ -163,9 +168,13 @@ public class TestThriftHttpServer {
     startHttpServerThread(args.toArray(new String[args.size()]));
 
     // wait up to 10s for the server to start
-    HBaseTestingUtility.waitForHostPort(HConstants.LOCALHOST, port);
+    for (int i = 0; i < 100
+        && (thriftServer.serverRunner == null ||  thriftServer.serverRunner.httpServer ==
+        null); i++) {
+      Thread.sleep(100);
+    }
 
-    String url = "http://" + HConstants.LOCALHOST + ":" + port;
+    String url = "http://"+ HConstants.LOCALHOST + ":" + port;
     try {
       checkHttpMethods(url);
       talkToThriftServer(url, customHeaderSize);
@@ -177,7 +186,7 @@ public class TestThriftHttpServer {
 
     if (clientSideException != null) {
       LOG.error("Thrift client threw an exception " + clientSideException);
-      if (clientSideException instanceof TTransportException) {
+      if (clientSideException instanceof  TTransportException) {
         throw clientSideException;
       } else {
         throw new Exception(clientSideException);
