@@ -75,7 +75,7 @@ public class HBaseRESTTestingUtility {
       filter = filter.trim();
       context.addFilter(Class.forName(filter), "/*", 0);
     }
-    HttpServerUtil.constrainHttpMethods(context);
+    HttpServerUtil.constrainHttpMethods(context, false);
     LOG.info("Loaded filter classes :" + filterClasses);
       // start the server
     server.start();
