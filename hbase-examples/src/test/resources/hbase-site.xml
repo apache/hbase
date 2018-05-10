@@ -25,11 +25,4 @@
     <name>hbase.defaults.for.version.skip</name>
     <value>true</value>
   </property>
-  <property>
-    <name>hbase.localcluster.assign.random.ports</name>
-    <value>true</value>
-    <description>
-      Assign random ports to master and RS info server (UI).
-    </description>
-  </property>
 </configuration>
