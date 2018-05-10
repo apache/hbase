@@ -95,6 +95,11 @@ public class RESTServer implements Constants {
 
   private static final String PATH_SPEC_ANY = "/*";
 
+  static String REST_HTTP_ALLOW_OPTIONS_METHOD = "hbase.rest.http.allow.options.method";
+  // HTTP OPTIONS method is commonly used in REST APIs for negotiation. It is disabled by default to
+  // maintain backward incompatibility
+  private static boolean REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT = false;
+
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("hbase rest start", "", options,
@@ -343,7 +348,8 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
-    HttpServerUtil.constrainHttpMethods(ctxHandler);
+    HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
+        .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
