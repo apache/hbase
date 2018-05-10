@@ -69,7 +69,7 @@ public class TestEnableRSGroup {
     TEST_UTIL.getMiniHBaseCluster().waitOnMaster(0);
 
     LOG.info("stopped master...");
-    final Configuration conf = TEST_UTIL.getConfiguration();
+    final Configuration conf = TEST_UTIL.getMiniHBaseCluster().getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, RSGroupAdminEndpoint.class.getName());
     conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
 
