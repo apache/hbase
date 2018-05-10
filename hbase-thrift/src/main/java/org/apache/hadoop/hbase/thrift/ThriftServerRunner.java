@@ -224,6 +224,9 @@ public class ThriftServerRunner implements Runnable {
 
   private final JvmPauseMonitor pauseMonitor;
 
+  static String THRIFT_HTTP_ALLOW_OPTIONS_METHOD = "hbase.thrift.http.allow.options.method";
+  private static boolean THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT = false;
+
   /** An enum of server implementation selections */
   public enum ImplType {
     HS_HA("hsha", true, THsHaServer.class, true),
@@ -458,7 +461,8 @@ public class ThriftServerRunner implements Runnable {
     ServletContextHandler ctxHandler = new ServletContextHandler(httpServer, "/",
             ServletContextHandler.SESSIONS);
     ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), "/*");
-    HttpServerUtil.constrainHttpMethods(ctxHandler);
+    HttpServerUtil.constrainHttpMethods(ctxHandler,
+      conf.getBoolean(THRIFT_HTTP_ALLOW_OPTIONS_METHOD, THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // set up Jetty and run the embedded server
     HttpConfiguration httpConfig = new HttpConfiguration();
