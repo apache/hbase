@@ -80,6 +80,11 @@ public class RESTServer implements Constants {
   static String REST_CSRF_METHODS_TO_IGNORE_KEY = "hbase.rest.csrf.methods.to.ignore";
   static String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
 
+  static String REST_HTTP_ALLOW_OPTIONS_METHOD = "hbase.rest.http.allow.options.method";
+  // HTTP OPTIONS method is commonly used in REST APIs for negotiation. It is disabled by default to
+  // maintain backward incompatibility
+  private static boolean REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT = false;
+
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("bin/hbase rest start", "", options,
@@ -294,7 +299,8 @@ public class RESTServer implements Constants {
       context.addFilter(Class.forName(filter), "/*", 0);
     }
     addCSRFFilter(context, conf);
-    HttpServerUtil.constrainHttpMethods(context);
+    HttpServerUtil.constrainHttpMethods(context, servlet.getConfiguration()
+        .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
