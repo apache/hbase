@@ -139,15 +139,30 @@ public class LocalHBaseCluster {
   throws IOException {
     this.conf = conf;
 
-    // Always have masters and regionservers come up on port '0' so we don't
-    // clash over default ports.
+    // When active, if a port selection is default then we switch to random
     if (conf.getBoolean(ASSIGN_RANDOM_PORTS, false)) {
-      conf.set(HConstants.MASTER_PORT, "0");
-      conf.set(HConstants.REGIONSERVER_PORT, "0");
-      if (conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1) {
+      if (conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT)
+          == HConstants.DEFAULT_MASTER_PORT) {
+        LOG.debug("Setting Master Port to random.");
+        conf.set(HConstants.MASTER_PORT, "0");
+      }
+      if (conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT)
+          == HConstants.DEFAULT_REGIONSERVER_PORT) {
+        LOG.debug("Setting RegionServer Port to random.");
+        conf.set(HConstants.REGIONSERVER_PORT, "0");
+      }
+      // treat info ports special; expressly don't change '-1' (keep off)
+      // in case we make that the default behavior.
+      if (conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1 &&
+          conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT)
+          == HConstants.DEFAULT_REGIONSERVER_INFOPORT) {
+        LOG.debug("Setting RS InfoServer Port to random.");
         conf.set(HConstants.REGIONSERVER_INFO_PORT, "0");
       }
-      if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1) {
+      if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1 &&
+          conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT)
+          == HConstants.DEFAULT_MASTER_INFOPORT) {
+        LOG.debug("Setting Master InfoServer Port to random.");
         conf.set(HConstants.MASTER_INFO_PORT, "0");
       }
     }

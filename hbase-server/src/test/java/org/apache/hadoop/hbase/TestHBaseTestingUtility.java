@@ -436,26 +436,39 @@ public class TestHBaseTestingUtility {
   }
 
   @Test
-  public void testOverridingOfDefaultPorts() {
+  public void testOverridingOfDefaultPorts() throws Exception {
 
-    // confirm that default port properties being overridden to "-1"
+    // confirm that default port properties being overridden to random
     Configuration defaultConfig = HBaseConfiguration.create();
     defaultConfig.setInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
-    defaultConfig.setInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT);
+    defaultConfig.setInt(HConstants.REGIONSERVER_INFO_PORT,
+        HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     HBaseTestingUtility htu = new HBaseTestingUtility(defaultConfig);
-    assertEquals(-1, htu.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
-    assertEquals(-1, htu.getConfiguration().getInt(HConstants.REGIONSERVER_PORT, 0));
+    try {
+      MiniHBaseCluster defaultCluster = htu.startMiniCluster();
+      assertNotEquals(HConstants.DEFAULT_MASTER_INFOPORT,
+          defaultCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+      assertNotEquals(HConstants.DEFAULT_REGIONSERVER_INFOPORT,
+          defaultCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
+    } finally {
+      htu.shutdownMiniCluster();
+    }
 
     // confirm that nonDefault (custom) port settings are NOT overridden
     Configuration altConfig = HBaseConfiguration.create();
     final int nonDefaultMasterInfoPort = 3333;
     final int nonDefaultRegionServerPort = 4444;
     altConfig.setInt(HConstants.MASTER_INFO_PORT, nonDefaultMasterInfoPort);
-    altConfig.setInt(HConstants.REGIONSERVER_PORT, nonDefaultRegionServerPort);
+    altConfig.setInt(HConstants.REGIONSERVER_INFO_PORT, nonDefaultRegionServerPort);
     htu = new HBaseTestingUtility(altConfig);
-    assertEquals(nonDefaultMasterInfoPort,
-            htu.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
-    assertEquals(nonDefaultRegionServerPort
-            , htu.getConfiguration().getInt(HConstants.REGIONSERVER_PORT, 0));
+    try {
+      MiniHBaseCluster customCluster = htu.startMiniCluster();
+      assertEquals(nonDefaultMasterInfoPort,
+              customCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+      assertEquals(nonDefaultRegionServerPort,
+          customCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
+    } finally {
+      htu.shutdownMiniCluster();
+    }
   }
 }

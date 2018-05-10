@@ -49,10 +49,10 @@ public class TestEnableRSGroup {
   protected static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroup.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Configuration conf = TEST_UTIL.getConfiguration();
 
   @BeforeClass
   public static void setUp() throws Exception {
+    final Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY, true);
     TEST_UTIL.startMiniCluster(5);
   }
@@ -69,9 +69,9 @@ public class TestEnableRSGroup {
     TEST_UTIL.getMiniHBaseCluster().waitOnMaster(0);
 
     LOG.info("stopped master...");
+    final Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, RSGroupAdminEndpoint.class.getName());
     conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
-    TEST_UTIL.getMiniHBaseCluster().setConf(conf);
 
     TEST_UTIL.getMiniHBaseCluster().startMaster();
     TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(60000);

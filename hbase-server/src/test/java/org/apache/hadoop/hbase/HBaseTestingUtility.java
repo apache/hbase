@@ -332,20 +332,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // a hbase checksum verification failure will cause unit tests to fail
     ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
 
-    // if conf is provided, prevent contention for ports if other hbase thread(s) are running
-    if (conf != null) {
-      if (conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT)
-              == HConstants.DEFAULT_MASTER_INFOPORT) {
-        conf.setInt(HConstants.MASTER_INFO_PORT, -1);
-        LOG.debug("Config property {} changed to -1", HConstants.MASTER_INFO_PORT);
-      }
-      if (conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT)
-              == HConstants.DEFAULT_REGIONSERVER_PORT) {
-        conf.setInt(HConstants.REGIONSERVER_PORT, -1);
-        LOG.debug("Config property {} changed to -1", HConstants.REGIONSERVER_PORT);
-      }
-    }
-
     // Save this for when setting default file:// breaks things
     this.conf.set("original.defaultFS", this.conf.get("fs.defaultFS"));
 
@@ -356,6 +342,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
     LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
     this.conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE,false);
+    // If the value for random ports isn't set set it to true, thus making
+    // tests opt-out for random port assignment
+    this.conf.setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS,
+        this.conf.getBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, true));
   }
 
   /**
