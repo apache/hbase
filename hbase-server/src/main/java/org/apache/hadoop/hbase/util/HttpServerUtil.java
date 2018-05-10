@@ -29,8 +29,9 @@ public class HttpServerUtil {
   /**
    * Add constraints to a Jetty Context to disallow undesirable Http methods.
    * @param context The context to modify
+   * @param allowOptionsMethod if true then OPTIONS method will not be set in constraint mapping
    */
-  public static void constrainHttpMethods(Context context) {
+  public static void constrainHttpMethods(Context context, boolean allowOptionsMethod) {
     Constraint c = new Constraint();
     c.setAuthenticate(true);
 
@@ -39,13 +40,17 @@ public class HttpServerUtil {
     cmt.setMethod("TRACE");
     cmt.setPathSpec("/*");
 
-    ConstraintMapping cmo = new ConstraintMapping();
-    cmo.setConstraint(c);
-    cmo.setMethod("OPTIONS");
-    cmo.setPathSpec("/*");
-
     SecurityHandler sh = new SecurityHandler();
-    sh.setConstraintMappings(new ConstraintMapping[]{ cmt, cmo });
+
+    if (!allowOptionsMethod) {
+      ConstraintMapping cmo = new ConstraintMapping();
+      cmo.setConstraint(c);
+      cmo.setMethod("OPTIONS");
+      cmo.setPathSpec("/*");
+      sh.setConstraintMappings(new ConstraintMapping[] { cmt, cmo });
+    } else {
+      sh.setConstraintMappings(new ConstraintMapping[] { cmt });
+    }
 
     context.addHandler(sh);
   }

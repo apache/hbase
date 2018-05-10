@@ -67,6 +67,11 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class RESTServer implements Constants {
 
+  static String REST_HTTP_ALLOW_OPTIONS_METHOD = "hbase.rest.http.allow.options.method";
+  // HTTP OPTIONS method is commonly used in REST APIs for negotiation. It is disabled by default to
+  // maintain backward incompatibility
+  private static boolean REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT = false;
+
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("bin/hbase rest start", "", options,
@@ -240,7 +245,8 @@ public class RESTServer implements Constants {
       filter = filter.trim();
       context.addFilter(Class.forName(filter), "/*", 0);
     }
-    HttpServerUtil.constrainHttpMethods(context);
+    HttpServerUtil.constrainHttpMethods(context, servlet.getConfiguration()
+        .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
