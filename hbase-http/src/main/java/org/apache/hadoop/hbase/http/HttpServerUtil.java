@@ -31,8 +31,10 @@ public final class HttpServerUtil {
   /**
    * Add constraints to a Jetty Context to disallow undesirable Http methods.
    * @param ctxHandler The context to modify
+   * @param allowOptionsMethod if true then OPTIONS method will not be set in constraint mapping
    */
-  public static void constrainHttpMethods(ServletContextHandler ctxHandler) {
+  public static void constrainHttpMethods(ServletContextHandler ctxHandler,
+      boolean allowOptionsMethod) {
     Constraint c = new Constraint();
     c.setAuthenticate(true);
 
@@ -41,13 +43,17 @@ public final class HttpServerUtil {
     cmt.setMethod("TRACE");
     cmt.setPathSpec("/*");
 
-    ConstraintMapping cmo = new ConstraintMapping();
-    cmo.setConstraint(c);
-    cmo.setMethod("OPTIONS");
-    cmo.setPathSpec("/*");
-
     ConstraintSecurityHandler securityHandler = new ConstraintSecurityHandler();
-    securityHandler.setConstraintMappings(new ConstraintMapping[]{ cmt, cmo });
+
+    if (!allowOptionsMethod) {
+      ConstraintMapping cmo = new ConstraintMapping();
+      cmo.setConstraint(c);
+      cmo.setMethod("OPTIONS");
+      cmo.setPathSpec("/*");
+      securityHandler.setConstraintMappings(new ConstraintMapping[] { cmt, cmo });
+    } else {
+      securityHandler.setConstraintMappings(new ConstraintMapping[] { cmt });
+    }
 
     ctxHandler.setSecurityHandler(securityHandler);
   }

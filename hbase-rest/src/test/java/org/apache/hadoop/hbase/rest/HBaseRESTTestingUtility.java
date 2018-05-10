@@ -93,7 +93,7 @@ public class HBaseRESTTestingUtility {
     conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
     RESTServer.addCSRFFilter(ctxHandler, conf);
 
-    HttpServerUtil.constrainHttpMethods(ctxHandler);
+    HttpServerUtil.constrainHttpMethods(ctxHandler, true);
 
     // start the server
     server.start();
