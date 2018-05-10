@@ -108,12 +108,6 @@ public class MiniHBaseCluster extends HBaseCluster {
          Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
     super(conf);
-    if (conf.getBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, false)) {
-      conf.set(HConstants.MASTER_PORT, "0");
-      if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1) {
-        conf.set(HConstants.MASTER_INFO_PORT, "0");
-      }
-    }
 
     // Hadoop 2
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
