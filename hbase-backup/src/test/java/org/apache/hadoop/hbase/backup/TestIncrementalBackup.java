@@ -163,14 +163,14 @@ public class TestIncrementalBackup extends TestBackupBase {
     String backupIdIncMultiple2 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdIncMultiple2));
 
-    // #4 - restore full backup for all tables, without overwrite
+    // #4 - restore full backup for all tables
     TableName[] tablesRestoreFull = new TableName[] { table1, table2 };
 
     TableName[] tablesMapFull = new TableName[] { table1_restore, table2_restore };
 
     LOG.debug("Restoring full " + backupIdFull);
     client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdFull, false,
-      tablesRestoreFull, tablesMapFull, false));
+      tablesRestoreFull, tablesMapFull, true));
 
     // #5.1 - check tables for full restore
     HBaseAdmin hAdmin = TEST_UTIL.getHBaseAdmin();

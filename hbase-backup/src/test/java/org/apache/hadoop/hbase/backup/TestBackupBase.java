@@ -88,8 +88,8 @@ public class TestBackupBase {
   protected static TableName table3 = TableName.valueOf("table3");
   protected static TableName table4 = TableName.valueOf("table4");
 
-  protected static TableName table1_restore = TableName.valueOf("ns1:table1_restore");
-  protected static TableName table2_restore = TableName.valueOf("ns2:table2_restore");
+  protected static TableName table1_restore = TableName.valueOf("default:table1");
+  protected static TableName table2_restore = TableName.valueOf("ns2:table2");
   protected static TableName table3_restore = TableName.valueOf("ns3:table3_restore");
   protected static TableName table4_restore = TableName.valueOf("ns4:table4_restore");
 
@@ -404,7 +404,7 @@ public class TestBackupBase {
 
   protected static void createTables() throws Exception {
     long tid = System.currentTimeMillis();
-    table1 = TableName.valueOf("ns1:test-" + tid);
+    table1 = TableName.valueOf("test-" + tid);
     HBaseAdmin ha = TEST_UTIL.getHBaseAdmin();
 
     // Create namespaces

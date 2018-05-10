@@ -27,6 +27,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -251,6 +252,9 @@ public class HFileOutputFormat2
         byte[] tableNameBytes = null;
         if (writeMultipleTables) {
           tableNameBytes = MultiTableHFileOutputFormat.getTableName(row.get());
+          tableNameBytes =
+              TableName.valueOf(tableNameBytes).getNameWithNamespaceInclAsString()
+              .getBytes(Charset.defaultCharset());
           if (!allTableNames.contains(Bytes.toString(tableNameBytes))) {
             throw new IllegalArgumentException("TableName '" + Bytes.toString(tableNameBytes) +
                     "' not" + " expected");
@@ -639,7 +643,10 @@ public class HFileOutputFormat2
     for( TableInfo tableInfo : multiTableInfo )
     {
       regionLocators.add(tableInfo.getRegionLocator());
-      allTableNames.add(tableInfo.getRegionLocator().getName().getNameAsString());
+      String tn = writeMultipleTables?
+        tableInfo.getRegionLocator().getName().getNameWithNamespaceInclAsString():
+        tableInfo.getRegionLocator().getName().getNameAsString();
+      allTableNames.add(tn);
       tableDescriptors.add(tableInfo.getTableDescriptor());
     }
     // Record tablenames for creating writer by favored nodes, and decoding compression, block size and other attributes of columnfamily per table
