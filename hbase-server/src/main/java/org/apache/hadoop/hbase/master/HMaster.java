@@ -2336,16 +2336,18 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+  public long modifyTable(final TableName tableName, final TableDescriptor newDescriptor,
       final long nonceGroup, final long nonce) throws IOException {
     checkInitialized();
-    sanityCheckTableDescriptor(descriptor);
+    sanityCheckTableDescriptor(newDescriptor);
 
     return MasterProcedureUtil.submitProcedure(
         new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
       @Override
       protected void run() throws IOException {
-        getMaster().getMasterCoprocessorHost().preModifyTable(tableName, descriptor);
+        TableDescriptor oldDescriptor = getMaster().getTableDescriptors().get(tableName);
+        getMaster().getMasterCoprocessorHost()
+          .preModifyTable(tableName, oldDescriptor, newDescriptor);
 
         LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
 
@@ -2354,11 +2356,12 @@ public class HMaster extends HRegionServer implements MasterServices {
         // We need to wait for the procedure to potentially fail due to "prepare" sanity
         // checks. This will block only the beginning of the procedure. See HBASE-19953.
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-        submitProcedure(new ModifyTableProcedure(procedureExecutor.getEnvironment(),
-            descriptor, latch));
+        submitProcedure(
+          new ModifyTableProcedure(procedureExecutor.getEnvironment(), newDescriptor, latch));
         latch.await();
 
-        getMaster().getMasterCoprocessorHost().postModifyTable(tableName, descriptor);
+        getMaster().getMasterCoprocessorHost()
+          .postModifyTable(tableName, oldDescriptor, newDescriptor);
       }
 
       @Override
@@ -2971,26 +2974,28 @@ public class HMaster extends HRegionServer implements MasterServices {
    * <code>nonceGroup</code> (the source must ensure each operation gets a unique id).
    * @return procedure id
    */
-  long modifyNamespace(final NamespaceDescriptor namespaceDescriptor, final long nonceGroup,
+  long modifyNamespace(final NamespaceDescriptor newNsDescriptor, final long nonceGroup,
       final long nonce) throws IOException {
     checkInitialized();
 
-    TableName.isLegalNamespaceName(Bytes.toBytes(namespaceDescriptor.getName()));
+    TableName.isLegalNamespaceName(Bytes.toBytes(newNsDescriptor.getName()));
 
     return MasterProcedureUtil.submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this,
           nonceGroup, nonce) {
       @Override
       protected void run() throws IOException {
-        getMaster().getMasterCoprocessorHost().preModifyNamespace(namespaceDescriptor);
+        NamespaceDescriptor oldNsDescriptor = getNamespace(newNsDescriptor.getName());
+        getMaster().getMasterCoprocessorHost().preModifyNamespace(oldNsDescriptor, newNsDescriptor);
         // We need to wait for the procedure to potentially fail due to "prepare" sanity
         // checks. This will block only the beginning of the procedure. See HBASE-19953.
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-        LOG.info(getClientIdAuditPrefix() + " modify " + namespaceDescriptor);
+        LOG.info(getClientIdAuditPrefix() + " modify " + newNsDescriptor);
         // Execute the operation synchronously - wait for the operation to complete before
         // continuing.
-        setProcId(getClusterSchema().modifyNamespace(namespaceDescriptor, getNonceKey(), latch));
+        setProcId(getClusterSchema().modifyNamespace(newNsDescriptor, getNonceKey(), latch));
         latch.await();
-        getMaster().getMasterCoprocessorHost().postModifyNamespace(namespaceDescriptor);
+        getMaster().getMasterCoprocessorHost().postModifyNamespace(oldNsDescriptor,
+          newNsDescriptor);
       }
 
       @Override

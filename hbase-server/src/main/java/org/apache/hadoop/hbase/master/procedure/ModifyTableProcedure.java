@@ -420,10 +420,12 @@ public class ModifyTableProcedure
     if (cpHost != null) {
       switch (state) {
         case MODIFY_TABLE_PRE_OPERATION:
-          cpHost.preModifyTableAction(getTableName(), modifiedTableDescriptor, getUser());
+          cpHost.preModifyTableAction(getTableName(), unmodifiedTableDescriptor,
+            modifiedTableDescriptor, getUser());
           break;
         case MODIFY_TABLE_POST_OPERATION:
-          cpHost.postCompletedModifyTableAction(getTableName(), modifiedTableDescriptor,getUser());
+          cpHost.postCompletedModifyTableAction(getTableName(), unmodifiedTableDescriptor,
+            modifiedTableDescriptor,getUser());
           break;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
