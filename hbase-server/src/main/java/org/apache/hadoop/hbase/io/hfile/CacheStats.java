@@ -388,23 +388,53 @@ public class CacheStats {
   }
 
   public double getHitRatio() {
-    return ((double) getHitCount() / (double) getRequestCount());
+    double requestCount = getRequestCount();
+
+    if (requestCount == 0) {
+      return 0;
+    }
+
+    return getHitCount() / requestCount;
   }
 
   public double getHitCachingRatio() {
-    return ((double) getHitCachingCount() / (double) getRequestCachingCount());
+    double requestCachingCount = getRequestCachingCount();
+
+    if (requestCachingCount == 0) {
+      return 0;
+    }
+
+    return getHitCachingCount() / requestCachingCount;
   }
 
   public double getMissRatio() {
-    return ((double) getMissCount() / (double) getRequestCount());
+    double requestCount = getRequestCount();
+
+    if (requestCount == 0) {
+      return 0;
+    }
+
+    return getMissCount() / requestCount;
   }
 
   public double getMissCachingRatio() {
-    return ((double) getMissCachingCount() / (double) getRequestCachingCount());
+    double requestCachingCount = getRequestCachingCount();
+
+    if (requestCachingCount == 0) {
+      return 0;
+    }
+
+    return getMissCachingCount() / requestCachingCount;
   }
 
   public double evictedPerEviction() {
-    return ((double) getEvictedCount() / (double) getEvictionCount());
+    double evictionCount = getEvictionCount();
+
+    if (evictionCount == 0) {
+      return 0;
+    }
+
+    return getEvictedCount() / evictionCount;
   }
 
   public long getFailedInserts() {
