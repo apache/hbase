@@ -310,7 +310,11 @@ public class JSONBean {
         jg.writeEndArray();
       } else if(value instanceof Number) {
         Number n = (Number)value;
-        jg.writeNumber(n.toString());
+        if (Double.isFinite(n.doubleValue())) {
+          jg.writeNumber(n.toString());
+        } else {
+          jg.writeString(n.toString());
+        }
       } else if(value instanceof Boolean) {
         Boolean b = (Boolean)value;
         jg.writeBoolean(b);
