@@ -41,7 +41,7 @@ public class CacheStats {
 
   /** The number of getBlock requests that were cache hits from primary replica */
   private final Counter primaryHitCount = new Counter();
-  
+
   /**
    * The number of getBlock requests that were cache hits, but only from
    * requests that were set to use the block cache.  This is because all reads
@@ -387,23 +387,53 @@ public class CacheStats {
   }
 
   public double getHitRatio() {
-    return ((float)getHitCount()/(float)getRequestCount());
+    double requestCount = getRequestCount();
+
+    if (requestCount == 0) {
+      return 0;
+    }
+
+    return getHitCount() / requestCount;
   }
 
   public double getHitCachingRatio() {
-    return ((float)getHitCachingCount()/(float)getRequestCachingCount());
+    double requestCachingCount = getRequestCachingCount();
+
+    if (requestCachingCount == 0) {
+      return 0;
+    }
+
+    return getHitCachingCount() / requestCachingCount;
   }
 
   public double getMissRatio() {
-    return ((float)getMissCount()/(float)getRequestCount());
+    double requestCount = getRequestCount();
+
+    if (requestCount == 0) {
+      return 0;
+    }
+
+    return getMissCount() / requestCount;
   }
 
   public double getMissCachingRatio() {
-    return ((float)getMissCachingCount()/(float)getRequestCachingCount());
+    double requestCachingCount = getRequestCachingCount();
+
+    if (requestCachingCount == 0) {
+      return 0;
+    }
+
+    return getMissCachingCount() / requestCachingCount;
   }
 
   public double evictedPerEviction() {
-    return ((float)getEvictedCount()/(float)getEvictionCount());
+    double evictionCount = getEvictionCount();
+
+    if (evictionCount == 0) {
+      return 0;
+    }
+
+    return getEvictedCount() / evictionCount;
   }
 
   public long getFailedInserts() {
