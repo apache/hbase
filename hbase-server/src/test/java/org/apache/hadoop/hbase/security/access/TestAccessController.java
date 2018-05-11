@@ -406,7 +406,9 @@ public class TestAccessController extends SecureTestUtil {
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
         htd.addFamily(new HColumnDescriptor("fam_" + User.getCurrent().getShortName()));
         ACCESS_CONTROLLER.preModifyTable(ObserverContextImpl.createAndPrepare(CP_ENV),
-            TEST_TABLE, htd);
+            TEST_TABLE,
+            null,  // not needed by AccessController
+            htd);
         return null;
       }
     };

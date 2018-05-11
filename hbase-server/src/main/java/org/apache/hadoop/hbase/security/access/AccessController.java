@@ -969,24 +969,24 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
-      TableDescriptor htd) throws IOException {
+      TableDescriptor currentDesc, TableDescriptor newDesc) throws IOException {
     // TODO: potentially check if this is a add/modify/delete column operation
     requirePermission(c, "modifyTable",
         tableName, null, null, Action.ADMIN, Action.CREATE);
   }
 
   @Override
-  public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, final TableDescriptor htd) throws IOException {
+  public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
+    TableDescriptor oldDesc, TableDescriptor currentDesc) throws IOException {
     final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
-    final String owner = (htd.getOwnerString() != null) ? htd.getOwnerString() :
+    final String owner = (currentDesc.getOwnerString() != null) ? currentDesc.getOwnerString() :
       getActiveUser(c).getShortName();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         UserPermission userperm = new UserPermission(Bytes.toBytes(owner),
-            htd.getTableName(), null, Action.values());
+            currentDesc.getTableName(), null, Action.values());
         try (Table table = c.getEnvironment().getConnection().
             getTable(AccessControlLists.ACL_TABLE_NAME)) {
           AccessControlLists.addUserPermission(conf, userperm, table);
@@ -1233,18 +1233,16 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor ns) throws IOException {
+      NamespaceDescriptor currentNsDesc, NamespaceDescriptor newNsDesc) throws IOException {
     // We require only global permission so that
     // a user with NS admin cannot altering namespace configurations. i.e. namespace quota
-    requireGlobalPermission(ctx, "modifyNamespace",
-        Action.ADMIN, ns.getName());
+    requireGlobalPermission(ctx, "modifyNamespace", Action.ADMIN, newNsDesc.getName());
   }
 
   @Override
-  public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace)
-      throws IOException {
-    requireNamespacePermission(ctx, "getNamespaceDescriptor",
-        namespace, Action.ADMIN);
+  public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String namespace) throws IOException {
+    requireNamespacePermission(ctx, "getNamespaceDescriptor", namespace, Action.ADMIN);
   }
 
   @Override

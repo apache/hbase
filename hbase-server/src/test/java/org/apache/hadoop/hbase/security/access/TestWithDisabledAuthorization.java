@@ -493,7 +493,9 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY2));
         ACCESS_CONTROLLER.preModifyTable(ObserverContextImpl.createAndPrepare(CP_ENV),
-          TEST_TABLE.getTableName(), htd);
+          TEST_TABLE.getTableName(),
+          null,  // not needed by AccessController
+          htd);
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -700,6 +702,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       public Object run() throws Exception {
         NamespaceDescriptor ns = NamespaceDescriptor.create("test").build();
         ACCESS_CONTROLLER.preModifyNamespace(ObserverContextImpl.createAndPrepare(CP_ENV),
+          null,  // not needed by AccessController
           ns);
         return null;
       }

@@ -490,8 +490,8 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
 
   @Override
   public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor ns) throws IOException {
-    preCreateNamespace(ctx, ns);
+      NamespaceDescriptor currentNsDesc, NamespaceDescriptor newNsDesc) throws IOException {
+    preCreateNamespace(ctx, newNsDesc);
   }
 
   @Override

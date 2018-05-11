@@ -226,8 +226,8 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, TableDescriptor htd) throws IOException {
+  public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
+    TableDescriptor currentDescriptor, TableDescriptor newDescriptor) throws IOException {
     if (!authorizationEnabled) {
       return;
     }

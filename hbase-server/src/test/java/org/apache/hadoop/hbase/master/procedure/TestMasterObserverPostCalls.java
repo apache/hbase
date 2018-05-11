@@ -106,7 +106,8 @@ public class TestMasterObserverPostCalls {
 
     @Override
     public void postModifyNamespace(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, NamespaceDescriptor desc) {
+        ObserverContext<MasterCoprocessorEnvironment> ctx, NamespaceDescriptor oldNsDesc,
+        NamespaceDescriptor currentNsDesc) {
       postHookCalls.incrementAndGet();
     }
 
@@ -125,7 +126,8 @@ public class TestMasterObserverPostCalls {
 
     @Override
     public void postModifyTable(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tn, TableDescriptor td) {
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tn,
+        TableDescriptor oldDescriptor, TableDescriptor currentDescriptor) {
       postHookCalls.incrementAndGet();
     }
 

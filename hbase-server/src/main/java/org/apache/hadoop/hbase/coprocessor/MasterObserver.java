@@ -229,7 +229,6 @@ public interface MasterObserver {
     throws IOException {
     preModifyTable(ctx, tableName, newDescriptor);
   }
-
   /**
    * Called after the modifyTable operation has been requested.  Called as part
    * of modify table RPC call.

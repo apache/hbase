@@ -364,13 +364,15 @@ public class TestMasterObserver {
 
     @Override
     public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableName tableName, TableDescriptor htd) throws IOException {
+        TableName tableName, final TableDescriptor currentDescriptor,
+      final TableDescriptor newDescriptor) throws IOException {
       preModifyTableCalled = true;
     }
 
     @Override
     public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableName tableName, TableDescriptor htd) throws IOException {
+        TableName tableName, final TableDescriptor oldDescriptor,
+      final TableDescriptor currentDescriptor) throws IOException {
       postModifyTableCalled = true;
     }
 
@@ -424,13 +426,13 @@ public class TestMasterObserver {
 
     @Override
     public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> env,
-        NamespaceDescriptor ns) throws IOException {
+        NamespaceDescriptor currentNsDesc, NamespaceDescriptor newNsDesc) throws IOException {
       preModifyNamespaceCalled = true;
     }
 
     @Override
     public void postModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> env,
-        NamespaceDescriptor ns) throws IOException {
+        NamespaceDescriptor oldNsDesc, NamespaceDescriptor currentNsDesc) throws IOException {
       postModifyNamespaceCalled = true;
     }
 
@@ -917,7 +919,8 @@ public class TestMasterObserver {
     public void preModifyTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> env,
         final TableName tableName,
-        final TableDescriptor htd) throws IOException {
+        final TableDescriptor currentDescriptor,
+        final TableDescriptor newDescriptor) throws IOException {
       preModifyTableActionCalled = true;
     }
 
@@ -925,7 +928,8 @@ public class TestMasterObserver {
     public void postCompletedModifyTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> env,
         final TableName tableName,
-        final TableDescriptor htd) throws IOException {
+        final TableDescriptor oldDescriptor,
+        final TableDescriptor currentDescriptor) throws IOException {
       postCompletedModifyTableActionCalled = true;
     }
 
