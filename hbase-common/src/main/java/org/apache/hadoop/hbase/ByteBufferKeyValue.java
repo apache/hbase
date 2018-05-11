@@ -77,10 +77,6 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public short getRowLength() {
-    return getRowLen();
-  }
-
-  private short getRowLen() {
     return ByteBufferUtils.toShort(this.buf, this.offset + KeyValue.ROW_OFFSET);
   }
 
@@ -99,12 +95,15 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     return getFamilyLength(getFamilyLengthPosition());
   }
 
-  private int getFamilyLengthPosition() {
-    return this.offset + KeyValue.ROW_KEY_OFFSET
-        + getRowLen();
+  int getFamilyLengthPosition() {
+    return getFamilyLengthPosition(getRowLength());
   }
 
-  private byte getFamilyLength(int famLenPos) {
+  int getFamilyLengthPosition(int rowLength) {
+    return this.offset + KeyValue.ROW_KEY_OFFSET + rowLength;
+  }
+
+  byte getFamilyLength(int famLenPos) {
     return ByteBufferUtils.toByte(this.buf, famLenPos);
   }
 
@@ -120,21 +119,24 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getQualifierLength() {
-    return getQualifierLength(getRowLength(), getFamilyLength());
+    return getQualifierLength(getKeyLength(), getRowLength(), getFamilyLength());
   }
 
-  private int getQualifierLength(int rlength, int flength) {
-    return getKeyLen()
-        - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
+  int getQualifierLength(int keyLength, int rlength, int flength) {
+    return keyLength - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
   }
 
   @Override
   public long getTimestamp() {
-    int offset = getTimestampOffset(getKeyLen());
+    return getTimestamp(getKeyLength());
+  }
+
+  long getTimestamp(int keyLength) {
+    int offset = getTimestampOffset(keyLength);
     return ByteBufferUtils.toLong(this.buf, offset);
   }
 
-  private int getKeyLen() {
+  int getKeyLength() {
     return ByteBufferUtils.toInt(this.buf, this.offset);
   }
 
@@ -144,8 +146,11 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public byte getTypeByte() {
-    return ByteBufferUtils.toByte(this.buf,
-      this.offset + getKeyLen() - 1 + KeyValue.ROW_OFFSET);
+    return getTypeByte(getKeyLength());
+  }
+
+  byte getTypeByte(int keyLen) {
+    return ByteBufferUtils.toByte(this.buf, this.offset + keyLen - 1 + KeyValue.ROW_OFFSET);
   }
 
   @Override
@@ -185,7 +190,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getTagsLength() {
-    int tagsLen = this.length - (getKeyLen() + getValueLength()
+    int tagsLen = this.length - (getKeyLength() + getValueLength()
         + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
     if (tagsLen > 0) {
       // There are some Tag bytes in the byte[]. So reduce 2 bytes which is
@@ -213,7 +218,11 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getFamilyPosition() {
-    return getFamilyLengthPosition() + Bytes.SIZEOF_BYTE;
+    return getFamilyPosition(getFamilyLengthPosition());
+  }
+
+  public int getFamilyPosition(int familyLengthPosition) {
+    return familyLengthPosition + Bytes.SIZEOF_BYTE;
   }
 
   @Override
@@ -223,7 +232,11 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getQualifierPosition() {
-    return getFamilyPosition() + getFamilyLength();
+    return getQualifierPosition(getFamilyPosition(), getFamilyLength());
+  }
+
+  int getQualifierPosition(int familyPosition, int familyLength) {
+    return familyPosition + familyLength;
   }
 
   @Override
@@ -233,7 +246,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getValuePosition() {
-    return this.offset + KeyValue.ROW_OFFSET + getKeyLen();
+    return this.offset + KeyValue.ROW_OFFSET + getKeyLength();
   }
 
   @Override
@@ -270,8 +283,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     if (withTags) {
       return this.length;
     }
-    return getKeyLen() + this.getValueLength()
-        + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+    return getKeyLength() + this.getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 
   @Override
@@ -292,7 +304,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   private int getTimestampOffset() {
     return this.offset + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE
-        + getKeyLen() - KeyValue.TIMESTAMP_TYPE_SIZE;
+        + getKeyLength() - KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 
   @Override

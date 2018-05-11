@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -55,6 +56,24 @@ public class TestByteBufferKeyValue {
   static {
     tags.add(t1);
     tags.add(t2);
+  }
+
+  @Test
+  public void testCompare() {
+    Cell cell1 = getOffheapCell(row1, fam1, qual1);
+    Cell cell2 = getOffheapCell(row1, fam1, qual2);
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell2) < 0);
+    Cell cell3 = getOffheapCell(row1, Bytes.toBytes("wide_family"), qual2);
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell3) < 0);
+    Cell cell4 = getOffheapCell(row1, Bytes.toBytes("f"), qual2);
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell4) > 0);
+  }
+
+  private Cell getOffheapCell(byte [] row, byte [] family, byte [] qualifier) {
+    KeyValue kvCell = new KeyValue(row, family, qualifier, 0L, Type.Put, row);
+    ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
+    ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
+    return new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
   }
 
   @Test
