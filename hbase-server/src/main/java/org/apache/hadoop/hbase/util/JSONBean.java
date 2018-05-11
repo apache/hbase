@@ -314,7 +314,12 @@ public class JSONBean {
         jg.writeEndArray();
       } else if(value instanceof Number) {
         Number n = (Number)value;
-        jg.writeNumber(n.toString());
+        double doubleValue = n.doubleValue();
+        if (Double.isNaN(doubleValue) || Double.isInfinite(doubleValue)) {
+          jg.writeString(n.toString());
+        } else {
+          jg.writeNumber(n.toString());
+        }
       } else if(value instanceof Boolean) {
         Boolean b = (Boolean)value;
         jg.writeBoolean(b);
