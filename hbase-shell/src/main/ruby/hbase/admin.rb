@@ -1309,6 +1309,16 @@ module Hbase
                               TableName.valueOf(new_table_name),
                               preserve_splits)
     end
+
+    # Stop the active Master
+    def stop_master
+      @admin.stopMaster
+    end
+
+    # Stop the given RegionServer
+    def stop_regionserver(hostport)
+      @admin.stopRegionServer(hostport)
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end

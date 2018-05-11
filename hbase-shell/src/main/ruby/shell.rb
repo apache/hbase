@@ -357,6 +357,8 @@ Shell.load_command_group(
     list_deadservers
     clear_deadservers
     clear_block_cache
+    stop_master
+    stop_regionserver
   ],
   # TODO: remove older hlog_roll command
   aliases: {
