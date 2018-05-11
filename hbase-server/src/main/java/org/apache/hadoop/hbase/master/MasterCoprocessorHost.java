@@ -254,20 +254,22 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preModifyNamespace(final NamespaceDescriptor ns) throws IOException {
+  public void preModifyNamespace(final NamespaceDescriptor currentNsDescriptor,
+    final NamespaceDescriptor newNsDescriptor) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preModifyNamespace(this, ns);
+        observer.preModifyNamespace(this, currentNsDescriptor, newNsDescriptor);
       }
     });
   }
 
-  public void postModifyNamespace(final NamespaceDescriptor ns) throws IOException {
+  public void postModifyNamespace(final NamespaceDescriptor oldNsDescriptor,
+    final NamespaceDescriptor currentNsDescriptor) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postModifyNamespace(this, ns);
+        observer.postModifyNamespace(this, oldNsDescriptor, currentNsDescriptor);
       }
     });
   }
@@ -429,42 +431,44 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preModifyTable(final TableName tableName, final TableDescriptor htd)
-      throws IOException {
+  public void preModifyTable(final TableName tableName, final TableDescriptor currentDescriptor,
+    final TableDescriptor newDescriptor) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preModifyTable(this, tableName, htd);
+        observer.preModifyTable(this, tableName, currentDescriptor, newDescriptor);
       }
     });
   }
 
-  public void postModifyTable(final TableName tableName, final TableDescriptor htd)
-      throws IOException {
+  public void postModifyTable(final TableName tableName, final TableDescriptor oldDescriptor,
+    final TableDescriptor currentDescriptor) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postModifyTable(this, tableName, htd);
+        observer.postModifyTable(this, tableName, oldDescriptor, currentDescriptor);
       }
     });
   }
 
-  public void preModifyTableAction(final TableName tableName, final TableDescriptor htd,
-      final User user) throws IOException {
+  public void preModifyTableAction(final TableName tableName,
+    final TableDescriptor currentDescriptor, final TableDescriptor newDescriptor, final User user)
+    throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preModifyTableAction(this, tableName, htd);
+        observer.preModifyTableAction(this, tableName, currentDescriptor, newDescriptor);
       }
     });
   }
 
-  public void postCompletedModifyTableAction(final TableName tableName, final TableDescriptor htd,
-      final User user) throws IOException {
+  public void postCompletedModifyTableAction(final TableName tableName,
+    final TableDescriptor oldDescriptor, final TableDescriptor currentDescriptor, final User user)
+    throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postCompletedModifyTableAction(this, tableName, htd);
+        observer.postCompletedModifyTableAction(this, tableName, oldDescriptor, currentDescriptor);
       }
     });
   }
