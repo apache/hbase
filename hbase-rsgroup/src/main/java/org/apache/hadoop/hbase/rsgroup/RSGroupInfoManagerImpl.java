@@ -72,6 +72,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
+import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -407,8 +409,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       orphanTables.add(TableName.valueOf(entry));
     }
 
-    final List<TableName> specialTables = Arrays.asList(AccessControlLists.ACL_TABLE_NAME,
-        TableName.META_TABLE_NAME, TableName.NAMESPACE_TABLE_NAME, RSGROUP_TABLE_NAME);
+    List<TableName> specialTables =
+        new ArrayList<TableName>(Arrays.asList(AccessControlLists.ACL_TABLE_NAME,
+          TableName.META_TABLE_NAME, TableName.NAMESPACE_TABLE_NAME, RSGROUP_TABLE_NAME));
+    // if quota is enabled, add corresponding system table to special tables list
+    if (QuotaUtil.isQuotaEnabled(conn.getConfiguration())) {
+      specialTables.add(QuotaTableUtil.QUOTA_TABLE_NAME);
+    }
 
     for (TableName table : specialTables) {
       orphanTables.add(table);

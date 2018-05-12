@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -79,6 +81,8 @@ public class TestRSGroups extends TestRSGroupsBase {
         RSGroupBasedLoadBalancer.class.getName());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         RSGroupAdminEndpoint.class.getName());
+    // Enable quota for testRSGroupsWithHBaseQuota()
+    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
     TEST_UTIL.getConfiguration().setInt(
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
@@ -163,8 +167,8 @@ public class TestRSGroups extends TestRSGroupsBase {
     assertEquals(4, defaultInfo.getServers().size());
     // Assignment of root and meta regions.
     int count = master.getAssignmentManager().getRegionStates().getRegionAssignments().size();
-    //3 meta,namespace, group
-    assertEquals(3, count);
+    //4 meta,namespace, group, quota
+    assertEquals(4, count);
   }
 
   @Test
@@ -301,4 +305,13 @@ public class TestRSGroups extends TestRSGroupsBase {
     admin.cloneSnapshot(snapshotName, clonedTableName);
   }
 
+  @Test
+  public void testRSGroupsWithHBaseQuota() throws Exception {
+    TEST_UTIL.waitFor(90000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return admin.isTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
+      }
+    });
+  }
 }
