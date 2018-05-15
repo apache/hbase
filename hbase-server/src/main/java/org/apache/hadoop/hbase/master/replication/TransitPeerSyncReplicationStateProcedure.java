@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -31,9 +32,9 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,10 +114,20 @@ public class TransitPeerSyncReplicationStateProcedure
     if (cpHost != null) {
       cpHost.preTransitReplicationPeerSyncReplicationState(peerId, toState);
     }
-    Pair<SyncReplicationState, Boolean> pair =
+    ReplicationPeerDescription desc =
       env.getReplicationPeerManager().preTransitPeerSyncReplicationState(peerId, toState);
-    fromState = pair.getFirst();
-    enabled = pair.getSecond();
+    if (toState == SyncReplicationState.ACTIVE) {
+      Path remoteWALDirForPeer =
+        ReplicationUtils.getRemoteWALDirForPeer(desc.getPeerConfig().getRemoteWALDir(), peerId);
+      // check whether the remote wal directory is present
+      if (!remoteWALDirForPeer.getFileSystem(env.getMasterConfiguration())
+        .exists(remoteWALDirForPeer)) {
+        throw new DoNotRetryIOException(
+          "The remote WAL directory " + remoteWALDirForPeer + " does not exist");
+      }
+    }
+    fromState = desc.getSyncReplicationState();
+    enabled = desc.isEnabled();
   }
 
   private void postTransit(MasterProcedureEnv env) throws IOException {
@@ -150,6 +161,36 @@ public class TransitPeerSyncReplicationStateProcedure
       LOG.warn("Can not create remote wal dir {}", remoteWALDirForPeer);
       throw new ProcedureYieldException();
     }
+  }
+
+  private void setNextStateAfterRefreshBegin() {
+    if (fromState.equals(SyncReplicationState.ACTIVE)) {
+      setNextState(toState.equals(SyncReplicationState.STANDBY)
+        ? PeerSyncReplicationStateTransitionState.REMOVE_ALL_REPLICATION_QUEUES_IN_PEER
+        : PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
+    } else if (fromState.equals(SyncReplicationState.DOWNGRADE_ACTIVE)) {
+      setNextState(toState.equals(SyncReplicationState.STANDBY)
+        ? PeerSyncReplicationStateTransitionState.REMOVE_ALL_REPLICATION_QUEUES_IN_PEER
+        : PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
+    } else {
+      assert toState.equals(SyncReplicationState.DOWNGRADE_ACTIVE);
+      setNextState(PeerSyncReplicationStateTransitionState.REPLAY_REMOTE_WAL_IN_PEER);
+    }
+  }
+
+  private void setNextStateAfterRefreshEnd() {
+    if (toState == SyncReplicationState.STANDBY) {
+      setNextState(
+        enabled ? PeerSyncReplicationStateTransitionState.SYNC_REPLICATION_SET_PEER_ENABLED
+          : PeerSyncReplicationStateTransitionState.CREATE_DIR_FOR_REMOTE_WAL);
+    } else {
+      setNextState(
+        PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
+    }
+  }
+
+  private void replayRemoteWAL() {
+    addChildProcedure(new RecoverStandbyProcedure[] { new RecoverStandbyProcedure(peerId) });
   }
 
   @Override
@@ -191,21 +232,10 @@ public class TransitPeerSyncReplicationStateProcedure
         addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
           .map(sn -> new RefreshPeerProcedure(peerId, getPeerOperationType(), sn, 0))
           .toArray(RefreshPeerProcedure[]::new));
-        if (fromState.equals(SyncReplicationState.ACTIVE)) {
-          setNextState(toState.equals(SyncReplicationState.STANDBY)
-            ? PeerSyncReplicationStateTransitionState.REMOVE_ALL_REPLICATION_QUEUES_IN_PEER
-            : PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
-        } else if (fromState.equals(SyncReplicationState.DOWNGRADE_ACTIVE)) {
-          setNextState(toState.equals(SyncReplicationState.STANDBY)
-            ? PeerSyncReplicationStateTransitionState.REMOVE_ALL_REPLICATION_QUEUES_IN_PEER
-            : PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
-        } else {
-          assert toState.equals(SyncReplicationState.DOWNGRADE_ACTIVE);
-          setNextState(PeerSyncReplicationStateTransitionState.REPLAY_REMOTE_WAL_IN_PEER);
-        }
+        setNextStateAfterRefreshBegin();
         return Flow.HAS_MORE_STATE;
       case REPLAY_REMOTE_WAL_IN_PEER:
-        addChildProcedure(new RecoverStandbyProcedure(peerId));
+        replayRemoteWAL();
         setNextState(
           PeerSyncReplicationStateTransitionState.TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE);
         return Flow.HAS_MORE_STATE;
@@ -248,14 +278,7 @@ public class TransitPeerSyncReplicationStateProcedure
         addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
           .map(sn -> new RefreshPeerProcedure(peerId, getPeerOperationType(), sn, 1))
           .toArray(RefreshPeerProcedure[]::new));
-        if (toState == SyncReplicationState.STANDBY) {
-          setNextState(
-            enabled ? PeerSyncReplicationStateTransitionState.SYNC_REPLICATION_SET_PEER_ENABLED
-              : PeerSyncReplicationStateTransitionState.CREATE_DIR_FOR_REMOTE_WAL);
-        } else {
-          setNextState(
-            PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
-        }
+        setNextStateAfterRefreshEnd();
         return Flow.HAS_MORE_STATE;
       case SYNC_REPLICATION_SET_PEER_ENABLED:
         try {

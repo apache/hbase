@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.TestReplicationEndpoint.InterClusterReplicationEndpointForTest;
 import org.apache.hadoop.hbase.replication.regionserver.TestReplicator.ReplicationEndpointForTest;
@@ -981,34 +982,37 @@ public class TestReplicationAdmin {
     ReplicationPeerConfig rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
     assertNull(rpc.getRemoteWALDir());
 
+    builder.setRemoteWALDir("hdfs://srv2:8888/hbase");
     try {
-      builder.setRemoteWALDir("hdfs://srv2:8888/hbase");
       hbaseAdmin.updateReplicationPeerConfig(ID_ONE, builder.build());
       fail("Change remote wal dir is not allowed");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
 
     builder = ReplicationPeerConfig.newBuilder();
     builder.setClusterKey(KEY_SECOND);
-    builder.setRemoteWALDir(rootDir);
+    builder.setRemoteWALDir("whatever");
 
     try {
       hbaseAdmin.addReplicationPeer(ID_SECOND, builder.build());
       fail("Only support replicated table config for sync replication");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
 
     builder.setReplicateAllUserTables(false);
+    Set<String> namespaces = new HashSet<String>();
+    namespaces.add("ns1");
+    builder.setNamespaces(namespaces);
     try {
-      Set<String> namespaces = new HashSet<String>();
-      namespaces.add("ns1");
-      builder.setNamespaces(namespaces);
       hbaseAdmin.addReplicationPeer(ID_SECOND, builder.build());
       fail("Only support replicated table config for sync replication");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
 
     builder.setNamespaces(null);
@@ -1017,21 +1021,41 @@ public class TestReplicationAdmin {
       fail("Only support replicated table config for sync replication, and tables can't be empty");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
 
     Map<TableName, List<String>> tableCfs = new HashMap<>();
+    tableCfs.put(tableName, Arrays.asList("cf1"));
+    builder.setTableCFsMap(tableCfs);
     try {
-      tableCfs.put(tableName, Arrays.asList("cf1"));
-      builder.setTableCFsMap(tableCfs);
       hbaseAdmin.addReplicationPeer(ID_SECOND, builder.build());
       fail("Only support replicated table config for sync replication");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
 
     tableCfs = new HashMap<>();
     tableCfs.put(tableName, new ArrayList<>());
     builder.setTableCFsMap(tableCfs);
+    try {
+      hbaseAdmin.addReplicationPeer(ID_SECOND, builder.build());
+      fail("The remote WAL dir must be absolute");
+    } catch (Exception e) {
+      // OK
+      LOG.info("Expected error:", e);
+    }
+
+    builder.setRemoteWALDir("/hbase/remoteWALs");
+    try {
+      hbaseAdmin.addReplicationPeer(ID_SECOND, builder.build());
+      fail("The remote WAL dir must be qualified");
+    } catch (Exception e) {
+      // OK
+      LOG.info("Expected error:", e);
+    }
+
+    builder.setRemoteWALDir(rootDir);
     hbaseAdmin.addReplicationPeer(ID_SECOND, builder.build());
     rpc = hbaseAdmin.getReplicationPeerConfig(ID_SECOND);
     assertEquals(rootDir, rpc.getRemoteWALDir());
@@ -1042,6 +1066,7 @@ public class TestReplicationAdmin {
       fail("Change remote wal dir is not allowed");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
 
     try {
@@ -1050,6 +1075,7 @@ public class TestReplicationAdmin {
       fail("Change remote wal dir is not allowed");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
 
     try {
@@ -1062,6 +1088,7 @@ public class TestReplicationAdmin {
         "Change replicated table config on an existing synchronous peer is not allowed");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
   }
 
@@ -1079,13 +1106,13 @@ public class TestReplicationAdmin {
     try {
       hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_ONE,
         SyncReplicationState.DOWNGRADE_ACTIVE);
-      fail("Can't transit cluster state if replication peer don't config remote wal dir");
+      fail("Can't transit sync replication state if replication peer don't config remote wal dir");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
 
     Path rootDir = TEST_UTIL.getDataTestDirOnTestFS("remoteWAL");
-    TEST_UTIL.getTestFileSystem().mkdirs(new Path(rootDir, ID_SECOND));
     builder = ReplicationPeerConfig.newBuilder();
     builder.setClusterKey(KEY_SECOND);
     builder.setRemoteWALDir(rootDir.makeQualified(TEST_UTIL.getTestFileSystem().getUri(),
@@ -1106,6 +1133,15 @@ public class TestReplicationAdmin {
     assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
       hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
 
+    try {
+      hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND, SyncReplicationState.ACTIVE);
+      fail("Can't transit sync replication state to ACTIVE if remote wal dir does not exist");
+    } catch (Exception e) {
+      // OK
+      LOG.info("Expected error:", e);
+    }
+    TEST_UTIL.getTestFileSystem()
+      .mkdirs(ReplicationUtils.getRemoteWALDirForPeer(rootDir, ID_SECOND));
     hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND, SyncReplicationState.ACTIVE);
     assertEquals(SyncReplicationState.ACTIVE,
       hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
@@ -1133,9 +1169,10 @@ public class TestReplicationAdmin {
       hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));
     try {
       hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND, SyncReplicationState.ACTIVE);
-      fail("Can't transit cluster state from STANDBY to ACTIVE");
+      fail("Can't transit sync replication state from STANDBY to ACTIVE");
     } catch (Exception e) {
       // OK
+      LOG.info("Expected error:", e);
     }
     hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND,
       SyncReplicationState.DOWNGRADE_ACTIVE);

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -31,6 +32,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -45,7 +47,6 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -193,9 +194,9 @@ public class ReplicationPeerManager {
   }
 
   /**
-   * @return the old state, and whether the peer is enabled.
+   * @return the old desciption of the peer
    */
-  Pair<SyncReplicationState, Boolean> preTransitPeerSyncReplicationState(String peerId,
+  ReplicationPeerDescription preTransitPeerSyncReplicationState(String peerId,
       SyncReplicationState state) throws DoNotRetryIOException {
     ReplicationPeerDescription desc = checkPeerExists(peerId);
     SyncReplicationState fromState = desc.getSyncReplicationState();
@@ -204,7 +205,7 @@ public class ReplicationPeerManager {
       throw new DoNotRetryIOException("Can not transit current cluster state from " + fromState +
         " to " + state + " for peer id=" + peerId);
     }
-    return Pair.newPair(fromState, desc.isEnabled());
+    return desc;
   }
 
   public void addPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
@@ -383,6 +384,16 @@ public class ReplicationPeerManager {
         throw new DoNotRetryIOException(
           "Only support replicated table config for sync replication peer");
       }
+    }
+    Path remoteWALDir = new Path(peerConfig.getRemoteWALDir());
+    if (!remoteWALDir.isAbsolute()) {
+      throw new DoNotRetryIOException(
+        "The remote WAL directory " + peerConfig.getRemoteWALDir() + " is not absolute");
+    }
+    URI remoteWALDirUri = remoteWALDir.toUri();
+    if (remoteWALDirUri.getScheme() == null || remoteWALDirUri.getAuthority() == null) {
+      throw new DoNotRetryIOException("The remote WAL directory " + peerConfig.getRemoteWALDir() +
+        " is not qualified, you must provide scheme and authority");
     }
   }
 
