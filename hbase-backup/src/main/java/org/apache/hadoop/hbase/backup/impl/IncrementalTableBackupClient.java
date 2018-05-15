@@ -361,6 +361,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   protected void deleteBulkLoadDirectory() throws IOException {
     // delete original bulk load directory on method exit
     Path path = getBulkOutputDir();
+    FileSystem fs = FileSystem.get(path.toUri(), conf);
     boolean result = fs.delete(path, true);
     if (!result) {
       LOG.warn("Could not delete " + path);

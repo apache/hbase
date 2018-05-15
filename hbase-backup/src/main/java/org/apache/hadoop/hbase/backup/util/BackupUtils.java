@@ -563,7 +563,8 @@ public final class BackupUtils {
   private static List<BackupInfo> getHistory(Configuration conf, Path backupRootPath)
       throws IOException {
     // Get all (n) history from backup root destination
-    FileSystem fs = FileSystem.get(conf);
+
+    FileSystem fs = FileSystem.get(backupRootPath.toUri(), conf);
     RemoteIterator<LocatedFileStatus> it = fs.listLocatedStatus(backupRootPath);
 
     List<BackupInfo> infos = new ArrayList<>();
