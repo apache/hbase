@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
@@ -105,6 +106,11 @@ public class SplitLogWorker implements Runnable {
           LOG.warn("log splitting of " + filename + " interrupted, resigning", iioe);
           return Status.RESIGNED;
         } catch (IOException e) {
+          if (e instanceof FileNotFoundException) {
+            // A wal file may not exist anymore. Nothing can be recovered so move on
+            LOG.warn("WAL {} does not exist anymore", filename, e);
+            return Status.DONE;
+          }
           Throwable cause = e.getCause();
           if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException
                   || cause instanceof ConnectException
