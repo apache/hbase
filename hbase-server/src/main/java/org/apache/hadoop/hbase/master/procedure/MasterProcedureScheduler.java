@@ -247,6 +247,10 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     clear(tableMap, tableRunQueue, TABLE_QUEUE_KEY_COMPARATOR);
     tableMap = null;
 
+    // Remove Peers
+    clear(peerMap, peerRunQueue, PEER_QUEUE_KEY_COMPARATOR);
+    peerMap = null;
+
     assert size() == 0 : "expected queue size to be 0, got " + size();
   }
 
