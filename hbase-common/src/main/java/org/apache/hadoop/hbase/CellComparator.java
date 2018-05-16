@@ -51,6 +51,14 @@ public interface CellComparator extends Comparator<Cell> {
   int compare(Cell leftCell, Cell rightCell);
 
   /**
+   * Compare cells.
+   * @param ignoreSequenceid True if we are to compare the key portion only and ignore
+   * the sequenceid. Set to false to compare key and consider sequenceid.
+   * @return 0 if equal, -1 if a &lt; b, and +1 if a &gt; b.
+   */
+  int compare(Cell leftCell, Cell rightCell, boolean ignoreSequenceid);
+
+  /**
    * Lexographically compares the rows of two cells.
    * @param leftCell the left hand side cell
    * @param rightCell the right hand side cell

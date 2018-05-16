@@ -63,13 +63,12 @@ public class CellComparatorImpl implements CellComparator {
 
   /**
    * Compare cells.
-   * @param a
-   * @param b
    * @param ignoreSequenceid True if we are to compare the key portion only and ignore
-   * the sequenceid. Set to false to compare key and consider sequenceid.
+   *  the sequenceid. Set to false to compare key and consider sequenceid.
    * @return 0 if equal, -1 if a &lt; b, and +1 if a &gt; b.
    */
-  public final int compare(final Cell a, final Cell b, boolean ignoreSequenceid) {
+  @Override
+  public int compare(final Cell a, final Cell b, boolean ignoreSequenceid) {
     int diff = 0;
     if (a instanceof ByteBufferKeyValue && b instanceof ByteBufferKeyValue) {
       diff = compareByteBufferKeyValue((ByteBufferKeyValue)a, (ByteBufferKeyValue)b);
@@ -97,7 +96,8 @@ public class CellComparatorImpl implements CellComparator {
    * Caches deserialized lengths of rows and families, etc., and reuses them where it can
    * (ByteBufferKeyValue has been changed to be amenable to our providing pre-made lengths, etc.)
    */
-  private final int compareByteBufferKeyValue(ByteBufferKeyValue left, ByteBufferKeyValue right) {
+  private static final int compareByteBufferKeyValue(ByteBufferKeyValue left,
+      ByteBufferKeyValue right) {
     // Compare Rows. Cache row length.
     int leftRowLength = left.getRowLength();
     int rightRowLength = right.getRowLength();
@@ -134,6 +134,7 @@ public class CellComparatorImpl implements CellComparator {
     if (rightFamilyLength + rightQualifierLength == 0 && rightType == Type.Minimum.getCode()) {
       return -1;
     }
+
     // Compare families.
     int leftFamilyPosition = left.getFamilyPosition(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyPosition(rightFamilyLengthPosition);
@@ -153,7 +154,8 @@ public class CellComparatorImpl implements CellComparator {
       return diff;
     }
     // Timestamps.
-    diff = compareTimestamps(left.getTimestamp(leftKeyLength), right.getTimestamp(rightKeyLength));
+    diff = compareTimestampsInternal(left.getTimestamp(leftKeyLength),
+        right.getTimestamp(rightKeyLength));
     if (diff != 0) {
       return diff;
     }
@@ -166,8 +168,6 @@ public class CellComparatorImpl implements CellComparator {
 
   /**
    * Compares the family and qualifier part of the cell
-   * @param left the left cell
-   * @param right the right cell
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   public final int compareColumns(final Cell left, final Cell right) {
@@ -180,8 +180,6 @@ public class CellComparatorImpl implements CellComparator {
 
   /**
    * Compare the families of left and right cell
-   * @param left
-   * @param right
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   @Override
@@ -213,8 +211,6 @@ public class CellComparatorImpl implements CellComparator {
 
   /**
    * Compare the qualifiers part of the left and right cells.
-   * @param left
-   * @param right
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   @Override
@@ -357,40 +353,19 @@ public class CellComparatorImpl implements CellComparator {
     return (0xff & right.getTypeByte()) - (0xff & left.getTypeByte());
   }
 
-  /**
-   * Compares cell's timestamps in DESCENDING order.
-   * The below older timestamps sorting ahead of newer timestamps looks
-   * wrong but it is intentional. This way, newer timestamps are first
-   * found when we iterate over a memstore and newer versions are the
-   * first we trip over when reading from a store file.
-   * @return 1 if left's timestamp &lt; right's timestamp
-   *         -1 if left's timestamp &gt; right's timestamp
-   *         0 if both timestamps are equal
-   */
   @Override
   public int compareTimestamps(final Cell left, final Cell right) {
-    return compareTimestamps(left.getTimestamp(), right.getTimestamp());
+    return compareTimestampsInternal(left.getTimestamp(), right.getTimestamp());
   }
 
-
-  /**
-   * Compares timestamps in DESCENDING order.
-   * The below older timestamps sorting ahead of newer timestamps looks
-   * wrong but it is intentional. This way, newer timestamps are first
-   * found when we iterate over a memstore and newer versions are the
-   * first we trip over when reading from a store file.
-   * @return 1 if left timestamp &lt; right timestamp
-   *         -1 if left timestamp &gt; right timestamp
-   *         0 if both timestamps are equal
-   */
   @Override
   public int compareTimestamps(final long ltimestamp, final long rtimestamp) {
-    if (ltimestamp < rtimestamp) {
-      return 1;
-    } else if (ltimestamp > rtimestamp) {
-      return -1;
-    }
-    return 0;
+    return compareTimestampsInternal(ltimestamp, rtimestamp);
+  }
+
+  private static final int compareTimestampsInternal(final long ltimestamp, final long rtimestamp) {
+    // Swap the times so sort is newest to oldest, descending.
+    return Long.compare(rtimestamp, ltimestamp);
   }
 
   /**
@@ -398,7 +373,6 @@ public class CellComparatorImpl implements CellComparator {
    * {@link KeyValue}s.
    */
   public static class MetaCellComparator extends CellComparatorImpl {
-
     @Override
     public int compareRows(final Cell left, final Cell right) {
       return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
@@ -411,7 +385,23 @@ public class CellComparatorImpl implements CellComparator {
           roffset, rlength);
     }
 
-    private int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+    @Override
+    public int compare(final Cell a, final Cell b, boolean ignoreSequenceid) {
+      int diff = compareRows(a, b);
+      if (diff != 0) {
+        return diff;
+      }
+
+      diff = compareWithoutRow(a, b);
+      if (diff != 0) {
+        return diff;
+      }
+
+      // Negate following comparisons so later edits show up first mvccVersion: later sorts first
+      return ignoreSequenceid? diff: Longs.compare(b.getSequenceId(), a.getSequenceId());
+    }
+
+    private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
         int rlength) {
       int leftDelimiter = Bytes.searchDelimiterIndex(left, loffset, llength, HConstants.DELIMITER);
       int rightDelimiter = Bytes
