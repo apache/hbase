@@ -202,7 +202,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
-            TESTS = 'mvninstall,compile,javac,unit,htmlout'
+            TESTS = 'maven,mvninstall,compile,javac,unit,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK7}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK7}"
             // On branches where we do jdk7 checks, jdk7 will be JAVA_HOME already.
@@ -280,7 +280,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
-            TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
+            TESTS = 'maven,mvninstall,compile,javac,unit,findbugs,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
             // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
@@ -365,7 +365,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
-            TESTS = 'mvninstall,compile,javac,unit,htmlout'
+            TESTS = 'maven,mvninstall,compile,javac,unit,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
             // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
