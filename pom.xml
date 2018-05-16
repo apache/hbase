@@ -1467,7 +1467,7 @@
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
-    <jruby.version>9.1.10.0</jruby.version>
+    <jruby.version>9.1.17.0</jruby.version>
     <junit.version>4.12</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
     <htrace.version>4.2.0-incubating</htrace.version>
