@@ -233,6 +233,10 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     return this.address.getHostname();
   }
 
+  public String getHostnameLowerCase() {
+    return this.address.getHostname().toLowerCase(Locale.ROOT);
+  }
+
   public int getPort() {
     return this.address.getPort();
   }

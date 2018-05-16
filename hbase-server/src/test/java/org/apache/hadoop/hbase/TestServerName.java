@@ -87,16 +87,21 @@ public class TestServerName {
   }
 
   @Test public void testParseOfBytes() {
-    final String snStr = "www.example.org,1234,5678";
+    final String snStr = "www.EXAMPLE.org,1234,5678";
     ServerName sn = ServerName.valueOf(snStr);
     byte [] versionedBytes = sn.getVersionedBytes();
-    assertEquals(sn.toString(), ServerName.parseVersionedServerName(versionedBytes).toString());
-    final String hostnamePortStr = sn.getHostAndPort();
+    ServerName parsedSn = ServerName.parseVersionedServerName(versionedBytes);
+    assertEquals(sn.toString(), parsedSn.toString());
+    assertEquals(sn.getHostnameLowerCase(), parsedSn.getHostnameLowerCase());
+    assertEquals(sn.getPort(), parsedSn.getPort());
+    assertEquals(sn.getStartcode(), parsedSn.getStartcode());
+
+    final String hostnamePortStr = sn.getAddress().toString();
     byte [] bytes = Bytes.toBytes(hostnamePortStr);
-    String expecting =
-      hostnamePortStr.replace(":", ServerName.SERVERNAME_SEPARATOR) +
-      ServerName.SERVERNAME_SEPARATOR + ServerName.NON_STARTCODE;
-    assertEquals(expecting, ServerName.parseVersionedServerName(bytes).toString());
+    parsedSn = ServerName.parseVersionedServerName(bytes);
+    assertEquals(sn.getHostnameLowerCase(), parsedSn.getHostnameLowerCase());
+    assertEquals(sn.getPort(), parsedSn.getPort());
+    assertEquals(ServerName.NON_STARTCODE, parsedSn.getStartcode());
   }
 
   @Test
