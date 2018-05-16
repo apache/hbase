@@ -132,6 +132,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 public class PerformanceEvaluation extends Configured implements Tool {
   static final String RANDOM_SEEK_SCAN = "randomSeekScan";
   static final String RANDOM_READ = "randomRead";
+  static final String PE_COMMAND_SHORTNAME = "pe";
   private static final Logger LOG = LoggerFactory.getLogger(PerformanceEvaluation.class.getName());
   private static final ObjectMapper MAPPER = new ObjectMapper();
   static {
@@ -2356,11 +2357,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   protected void printUsage() {
-    printUsage(this.getClass().getName(), null);
+    printUsage(PE_COMMAND_SHORTNAME, null);
   }
 
   protected static void printUsage(final String message) {
-    printUsage(PerformanceEvaluation.class.getName(), message);
+    printUsage(PE_COMMAND_SHORTNAME, message);
   }
 
   protected static void printUsageAndExit(final String message, final int exitCode) {
@@ -2368,11 +2369,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.exit(exitCode);
   }
 
-  protected static void printUsage(final String className, final String message) {
+  protected static void printUsage(final String shortName, final String message) {
     if (message != null && message.length() > 0) {
       System.err.println(message);
     }
-    System.err.println("Usage: java " + className + " \\");
+    System.err.print("Usage: hbase " + shortName);
     System.err.println("  <OPTIONS> [-D<property=value>]* <command> <nclients>");
     System.err.println();
     System.err.println("General Options:");
@@ -2464,9 +2465,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         + "(and HRegionServers) running. 1 <= value <= 500");
     System.err.println("Examples:");
     System.err.println(" To run a single client doing the default 1M sequentialWrites:");
-    System.err.println(" $ hbase " + className + " sequentialWrite 1");
+    System.err.println(" $ hbase " + shortName + " sequentialWrite 1");
     System.err.println(" To run 10 clients doing increments over ten rows:");
-    System.err.println(" $ hbase " + className + " --rows=10 --nomapred increment 10");
+    System.err.println(" $ hbase " + shortName + " --rows=10 --nomapred increment 10");
   }
 
   /**
