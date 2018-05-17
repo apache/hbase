@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
@@ -410,6 +411,32 @@ public class TestFSUtils {
       fileSys.close();
       cluster.shutdown();
     }
+  }
+
+
+  @Test
+  public void testCopyFilesParallel() throws Exception {
+    MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
+    cluster.waitActive();
+    FileSystem fs = cluster.getFileSystem();
+    Path src = new Path("/src");
+    fs.mkdirs(src);
+    for (int i = 0; i < 50; i++) {
+      WriteDataToHDFS(fs, new Path(src, String.valueOf(i)), 1024);
+    }
+    Path sub = new Path(src, "sub");
+    fs.mkdirs(sub);
+    for (int i = 0; i < 50; i++) {
+      WriteDataToHDFS(fs, new Path(sub, String.valueOf(i)), 1024);
+    }
+    Path dst = new Path("/dst");
+    List<Path> allFiles = FSUtils.copyFilesParallel(fs, src, fs, dst, conf, 4);
+
+    assertEquals(102, allFiles.size());
+    FileStatus[] list = fs.listStatus(dst);
+    assertEquals(51, list.length);
+    FileStatus[] sublist = fs.listStatus(new Path(dst, "sub"));
+    assertEquals(50, sublist.length);
   }
 
   // Below is taken from TestPread over in HDFS.
