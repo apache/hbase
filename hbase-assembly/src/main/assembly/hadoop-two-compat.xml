@@ -66,14 +66,47 @@
         <outputDirectory>lib</outputDirectory>
         <unpack>false</unpack>
         <dependencySets>
-          <!-- Exclude jruby-complete from hbase_home/lib -->
           <dependencySet>
+            <!-- Exclude libraries that we put in their own dirs under lib/ -->
             <excludes>
               <exclude>org.jruby:jruby-complete</exclude>
               <exclude>com.sun.jersey:*</exclude>
               <exclude>com.sun.jersey.contribs:*</exclude>
               <exclude>jline:jline</exclude>
+        <exclude>org.apache.hbase:hbase-shaded-client</exclude>
+        <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
+        <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
+        <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
+        <exclude>commons-logging:commons-logging</exclude>
+        <exclude>log4j:log4j</exclude>
+        <exclude>org.apache.htrace:htrace-core4</exclude>
+        <exclude>org.apache.htrace:htrace-core</exclude>
+        <exclude>org.apache.yetus:audience-annotations</exclude>
+        <exclude>org.slf4j:slf4j-api</exclude>
+        <exclude>org.slf4j:slf4j-log4j12</exclude>
             </excludes>
+          </dependencySet>
+        </dependencySets>
+      </binaries>
+    </moduleSet>
+    <!-- Include shaded clients in their own directory -->
+    <moduleSet>
+      <useAllReactorProjects>true</useAllReactorProjects>
+      <includes>
+        <include>org.apache.hbase:hbase-shaded-client</include>
+        <include>org.apache.hbase:hbase-shaded-mapreduce</include>
+        <include>org.apache.hbase:hbase-shaded-client-byo-hadoop</include>
+      </includes>
+      <binaries>
+        <outputDirectory>lib/shaded-clients</outputDirectory>
+        <unpack>false</unpack>
+        <dependencySets>
+          <dependencySet>
+            <includes>
+        <include>org.apache.hbase:hbase-shaded-client</include>
+        <include>org.apache.hbase:hbase-shaded-mapreduce</include>
+        <include>org.apache.hbase:hbase-shaded-client-byo-hadoop</include>
+            </includes>
           </dependencySet>
         </dependencySets>
       </binaries>
@@ -101,13 +134,54 @@
     </file>
   </files>
 
-  <!-- Add jruby-complete to hbase_home/lib/ruby.
-       Update JRUBY_PACKAGED_WITH_HBASE in bin/hbase and hbase.cmd if you would like to update outputDirectory below -->
   <dependencySets>
+    <!-- Add jruby-complete to hbase_home/lib/ruby.
+         Update JRUBY_PACKAGED_WITH_HBASE in bin/hbase and hbase.cmd if you would like to update outputDirectory below -->
     <dependencySet>
       <outputDirectory>lib/ruby</outputDirectory>
       <includes>
         <include>org.jruby:jruby-complete</include>
+      </includes>
+    </dependencySet>
+    <!-- Include third party dependencies the shaded clients expose in the lib directory
+      -->
+    <dependencySet>
+      <outputDirectory>lib/client-facing-thirdparty</outputDirectory>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <!-- Unfortunately, we have to whitelist these because Maven
+           currently doesn't use the dependency-reduced-pom after
+           the shaded module has done its thing. That means if we
+           did this as "transitives of the shaded modules" we'd
+           get a duplication of all the jars we already have in our
+           shaded artifacts. See MNG-5899.
+
+           Check that things match by listing files and making
+           sure the runtime scoped things are all present in the
+           tarball. e.g.:
+
+           for module in hbase-shaded-mapreduce hbase-shaded-client; do
+             mvn dependency:list -f hbase-shaded/${module}/dependency-reduced-pom.xml
+           done | \
+           grep -E "runtime|compile" | \
+           grep -v -E "junit|(optional)" | \
+           cut -d ' ' -f 3- | \
+           sort -u
+
+           TODO we should check this in nightly
+
+           Alternatively, we could
+           stop waiting for Maven to fix this and build the client
+           tarball in a different build.
+        -->
+      <includes>
+        <include>com.github.stephenc.findbugs:findbugs-annotations</include>
+        <include>commons-logging:commons-logging</include>
+        <include>log4j:log4j</include>
+        <include>org.apache.htrace:htrace-core4</include>
+        <include>org.apache.htrace:htrace-core</include>
+        <include>org.apache.yetus:audience-annotations</include>
+        <include>org.slf4j:slf4j-api</include>
+        <include>org.slf4j:slf4j-log4j12</include>
       </includes>
     </dependencySet>
     <dependencySet>

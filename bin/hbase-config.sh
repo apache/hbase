@@ -84,6 +84,16 @@ do
       exit 1
     fi
     shift
+  elif [ "--internal-classpath" = "$1" ]
+  then
+    shift
+    # shellcheck disable=SC2034
+    INTERNAL_CLASSPATH="true"
+  elif [ "--debug" = "$1" ]
+  then
+    shift
+    # shellcheck disable=SC2034
+    DEBUG="true"
   else
     # Presume we are at end of options and break
     break

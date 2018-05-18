@@ -32,7 +32,8 @@
       <directory>${project.basedir}/..</directory>
       <outputDirectory>.</outputDirectory>
       <includes>
-        <include>CHANGES.txt</include>
+        <include>CHANGES.md</include>
+        <include>RELEASENOTES.md</include>
         <include>README.txt</include>
       </includes>
       <fileMode>0644</fileMode>
@@ -56,7 +57,6 @@
         <include>hbase-config.sh</include>
         <include>hbase-jruby</include>
         <include>hirb.rb</include>
-        <include></include>
       </includes>
       <fileMode>0755</fileMode>
       <directoryMode>0755</directoryMode>
@@ -87,6 +87,45 @@
         <include>*.so</include>
         <include>*.dylib</include>
       </includes>
+    </fileSet>
+    <!-- This is only necessary until maven fixes the intra-project dependency bug
+      in maven 3.0. Until then, we have to include the test jars for sub-projects. When
+      fixed, the below dependencySet stuff is sufficient for pulling in the test jars as
+      well, as long as they are added as dependencies in this project. Right now, we only
+      have 1 submodule to accumulate, but we can copy/paste as necessary until maven is
+      fixed. -->
+    <!-- Used by PE and ltt -->
+    <fileSet>
+      <directory>${project.basedir}/../hbase-server/target/</directory>
+      <outputDirectory>lib</outputDirectory>
+      <includes>
+        <include>${server.test.jar}</include>
+      </includes>
+      <fileMode>0644</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/../hbase-mapreduce/target/</directory>
+      <outputDirectory>lib</outputDirectory>
+      <includes>
+        <include>${mapreduce.test.jar}</include>
+      </includes>
+      <fileMode>0644</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/../hbase-common/target/</directory>
+      <outputDirectory>lib</outputDirectory>
+      <includes>
+        <include>${common.test.jar}</include>
+      </includes>
+      <fileMode>0644</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/../hbase-zookeeper/target/</directory>
+      <outputDirectory>lib</outputDirectory>
+      <includes>
+        <include>${zookeeper.test.jar}</include>
+      </includes>
+      <fileMode>0644</fileMode>
     </fileSet>
   </fileSets>
 </component>

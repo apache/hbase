@@ -37,7 +37,8 @@
       <directory>${project.basedir}/..</directory>
       <outputDirectory>.</outputDirectory>
       <includes>
-        <include>CHANGES.txt</include>
+        <include>CHANGES.md</include>
+        <include>RELEASENOTES.md</include>
         <include>README.txt</include>
       </includes>
       <fileMode>0644</fileMode>
