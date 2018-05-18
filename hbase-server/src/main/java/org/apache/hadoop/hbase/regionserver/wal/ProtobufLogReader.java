@@ -334,6 +334,7 @@ public class ProtobufLogReader extends ReaderBase {
       }
       WALKey.Builder builder = WALKey.newBuilder();
       long size = 0;
+      boolean resetPosition = false;
       try {
         long available = -1;
         try {
@@ -352,6 +353,7 @@ public class ProtobufLogReader extends ReaderBase {
           ProtobufUtil.mergeFrom(builder, new LimitInputStream(this.inputStream, size),
             (int)size);
         } catch (InvalidProtocolBufferException ipbe) {
+          resetPosition = true;
           throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition=" +
             originalPosition + ", currentPosition=" + this.inputStream.getPos() +
             ", messageSize=" + size + ", currentAvailable=" + available).initCause(ipbe);
@@ -368,13 +370,15 @@ public class ProtobufLogReader extends ReaderBase {
           if (LOG.isTraceEnabled()) {
             LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset=" + this.inputStream.getPos());
           }
-          continue;
+          seekOnFs(originalPosition);
+          return false;
         }
         int expectedCells = walKey.getFollowingKvCount();
         long posBefore = this.inputStream.getPos();
         try {
           int actualCells = entry.getEdit().readFromCells(cellDecoder, expectedCells);
           if (expectedCells != actualCells) {
+            resetPosition = true;
             throw new EOFException("Only read " + actualCells); // other info added in catch
           }
         } catch (Exception ex) {
@@ -402,16 +406,28 @@ public class ProtobufLogReader extends ReaderBase {
         // If originalPosition is < 0, it is rubbish and we cannot use it (probably local fs)
         if (originalPosition < 0) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Encountered a malformed edit, but can't seek back to last good position because originalPosition is negative. last offset=" + this.inputStream.getPos(), eof);
+            LOG.trace("Encountered a malformed edit, but can't seek back to last good position "
+                + "because originalPosition is negative. last offset="
+                + this.inputStream.getPos(), eof);
           }
           throw eof;
         }
-        // Else restore our position to original location in hope that next time through we will
-        // read successfully.
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Encountered a malformed edit, seeking back to last good position in file, from "+ inputStream.getPos()+" to " + originalPosition, eof);
+        // If stuck at the same place and we got and exception, lets go back at the beginning.
+        if (inputStream.getPos() == originalPosition && resetPosition) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Encountered a malformed edit, seeking to the beginning of the WAL since "
+                + "current position and original position match at " + originalPosition);
+          }
+          seekOnFs(0);
+        } else {
+          // Else restore our position to original location in hope that next time through we will
+          // read successfully.
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Encountered a malformed edit, seeking back to last good position in file, "
+                + "from " + inputStream.getPos()+" to " + originalPosition, eof);
+          }
+          seekOnFs(originalPosition);
         }
-        seekOnFs(originalPosition);
         return false;
       }
       return true;
