@@ -31,6 +31,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -38,8 +40,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin.MasterSwitchType;
@@ -93,6 +97,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 public class RSGroupAdminEndpoint extends RSGroupAdminService
     implements CoprocessorService, Coprocessor, MasterObserver {
+
+  private static final Log LOG = LogFactory.getLog(RSGroupAdminEndpoint.class);
 
   private MasterServices master = null;
 
@@ -181,11 +187,11 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
           GetRSGroupInfoOfTableResponse.newBuilder();
       TableName tableName = ProtobufUtil.toTableName(request.getTableName());
       checkPermission("getRSGroupInfoOfTable");
-      RSGroupInfo RSGroupInfo = groupAdminServer.getRSGroupInfoOfTable(tableName);
-      if (RSGroupInfo == null) {
+      RSGroupInfo info = groupAdminServer.getRSGroupInfoOfTable(tableName);
+      if (info == null) {
         response = builder.build();
       } else {
-        response = builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo)).build();
+        response = builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(info)).build();
       }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
@@ -363,10 +369,17 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   void assignTableToGroup(HTableDescriptor desc) throws IOException {
-    String groupName =
+    String groupName;
+    try {
+      groupName =
         master.getNamespaceDescriptor(desc.getTableName().getNamespaceAsString())
                 .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
-    if (groupName == null) {
+      if (groupName == null) {
+        groupName = RSGroupInfo.DEFAULT_GROUP;
+      }
+    } catch (MasterNotRunningException | PleaseHoldException e) {
+      LOG.info("Master has not initialized yet; temporarily using default RSGroup '" +
+        RSGroupInfo.DEFAULT_GROUP + "' for deploy of system table");
       groupName = RSGroupInfo.DEFAULT_GROUP;
     }
     RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
