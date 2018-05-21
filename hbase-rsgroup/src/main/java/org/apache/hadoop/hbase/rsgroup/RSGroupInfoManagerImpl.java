@@ -27,7 +27,6 @@ import com.google.common.collect.Sets;
 import com.google.protobuf.ServiceException;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -78,7 +77,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -223,12 +221,15 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
    */
   @Override
   public RSGroupInfo getRSGroup(String groupName) throws IOException {
-    RSGroupInfo RSGroupInfo = rsGroupMap.get(groupName);
-    return RSGroupInfo;
+    return rsGroupMap.get(groupName);
   }
 
-
-
+  /**
+   * Gets the group name for a given table
+   *
+   * @param tableName the table name
+   * @return group name, or null if not found
+   */
   @Override
   public String getRSGroupOfTable(TableName tableName) throws IOException {
     return tableMap.get(tableName);
@@ -238,7 +239,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   public synchronized void moveTables(
       Set<TableName> tableNames, String groupName) throws IOException {
     if (groupName != null && !rsGroupMap.containsKey(groupName)) {
-      throw new DoNotRetryIOException("Group "+groupName+" does not exist or is a special group");
+      throw new DoNotRetryIOException("Group "+groupName+" does not exist");
     }
 
     Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
@@ -302,7 +303,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
         groupList.addAll(rsGroupSerDe.retrieveGroupList(rsGroupTable));
       }
     } else {
-      LOG.debug("Refershing in Offline mode.");
+      LOG.debug("Refreshing in Offline mode.");
       String groupBasePath = ZKUtil.joinZNode(watcher.baseZNode, rsGroupZNode);
       groupList.addAll(rsGroupSerDe.retrieveGroupList(watcher, groupBasePath));
     }
@@ -313,13 +314,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       orphanTables.add(TableName.valueOf(entry));
     }
 
-    final List<TableName> specialTables = Arrays.asList(AccessControlLists.ACL_TABLE_NAME,
-        TableName.META_TABLE_NAME, TableName.NAMESPACE_TABLE_NAME, RSGROUP_TABLE_NAME);
-
-    for(TableName table : specialTables) {
-      orphanTables.add(table);
-    }
-    for(RSGroupInfo group: groupList) {
+    for (RSGroupInfo group: groupList) {
       if(!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
         orphanTables.removeAll(group.getTables());
       }
@@ -331,7 +326,6 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     groupList.add(new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP,
         Sets.newHashSet(getDefaultServers()),
         orphanTables));
-
 
     // populate the data
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap();
