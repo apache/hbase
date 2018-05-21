@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Version;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -117,50 +118,49 @@ public class VersionInfo {
     if (v1.equals(v2)) {
       return 0;
     }
+    String[] v1Comps = getVersionComponents(v1);
+    String[] v2Comps = getVersionComponents(v2);
 
-    Object[] v1Comps = getVersionComponents(v1); //1.2.3-hotfix -> [1, 2, 3, hotfix]
-    Object[] v2Comps = getVersionComponents(v2);
-    int index = 0;
-    while (index < v1Comps.length && index < v2Comps.length) {
-      int va = v1Comps[index] instanceof Integer ? (Integer)v1Comps[index] : VERY_LARGE_NUMBER;
-      int vb = v2Comps[index] instanceof Integer ? (Integer)v2Comps[index] : VERY_LARGE_NUMBER;
-
-      if (va != vb) {
-        return va - vb;
+    int length = Math.max(v1Comps.length, v2Comps.length);
+    for (int i = 0; i < length; i++) {
+      Integer va = i < v1Comps.length ? Integer.parseInt(v1Comps[i]) : 0;
+      Integer vb = i < v2Comps.length ? Integer.parseInt(v2Comps[i]) : 0;
+      int compare = va.compareTo(vb);
+      if (compare != 0) {
+        return compare;
       }
-      if (va == VERY_LARGE_NUMBER) {
-        // here, va and vb components must be same and Strings, compare as String
-        int c = ((String)v1Comps[index]).compareTo((String)v2Comps[index]);
-        if (c != 0) {
-          return c;
-        }
-      }
-      index++;
     }
-    if (index < v1Comps.length) {
-      // v1 is longer
-      return 1;
-    }
-    //v2 is longer
-    return -1;
+    return 0;
   }
 
   /**
-   * Returns the version components as Integer and String objects
-   * Examples: "1.2.3" returns [1, 2, 3], "4.5.6-SNAPSHOT" returns [4, 5, 6, "SNAPSHOT"]
+   * Returns the version components as String objects
+   * Examples: "1.2.3" returns ["1", "2", "3"], "4.5.6-SNAPSHOT" returns ["4", "5", "6", "-1"]
+   * "4.5.6-beta" returns ["4", "5", "6", "-2"], "4.5.6-alpha" returns ["4", "5", "6", "-3"]
+   * "4.5.6-UNKNOW" returns ["4", "5", "6", "-4"]
    * @return the components of the version string
    */
-  static Object[] getVersionComponents(final String version) {
+  static String[] getVersionComponents(final String version) {
     assert(version != null);
-    Object[] strComps = version.split("[\\.-]");
+    String[] strComps = version.split("[\\.-]");
     assert(strComps.length > 0);
 
-    Object[] comps = new Object[strComps.length];
+    String[] comps = new String[strComps.length];
     for (int i = 0; i < strComps.length; ++i) {
-      try {
-        comps[i] = Integer.parseInt((String) strComps[i]);
-      } catch (NumberFormatException e) {
+      if (StringUtils.isNumeric(strComps[i])) {
         comps[i] = strComps[i];
+      } else if (StringUtils.isEmpty(strComps[i])) {
+        comps[i] = String.valueOf(VERY_LARGE_NUMBER);
+      } else {
+        if("SNAPSHOT".equals(strComps[i])) {
+          comps[i] = "-1";
+        } else if("beta".equals(strComps[i])) {
+          comps[i] = "-2";
+        } else if("alpha".equals(strComps[i])) {
+          comps[i] = "-3";
+        } else {
+          comps[i] = "-4";
+        }
       }
     }
     return comps;

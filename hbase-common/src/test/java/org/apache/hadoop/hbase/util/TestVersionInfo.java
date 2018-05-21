@@ -37,6 +37,24 @@ public class TestVersionInfo {
     assertTrue(VersionInfo.compareVersion("1.0.0", "0.98.11") > 0);
     assertTrue(VersionInfo.compareVersion("0.98.11", "1.0.1") < 0);
     assertTrue(VersionInfo.compareVersion("2.0.0", "1.4.0") > 0);
-    assertTrue(VersionInfo.compareVersion("2.0.0", "2.0.0-SNAPSHOT") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0", "2.0.0-SNAPSHOT") > 0);
+    assertTrue(VersionInfo.compareVersion("0.94.6.1", "0.96.1.1") < 0);
+    assertTrue(VersionInfo.compareVersion("0.96.1.1", "0.98.6.1") < 0);
+    assertTrue(VersionInfo.compareVersion("0.98.6.1", "0.98.10.1") < 0);
+    assertTrue(VersionInfo.compareVersion("0.98.10.1", "0.98.12.1") < 0);
+    assertTrue(VersionInfo.compareVersion("0.98.12.1", "0.98.16.1") < 0);
+    assertTrue(VersionInfo.compareVersion("0.98.16.1", "1.0.1.1") < 0);
+    assertTrue(VersionInfo.compareVersion("1.0.1.1", "1.1.0.1") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0..1", "2.0.0") > 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0", "2.0.0") == 0);
+    assertTrue(VersionInfo.compareVersion("1.99.14", "2.0.0-alpha-1") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0-alpha-1", "2.0.0-beta-3") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0-beta-3", "2.0.0-SNAPSHOT") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0-SNAPSHOT", "2.0") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0", "2.0.0.1") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0.1", "2.0.1") < 0);
+    assertTrue(VersionInfo.compareVersion("3.0.0-alpha-2", "3.0.0-alpha-11") < 0);
+    assertTrue(VersionInfo.compareVersion("3.0.0-beta-2", "3.0.0-beta-11") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0-foobar", "2.0.0.1") < 0);
   }
 }
