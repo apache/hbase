@@ -33,7 +33,9 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -298,9 +300,9 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
           + hp);
       try {
         checkPermission("getRSGroupInfoOfServer");
-        RSGroupInfo RSGroupInfo = groupAdminServer.getRSGroupOfServer(hp);
-        if (RSGroupInfo != null) {
-          builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo));
+        RSGroupInfo info = groupAdminServer.getRSGroupOfServer(hp);
+        if (info != null) {
+          builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(info));
         }
       } catch (IOException e) {
         CoprocessorRpcUtils.setControllerException(controller, e);
@@ -354,12 +356,20 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   }
 
   boolean rsgroupHasServersOnline(TableDescriptor desc) throws IOException {
-    String groupName =
+    String groupName;
+    try {
+      groupName =
         master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
         .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
-    if (groupName == null) {
+      if (groupName == null) {
+        groupName = RSGroupInfo.DEFAULT_GROUP;
+      }
+    } catch (MasterNotRunningException | PleaseHoldException e) {
+      LOG.info("Master has not initialized yet; temporarily using default RSGroup '" +
+          RSGroupInfo.DEFAULT_GROUP + "' for deploy of system table");
       groupName = RSGroupInfo.DEFAULT_GROUP;
     }
+
     RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
     if (rsGroupInfo == null) {
       throw new ConstraintException(
