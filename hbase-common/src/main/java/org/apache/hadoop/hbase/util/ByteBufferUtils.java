@@ -50,8 +50,7 @@ public final class ByteBufferUtils {
   public final static int NEXT_BIT_MASK = 1 << 7;
   @VisibleForTesting
   final static boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
-  @VisibleForTesting
-  final static boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  public final static boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -630,6 +629,8 @@ public final class ByteBufferUtils {
   }
 
   public static int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
+    // NOTE: This method is copied over in BBKVComparator!!!!! For perf reasons. If you make
+    // changes here, make them there too!!!!
     if (UNSAFE_UNALIGNED) {
       long offset1Adj, offset2Adj;
       Object refObj1 = null, refObj2 = null;
@@ -671,9 +672,12 @@ public final class ByteBufferUtils {
     return compareTo(buf1, o1, l1, buf2, o2, l2) == 0;
   }
 
+  // The below two methods show up in lots of places. Versions of them in commons util and in
+  // Cassandra. In guava too? They are copied from ByteBufferUtils. They are here as static
+  // privates. Seems to make code smaller and make Hotspot happier (comes of compares and study
+  // of compiled code via  jitwatch).
+
   public static int compareTo(byte [] buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
-    // This method is nearly same as the compareTo that follows but hard sharing code given
-    // byte array and bytebuffer types and this is a hot code path
     if (UNSAFE_UNALIGNED) {
       long offset2Adj;
       Object refObj2 = null;
@@ -738,7 +742,7 @@ public final class ByteBufferUtils {
       long lw = UnsafeAccess.theUnsafe.getLong(obj1, o1 + (long) i);
       long rw = UnsafeAccess.theUnsafe.getLong(obj2, o2 + (long) i);
       if (lw != rw) {
-        if (!UnsafeAccess.littleEndian) {
+        if (!UnsafeAccess.LITTLE_ENDIAN) {
           return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
         }
 

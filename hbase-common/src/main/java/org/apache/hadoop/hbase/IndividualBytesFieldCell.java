@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class IndividualBytesFieldCell implements ExtendedCell {
+public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
 
   private static final long FIXED_OVERHEAD = ClassSize.align(  // do alignment(padding gap)
         ClassSize.OBJECT              // object header

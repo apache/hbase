@@ -21,6 +21,7 @@ import java.util.Comparator;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 /**
  * Comparator for comparing cells and has some specialized methods that allows comparing individual
  * cell components like row, family, qualifier and timestamp
@@ -130,4 +131,11 @@ public interface CellComparator extends Comparator<Cell> {
    *         timestamp 0 if both timestamps are equal
    */
   int compareTimestamps(long leftCellts, long rightCellts);
+
+  /**
+   * @return A dumbed-down, fast comparator for hbase2 base-type, the {@link ByteBufferKeyValue}.
+   *   Create an instance when you make a new memstore, when you know only BBKVs will be passed.
+   *   Do not pollute with types other than BBKV if can be helped; the Comparator will slow.
+   */
+  Comparator getSimpleComparator();
 }
