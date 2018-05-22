@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.hbase;
 
+import java.util.Comparator;
+
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
+
 
 /**
  * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or
@@ -34,9 +37,13 @@ import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
  * takes account of the special formatting of the row where we have commas to delimit table from
  * regionname, from row.  See KeyValue for how it has a special comparator to do hbase:meta cells
  * and yet another for -ROOT-.
- * While using this comparator for {{@link #compareRows(Cell, Cell)} et al, the hbase:meta cells
+ * <p>While using this comparator for {{@link #compareRows(Cell, Cell)} et al, the hbase:meta cells
  * format should be taken into consideration, for which the instance of this comparator
  * should be used.  In all other cases the static APIs in this comparator would be enough
+ * <p>HOT methods. We spend a good portion of CPU comparing. Anything that makes the compare
+ * faster will likely manifest at the macro level. See also
+ * {@link BBKVComparator}. Use it when mostly {@link ByteBufferKeyValue}s.
+ * </p>
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value="UNKNOWN",
@@ -57,21 +64,17 @@ public class CellComparatorImpl implements CellComparator {
   public static final CellComparatorImpl META_COMPARATOR = new MetaCellComparator();
 
   @Override
-  public int compare(Cell a, Cell b) {
+  public final int compare(final Cell a, final Cell b) {
     return compare(a, b, false);
   }
 
-  /**
-   * Compare cells.
-   * @param ignoreSequenceid True if we are to compare the key portion only and ignore
-   *  the sequenceid. Set to false to compare key and consider sequenceid.
-   * @return 0 if equal, -1 if a &lt; b, and +1 if a &gt; b.
-   */
   @Override
   public int compare(final Cell a, final Cell b, boolean ignoreSequenceid) {
+
     int diff = 0;
+    // "Peel off" the most common path.
     if (a instanceof ByteBufferKeyValue && b instanceof ByteBufferKeyValue) {
-      diff = compareByteBufferKeyValue((ByteBufferKeyValue)a, (ByteBufferKeyValue)b);
+      diff = BBKVComparator.compare((ByteBufferKeyValue)a, (ByteBufferKeyValue)b);
       if (diff != 0) {
         return diff;
       }
@@ -88,82 +91,7 @@ public class CellComparatorImpl implements CellComparator {
     }
 
     // Negate following comparisons so later edits show up first mvccVersion: later sorts first
-    return ignoreSequenceid? diff: Longs.compare(b.getSequenceId(), a.getSequenceId());
-  }
-
-  /**
-   * Specialized comparator for the ByteBufferKeyValue type exclusivesly.
-   * Caches deserialized lengths of rows and families, etc., and reuses them where it can
-   * (ByteBufferKeyValue has been changed to be amenable to our providing pre-made lengths, etc.)
-   */
-  private static final int compareByteBufferKeyValue(ByteBufferKeyValue left,
-      ByteBufferKeyValue right) {
-    // Compare Rows. Cache row length.
-    int leftRowLength = left.getRowLength();
-    int rightRowLength = right.getRowLength();
-    int diff = ByteBufferUtils.compareTo(
-        left.getRowByteBuffer(), left.getRowPosition(), leftRowLength,
-        right.getRowByteBuffer(), right.getRowPosition(), rightRowLength);
-    if (diff != 0) {
-      return diff;
-    }
-
-    // If the column is not specified, the "minimum" key type appears the
-    // latest in the sorted order, regardless of the timestamp. This is used
-    // for specifying the last key/value in a given row, because there is no
-    // "lexicographically last column" (it would be infinitely long). The
-    // "maximum" key type does not need this behavior.
-    // Copied from KeyValue. This is bad in that we can't do memcmp w/ special rules like this.
-    // I tried to get rid of the above but scanners depend on it. TODO.
-    int leftFamilyLengthPosition = left.getFamilyLengthPosition(leftRowLength);
-    int leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
-    int rightFamilyLengthPosition = right.getFamilyLengthPosition(rightRowLength);
-    int rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
-    int leftKeyLength = left.getKeyLength();
-    int leftQualifierLength = left.getQualifierLength(leftKeyLength, leftRowLength,
-        leftFamilyLength);
-    byte leftType = left.getTypeByte(leftKeyLength);
-    if (leftFamilyLength + leftQualifierLength == 0 && leftType == Type.Minimum.getCode()) {
-      // left is "bigger", i.e. it appears later in the sorted order
-      return 1;
-    }
-    int rightKeyLength = right.getKeyLength();
-    int rightQualifierLength = right.getQualifierLength(rightKeyLength, rightRowLength,
-        rightFamilyLength);
-    byte rightType = right.getTypeByte(rightKeyLength);
-    if (rightFamilyLength + rightQualifierLength == 0 && rightType == Type.Minimum.getCode()) {
-      return -1;
-    }
-
-    // Compare families.
-    int leftFamilyPosition = left.getFamilyPosition(leftFamilyLengthPosition);
-    int rightFamilyPosition = right.getFamilyPosition(rightFamilyLengthPosition);
-    diff = ByteBufferUtils.compareTo(
-        left.getFamilyByteBuffer(), leftFamilyPosition, leftFamilyLength,
-        right.getFamilyByteBuffer(), rightFamilyPosition, rightFamilyLength);
-    if (diff != 0) {
-      return diff;
-    }
-    // Compare qualifiers
-    diff = ByteBufferUtils.compareTo(left.getQualifierByteBuffer(),
-        left.getQualifierPosition(leftFamilyPosition, leftFamilyLength), leftQualifierLength,
-        right.getQualifierByteBuffer(),
-        right.getQualifierPosition(rightFamilyPosition, rightFamilyLength),
-        rightQualifierLength);
-    if (diff != 0) {
-      return diff;
-    }
-    // Timestamps.
-    diff = compareTimestampsInternal(left.getTimestamp(leftKeyLength),
-        right.getTimestamp(rightKeyLength));
-    if (diff != 0) {
-      return diff;
-    }
-    // Compare types. Let the delete types sort ahead of puts; i.e. types
-    // of higher numbers sort before those of lesser numbers. Maximum (255)
-    // appears ahead of everything, and minimum (0) appears after
-    // everything.
-    return (0xff & rightType) - (0xff & leftType);
+    return ignoreSequenceid? diff: Long.compare(b.getSequenceId(), a.getSequenceId());
   }
 
   /**
@@ -254,7 +182,7 @@ public class CellComparatorImpl implements CellComparator {
     return compareRows(left, left.getRowLength(), right, right.getRowLength());
   }
 
-  int compareRows(final Cell left, int leftRowLength, final Cell right, int rightRowLength) {
+  static int compareRows(final Cell left, int leftRowLength, final Cell right, int rightRowLength) {
     // left and right can be exactly the same at the beginning of a row
     if (left == right) {
       return 0;
@@ -341,7 +269,7 @@ public class CellComparatorImpl implements CellComparator {
       return diff;
     }
 
-    diff = compareTimestamps(left, right);
+    diff = compareTimestamps(left.getTimestamp(), right.getTimestamp());
     if (diff != 0) {
       return diff;
     }
@@ -355,16 +283,12 @@ public class CellComparatorImpl implements CellComparator {
 
   @Override
   public int compareTimestamps(final Cell left, final Cell right) {
-    return compareTimestampsInternal(left.getTimestamp(), right.getTimestamp());
+    return compareTimestamps(left.getTimestamp(), right.getTimestamp());
   }
 
   @Override
   public int compareTimestamps(final long ltimestamp, final long rtimestamp) {
-    return compareTimestampsInternal(ltimestamp, rtimestamp);
-  }
-
-  private static final int compareTimestampsInternal(final long ltimestamp, final long rtimestamp) {
-    // Swap the times so sort is newest to oldest, descending.
+    // Swap order we pass into compare so we get DESCENDING order.
     return Long.compare(rtimestamp, ltimestamp);
   }
 
@@ -373,6 +297,7 @@ public class CellComparatorImpl implements CellComparator {
    * {@link KeyValue}s.
    */
   public static class MetaCellComparator extends CellComparatorImpl {
+    // TODO: Do we need a ByteBufferKeyValue version of this?
     @Override
     public int compareRows(final Cell left, final Cell right) {
       return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
@@ -451,5 +376,15 @@ public class CellComparatorImpl implements CellComparator {
           right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
       return result;
     }
+
+    @Override
+    public Comparator getSimpleComparator() {
+      return this;
+    }
+  }
+
+  @Override
+  public Comparator getSimpleComparator() {
+    return new BBKVComparator(this);
   }
 }

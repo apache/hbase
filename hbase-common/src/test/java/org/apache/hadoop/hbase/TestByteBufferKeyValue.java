@@ -24,6 +24,8 @@ import static org.junit.Assert.assertFalse;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentSkipListMap;
+
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -67,9 +69,23 @@ public class TestByteBufferKeyValue {
     assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell3) < 0);
     Cell cell4 = getOffheapCell(row1, Bytes.toBytes("f"), qual2);
     assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell4) > 0);
+    BBKVComparator comparator = new BBKVComparator(null);
+    assertTrue(comparator.compare(cell1, cell2) < 0);
+    assertTrue(comparator.compare(cell1, cell3) < 0);
+    assertTrue(comparator.compare(cell1, cell4) > 0);
+    ByteBuffer buf = ByteBuffer.allocate(row1.length);
+    ByteBufferUtils.copyFromArrayToBuffer(buf, row1, 0, row1.length);
+
+    ConcurrentSkipListMap<ByteBufferKeyValue, ByteBufferKeyValue> map =
+        new ConcurrentSkipListMap<>(comparator);
+    map.put((ByteBufferKeyValue)cell1, (ByteBufferKeyValue)cell1);
+    map.put((ByteBufferKeyValue)cell2, (ByteBufferKeyValue)cell2);
+    map.put((ByteBufferKeyValue)cell3, (ByteBufferKeyValue)cell3);
+    map.put((ByteBufferKeyValue)cell1, (ByteBufferKeyValue)cell1);
+    map.put((ByteBufferKeyValue)cell1, (ByteBufferKeyValue)cell1);
   }
 
-  private Cell getOffheapCell(byte [] row, byte [] family, byte [] qualifier) {
+  private static Cell getOffheapCell(byte [] row, byte [] family, byte [] qualifier) {
     KeyValue kvCell = new KeyValue(row, family, qualifier, 0L, Type.Put, row);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);

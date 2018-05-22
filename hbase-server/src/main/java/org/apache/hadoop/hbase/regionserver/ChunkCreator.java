@@ -46,7 +46,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 @InterfaceAudience.Private
 public class ChunkCreator {
   private static final Logger LOG = LoggerFactory.getLogger(ChunkCreator.class);
-  // monotonically increasing chunkid
+  // monotonically increasing chunkid. Starts at 1.
   private AtomicInteger chunkID = new AtomicInteger(1);
   // maps the chunk against the monotonically increasing chunk id. We need to preserve the
   // natural ordering of the key
