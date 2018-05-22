@@ -76,7 +76,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
 
   @Override
   public void init(Map<String, Object> params) {
-    if (params.containsKey(HMaster.MASTER)) {
+    if (params != null && params.containsKey(HMaster.MASTER)) {
       this.master = (MasterServices) params.get(HMaster.MASTER);
     }
   }

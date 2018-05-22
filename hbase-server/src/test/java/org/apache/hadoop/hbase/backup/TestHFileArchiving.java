@@ -375,6 +375,7 @@ public class TestHFileArchiving {
 
     // The cleaner should be looping without long pauses to reproduce the race condition.
     HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir);
+    assertFalse("cleaner should not be null", cleaner == null);
     try {
       choreService.scheduleChore(cleaner);
 
