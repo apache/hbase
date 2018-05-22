@@ -108,7 +108,6 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       } catch (PreemptiveFastFailException e) {
         throw e;
       } catch (Throwable t) {
-        Throwable e = t.getCause();
         ExceptionUtil.rethrowIfInterrupt(t);
         Throwable cause = t.getCause();
         if (cause instanceof DoNotRetryIOException) {
