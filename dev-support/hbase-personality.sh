@@ -155,9 +155,9 @@ function personality_modules
     return
   fi
 
-  if [[ ${testtype} == compile ]]; then
-    extra="${extra} -PerrorProne"
-  fi
+#  if [[ ${testtype} == compile ]]; then
+#    extra="${extra} -PerrorProne"
+#  fi
 
   # If EXCLUDE_TESTS_URL/INCLUDE_TESTS_URL is set, fetches the url
   # and sets -Dtest.exclude.pattern/-Dtest to exclude/include the
