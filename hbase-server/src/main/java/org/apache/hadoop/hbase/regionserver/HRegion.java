@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.RowTooBigException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -6611,7 +6612,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           // Ok, we are good, let's try to get some results from the main heap.
-          populateResult(results, this.storeHeap, scannerContext, current);
+          try {
+            populateResult(results, this.storeHeap, scannerContext, current);
+          } catch(RowTooBigException e) {
+            this.storeHeap.reseek(PrivateCellUtil.createLastOnRow(current));
+            results.clear();
+            scannerContext.clearProgress();
+            continue;
+          }
+
+
           if (scannerContext.checkAnyLimitReached(LimitScope.BETWEEN_CELLS)) {
             if (hasFilterRow) {
               throw new IncompatibleFilterException(
@@ -6684,7 +6694,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
         } else {
           // Populating from the joined heap was stopped by limits, populate some more.
-          populateFromJoinedHeap(results, scannerContext);
+          try {
+            populateFromJoinedHeap(results, scannerContext);
+          } catch(RowTooBigException e) {
+            joinedContinuationRow = null;
+            results.clear();
+            continue;
+          }
+
           if (scannerContext.checkAnyLimitReached(LimitScope.BETWEEN_CELLS)) {
             return true;
           }
