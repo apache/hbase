@@ -37,7 +37,7 @@ public final class CompactionThroughputControllerFactory {
   }
 
   private static final Class<? extends ThroughputController>
-      DEFAULT_THROUGHPUT_CONTROLLER_CLASS = NoLimitThroughputController.class;
+      DEFAULT_THROUGHPUT_CONTROLLER_CLASS = PressureAwareCompactionThroughputController.class;
 
   // for backward compatibility and may not be supported in the future
   private static final String DEPRECATED_NAME_OF_PRESSURE_AWARE_THROUGHPUT_CONTROLLER_CLASS =
