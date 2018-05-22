@@ -88,7 +88,7 @@ public class TestWeakObjectPool {
     Assert.assertNotEquals(hash1, System.identityHashCode(obj3));
   }
 
-  @Test(timeout=1000)
+  @Test
   public void testCongestion() throws Exception {
     final int THREAD_COUNT = 100;
 
