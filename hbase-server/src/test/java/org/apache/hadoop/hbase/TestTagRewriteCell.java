@@ -47,9 +47,10 @@ public class TestTagRewriteCell {
     // VisibilityController and AccessController)
     Cell trCell2 = PrivateCellUtil.createCell(trCell, new byte[fakeTagArrayLength]);
 
-    assertTrue("TagRewriteCell containing a TagRewriteCell's heapsize should be larger than a " +
-        "single TagRewriteCell's heapsize", trCellHeapSize < ((HeapSize)trCell2).heapSize());
-    assertTrue("TagRewriteCell should have had nulled out tags array", ((HeapSize)trCell).heapSize() <
-        trCellHeapSize);
+    assertTrue("TagRewriteCell containing a TagRewriteCell's heapsize should be " +
+            "larger than a single TagRewriteCell's heapsize",
+        trCellHeapSize < ((HeapSize)trCell2).heapSize());
+    assertTrue("TagRewriteCell should have had nulled out tags array",
+        ((HeapSize)trCell).heapSize() < trCellHeapSize);
   }
 }

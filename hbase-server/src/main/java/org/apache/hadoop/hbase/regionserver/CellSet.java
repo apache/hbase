@@ -53,7 +53,7 @@ public class CellSet implements NavigableSet<Cell>  {
   private final int numUniqueKeys;
 
   CellSet(final CellComparator c) {
-    this.delegatee = new ConcurrentSkipListMap<>(c);
+    this.delegatee = new ConcurrentSkipListMap<>(c.getSimpleComparator());
     this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
 

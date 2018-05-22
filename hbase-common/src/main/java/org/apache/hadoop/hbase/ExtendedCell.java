@@ -30,9 +30,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * must implement this.
  */
 @InterfaceAudience.Private
-public interface ExtendedCell extends RawCell, HeapSize, Cloneable {
-
+public interface ExtendedCell extends RawCell, HeapSize {
   int CELL_NOT_BASED_ON_CHUNK = -1;
+
   /**
    * Write this cell to an OutputStream in a {@link KeyValue} format.
    * <br> KeyValue format <br>
@@ -88,6 +88,13 @@ public interface ExtendedCell extends RawCell, HeapSize, Cloneable {
   }
 
   /**
+   * @return Serialized size (defaults to include tag length).
+   */
+  default int getSerializedSize() {
+    return getSerializedSize(true);
+  }
+
+  /**
    * Write this Cell into the given buf's offset in a {@link KeyValue} format.
    * @param buf The buffer where to write the Cell.
    * @param offset The offset within buffer, to write the Cell.
@@ -108,7 +115,8 @@ public interface ExtendedCell extends RawCell, HeapSize, Cloneable {
   /**
    * Extracts the id of the backing bytebuffer of this cell if it was obtained from fixed sized
    * chunks as in case of MemstoreLAB
-   * @return the chunk id if the cell is backed by fixed sized Chunks, else return -1
+   * @return the chunk id if the cell is backed by fixed sized Chunks, else return
+   * {@link #CELL_NOT_BASED_ON_CHUNK}; i.e. -1.
    */
   default int getChunkId() {
     return CELL_NOT_BASED_ON_CHUNK;

@@ -47,9 +47,11 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * implementations:
  * <ul>
  *   <li><em>defaultProvider</em> : whatever provider is standard for the hbase version. Currently
- *                                  "filesystem"</li>
+ *                                  "asyncfs"</li>
+ *   <li><em>asyncfs</em> : a provider that will run on top of an implementation of the Hadoop
+ *                             FileSystem interface via an asynchronous client.</li>
  *   <li><em>filesystem</em> : a provider that will run on top of an implementation of the Hadoop
- *                             FileSystem interface, normally HDFS.</li>
+ *                             FileSystem interface via HDFS's synchronous DFSClient.</li>
  *   <li><em>multiwal</em> : a provider that will use multiple "filesystem" wal instances per region
  *                           server.</li>
  * </ul>

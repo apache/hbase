@@ -120,12 +120,13 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   @Override
   public Cell forceCopyOfBigCellInto(Cell cell) {
-    int size = KeyValueUtil.length(cell) + ChunkCreator.SIZEOF_CHUNK_HEADER;
+    int size = cell instanceof ExtendedCell? ((ExtendedCell)cell).getSerializedSize():
+        KeyValueUtil.length(cell);
+    size += ChunkCreator.SIZEOF_CHUNK_HEADER;
     Preconditions.checkArgument(size >= 0, "negative size");
     if (size <= dataChunkSize) {
       // Using copyCellInto for cells which are bigger than the original maxAlloc
-      Cell newCell = copyCellInto(cell, dataChunkSize);
-      return newCell;
+      return copyCellInto(cell, dataChunkSize);
     } else {
       Chunk c = getNewExternalChunk(size);
       int allocOffset = c.alloc(size);
@@ -134,7 +135,8 @@ public class MemStoreLABImpl implements MemStoreLAB {
   }
 
   private Cell copyCellInto(Cell cell, int maxAlloc) {
-    int size = KeyValueUtil.length(cell);
+    int size = cell instanceof ExtendedCell? ((ExtendedCell)cell).getSerializedSize():
+        KeyValueUtil.length(cell);
     Preconditions.checkArgument(size >= 0, "negative size");
     // Callers should satisfy large allocations directly from JVM since they
     // don't cause fragmentation as badly.
@@ -169,7 +171,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
    * Clone the passed cell by copying its data into the passed buf and create a cell with a chunkid
    * out of it
    */
-  private Cell copyToChunkCell(Cell cell, ByteBuffer buf, int offset, int len) {
+  private static Cell copyToChunkCell(Cell cell, ByteBuffer buf, int offset, int len) {
     int tagsLen = cell.getTagsLength();
     if (cell instanceof ExtendedCell) {
       ((ExtendedCell) cell).write(buf, offset);
@@ -255,8 +257,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   private Chunk getOrMakeChunk() {
     // Try to get the chunk
-    Chunk c;
-    c = currChunk.get();
+    Chunk c = currChunk.get();
     if (c != null) {
       return c;
     }
