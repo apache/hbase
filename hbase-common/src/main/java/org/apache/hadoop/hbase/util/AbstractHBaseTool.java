@@ -22,7 +22,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.Tool;
@@ -46,9 +45,9 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
  * command-line argument parsing.
  */
 @InterfaceAudience.Private
-public abstract class AbstractHBaseTool implements Tool, Configurable {
-  protected static final int EXIT_SUCCESS = 0;
-  protected static final int EXIT_FAILURE = 1;
+public abstract class AbstractHBaseTool implements Tool {
+  public static final int EXIT_SUCCESS = 0;
+  public static final int EXIT_FAILURE = 1;
 
   public static final String SHORT_HELP_OPTION = "h";
   public static final String LONG_HELP_OPTION = "help";
