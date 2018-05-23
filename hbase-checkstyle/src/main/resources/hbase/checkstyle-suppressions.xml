@@ -36,4 +36,5 @@
   <suppress checks="MagicNumberCheck" files=".*/src/test/.*\.java"/>
   <suppress checks="VisibilityModifier" files=".*/src/test/.*\.java"/>
   <suppress checks="InterfaceIsTypeCheck" files=".*/src/main/.*\.java"/>
+  <suppress checks="MethodLength" files="Branch1CoprocessorMethods.java"/>
 </suppressions>

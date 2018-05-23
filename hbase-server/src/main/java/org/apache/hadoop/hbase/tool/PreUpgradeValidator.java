@@ -18,111 +18,99 @@
  */
 package org.apache.hadoop.hbase.tool;
 
-import java.io.IOException;
-import java.util.List;
+import java.util.Arrays;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidator;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * Tool for validating that cluster can be upgraded from HBase 1.x to 2.0
  * <p>
  * Available validations:
  * <ul>
- * <li>all: Run all pre-upgrade validations</li>
- * <li>validateDBE: Check Data Block Encoding for column families</li>
+ * <li>validate-cp: Validates Co-processors compatibility</li>
+ * <li>validate-dbe: Check Data Block Encoding for column families</li>
  * </ul>
  * </p>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
-public class PreUpgradeValidator extends AbstractHBaseTool {
+public class PreUpgradeValidator implements Tool {
+  private static final Logger LOG = LoggerFactory
+      .getLogger(PreUpgradeValidator.class);
 
-  public static final String NAME = "pre-upgrade";
-  private static final Logger LOG = LoggerFactory.getLogger(PreUpgradeValidator.class);
-  private static final byte[] DATA_BLOCK_ENCODING = Bytes.toBytes("DATA_BLOCK_ENCODING");
-  private boolean validateAll;
-  private boolean validateDBE;
+  public static final String TOOL_NAME = "pre-upgrade";
+  public static final String VALIDATE_CP_NAME = "validate-cp";
+  public static final String VALIDATE_DBE_NAME = "validate-dbe";
 
-  /**
-   * Check DataBlockEncodings of column families are compatible.
-   *
-   * @return number of column families with incompatible DataBlockEncoding
-   * @throws IOException if a remote or network exception occurs
-   */
-  private int validateDBE() throws IOException {
-    int incompatibilities = 0;
+  private Configuration configuration;
 
-    LOG.info("Validating Data Block Encodings");
-
-    try (Connection connection = ConnectionFactory.createConnection(getConf());
-        Admin admin = connection.getAdmin()) {
-      List<TableDescriptor> tableDescriptors = admin.listTableDescriptors();
-      String encoding = "";
-
-      for (TableDescriptor td : tableDescriptors) {
-        ColumnFamilyDescriptor[] columnFamilies = td.getColumnFamilies();
-        for (ColumnFamilyDescriptor cfd : columnFamilies) {
-          try {
-            encoding = Bytes.toString(cfd.getValue(DATA_BLOCK_ENCODING));
-            // IllegalArgumentException will be thrown if encoding is incompatible with 2.0
-            DataBlockEncoding.valueOf(encoding);
-          } catch (IllegalArgumentException e) {
-            incompatibilities++;
-            LOG.warn("Incompatible DataBlockEncoding for table: {}, cf: {}, encoding: {}",
-                td.getTableName().getNameAsString(), cfd.getNameAsString(), encoding);
-          }
-        }
-      }
-    }
-
-    if (incompatibilities > 0) {
-      LOG.warn("There are {} column families with incompatible Data Block Encodings. Do not "
-          + "upgrade until these encodings are converted to a supported one.", incompatibilities);
-      LOG.warn("Check http://hbase.apache.org/book.html#upgrade2.0.prefix-tree.removed "
-          + "for instructions.");
-    } else {
-      LOG.info("The used Data Block Encodings are compatible with HBase 2.0.");
-    }
-    return incompatibilities;
+  @Override
+  public Configuration getConf() {
+    return configuration;
   }
 
   @Override
-  protected void addOptions() {
-    addOptNoArg("all", "Run all pre-upgrade validations");
-    addOptNoArg("validateDBE", "Validate DataBlockEncodings are compatible");
+  public void setConf(Configuration conf) {
+    this.configuration = conf;
+  }
+
+  private void printUsage() {
+    System.out.println("usage: hbase " + TOOL_NAME + " command ...");
+    System.out.println("Available commands:");
+    System.out.printf(" %-12s Validate co-processors are compatible with HBase%n",
+        VALIDATE_CP_NAME);
+    System.out.printf(" %-12s Validate DataBlockEncoding are compatible on the cluster%n",
+        VALIDATE_DBE_NAME);
+    System.out.println("For further information, please use command -h");
   }
 
   @Override
-  protected void processOptions(CommandLine cmd) {
-    validateAll = cmd.hasOption("all");
-    validateDBE = cmd.hasOption("validateDBE");
-  }
-
-  @Override
-  protected int doWork() throws Exception {
-    boolean validationFailed = false;
-    if (validateDBE || validateAll) {
-      if (validateDBE() > 0) {
-        validationFailed = true;
-      }
+  public int run(String[] args) throws Exception {
+    if (args.length == 0) {
+      printUsage();
+      return AbstractHBaseTool.EXIT_FAILURE;
     }
 
-    return validationFailed ? 1 : 0;
+    Tool tool;
+
+    switch (args[0]) {
+      case VALIDATE_CP_NAME:
+        tool = new CoprocessorValidator();
+        break;
+      case VALIDATE_DBE_NAME:
+        tool = new DataBlockEncodingValidator();
+        break;
+      case "-h":
+        printUsage();
+        return AbstractHBaseTool.EXIT_FAILURE;
+      default:
+        System.err.println("Unknown command: " + args[0]);
+        printUsage();
+        return AbstractHBaseTool.EXIT_FAILURE;
+    }
+
+    tool.setConf(getConf());
+    return tool.run(Arrays.copyOfRange(args, 1, args.length));
   }
 
   public static void main(String[] args) {
-    new PreUpgradeValidator().doStaticMain(args);
+    int ret;
+
+    try {
+      ret = ToolRunner.run(HBaseConfiguration.create(), new PreUpgradeValidator(), args);
+    } catch (Exception e) {
+      LOG.error("Error running command-line tool", e);
+      ret = AbstractHBaseTool.EXIT_FAILURE;
+    }
+
+    System.exit(ret);
   }
 }
