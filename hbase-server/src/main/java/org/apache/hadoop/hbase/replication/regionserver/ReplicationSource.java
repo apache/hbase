@@ -101,8 +101,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   protected FileSystem fs;
   // id of this cluster
   private UUID clusterId;
-  // id of the other cluster
-  private UUID peerClusterId;
   // total number of edits we replicated
   private AtomicLong totalReplicatedEdits = new AtomicLong(0);
   // The znode we currently play with
@@ -118,7 +116,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   // ReplicationEndpoint which will handle the actual replication
   private volatile ReplicationEndpoint replicationEndpoint;
   // A filter (or a chain of filters) for the WAL entries.
-  protected WALEntryFilter walEntryFilter;
+  protected volatile WALEntryFilter walEntryFilter;
   // throttler
   private ReplicationThrottler throttler;
   private long defaultBandwidth;
@@ -197,7 +195,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (queue == null) {
       queue = new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator());
       queues.put(logPrefix, queue);
-      if (this.isSourceActive() && this.replicationEndpoint != null) {
+      if (this.isSourceActive() && this.walEntryFilter != null) {
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that log enqueued when this.running is set but worker thread
         // still not launched, so it's necessary to check workerThreads before start the worker
@@ -282,7 +280,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     replicationEndpoint.awaitRunning(waitOnEndpointSeconds, TimeUnit.SECONDS);
   }
 
-  private void initializeWALEntryFilter() {
+  private void initializeWALEntryFilter(UUID peerClusterId) {
     // get the WALEntryFilter from ReplicationEndpoint and add it to default filters
     ArrayList<WALEntryFilter> filters =
       Lists.<WALEntryFilter> newArrayList(new SystemTableWALEntryFilter());
@@ -430,13 +428,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     sleepMultiplier = 1;
+    UUID peerClusterId;
     // delay this until we are in an asynchronous thread
-    while (this.isSourceActive() && this.peerClusterId == null) {
-      this.peerClusterId = replicationEndpoint.getPeerUUID();
-      if (this.isSourceActive() && this.peerClusterId == null) {
+    for (;;) {
+      peerClusterId = replicationEndpoint.getPeerUUID();
+      if (this.isSourceActive() && peerClusterId == null) {
         if (sleepForRetries("Cannot contact the peer's zk ensemble", sleepMultiplier)) {
           sleepMultiplier++;
         }
+      } else {
+        break;
       }
     }
 
@@ -451,7 +452,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
     LOG.info("Replicating " + clusterId + " -> " + peerClusterId);
 
-    initializeWALEntryFilter();
+    initializeWALEntryFilter(peerClusterId);
     // start workers
     for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {
       String walGroupId = entry.getKey();
