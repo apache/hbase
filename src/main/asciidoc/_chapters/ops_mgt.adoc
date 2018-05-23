@@ -845,11 +845,39 @@ The LoadTestTool has received many updates in recent HBase releases, including s
 [[ops.pre-upgrade]]
 === Pre-Upgrade validator
 Pre-Upgrade validator tool can be used to check the cluster for known incompatibilities before upgrading from HBase 1 to HBase 2.
-To run all the checks use the `-all` flag.
 
 [source, bash]
 ----
-$ bin/hbase pre-upgrade -all
+$ bin/hbase pre-upgrade command ...
+----
+
+==== Coprocessor validation
+
+HBase supports co-processors for a long time, but the co-processor API can be changed between major releases. Co-processor validator tries to determine
+whether the old co-processors are still compatible with the actual HBase version.
+
+[source, bash]
+----
+$ bin/hbase pre-upgrade validate-cp <jar> -scan|<classes>
+Options:
+ -e      Treat warnings as errors.
+ -scan   Scan jar for observers.
+----
+
+The first parameter of the tool is the `jar` file which holds the co-processor implementation. Further parameters can be `-scan` when the tool will
+search the jar file for `Coprocessor` implementations or the `classes` can be explicitly given.
+
+The tool can report errors and warnings. Errors mean that HBase won't be able to load the coprocessor, because it is incompatible with the current version
+of HBase. Warnings mean that the co-processors can be loaded, but they won't work as expected. If `-e` option is given, then the tool will also fail
+for warnings.
+
+Please note that this tool cannot validate every aspect of jar files, it just does some static checks.
+
+For example:
+
+[source, bash]
+----
+$ bin/hbase pre-upgrade validate-cp my-coprocessor.jar MyMasterObserver MyRegionObserver
 ----
 
 ==== DataBlockEncoding validation
@@ -858,7 +886,7 @@ To verify that none of the column families are using incompatible Data Block Enc
 
 [source, bash]
 ----
-$ bin/hbase pre-upgrade -validateDBE
+$ bin/hbase pre-upgrade validate-dbe
 ----
 
 This check validates all column families and print out any incompatibilities.

@@ -38,4 +38,5 @@
   <suppress checks="InterfaceIsTypeCheck" files=".*/src/main/.*\.java"/>
   <suppress checks="EmptyBlockCheck" files="TBoundedThreadPoolServer.java"/>
   <suppress checks="EqualsHashCode" files="StartcodeAgnosticServerName.java"/>
+  <suppress checks="MethodLength" files="Branch1CoprocessorMethods.java"/>
 </suppressions>
