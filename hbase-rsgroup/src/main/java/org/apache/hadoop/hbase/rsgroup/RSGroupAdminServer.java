@@ -291,9 +291,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     // Hold a lock on the manager instance while moving servers to prevent
     // another writer changing our state while we are working.
     synchronized (rsGroupInfoManager) {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preMoveServers(servers, targetGroupName);
-      }
       // Presume first server's source group. Later ensure all servers are from this group.
       Address firstServer = servers.iterator().next();
       RSGroupInfo srcGrp = rsGroupInfoManager.getRSGroupOfServer(firstServer);
@@ -370,9 +367,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
       } while (foundRegionsToMove);
 
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postMoveServers(servers, targetGroupName);
-      }
       LOG.info("Move server done: " + srcGrp.getName() + "=>" + targetGroupName);
     }
   }
@@ -390,9 +384,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     // Hold a lock on the manager instance while moving servers to prevent
     // another writer changing our state while we are working.
     synchronized (rsGroupInfoManager) {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preMoveTables(tables, targetGroup);
-      }
       if(targetGroup != null) {
         RSGroupInfo destGroup = rsGroupInfoManager.getRSGroup(targetGroup);
         if(destGroup == null) {
@@ -430,22 +421,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           }
         }
       }
-
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postMoveTables(tables, targetGroup);
-      }
     }
   }
 
   @Override
   public void addRSGroup(String name) throws IOException {
-    if (master.getMasterCoprocessorHost() != null) {
-      master.getMasterCoprocessorHost().preAddRSGroup(name);
-    }
     rsGroupInfoManager.addRSGroup(new RSGroupInfo(name));
-    if (master.getMasterCoprocessorHost() != null) {
-      master.getMasterCoprocessorHost().postAddRSGroup(name);
-    }
   }
 
   @Override
@@ -453,9 +434,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     // Hold a lock on the manager instance while moving servers to prevent
     // another writer changing our state while we are working.
     synchronized (rsGroupInfoManager) {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preRemoveRSGroup(name);
-      }
       RSGroupInfo rsGroupInfo = rsGroupInfoManager.getRSGroup(name);
       if (rsGroupInfo == null) {
         throw new ConstraintException("RSGroup " + name + " does not exist");
@@ -480,9 +458,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
       }
       rsGroupInfoManager.removeRSGroup(name);
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postRemoveRSGroup(name);
-      }
     }
   }
 
@@ -498,9 +473,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         return false;
       }
 
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preBalanceRSGroup(groupName);
-      }
       if (getRSGroupInfo(groupName) == null) {
         throw new ConstraintException("RSGroup does not exist: "+groupName);
       }
@@ -542,9 +514,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         LOG.info("RSGroup balance " + groupName + " completed after " +
             (System.currentTimeMillis()-startTime) + " seconds");
       }
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postBalanceRSGroup(groupName, balancerRan);
-      }
       return balancerRan;
     }
   }
@@ -575,9 +544,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     // Hold a lock on the manager instance while moving servers and tables to prevent
     // another writer changing our state while we are working.
     synchronized (rsGroupInfoManager) {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preMoveServersAndTables(servers, tables, targetGroup);
-      }
       //check servers and tables status
       checkServersAndTables(servers, tables, targetGroup);
 
@@ -589,10 +555,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       moveRegionsFromServers(servers, tables, targetGroup);
       //move regions which should belong to these servers
       moveRegionsToServers(servers, tables, targetGroup);
-
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postMoveServersAndTables(servers, tables, targetGroup);
-      }
     }
     LOG.info("Move servers and tables done. Severs :"
             + servers + " , Tables : " + tables + " => " +  targetGroup);
@@ -607,15 +569,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       // Hold a lock on the manager instance while moving servers to prevent
       // another writer changing our state while we are working.
       synchronized (rsGroupInfoManager) {
-        if (master.getMasterCoprocessorHost() != null) {
-          master.getMasterCoprocessorHost().preRemoveServers(servers);
-        }
         //check the set of servers
         checkForDeadOrOnlineServers(servers);
         rsGroupInfoManager.removeServers(servers);
-        if (master.getMasterCoprocessorHost() != null) {
-          master.getMasterCoprocessorHost().postRemoveServers(servers);
-        }
         LOG.info("Remove decommissioned servers " + servers + " from rsgroup done.");
       }
     }
