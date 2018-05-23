@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -121,6 +122,7 @@ public class TruncateTableProcedure
           setNextState(TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT);
           break;
         case TRUNCATE_TABLE_CREATE_FS_LAYOUT:
+          DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
           regions = CreateTableProcedure.createFsLayout(env, tableDescriptor, regions);
           CreateTableProcedure.updateTableDescCache(env, getTableName());
           setNextState(TruncateTableState.TRUNCATE_TABLE_ADD_TO_META);
@@ -148,7 +150,8 @@ public class TruncateTableProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-truncate-table", e);
       } else {
-        LOG.warn("Retriable error trying to truncate table=" + getTableName() + " state=" + state, e);
+        LOG.warn("Retriable error trying to truncate table=" + getTableName()
+          + " state=" + state, e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -302,5 +305,13 @@ public class TruncateTableProcedure
       final TableName tableName = getTableName();
       cpHost.postCompletedTruncateTableAction(tableName, getUser());
     }
+  }
+
+  @VisibleForTesting
+  RegionInfo getFirstRegionInfo() {
+    if (regions == null || regions.isEmpty()) {
+      return null;
+    }
+    return regions.get(0);
   }
 }
