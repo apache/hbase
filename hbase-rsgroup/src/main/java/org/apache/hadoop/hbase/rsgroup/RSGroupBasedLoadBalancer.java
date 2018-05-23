@@ -455,4 +455,9 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   public boolean isStopped() {
     return false;
   }
+
+  @Override
+  public void postMasterStartupInitialize() {
+    this.internalBalancer.postMasterStartupInitialize();
+  }
 }

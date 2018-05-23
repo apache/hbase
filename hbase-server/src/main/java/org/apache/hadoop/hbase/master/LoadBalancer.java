@@ -152,4 +152,9 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    */
   @Override
   void onConfigurationChange(Configuration conf);
+
+  /**
+   * If balancer needs to do initialization after Master has started up, lets do that here.
+   */
+  void postMasterStartupInitialize();
 }
