@@ -1267,6 +1267,19 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
   }
 
+  @Override
+  public void postMasterStartupInitialize() {
+    if (services != null && regionFinder != null) {
+      try {
+        Set<HRegionInfo> regions =
+            services.getAssignmentManager().getRegionStates().getRegionAssignments().keySet();
+        regionFinder.refreshAndWait(regions);
+      } catch (Exception e) {
+        LOG.warn("Refreshing region HDFS Block dist failed with exception, ignoring", e);
+      }
+    }
+  }
+
   public void setRackManager(RackManager rackManager) {
     this.rackManager = rackManager;
   }
@@ -1367,7 +1380,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return assignments;
     }
 
-    Cluster cluster = createCluster(servers, regions, false);
+    Cluster cluster = createCluster(servers, regions);
     List<HRegionInfo> unassignedRegions = new ArrayList<HRegionInfo>();
 
     roundRobinAssignment(cluster, regions, unassignedRegions,
@@ -1413,11 +1426,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return assignments;
   }
 
-  protected Cluster createCluster(List<ServerName> servers,
-      Collection<HRegionInfo> regions, boolean forceRefresh) {
-    if (forceRefresh && useRegionFinder) {
-      regionFinder.refreshAndWait(regions);
-    }
+  protected Cluster createCluster(List<ServerName> servers, Collection<HRegionInfo> regions) {
     // Get the snapshot of the current assignments for the regions in question, and then create
     // a cluster out of it. Note that we might have replicas already assigned to some servers
     // earlier. So we want to get the snapshot to see those assignments, but this will only contain
@@ -1491,7 +1500,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     List<HRegionInfo> regions = Lists.newArrayList(regionInfo);
-    Cluster cluster = createCluster(servers, regions, false);
+    Cluster cluster = createCluster(servers, regions);
     return randomAssignment(cluster, regionInfo, servers);
   }
 
@@ -1569,8 +1578,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int numRandomAssignments = 0;
     int numRetainedAssigments = 0;
 
-    Cluster cluster = createCluster(servers, regions.keySet(), true);
-
     for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
       HRegionInfo region = entry.getKey();
       ServerName oldServerName = entry.getValue();
@@ -1613,6 +1620,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     // If servers from prior assignment aren't present, then lets do randomAssignment on regions.
     if (randomAssignRegions.size() > 0) {
+      Cluster cluster = createCluster(servers, regions.keySet());
       for (Map.Entry<ServerName, List<HRegionInfo>> entry : assignments.entrySet()) {
         ServerName sn = entry.getKey();
         for (HRegionInfo region : entry.getValue()) {
