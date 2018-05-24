@@ -112,6 +112,17 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
         }
       }
 
+      // Disable violation policy for all such tables which have been removed in new snapshot
+      for (TableName tableName : currentSnapshots.keySet()) {
+        // check whether table was removed in new snapshot
+        if (!newSnapshots.containsKey(tableName)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Removing quota violation policy on " + tableName);
+          }
+          getManager().disableViolationPolicyEnforcement(tableName);
+        }
+      }
+
       // We're intentionally ignoring anything extra with the currentSnapshots. If we were missing
       // information from the RegionServers to create an accurate SpaceQuotaSnapshot in the Master,
       // the Master will generate a new SpaceQuotaSnapshot which represents this state. This lets
