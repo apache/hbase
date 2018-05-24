@@ -42,7 +42,7 @@ public abstract class MemStoreCompactionStrategy {
   // The upper bound for the number of segments we store in the pipeline prior to merging.
   public static final String COMPACTING_MEMSTORE_THRESHOLD_KEY =
       "hbase.hregion.compacting.pipeline.segments.limit";
-  public static final int COMPACTING_MEMSTORE_THRESHOLD_DEFAULT = 4;
+  public static final int COMPACTING_MEMSTORE_THRESHOLD_DEFAULT = 2;
 
   /**
    * Types of actions to be done on the pipeline upon MemStoreCompaction invocation.
