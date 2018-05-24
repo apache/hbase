@@ -112,9 +112,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
     RSGroupInfoManager manager = getRSGroupInfoManager();
     synchronized (manager) {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preMoveServers(servers, targetGroupName);
-      }
       Address firstServer = servers.iterator().next();
       //we only allow a move from a single source group
       //so this should be ok
@@ -235,9 +232,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           serversInTransition.remove(server);
         }
       }
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postMoveServers(servers, targetGroupName);
-      }
       LOG.info("Move server done: "+sourceGroupName+"->"+targetGroupName);
     }
   }
@@ -254,10 +248,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
     RSGroupInfoManager manager = getRSGroupInfoManager();
     synchronized (manager) {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preMoveTables(tables, targetGroup);
-      }
-
       if(targetGroup != null) {
         RSGroupInfo destGroup = manager.getRSGroup(targetGroup);
         if(destGroup == null) {
@@ -276,9 +266,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
       }
       manager.moveTables(tables, targetGroup);
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postMoveTables(tables, targetGroup);
-      }
     }
     for(TableName table: tables) {
       if (master.getAssignmentManager().getTableStateManager().isTableState(table,
@@ -302,22 +289,13 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
   @Override
   public void addRSGroup(String name) throws IOException {
-    if (master.getMasterCoprocessorHost() != null) {
-      master.getMasterCoprocessorHost().preAddRSGroup(name);
-    }
     getRSGroupInfoManager().addRSGroup(new RSGroupInfo(name));
-    if (master.getMasterCoprocessorHost() != null) {
-      master.getMasterCoprocessorHost().postAddRSGroup(name);
-    }
   }
 
   @Override
   public void removeRSGroup(String name) throws IOException {
     RSGroupInfoManager manager = getRSGroupInfoManager();
     synchronized (manager) {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preRemoveRSGroup(name);
-      }
       RSGroupInfo groupInfo = getRSGroupInfoManager().getRSGroup(name);
       if(groupInfo == null) {
         throw new ConstraintException("Group "+name+" does not exist");
@@ -338,9 +316,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
       }
       manager.removeRSGroup(name);
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postRemoveRSGroup(name);
-      }
     }
   }
 
@@ -352,9 +327,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
     boolean balancerRan;
     synchronized (balancer) {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preBalanceRSGroup(groupName);
-      }
       if (getRSGroupInfo(groupName) == null) {
         throw new ConstraintException("Group does not exist: "+groupName);
       }
@@ -397,9 +369,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         LOG.info("Group balance "+groupName+" completed after "+
             (System.currentTimeMillis()-startTime)+" seconds");
       }
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postBalanceRSGroup(groupName, balancerRan);
-      }
     }
     return balancerRan;
   }
@@ -428,15 +397,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       // Hold a lock on the manager instance while moving servers to prevent
       // another writer changing our state while we are working.
       synchronized (rsGroupInfoManager) {
-        if (master.getMasterCoprocessorHost() != null) {
-          master.getMasterCoprocessorHost().preRemoveServers(servers);
-        }
         //check the set of servers
         checkForDeadOrOnlineServers(servers);
         rsGroupInfoManager.removeServers(servers);
-        if (master.getMasterCoprocessorHost() != null) {
-          master.getMasterCoprocessorHost().postRemoveServers(servers);
-        }
         LOG.info("Remove decommissioned servers " + servers + " from rsgroup done.");
       }
     }

@@ -209,8 +209,14 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       for(HBaseProtos.ServerName el: request.getServersList()) {
         servers.add(Address.fromParts(el.getHostName(), el.getPort()));
       }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preMoveServers(servers, request.getTargetGroup());
+      }
       checkPermission("moveServers");
       groupAdminServer.moveServers(servers, request.getTargetGroup());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postMoveServers(servers, request.getTargetGroup());
+      }
       response = builder.build();
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
@@ -230,9 +236,15 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       for(TableProtos.TableName tableName: request.getTableNameList()) {
         tables.add(ProtobufUtil.toTableName(tableName));
       }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preMoveTables(tables, request.getTargetGroup());
+      }
       checkPermission("moveTables");
       groupAdminServer.moveTables(tables, request.getTargetGroup());
       response = builder.build();
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postMoveTables(tables, request.getTargetGroup());
+      }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
     }
@@ -252,8 +264,16 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       for (TableProtos.TableName tableName : request.getTableNameList()) {
         tables.add(ProtobufUtil.toTableName(tableName));
       }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preMoveServersAndTables(servers, tables,
+            request.getTargetGroup());
+      }
       checkPermission("moveServersAndTables");
       groupAdminServer.moveServersAndTables(servers, tables, request.getTargetGroup());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postMoveServersAndTables(servers, tables,
+            request.getTargetGroup());
+      }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
     }
@@ -268,9 +288,15 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
     try {
       AddRSGroupResponse.Builder builder =
           AddRSGroupResponse.newBuilder();
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preAddRSGroup(request.getRSGroupName());
+      }
       checkPermission("addRSGroup");
       groupAdminServer.addRSGroup(request.getRSGroupName());
       response = builder.build();
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postAddRSGroup(request.getRSGroupName());
+      }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
     }
@@ -285,8 +311,14 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
     try {
       RemoveRSGroupResponse.Builder builder =
           RemoveRSGroupResponse.newBuilder();
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRemoveRSGroup(request.getRSGroupName());
+      }
       checkPermission("removeRSGroup");
       groupAdminServer.removeRSGroup(request.getRSGroupName());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRemoveRSGroup(request.getRSGroupName());
+      }
       response = builder.build();
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
@@ -300,8 +332,16 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
                            RpcCallback<BalanceRSGroupResponse> done) {
     BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder();
     try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
+      }
       checkPermission("balanceRSGroup");
-      builder.setBalanceRan(groupAdminServer.balanceRSGroup(request.getRSGroupName()));
+      boolean balancerRan = groupAdminServer.balanceRSGroup(request.getRSGroupName());
+      builder.setBalanceRan(balancerRan);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(),
+            balancerRan);
+      }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
       builder.setBalanceRan(false);
@@ -358,8 +398,14 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       for (HBaseProtos.ServerName el : request.getServersList()) {
         servers.add(Address.fromParts(el.getHostName(), el.getPort()));
       }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRemoveServers(servers);
+      }
       checkPermission("removeServers");
       groupAdminServer.removeServers(servers);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRemoveServers(servers);
+      }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
     }
