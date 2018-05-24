@@ -480,6 +480,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 echo '(/) {color:green}+1 source release artifact{color}\n-- See build output for details.' >output-srctarball/commentfile
               else
                 echo '(x) {color:red}-1 source release artifact{color}\n-- See build output for details.' >output-srctarball/commentfile
+                exit 1
               fi
 """
           }
