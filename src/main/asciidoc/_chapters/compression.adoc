@@ -377,7 +377,7 @@ Options:
                               LZ4]
  -data_block_encoding <arg>   Encoding algorithm (e.g. prefix compression) to
                               use for data blocks in the test column family, one
-                              of [NONE, PREFIX, DIFF, FAST_DIFF, PREFIX_TREE].
+                              of [NONE, PREFIX, DIFF, FAST_DIFF, ROW_INDEX_V1].
  -encryption <arg>            Enables transparent encryption on the test table,
                               one of [AES]
  -generator <arg>             The class which generates load for the tool. Any
