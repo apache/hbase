@@ -2552,8 +2552,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     MemStoreSize mss = this.memStoreSizing.getMemStoreSize();
     LOG.info("Flushing " + + storesToFlush.size() + "/" + stores.size() + " column families," +
-        " memstore data size=" + StringUtils.byteDesc(mss.getDataSize()) +
-        " memstore heap size=" + StringUtils.byteDesc(mss.getHeapSize()) +
+        " dataSize=" + StringUtils.byteDesc(mss.getDataSize()) +
+        " heapSize=" + StringUtils.byteDesc(mss.getHeapSize()) +
         ((perCfExtras != null && perCfExtras.length() > 0)? perCfExtras.toString(): "") +
         ((wal != null) ? "" : "; WAL is null, using passed sequenceid=" + sequenceId));
   }
@@ -2753,10 +2753,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long time = EnvironmentEdgeManager.currentTime() - startTime;
     MemStoreSize mss = prepareResult.totalFlushableSize.getMemStoreSize();
     long memstoresize = this.memStoreSizing.getMemStoreSize().getDataSize();
-    String msg = "Finished memstore flush;"
-        + " data size ~" + StringUtils.byteDesc(mss.getDataSize()) + "/" + mss.getDataSize()
-        + ", heap size ~" + StringUtils.byteDesc(mss.getHeapSize()) + "/" + mss.getHeapSize()
-        + ", currentsize=" + StringUtils.byteDesc(memstoresize) + "/" + memstoresize
+    String msg = "Finished flush of"
+        + " dataSize ~" + StringUtils.byteDesc(mss.getDataSize()) + "/" + mss.getDataSize()
+        + ", heapSize ~" + StringUtils.byteDesc(mss.getHeapSize()) + "/" + mss.getHeapSize()
+        + ", currentSize=" + StringUtils.byteDesc(memstoresize) + "/" + memstoresize
         + " for " + this.getRegionInfo().getEncodedName() + " in " + time + "ms, sequenceid="
         + flushOpSeqId +  ", compaction requested=" + compactionRequested
         + ((wal == null) ? "; wal=null" : "");
@@ -4236,7 +4236,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param cellItr
    * @param now
    */
-  public void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
+  private static void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
       throws IOException {
     for (List<Cell> cells: cellItr) {
       if (cells == null) continue;
@@ -4291,12 +4291,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       requestFlush();
       // Don't print current limit because it will vary too much. The message is used as a key
       // over in RetriesExhaustedWithDetailsException processing.
-      throw new RegionTooBusyException("Over memstore limit; regionName=" +
+      throw new RegionTooBusyException("Over memstore limit=" +
+        org.apache.hadoop.hbase.procedure2.util.StringUtils.humanSize(this.blockingMemStoreSize) +
+        ", regionName=" +
           (this.getRegionInfo() == null? "unknown": this.getRegionInfo().getEncodedName()) +
-          ", server=" + (this.getRegionServerServices() == null ? "unknown":
-          this.getRegionServerServices().getServerName()) +
-          ", blockingMemStoreSize=" +
-          org.apache.hadoop.hbase.procedure2.util.StringUtils.humanSize(blockingMemStoreSize));
+          ", server=" + (this.getRegionServerServices() == null? "unknown":
+              this.getRegionServerServices().getServerName()));
     }
   }
 
@@ -8602,4 +8602,5 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void requestFlush(FlushLifeCycleTracker tracker) throws IOException {
     requestFlush0(tracker);
   }
+
 }

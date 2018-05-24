@@ -1549,7 +1549,7 @@ public class Bytes implements Comparable<Bytes> {
           long lw = theUnsafe.getLong(buffer1, offset1Adj + i);
           long rw = theUnsafe.getLong(buffer2, offset2Adj + i);
           if (lw != rw) {
-            if(!UnsafeAccess.littleEndian) {
+            if(!UnsafeAccess.LITTLE_ENDIAN) {
               return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
             }
 

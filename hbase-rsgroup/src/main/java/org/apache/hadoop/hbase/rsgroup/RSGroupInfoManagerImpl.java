@@ -23,7 +23,6 @@ import com.google.protobuf.ServiceException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -72,10 +71,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
-import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
-import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -249,7 +245,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   public synchronized void moveTables(Set<TableName> tableNames, String groupName)
       throws IOException {
     if (groupName != null && !rsGroupMap.containsKey(groupName)) {
-      throw new DoNotRetryIOException("Group "+groupName+" does not exist or is a special group");
+      throw new DoNotRetryIOException("Group "+groupName+" does not exist");
     }
 
     Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
@@ -407,18 +403,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     NavigableSet<TableName> orphanTables = new TreeSet<>();
     for(String entry: masterServices.getTableDescriptors().getAll().keySet()) {
       orphanTables.add(TableName.valueOf(entry));
-    }
-
-    List<TableName> specialTables =
-        new ArrayList<TableName>(Arrays.asList(AccessControlLists.ACL_TABLE_NAME,
-          TableName.META_TABLE_NAME, TableName.NAMESPACE_TABLE_NAME, RSGROUP_TABLE_NAME));
-    // if quota is enabled, add corresponding system table to special tables list
-    if (QuotaUtil.isQuotaEnabled(conn.getConfiguration())) {
-      specialTables.add(QuotaTableUtil.QUOTA_TABLE_NAME);
-    }
-
-    for (TableName table : specialTables) {
-      orphanTables.add(table);
     }
     for (RSGroupInfo group: groupList) {
       if(!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
