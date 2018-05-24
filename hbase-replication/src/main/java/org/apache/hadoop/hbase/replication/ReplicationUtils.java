@@ -46,6 +46,16 @@ public final class ReplicationUtils {
 
   public static final String REMOTE_WAL_DIR_NAME = "remoteWALs";
 
+  public static final String SYNC_WAL_SUFFIX = ".syncrep";
+
+  public static final String REMOTE_WAL_REPLAY_SUFFIX = "-replay";
+
+  public static final String REMOTE_WAL_SNAPSHOT_SUFFIX = "-snapshot";
+
+  // This is used for copying sync replication log from local to remote and overwrite the old one
+  // since some FileSystem implementation may not support atomic rename.
+  public static final String RENAME_WAL_SUFFIX = ".ren";
+
   private ReplicationUtils() {
   }
 
@@ -187,12 +197,24 @@ public final class ReplicationUtils {
     return new Path(remoteWALDir).getFileSystem(conf);
   }
 
-  public static Path getRemoteWALDirForPeer(String remoteWALDir, String peerId) {
+  public static Path getPeerRemoteWALDir(String remoteWALDir, String peerId) {
     return new Path(remoteWALDir, peerId);
   }
 
-  public static Path getRemoteWALDirForPeer(Path remoteWALDir, String peerId) {
+  public static Path getPeerRemoteWALDir(Path remoteWALDir, String peerId) {
     return new Path(remoteWALDir, peerId);
+  }
+
+  public static Path getPeerReplayWALDir(Path remoteWALDir, String peerId) {
+    return getPeerRemoteWALDir(remoteWALDir, peerId).suffix(REMOTE_WAL_REPLAY_SUFFIX);
+  }
+
+  public static Path getPeerSnapshotWALDir(String remoteWALDir, String peerId) {
+    return getPeerRemoteWALDir(remoteWALDir, peerId).suffix(REMOTE_WAL_SNAPSHOT_SUFFIX);
+  }
+
+  public static Path getPeerSnapshotWALDir(Path remoteWALDir, String peerId) {
+    return getPeerRemoteWALDir(remoteWALDir, peerId).suffix(REMOTE_WAL_SNAPSHOT_SUFFIX);
   }
 
   /**

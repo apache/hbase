@@ -77,8 +77,7 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
       return false;
     }
     Pair<SyncReplicationState, SyncReplicationState> states =
-        peer.getSyncReplicationStateAndNewState();
+      peer.getSyncReplicationStateAndNewState();
     return checker.test(states.getFirst(), states.getSecond());
   }
-
 }

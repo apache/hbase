@@ -97,25 +97,25 @@ public class TestSyncReplicationStandBy extends SyncReplicationTestBase {
     writeAndVerifyReplication(UTIL1, UTIL2, 0, 100);
 
     // Remove the peers in ACTIVE & STANDBY cluster.
-    FileSystem fs2 = remoteWALDir2.getFileSystem(UTIL2.getConfiguration());
-    Assert.assertTrue(fs2.exists(getRemoteWALDir(remoteWALDir2, PEER_ID)));
+    FileSystem fs2 = REMOTE_WAL_DIR2.getFileSystem(UTIL2.getConfiguration());
+    Assert.assertTrue(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
 
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);
-    Assert.assertFalse(fs2.exists(getRemoteWALDir(remoteWALDir2, PEER_ID)));
-    Assert.assertFalse(fs2.exists(getReplayRemoteWALs(remoteWALDir2, PEER_ID)));
+    Assert.assertFalse(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
+    Assert.assertFalse(fs2.exists(getReplayRemoteWALs(REMOTE_WAL_DIR2, PEER_ID)));
 
     UTIL1.getAdmin().removeReplicationPeer(PEER_ID);
-    verifyRemovedPeer(PEER_ID, remoteWALDir1, UTIL1);
+    verifyRemovedPeer(PEER_ID, REMOTE_WAL_DIR1, UTIL1);
 
     // Peer remoteWAL dir will be renamed to replay WAL dir when transit from S to DA, and the
     // replay WAL dir will be removed after replaying all WALs, so create a emtpy dir here to test
     // whether the removeReplicationPeer would remove the remoteWAL dir.
-    fs2.create(getRemoteWALDir(remoteWALDir2, PEER_ID));
-    fs2.create(getReplayRemoteWALs(remoteWALDir2, PEER_ID));
-    Assert.assertTrue(fs2.exists(getRemoteWALDir(remoteWALDir2, PEER_ID)));
-    Assert.assertTrue(fs2.exists(getReplayRemoteWALs(remoteWALDir2, PEER_ID)));
+    fs2.create(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID));
+    fs2.create(getReplayRemoteWALs(REMOTE_WAL_DIR2, PEER_ID));
+    Assert.assertTrue(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
+    Assert.assertTrue(fs2.exists(getReplayRemoteWALs(REMOTE_WAL_DIR2, PEER_ID)));
     UTIL2.getAdmin().removeReplicationPeer(PEER_ID);
-    verifyRemovedPeer(PEER_ID, remoteWALDir2, UTIL2);
+    verifyRemovedPeer(PEER_ID, REMOTE_WAL_DIR2, UTIL2);
   }
 }

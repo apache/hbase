@@ -72,9 +72,9 @@ public class SyncReplicationTestBase {
 
   protected static String PEER_ID = "1";
 
-  protected static Path remoteWALDir1;
+  protected static Path REMOTE_WAL_DIR1;
 
-  protected static Path remoteWALDir2;
+  protected static Path REMOTE_WAL_DIR2;
 
   private static void initTestingUtility(HBaseTestingUtility util, String zkParent) {
     util.setZkCluster(ZK_UTIL.getZkCluster());
@@ -109,22 +109,22 @@ public class SyncReplicationTestBase {
     UTIL2.getAdmin().createTable(td);
     FileSystem fs1 = UTIL1.getTestFileSystem();
     FileSystem fs2 = UTIL2.getTestFileSystem();
-    remoteWALDir1 =
+    REMOTE_WAL_DIR1 =
       new Path(UTIL1.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
         "remoteWALs").makeQualified(fs1.getUri(), fs1.getWorkingDirectory());
-    remoteWALDir2 =
+    REMOTE_WAL_DIR2 =
       new Path(UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir(),
         "remoteWALs").makeQualified(fs2.getUri(), fs2.getWorkingDirectory());
     UTIL1.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
         .setReplicateAllUserTables(false)
         .setTableCFsMap(ImmutableMap.of(TABLE_NAME, new ArrayList<>()))
-        .setRemoteWALDir(remoteWALDir2.toUri().toString()).build());
+        .setRemoteWALDir(REMOTE_WAL_DIR2.toUri().toString()).build());
     UTIL2.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL1.getClusterKey())
         .setReplicateAllUserTables(false)
         .setTableCFsMap(ImmutableMap.of(TABLE_NAME, new ArrayList<>()))
-        .setRemoteWALDir(remoteWALDir1.toUri().toString()).build());
+        .setRemoteWALDir(REMOTE_WAL_DIR1.toUri().toString()).build());
   }
 
   @AfterClass

@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWALArchiveDir
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWALDirectoryName;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Streams;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -67,8 +70,9 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   private static final Logger LOG = LoggerFactory.getLogger(SyncReplicationWALProvider.class);
 
+  // only for injecting errors for testcase, do not use it for other purpose.
   @VisibleForTesting
-  public static final String LOG_SUFFIX = ".syncrep";
+  public static final String DUAL_WAL_IMPL = "hbase.wal.sync.impl";
 
   private final WALProvider provider;
 
@@ -126,12 +130,35 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   }
 
   private DualAsyncFSWAL createWAL(String peerId, String remoteWALDir) throws IOException {
-    return new DualAsyncFSWAL(CommonFSUtils.getWALFileSystem(conf),
-      ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir),
-      CommonFSUtils.getWALRootDir(conf),
-      ReplicationUtils.getRemoteWALDirForPeer(remoteWALDir, peerId),
-      getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
-      conf, listeners, true, getLogPrefix(peerId), LOG_SUFFIX, eventLoopGroup, channelClass);
+    Class<? extends DualAsyncFSWAL> clazz =
+      conf.getClass(DUAL_WAL_IMPL, DualAsyncFSWAL.class, DualAsyncFSWAL.class);
+    try {
+      Constructor<?> constructor = null;
+      for (Constructor<?> c : clazz.getDeclaredConstructors()) {
+        if (c.getParameterCount() > 0) {
+          constructor = c;
+          break;
+        }
+      }
+      if (constructor == null) {
+        throw new IllegalArgumentException("No valid constructor provided for class " + clazz);
+      }
+      constructor.setAccessible(true);
+      return (DualAsyncFSWAL) constructor.newInstance(
+        CommonFSUtils.getWALFileSystem(conf),
+        ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir),
+        CommonFSUtils.getWALRootDir(conf),
+        ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId),
+        getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
+        conf, listeners, true, getLogPrefix(peerId), ReplicationUtils.SYNC_WAL_SUFFIX,
+        eventLoopGroup, channelClass);
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new RuntimeException(e);
+    } catch (InvocationTargetException e) {
+      Throwable cause = e.getTargetException();
+      Throwables.propagateIfPossible(cause, IOException.class);
+      throw new RuntimeException(cause);
+    }
   }
 
   private DualAsyncFSWAL getWAL(String peerId, String remoteWALDir) throws IOException {
@@ -304,7 +331,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
    * </p>
    */
   public static Optional<String> getSyncReplicationPeerIdFromWALName(String name) {
-    if (!name.endsWith(LOG_SUFFIX)) {
+    if (!name.endsWith(ReplicationUtils.SYNC_WAL_SUFFIX)) {
       // fast path to return earlier if the name is not for a sync replication peer.
       return Optional.empty();
     }

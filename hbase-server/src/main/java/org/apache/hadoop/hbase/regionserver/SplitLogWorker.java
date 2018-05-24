@@ -23,22 +23,31 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Optional;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
-import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor.Status;
+import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -67,67 +76,133 @@ public class SplitLogWorker implements Runnable {
   Thread worker;
   // thread pool which executes recovery work
   private SplitLogWorkerCoordination coordination;
-  private Configuration conf;
   private RegionServerServices server;
 
   public SplitLogWorker(Server hserver, Configuration conf, RegionServerServices server,
       TaskExecutor splitTaskExecutor) {
     this.server = server;
-    this.conf = conf;
     this.coordination = hserver.getCoordinatedStateManager().getSplitLogWorkerCoordination();
     coordination.init(server, conf, splitTaskExecutor, this);
   }
 
-  public SplitLogWorker(final Server hserver, final Configuration conf,
-      final RegionServerServices server, final LastSequenceId sequenceIdChecker,
-      final WALFactory factory) {
-    this(hserver, conf, server, new TaskExecutor() {
-      @Override
-      public Status exec(String filename, CancelableProgressable p) {
-        Path walDir;
-        FileSystem fs;
-        try {
-          walDir = FSUtils.getWALRootDir(conf);
-          fs = walDir.getFileSystem(conf);
-        } catch (IOException e) {
-          LOG.warn("could not find root dir or fs", e);
-          return Status.RESIGNED;
-        }
-        // TODO have to correctly figure out when log splitting has been
-        // interrupted or has encountered a transient error and when it has
-        // encountered a bad non-retry-able persistent error.
-        try {
-          if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)),
-            fs, conf, p, sequenceIdChecker,
-              server.getCoordinatedStateManager().getSplitLogWorkerCoordination(), factory)) {
-            return Status.PREEMPTED;
-          }
-        } catch (InterruptedIOException iioe) {
-          LOG.warn("log splitting of " + filename + " interrupted, resigning", iioe);
-          return Status.RESIGNED;
-        } catch (IOException e) {
-          if (e instanceof FileNotFoundException) {
-            // A wal file may not exist anymore. Nothing can be recovered so move on
-            LOG.warn("WAL {} does not exist anymore", filename, e);
-            return Status.DONE;
-          }
-          Throwable cause = e.getCause();
-          if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException
-                  || cause instanceof ConnectException
-                  || cause instanceof SocketTimeoutException)) {
-            LOG.warn("log replaying of " + filename + " can't connect to the target regionserver, "
-                + "resigning", e);
-            return Status.RESIGNED;
-          } else if (cause instanceof InterruptedException) {
-            LOG.warn("log splitting of " + filename + " interrupted, resigning", e);
-            return Status.RESIGNED;
-          }
-          LOG.warn("log splitting of " + filename + " failed, returning error", e);
-          return Status.ERR;
-        }
+  public SplitLogWorker(Configuration conf, RegionServerServices server,
+      LastSequenceId sequenceIdChecker, WALFactory factory) {
+    this(server, conf, server, (f, p) -> splitLog(f, p, conf, server, sequenceIdChecker, factory));
+  }
+
+  // returns whether we need to continue the split work
+  private static boolean processSyncReplicationWAL(String name, Configuration conf,
+      RegionServerServices server, FileSystem fs, Path walDir) throws IOException {
+    Path walFile = new Path(walDir, name);
+    String filename = walFile.getName();
+    Optional<String> optSyncPeerId =
+      SyncReplicationWALProvider.getSyncReplicationPeerIdFromWALName(filename);
+    if (!optSyncPeerId.isPresent()) {
+      return true;
+    }
+    String peerId = optSyncPeerId.get();
+    ReplicationPeerImpl peer =
+      server.getReplicationSourceService().getReplicationPeers().getPeer(peerId);
+    if (peer == null || !peer.getPeerConfig().isSyncReplication()) {
+      return true;
+    }
+    Pair<SyncReplicationState, SyncReplicationState> stateAndNewState =
+      peer.getSyncReplicationStateAndNewState();
+    if (stateAndNewState.getFirst().equals(SyncReplicationState.ACTIVE) &&
+      stateAndNewState.getSecond().equals(SyncReplicationState.NONE)) {
+      // copy the file to remote and overwrite the previous one
+      String remoteWALDir = peer.getPeerConfig().getRemoteWALDir();
+      Path remoteWALDirForPeer = ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId);
+      Path tmpRemoteWAL = new Path(remoteWALDirForPeer, filename + ".tmp");
+      FileSystem remoteFs = ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir);
+      try (FSDataInputStream in = fs.open(walFile); @SuppressWarnings("deprecation")
+      FSDataOutputStream out = remoteFs.createNonRecursive(tmpRemoteWAL, true,
+        FSUtils.getDefaultBufferSize(remoteFs), remoteFs.getDefaultReplication(tmpRemoteWAL),
+        remoteFs.getDefaultBlockSize(tmpRemoteWAL), null)) {
+        IOUtils.copy(in, out);
+      }
+      Path toCommitRemoteWAL =
+        new Path(remoteWALDirForPeer, filename + ReplicationUtils.RENAME_WAL_SUFFIX);
+      // Some FileSystem implementations may not support atomic rename so we need to do it in two
+      // phases
+      FSUtils.renameFile(remoteFs, tmpRemoteWAL, toCommitRemoteWAL);
+      FSUtils.renameFile(remoteFs, toCommitRemoteWAL, new Path(remoteWALDirForPeer, filename));
+    } else if ((stateAndNewState.getFirst().equals(SyncReplicationState.ACTIVE) &&
+      stateAndNewState.getSecond().equals(SyncReplicationState.STANDBY)) ||
+      stateAndNewState.getFirst().equals(SyncReplicationState.STANDBY)) {
+      // check whether we still need to process this file
+      // actually we only write wal file which name is ended with .syncrep in A state, and after
+      // transiting to a state other than A, we will reopen all the regions so the data in the wal
+      // will be flushed so the wal file will be archived soon. But it is still possible that there
+      // is a server crash when we are transiting from A to S, to simplify the logic of the transit
+      // procedure, here we will also check the remote snapshot directory in state S, so that we do
+      // not need wait until all the wal files with .syncrep suffix to be archived before finishing
+      // the procedure.
+      String remoteWALDir = peer.getPeerConfig().getRemoteWALDir();
+      Path remoteSnapshotDirForPeer = ReplicationUtils.getPeerSnapshotWALDir(remoteWALDir, peerId);
+      FileSystem remoteFs = ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir);
+      if (remoteFs.exists(new Path(remoteSnapshotDirForPeer, filename))) {
+        // the file has been replayed when the remote cluster was transited from S to DA, the
+        // content will be replicated back to us so give up split it.
+        LOG.warn("Giveup splitting {} since it has been replayed in the remote cluster and " +
+          "the content will be replicated back", filename);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static Status splitLog(String name, CancelableProgressable p, Configuration conf,
+      RegionServerServices server, LastSequenceId sequenceIdChecker, WALFactory factory) {
+    Path walDir;
+    FileSystem fs;
+    try {
+      walDir = FSUtils.getWALRootDir(conf);
+      fs = walDir.getFileSystem(conf);
+    } catch (IOException e) {
+      LOG.warn("could not find root dir or fs", e);
+      return Status.RESIGNED;
+    }
+    try {
+      if (!processSyncReplicationWAL(name, conf, server, fs, walDir)) {
         return Status.DONE;
       }
-    });
+    } catch (IOException e) {
+      LOG.warn("failed to process sync replication wal {}", name, e);
+      return Status.RESIGNED;
+    }
+    // TODO have to correctly figure out when log splitting has been
+    // interrupted or has encountered a transient error and when it has
+    // encountered a bad non-retry-able persistent error.
+    try {
+      if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, name)), fs, conf,
+        p, sequenceIdChecker, server.getCoordinatedStateManager().getSplitLogWorkerCoordination(),
+        factory)) {
+        return Status.PREEMPTED;
+      }
+    } catch (InterruptedIOException iioe) {
+      LOG.warn("log splitting of " + name + " interrupted, resigning", iioe);
+      return Status.RESIGNED;
+    } catch (IOException e) {
+      if (e instanceof FileNotFoundException) {
+        // A wal file may not exist anymore. Nothing can be recovered so move on
+        LOG.warn("WAL {} does not exist anymore", name, e);
+        return Status.DONE;
+      }
+      Throwable cause = e.getCause();
+      if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException ||
+        cause instanceof ConnectException || cause instanceof SocketTimeoutException)) {
+        LOG.warn("log replaying of " + name + " can't connect to the target regionserver, " +
+          "resigning", e);
+        return Status.RESIGNED;
+      } else if (cause instanceof InterruptedException) {
+        LOG.warn("log splitting of " + name + " interrupted, resigning", e);
+        return Status.RESIGNED;
+      }
+      LOG.warn("log splitting of " + name + " failed, returning error", e);
+      return Status.ERR;
+    }
+    return Status.DONE;
   }
 
   @Override
@@ -191,6 +266,7 @@ public class SplitLogWorker implements Runnable {
    * {@link org.apache.hadoop.hbase.master.SplitLogManager} commit the work in
    * SplitLogManager.TaskFinisher
    */
+  @FunctionalInterface
   public interface TaskExecutor {
     enum Status {
       DONE(),

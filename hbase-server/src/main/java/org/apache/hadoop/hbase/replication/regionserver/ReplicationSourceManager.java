@@ -671,7 +671,7 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   private void removeRemoteWALs(String peerId, String remoteWALDir, Collection<String> wals)
       throws IOException {
-    Path remoteWALDirForPeer = ReplicationUtils.getRemoteWALDirForPeer(remoteWALDir, peerId);
+    Path remoteWALDirForPeer = ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId);
     FileSystem fs = ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir);
     for (String wal : wals) {
       Path walFile = new Path(remoteWALDirForPeer, wal);

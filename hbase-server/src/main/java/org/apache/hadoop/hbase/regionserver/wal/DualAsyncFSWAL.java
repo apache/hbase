@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 
@@ -50,6 +51,13 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
     this.remoteWalDir = remoteWalDir;
   }
 
+  // will be overridden in testcase
+  @VisibleForTesting
+  protected AsyncWriter createCombinedAsyncWriter(AsyncWriter localWriter,
+      AsyncWriter remoteWriter) {
+    return CombinedAsyncWriter.create(remoteWriter, localWriter);
+  }
+
   @Override
   protected AsyncWriter createWriterInstance(Path path) throws IOException {
     AsyncWriter localWriter = super.createWriterInstance(path);
@@ -66,8 +74,7 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
         closeWriter(localWriter);
       }
     }
-    return CombinedAsyncWriter.create(CombinedAsyncWriter.Mode.SEQUENTIAL, remoteWriter,
-      localWriter);
+    return createCombinedAsyncWriter(localWriter, remoteWriter);
   }
 
   // Allow temporarily skipping the creation of remote writer. When failing to write to the remote

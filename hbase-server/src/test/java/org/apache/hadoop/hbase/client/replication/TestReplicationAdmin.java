@@ -1141,7 +1141,7 @@ public class TestReplicationAdmin {
       LOG.info("Expected error:", e);
     }
     TEST_UTIL.getTestFileSystem()
-      .mkdirs(ReplicationUtils.getRemoteWALDirForPeer(rootDir, ID_SECOND));
+      .mkdirs(ReplicationUtils.getPeerRemoteWALDir(rootDir, ID_SECOND));
     hbaseAdmin.transitReplicationPeerSyncReplicationState(ID_SECOND, SyncReplicationState.ACTIVE);
     assertEquals(SyncReplicationState.ACTIVE,
       hbaseAdmin.getReplicationPeerSyncReplicationState(ID_SECOND));

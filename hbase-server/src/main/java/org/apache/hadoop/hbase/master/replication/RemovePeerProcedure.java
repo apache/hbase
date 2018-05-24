@@ -67,10 +67,7 @@ public class RemovePeerProcedure extends ModifyPeerProcedure {
   }
 
   private void removeRemoteWALs(MasterProcedureEnv env) throws IOException {
-    ReplaySyncReplicationWALManager remoteWALManager =
-        env.getMasterServices().getReplaySyncReplicationWALManager();
-    remoteWALManager.removePeerRemoteWALs(peerId);
-    remoteWALManager.removePeerReplayWALDir(peerId);
+    env.getMasterServices().getReplaySyncReplicationWALManager().removePeerRemoteWALs(peerId);
   }
 
   @Override

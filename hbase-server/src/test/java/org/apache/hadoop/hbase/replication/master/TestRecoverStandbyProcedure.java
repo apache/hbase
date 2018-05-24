@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -151,7 +152,8 @@ public class TestRecoverStandbyProcedure {
   }
 
   private void setupSyncReplicationWALs() throws IOException, StreamLacksCapabilityException {
-    Path peerRemoteWALDir = replaySyncReplicationWALManager.getPeerRemoteWALDir(PEER_ID);
+    Path peerRemoteWALDir = ReplicationUtils
+      .getPeerRemoteWALDir(replaySyncReplicationWALManager.getRemoteWALDir(), PEER_ID);
     if (!fs.exists(peerRemoteWALDir)) {
       fs.mkdirs(peerRemoteWALDir);
     }

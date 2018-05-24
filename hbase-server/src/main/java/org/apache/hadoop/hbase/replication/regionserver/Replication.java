@@ -288,4 +288,9 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   public SyncReplicationPeerInfoProvider getSyncReplicationPeerInfoProvider() {
     return syncReplicationPeerInfoProvider;
   }
+
+  @Override
+  public ReplicationPeers getReplicationPeers() {
+    return replicationPeers;
+  }
 }

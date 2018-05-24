@@ -50,7 +50,7 @@ public class RecoverStandbyProcedure extends AbstractPeerProcedure<RecoverStandb
     switch (state) {
       case RENAME_SYNC_REPLICATION_WALS_DIR:
         try {
-          replaySyncReplicationWALManager.renamePeerRemoteWALDir(peerId);
+          replaySyncReplicationWALManager.renameToPeerReplayWALDir(peerId);
         } catch (IOException e) {
           LOG.warn("Failed to rename remote wal dir for peer id={}", peerId, e);
           setFailure("master-recover-standby", e);
@@ -67,11 +67,11 @@ public class RecoverStandbyProcedure extends AbstractPeerProcedure<RecoverStandb
             .map(wal -> new ReplaySyncReplicationWALProcedure(peerId,
                 replaySyncReplicationWALManager.removeWALRootPath(wal)))
             .toArray(ReplaySyncReplicationWALProcedure[]::new));
-        setNextState(RecoverStandbyState.REMOVE_SYNC_REPLICATION_WALS_DIR);
+        setNextState(RecoverStandbyState.SNAPSHOT_SYNC_REPLICATION_WALS_DIR);
         return Flow.HAS_MORE_STATE;
-      case REMOVE_SYNC_REPLICATION_WALS_DIR:
+      case SNAPSHOT_SYNC_REPLICATION_WALS_DIR:
         try {
-          replaySyncReplicationWALManager.removePeerReplayWALDir(peerId);
+          replaySyncReplicationWALManager.renameToPeerSnapshotWALDir(peerId);
         } catch (IOException e) {
           LOG.warn("Failed to cleanup replay wals dir for peer id={}, , retry", peerId, e);
           throw new ProcedureYieldException();
@@ -85,7 +85,7 @@ public class RecoverStandbyProcedure extends AbstractPeerProcedure<RecoverStandb
   private List<Path> getReplayWALs(ReplaySyncReplicationWALManager replaySyncReplicationWALManager)
       throws ProcedureYieldException {
     try {
-      return replaySyncReplicationWALManager.getReplayWALs(peerId);
+      return replaySyncReplicationWALManager.getReplayWALsAndCleanUpUnusedFiles(peerId);
     } catch (IOException e) {
       LOG.warn("Failed to get replay wals for peer id={}, , retry", peerId, e);
       throw new ProcedureYieldException();

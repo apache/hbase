@@ -86,7 +86,6 @@ public class TestSyncReplicationWALProvider {
     @Override
     public boolean checkState(TableName table,
         BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
-      // TODO Implement SyncReplicationPeerInfoProvider.isInState
       return false;
     }
   }

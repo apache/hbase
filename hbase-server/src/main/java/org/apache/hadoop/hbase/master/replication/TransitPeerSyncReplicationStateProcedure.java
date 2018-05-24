@@ -118,7 +118,7 @@ public class TransitPeerSyncReplicationStateProcedure
       env.getReplicationPeerManager().preTransitPeerSyncReplicationState(peerId, toState);
     if (toState == SyncReplicationState.ACTIVE) {
       Path remoteWALDirForPeer =
-        ReplicationUtils.getRemoteWALDirForPeer(desc.getPeerConfig().getRemoteWALDir(), peerId);
+        ReplicationUtils.getPeerRemoteWALDir(desc.getPeerConfig().getRemoteWALDir(), peerId);
       // check whether the remote wal directory is present
       if (!remoteWALDirForPeer.getFileSystem(env.getMasterConfiguration())
         .exists(remoteWALDirForPeer)) {
@@ -152,7 +152,7 @@ public class TransitPeerSyncReplicationStateProcedure
       throws ProcedureYieldException, IOException {
     MasterFileSystem mfs = env.getMasterFileSystem();
     Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
-    Path remoteWALDirForPeer = ReplicationUtils.getRemoteWALDirForPeer(remoteWALDir, peerId);
+    Path remoteWALDirForPeer = ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId);
     FileSystem walFs = mfs.getWALFileSystem();
     if (walFs.exists(remoteWALDirForPeer)) {
       LOG.warn("Wal dir {} already exists, usually this should not happen, continue anyway",

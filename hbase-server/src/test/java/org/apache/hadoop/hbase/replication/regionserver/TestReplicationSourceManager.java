@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -618,7 +617,7 @@ public abstract class TestReplicationSourceManager {
     try {
       // make sure that we can deal with files which does not exist
       String walNameNotExists =
-        "remoteWAL-12345-" + slaveId + ".12345" + SyncReplicationWALProvider.LOG_SUFFIX;
+        "remoteWAL-12345-" + slaveId + ".12345" + ReplicationUtils.SYNC_WAL_SUFFIX;
       Path wal = new Path(logDir, walNameNotExists);
       manager.preLogRoll(wal);
       manager.postLogRoll(wal);
@@ -626,7 +625,7 @@ public abstract class TestReplicationSourceManager {
       Path remoteLogDirForPeer = new Path(remoteLogDir, slaveId);
       fs.mkdirs(remoteLogDirForPeer);
       String walName =
-        "remoteWAL-12345-" + slaveId + ".23456" + SyncReplicationWALProvider.LOG_SUFFIX;
+        "remoteWAL-12345-" + slaveId + ".23456" + ReplicationUtils.SYNC_WAL_SUFFIX;
       Path remoteWAL =
         new Path(remoteLogDirForPeer, walName).makeQualified(fs.getUri(), fs.getWorkingDirectory());
       fs.create(remoteWAL).close();

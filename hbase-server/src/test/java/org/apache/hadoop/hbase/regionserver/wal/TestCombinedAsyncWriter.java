@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,23 +37,18 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
-@RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestCombinedAsyncWriter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCombinedAsyncWriter.class);
+    HBaseClassTestRule.forClass(TestCombinedAsyncWriter.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -67,15 +60,6 @@ public class TestCombinedAsyncWriter {
 
   @Rule
   public final TestName name = new TestName();
-
-  @Parameter
-  public CombinedAsyncWriter.Mode mode;
-
-  @Parameters(name = "{index}: mode={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { CombinedAsyncWriter.Mode.SEQUENTIAL },
-      new Object[] { CombinedAsyncWriter.Mode.PARALLEL });
-  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -125,7 +109,7 @@ public class TestCombinedAsyncWriter {
         EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
       AsyncWriter writer2 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path2, false,
         EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
-      CombinedAsyncWriter writer = CombinedAsyncWriter.create(mode, writer1, writer2)) {
+      CombinedAsyncWriter writer = CombinedAsyncWriter.create(writer1, writer2)) {
       ProtobufLogTestHelper.doWrite(new WriterOverAsyncWriter(writer), withTrailer, tableName,
         columnCount, recordCount, row, timestamp);
       try (ProtobufLogReader reader = (ProtobufLogReader) WALS.createReader(fs, path1)) {

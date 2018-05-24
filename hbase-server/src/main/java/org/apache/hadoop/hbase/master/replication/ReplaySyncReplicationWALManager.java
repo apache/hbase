@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.replication;
 
+import static org.apache.hadoop.hbase.replication.ReplicationUtils.getPeerRemoteWALDir;
+import static org.apache.hadoop.hbase.replication.ReplicationUtils.getPeerReplayWALDir;
+import static org.apache.hadoop.hbase.replication.ReplicationUtils.getPeerSnapshotWALDir;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,18 +29,18 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 public class ReplaySyncReplicationWALManager {
@@ -44,11 +48,7 @@ public class ReplaySyncReplicationWALManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(ReplaySyncReplicationWALManager.class);
 
-  private static final String REPLAY_SUFFIX = "-replay";
-
   private final MasterServices services;
-
-  private final Configuration conf;
 
   private final FileSystem fs;
 
@@ -60,67 +60,84 @@ public class ReplaySyncReplicationWALManager {
 
   public ReplaySyncReplicationWALManager(MasterServices services) {
     this.services = services;
-    this.conf = services.getConfiguration();
     this.fs = services.getMasterFileSystem().getWALFileSystem();
     this.walRootDir = services.getMasterFileSystem().getWALRootDir();
     this.remoteWALDir = new Path(this.walRootDir, ReplicationUtils.REMOTE_WAL_DIR_NAME);
   }
 
-  public Path getPeerRemoteWALDir(String peerId) {
-    return new Path(this.remoteWALDir, peerId);
-  }
-
-  private Path getPeerReplayWALDir(String peerId) {
-    return getPeerRemoteWALDir(peerId).suffix(REPLAY_SUFFIX);
-  }
-
   public void createPeerRemoteWALDir(String peerId) throws IOException {
-    Path peerRemoteWALDir = getPeerRemoteWALDir(peerId);
+    Path peerRemoteWALDir = getPeerRemoteWALDir(remoteWALDir, peerId);
     if (!fs.exists(peerRemoteWALDir) && !fs.mkdirs(peerRemoteWALDir)) {
       throw new IOException("Unable to mkdir " + peerRemoteWALDir);
     }
   }
 
-  public void renamePeerRemoteWALDir(String peerId) throws IOException {
-    Path peerRemoteWALDir = getPeerRemoteWALDir(peerId);
-    Path peerReplayWALDir = peerRemoteWALDir.suffix(REPLAY_SUFFIX);
-    if (fs.exists(peerRemoteWALDir)) {
-      if (!fs.rename(peerRemoteWALDir, peerReplayWALDir)) {
-        throw new IOException("Failed rename remote wal dir from " + peerRemoteWALDir + " to "
-            + peerReplayWALDir + " for peer id=" + peerId);
+  private void rename(Path src, Path dst, String peerId) throws IOException {
+    if (fs.exists(src)) {
+      deleteDir(dst, peerId);
+      if (!fs.rename(src, dst)) {
+        throw new IOException(
+          "Failed to rename dir from " + src + " to " + dst + " for peer id=" + peerId);
       }
-      LOG.info("Rename remote wal dir from {} to {} for peer id={}", remoteWALDir, peerReplayWALDir,
-        peerId);
-    } else if (!fs.exists(peerReplayWALDir)) {
-      throw new IOException("Remote wal dir " + peerRemoteWALDir + " and replay wal dir "
-          + peerReplayWALDir + " not exist for peer id=" + peerId);
+      LOG.info("Renamed dir from {} to {} for peer id={}", src, dst, peerId);
+    } else if (!fs.exists(dst)) {
+      throw new IOException(
+        "Want to rename from " + src + " to " + dst + ", but they both do not exist");
     }
   }
 
-  public List<Path> getReplayWALs(String peerId) throws IOException {
-    Path peerReplayWALDir = getPeerReplayWALDir(peerId);
-    List<Path> replayWals = new ArrayList<>();
-    RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(peerReplayWALDir, false);
-    while (iterator.hasNext()) {
-      replayWals.add(iterator.next().getPath());
-    }
-    return replayWals;
+  public void renameToPeerReplayWALDir(String peerId) throws IOException {
+    rename(getPeerRemoteWALDir(remoteWALDir, peerId), getPeerReplayWALDir(remoteWALDir, peerId),
+      peerId);
   }
 
-  public void removePeerReplayWALDir(String peerId) throws IOException {
-    Path peerReplayWALDir = getPeerReplayWALDir(peerId);
+  public void renameToPeerSnapshotWALDir(String peerId) throws IOException {
+    rename(getPeerReplayWALDir(remoteWALDir, peerId), getPeerSnapshotWALDir(remoteWALDir, peerId),
+      peerId);
+  }
+
+  public List<Path> getReplayWALsAndCleanUpUnusedFiles(String peerId) throws IOException {
+    Path peerReplayWALDir = getPeerReplayWALDir(remoteWALDir, peerId);
+    for (FileStatus status : fs.listStatus(peerReplayWALDir,
+      p -> p.getName().endsWith(ReplicationUtils.RENAME_WAL_SUFFIX))) {
+      Path src = status.getPath();
+      String srcName = src.getName();
+      String dstName =
+        srcName.substring(0, srcName.length() - ReplicationUtils.RENAME_WAL_SUFFIX.length());
+      FSUtils.renameFile(fs, src, new Path(src.getParent(), dstName));
+    }
+    List<Path> wals = new ArrayList<>();
+    for (FileStatus status : fs.listStatus(peerReplayWALDir)) {
+      Path path = status.getPath();
+      if (path.getName().endsWith(ReplicationUtils.SYNC_WAL_SUFFIX)) {
+        wals.add(path);
+      } else {
+        if (!fs.delete(path, true)) {
+          LOG.warn("Can not delete unused file: " + path);
+        }
+      }
+    }
+    return wals;
+  }
+
+  public void snapshotPeerReplayWALDir(String peerId) throws IOException {
+    Path peerReplayWALDir = getPeerReplayWALDir(remoteWALDir, peerId);
     if (fs.exists(peerReplayWALDir) && !fs.delete(peerReplayWALDir, true)) {
       throw new IOException(
           "Failed to remove replay wals dir " + peerReplayWALDir + " for peer id=" + peerId);
     }
   }
 
-  public void removePeerRemoteWALs(String peerId) throws IOException {
-    Path remoteWALDir = getPeerRemoteWALDir(peerId);
-    if (fs.exists(remoteWALDir) && !fs.delete(remoteWALDir, true)) {
-      throw new IOException(
-          "Failed to remove remote WALs dir " + remoteWALDir + " for peer id=" + peerId);
+  private void deleteDir(Path dir, String peerId) throws IOException {
+    if (!fs.delete(dir, true) && fs.exists(dir)) {
+      throw new IOException("Failed to remove dir " + dir + " for peer id=" + peerId);
     }
+  }
+
+  public void removePeerRemoteWALs(String peerId) throws IOException {
+    deleteDir(getPeerRemoteWALDir(remoteWALDir, peerId), peerId);
+    deleteDir(getPeerReplayWALDir(remoteWALDir, peerId), peerId);
+    deleteDir(getPeerSnapshotWALDir(remoteWALDir, peerId), peerId);
   }
 
   public void initPeerWorkers(String peerId) {
@@ -143,5 +160,10 @@ public class ReplaySyncReplicationWALManager {
     String pathStr = path.toString();
     // remove the "/" too.
     return pathStr.substring(walRootDir.toString().length() + 1);
+  }
+
+  @VisibleForTesting
+  public Path getRemoteWALDir() {
+    return remoteWALDir;
   }
 }

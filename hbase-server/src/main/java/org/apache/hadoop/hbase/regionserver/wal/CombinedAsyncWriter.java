@@ -32,13 +32,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
  * An {@link AsyncWriter} wrapper which writes data to a set of {@link AsyncWriter} instances.
  */
 @InterfaceAudience.Private
-public abstract class CombinedAsyncWriter implements AsyncWriter {
+public final class CombinedAsyncWriter implements AsyncWriter {
 
   private static final Logger LOG = LoggerFactory.getLogger(CombinedAsyncWriter.class);
 
-  protected final ImmutableList<AsyncWriter> writers;
+  private final ImmutableList<AsyncWriter> writers;
 
-  protected CombinedAsyncWriter(ImmutableList<AsyncWriter> writers) {
+  private CombinedAsyncWriter(ImmutableList<AsyncWriter> writers) {
     this.writers = writers;
   }
 
@@ -66,69 +66,29 @@ public abstract class CombinedAsyncWriter implements AsyncWriter {
     }
   }
 
-  protected abstract void doSync(CompletableFuture<Long> future);
-
-  @Override
-  public CompletableFuture<Long> sync() {
-    CompletableFuture<Long> future = new CompletableFuture<>();
-    doSync(future);
-    return future;
-  }
-
   @Override
   public void append(Entry entry) {
     writers.forEach(w -> w.append(entry));
   }
 
-  public enum Mode {
-    SEQUENTIAL, PARALLEL
+  @Override
+  public CompletableFuture<Long> sync() {
+    CompletableFuture<Long> future = new CompletableFuture<>();
+    AtomicInteger remaining = new AtomicInteger(writers.size());
+    writers.forEach(w -> w.sync().whenComplete((length, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      if (remaining.decrementAndGet() == 0) {
+        future.complete(length);
+      }
+    }));
+    return future;
   }
 
-  public static CombinedAsyncWriter create(Mode mode, AsyncWriter writer, AsyncWriter... writers) {
-    ImmutableList<AsyncWriter> ws =
-        ImmutableList.<AsyncWriter> builder().add(writer).add(writers).build();
-    switch (mode) {
-      case SEQUENTIAL:
-        return new CombinedAsyncWriter(ws) {
-
-          private void doSync(CompletableFuture<Long> future, Long length, int index) {
-            if (index == writers.size()) {
-              future.complete(length);
-              return;
-            }
-            writers.get(index).sync().whenComplete((len, error) -> {
-              if (error != null) {
-                future.completeExceptionally(error);
-                return;
-              }
-              doSync(future, len, index + 1);
-            });
-          }
-
-          @Override
-          protected void doSync(CompletableFuture<Long> future) {
-            doSync(future, null, 0);
-          }
-        };
-      case PARALLEL:
-        return new CombinedAsyncWriter(ws) {
-
-          @Override
-          protected void doSync(CompletableFuture<Long> future) {
-            AtomicInteger remaining = new AtomicInteger(writers.size());
-            writers.forEach(w -> w.sync().whenComplete((length, error) -> {
-              if (error != null) {
-                future.completeExceptionally(error);
-                return;
-              }
-              if (remaining.decrementAndGet() == 0) {
-                future.complete(length);
-              }
-            }));
-          }
-        };
-      default:
-        throw new IllegalArgumentException("Unknown mode: " + mode);
-    }
+  public static CombinedAsyncWriter create(AsyncWriter writer, AsyncWriter... writers) {
+    return new CombinedAsyncWriter(
+      ImmutableList.<AsyncWriter> builder().add(writer).add(writers).build());
   }
 }

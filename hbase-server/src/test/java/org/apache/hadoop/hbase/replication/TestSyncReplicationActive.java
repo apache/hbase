@@ -37,8 +37,7 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSyncReplicationActive.class);
-
+    HBaseClassTestRule.forClass(TestSyncReplicationActive.class);
 
   @Test
   public void testActive() throws Exception {
@@ -58,7 +57,7 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     verifyNotReplicatedThroughRegion(UTIL2, 0, 100);
 
     // Ensure that there's no cluster id in remote log entries.
-    verifyNoClusterIdInRemoteLog(UTIL2, remoteWALDir2, PEER_ID);
+    verifyNoClusterIdInRemoteLog(UTIL2, REMOTE_WAL_DIR2, PEER_ID);
 
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);

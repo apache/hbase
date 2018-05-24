@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,12 +65,12 @@ public class TestSyncReplicationRemoveRemoteWAL extends SyncReplicationTestBase 
       SyncReplicationState.ACTIVE);
 
     MasterFileSystem mfs = UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    Path remoteWALDir = ReplicationUtils.getRemoteWALDirForPeer(
+    Path remoteWALDir = ReplicationUtils.getPeerRemoteWALDir(
       new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME), PEER_ID);
     FileStatus[] remoteWALStatus = mfs.getWALFileSystem().listStatus(remoteWALDir);
     assertEquals(1, remoteWALStatus.length);
     Path remoteWAL = remoteWALStatus[0].getPath();
-    assertThat(remoteWAL.getName(), endsWith(SyncReplicationWALProvider.LOG_SUFFIX));
+    assertThat(remoteWAL.getName(), endsWith(ReplicationUtils.SYNC_WAL_SUFFIX));
     writeAndVerifyReplication(UTIL1, UTIL2, 0, 100);
 
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
@@ -81,7 +80,7 @@ public class TestSyncReplicationRemoveRemoteWAL extends SyncReplicationTestBase 
     remoteWALStatus = mfs.getWALFileSystem().listStatus(remoteWALDir);
     assertEquals(1, remoteWALStatus.length);
     remoteWAL = remoteWALStatus[0].getPath();
-    assertThat(remoteWAL.getName(), endsWith(SyncReplicationWALProvider.LOG_SUFFIX));
+    assertThat(remoteWAL.getName(), endsWith(ReplicationUtils.SYNC_WAL_SUFFIX));
 
     UTIL1.getAdmin().disableReplicationPeer(PEER_ID);
     write(UTIL1, 100, 200);

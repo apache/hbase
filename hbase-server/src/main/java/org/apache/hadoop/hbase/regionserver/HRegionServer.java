@@ -1963,8 +1963,7 @@ public class HRegionServer extends HasThread implements
     sinkConf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
     if (this.csm != null) {
       // SplitLogWorker needs csm. If none, don't start this.
-      this.splitLogWorker = new SplitLogWorker(this, sinkConf, this,
-          this, walFactory);
+      this.splitLogWorker = new SplitLogWorker(sinkConf, this, this, walFactory);
       splitLogWorker.start();
     } else {
       LOG.warn("SplitLogWorker Service NOT started; CoordinatedStateManager is null");
