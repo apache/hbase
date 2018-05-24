@@ -1003,6 +1003,17 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     zombieDetector.interrupt();
+
+    /*
+     * After master has started up, lets do balancer post startup initialization. Since this runs
+     * in activeMasterManager thread, it should be fine.
+     */
+    long start = System.currentTimeMillis();
+    this.balancer.postMasterStartupInitialize();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Balancer post startup initialization complete, took " + (
+          (System.currentTimeMillis() - start) / 1000) + " seconds");
+    }
   }
 
   /**

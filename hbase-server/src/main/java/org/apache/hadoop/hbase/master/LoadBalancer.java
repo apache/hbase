@@ -160,6 +160,11 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   void onConfigurationChange(Configuration conf);
 
   /**
+   * If balancer needs to do initialization after Master has started up, lets do that here.
+   */
+  void postMasterStartupInitialize();
+
+  /**
    * @return true if Master carries regions
    */
   static boolean isTablesOnMaster(Configuration conf) {
