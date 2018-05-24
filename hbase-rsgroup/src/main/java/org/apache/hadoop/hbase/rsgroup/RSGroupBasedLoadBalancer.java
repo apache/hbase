@@ -468,4 +468,9 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   public void setRsGroupInfoManager(RSGroupInfoManager rsGroupInfoManager) {
     this.rsGroupInfoManager = rsGroupInfoManager;
   }
+
+  @Override
+  public void postMasterStartupInitialize() {
+    this.internalBalancer.postMasterStartupInitialize();
+  }
 }
