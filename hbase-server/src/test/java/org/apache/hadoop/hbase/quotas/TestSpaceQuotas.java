@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
@@ -348,6 +349,161 @@ public class TestSpaceQuotas {
     verifyViolation(policy, tn, p);
   }
 
+  @Test
+  public void testSetQuotaAndThenRemoveWithNoInserts() throws Exception {
+    setQuotaAndThenRemove(SpaceViolationPolicy.NO_INSERTS);
+  }
+
+  @Test
+  public void testSetQuotaAndThenRemoveWithNoWrite() throws Exception {
+    setQuotaAndThenRemove(SpaceViolationPolicy.NO_WRITES);
+  }
+
+  @Test
+  public void testSetQuotaAndThenRemoveWithNoWritesCompactions() throws Exception {
+    setQuotaAndThenRemove(SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
+  }
+
+  @Test
+  public void testSetQuotaAndThenRemoveWithDisable() throws Exception {
+    setQuotaAndThenRemove(SpaceViolationPolicy.DISABLE);
+  }
+
+  @Test
+  public void testSetQuotaAndThenDropTableWithNoInserts() throws Exception {
+    setQuotaAndThenDropTable(SpaceViolationPolicy.NO_INSERTS);
+  }
+
+  @Test
+  public void testSetQuotaAndThenDropTableWithNoWrite() throws Exception {
+    setQuotaAndThenDropTable(SpaceViolationPolicy.NO_WRITES);
+  }
+
+  @Test
+  public void testSetQuotaAndThenDropTableeWithNoWritesCompactions() throws Exception {
+    setQuotaAndThenDropTable(SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
+  }
+
+  @Test
+  public void testSetQuotaAndThenIncreaseQuotaWithNoInserts() throws Exception {
+    setQuotaAndThenIncreaseQuota(SpaceViolationPolicy.NO_INSERTS);
+  }
+
+  @Test
+  public void testSetQuotaAndThenIncreaseQuotaWithNoWrite() throws Exception {
+    setQuotaAndThenIncreaseQuota(SpaceViolationPolicy.NO_WRITES);
+  }
+
+  @Test
+  public void testSetQuotaAndThenIncreaseQuotaWithNoWritesCompactions() throws Exception {
+    setQuotaAndThenIncreaseQuota(SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
+  }
+
+  @Test
+  public void testSetQuotaAndThenRemoveInOneWithNoInserts() throws Exception {
+    setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy.NO_INSERTS);
+  }
+
+  @Test
+  public void testSetQuotaAndThenRemoveInOneWithNoWrite() throws Exception {
+    setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy.NO_WRITES);
+  }
+
+  @Test
+  public void testSetQuotaAndThenRemoveInOneWithNoWritesCompaction() throws Exception {
+    setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
+  }
+
+  @Test
+  public void testSetQuotaAndThenRemoveInOneWithDisable() throws Exception {
+    setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy.DISABLE);
+  }
+
+  private void setQuotaAndThenRemove(SpaceViolationPolicy policy) throws Exception {
+    Put put = new Put(Bytes.toBytes("to_reject"));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+
+    // Do puts until we violate space policy
+    final TableName tn = writeUntilViolationAndVerifyViolation(policy, put);
+
+    // Now, remove the quota
+    removeQuotaFromtable(tn);
+
+    // Put some rows now: should not violate as quota settings removed
+    verifyNoViolation(policy, tn, put);
+  }
+
+  private void setQuotaAndThenDropTable(SpaceViolationPolicy policy) throws Exception {
+    Put put = new Put(Bytes.toBytes("to_reject"));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+
+    // Do puts until we violate space policy
+    final TableName tn = writeUntilViolationAndVerifyViolation(policy, put);
+
+    // Now, drop the table
+    TEST_UTIL.deleteTable(tn);
+    LOG.debug("Successfully deleted table ", tn);
+
+    // Now re-create the table
+    TEST_UTIL.createTable(tn, Bytes.toBytes(SpaceQuotaHelperForTests.F1));
+    LOG.debug("Successfully re-created table ", tn);
+
+    // Put some rows now: should not violate as table/quota was dropped
+    verifyNoViolation(policy, tn, put);
+  }
+
+  private void setQuotaAndThenIncreaseQuota(SpaceViolationPolicy policy) throws Exception {
+    Put put = new Put(Bytes.toBytes("to_reject"));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+
+    // Do puts until we violate space policy
+    final TableName tn = writeUntilViolationAndVerifyViolation(policy, put);
+
+    // Now, increase limit and perform put
+    increaseQuotaLimit(tn, policy);
+
+    // Put some row now: should not violate as quota limit increased
+    verifyNoViolation(policy, tn, put);
+  }
+
+  public void setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy policy)
+      throws Exception {
+    Put put = new Put(Bytes.toBytes("to_reject"));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+
+    // Do puts until we violate space policy on table tn1
+    final TableName tn1 = writeUntilViolationAndVerifyViolation(policy, put);
+
+    // Do puts until we violate space policy on table tn2
+    final TableName tn2 = writeUntilViolationAndVerifyViolation(policy, put);
+
+    // Now, remove the quota from table tn1
+    removeQuotaFromtable(tn1);
+
+    // Put a new row now on tn1: should not violate as quota settings removed
+    verifyNoViolation(policy, tn1, put);
+    // Put a new row now on tn2: should violate as quota settings exists
+    verifyViolation(policy, tn2, put);
+  }
+
+  private void removeQuotaFromtable(final TableName tn) throws Exception {
+    QuotaSettings removeQuota = QuotaSettingsFactory.removeTableSpaceLimit(tn);
+    TEST_UTIL.getAdmin().setQuota(removeQuota);
+    LOG.debug("Space quota settings removed from the table ", tn);
+  }
+
+  private void increaseQuotaLimit(final TableName tn, SpaceViolationPolicy policy)
+      throws Exception {
+    final long sizeLimit = 4L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, policy);
+    TEST_UTIL.getAdmin().setQuota(settings);
+    LOG.debug("Quota limit increased for table ", tn);
+  }
+
   private Map<RegionInfo,Long> getReportedSizesForTable(TableName tn) {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
@@ -406,8 +562,13 @@ public class TestSpaceQuotas {
         Thread.sleep(2000);
       } catch (Exception e) {
         String msg = StringUtils.stringifyException(e);
-        assertTrue("Expected exception message to contain the word '" + policyToViolate.name() +
-            "', but was " + msg, msg.contains(policyToViolate.name()));
+        if (policyToViolate.equals(SpaceViolationPolicy.DISABLE)) {
+          assertTrue(e instanceof TableNotEnabledException);
+        } else {
+          assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
+              + "', but was " + msg,
+            msg.contains(policyToViolate.name()));
+        }
         sawError = true;
       }
     }
@@ -424,5 +585,43 @@ public class TestSpaceQuotas {
     }
     assertTrue(
         "Expected to see an exception writing data to a table exceeding its quota", sawError);
+  }
+
+  private void verifyNoViolation(SpaceViolationPolicy policyToViolate, TableName tn, Mutation m)
+      throws Exception {
+    // But let's try a few times to write data before failing
+    boolean sawSuccess = false;
+    for (int i = 0; i < NUM_RETRIES && !sawSuccess; i++) {
+      try (Table table = TEST_UTIL.getConnection().getTable(tn)) {
+        if (m instanceof Put) {
+          table.put((Put) m);
+        } else if (m instanceof Delete) {
+          table.delete((Delete) m);
+        } else if (m instanceof Append) {
+          table.append((Append) m);
+        } else if (m instanceof Increment) {
+          table.increment((Increment) m);
+        } else {
+          fail(
+            "Failed to apply " + m.getClass().getSimpleName() + " to the table. Programming error");
+        }
+        sawSuccess = true;
+      } catch (Exception e) {
+        LOG.info("Rejected the " + m.getClass().getSimpleName() + ", will sleep and retry");
+        Thread.sleep(2000);
+      }
+    }
+    if (!sawSuccess) {
+      try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
+        ResultScanner scanner = quotaTable.getScanner(new Scan());
+        Result result = null;
+        LOG.info("Dumping contents of hbase:quota table");
+        while ((result = scanner.next()) != null) {
+          LOG.info(Bytes.toString(result.getRow()) + " => " + result.toString());
+        }
+        scanner.close();
+      }
+    }
+    assertTrue("Expected to succeed in writing data to a table not having quota ", sawSuccess);
   }
 }
