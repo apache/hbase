@@ -43,19 +43,17 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
  * target cluster is an HBase cluster.
  */
 @InterfaceAudience.Private
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MT_CORRECTNESS",
-  justification="Thinks zkw needs to be synchronized access but should be fine as is.")
 public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   implements Abortable {
 
   private static final Log LOG = LogFactory.getLog(HBaseReplicationEndpoint.class);
 
-  private ZooKeeperWatcher zkw = null; // FindBugs: MT_CORRECTNESS
+  private ZooKeeperWatcher zkw = null;
 
   private List<ServerName> regionServers = new ArrayList<ServerName>(0);
   private long lastRegionServerUpdate;
 
-  protected void disconnect() {
+  protected synchronized void disconnect() {
     if (zkw != null) {
       zkw.close();
     }
@@ -113,7 +111,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Get the ZK connection to this peer
    * @return zk connection
    */
-  protected ZooKeeperWatcher getZkw() {
+  protected synchronized ZooKeeperWatcher getZkw() {
     return zkw;
   }
 
@@ -121,7 +119,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Closes the current ZKW (if not null) and creates a new one
    * @throws IOException If anything goes wrong connecting
    */
-  void reloadZkWatcher() throws IOException {
+  synchronized void reloadZkWatcher() throws IOException {
     if (zkw != null) zkw.close();
     zkw = new ZooKeeperWatcher(ctx.getConfiguration(),
         "connection to cluster: " + ctx.getPeerId(), this);
