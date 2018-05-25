@@ -662,6 +662,7 @@ You also need to enable the DataBlockEncoder for the column family, for encoding
 You can enable compression of each tag in the WAL, if WAL compression is also enabled, by setting the value of `hbase.regionserver.wal.tags.enablecompression` to `true` in _hbase-site.xml_.
 Tag compression uses dictionary encoding.
 
+Coprocessors that run server-side on RegionServers can perform get and set operations on cell Tags. Tags are stripped out at the RPC layer before the read response is sent back, so clients do not see these tags.
 Tag compression is not supported when using WAL encryption.
 
 [[hbase.accesscontrol.configuration]]
