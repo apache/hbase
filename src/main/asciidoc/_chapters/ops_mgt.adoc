@@ -2116,10 +2116,12 @@ In these cases, the user may configure the system to not delete any space quota 
 ----
 
   <property>
-    <name>hbase.master.quota.observer.ignore</name>
-    <value>true</value>
+    <name>hbase.quota.remove.on.table.delete</name>
+    <value>false</value>
   </property>
 ----
+
+The value is set to `true` by default.
 
 === HBase Snapshots with Space Quotas
 
