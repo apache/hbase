@@ -198,7 +198,7 @@ module Hbase
         # If we are unable to use getSecurityCapabilities, fall back with a check for
         # deployment of the ACL table
         raise(ArgumentError, 'DISABLED: Security features are not available') unless \
-          exists?(org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
+          exists?(org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME.getNameAsString)
         return
       end
       raise(ArgumentError, 'DISABLED: Security features are not available') unless \
