@@ -18,32 +18,39 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
 
 @Category(MediumTests.class)
 public class TestTruncateTableProcedure {
@@ -288,6 +295,88 @@ public class TestTruncateTableProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     UTIL.waitUntilAllRegionsAssigned(tableName);
+  }
+
+  @Test
+  public void testOnHDFSFailurePreserveSplits() throws Exception {
+    final TableName tableName = TableName.valueOf("testOnHDFSFailurePreserveSplits");
+    testOnHDFSFailure(tableName, true);
+  }
+
+  @Test
+  public void testOnHDFSFailureNoPreserveSplits() throws Exception {
+    final TableName tableName = TableName.valueOf("testOnHDFSFailureNoPreserveSplits");
+    testOnHDFSFailure(tableName, false);
+  }
+
+  public static class TruncateTableProcedureOnHDFSFailure extends TruncateTableProcedure {
+
+    private boolean failOnce = false;
+
+    public TruncateTableProcedureOnHDFSFailure() {
+      // Required by the Procedure framework to create the procedure on replay
+      super();
+    }
+
+    public TruncateTableProcedureOnHDFSFailure(final MasterProcedureEnv env, TableName tableName,
+      boolean preserveSplits)
+      throws HBaseIOException {
+      super(env, tableName, preserveSplits);
+    }
+
+    @Override
+    protected Flow executeFromState(MasterProcedureEnv env,
+      MasterProcedureProtos.TruncateTableState state) throws InterruptedException {
+
+      if (!failOnce &&
+        state == MasterProcedureProtos.TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT) {
+        try {
+          // To emulate an HDFS failure, create only the first region directory
+          HRegionInfo regionInfo = getFirstRegionInfo();
+          Configuration conf = env.getMasterConfiguration();
+          MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+          Path tempdir = mfs.getTempDir();
+          Path tableDir = FSUtils.getTableDir(tempdir, regionInfo.getTable());
+          Path regionDir = new Path(tableDir,
+            ServerRegionReplicaUtil.getRegionInfoForFs(regionInfo).getEncodedName());
+          FileSystem fs = FileSystem.get(conf);
+          fs.mkdirs(regionDir);
+
+          failOnce = true;
+          return Flow.HAS_MORE_STATE;
+        } catch (IOException e) {
+          fail("failed to create a region directory: " + e);
+        }
+      }
+
+      return super.executeFromState(env, state);
+    }
+  }
+
+  private void testOnHDFSFailure(TableName tableName, boolean preserveSplits) throws Exception {
+    String[] families = new String[] { "f1", "f2" };
+    byte[][] splitKeys = new byte[][] {
+      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
+    };
+
+    // create a table
+    MasterProcedureTestingUtility.createTable(
+      getMasterProcedureExecutor(), tableName, splitKeys, families);
+
+    // load and verify that there are rows in the table
+    MasterProcedureTestingUtility.loadData(
+      UTIL.getConnection(), tableName, 100, splitKeys, families);
+    assertEquals(100, UTIL.countRows(tableName));
+
+    // disable the table
+    UTIL.getHBaseAdmin().disableTable(tableName);
+
+    // truncate the table
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new TruncateTableProcedureOnHDFSFailure(procExec.getEnvironment(), tableName,
+        preserveSplits));
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
   }
 
 }
