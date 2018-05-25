@@ -22,6 +22,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,7 +33,10 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -39,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -306,5 +313,64 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
       new TruncateTableProcedureOnHDFSFailure(procExec.getEnvironment(), tableName,
         preserveSplits));
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+  }
+
+  @Test(timeout = 60000)
+  public void testTruncateWithPreserveAfterSplit() throws Exception {
+    String[] families = new String[] { "f1", "f2" };
+    byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, families);
+    splitAndTruncate(tableName, regions);
+  }
+
+  @Test(timeout = 60000)
+  public void testTruncatePreserveWithReplicaRegionAfterSplit() throws Exception {
+    String[] families = new String[] { "f1", "f2" };
+    byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+    TableName tableName = TableName.valueOf(name.getMethodName());
+
+    // create a table with region replications
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+      .setRegionReplication(3)
+      .setColumnFamilies(
+        Arrays.stream(families)
+         .map(fam -> ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(fam)).build())
+         .collect(Collectors.toList()))
+      .build();
+    RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
+    ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
+
+    splitAndTruncate(tableName, regions);
+  }
+
+  private void splitAndTruncate(TableName tableName, RegionInfo[] regions) throws IOException,
+    InterruptedException {
+
+    // split a region
+    UTIL.getAdmin().split(tableName, new byte[]{'0'});
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+
+    // wait until split really happens
+    while (UTIL.getAdmin().getRegions(tableName).size() <= regions.length) {
+      Thread.sleep(50);
+    }
+
+    // disable the table
+    UTIL.getAdmin().disableTable(tableName);
+
+    // truncate the table
+    ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, true));
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+
+    UTIL.waitUntilAllRegionsAssigned(tableName);
   }
 }
