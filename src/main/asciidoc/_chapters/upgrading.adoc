@@ -427,6 +427,10 @@ This feature was removed because it as not being actively maintained. If interes
 sweet facility which improved random read latencies at the expensive of slowed writes,
 write the HBase developers list at _dev at hbase dot apache dot org_.
 
+The prefix-tree encoding needs to be removed from all tables before upgrading to HBase 2.0+.
+To do that first you need to change the encoding from PREFIX_TREE to something else that is supported in HBase 2.0.
+After that you have to major compact the tables that were using PREFIX_TREE encoding before.
+To check which column families are using incompatible data block encoding you can use <<ops.pre-upgrade,Pre-Upgrade Validator>>.
 
 [[upgrade2.0.metrics]]
 .Changed metrics

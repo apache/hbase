@@ -842,6 +842,28 @@ For general usage instructions, pass the `-h` option.
 
 The LoadTestTool has received many updates in recent HBase releases, including support for namespaces, support for tags, cell-level ACLS and visibility labels, testing security-related features, ability to specify the number of regions per server, tests for multi-get RPC calls, and tests relating to replication.
 
+[[ops.pre-upgrade]]
+=== Pre-Upgrade validator
+Pre-Upgrade validator tool can be used to check the cluster for known incompatibilities before upgrading from HBase 1 to HBase 2.
+To run all the checks use the `-all` flag.
+
+[source, bash]
+----
+$ bin/hbase pre-upgrade -all
+----
+
+==== DataBlockEncoding validation
+HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families.
+To verify that none of the column families are using incompatible Data Block Encodings in the cluster run the following command.
+
+[source, bash]
+----
+$ bin/hbase pre-upgrade -validateDBE
+----
+
+This check validates all column families and print out any incompatibilities.
+To change `PREFIX_TREE` encoding to supported one check <<upgrade2.0.prefix-tree.removed,_prefix-tree_ encoding removed>>.
+
 [[ops.regionmgt]]
 == Region Management
 

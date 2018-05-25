@@ -321,7 +321,7 @@ Version 3 added two additional pieces of information to the reserved keys in the
 When reading a Version 3 HFile the presence of `MAX_TAGS_LEN` is used to determine how to deserialize the cells within a data block.
 Therefore, consumers must read the file's info block prior to reading any data blocks.
 
-When writing a Version 3 HFile, HBase will always include `MAX_TAGS_LEN ` when flushing the memstore to underlying filesystem and when using prefix tree encoding for data blocks, as described in <<compression,compression>>.
+When writing a Version 3 HFile, HBase will always include `MAX_TAGS_LEN` when flushing the memstore to underlying filesystem.
 
 When compacting extant files, the default writer will omit `MAX_TAGS_LEN` if all of the files selected do not themselves contain any cells with tags.
 

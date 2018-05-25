@@ -108,6 +108,7 @@ if [ $# = 0 ]; then
   echo "  regionsplitter  Run RegionSplitter tool"
   echo "  rowcounter      Run RowCounter tool"
   echo "  cellcounter     Run CellCounter tool"
+  echo "  pre-upgrade     Run Pre-Upgrade validator tool"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
 fi
@@ -471,6 +472,8 @@ elif [ "$COMMAND" = "rowcounter" ] ; then
   CLASS='org.apache.hadoop.hbase.mapreduce.RowCounter'
 elif [ "$COMMAND" = "cellcounter" ] ; then
   CLASS='org.apache.hadoop.hbase.mapreduce.CellCounter'
+elif [ "$COMMAND" = "pre-upgrade" ] ; then
+  CLASS='org.apache.hadoop.hbase.tool.PreUpgradeValidator'
 else
   CLASS=$COMMAND
 fi
