@@ -125,7 +125,7 @@ The compression or codec type to use depends on the characteristics of your data
 In general, you need to weigh your options between smaller size and faster compression/decompression. Following are some general guidelines, expanded from a discussion at link:http://search-hadoop.com/m/lL12B1PFVhp1[Documenting Guidance on compression and codecs].
 
 * If you have long keys (compared to the values) or many columns, use a prefix encoder.
-  FAST_DIFF is recommended, as more testing is needed for Prefix Tree encoding.
+  FAST_DIFF is recommended.
 * If the values are large (and not precompressed, such as images), use a data block compressor.
 * Use GZIP for [firstterm]_cold data_, which is accessed infrequently.
   GZIP compression uses more CPU resources than Snappy or LZO, but provides a higher compression ratio.
