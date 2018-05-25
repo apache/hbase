@@ -209,6 +209,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
     if (oldPeerConfig != null) {
       builder.setOldPeerConfig(ReplicationPeerConfigUtil.convert(oldPeerConfig));
     }
+    builder.setEnabled(enabled);
     serializer.serialize(builder.build());
   }
 
@@ -222,5 +223,6 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
     } else {
       oldPeerConfig = null;
     }
+    enabled = data.getEnabled();
   }
 }

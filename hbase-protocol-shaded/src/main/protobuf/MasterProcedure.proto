@@ -425,6 +425,7 @@ message AddPeerStateData {
 message UpdatePeerConfigStateData {
   required ReplicationPeer peer_config = 1;
   optional ReplicationPeer old_peer_config = 2;
+  required bool enabled = 3;
 }
 
 message RemovePeerStateData {
