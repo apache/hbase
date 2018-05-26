@@ -848,8 +848,10 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
 
     // set memstore to flat into CellChunkMap
     MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.BASIC;
+    memstore.getConfiguration().setInt(MemStoreCompactionStrategy
+        .COMPACTING_MEMSTORE_THRESHOLD_KEY, 4);
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-            String.valueOf(compactionType));
+        String.valueOf(compactionType));
     ((MyCompactingMemStore) memstore).initiateType(compactionType, memstore.getConfiguration());
     ((CompactingMemStore) memstore).setIndexType(CompactingMemStore.IndexType.CHUNK_MAP);
 
