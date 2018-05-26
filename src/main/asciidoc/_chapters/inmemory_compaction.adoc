@@ -52,7 +52,7 @@ In this section we describe how to enable Accordion and the available configurat
 
 To enable in-memory compactions, set the _IN_MEMORY_COMPACTION_ attribute
 on per column family where you want the behavior. The _IN_MEMORY_COMPACTION_
-attribute can have one of three values.
+attribute can have one of four values.
 
  * _NONE_: No in-memory compaction.
  * _BASIC_: Basic policy enables flushing and keeps a pipeline of flushes until we trip the pipeline maximum threshold and then we flush to disk. No in-memory compaction but can help throughput as data is moved from the profligate, native ConcurrentSkipListMap data-type to more compact (and efficient) data types.
@@ -94,11 +94,12 @@ to set the in-memory attribute to _NONE_).
 
 When an in-memory flush happens is calculated by dividing the configured region flush size (Set in the table descriptor
 or read from _hbase.hregion.memstore.flush.size_) by the number of column families and then multiplying by
-_hbase.memstore.inmemoryflush.threshold.factor_ (default is 0.1).
+_hbase.memstore.inmemoryflush.threshold.factor_ (default is 0.014 - a little less than the size
+of a chunk).
 
 The number of flushes carried by the pipeline is monitored so as to fit within the bounds of memstore sizing
 but you can also set a maximum on the number of flushes total by setting
-_hbase.hregion.compacting.pipeline.segments.limit_. Default is 4.
+_hbase.hregion.compacting.pipeline.segments.limit_. Default is 2.
 
 When a column family Store is created, it says what memstore type is in effect. As of this writing
 there is the old-school _DefaultMemStore_ which fills a _ConcurrentSkipListMap_ and then flushes

@@ -43,12 +43,12 @@ import org.apache.hadoop.hbase.wal.WAL;
 /**
  * A memstore implementation which supports in-memory compaction.
  * A compaction pipeline is added between the active set and the snapshot data structures;
- * it consists of a list of kv-sets that are subject to compaction.
- * Like the snapshot, all pipeline components are read-only; updates only affect the active set.
+ * it consists of a list of segments that are subject to compaction.
+ * Like the snapshot, all pipeline segments are read-only; updates only affect the active set.
  * To ensure this property we take advantage of the existing blocking mechanism -- the active set
  * is pushed to the pipeline while holding the region's updatesLock in exclusive mode.
- * Periodically, a compaction is applied in the background to all pipeline components resulting
- * in a single read-only component. The ``old'' components are discarded when no scanner is reading
+ * Periodically, a compaction is applied in the background to all pipeline segments resulting
+ * in a single read-only component. The ``old'' segments are discarded when no scanner is reading
  * them.
  */
 @InterfaceAudience.Private
@@ -62,7 +62,7 @@ public class CompactingMemStore extends AbstractMemStore {
   // Default fraction of in-memory-flush size w.r.t. flush-to-disk size
   public static final String IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY =
       "hbase.memstore.inmemoryflush.threshold.factor";
-  private static final double IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT = 0.1;
+  private static final double IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT = 0.014;
 
   private static final Logger LOG = LoggerFactory.getLogger(CompactingMemStore.class);
   private HStore store;
