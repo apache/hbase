@@ -35,7 +35,7 @@ bin=`cd "$bin">/dev/null; pwd`
 shift
 deadhost=$@
 
-remote_cmd="cd ${HBASE_HOME}; $bin/hbase-daemon.sh --config ${HBASE_CONF_DIR} restart"
+remote_cmd="cd ${HBASE_HOME}; $bin/hbase-daemon.sh --config ${HBASE_CONF_DIR} restart regionserver"
 
 zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
 if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
