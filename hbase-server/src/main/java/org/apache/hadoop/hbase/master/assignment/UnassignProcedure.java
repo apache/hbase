@@ -199,10 +199,11 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       return false;
     }
 
+
     // Mark the region as CLOSING.
     env.getAssignmentManager().markRegionAsClosing(regionNode);
 
-    // Add the close region operation the the server dispatch queue.
+    // Add the close region operation to the server dispatch queue.
     if (!addToRemoteDispatcher(env, regionNode.getRegionLocation())) {
       // If addToRemoteDispatcher fails, it calls the callback #remoteCallFailed.
     }
@@ -250,37 +251,76 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     }
   }
 
+  /**
+   * Our remote call failed but there are a few states where it is safe to proceed with the
+   * unassign; e.g. if a server crash and it has had all of its WALs processed, then we can allow
+   * this unassign to go to completion.
+   * @return True if it is safe to proceed with the unassign.
+   */
+  private boolean isSafeToProceed(final MasterProcedureEnv env, final RegionStateNode regionNode,
+    final IOException exception) {
+    if (exception instanceof ServerCrashException) {
+      // This exception comes from ServerCrashProcedure AFTER log splitting. Its a signaling
+      // exception. SCP found this region as a RIT during its processing of the crash.  Its call
+      // into here says it is ok to let this procedure go complete.
+      return true;
+    }
+    if (exception instanceof NotServingRegionException) {
+      LOG.warn("IS OK? ANY LOGS TO REPLAY; ACTING AS THOUGH ALL GOOD {}", regionNode, exception);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Set it up so when procedure is unsuspended, we'll move to the procedure finish.
+   */
+  protected void proceed(final MasterProcedureEnv env, final RegionStateNode regionNode) {
+    try {
+      reportTransition(env, regionNode, TransitionCode.CLOSED, HConstants.NO_SEQNUM);
+    } catch (UnexpectedStateException e) {
+      // Should never happen.
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * @return If true, we will re-wake up this procedure; if false, the procedure stays suspended.
+   */
   @Override
   protected boolean remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,
       final IOException exception) {
-    // TODO: Is there on-going rpc to cleanup?
-    if (exception instanceof ServerCrashException) {
-      // This exception comes from ServerCrashProcedure AFTER log splitting.
-      // SCP found this region as a RIT. Its call into here says it is ok to let this procedure go
-      // complete. This complete will release lock on this region so subsequent action on region
-      // can succeed; e.g. the assign that follows this unassign when a move (w/o wait on SCP
-      // the assign could run w/o logs being split so data loss).
-      try {
-        reportTransition(env, regionNode, TransitionCode.CLOSED, HConstants.NO_SEQNUM);
-      } catch (UnexpectedStateException e) {
-        // Should never happen.
-        throw new RuntimeException(e);
-      }
+    // Be careful reading the below; we do returns in middle of the method a few times.
+    if (isSafeToProceed(env, regionNode, exception)) {
+      proceed(env, regionNode);
     } else if (exception instanceof RegionServerAbortedException ||
-        exception instanceof RegionServerStoppedException ||
-        exception instanceof ServerNotRunningYetException) {
-      // RS is aborting, we cannot offline the region since the region may need to do WAL
-      // recovery. Until we see the RS expiration, we should retry.
-      // TODO: This should be suspend like the below where we call expire on server?
+        exception instanceof RegionServerStoppedException) {
+      // RS is aborting/stopping, we cannot offline the region since the region may need to do WAL
+      // recovery. Until we see the RS expiration, stay suspended; return false.
       LOG.info("Ignoring; waiting on ServerCrashProcedure", exception);
-    } else if (exception instanceof NotServingRegionException) {
-      LOG.info("IS THIS OK? ANY LOGS TO REPLAY; ACTING AS THOUGH ALL GOOD " + regionNode,
-        exception);
-      setTransitionState(RegionTransitionState.REGION_TRANSITION_FINISH);
+      return false;
+    } else if (exception instanceof ServerNotRunningYetException) {
+      // This should not happen. If it does, procedure will be woken-up and we'll retry.
+      // TODO: Needs a pause and backoff?
+      LOG.info("Retry", exception);
     } else {
-      LOG.warn("Expiring server " + this + "; " + regionNode.toShortString() +
-        ", exception=" + exception);
-      env.getMasterServices().getServerManager().expireServer(regionNode.getRegionLocation());
+      // We failed to RPC this server. Set it as expired.
+      ServerName serverName = regionNode.getRegionLocation();
+      LOG.warn("Expiring {}, {} {}; exception={}", serverName, this, regionNode.toShortString(),
+          exception.getClass().getSimpleName());
+      if (!env.getMasterServices().getServerManager().expireServer(serverName)) {
+        // Failed to queue an expire. Lots of possible reasons including it may be already expired.
+        // If so, is it beyond the state where we will be woken-up if go ahead and suspend the
+        // procedure. Look for this rare condition.
+        if (env.getAssignmentManager().isDeadServerProcessed(serverName)) {
+          // Its ok to proceed with this unassign.
+          LOG.info("{} is dead and processed; moving procedure to finished state; {}",
+              serverName, this);
+          proceed(env, regionNode);
+          // Return true; wake up the procedure so we can act on proceed.
+          return true;
+        }
+      }
       // Return false so this procedure stays in suspended state. It will be woken up by the
       // ServerCrashProcedure that was scheduled when we called #expireServer above. SCP calls
       // #handleRIT which will call this method only the exception will be a ServerCrashException

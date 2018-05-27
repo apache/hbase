@@ -308,7 +308,29 @@ public class RegionStates {
     }
   }
 
-  public enum ServerState { ONLINE, SPLITTING, OFFLINE }
+  /**
+   * Server State.
+   */
+  public enum ServerState {
+    /**
+     * Initial state. Available.
+     */
+    ONLINE,
+
+    /**
+     * Server expired/crashed. Currently undergoing WAL splitting.
+     */
+    SPLITTING,
+
+    /**
+     * WAL splitting done.
+     */
+    OFFLINE
+  }
+
+  /**
+   * State of Server; list of hosted regions, etc.
+   */
   public static class ServerStateNode implements Comparable<ServerStateNode> {
     private final ServerReportEvent reportEvent;
 
@@ -338,6 +360,10 @@ public class RegionStates {
 
     public ProcedureEvent<?> getReportEvent() {
       return reportEvent;
+    }
+
+    public boolean isOffline() {
+      return this.state.equals(ServerState.OFFLINE);
     }
 
     public boolean isInState(final ServerState... expected) {
@@ -597,17 +623,26 @@ public class RegionStates {
   // ============================================================================================
   //  TODO: split helpers
   // ============================================================================================
-  public void logSplit(final ServerName serverName) {
+
+  /**
+   * Call this when we start log splitting a crashed Server.
+   * @see #logSplit(ServerName)
+   */
+  public void logSplitting(final ServerName serverName) {
     final ServerStateNode serverNode = getOrCreateServer(serverName);
     synchronized (serverNode) {
       serverNode.setState(ServerState.SPLITTING);
-      /* THIS HAS TO BE WRONG. THIS IS SPLITTING OF REGION, NOT SPLITTING WALs.
-      for (RegionStateNode regionNode: serverNode.getRegions()) {
-        synchronized (regionNode) {
-          // TODO: Abort procedure if present
-          regionNode.setState(State.SPLITTING);
-        }
-      }*/
+    }
+  }
+
+  /**
+   * Called after we've split all logs on a crashed Server.
+   * @see #logSplitting(ServerName)
+   */
+  public void logSplit(final ServerName serverName) {
+    final ServerStateNode serverNode = getOrCreateServer(serverName);
+    synchronized (serverNode) {
+      serverNode.setState(ServerState.OFFLINE);
     }
   }
 
@@ -930,6 +965,12 @@ public class RegionStates {
   // ==========================================================================
   //  Servers
   // ==========================================================================
+
+  /**
+   * Be judicious calling this method. Do it on server register ONLY otherwise
+   * you could mess up online server accounting. TOOD: Review usage and convert
+   * to {@link #getServerNode(ServerName)} where we can.
+   */
   public ServerStateNode getOrCreateServer(final ServerName serverName) {
     ServerStateNode node = serverMap.get(serverName);
     if (node == null) {

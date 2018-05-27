@@ -15,29 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Used internally signaling failed queue of a remote procedure
+ * operation.
+ */
+@SuppressWarnings("serial")
 @InterfaceAudience.Private
-@InterfaceStability.Stable
-public class BadProcedureException extends HBaseIOException {
-  public BadProcedureException() {
-    super();
-  }
-
-  public BadProcedureException(String message) {
-    super(message);
-  }
-
-  public BadProcedureException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
-  public BadProcedureException(Throwable cause) {
-    super(cause);
+public class FailedRemoteDispatchException extends HBaseIOException {
+  public FailedRemoteDispatchException(String msg) {
+    super(msg);
   }
 }

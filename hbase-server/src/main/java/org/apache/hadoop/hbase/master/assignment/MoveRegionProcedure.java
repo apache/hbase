@@ -79,6 +79,9 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
         try {
           preflightChecks(env, true);
           checkOnline(env, this.plan.getRegionInfo());
+          if (!env.getMasterServices().getServerManager().isServerOnline(this.plan.getSource())) {
+            throw new HBaseIOException(this.plan.getSource() + " not online");
+          }
         } catch (HBaseIOException e) {
           LOG.warn(this.toString() + " FAILED because " + e.toString());
           return Flow.NO_MORE_STATE;

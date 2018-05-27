@@ -162,24 +162,25 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   }
 
   /**
-   * Add a remote rpc. Be sure to check result for successful add.
+   * Add a remote rpc.
    * @param key the node identifier
-   * @return True if we successfully added the operation.
    */
-  public boolean addOperationToNode(final TRemote key, RemoteProcedure rp) {
+  public void addOperationToNode(final TRemote key, RemoteProcedure rp)
+  throws NullTargetServerDispatchException, NoServerDispatchException, NoNodeDispatchException {
     if (key == null) {
-      // Key is remote server name. Be careful. It could have been nulled by a concurrent
-      // ServerCrashProcedure shutting down outstanding RPC requests. See remoteCallFailed.
-      return false;
+      throw new NullTargetServerDispatchException(rp.toString());
     }
-    assert key != null : "found null key for node";
     BufferNode node = nodeMap.get(key);
     if (node == null) {
-      return false;
+      // If null here, it means node has been removed because it crashed. This happens when server
+      // is expired in ServerManager. ServerCrashProcedure may or may not have run.
+      throw new NoServerDispatchException(key.toString() + "; " + rp.toString());
     }
     node.add(rp);
     // Check our node still in the map; could have been removed by #removeNode.
-    return nodeMap.containsValue(node);
+    if (!nodeMap.containsValue(node)) {
+      throw new NoNodeDispatchException(key.toString() + "; " + rp.toString());
+    }
   }
 
   /**
