@@ -163,7 +163,11 @@ implements ServerProcedureInterface {
                 "; cycles=" + getCycles());
             }
             // Handle RIT against crashed server. Will cancel any ongoing assigns/unassigns.
-            // Returns list of regions we need to reassign.
+            // Returns list of regions we need to reassign. NOTE: there is nothing to stop a
+            // dispatch happening AFTER this point. Check for the condition if a dispatch RPC fails
+            // inside in AssignProcedure/UnassignProcedure. AssignProcedure just keeps retrying.
+            // UnassignProcedure is more complicated. See where it does the check by calling
+            // am#isDeadServerProcessed.
             List<RegionInfo> toAssign = handleRIT(env, regionsOnCrashedServer);
             AssignmentManager am = env.getAssignmentManager();
             // CreateAssignProcedure will try to use the old location for the region deploy.
@@ -175,9 +179,8 @@ implements ServerProcedureInterface {
           break;
 
         case SERVER_CRASH_HANDLE_RIT2:
-          // Run the handleRIT again for case where another procedure managed to grab the lock on
-          // a region ahead of this crash handling procedure. Can happen in rare case. See
-          handleRIT(env, regionsOnCrashedServer);
+          // Noop. Left in place because we used to call handleRIT here for a second time
+          // but no longer necessary since HBASE-20634.
           setNextState(ServerCrashState.SERVER_CRASH_FINISH);
           break;
 
@@ -232,11 +235,10 @@ implements ServerProcedureInterface {
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
     // TODO: For Matteo. Below BLOCKs!!!! Redo so can relinquish executor while it is running.
     // PROBLEM!!! WE BLOCK HERE.
+    am.getRegionStates().logSplitting(this.serverName);
     mwm.splitLog(this.serverName);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Done splitting WALs " + this);
-    }
     am.getRegionStates().logSplit(this.serverName);
+    LOG.debug("Done splitting WALs {}", this);
   }
 
   @Override

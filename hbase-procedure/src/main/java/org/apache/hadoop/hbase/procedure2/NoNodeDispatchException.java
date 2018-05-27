@@ -15,29 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseIOException;
 
+/**
+ * Used internally signaling failed queue of a remote procedure operation.
+ * In particular, no dispatch Node was found for the passed server name
+ * key AFTER queuing dispatch.
+ */
+@SuppressWarnings("serial")
 @InterfaceAudience.Private
-@InterfaceStability.Stable
-public class BadProcedureException extends HBaseIOException {
-  public BadProcedureException() {
-    super();
-  }
-
-  public BadProcedureException(String message) {
-    super(message);
-  }
-
-  public BadProcedureException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
-  public BadProcedureException(Throwable cause) {
-    super(cause);
+public class NoNodeDispatchException extends FailedRemoteDispatchException {
+  public NoNodeDispatchException(String msg) {
+    super(msg);
   }
 }

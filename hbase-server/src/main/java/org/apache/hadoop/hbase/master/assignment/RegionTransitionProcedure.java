@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
+import org.apache.hadoop.hbase.procedure2.FailedRemoteDispatchException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -215,10 +216,8 @@ public abstract class RegionTransitionProcedure
   public void remoteCallFailed(final MasterProcedureEnv env,
       final ServerName serverName, final IOException exception) {
     final RegionStateNode regionNode = getRegionState(env);
-    String msg = exception.getMessage() == null? exception.getClass().getSimpleName():
-      exception.getMessage();
-    LOG.warn("Remote call failed " + this + "; " + regionNode.toShortString() +
-      "; exception=" + msg);
+    LOG.warn("Remote call failed {}; {}; {}; exception={}", serverName,
+        this, regionNode.toShortString(), exception.getClass().getSimpleName());
     if (remoteCallFailed(env, regionNode, exception)) {
       // NOTE: This call to wakeEvent puts this Procedure back on the scheduler.
       // Thereafter, another Worker can be in here so DO NOT MESS WITH STATE beyond
@@ -239,11 +238,7 @@ public abstract class RegionTransitionProcedure
    */
   protected boolean addToRemoteDispatcher(final MasterProcedureEnv env,
       final ServerName targetServer) {
-    assert targetServer == null || targetServer.equals(getRegionState(env).getRegionLocation()):
-      "targetServer=" + targetServer + " getRegionLocation=" +
-        getRegionState(env).getRegionLocation(); // TODO
-
-    LOG.info("Dispatch " + this + "; " + getRegionState(env).toShortString());
+    LOG.info("Dispatch {}; {}", this, getRegionState(env).toShortString());
 
     // Put this procedure into suspended mode to wait on report of state change
     // from remote regionserver. Means Procedure associated ProcedureEvent is marked not 'ready'.
@@ -253,9 +248,10 @@ public abstract class RegionTransitionProcedure
     // backtrack on stuff like the 'suspend' done above -- tricky as the 'wake' requests us -- and
     // ditto up in the caller; it needs to undo state changes. Inside in remoteCallFailed, it does
     // wake to undo the above suspend.
-    if (!env.getRemoteDispatcher().addOperationToNode(targetServer, this)) {
-      remoteCallFailed(env, targetServer,
-          new FailedRemoteDispatchException(this + " to " + targetServer));
+    try {
+      env.getRemoteDispatcher().addOperationToNode(targetServer, this);
+    } catch (FailedRemoteDispatchException frde) {
+      remoteCallFailed(env, targetServer, frde);
       return false;
     }
     return true;

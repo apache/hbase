@@ -557,29 +557,34 @@ public class ServerManager {
   /*
    * Expire the passed server.  Add it to list of dead servers and queue a
    * shutdown processing.
+   * @return True if we queued a ServerCrashProcedure else false if we did not (could happen
+   * for many reasons including the fact that its this server that is going down or we already
+   * have queued an SCP for this server or SCP processing is currently disabled because we are
+   * in startup phase).
    */
-  public synchronized void expireServer(final ServerName serverName) {
+  public synchronized boolean expireServer(final ServerName serverName) {
+    // THIS server is going down... can't handle our own expiration.
     if (serverName.equals(master.getServerName())) {
       if (!(master.isAborted() || master.isStopped())) {
         master.stop("We lost our znode?");
       }
-      return;
+      return false;
     }
+    // No SCP handling during startup.
     if (!master.isServerCrashProcessingEnabled()) {
       LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
           + "delay expiring server " + serverName);
-      // Even we delay expire this server, we still need to handle Meta's RIT
+      // Even though we delay expire of this server, we still need to handle Meta's RIT
       // that are against the crashed server; since when we do RecoverMetaProcedure,
-      // the SCP is not enable yet and Meta's RIT may be suspend forever. See HBase-19287
+      // the SCP is not enabled yet and Meta's RIT may be suspend forever. See HBase-19287
       master.getAssignmentManager().handleMetaRITOnCrashedServer(serverName);
       this.queuedDeadServers.add(serverName);
-      return;
+      // Return true because though on SCP queued, there will be one queued later.
+      return true;
     }
     if (this.deadservers.isDeadServer(serverName)) {
-      // TODO: Can this happen?  It shouldn't be online in this case?
-      LOG.warn("Expiration of " + serverName +
-          " but server shutdown already in progress");
-      return;
+      LOG.warn("Expiration called on {} but crash processing already in progress", serverName);
+      return false;
     }
     moveFromOnlineToDeadServers(serverName);
 
@@ -591,7 +596,7 @@ public class ServerManager {
       if (this.onlineServers.isEmpty()) {
         master.stop("Cluster shutdown set; onlineServer=0");
       }
-      return;
+      return false;
     }
     LOG.info("Processing expiration of " + serverName + " on " + this.master.getServerName());
     master.getAssignmentManager().submitServerCrash(serverName, true);
@@ -602,6 +607,7 @@ public class ServerManager {
         listener.serverRemoved(serverName);
       }
     }
+    return true;
   }
 
   @VisibleForTesting

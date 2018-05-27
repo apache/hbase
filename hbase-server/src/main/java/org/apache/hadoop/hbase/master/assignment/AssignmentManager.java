@@ -1064,6 +1064,9 @@ public class AssignmentManager implements ServerListener {
 
   protected boolean waitServerReportEvent(final ServerName serverName, final Procedure proc) {
     final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
+    if (serverNode == null) {
+      LOG.warn("serverName=null; {}", proc);
+    }
     return serverNode.getReportEvent().suspendIfNotReady(proc);
   }
 
@@ -1903,17 +1906,33 @@ public class AssignmentManager implements ServerListener {
     return node != null ? node.getVersionNumber() : 0;
   }
 
-  public void killRegionServer(final ServerName serverName) {
+  private void killRegionServer(final ServerName serverName) {
     final ServerStateNode serverNode = regionStates.getServerNode(serverName);
     killRegionServer(serverNode);
   }
 
-  public void killRegionServer(final ServerStateNode serverNode) {
-    /** Don't do this. Messes up accounting. Let ServerCrashProcedure do this.
-    for (RegionStateNode regionNode: serverNode.getRegions()) {
-      regionNode.offline();
-    }*/
+  private void killRegionServer(final ServerStateNode serverNode) {
     master.getServerManager().expireServer(serverNode.getServerName());
+  }
+
+  /**
+   * This is a very particular check. The {@link org.apache.hadoop.hbase.master.ServerManager} is
+   * where you go to check on state of 'Servers', what Servers are online, etc. Here we are
+   * checking the state of a server that is post expiration, a ServerManager function that moves a
+   * server from online to dead. Here we are seeing if the server has moved beyond a particular
+   * point in the recovery process such that it is safe to move on with assigns; etc.
+   * @return True if this Server does not exist or if does and it is marked as OFFLINE (which
+   *   happens after all WALs have been split on this server making it so assigns, etc. can
+   *   proceed). If null, presumes the ServerStateNode was cleaned up by SCP.
+   */
+  boolean isDeadServerProcessed(final ServerName serverName) {
+    ServerStateNode ssn = this.regionStates.getServerNode(serverName);
+    if (ssn == null) {
+      return true;
+    }
+    synchronized (ssn) {
+      return ssn.isOffline();
+    }
   }
 
   /**
