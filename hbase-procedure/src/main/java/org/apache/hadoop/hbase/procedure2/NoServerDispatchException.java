@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,19 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.assignment;
+package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used internally signaling failed queue of a remote procedure
- * operation.
+ * Used internally signaling failed queue of a remote procedure operation.
+ * In particular, no dispatch Node was found for the passed server name
+ * key.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
-public class FailedRemoteDispatchException extends HBaseIOException {
-  public FailedRemoteDispatchException(String msg) {
+public class NoServerDispatchException extends FailedRemoteDispatchException {
+  public NoServerDispatchException(String msg) {
     super(msg);
   }
 }

@@ -729,22 +729,38 @@ public class TestAssignmentManager {
     protected CloseRegionResponse execCloseRegion(ServerName server, byte[] regionName)
         throws IOException {
       switch (this.invocations++) {
-      case 0: throw new NotServingRegionException("Fake");
-      case 1: throw new RegionServerAbortedException("Fake!");
-      case 2: throw new RegionServerStoppedException("Fake!");
-      case 3: throw new ServerNotRunningYetException("Fake!");
-      case 4:
-        LOG.info("Return null response from serverName=" + server + "; means STUCK...TODO timeout");
-        executor.schedule(new Runnable() {
-          @Override
-          public void run() {
-            LOG.info("Sending in CRASH of " + server);
-            doCrash(server);
-          }
-        }, 1, TimeUnit.SECONDS);
-        return null;
-      default:
-        return super.execCloseRegion(server, regionName);
+        case 0: throw new NotServingRegionException("Fake");
+        case 1:
+          executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+              LOG.info("Sending in CRASH of " + server);
+              doCrash(server);
+            }
+          }, 1, TimeUnit.SECONDS);
+          throw new RegionServerAbortedException("Fake!");
+        case 2:
+          executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+              LOG.info("Sending in CRASH of " + server);
+              doCrash(server);
+            }
+          }, 1, TimeUnit.SECONDS);
+          throw new RegionServerStoppedException("Fake!");
+        case 3: throw new ServerNotRunningYetException("Fake!");
+        case 4:
+          LOG.info("Returned null from serverName={}; means STUCK...TODO timeout", server);
+          executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+              LOG.info("Sending in CRASH of " + server);
+              doCrash(server);
+            }
+          }, 1, TimeUnit.SECONDS);
+          return null;
+        default:
+          return super.execCloseRegion(server, regionName);
       }
     }
   }
