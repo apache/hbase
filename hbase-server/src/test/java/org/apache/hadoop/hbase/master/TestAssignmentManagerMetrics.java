@@ -91,6 +91,8 @@ public class TestAssignmentManagerMetrics {
     conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 2500);
     // set a small interval for updating rit metrics
     conf.setInt(AssignmentManager.RIT_CHORE_INTERVAL_MSEC_CONF_KEY, MSG_INTERVAL);
+    // set a small assign attempts for avoiding assert when retrying. (HBASE-20533)
+    conf.setInt(AssignmentManager.ASSIGN_MAX_ATTEMPTS, 3);
 
     // keep rs online so it can report the failed opens.
     conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
@@ -150,14 +152,14 @@ public class TestAssignmentManagerMetrics {
         LOG.info("Expected error", e);
       }
 
-      // Sleep 3 seconds, wait for doMetrics chore catching up
+      // Sleep 5 seconds, wait for doMetrics chore catching up
       // the rit count consists of rit and failed opens. see RegionInTransitionStat#update
       // Waiting for the completion of rit makes the assert stable.
       TEST_UTIL.waitUntilNoRegionsInTransition();
-      Thread.sleep(MSG_INTERVAL * 3);
+      Thread.sleep(MSG_INTERVAL * 5);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 1, amSource);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 1,
-          amSource);
+        amSource);
     }
   }
 }
