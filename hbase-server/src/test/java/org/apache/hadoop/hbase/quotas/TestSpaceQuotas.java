@@ -88,6 +88,7 @@ public class TestSpaceQuotas {
   @Rule
   public TestName testName = new TestName();
   private SpaceQuotaHelperForTests helper;
+  private final TableName NON_EXISTENT_TABLE = TableName.valueOf("NON_EXISTENT_TABLE");
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -385,6 +386,11 @@ public class TestSpaceQuotas {
   }
 
   @Test
+  public void testSetQuotaAndThenDropTableWithDisable() throws Exception {
+    setQuotaAndThenDropTable(SpaceViolationPolicy.DISABLE);
+  }
+
+  @Test
   public void testSetQuotaAndThenIncreaseQuotaWithNoInserts() throws Exception {
     setQuotaAndThenIncreaseQuota(SpaceViolationPolicy.NO_INSERTS);
   }
@@ -417,6 +423,26 @@ public class TestSpaceQuotas {
   @Test
   public void testSetQuotaAndThenRemoveInOneWithDisable() throws Exception {
     setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy.DISABLE);
+  }
+
+  @Test
+  public void testSetQuotaOnNonExistingTableWithNoInserts() throws Exception {
+    setQuotaLimit(NON_EXISTENT_TABLE, SpaceViolationPolicy.NO_INSERTS, 2L);
+  }
+
+  @Test
+  public void testSetQuotaOnNonExistingTableWithNoWrites() throws Exception {
+    setQuotaLimit(NON_EXISTENT_TABLE, SpaceViolationPolicy.NO_WRITES, 2L);
+  }
+
+  @Test
+  public void testSetQuotaOnNonExistingTableWithNoWritesCompaction() throws Exception {
+    setQuotaLimit(NON_EXISTENT_TABLE, SpaceViolationPolicy.NO_WRITES_COMPACTIONS, 2L);
+  }
+
+  @Test
+  public void testSetQuotaOnNonExistingTableWithDisable() throws Exception {
+    setQuotaLimit(NON_EXISTENT_TABLE, SpaceViolationPolicy.DISABLE, 2L);
   }
 
   private void setQuotaAndThenRemove(SpaceViolationPolicy policy) throws Exception {
@@ -463,7 +489,7 @@ public class TestSpaceQuotas {
     final TableName tn = writeUntilViolationAndVerifyViolation(policy, put);
 
     // Now, increase limit and perform put
-    increaseQuotaLimit(tn, policy);
+    setQuotaLimit(tn, policy, 4L);
 
     // Put some row now: should not violate as quota limit increased
     verifyNoViolation(policy, tn, put);
@@ -496,12 +522,12 @@ public class TestSpaceQuotas {
     LOG.debug("Space quota settings removed from the table ", tn);
   }
 
-  private void increaseQuotaLimit(final TableName tn, SpaceViolationPolicy policy)
+  private void setQuotaLimit(final TableName tn, SpaceViolationPolicy policy, long sizeInMBs)
       throws Exception {
-    final long sizeLimit = 4L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, policy);
     TEST_UTIL.getAdmin().setQuota(settings);
-    LOG.debug("Quota limit increased for table ", tn);
+    LOG.debug("Quota limit set for table = {}, limit = {}", tn, sizeLimit);
   }
 
   private Map<RegionInfo,Long> getReportedSizesForTable(TableName tn) {
@@ -518,11 +544,7 @@ public class TestSpaceQuotas {
 
   private TableName writeUntilViolation(SpaceViolationPolicy policyToViolate) throws Exception {
     TableName tn = helper.createTableWithRegions(10);
-
-    final long sizeLimit = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, policyToViolate);
-    TEST_UTIL.getAdmin().setQuota(settings);
-
+    setQuotaLimit(tn, policyToViolate, 2L);
     // Write more data than should be allowed and flush it to disk
     helper.writeData(tn, 3L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
 
