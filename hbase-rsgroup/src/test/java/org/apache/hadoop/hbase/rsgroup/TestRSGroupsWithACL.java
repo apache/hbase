@@ -235,7 +235,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
   @Test
   public void testGetRSGroupInfo() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.checkPermission("getRSGroupInfo");
+      accessController.preGetRSGroupInfo(CTX, null);
       return null;
     };
 
@@ -245,7 +245,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
   @Test
   public void testGetRSGroupInfoOfTable() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.checkPermission("getRSGroupInfoOfTable");
+      accessController.preGetRSGroupInfoOfTable(CTX, null);
       return null;
     };
 
@@ -305,7 +305,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
   @Test
   public void testListRSGroup() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.checkPermission("listRSGroup");
+      accessController.preListRSGroupInfos(CTX);
       return null;
     };
 
@@ -315,7 +315,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
   @Test
   public void testGetRSGroupInfoOfServer() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.checkPermission("getRSGroupInfoOfServer");
+      accessController.preGetRSGroupInfoOfServer(CTX, null);
       return null;
     };
 

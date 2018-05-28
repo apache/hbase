@@ -1213,6 +1213,68 @@ public interface MasterObserver {
       Set<Address> servers) throws IOException {}
 
   /**
+   * Called before getting region server group info of the passed groupName.
+   * @param ctx the environment to interact with the framework and master
+   * @param groupName name of the group to get RSGroupInfo for
+   */
+  default void preGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String groupName) throws IOException {}
+
+  /**
+   * Called after getting region server group info of the passed groupName.
+   * @param ctx the environment to interact with the framework and master
+   * @param groupName name of the group to get RSGroupInfo for
+   */
+  default void postGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String groupName) throws IOException {}
+
+  /**
+   * Called before getting region server group info of the passed tableName.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName name of the table to get RSGroupInfo for
+   */
+  default void preGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {}
+
+  /**
+   * Called after getting region server group info of the passed tableName.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName name of the table to get RSGroupInfo for
+   */
+  default void postGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName) throws IOException {}
+
+  /**
+   * Called before listing region server group information.
+   * @param ctx the environment to interact with the framework and master
+   */
+  default void preListRSGroupInfos(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * Called after listing region server group information.
+   * @param ctx the environment to interact with the framework and master
+   */
+  default void postListRSGroupInfos(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * Called before getting region server group info of the passed server.
+   * @param ctx the environment to interact with the framework and master
+   * @param server server to get RSGroupInfo for
+   */
+  default void preGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final Address server) throws IOException {}
+
+  /**
+   * Called after getting region server group info of the passed server.
+   * @param ctx the environment to interact with the framework and master
+   * @param server server to get RSGroupInfo for
+   */
+  default void postGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final Address server) throws IOException {}
+
+  /**
    * Called before add a replication peer
    * @param ctx the environment to interact with the framework and master
    * @param peerId a short name that identifies the peer

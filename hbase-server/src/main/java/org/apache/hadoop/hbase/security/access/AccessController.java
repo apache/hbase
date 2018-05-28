@@ -1307,6 +1307,18 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public void preGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String groupName) throws IOException {
+    requirePermission(ctx, "getRSGroupInfo", Action.ADMIN);
+  }
+
+  @Override
+  public void preGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+    requirePermission(ctx, "getRSGroupInfoOfTable", Action.ADMIN);
+  }
+
+  @Override
   public void preMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
     requirePermission(ctx, "moveServersAndTables", Action.ADMIN);
@@ -1340,6 +1352,18 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void preBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       String groupName) throws IOException {
     requirePermission(ctx, "balanceRSGroup", Action.ADMIN);
+  }
+
+  @Override
+  public void preListRSGroupInfos(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    requirePermission(ctx, "listRSGroup", Action.ADMIN);
+  }
+
+  @Override
+  public void preGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Address server) throws IOException {
+    requirePermission(ctx, "getRSGroupInfoOfServer", Action.ADMIN);
   }
 
   @Override
