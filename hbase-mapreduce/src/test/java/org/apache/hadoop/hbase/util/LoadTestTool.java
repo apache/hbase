@@ -119,6 +119,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_VERBOSE = "verbose";
 
   public static final String OPT_BLOOM = "bloom";
+  public static final String OPT_BLOOM_PARAM = "bloom_param";
   public static final String OPT_COMPRESSION = "compression";
   public static final String OPT_DEFERRED_LOG_FLUSH = "deferredlogflush";
   public static final String OPT_DEFERRED_LOG_FLUSH_USAGE = "Enable deferred log flush.";
@@ -330,6 +331,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_UPDATE, OPT_USAGE_UPDATE);
     addOptNoArg(OPT_INIT_ONLY, "Initialize the test table only, don't do any loading");
     addOptWithArg(OPT_BLOOM, OPT_USAGE_BLOOM);
+    addOptWithArg(OPT_BLOOM_PARAM, "the parameter of bloom filter type");
     addOptWithArg(OPT_COMPRESSION, OPT_USAGE_COMPRESSION);
     addOptWithArg(HFileTestUtil.OPT_DATA_BLOCK_ENCODING, HFileTestUtil.OPT_DATA_BLOCK_ENCODING_USAGE);
     addOptWithArg(OPT_MAX_READ_ERRORS, "The maximum number of read errors " +
@@ -550,6 +552,22 @@ public class LoadTestTool extends AbstractHBaseTool {
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
     bloomType = bloomStr == null ? BloomType.ROW :
         BloomType.valueOf(bloomStr);
+
+    if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+      if (!cmd.hasOption(OPT_BLOOM_PARAM)) {
+        LOG.error("the parameter of bloom filter {} is not specified", bloomType.name());
+      } else {
+        conf.set(BloomFilterUtil.PREFIX_LENGTH_KEY, cmd.getOptionValue(OPT_BLOOM_PARAM));
+      }
+    }
+
+    if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
+      if (!cmd.hasOption(OPT_BLOOM_PARAM)) {
+        LOG.error("the parameter of bloom filter {} is not specified", bloomType.name());
+      } else {
+        conf.set(BloomFilterUtil.DELIMITER_KEY, cmd.getOptionValue(OPT_BLOOM_PARAM));
+      }
+    }
 
     inMemoryCF = cmd.hasOption(OPT_INMEMORY);
     if (cmd.hasOption(OPT_ENCRYPTION)) {

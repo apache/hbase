@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -142,6 +143,8 @@ public class TestSeekOptimizations {
   public void setUp() {
     rand = new Random(91238123L);
     expectedKVs.clear();
+    TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
+    TEST_UTIL.getConfiguration().set(BloomFilterUtil.DELIMITER_KEY, "#");
   }
 
   @Test

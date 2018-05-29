@@ -86,6 +86,9 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
   /** Bloom filter Type in FileInfo */
   public static final byte[] BLOOM_FILTER_TYPE_KEY = Bytes.toBytes("BLOOM_FILTER_TYPE");
 
+  /** Bloom filter param in FileInfo */
+  public static final byte[] BLOOM_FILTER_PARAM_KEY = Bytes.toBytes("BLOOM_FILTER_PARAM");
+
   /** Delete Family Count in FileInfo */
   public static final byte[] DELETE_FAMILY_COUNT = Bytes.toBytes("DELETE_FAMILY_COUNT");
 

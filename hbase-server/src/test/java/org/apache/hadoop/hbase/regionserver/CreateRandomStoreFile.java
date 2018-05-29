@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.io.BytesWritable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +65,7 @@ public class CreateRandomStoreFile {
   private static final String VALUE_SIZE_OPTION = "v";
   private static final String COMPRESSION_OPTION = "c";
   private static final String BLOOM_FILTER_OPTION = "bf";
+  private static final String BLOOM_FILTER_PARAM_OPTION = "bfp";
   private static final String BLOCK_SIZE_OPTION = "bs";
   private static final String BLOOM_BLOCK_SIZE_OPTION = "bfbs";
   private static final String INDEX_BLOCK_SIZE_OPTION = "ibs";
@@ -103,6 +105,8 @@ public class CreateRandomStoreFile {
     options.addOption(BLOOM_FILTER_OPTION, "bloom_filter", true,
         "Bloom filter type, one of "
             + Arrays.toString(BloomType.values()));
+    options.addOption(BLOOM_FILTER_PARAM_OPTION, "bloom_param", true,
+        "the parameter of the bloom filter");
     options.addOption(BLOCK_SIZE_OPTION, "block_size", true,
         "HFile block size");
     options.addOption(BLOOM_BLOCK_SIZE_OPTION, "bloom_block_size", true,
@@ -167,6 +171,25 @@ public class CreateRandomStoreFile {
     if (cmdLine.hasOption(BLOOM_FILTER_OPTION)) {
       bloomType = BloomType.valueOf(cmdLine.getOptionValue(
           BLOOM_FILTER_OPTION));
+    }
+
+    if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+      if (!cmdLine.hasOption(BLOOM_FILTER_PARAM_OPTION)) {
+        LOG.error("the parameter of bloom filter is not specified");
+        return false;
+      } else {
+        conf.set(BloomFilterUtil.PREFIX_LENGTH_KEY,
+            cmdLine.getOptionValue(BLOOM_FILTER_PARAM_OPTION));
+      }
+    }
+
+    if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
+      if (!cmdLine.hasOption(BLOOM_FILTER_PARAM_OPTION)) {
+        LOG.error("the parameter of bloom filter is not specified");
+        return false;
+      } else {
+        conf.set(BloomFilterUtil.DELIMITER_KEY, cmdLine.getOptionValue(BLOOM_FILTER_PARAM_OPTION));
+      }
     }
 
     int blockSize = HConstants.DEFAULT_BLOCKSIZE;

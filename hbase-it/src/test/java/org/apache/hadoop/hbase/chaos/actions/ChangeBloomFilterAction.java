@@ -22,6 +22,7 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 
 /**
  * Action that tries to adjust the bloom filter setting on all the columns of a
@@ -53,6 +54,11 @@ public class ChangeBloomFilterAction extends Action {
       LOG.debug("Performing action: About to set bloom filter type to "
           + bloomType + " on column " + columnName + " of table " + tableName);
       columnBuilder.setBloomFilterType(bloomType);
+      if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+        columnBuilder.setConfiguration(BloomFilterUtil.PREFIX_LENGTH_KEY, "10");
+      } else if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
+        columnBuilder.setConfiguration(BloomFilterUtil.DELIMITER_KEY, "#");
+      }
     });
 
     LOG.debug("Performing action: Just set bloom filter types on table " + tableName);
