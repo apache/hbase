@@ -748,7 +748,7 @@ public class TestHStoreFile extends HBaseTestCase {
       reader.loadFileInfo();
       reader.loadBloomfilter();
       StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
-      assertEquals(expKeys[x], reader.generalBloomFilter.getKeyCount());
+      assertEquals(expKeys[x], reader.getGeneralBloomFilter().getKeyCount());
 
       HStore store = mock(HStore.class);
       when(store.getColumnFamilyDescriptor())

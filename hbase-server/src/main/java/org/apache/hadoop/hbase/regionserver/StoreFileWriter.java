@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_PARAM_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
@@ -44,11 +45,14 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.BloomContext;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.RowBloomContext;
 import org.apache.hadoop.hbase.util.RowColBloomContext;
+import org.apache.hadoop.hbase.util.RowPrefixDelimiterBloomContext;
+import org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +69,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   private final BloomFilterWriter generalBloomFilterWriter;
   private final BloomFilterWriter deleteFamilyBloomFilterWriter;
   private final BloomType bloomType;
+  private byte[] bloomParam = null;
   private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
   private long deleteFamilyCnt = 0;
   private BloomContext bloomContext = null;
@@ -110,21 +115,32 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
     if (generalBloomFilterWriter != null) {
       this.bloomType = bloomType;
+      this.bloomParam = BloomFilterUtil.getBloomFilterParam(bloomType, conf);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Bloom filter type for " + path + ": " + this.bloomType + ", " +
-            generalBloomFilterWriter.getClass().getSimpleName());
+        LOG.trace("Bloom filter type for " + path + ": " + this.bloomType + ", param: "
+            + (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH?
+               Bytes.toInt(bloomParam):Bytes.toStringBinary(bloomParam))
+            + ", " + generalBloomFilterWriter.getClass().getSimpleName());
       }
       // init bloom context
       switch (bloomType) {
-      case ROW:
-        bloomContext = new RowBloomContext(generalBloomFilterWriter, comparator);
-        break;
-      case ROWCOL:
-        bloomContext = new RowColBloomContext(generalBloomFilterWriter, comparator);
-        break;
-      default:
-        throw new IOException(
-            "Invalid Bloom filter type: " + bloomType + " (ROW or ROWCOL expected)");
+        case ROW:
+          bloomContext = new RowBloomContext(generalBloomFilterWriter, comparator);
+          break;
+        case ROWCOL:
+          bloomContext = new RowColBloomContext(generalBloomFilterWriter, comparator);
+          break;
+        case ROWPREFIX_FIXED_LENGTH:
+          bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter, comparator,
+              Bytes.toInt(bloomParam));
+          break;
+        case ROWPREFIX_DELIMITED:
+          bloomContext = new RowPrefixDelimiterBloomContext(generalBloomFilterWriter, comparator,
+              bloomParam);
+          break;
+        default:
+          throw new IOException("Invalid Bloom filter type: "
+              + bloomType + " (ROW or ROWCOL or ROWPREFIX or ROWPREFIX_DELIMITED expected)");
       }
     } else {
       // Not using Bloom filters.
@@ -206,9 +222,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
        * http://2.bp.blogspot.com/_Cib_A77V54U/StZMrzaKufI/AAAAAAAAADo/ZhK7bGoJdMQ/s400/KeyValue.png
        * Key = RowLen + Row + FamilyLen + Column [Family + Qualifier] + Timestamp
        *
-       * 2 Types of Filtering:
+       * 4 Types of Filtering:
        *  1. Row = Row
        *  2. RowCol = Row + Qualifier
+       *  3. RowPrefixFixedLength  = Fixed Length Row Prefix
+       *  4. RowPrefixDelimiter = Delimited Row Prefix
        */
       bloomContext.writeBloom(cell);
     }
@@ -280,6 +298,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     if (hasGeneralBloom) {
       writer.addGeneralBloomFilter(generalBloomFilterWriter);
       writer.appendFileInfo(BLOOM_FILTER_TYPE_KEY, Bytes.toBytes(bloomType.toString()));
+      if (bloomParam != null) {
+        writer.appendFileInfo(BLOOM_FILTER_PARAM_KEY, bloomParam);
+      }
       bloomContext.addLastBloomKey(writer);
     }
     return hasGeneralBloom;

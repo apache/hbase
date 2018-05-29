@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -191,6 +192,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EncryptionTest;
@@ -2153,6 +2155,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       // check replication scope
       checkReplicationScope(hcd);
+      // check bloom filter type
+      checkBloomFilterType(hcd);
 
       // check data replication factor, it can be 0(default value) when user has not explicitly
       // set the value, in this case we use default replication factor set in the file system.
@@ -2232,6 +2236,16 @@ public class HMaster extends HRegionServer implements MasterServices {
                 + " is below recommended minimum of 1000 for column family "+ hcd.getNameAsString();
         throw new IOException(message);
       }
+    }
+  }
+
+  private static void checkBloomFilterType(ColumnFamilyDescriptor cfd)
+      throws IOException {
+    Configuration conf = new CompoundConfiguration().addStringMap(cfd.getConfiguration());
+    try {
+      BloomFilterUtil.getBloomFilterParam(cfd.getBloomFilterType(), conf);
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException("Failed to get bloom filter param", e);
     }
   }
 
