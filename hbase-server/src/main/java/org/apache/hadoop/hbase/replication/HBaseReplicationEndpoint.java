@@ -155,7 +155,8 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    */
   protected static List<ServerName> fetchSlavesAddresses(ZKWatcher zkw)
       throws KeeperException {
-    List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.znodePaths.rsZNode);
+    List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
+            zkw.getZNodePaths().rsZNode);
     if (children == null) {
       return Collections.emptyList();
     }
@@ -216,7 +217,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     public PeerRegionServerListener(HBaseReplicationEndpoint replicationPeer) {
       super(replicationPeer.getZkw());
       this.replicationEndpoint = replicationPeer;
-      this.regionServerListNode = replicationEndpoint.getZkw().znodePaths.rsZNode;
+      this.regionServerListNode = replicationEndpoint.getZkw().getZNodePaths().rsZNode;
     }
 
     @Override

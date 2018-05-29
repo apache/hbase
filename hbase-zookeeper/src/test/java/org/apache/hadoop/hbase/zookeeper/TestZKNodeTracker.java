@@ -99,9 +99,9 @@ public class TestZKNodeTracker {
     Abortable abortable = new StubAbortable();
     ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
         "testNodeTracker", abortable);
-    ZKUtil.createAndFailSilent(zk, zk.znodePaths.baseZNode);
+    ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().baseZNode);
 
-    final String node = ZNodePaths.joinZNode(zk.znodePaths.baseZNode,
+    final String node = ZNodePaths.joinZNode(zk.getZNodePaths().baseZNode,
       Long.toString(ThreadLocalRandom.current().nextLong()));
 
     final byte [] dataOne = Bytes.toBytes("dataOne");
@@ -322,7 +322,7 @@ public class TestZKNodeTracker {
         TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_ZNODE_PARENT,
             HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT));
 
-    final String nodeName =  zkw.znodePaths.masterAddressZNode;
+    final String nodeName =  zkw.getZNodePaths().masterAddressZNode;
 
     // Check that we manage the case when there is no data
     ZKUtil.createAndFailSilent(zkw, nodeName);

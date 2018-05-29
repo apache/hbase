@@ -102,7 +102,7 @@ public abstract class ZKNodeTracker extends ZKListener {
    * @throws InterruptedException if the waiting thread is interrupted
    */
   public synchronized byte [] blockUntilAvailable()
-  throws InterruptedException {
+    throws InterruptedException {
     return blockUntilAvailable(0, false);
   }
 
@@ -238,11 +238,11 @@ public abstract class ZKNodeTracker extends ZKListener {
    */
   public boolean checkIfBaseNodeAvailable() {
     try {
-      if (ZKUtil.checkExists(watcher, watcher.znodePaths.baseZNode) == -1) {
+      if (ZKUtil.checkExists(watcher, watcher.getZNodePaths().baseZNode) == -1) {
         return false;
       }
     } catch (KeeperException e) {
-      abortable.abort("Exception while checking if basenode (" + watcher.znodePaths.baseZNode
+      abortable.abort("Exception while checking if basenode (" + watcher.getZNodePaths().baseZNode
           + ") exists in ZooKeeper.",
         e);
     }

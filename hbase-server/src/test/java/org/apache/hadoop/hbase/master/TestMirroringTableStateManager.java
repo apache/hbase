@@ -82,7 +82,8 @@ public class TestMirroringTableStateManager {
 
   private TableState.State getTableStateInZK(ZKWatcher watcher, final TableName tableName)
       throws KeeperException, IOException, InterruptedException {
-    String znode = ZNodePaths.joinZNode(watcher.znodePaths.tableZNode, tableName.getNameAsString());
+    String znode = ZNodePaths.joinZNode(watcher.getZNodePaths().tableZNode,
+            tableName.getNameAsString());
     byte [] data = ZKUtil.getData(watcher, znode);
     if (data == null || data.length <= 0) {
       return null;

@@ -144,7 +144,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
     ZKWatcher watcher = new ZKWatcher(conf, "IntegrationTestZnodeACLs", null);
     RecoverableZooKeeper zk = ZKUtil.connect(this.conf, watcher);
 
-    String baseZNode = watcher.znodePaths.baseZNode;
+    String baseZNode = watcher.getZNodePaths().baseZNode;
 
     LOG.info("");
     LOG.info("***********************************************************************************");
@@ -160,7 +160,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
   private void checkZnodePermsRecursive(ZKWatcher watcher,
       RecoverableZooKeeper zk, String znode) throws KeeperException, InterruptedException {
 
-    boolean expectedWorldReadable = watcher.znodePaths.isClientReadable(znode);
+    boolean expectedWorldReadable = watcher.getZNodePaths().isClientReadable(znode);
 
     assertZnodePerms(zk, znode, expectedWorldReadable);
 

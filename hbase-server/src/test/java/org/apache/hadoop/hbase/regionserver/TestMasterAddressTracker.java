@@ -87,7 +87,7 @@ public class TestMasterAddressTracker {
       throws Exception {
     ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
         name.getMethodName(), null);
-    ZKUtil.createAndFailSilent(zk, zk.znodePaths.baseZNode);
+    ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().baseZNode);
 
     // Should not have a master yet
     MasterAddressTracker addressTracker = new MasterAddressTracker(zk, null);
@@ -96,12 +96,14 @@ public class TestMasterAddressTracker {
     zk.registerListener(addressTracker);
 
     // Use a listener to capture when the node is actually created
-    NodeCreationListener listener = new NodeCreationListener(zk, zk.znodePaths.masterAddressZNode);
+    NodeCreationListener listener = new NodeCreationListener(zk,
+            zk.getZNodePaths().masterAddressZNode);
     zk.registerListener(listener);
 
     if (sn != null) {
       LOG.info("Creating master node");
-      MasterAddressTracker.setMasterAddress(zk, zk.znodePaths.masterAddressZNode, sn, infoPort);
+      MasterAddressTracker.setMasterAddress(zk, zk.getZNodePaths().masterAddressZNode,
+              sn, infoPort);
 
       // Wait for the node to be created
       LOG.info("Waiting for master address manager to be notified");

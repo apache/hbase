@@ -125,14 +125,14 @@ public class MasterMetaBootstrap {
     try {
       List<String> metaReplicaZnodes = zooKeeper.getMetaReplicaNodes();
       for (String metaReplicaZnode : metaReplicaZnodes) {
-        int replicaId = zooKeeper.znodePaths.getMetaReplicaIdFromZnode(metaReplicaZnode);
+        int replicaId = zooKeeper.getZNodePaths().getMetaReplicaIdFromZnode(metaReplicaZnode);
         if (replicaId >= numMetaReplicasConfigured) {
           RegionState r = MetaTableLocator.getMetaRegionState(zooKeeper, replicaId);
           LOG.info("Closing excess replica of meta region " + r.getRegion());
           // send a close and wait for a max of 30 seconds
           ServerManager.closeRegionSilentlyAndWait(master.getClusterConnection(),
               r.getServerName(), r.getRegion(), 30000);
-          ZKUtil.deleteNode(zooKeeper, zooKeeper.znodePaths.getZNodeForReplica(replicaId));
+          ZKUtil.deleteNode(zooKeeper, zooKeeper.getZNodePaths().getZNodeForReplica(replicaId));
         }
       }
     } catch (Exception ex) {

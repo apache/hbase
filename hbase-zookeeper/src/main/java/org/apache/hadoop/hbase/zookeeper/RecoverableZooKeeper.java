@@ -85,7 +85,7 @@ public class RecoverableZooKeeper {
 
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime)
-  throws IOException {
+    throws IOException {
     this(quorumServers, sessionTimeout, watcher, maxRetries, retryIntervalMillis, maxSleepTime,
         null);
   }
@@ -94,7 +94,7 @@ public class RecoverableZooKeeper {
       justification="None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier)
-  throws IOException {
+    throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries+1, retryIntervalMillis, maxSleepTime);
@@ -300,7 +300,7 @@ public class RecoverableZooKeeper {
    * @return List of children znodes
    */
   public List<String> getChildren(String path, boolean watch)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getChildren")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
@@ -331,7 +331,7 @@ public class RecoverableZooKeeper {
    * @return Data
    */
   public byte[] getData(String path, Watcher watcher, Stat stat)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getData")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
@@ -362,7 +362,7 @@ public class RecoverableZooKeeper {
    * @return Data
    */
   public byte[] getData(String path, boolean watch, Stat stat)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getData")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
@@ -395,7 +395,7 @@ public class RecoverableZooKeeper {
    * @return Stat instance
    */
   public Stat setData(String path, byte[] data, int version)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.setData")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       byte[] newData = ZKMetadata.appendMetaData(id, data);
@@ -445,7 +445,7 @@ public class RecoverableZooKeeper {
    * @return list of ACLs
    */
   public List<ACL> getAcl(String path, Stat stat)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getAcl")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
@@ -476,7 +476,7 @@ public class RecoverableZooKeeper {
    * @return list of ACLs
    */
   public Stat setAcl(String path, List<ACL> acls, int version)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.setAcl")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
@@ -519,7 +519,7 @@ public class RecoverableZooKeeper {
    */
   public String create(String path, byte[] data, List<ACL> acl,
       CreateMode createMode)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.create")) {
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       switch (createMode) {
@@ -587,7 +587,7 @@ public class RecoverableZooKeeper {
 
   private String createSequential(String path, byte[] data,
       List<ACL> acl, CreateMode createMode)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     RetryCounter retryCounter = retryCounterFactory.create();
     boolean first = true;
     String newPath = path+this.identifier;
@@ -653,7 +653,7 @@ public class RecoverableZooKeeper {
    * Run multiple operations in a transactional manner. Retry before throwing exception
    */
   public List<OpResult> multi(Iterable<Op> ops)
-  throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.multi")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       Iterable<Op> multiOps = prepareZKMulti(ops);

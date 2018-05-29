@@ -347,7 +347,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   List<RSGroupInfo> retrieveGroupListFromZookeeper() throws IOException {
-    String groupBasePath = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, rsGroupZNode);
+    String groupBasePath = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, rsGroupZNode);
     List<RSGroupInfo> RSGroupInfoList = Lists.newArrayList();
     //Overwrite any info stored by table, this takes precedence
     try {
@@ -488,7 +488,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     resetRSGroupAndTableMaps(newGroupMap, newTableMap);
 
     try {
-      String groupBasePath = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, rsGroupZNode);
+      String groupBasePath = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, rsGroupZNode);
       ZKUtil.createAndFailSilent(watcher, groupBasePath, ProtobufMagic.PB_MAGIC);
 
       List<ZKUtil.ZKUtilOp> zkOps = new ArrayList<>(newGroupMap.size());
@@ -549,7 +549,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     LOG.debug("Reading online RS from zookeeper");
     List<ServerName> servers = new LinkedList<>();
     try {
-      for (String el: ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.rsZNode)) {
+      for (String el: ZKUtil.listChildrenNoWatch(watcher, watcher.getZNodePaths().rsZNode)) {
         servers.add(ServerName.parseServerName(el));
       }
     } catch (KeeperException e) {

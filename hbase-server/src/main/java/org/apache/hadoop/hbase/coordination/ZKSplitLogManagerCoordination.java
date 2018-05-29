@@ -122,7 +122,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   public int remainingTasksInCoordination() {
     int count = 0;
     try {
-      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.splitLogZNode);
+      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher,
+              watcher.getZNodePaths().splitLogZNode);
       if (tasks != null) {
         int listSize = tasks.size();
         for (int i = 0; i < listSize; i++) {
@@ -466,13 +467,14 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   private void lookForOrphans() {
     List<String> orphans;
     try {
-      orphans = ZKUtil.listChildrenNoWatch(this.watcher, this.watcher.znodePaths.splitLogZNode);
+      orphans = ZKUtil.listChildrenNoWatch(this.watcher,
+              this.watcher.getZNodePaths().splitLogZNode);
       if (orphans == null) {
-        LOG.warn("Could not get children of " + this.watcher.znodePaths.splitLogZNode);
+        LOG.warn("Could not get children of " + this.watcher.getZNodePaths().splitLogZNode);
         return;
       }
     } catch (KeeperException e) {
-      LOG.warn("Could not get children of " + this.watcher.znodePaths.splitLogZNode + " "
+      LOG.warn("Could not get children of " + this.watcher.getZNodePaths().splitLogZNode + " "
           + StringUtils.stringifyException(e));
       return;
     }
@@ -480,7 +482,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     int listSize = orphans.size();
     for (int i = 0; i < listSize; i++) {
       String path = orphans.get(i);
-      String nodepath = ZNodePaths.joinZNode(watcher.znodePaths.splitLogZNode, path);
+      String nodepath = ZNodePaths.joinZNode(watcher.getZNodePaths().splitLogZNode, path);
       if (ZKSplitLog.isRescanNode(watcher, nodepath)) {
         rescan_nodes++;
         LOG.debug("Found orphan rescan node " + path);

@@ -112,7 +112,7 @@ public class TestZKUtilNoServer {
       }
     };
     Mockito.doThrow(new InterruptedException()).when(recoverableZk)
-        .getChildren(zkw.znodePaths.baseZNode, null);
-    ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.baseZNode);
+        .getChildren(zkw.getZNodePaths().baseZNode, null);
+    ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().baseZNode);
   }
 }

@@ -50,7 +50,7 @@ public class ZKReplicationStorageBase {
     this.zookeeper = zookeeper;
     this.conf = conf;
 
-    this.replicationZNode = ZNodePaths.joinZNode(this.zookeeper.znodePaths.baseZNode,
+    this.replicationZNode = ZNodePaths.joinZNode(this.zookeeper.getZNodePaths().baseZNode,
       conf.get(REPLICATION_ZNODE, REPLICATION_ZNODE_DEFAULT));
   }
 

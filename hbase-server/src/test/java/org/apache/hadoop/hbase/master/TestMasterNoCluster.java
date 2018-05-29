@@ -120,7 +120,7 @@ public class TestMasterNoCluster {
         return false;
       }
     });
-    ZKUtil.deleteNodeRecursively(zkw, zkw.znodePaths.baseZNode);
+    ZKUtil.deleteNodeRecursively(zkw, zkw.getZNodePaths().baseZNode);
     zkw.close();
   }
 

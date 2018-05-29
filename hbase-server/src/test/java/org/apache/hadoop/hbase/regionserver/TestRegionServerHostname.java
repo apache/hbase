@@ -106,7 +106,7 @@ public class TestRegionServerHostname {
         TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
         try {
           ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-          List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
+          List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
           // there would be NUM_RS+1 children - one for the master
           assertTrue(servers.size() ==
             NUM_RS + (LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration())? 1: 0));
@@ -167,7 +167,7 @@ public class TestRegionServerHostname {
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
     int expectedRS = NUM_RS + (tablesOnMaster? 1: 0);
     try (ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher()) {
-      List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
+      List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
       assertEquals(expectedRS, servers.size());
     }
   }
