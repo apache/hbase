@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -127,10 +129,26 @@ public class SyncReplicationTestBase {
         .setRemoteWALDir(REMOTE_WAL_DIR1.toUri().toString()).build());
   }
 
+  private static void shutdown(HBaseTestingUtility util) throws Exception {
+    if (util.getHBaseCluster() == null) {
+      return;
+    }
+    Admin admin = util.getAdmin();
+    if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
+      if (admin
+        .getReplicationPeerSyncReplicationState(PEER_ID) != SyncReplicationState.DOWNGRADE_ACTIVE) {
+        admin.transitReplicationPeerSyncReplicationState(PEER_ID,
+          SyncReplicationState.DOWNGRADE_ACTIVE);
+      }
+      admin.removeReplicationPeer(PEER_ID);
+    }
+    util.shutdownMiniCluster();
+  }
+
   @AfterClass
   public static void tearDown() throws Exception {
-    UTIL1.shutdownMiniCluster();
-    UTIL2.shutdownMiniCluster();
+    shutdown(UTIL1);
+    shutdown(UTIL2);
     ZK_UTIL.shutdownMiniZKCluster();
   }
 
@@ -207,7 +225,7 @@ public class SyncReplicationTestBase {
   protected void verifyRemovedPeer(String peerId, Path remoteWALDir, HBaseTestingUtility utility)
       throws Exception {
     ReplicationPeerStorage rps = ReplicationStorageFactory
-        .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
+      .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
     try {
       rps.getPeerSyncReplicationState(peerId);
       fail("Should throw exception when get the sync replication state of a removed peer.");
@@ -233,7 +251,7 @@ public class SyncReplicationTestBase {
     Entry[] entries = new Entry[10];
     for (int i = 0; i < entries.length; i++) {
       entries[i] =
-          new Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TABLE_NAME, 0), new WALEdit());
+        new Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TABLE_NAME, 0), new WALEdit());
     }
     if (!expectedRejection) {
       ReplicationProtbufUtil.replicateWALEntry(connection.getAdmin(regionServer.getServerName()),

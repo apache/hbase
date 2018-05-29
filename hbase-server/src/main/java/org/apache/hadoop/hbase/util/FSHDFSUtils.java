@@ -28,9 +28,9 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
@@ -155,12 +155,16 @@ public class FSHDFSUtils extends FSUtils {
    * Recover the lease from HDFS, retrying multiple times.
    */
   @Override
-  public void recoverFileLease(final FileSystem fs, final Path p,
-      Configuration conf, CancelableProgressable reporter)
-  throws IOException {
+  public void recoverFileLease(FileSystem fs, Path p, Configuration conf,
+      CancelableProgressable reporter) throws IOException {
+    if (fs instanceof FilterFileSystem) {
+      fs = ((FilterFileSystem) fs).getRawFileSystem();
+    }
     // lease recovery not needed for local file system case.
-    if (!(fs instanceof DistributedFileSystem)) return;
-    recoverDFSFileLease((DistributedFileSystem)fs, p, conf, reporter);
+    if (!(fs instanceof DistributedFileSystem)) {
+      return;
+    }
+    recoverDFSFileLease((DistributedFileSystem) fs, p, conf, reporter);
   }
 
   /*

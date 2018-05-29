@@ -291,7 +291,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
         try {
           Optional<DualAsyncFSWAL> opt = peerId2WAL.get(peerId);
           if (opt != null) {
-            opt.ifPresent(DualAsyncFSWAL::skipRemoteWal);
+            opt.ifPresent(w -> w.skipRemoteWAL(to == SyncReplicationState.STANDBY));
           } else {
             // add a place holder to tell the getWAL caller do not use DualAsyncFSWAL any more.
             peerId2WAL.put(peerId, Optional.empty());
