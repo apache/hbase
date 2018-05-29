@@ -43,7 +43,7 @@ public class TestZKMainServer {
   // http://stackoverflow.com/questions/309396/java-how-to-test-methods-that-call-system-exit
   protected static class ExitException extends SecurityException {
     private static final long serialVersionUID = 1L;
-    public final int status;
+    private final int status;
     public ExitException(int status) {
       super("There is no escape!");
       this.status = status;

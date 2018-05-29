@@ -191,7 +191,7 @@ public class MetaTableLocator {
    * @throws NotAllMetaRegionsOnlineException if a meta or root region is not online
    */
   public ServerName waitMetaRegionLocation(ZKWatcher zkw, long timeout)
-  throws InterruptedException, NotAllMetaRegionsOnlineException {
+    throws InterruptedException, NotAllMetaRegionsOnlineException {
     return waitMetaRegionLocation(zkw, RegionInfo.DEFAULT_REPLICA_ID, timeout);
   }
 
@@ -209,9 +209,9 @@ public class MetaTableLocator {
    * @throws NotAllMetaRegionsOnlineException if a meta or root region is not online
    */
   public ServerName waitMetaRegionLocation(ZKWatcher zkw, int replicaId, long timeout)
-  throws InterruptedException, NotAllMetaRegionsOnlineException {
+    throws InterruptedException, NotAllMetaRegionsOnlineException {
     try {
-      if (ZKUtil.checkExists(zkw, zkw.znodePaths.baseZNode) == -1) {
+      if (ZKUtil.checkExists(zkw, zkw.getZNodePaths().baseZNode) == -1) {
         String errorMsg = "Check the value configured in 'zookeeper.znode.parent'. "
             + "There could be a mismatch with the one configured in the master.";
         LOG.error(errorMsg);
@@ -388,7 +388,7 @@ public class MetaTableLocator {
       service = connection.getAdmin(sn);
     } catch (RetriesExhaustedException e) {
       if (e.getCause() != null && e.getCause() instanceof ConnectException) {
-        // Catch this; presume it means the cached connection has gone bad.
+        LOG.debug("Catch this; presume it means the cached connection has gone bad.");
       } else {
         throw e;
       }
@@ -407,12 +407,12 @@ public class MetaTableLocator {
     } catch (IOException ioe) {
       Throwable cause = ioe.getCause();
       if (ioe instanceof ConnectException) {
-        // Catch. Connect refused.
+        LOG.debug("Catch. Connect refused.");
       } else if (cause != null && cause instanceof EOFException) {
-        // Catch. Other end disconnected us.
+        LOG.debug("Catch. Other end disconnected us.");
       } else if (cause != null && cause.getMessage() != null &&
         cause.getMessage().toLowerCase(Locale.ROOT).contains("connection reset")) {
-        // Catch. Connection reset.
+        LOG.debug("Catch. Connection reset.");
       } else {
         throw ioe;
       }
@@ -460,7 +460,7 @@ public class MetaTableLocator {
     byte[] data = ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
     try {
       ZKUtil.setData(zookeeper,
-          zookeeper.znodePaths.getZNodeForReplica(replicaId), data);
+          zookeeper.getZNodePaths().getZNodeForReplica(replicaId), data);
     } catch(KeeperException.NoNodeException nne) {
       if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
         LOG.debug("META region location doesn't exist, create it");
@@ -468,7 +468,8 @@ public class MetaTableLocator {
         LOG.debug("META region location doesn't exist for replicaId=" + replicaId +
             ", create it");
       }
-      ZKUtil.createAndWatch(zookeeper, zookeeper.znodePaths.getZNodeForReplica(replicaId), data);
+      ZKUtil.createAndWatch(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId),
+              data);
     }
   }
 
@@ -492,7 +493,7 @@ public class MetaTableLocator {
     RegionState.State state = RegionState.State.OPEN;
     ServerName serverName = null;
     try {
-      byte[] data = ZKUtil.getData(zkw, zkw.znodePaths.getZNodeForReplica(replicaId));
+      byte[] data = ZKUtil.getData(zkw, zkw.getZNodePaths().getZNodeForReplica(replicaId));
       if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
         try {
           int prefixLen = ProtobufUtil.lengthOfPBMagic();
@@ -532,12 +533,12 @@ public class MetaTableLocator {
    * @throws KeeperException unexpected zookeeper exception
    */
   public void deleteMetaLocation(ZKWatcher zookeeper)
-  throws KeeperException {
+    throws KeeperException {
     deleteMetaLocation(zookeeper, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   public void deleteMetaLocation(ZKWatcher zookeeper, int replicaId)
-  throws KeeperException {
+    throws KeeperException {
     if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
       LOG.info("Deleting hbase:meta region location in ZooKeeper");
     } else {
@@ -545,7 +546,7 @@ public class MetaTableLocator {
     }
     try {
       // Just delete the node.  Don't need any watches.
-      ZKUtil.deleteNode(zookeeper, zookeeper.znodePaths.getZNodeForReplica(replicaId));
+      ZKUtil.deleteNode(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId));
     } catch(KeeperException.NoNodeException nne) {
       // Has already been deleted
     }

@@ -92,6 +92,13 @@
         <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>net.revelc.code</groupId>
         <artifactId>warbucks-maven-plugin</artifactId>
       </plugin>

@@ -55,7 +55,7 @@ public class ZKNamespaceManager extends ZKListener {
 
   public ZKNamespaceManager(ZKWatcher zkw) throws IOException {
     super(zkw);
-    nsZNode = zkw.znodePaths.namespaceZNode;
+    nsZNode = zkw.getZNodePaths().namespaceZNode;
     cache = new ConcurrentSkipListMap<>();
   }
 

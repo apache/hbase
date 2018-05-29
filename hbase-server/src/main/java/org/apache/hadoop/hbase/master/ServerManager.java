@@ -551,7 +551,7 @@ public class ServerManager {
 
   private List<String> getRegionServersInZK(final ZKWatcher zkw)
   throws KeeperException {
-    return ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
+    return ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
   }
 
   /*

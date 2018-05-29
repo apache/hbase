@@ -38,7 +38,7 @@ public class RegionNormalizerTracker extends ZKNodeTracker {
   private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerTracker.class);
 
   public RegionNormalizerTracker(ZKWatcher watcher, Abortable abortable) {
-    super(watcher, watcher.znodePaths.regionNormalizerZNode, abortable);
+    super(watcher, watcher.getZNodePaths().regionNormalizerZNode, abortable);
   }
 
   /**
@@ -65,11 +65,11 @@ public class RegionNormalizerTracker extends ZKNodeTracker {
   public void setNormalizerOn(boolean normalizerOn) throws KeeperException {
     byte [] upData = toByteArray(normalizerOn);
     try {
-      ZKUtil.setData(watcher, watcher.znodePaths.regionNormalizerZNode, upData);
+      ZKUtil.setData(watcher, watcher.getZNodePaths().regionNormalizerZNode, upData);
     } catch(KeeperException.NoNodeException nne) {
-      ZKUtil.createAndWatch(watcher, watcher.znodePaths.regionNormalizerZNode, upData);
+      ZKUtil.createAndWatch(watcher, watcher.getZNodePaths().regionNormalizerZNode, upData);
     }
-    super.nodeDataChanged(watcher.znodePaths.regionNormalizerZNode);
+    super.nodeDataChanged(watcher.getZNodePaths().regionNormalizerZNode);
   }
 
   private byte [] toByteArray(boolean isNormalizerOn) {

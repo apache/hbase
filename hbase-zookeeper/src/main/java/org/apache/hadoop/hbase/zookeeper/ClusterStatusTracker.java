@@ -48,7 +48,7 @@ public class ClusterStatusTracker extends ZKNodeTracker {
    * @param abortable used to abort if a fatal error occurs
    */
   public ClusterStatusTracker(ZKWatcher watcher, Abortable abortable) {
-    super(watcher, watcher.znodePaths.clusterStateZNode, abortable);
+    super(watcher, watcher.getZNodePaths().clusterStateZNode, abortable);
   }
 
   /**
@@ -65,12 +65,12 @@ public class ClusterStatusTracker extends ZKNodeTracker {
    * @throws KeeperException unexpected zk exception
    */
   public void setClusterUp()
-  throws KeeperException {
+    throws KeeperException {
     byte [] upData = toByteArray();
     try {
-      ZKUtil.createAndWatch(watcher, watcher.znodePaths.clusterStateZNode, upData);
+      ZKUtil.createAndWatch(watcher, watcher.getZNodePaths().clusterStateZNode, upData);
     } catch(KeeperException.NodeExistsException nee) {
-      ZKUtil.setData(watcher, watcher.znodePaths.clusterStateZNode, upData);
+      ZKUtil.setData(watcher, watcher.getZNodePaths().clusterStateZNode, upData);
     }
   }
 
@@ -79,12 +79,12 @@ public class ClusterStatusTracker extends ZKNodeTracker {
    * @throws KeeperException unexpected zk exception
    */
   public void setClusterDown()
-  throws KeeperException {
+    throws KeeperException {
     try {
-      ZKUtil.deleteNode(watcher, watcher.znodePaths.clusterStateZNode);
+      ZKUtil.deleteNode(watcher, watcher.getZNodePaths().clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {
       LOG.warn("Attempted to set cluster as down but already down, cluster " +
-          "state node (" + watcher.znodePaths.clusterStateZNode + ") not found");
+          "state node (" + watcher.getZNodePaths().clusterStateZNode + ") not found");
     }
   }
 

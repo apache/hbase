@@ -46,7 +46,7 @@ public class ZKMainServer {
    */
   private static class HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain extends ZooKeeperMain {
     public HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain(String[] args)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       super(args);
       // Make sure we are connected before we proceed. Can take a while on some systems. If we
       // run the command without being connected, we get ConnectionLoss KeeperErrorConnection...
@@ -57,9 +57,9 @@ public class ZKMainServer {
 
     /**
      * Run the command-line args passed.  Calls System.exit when done.
-     * @throws KeeperException
-     * @throws IOException
-     * @throws InterruptedException
+     * @throws KeeperException if an unexpected ZooKeeper exception happens
+     * @throws IOException in case of a network failure
+     * @throws InterruptedException if the ZooKeeper client closes
      */
     void runCmdLine() throws KeeperException, IOException, InterruptedException {
       processCmd(this.cl);

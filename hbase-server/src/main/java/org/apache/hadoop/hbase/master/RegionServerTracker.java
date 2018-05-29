@@ -72,7 +72,7 @@ public class RegionServerTracker extends ZKListener {
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
     List<String> servers =
-      ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.rsZNode);
+      ZKUtil.listChildrenAndWatchThem(watcher, watcher.getZNodePaths().rsZNode);
     refresh(servers);
   }
 
@@ -84,7 +84,7 @@ public class RegionServerTracker extends ZKListener {
         if (regionServers.get(sn) == null) {
           RegionServerInfo.Builder rsInfoBuilder = RegionServerInfo.newBuilder();
           try {
-            String nodePath = ZNodePaths.joinZNode(watcher.znodePaths.rsZNode, n);
+            String nodePath = ZNodePaths.joinZNode(watcher.getZNodePaths().rsZNode, n);
             byte[] data = ZKUtil.getData(watcher, nodePath);
             if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
               int magicLen = ProtobufUtil.lengthOfPBMagic();
@@ -114,7 +114,7 @@ public class RegionServerTracker extends ZKListener {
 
   @Override
   public void nodeCreated(String path) {
-    if (path.startsWith(watcher.znodePaths.rsZNode)) {
+    if (path.startsWith(watcher.getZNodePaths().rsZNode)) {
       String serverName = ZKUtil.getNodeName(path);
       LOG.info("RegionServer ephemeral node created, adding [" + serverName + "]");
       if (server.isInitialized()) {
@@ -127,7 +127,7 @@ public class RegionServerTracker extends ZKListener {
 
   @Override
   public void nodeDeleted(String path) {
-    if (path.startsWith(watcher.znodePaths.rsZNode)) {
+    if (path.startsWith(watcher.getZNodePaths().rsZNode)) {
       String serverName = ZKUtil.getNodeName(path);
       LOG.info("RegionServer ephemeral node deleted, processing expiration [" +
         serverName + "]");
@@ -144,11 +144,11 @@ public class RegionServerTracker extends ZKListener {
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if (path.equals(watcher.znodePaths.rsZNode)
+    if (path.equals(watcher.getZNodePaths().rsZNode)
         && !server.isAborted() && !server.isStopped()) {
       try {
         List<String> servers =
-          ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.rsZNode);
+          ZKUtil.listChildrenAndWatchThem(watcher, watcher.getZNodePaths().rsZNode);
         refresh(servers);
       } catch (IOException e) {
         server.abort("Unexpected zk exception getting RS nodes", e);

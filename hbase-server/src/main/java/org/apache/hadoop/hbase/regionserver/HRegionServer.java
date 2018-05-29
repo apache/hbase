@@ -3483,7 +3483,7 @@ public class HRegionServer extends HasThread implements
   }
 
   private String getMyEphemeralNodePath() {
-    return ZNodePaths.joinZNode(this.zooKeeper.znodePaths.rsZNode, getServerName().toString());
+    return ZNodePaths.joinZNode(this.zooKeeper.getZNodePaths().rsZNode, getServerName().toString());
   }
 
   private boolean isHealthCheckerConfigured() {

@@ -58,7 +58,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     conf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     zkw = utility.getZooKeeperWatcher();
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
-    replicationZNode = ZNodePaths.joinZNode(zkw.znodePaths.baseZNode, replicationZNodeName);
+    replicationZNode = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, replicationZNodeName);
     KEY_ONE = initPeerClusterState("/hbase1");
     KEY_TWO = initPeerClusterState("/hbase2");
   }
@@ -69,7 +69,8 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     Configuration testConf = new Configuration(conf);
     testConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, baseZKNode);
     ZKWatcher zkw1 = new ZKWatcher(testConf, "test1", null);
-    String fakeRs = ZNodePaths.joinZNode(zkw1.znodePaths.rsZNode, "hostname1.example.org:1234");
+    String fakeRs = ZNodePaths.joinZNode(zkw1.getZNodePaths().rsZNode,
+            "hostname1.example.org:1234");
     ZKUtil.createWithParents(zkw1, fakeRs);
     ZKClusterId.setClusterId(zkw1, new ClusterId());
     return ZKConfig.getZooKeeperClusterKey(testConf);

@@ -40,7 +40,7 @@ public class MasterMaintenanceModeTracker extends ZKListener {
   }
 
   private void update(String path) {
-    if (path.startsWith(watcher.znodePaths.masterMaintZNode)) {
+    if (path.startsWith(watcher.getZNodePaths().masterMaintZNode)) {
       update();
     }
   }
@@ -48,7 +48,8 @@ public class MasterMaintenanceModeTracker extends ZKListener {
   private void update() {
     try {
       List<String> children =
-          ZKUtil.listChildrenAndWatchForNewChildren(watcher, watcher.znodePaths.masterMaintZNode);
+          ZKUtil.listChildrenAndWatchForNewChildren(watcher,
+                  watcher.getZNodePaths().masterMaintZNode);
       hasChildren = (children != null && children.size() > 0);
     } catch (KeeperException e) {
       // Ignore the ZK keeper exception

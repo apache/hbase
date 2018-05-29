@@ -97,7 +97,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
    */
   @Override
   public void nodeChildrenChanged(String path) {
-    if (path.equals(watcher.znodePaths.splitLogZNode)) {
+    if (path.equals(watcher.getZNodePaths().splitLogZNode)) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("tasks arrived or departed on " + path);
       }
@@ -331,7 +331,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
     int availableRSs = 1;
     try {
       List<String> regionServers =
-          ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.rsZNode);
+          ZKUtil.listChildrenNoWatch(watcher, watcher.getZNodePaths().rsZNode);
       availableRSs = Math.max(availableRSs, (regionServers == null) ? 0 : regionServers.size());
     } catch (KeeperException e) {
       // do nothing
@@ -412,7 +412,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
       List<String> paths;
       paths = getTaskList();
       if (paths == null) {
-        LOG.warn("Could not get tasks, did someone remove " + watcher.znodePaths.splitLogZNode
+        LOG.warn("Could not get tasks, did someone remove " + watcher.getZNodePaths().splitLogZNode
             + " ... worker thread exiting.");
         return;
       }
@@ -439,7 +439,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
             // don't call ZKSplitLog.getNodeName() because that will lead to
             // double encoding of the path name
             taskGrabbed |= grabTask(ZNodePaths.joinZNode(
-                watcher.znodePaths.splitLogZNode, paths.get(idx)));
+                watcher.getZNodePaths().splitLogZNode, paths.get(idx)));
             break;
           } else {
             LOG.debug("Current region server " + server.getServerName() + " has "
@@ -472,14 +472,14 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
     while (!shouldStop) {
       try {
         childrenPaths = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
-          watcher.znodePaths.splitLogZNode);
+          watcher.getZNodePaths().splitLogZNode);
         if (childrenPaths != null) {
           return childrenPaths;
         }
       } catch (KeeperException e) {
-        LOG.warn("Could not get children of znode " + watcher.znodePaths.splitLogZNode, e);
+        LOG.warn("Could not get children of znode " + watcher.getZNodePaths().splitLogZNode, e);
       }
-      LOG.debug("Retry listChildren of znode " + watcher.znodePaths.splitLogZNode
+      LOG.debug("Retry listChildren of znode " + watcher.getZNodePaths().splitLogZNode
           + " after sleep for " + sleepTime + "ms!");
       Thread.sleep(sleepTime);
     }
@@ -495,14 +495,14 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
   public boolean isReady() throws InterruptedException {
     int result = -1;
     try {
-      result = ZKUtil.checkExists(watcher, watcher.znodePaths.splitLogZNode);
+      result = ZKUtil.checkExists(watcher, watcher.getZNodePaths().splitLogZNode);
     } catch (KeeperException e) {
       // ignore
-      LOG.warn("Exception when checking for " + watcher.znodePaths.splitLogZNode
+      LOG.warn("Exception when checking for " + watcher.getZNodePaths().splitLogZNode
           + " ... retrying", e);
     }
     if (result == -1) {
-      LOG.info(watcher.znodePaths.splitLogZNode
+      LOG.info(watcher.getZNodePaths().splitLogZNode
           + " znode does not exist, waiting for master to create");
       Thread.sleep(1000);
     }

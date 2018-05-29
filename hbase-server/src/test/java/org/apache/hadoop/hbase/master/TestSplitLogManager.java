@@ -127,13 +127,13 @@ public class TestSplitLogManager {
         new ZKWatcher(conf, "split-log-manager-tests" + UUID.randomUUID().toString(), null);
     master = new DummyMasterServices(zkw, conf);
 
-    ZKUtil.deleteChildrenRecursively(zkw, zkw.znodePaths.baseZNode);
-    ZKUtil.createAndFailSilent(zkw, zkw.znodePaths.baseZNode);
-    assertTrue(ZKUtil.checkExists(zkw, zkw.znodePaths.baseZNode) != -1);
-    LOG.debug(zkw.znodePaths.baseZNode + " created");
-    ZKUtil.createAndFailSilent(zkw, zkw.znodePaths.splitLogZNode);
-    assertTrue(ZKUtil.checkExists(zkw, zkw.znodePaths.splitLogZNode) != -1);
-    LOG.debug(zkw.znodePaths.splitLogZNode + " created");
+    ZKUtil.deleteChildrenRecursively(zkw, zkw.getZNodePaths().baseZNode);
+    ZKUtil.createAndFailSilent(zkw, zkw.getZNodePaths().baseZNode);
+    assertTrue(ZKUtil.checkExists(zkw, zkw.getZNodePaths().baseZNode) != -1);
+    LOG.debug(zkw.getZNodePaths().baseZNode + " created");
+    ZKUtil.createAndFailSilent(zkw, zkw.getZNodePaths().splitLogZNode);
+    assertTrue(ZKUtil.checkExists(zkw, zkw.getZNodePaths().splitLogZNode) != -1);
+    LOG.debug(zkw.getZNodePaths().splitLogZNode + " created");
 
     resetCounters();
 
