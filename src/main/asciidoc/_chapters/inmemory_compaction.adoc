@@ -94,8 +94,7 @@ to set the in-memory attribute to _NONE_).
 
 When an in-memory flush happens is calculated by dividing the configured region flush size (Set in the table descriptor
 or read from _hbase.hregion.memstore.flush.size_) by the number of column families and then multiplying by
-_hbase.memstore.inmemoryflush.threshold.factor_ (default is 0.014 - a little less than the size
-of a chunk).
+_hbase.memstore.inmemoryflush.threshold.factor_. Default is 0.014.
 
 The number of flushes carried by the pipeline is monitored so as to fit within the bounds of memstore sizing
 but you can also set a maximum on the number of flushes total by setting
