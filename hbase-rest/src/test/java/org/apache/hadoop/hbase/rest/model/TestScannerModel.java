@@ -21,11 +21,16 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.rest.ScannerResultGenerator;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestScannerModel extends TestModelBase<ScannerModel> {
@@ -117,4 +122,33 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     }
   }
 
+  @Test
+  public void testExistingFilter() throws Exception {
+    final String CORRECT_FILTER = "{\"type\": \"PrefixFilter\", \"value\": \"cg==\"}";
+    verifyException(CORRECT_FILTER);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testNonExistingFilter() throws Exception {
+    final String UNKNOWN_FILTER = "{\"type\": \"UnknownFilter\", \"value\": \"cg==\"}";
+    verifyException(UNKNOWN_FILTER);
+  }
+
+  @Test(expected = JsonMappingException.class)
+  public void testIncorrectFilterThrowsJME() throws Exception {
+    final String JME_FILTER = "{\"invalid_tag\": \"PrefixFilter\", \"value\": \"cg==\"}";
+    verifyException(JME_FILTER);
+  }
+
+  @Test(expected = JsonParseException.class)
+  public void tesIncorrecttFilterThrowsJPE() throws Exception {
+    final String JPE_FILTER = "{\"type\": \"PrefixFilter\",, \"value\": \"cg==\"}";
+    verifyException(JPE_FILTER);
+  }
+
+  private void verifyException(final String FILTER) throws Exception {
+    ScannerModel model = new ScannerModel();
+    model.setFilter(FILTER);
+    ScannerResultGenerator.buildFilterFromModel(model);
+  }
 }
