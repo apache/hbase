@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -91,8 +92,7 @@ public class TestWALProcedureStoreOnHDFS {
     store.recoverLease();
   }
 
-  // No @After
-  @SuppressWarnings("JUnit4TearDownNotRun")
+  @After
   public void tearDown() throws Exception {
     store.stop(false);
     UTIL.getDFSCluster().getFileSystem().delete(store.getWALDir(), true);
