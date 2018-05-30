@@ -920,6 +920,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Collection<HStore> stores = this.stores.values();
       try {
         // update the stores that we are replaying
+        LOG.debug("replaying wal for " + this.getRegionInfo().getEncodedName());
         stores.forEach(HStore::startReplayingFromWAL);
         // Recover any edits if available.
         maxSeqId = Math.max(maxSeqId,
@@ -927,6 +928,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // Make sure mvcc is up to max.
         this.mvcc.advanceTo(maxSeqId);
       } finally {
+        LOG.debug("stopping wal replay for " + this.getRegionInfo().getEncodedName());
         // update the stores that we are done replaying
         stores.forEach(HStore::stopReplayingFromWAL);
       }
@@ -938,6 +940,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.writestate.compacting.set(0);
 
     if (this.writestate.writesEnabled) {
+      LOG.debug("Cleaning up temporary data for " + this.getRegionInfo().getEncodedName());
       // Remove temporary data left over from old regions
       status.setStatus("Cleaning up temporary data from old regions");
       fs.cleanupTempDir();
@@ -948,6 +951,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Get rid of any splits or merges that were lost in-progress.  Clean out
       // these directories here on open.  We may be opening a region that was
       // being split but we crashed in the middle of it all.
+      LOG.debug("Cleaning up detritus for " + this.getRegionInfo().getEncodedName());
       fs.cleanupAnySplitDetritus();
       fs.cleanupMergesDir();
     }
@@ -969,6 +973,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       WALSplitter.getMaxRegionSequenceId(fs.getFileSystem(), fs.getRegionDir());
     long nextSeqId = Math.max(maxSeqId, maxSeqIdFromFile) + 1;
     if (writestate.writesEnabled) {
+      LOG.debug("writing seq id for " + this.getRegionInfo().getEncodedName());
       WALSplitter.writeRegionSequenceIdFile(fs.getFileSystem(), fs.getRegionDir(), nextSeqId - 1);
     }
 
@@ -979,6 +984,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.closed.set(false);
 
     if (coprocessorHost != null) {
+      LOG.debug("Running coprocessor post-open hooks for " + this.getRegionInfo().getEncodedName());
       status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
     }
@@ -7125,10 +7131,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   throws IOException {
     // Refuse to open the region if we are missing local compression support
     checkCompressionCodecs();
+    LOG.debug("checking encryption for " + this.getRegionInfo().getEncodedName());
     // Refuse to open the region if encryption configuration is incorrect or
     // codec support is missing
     checkEncryption();
     // Refuse to open the region if a required class cannot be loaded
+    LOG.debug("checking classloading for " + this.getRegionInfo().getEncodedName());
     checkClassLoading();
     this.openSeqNum = initialize(reporter);
     this.mvcc.advanceTo(openSeqNum);

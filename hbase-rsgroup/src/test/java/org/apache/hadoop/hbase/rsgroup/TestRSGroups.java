@@ -292,14 +292,6 @@ public class TestRSGroups extends TestRSGroupsBase {
     boolean postRemoveServersCalled = false;
     boolean preMoveServersAndTables = false;
     boolean postMoveServersAndTables = false;
-    boolean preGetRSGroupInfoCalled = false;
-    boolean postGetRSGroupInfoCalled = false;
-    boolean preGetRSGroupInfoOfTableCalled = false;
-    boolean postGetRSGroupInfoOfTableCalled = false;
-    boolean preListRSGroupInfosCalled = false;
-    boolean postListRSGroupInfosCalled = false;
-    boolean preGetRSGroupInfoOfServerCalled = false;
-    boolean postGetRSGroupInfoOfServerCalled = false;
 
     @Override
     public Optional<MasterObserver> getMasterObserver() {
@@ -378,85 +370,7 @@ public class TestRSGroups extends TestRSGroupsBase {
         String groupName, boolean balancerRan) throws IOException {
       postBalanceRSGroupCalled = true;
     }
-
-    @Override
-    public void preGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String groupName) throws IOException {
-      preGetRSGroupInfoCalled = true;
-    }
-
-    @Override
-    public void postGetRSGroupInfo(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final String groupName) throws IOException {
-      postGetRSGroupInfoCalled = true;
-    }
-
-    @Override
-    public void preGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName) throws IOException {
-      preGetRSGroupInfoOfTableCalled = true;
-    }
-
-    @Override
-    public void postGetRSGroupInfoOfTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName) throws IOException {
-      postGetRSGroupInfoOfTableCalled = true;
-    }
-
-    @Override
-    public void preListRSGroupInfos(final ObserverContext<MasterCoprocessorEnvironment> ctx)
-        throws IOException {
-      preListRSGroupInfosCalled = true;
-    }
-
-    @Override
-    public void postListRSGroupInfos(final ObserverContext<MasterCoprocessorEnvironment> ctx)
-        throws IOException {
-      postListRSGroupInfosCalled = true;
-    }
-
-    @Override
-    public void preGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final Address server) throws IOException {
-      preGetRSGroupInfoOfServerCalled = true;
-    }
-
-    @Override
-    public void postGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final Address server) throws IOException {
-      postGetRSGroupInfoOfServerCalled = true;
-    }
   }
-
-  @Test
-  public void testGetRSGroupInfoCPHookCalled() throws Exception {
-    rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
-    assertTrue(observer.preGetRSGroupInfoCalled);
-    assertTrue(observer.postGetRSGroupInfoCalled);
-  }
-
-  @Test
-  public void testGetRSGroupInfoOfTableCPHookCalled() throws Exception {
-    rsGroupAdmin.getRSGroupInfoOfTable(TableName.META_TABLE_NAME);
-    assertTrue(observer.preGetRSGroupInfoOfTableCalled);
-    assertTrue(observer.postGetRSGroupInfoOfTableCalled);
-  }
-
-  @Test
-  public void testListRSGroupInfosCPHookCalled() throws Exception {
-    rsGroupAdmin.listRSGroups();
-    assertTrue(observer.preListRSGroupInfosCalled);
-    assertTrue(observer.postListRSGroupInfosCalled);
-  }
-
-  @Test
-  public void testGetRSGroupInfoOfServerCPHookCalled() throws Exception {
-    ServerName masterServerName = ((MiniHBaseCluster) cluster).getMaster().getServerName();
-    rsGroupAdmin.getRSGroupOfServer(masterServerName.getAddress());
-    assertTrue(observer.preGetRSGroupInfoOfServerCalled);
-    assertTrue(observer.postGetRSGroupInfoOfServerCalled);
-  }
-
   @Test
   public void testMoveServersAndTables() throws Exception {
     super.testMoveServersAndTables();
