@@ -205,6 +205,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().preMoveServers(hostPorts, request.getTargetGroup());
         }
+        checkPermission("moveServers");
         groupAdminServer.moveServers(hostPorts, request.getTargetGroup());
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postMoveServers(hostPorts, request.getTargetGroup());
@@ -229,6 +230,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().preMoveTables(tables, request.getTargetGroup());
         }
+        checkPermission("moveTables");
         groupAdminServer.moveTables(tables, request.getTargetGroup());
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postMoveTables(tables, request.getTargetGroup());
@@ -248,6 +250,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().preAddRSGroup(request.getRSGroupName());
         }
+        checkPermission("addRSGroup");
         groupAdminServer.addRSGroup(request.getRSGroupName());
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postAddRSGroup(request.getRSGroupName());
@@ -268,6 +271,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().preRemoveRSGroup(request.getRSGroupName());
         }
+        checkPermission("removeRSGroup");
         groupAdminServer.removeRSGroup(request.getRSGroupName());
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postRemoveRSGroup(request.getRSGroupName());
@@ -288,6 +292,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
         }
+        checkPermission("balanceRSGroup");
         boolean balancerRan = groupAdminServer.balanceRSGroup(request.getRSGroupName());
         builder.setBalanceRan(balancerRan);
         if (master.getMasterCoprocessorHost() != null) {
@@ -356,6 +361,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
           master.getMasterCoprocessorHost().preMoveServersAndTables(hostPorts, tables,
               request.getTargetGroup());
         }
+        checkPermission("moveServersAndTables");
         groupAdminServer.moveServersAndTables(hostPorts, tables, request.getTargetGroup());
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postMoveServersAndTables(hostPorts, tables,
@@ -383,6 +389,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().preRemoveServers(servers);
         }
+        checkPermission("removeServers");
         groupAdminServer.removeServers(servers);
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postRemoveServers(servers);
