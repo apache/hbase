@@ -142,10 +142,15 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * Add a child procedure to execute
    * @param subProcedure the child procedure
    */
-  protected void addChildProcedure(Procedure<TEnvironment>... subProcedure) {
-    if (subProcedure == null) return;
+  protected <T extends Procedure<TEnvironment>> void addChildProcedure(
+      @SuppressWarnings("unchecked") T... subProcedure) {
+    if (subProcedure == null) {
+      return;
+    }
     final int len = subProcedure.length;
-    if (len == 0) return;
+    if (len == 0) {
+      return;
+    }
     if (subProcList == null) {
       subProcList = new ArrayList<>(len);
     }

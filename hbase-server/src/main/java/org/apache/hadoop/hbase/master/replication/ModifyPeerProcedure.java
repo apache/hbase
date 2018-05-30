@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.TableStateManager.TableStateNotFoundException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -165,8 +166,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         continue;
       }
       if (needReopen(tsm, tn)) {
-        addChildProcedure(env.getAssignmentManager().createReopenProcedures(
-          env.getAssignmentManager().getRegionStates().getRegionsOfTable(tn)));
+        addChildProcedure(new ReopenTableRegionsProcedure(tn));
       }
     }
   }

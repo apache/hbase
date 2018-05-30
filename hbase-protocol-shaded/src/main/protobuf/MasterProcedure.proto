@@ -437,3 +437,11 @@ message EnablePeerStateData {
 
 message DisablePeerStateData {
 }
+
+enum ReopenTableRegionsState {
+  REOPEN_TABLE_REGIONS_REOPEN_ALL_REGIONS = 1;
+}
+
+message ReopenTableRegionsStateData {
+  required TableName table_name = 1;
+}
