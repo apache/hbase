@@ -95,7 +95,6 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -1306,48 +1305,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void preRecommissionRegionServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
       ServerName server, List<byte[]> encodedRegionNames) throws IOException {
     requirePermission(ctx, "recommissionRegionServers", Action.ADMIN);
-  }
-
-  @Override
-  public void preMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
-    requirePermission(ctx, "moveServersAndTables", Action.ADMIN);
-  }
-
-  @Override
-  public void preMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, String targetGroup) throws IOException {
-    requirePermission(ctx, "moveServers", Action.ADMIN);
-  }
-
-  @Override
-  public void preMoveTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<TableName> tables, String targetGroup) throws IOException {
-    requirePermission(ctx, "moveTables", Action.ADMIN);
-  }
-
-  @Override
-  public void preAddRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
-      throws IOException {
-    requirePermission(ctx, "addRSGroup", Action.ADMIN);
-  }
-
-  @Override
-  public void preRemoveRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
-      throws IOException {
-    requirePermission(ctx, "removeRSGroup", Action.ADMIN);
-  }
-
-  @Override
-  public void preBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName) throws IOException {
-    requirePermission(ctx, "balanceRSGroup", Action.ADMIN);
-  }
-
-  @Override
-  public void preRemoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers) throws IOException {
-    requirePermission(ctx, "removeServers", Action.ADMIN);
   }
 
   /* ---- RegionObserver implementation ---- */
