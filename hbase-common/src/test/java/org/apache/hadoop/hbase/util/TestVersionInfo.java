@@ -56,5 +56,13 @@ public class TestVersionInfo {
     assertTrue(VersionInfo.compareVersion("3.0.0-alpha-2", "3.0.0-alpha-11") < 0);
     assertTrue(VersionInfo.compareVersion("3.0.0-beta-2", "3.0.0-beta-11") < 0);
     assertTrue(VersionInfo.compareVersion("2.0.0-foobar", "2.0.0.1") < 0);
+    assertTrue(VersionInfo.compareVersion("2.any.any", "2.0.0") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0", "2.any.any") > 0);
+    assertTrue(VersionInfo.compareVersion("2.any.any", "2.0.0-alpha-1") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0-alpha-1", "2.any.any") > 0);
+    assertTrue(VersionInfo.compareVersion("2.any.any", "2.0.0-beta-5-SNAPSHOT") < 0);
+    assertTrue(VersionInfo.compareVersion("2.0.0-beta-5-SNAPSHOT", "2.any.any") > 0);
+    assertTrue(VersionInfo.compareVersion("2.any.any", "1.4.4") > 0);
+    assertTrue(VersionInfo.compareVersion("1.4.4", "2.any.any") < 0);
   }
 }
