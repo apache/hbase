@@ -39,16 +39,17 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream.WALEntryStreamRuntimeException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
 
 /**
  * Reads and filters WAL entries, groups the filtered entries into batches, and puts the batches onto a queue
@@ -144,11 +145,10 @@ public class ReplicationSourceWALReaderThread extends Thread {
             if (entry != null) {
               WALEdit edit = entry.getEdit();
               if (edit != null && !edit.isEmpty()) {
-                long entrySize = getEntrySizeIncludeBulkLoad(entry);
-                long entrySizeExlucdeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
+                long entrySize = getEntrySize(entry);
                 batch.addEntry(entry);
                 updateBatchStats(batch, entry, entryStream.getPosition(), entrySize);
-                boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExlucdeBulkLoad);
+                boolean totalBufferTooLarge = acquireBufferQuota(entrySize);
                 // Stop if too many entries or too big
                 if (totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
                     || batch.getNbEntries() >= replicationBatchCountCapacity) {
@@ -251,17 +251,9 @@ public class ReplicationSourceWALReaderThread extends Thread {
     return entryBatchQueue.take();
   }
 
-  private long getEntrySizeIncludeBulkLoad(Entry entry) {
+  private long getEntrySize(Entry entry) {
     WALEdit edit = entry.getEdit();
-    WALKey key = entry.getKey();
-    return edit.heapSize() + sizeOfStoreFilesIncludeBulkLoad(edit) +
-        key.estimatedSerializedSizeOf();
-  }
-
-  private long getEntrySizeExcludeBulkLoad(Entry entry) {
-    WALEdit edit = entry.getEdit();
-    WALKey key = entry.getKey();
-    return edit.heapSize() + key.estimatedSerializedSizeOf();
+    return edit.heapSize() + calculateTotalSizeOfStoreFiles(edit);
   }
 
   private void updateBatchStats(WALEntryBatch batch, Entry entry, long entryPosition, long entrySize) {
@@ -319,7 +311,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
    * @param edit edit to count row keys from
    * @return the total size of the store files
    */
-  private int sizeOfStoreFilesIncludeBulkLoad(WALEdit edit) {
+  private int calculateTotalSizeOfStoreFiles(WALEdit edit) {
     List<Cell> cells = edit.getCells();
     int totalStoreFilesSize = 0;
 
