@@ -57,7 +57,6 @@ public class ThriftHttpServlet extends TServlet {
   private final boolean securityEnabled;
   private final boolean doAsEnabled;
   private transient ThriftServerRunner.HBaseHandler hbaseHandler;
-  private String outToken;
 
   // HTTP Header related constants.
   public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
@@ -83,10 +82,11 @@ public class ThriftHttpServlet extends TServlet {
       try {
         // As Thrift HTTP transport doesn't support SPNEGO yet (THRIFT-889),
         // Kerberos authentication is being done at servlet level.
-        effectiveUser = doKerberosAuth(request);
+        final RemoteUserIdentity identity = doKerberosAuth(request);
+        effectiveUser = identity.principal;
         // It is standard for client applications expect this header.
         // Please see http://tools.ietf.org/html/rfc4559 for more details.
-        response.addHeader(WWW_AUTHENTICATE,  NEGOTIATE + " " + outToken);
+        response.addHeader(WWW_AUTHENTICATE,  NEGOTIATE + " " + identity.outToken);
       } catch (HttpAuthenticationException e) {
         LOG.error("Kerberos Authentication failed", e);
         // Send a 401 to the client
@@ -127,19 +127,31 @@ public class ThriftHttpServlet extends TServlet {
    * We already have a logged in subject in the form of serviceUGI,
    * which GSS-API will extract information from.
    */
-  private String doKerberosAuth(HttpServletRequest request)
+  private RemoteUserIdentity doKerberosAuth(HttpServletRequest request)
       throws HttpAuthenticationException {
     HttpKerberosServerAction action = new HttpKerberosServerAction(request, realUser);
     try {
       String principal = realUser.doAs(action);
-      outToken = action.outToken;
-      return principal;
+      return new RemoteUserIdentity(principal, action.outToken);
     } catch (Exception e) {
       LOG.error("Failed to perform authentication");
       throw new HttpAuthenticationException(e);
     }
   }
 
+  /**
+   * Basic "struct" class to hold the final base64-encoded, authenticated GSSAPI token
+   * for the user with the given principal talking to the Thrift server.
+   */
+  private static class RemoteUserIdentity {
+    final String outToken;
+    final String principal;
+
+    RemoteUserIdentity(String principal, String outToken) {
+      this.principal = principal;
+      this.outToken = outToken;
+    }
+  }
 
   private static class HttpKerberosServerAction implements PrivilegedExceptionAction<String> {
     HttpServletRequest request;
