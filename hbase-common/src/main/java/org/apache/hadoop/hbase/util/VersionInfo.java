@@ -142,7 +142,7 @@ public class VersionInfo {
    * "4.5.6-UNKNOW" returns ["4", "5", "6", "-4"]
    * @return the components of the version string
    */
-  static String[] getVersionComponents(final String version) {
+  private static String[] getVersionComponents(final String version) {
     assert(version != null);
     String[] strComps = version.split("[\\.-]");
     assert(strComps.length > 0);
