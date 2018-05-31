@@ -1,5 +1,9 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.2.6.1
+
+** Bug
+    * [HBASE-20664] - Reduce the broad scope of outToken in ThriftHttpServlet
 
 Release Notes - HBase - Version 1.2.6
 
