@@ -5141,8 +5141,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean isOptionsSupported(String[] args) {
     boolean result = true;
     String hbaseServerVersion = status.getHBaseVersion();
-    Object[] versionComponents = VersionInfo.getVersionComponents(hbaseServerVersion);
-    if (versionComponents[0] instanceof Integer && ((Integer) versionComponents[0]) >= 2) {
+    if (VersionInfo.compareVersion("2.any.any", hbaseServerVersion) < 0) {
       // Process command-line args.
       for (String arg : args) {
         if (unsupportedOptionsInV2.contains(arg)) {
