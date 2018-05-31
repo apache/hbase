@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -40,22 +41,20 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReplaySyncReplicationWALParameter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReplaySyncReplicationWALStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SyncReplicationReplayWALRemoteStateData;
 
 @InterfaceAudience.Private
-public class ReplaySyncReplicationWALProcedure extends Procedure<MasterProcedureEnv>
+public class SyncReplicationReplayWALRemoteProcedure extends Procedure<MasterProcedureEnv>
     implements RemoteProcedure<MasterProcedureEnv, ServerName>, PeerProcedureInterface {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ReplaySyncReplicationWALProcedure.class);
-
-  private static final long DEFAULT_WAIT_AVAILABLE_SERVER_TIMEOUT = 10000;
+      LoggerFactory.getLogger(SyncReplicationReplayWALRemoteProcedure.class);
 
   private String peerId;
 
-  private ServerName targetServer = null;
+  private ServerName targetServer;
 
-  private String wal;
+  private List<String> wals;
 
   private boolean dispatched;
 
@@ -63,19 +62,24 @@ public class ReplaySyncReplicationWALProcedure extends Procedure<MasterProcedure
 
   private boolean succ;
 
-  public ReplaySyncReplicationWALProcedure() {
+  public SyncReplicationReplayWALRemoteProcedure() {
   }
 
-  public ReplaySyncReplicationWALProcedure(String peerId, String wal) {
+  public SyncReplicationReplayWALRemoteProcedure(String peerId, List<String> wals,
+      ServerName targetServer) {
     this.peerId = peerId;
-    this.wal = wal;
+    this.wals = wals;
+    this.targetServer = targetServer;
   }
 
   @Override
   public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
+    ReplaySyncReplicationWALParameter.Builder builder =
+        ReplaySyncReplicationWALParameter.newBuilder();
+    builder.setPeerId(peerId);
+    wals.stream().forEach(builder::addWal);
     return new ServerOperation(this, getProcId(), ReplaySyncReplicationWALCallable.class,
-        ReplaySyncReplicationWALParameter.newBuilder().setPeerId(peerId).setWal(wal).build()
-            .toByteArray());
+        builder.build().toByteArray());
   }
 
   @Override
@@ -99,20 +103,45 @@ public class ReplaySyncReplicationWALProcedure extends Procedure<MasterProcedure
         getProcId());
       return;
     }
-    ReplaySyncReplicationWALManager replaySyncReplicationWALManager =
-        env.getMasterServices().getReplaySyncReplicationWALManager();
     if (error != null) {
-      LOG.warn("Replay sync replication wal {} on {} failed for peer id={}", wal, targetServer,
-        peerId, error);
+      LOG.warn("Replay wals {} on {} failed for peer id={}", wals, targetServer, peerId, error);
       this.succ = false;
     } else {
-      LOG.warn("Replay sync replication wal {} on {} suceeded for peer id={}", wal, targetServer,
-        peerId);
+      truncateWALs(env);
+      LOG.info("Replay wals {} on {} succeed for peer id={}", wals, targetServer, peerId);
       this.succ = true;
-      replaySyncReplicationWALManager.addAvailServer(peerId, targetServer);
     }
     event.wake(env.getProcedureScheduler());
     event = null;
+  }
+
+  /**
+   * Only truncate wals one by one when task succeed. The parent procedure will check the first
+   * wal length to know whether this task succeed.
+   */
+  private void truncateWALs(MasterProcedureEnv env) {
+    String firstWal = wals.get(0);
+    try {
+      env.getMasterServices().getSyncReplicationReplayWALManager().finishReplayWAL(firstWal);
+    } catch (IOException e) {
+      // As it is idempotent to rerun this task. Just ignore this exception and return.
+      LOG.warn("Failed to truncate wal {} for peer id={}", firstWal, peerId, e);
+      return;
+    }
+    for (int i = 1; i < wals.size(); i++) {
+      String wal = wals.get(i);
+      try {
+        env.getMasterServices().getSyncReplicationReplayWALManager().finishReplayWAL(wal);
+      } catch (IOException e1) {
+        try {
+          // retry
+          env.getMasterServices().getSyncReplicationReplayWALManager().finishReplayWAL(wal);
+        } catch (IOException e2) {
+          // As the parent procedure only check the first wal length. Just ignore this exception.
+          LOG.warn("Failed to truncate wal {} for peer id={}", wal, peerId, e2);
+        }
+      }
+    }
   }
 
   @Override
@@ -126,25 +155,14 @@ public class ReplaySyncReplicationWALProcedure extends Procedure<MasterProcedure
       dispatched = false;
     }
 
-    // Try poll a available server
-    if (targetServer == null) {
-      targetServer = env.getMasterServices().getReplaySyncReplicationWALManager()
-          .getAvailServer(peerId, DEFAULT_WAIT_AVAILABLE_SERVER_TIMEOUT, TimeUnit.MILLISECONDS);
-      if (targetServer == null) {
-        LOG.info("No available server to replay wal {} for peer id={}, retry", wal, peerId);
-        throw new ProcedureYieldException();
-      }
-    }
-
     // Dispatch task to target server
     try {
       env.getRemoteDispatcher().addOperationToNode(targetServer, this);
     } catch (FailedRemoteDispatchException e) {
-      LOG.info(
-        "Can not add remote operation for replay wal {} on {} for peer id={}, " +
-          "this usually because the server is already dead, " + "retry",
-        wal, targetServer, peerId, e);
-      targetServer = null;
+      LOG.warn(
+          "Can not add remote operation for replay wals {} on {} for peer id={}, "
+              + "this usually because the server is already dead, retry",
+          wals, targetServer, peerId);
       throw new ProcedureYieldException();
     }
     dispatched = true;
@@ -164,24 +182,23 @@ public class ReplaySyncReplicationWALProcedure extends Procedure<MasterProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    ReplaySyncReplicationWALStateData.Builder builder =
-        ReplaySyncReplicationWALStateData.newBuilder().setPeerId(peerId).setWal(wal);
-    if (targetServer != null) {
-      builder.setTargetServer(ProtobufUtil.toServerName(targetServer));
-    }
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    SyncReplicationReplayWALRemoteStateData.Builder builder =
+        SyncReplicationReplayWALRemoteStateData.newBuilder().setPeerId(peerId)
+            .setTargetServer(ProtobufUtil.toServerName(targetServer));
+    wals.stream().forEach(builder::addWal);
     serializer.serialize(builder.build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    ReplaySyncReplicationWALStateData data =
-        serializer.deserialize(ReplaySyncReplicationWALStateData.class);
+    SyncReplicationReplayWALRemoteStateData data =
+        serializer.deserialize(SyncReplicationReplayWALRemoteStateData.class);
     peerId = data.getPeerId();
-    wal = data.getWal();
-    if (data.hasTargetServer()) {
-      targetServer = ProtobufUtil.toServerName(data.getTargetServer());
-    }
+    wals = new ArrayList<>();
+    data.getWalList().forEach(wals::add);
+    targetServer = ProtobufUtil.toServerName(data.getTargetServer());
   }
 
   @Override
@@ -191,6 +208,6 @@ public class ReplaySyncReplicationWALProcedure extends Procedure<MasterProcedure
 
   @Override
   public PeerOperationType getPeerOperationType() {
-    return PeerOperationType.REPLAY_SYNC_REPLICATION_WAL;
+    return PeerOperationType.SYNC_REPLICATION_REPLAY_WAL_REMOTE;
   }
 }

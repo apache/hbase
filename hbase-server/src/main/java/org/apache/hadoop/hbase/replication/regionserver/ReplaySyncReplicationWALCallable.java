@@ -21,6 +21,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
@@ -68,31 +71,28 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
 
   private String peerId;
 
-  private String wal;
+  private List<String> wals = new ArrayList<>();
 
   private Exception initError;
 
   private long batchSize;
+
+  private final KeyLocker<String> peersLock = new KeyLocker<>();
 
   @Override
   public Void call() throws Exception {
     if (initError != null) {
       throw initError;
     }
-    LOG.info("Received a replay sync replication wal {} event, peerId={}", wal, peerId);
+    LOG.info("Received a replay sync replication wals {} event, peerId={}", wals, peerId);
     if (rs.getReplicationSinkService() != null) {
-      try (Reader reader = getReader()) {
-        List<Entry> entries = readWALEntries(reader);
-        while (!entries.isEmpty()) {
-          Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtbufUtil
-              .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
-          ReplicateWALEntryRequest request = pair.getFirst();
-          rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(),
-            pair.getSecond(), request.getReplicationClusterId(),
-            request.getSourceBaseNamespaceDirPath(), request.getSourceHFileArchiveDirPath());
-          // Read next entries.
-          entries = readWALEntries(reader);
+      Lock peerLock = peersLock.acquireLock(wals.get(0));
+      try {
+        for (String wal : wals) {
+          replayWAL(wal);
         }
+      } finally {
+        peerLock.unlock();
       }
     }
     return null;
@@ -107,7 +107,7 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
       ReplaySyncReplicationWALParameter param =
           ReplaySyncReplicationWALParameter.parseFrom(parameter);
       this.peerId = param.getPeerId();
-      this.wal = param.getWal();
+      param.getWalList().forEach(this.wals::add);
       this.batchSize = rs.getConfiguration().getLong(REPLAY_SYNC_REPLICATION_WAL_BATCH_SIZE,
         DEFAULT_REPLAY_SYNC_REPLICATION_WAL_BATCH_SIZE);
     } catch (InvalidProtocolBufferException e) {
@@ -120,7 +120,23 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
     return EventType.RS_REPLAY_SYNC_REPLICATION_WAL;
   }
 
-  private Reader getReader() throws IOException {
+  private void replayWAL(String wal) throws IOException {
+    try (Reader reader = getReader(wal)) {
+      List<Entry> entries = readWALEntries(reader);
+      while (!entries.isEmpty()) {
+        Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtbufUtil
+            .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
+        ReplicateWALEntryRequest request = pair.getFirst();
+        rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(),
+            pair.getSecond(), request.getReplicationClusterId(),
+            request.getSourceBaseNamespaceDirPath(), request.getSourceHFileArchiveDirPath());
+        // Read next entries.
+        entries = readWALEntries(reader);
+      }
+    }
+  }
+
+  private Reader getReader(String wal) throws IOException {
     Path path = new Path(rs.getWALRootDir(), wal);
     long length = rs.getWALFileSystem().getFileStatus(path).getLen();
     try {

@@ -18,60 +18,79 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverStandbyState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverStandbyStateData;
 
 @InterfaceAudience.Private
 public class RecoverStandbyProcedure extends AbstractPeerProcedure<RecoverStandbyState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RecoverStandbyProcedure.class);
 
+  private boolean serial;
+
   public RecoverStandbyProcedure() {
   }
 
-  public RecoverStandbyProcedure(String peerId) {
+  public RecoverStandbyProcedure(String peerId, boolean serial) {
     super(peerId);
+    this.serial = serial;
   }
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, RecoverStandbyState state)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
-    ReplaySyncReplicationWALManager replaySyncReplicationWALManager =
-        env.getMasterServices().getReplaySyncReplicationWALManager();
+    SyncReplicationReplayWALManager syncReplicationReplayWALManager =
+        env.getMasterServices().getSyncReplicationReplayWALManager();
     switch (state) {
       case RENAME_SYNC_REPLICATION_WALS_DIR:
         try {
-          replaySyncReplicationWALManager.renameToPeerReplayWALDir(peerId);
+          syncReplicationReplayWALManager.renameToPeerReplayWALDir(peerId);
         } catch (IOException e) {
           LOG.warn("Failed to rename remote wal dir for peer id={}", peerId, e);
           setFailure("master-recover-standby", e);
           return Flow.NO_MORE_STATE;
         }
-        setNextState(RecoverStandbyState.INIT_WORKERS);
+        setNextState(RecoverStandbyState.REGISTER_PEER_TO_WORKER_STORAGE);
         return Flow.HAS_MORE_STATE;
-      case INIT_WORKERS:
-        replaySyncReplicationWALManager.initPeerWorkers(peerId);
-        setNextState(RecoverStandbyState.DISPATCH_TASKS);
+      case REGISTER_PEER_TO_WORKER_STORAGE:
+        try {
+          syncReplicationReplayWALManager.registerPeer(peerId);
+        } catch (ReplicationException e) {
+          LOG.warn("Failed to register peer to worker storage for peer id={}, retry", peerId, e);
+          throw new ProcedureYieldException();
+        }
+        setNextState(RecoverStandbyState.DISPATCH_WALS);
         return Flow.HAS_MORE_STATE;
-      case DISPATCH_TASKS:
-        addChildProcedure(getReplayWALs(replaySyncReplicationWALManager).stream()
-            .map(wal -> new ReplaySyncReplicationWALProcedure(peerId,
-                replaySyncReplicationWALManager.removeWALRootPath(wal)))
-            .toArray(ReplaySyncReplicationWALProcedure[]::new));
+      case DISPATCH_WALS:
+        dispathWals(syncReplicationReplayWALManager);
+        setNextState(RecoverStandbyState.UNREGISTER_PEER_FROM_WORKER_STORAGE);
+        return Flow.HAS_MORE_STATE;
+      case UNREGISTER_PEER_FROM_WORKER_STORAGE:
+        try {
+          syncReplicationReplayWALManager.unregisterPeer(peerId);
+        } catch (ReplicationException e) {
+          LOG.warn("Failed to unregister peer from worker storage for peer id={}, retry", peerId,
+              e);
+          throw new ProcedureYieldException();
+        }
         setNextState(RecoverStandbyState.SNAPSHOT_SYNC_REPLICATION_WALS_DIR);
         return Flow.HAS_MORE_STATE;
       case SNAPSHOT_SYNC_REPLICATION_WALS_DIR:
         try {
-          replaySyncReplicationWALManager.renameToPeerSnapshotWALDir(peerId);
+          syncReplicationReplayWALManager.renameToPeerSnapshotWALDir(peerId);
         } catch (IOException e) {
           LOG.warn("Failed to cleanup replay wals dir for peer id={}, , retry", peerId, e);
           throw new ProcedureYieldException();
@@ -82,10 +101,14 @@ public class RecoverStandbyProcedure extends AbstractPeerProcedure<RecoverStandb
     }
   }
 
-  private List<Path> getReplayWALs(ReplaySyncReplicationWALManager replaySyncReplicationWALManager)
+  // TODO: dispatch wals by region server when serial is true and sort wals
+  private void dispathWals(SyncReplicationReplayWALManager syncReplicationReplayWALManager)
       throws ProcedureYieldException {
     try {
-      return replaySyncReplicationWALManager.getReplayWALsAndCleanUpUnusedFiles(peerId);
+      List<Path> wals = syncReplicationReplayWALManager.getReplayWALsAndCleanUpUnusedFiles(peerId);
+      addChildProcedure(wals.stream().map(wal -> new SyncReplicationReplayWALProcedure(peerId,
+          Arrays.asList(syncReplicationReplayWALManager.removeWALRootPath(wal))))
+          .toArray(SyncReplicationReplayWALProcedure[]::new));
     } catch (IOException e) {
       LOG.warn("Failed to get replay wals for peer id={}, , retry", peerId, e);
       throw new ProcedureYieldException();
@@ -110,5 +133,18 @@ public class RecoverStandbyProcedure extends AbstractPeerProcedure<RecoverStandb
   @Override
   public PeerOperationType getPeerOperationType() {
     return PeerOperationType.RECOVER_STANDBY;
+  }
+
+  @Override
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.serializeStateData(serializer);
+    serializer.serialize(RecoverStandbyStateData.newBuilder().setSerial(serial).build());
+  }
+
+  @Override
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.deserializeStateData(serializer);
+    RecoverStandbyStateData data = serializer.deserialize(RecoverStandbyStateData.class);
+    serial = data.getSerial();
   }
 }

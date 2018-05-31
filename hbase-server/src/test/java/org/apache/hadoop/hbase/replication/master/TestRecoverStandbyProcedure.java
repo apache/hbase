@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.replication.RecoverStandbyProcedure;
-import org.apache.hadoop.hbase.master.replication.ReplaySyncReplicationWALManager;
+import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
@@ -92,7 +92,7 @@ public class TestRecoverStandbyProcedure {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static ReplaySyncReplicationWALManager replaySyncReplicationWALManager;
+  private static SyncReplicationReplayWALManager syncReplicationReplayWALManager;
 
   private static ProcedureExecutor<MasterProcedureEnv> procExec;
 
@@ -107,7 +107,7 @@ public class TestRecoverStandbyProcedure {
     conf = UTIL.getConfiguration();
     HMaster master = UTIL.getHBaseCluster().getMaster();
     fs = master.getMasterFileSystem().getWALFileSystem();
-    replaySyncReplicationWALManager = master.getReplaySyncReplicationWALManager();
+    syncReplicationReplayWALManager = master.getSyncReplicationReplayWALManager();
     procExec = master.getMasterProcedureExecutor();
   }
 
@@ -138,7 +138,7 @@ public class TestRecoverStandbyProcedure {
   @Test
   public void testRecoverStandby() throws IOException, StreamLacksCapabilityException {
     setupSyncReplicationWALs();
-    long procId = procExec.submitProcedure(new RecoverStandbyProcedure(PEER_ID));
+    long procId = procExec.submitProcedure(new RecoverStandbyProcedure(PEER_ID, false));
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
@@ -153,7 +153,7 @@ public class TestRecoverStandbyProcedure {
 
   private void setupSyncReplicationWALs() throws IOException, StreamLacksCapabilityException {
     Path peerRemoteWALDir = ReplicationUtils
-      .getPeerRemoteWALDir(replaySyncReplicationWALManager.getRemoteWALDir(), PEER_ID);
+      .getPeerRemoteWALDir(syncReplicationReplayWALManager.getRemoteWALDir(), PEER_ID);
     if (!fs.exists(peerRemoteWALDir)) {
       fs.mkdirs(peerRemoteWALDir);
     }

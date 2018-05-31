@@ -186,8 +186,8 @@ public class TransitPeerSyncReplicationStateProcedure
     }
   }
 
-  private void replayRemoteWAL() {
-    addChildProcedure(new RecoverStandbyProcedure(peerId));
+  private void replayRemoteWAL(boolean serial) {
+    addChildProcedure(new RecoverStandbyProcedure(peerId, serial));
   }
 
   @Override
@@ -232,7 +232,7 @@ public class TransitPeerSyncReplicationStateProcedure
         setNextStateAfterRefreshBegin();
         return Flow.HAS_MORE_STATE;
       case REPLAY_REMOTE_WAL_IN_PEER:
-        replayRemoteWAL();
+        replayRemoteWAL(env.getReplicationPeerManager().getPeerConfig(peerId).get().isSerial());
         setNextState(
           PeerSyncReplicationStateTransitionState.TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE);
         return Flow.HAS_MORE_STATE;

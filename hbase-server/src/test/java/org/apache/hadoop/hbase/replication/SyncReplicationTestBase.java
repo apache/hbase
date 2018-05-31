@@ -78,7 +78,7 @@ public class SyncReplicationTestBase {
 
   protected static Path REMOTE_WAL_DIR2;
 
-  private static void initTestingUtility(HBaseTestingUtility util, String zkParent) {
+  protected static void initTestingUtility(HBaseTestingUtility util, String zkParent) {
     util.setZkCluster(ZK_UTIL.getZkCluster());
     Configuration conf = util.getConfiguration();
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, zkParent);
@@ -102,8 +102,8 @@ public class SyncReplicationTestBase {
     ZK_UTIL.startMiniZKCluster();
     initTestingUtility(UTIL1, "/cluster1");
     initTestingUtility(UTIL2, "/cluster2");
-    UTIL1.startMiniCluster(3);
-    UTIL2.startMiniCluster(3);
+    UTIL1.startMiniCluster(2,3);
+    UTIL2.startMiniCluster(2,3);
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();

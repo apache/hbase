@@ -50,6 +50,7 @@ class PeerQueue extends Queue<String> {
 
   private static boolean requirePeerExclusiveLock(PeerProcedureInterface proc) {
     return proc.getPeerOperationType() != PeerOperationType.REFRESH
-        && proc.getPeerOperationType() != PeerOperationType.REPLAY_SYNC_REPLICATION_WAL;
+        && proc.getPeerOperationType() != PeerOperationType.SYNC_REPLICATION_REPLAY_WAL
+        && proc.getPeerOperationType() != PeerOperationType.SYNC_REPLICATION_REPLAY_WAL_REMOTE;
   }
 }

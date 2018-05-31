@@ -486,22 +486,34 @@ message TransitPeerSyncReplicationStateStateData {
 
 enum RecoverStandbyState {
   RENAME_SYNC_REPLICATION_WALS_DIR = 1;
-  INIT_WORKERS = 2;
-  DISPATCH_TASKS = 3;
-  SNAPSHOT_SYNC_REPLICATION_WALS_DIR = 4;
+  REGISTER_PEER_TO_WORKER_STORAGE = 2;
+  DISPATCH_WALS = 3;
+  UNREGISTER_PEER_FROM_WORKER_STORAGE = 4;
+  SNAPSHOT_SYNC_REPLICATION_WALS_DIR = 5;
+}
+
+enum SyncReplicationReplayWALState {
+  ASSIGN_WORKER = 1;
+  DISPATCH_WALS_TO_WORKER = 2;
+  RELEASE_WORKER = 3;
 }
 
 message RecoverStandbyStateData {
-  required string peer_id = 1;
+  required bool serial  = 1;
 }
 
-message ReplaySyncReplicationWALStateData {
+message SyncReplicationReplayWALStateData {
   required string peer_id = 1;
-  required string wal = 2;
-  optional ServerName target_server = 3;
+  repeated string wal = 2;
+}
+
+message SyncReplicationReplayWALRemoteStateData {
+  required string peer_id = 1;
+  repeated string wal = 2;
+  required ServerName target_server = 3;
 }
 
 message ReplaySyncReplicationWALParameter {
   required string peer_id = 1;
-  required string wal = 2;
+  repeated string wal = 2;
 }

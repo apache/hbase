@@ -67,11 +67,10 @@ public class RemovePeerProcedure extends ModifyPeerProcedure {
   }
 
   private void removeRemoteWALs(MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getReplaySyncReplicationWALManager().removePeerRemoteWALs(peerId);
+    env.getMasterServices().getSyncReplicationReplayWALManager().removePeerRemoteWALs(peerId);
   }
 
-  @Override
-  protected void postPeerModification(MasterProcedureEnv env)
+  @Override  protected void postPeerModification(MasterProcedureEnv env)
       throws IOException, ReplicationException {
     if (peerConfig.isSyncReplication()) {
       removeRemoteWALs(env);
