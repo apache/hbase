@@ -279,4 +279,13 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     }
     return sb.toString();
   }
+
+  @Override
+  List<KeyValueScanner> getSnapshotScanners() {
+    List<KeyValueScanner> list = new ArrayList<>(this.segments.size());
+    for (ImmutableSegment segment: this.segments) {
+      list.add(new SnapshotSegmentScanner(segment));
+    }
+    return list;
+  }
 }

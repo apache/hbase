@@ -84,4 +84,8 @@ public abstract class ImmutableSegment extends Segment {
     res += "Num uniques "+getNumUniqueKeys()+"; ";
     return res;
   }
+
+  List<KeyValueScanner> getSnapshotScanners() {
+    return Collections.singletonList(new SnapshotSegmentScanner(this));
+  }
 }
