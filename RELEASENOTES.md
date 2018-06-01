@@ -1,5 +1,4 @@
-# HBASE  2.0.0 Release Notes
-
+# HBASE  2.0.0.1 Release Notes
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -42,6 +41,14 @@ may have to bulk import old-style CHANGES.txt on to the end in a code
 comment to preserve continuity of the CHANGELOG.
 
 -->
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+None.
+
+
+# HBASE  2.0.0 Release Notes
+
 
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

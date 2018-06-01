@@ -41,6 +41,18 @@ may have to bulk import old-style CHANGES.txt on to the end in a code
 comment to preserve continuity of the CHANGELOG.
 -->
 
+## Release 2.0.0.1 - Unreleased (as of 2018-06-01)
+
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-20664](https://issues.apache.org/jira/browse/HBASE-20664) | Variable shared across multiple threads |  Major | . |
+
+
+
 ## Release 2.0.0 - Unreleased (as of 2018-04-22)
 
 ### INCOMPATIBLE CHANGES:
