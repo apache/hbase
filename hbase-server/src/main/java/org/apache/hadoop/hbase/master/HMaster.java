@@ -2822,7 +2822,10 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return true if master is in maintenanceMode
    */
   @Override
-  public boolean isInMaintenanceMode() {
+  public boolean isInMaintenanceMode() throws IOException {
+    if (!isInitialized()) {
+      throw new PleaseHoldException("Master is initializing");
+    }
     return maintenanceModeTracker.isInMaintenanceMode();
   }
 
@@ -3359,7 +3362,11 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   public boolean isBalancerOn() {
-    if (null == loadBalancerTracker || isInMaintenanceMode()) {
+    try {
+      if (null == loadBalancerTracker || isInMaintenanceMode()) {
+        return false;
+      }
+    } catch (IOException e) {
       return false;
     }
     return loadBalancerTracker.isBalancerOn();
@@ -3370,8 +3377,12 @@ public class HMaster extends HRegionServer implements MasterServices {
    * false is returned.
    */
   public boolean isNormalizerOn() {
-    return (null == regionNormalizerTracker || isInMaintenanceMode()) ?
-        false: regionNormalizerTracker.isNormalizerOn();
+    try {
+      return (null == regionNormalizerTracker || isInMaintenanceMode()) ?
+          false: regionNormalizerTracker.isNormalizerOn();
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   /**
@@ -3382,7 +3393,11 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   @Override
   public boolean isSplitOrMergeEnabled(MasterSwitchType switchType) {
-    if (null == splitOrMergeTracker || isInMaintenanceMode()) {
+    try {
+      if (null == splitOrMergeTracker || isInMaintenanceMode()) {
+        return false;
+      }
+    } catch (IOException e) {
       return false;
     }
     return splitOrMergeTracker.isSplitOrMergeEnabled(switchType);
