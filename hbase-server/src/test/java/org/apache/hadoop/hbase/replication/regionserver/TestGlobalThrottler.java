@@ -20,14 +20,11 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,13 +50,13 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, LargeTests.class })
-@Ignore("See HBASE-20496")
 public class TestGlobalThrottler {
   private static final Log LOG = LogFactory.getLog(TestGlobalThrottler.class);
+  private static final int REPLICATION_SOURCE_QUOTA = 200;
+  private static int numOfPeer = 0;
   private static Configuration conf1;
   private static Configuration conf2;
 
@@ -98,6 +95,7 @@ public class TestGlobalThrottler {
     admin1.addPeer("peer1", rpc, null);
     admin1.addPeer("peer2", rpc, null);
     admin1.addPeer("peer3", rpc, null);
+    numOfPeer = admin1.getPeersCount();
 
     utility1.startMiniCluster(1, 1);
     utility2.startMiniCluster(1, 1);
@@ -109,9 +107,8 @@ public class TestGlobalThrottler {
     utility1.shutdownMiniCluster();
   }
 
-
   volatile private boolean testQuotaPass = false;
-  volatile private boolean testQuotaNonZero = false;
+
   @Test
   public void testQuota() throws IOException {
     TableName tableName = TableName.valueOf("testQuota");
@@ -131,10 +128,10 @@ public class TestGlobalThrottler {
         testQuotaPass = true;
         while (!Thread.interrupted()) {
           long size = bufferUsed.get();
-          if (size > 0) {
-            testQuotaNonZero = true;
-          }
-          if (size > 600) {
+          //the reason here doing "numOfPeer + 1" is because by using method addEntryToBatch(), even the
+          // batch size (after added last entry) exceeds quota, it still keeps the last one in the batch
+          // so total used buffer size can be one "replication.total.buffer.quota" larger than expected
+          if (size > REPLICATION_SOURCE_QUOTA * (numOfPeer + 1)) {
             // We read logs first then check throttler, so if the buffer quota limiter doesn't
             // take effect, it will push many logs and exceed the quota.
             testQuotaPass = false;
@@ -174,16 +171,5 @@ public class TestGlobalThrottler {
 
     watcher.interrupt();
     Assert.assertTrue(testQuotaPass);
-    Assert.assertTrue(testQuotaNonZero);
-  }
-
-  private List<Integer> getRowNumbers(List<Cell> cells) {
-    List<Integer> listOfRowNumbers = new ArrayList<>();
-    for (Cell c : cells) {
-      listOfRowNumbers.add(Integer.parseInt(Bytes
-          .toString(c.getRowArray(), c.getRowOffset() + ROW.length,
-              c.getRowLength() - ROW.length)));
-    }
-    return listOfRowNumbers;
   }
 }

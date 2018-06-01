@@ -72,10 +72,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.Service;
-
 /**
  * Class that handles the source of a replication stream.
  * Currently does not handle more than 1 slave
@@ -629,6 +625,18 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     /**
+     * get batchEntry size excludes bulk load file sizes.
+     * Uses ReplicationSourceWALReader's static method.
+     */
+    private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
+      int totalSize = 0;
+      for(Entry entry : entryBatch.getWalEntries()) {
+        totalSize += entryReader.getEntrySizeExcludeBulkLoad(entry);
+      }
+      return  totalSize;
+    }
+
+    /**
      * Do the shipping logic
      */
     protected void shipEdits(WALEntryBatch entryBatch) {
@@ -646,11 +654,12 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         return;
       }
       int currentSize = (int) entryBatch.getHeapSize();
+      int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
       while (isWorkerActive()) {
         try {
           checkBandwidthChangeAndResetThrottler();
           if (throttler.isEnabled()) {
-            long sleepTicks = throttler.getNextSleepInterval(currentSize);
+            long sleepTicks = throttler.getNextSleepInterval(sizeExcludeBulkLoad);
             if (sleepTicks > 0) {
               try {
                 if (LOG.isTraceEnabled()) {
@@ -696,7 +705,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
             updateLogPosition(lastReadPosition);
           }
           if (throttler.isEnabled()) {
-            throttler.addPushSize(currentSize);
+            throttler.addPushSize(sizeExcludeBulkLoad);
           }
           totalReplicatedEdits.addAndGet(entries.size());
           totalReplicatedOperations.addAndGet(entryBatch.getNbOperations());
