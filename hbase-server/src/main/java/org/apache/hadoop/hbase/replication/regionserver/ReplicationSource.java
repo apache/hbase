@@ -598,6 +598,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   @Override
+  //offsets totalBufferUsed by deducting shipped batchSize.
   public void postShipEdits(List<Entry> entries, int batchSize) {
     if (throttler.isEnabled()) {
       throttler.addPushSize(batchSize);
