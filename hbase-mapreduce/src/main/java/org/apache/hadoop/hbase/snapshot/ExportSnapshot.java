@@ -1027,25 +1027,29 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     // The snapshot references must be copied before the hfiles otherwise the cleaner
     // will remove them because they are unreferenced.
     List<Path> travesedPaths = new ArrayList<>();
+    boolean copySucceeded = false;
     try {
-      LOG.info("Copy Snapshot Manifest");
+      LOG.info("Copy Snapshot Manifest from " + snapshotDir + " to " + initialOutputSnapshotDir);
       travesedPaths =
           FSUtils.copyFilesParallel(inputFs, snapshotDir, outputFs, initialOutputSnapshotDir, conf,
               conf.getInt(CONF_COPY_MANIFEST_THREADS, DEFAULT_COPY_MANIFEST_THREADS));
+      copySucceeded = true;
     } catch (IOException e) {
       throw new ExportSnapshotException("Failed to copy the snapshot directory: from=" +
         snapshotDir + " to=" + initialOutputSnapshotDir, e);
     } finally {
-      if (filesUser != null || filesGroup != null) {
-        LOG.warn((filesUser == null ? "" : "Change the owner of " + needSetOwnerDir + " to "
-            + filesUser)
-            + (filesGroup == null ? "" : ", Change the group of " + needSetOwnerDir + " to "
-            + filesGroup));
-        setOwnerParallel(outputFs, filesUser, filesGroup, conf, travesedPaths);
-      }
-      if (filesMode > 0) {
-        LOG.warn("Change the permission of " + needSetOwnerDir + " to " + filesMode);
-        setPermissionParallel(outputFs, (short)filesMode, travesedPaths, conf);
+      if (copySucceeded) {
+        if (filesUser != null || filesGroup != null) {
+          LOG.warn((filesUser == null ? "" : "Change the owner of " + needSetOwnerDir + " to "
+              + filesUser)
+              + (filesGroup == null ? "" : ", Change the group of " + needSetOwnerDir + " to "
+                  + filesGroup));
+          setOwnerParallel(outputFs, filesUser, filesGroup, conf, travesedPaths);
+        }
+        if (filesMode > 0) {
+          LOG.warn("Change the permission of " + needSetOwnerDir + " to " + filesMode);
+          setPermissionParallel(outputFs, (short)filesMode, travesedPaths, conf);
+        }
       }
     }
 
