@@ -18,11 +18,8 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -57,13 +54,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestGlobalThrottler {
+public class TestGlobalReplicationThrottler {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGlobalThrottler.class);
+      HBaseClassTestRule.forClass(TestGlobalReplicationThrottler.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestGlobalThrottler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestGlobalReplicationThrottler.class);
   private static final int REPLICATION_SOURCE_QUOTA = 200;
   private static int numOfPeer = 0;
   private static Configuration conf1;
