@@ -53,8 +53,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestGlobalThrottler {
-  private static final Log LOG = LogFactory.getLog(TestGlobalThrottler.class);
+public class TestGlobalReplicationThrottler {
+  private static final Log LOG = LogFactory.getLog(TestGlobalReplicationThrottler.class);
   private static final int REPLICATION_SOURCE_QUOTA = 200;
   private static int numOfPeer = 0;
   private static Configuration conf1;
