@@ -124,6 +124,18 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   /**
+   * get batchEntry size excludes bulk load file sizes.
+   * Uses ReplicationSourceWALReader's static method.
+   */
+  private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
+    int totalSize = 0;
+    for(Entry entry : entryBatch.getWalEntries()) {
+      totalSize += entryReader.getEntrySizeExcludeBulkLoad(entry);
+    }
+    return  totalSize;
+  }
+
+  /**
    * Do the shipping logic
    */
   private void shipEdits(WALEntryBatch entryBatch) {
@@ -139,6 +151,7 @@ public class ReplicationSourceShipper extends Thread {
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
+    int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
     while (isActive()) {
       try {
         try {
@@ -175,7 +188,11 @@ public class ReplicationSourceShipper extends Thread {
         // Log and clean up WAL logs
         updateLogPosition(entryBatch);
 
-        source.postShipEdits(entries, currentSize);
+        //offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
+        //this sizeExcludeBulkLoad has to use same calculation that when calling
+        //acquireBufferQuota() in ReplicatinoSourceWALReader because they maintain
+        //same variable: totalBufferUsed
+        source.postShipEdits(entries, sizeExcludeBulkLoad);
         // FIXME check relationship between wal group and overall
         source.getSourceMetrics().shipBatch(entryBatch.getNbOperations(), currentSize,
           entryBatch.getNbHFiles());

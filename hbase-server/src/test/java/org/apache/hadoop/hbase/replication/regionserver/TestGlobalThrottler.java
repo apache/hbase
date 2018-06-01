@@ -64,6 +64,8 @@ public class TestGlobalThrottler {
       HBaseClassTestRule.forClass(TestGlobalThrottler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestGlobalThrottler.class);
+  private static final int REPLICATION_SOURCE_QUOTA = 200;
+  private static int numOfPeer = 0;
   private static Configuration conf1;
   private static Configuration conf2;
 
@@ -84,7 +86,7 @@ public class TestGlobalThrottler {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     conf1.setLong("replication.source.sleepforretries", 100);
     // Each WAL is about 120 bytes
-    conf1.setInt(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY, 200);
+    conf1.setInt(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY, REPLICATION_SOURCE_QUOTA);
     conf1.setLong("replication.source.per.peer.node.bandwidth", 100L);
 
     utility1 = new HBaseTestingUtility(conf1);
@@ -109,6 +111,7 @@ public class TestGlobalThrottler {
     admin1.addPeer("peer1", rpc, null);
     admin1.addPeer("peer2", rpc, null);
     admin1.addPeer("peer3", rpc, null);
+    numOfPeer = admin1.getPeersCount();
   }
 
   @AfterClass
@@ -140,7 +143,10 @@ public class TestGlobalThrottler {
         if (size > 0) {
           testQuotaNonZero = true;
         }
-        if (size > 600) {
+        //the reason here doing "numOfPeer + 1" is because by using method addEntryToBatch(), even the
+        // batch size (after added last entry) exceeds quota, it still keeps the last one in the batch
+        // so total used buffer size can be one "replication.total.buffer.quota" larger than expected
+        if (size > REPLICATION_SOURCE_QUOTA * (numOfPeer + 1)) {
           // We read logs first then check throttler, so if the buffer quota limiter doesn't
           // take effect, it will push many logs and exceed the quota.
           testQuotaPass = false;
@@ -181,13 +187,5 @@ public class TestGlobalThrottler {
     Assert.assertTrue(testQuotaNonZero);
   }
 
-  private List<Integer> getRowNumbers(List<Cell> cells) {
-    List<Integer> listOfRowNumbers = new ArrayList<>(cells.size());
-    for (Cell c : cells) {
-      listOfRowNumbers.add(Integer.parseInt(Bytes
-          .toString(c.getRowArray(), c.getRowOffset() + ROW.length,
-              c.getRowLength() - ROW.length)));
-    }
-    return listOfRowNumbers;
-  }
+
 }
