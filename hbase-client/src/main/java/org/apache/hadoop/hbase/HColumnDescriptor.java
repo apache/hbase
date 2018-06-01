@@ -576,7 +576,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       cachedMaxVersions = UNINITIALIZED;
     } else if (Bytes.compareTo(REPLICATION_SCOPE_BYTES, key) == 0) {
       // as bytes are encoded from string, we have to decode value as string
-      int scopeType = Integer.valueOf(Bytes.toString(value));
+      int scopeType = Integer.parseInt(Bytes.toString(value));
       if (scopeType != WALProtos.ScopeType.REPLICATION_SCOPE_GLOBAL_VALUE &&
           scopeType != WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL_VALUE) {
         throw new IllegalArgumentException("Invalid value '" + scopeType +
