@@ -40,7 +40,7 @@ public class MemStoreSnapshot implements Closeable {
     this.cellsCount = snapshot.getCellsCount();
     this.memStoreSize = snapshot.getMemStoreSize();
     this.timeRangeTracker = snapshot.getTimeRangeTracker();
-    this.scanners = snapshot.getScanners(Long.MAX_VALUE, Long.MAX_VALUE);
+    this.scanners = snapshot.getSnapshotScanners();
     this.tagsPresent = snapshot.isTagsPresent();
   }
 
@@ -95,5 +95,4 @@ public class MemStoreSnapshot implements Closeable {
       }
     }
   }
-
 }
