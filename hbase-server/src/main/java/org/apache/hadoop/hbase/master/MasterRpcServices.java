@@ -1456,7 +1456,11 @@ public class MasterRpcServices extends RSRpcServices
       final RpcController controller,
       final IsInMaintenanceModeRequest request) throws ServiceException {
     IsInMaintenanceModeResponse.Builder response = IsInMaintenanceModeResponse.newBuilder();
-    response.setInMaintenanceMode(master.isInMaintenanceMode());
+    try {
+      response.setInMaintenanceMode(master.isInMaintenanceMode());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
     return response.build();
   }
 
