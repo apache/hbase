@@ -877,7 +877,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         fs.setOwner(path, filesUser, filesGroup);
       } catch (IOException e) {
         throw new RuntimeException(
-            "set owner for file " + path + " to " + filesUser + ":" + filesGroup + " failed");
+            "set owner for file " + path + " to " + filesUser + ":" + filesGroup + " failed", e);
       }
     }, conf);
   }
@@ -893,7 +893,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         fs.setPermission(path, perm);
       } catch (IOException e) {
         throw new RuntimeException(
-            "set permission for file " + path + " to " + filesMode + " failed");
+            "set permission for file " + path + " to " + filesMode + " failed", e);
       }
     }, conf);
   }
