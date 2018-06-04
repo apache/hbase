@@ -418,8 +418,6 @@
                                         <pattern>org.junit</pattern>
                                         <shadedPattern>${shaded.prefix}.org.junit</shadedPattern>
                                     </relocation>
-
-
                                 </relocations>
                                 <transformers>
                                   <!-- Need to filter out some extraneous license files.
