@@ -393,10 +393,10 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
             " failed when creating the node for " + destServerName,
           e);
     }
+    String newQueueId = queueId + "-" + sourceServerName;
     try {
       String oldQueueNode = getQueueNode(sourceServerName, queueId);
       List<String> wals = ZKUtil.listChildrenNoWatch(zookeeper, oldQueueNode);
-      String newQueueId = queueId + "-" + sourceServerName;
       if (CollectionUtils.isEmpty(wals)) {
         ZKUtil.deleteNodeFailSilent(zookeeper, oldQueueNode);
         LOG.info("Removed empty {}/{}", sourceServerName, queueId);
@@ -427,11 +427,12 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       return new Pair<>(newQueueId, logQueue);
     } catch (NoNodeException | NodeExistsException | NotEmptyException | BadVersionException e) {
       // Multi call failed; it looks like some other regionserver took away the logs.
-      // These exceptions mean that zk tells us the request can not be execute so it is safe to just
-      // return a null. For other types of exception should be thrown out to notify the upper layer.
+      // These exceptions mean that zk tells us the request can not be execute. So return an empty
+      // queue to tell the upper layer that claim nothing. For other types of exception should be
+      // thrown out to notify the upper layer.
       LOG.info("Claim queue queueId={} from {} to {} failed with {}, someone else took the log?",
           queueId,sourceServerName, destServerName, e.toString());
-      return null;
+      return new Pair<>(newQueueId, Collections.emptySortedSet());
     } catch (KeeperException | InterruptedException e) {
       throw new ReplicationException("Claim queue queueId=" + queueId + " from " +
         sourceServerName + " to " + destServerName + " failed", e);
