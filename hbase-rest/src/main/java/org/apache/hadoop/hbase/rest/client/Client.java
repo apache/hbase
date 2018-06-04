@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.rest.client;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.HttpVersion;
 import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 import org.apache.commons.httpclient.URI;
@@ -43,6 +45,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 
 /**
  * A wrapper around HttpClient which provides some useful function and
@@ -60,6 +65,10 @@ public class Client {
   private boolean sslEnabled;
 
   private Map<String, String> extraHeaders;
+
+  private static final String AUTH_COOKIE = "hadoop.auth";
+  private static final String AUTH_COOKIE_EQ = AUTH_COOKIE + "=";
+  private static final String COOKIE = "Cookie";
 
   /**
    * Default Constructor
@@ -208,6 +217,11 @@ public class Client {
     }
     long startTime = System.currentTimeMillis();
     int code = httpClient.executeMethod(method);
+    if (code == HttpStatus.SC_UNAUTHORIZED) { // Authentication error
+      LOG.debug("Performing negotiation with the server.");
+      negotiate(method, uri);
+      code = httpClient.executeMethod(method);
+    }
     long endTime = System.currentTimeMillis();
     if (LOG.isTraceEnabled()) {
       LOG.trace(method.getName() + " " + uri + " " + code + " " +
@@ -233,6 +247,40 @@ public class Client {
       return executePathOnly(cluster, method, headers, path);
     }
     return executeURI(method, headers, path);
+  }
+
+  /**
+   * Initiate client side Kerberos negotiation with the server.
+   * @param method method to inject the authentication token into.
+   * @param uri the String to parse as a URL.
+   * @throws IOException if unknown protocol is found.
+   */
+  private void negotiate(HttpMethod method, String uri) throws IOException {
+    try {
+      AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+      KerberosAuthenticator authenticator = new KerberosAuthenticator();
+      authenticator.authenticate(new URL(uri), token);
+      // Inject the obtained negotiated token in the method cookie
+      injectToken(method, token);
+    } catch (AuthenticationException e) {
+      LOG.error("Failed to negotiate with the server.", e);
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Helper method that injects an authentication token to send with the method.
+   * @param method method to inject the authentication token into.
+   * @param token authentication token to inject.
+   */
+  private void injectToken(HttpMethod method, AuthenticatedURL.Token token) {
+    String t = token.toString();
+    if (t != null) {
+      if (!t.startsWith("\"")) {
+        t = "\"" + t + "\"";
+      }
+      method.addRequestHeader(COOKIE, AUTH_COOKIE_EQ + t);
+    }
   }
 
   /**
