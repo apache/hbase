@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,7 +66,6 @@ import org.slf4j.LoggerFactory;
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestClassLoading {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestClassLoading.class);
@@ -98,9 +97,7 @@ public class TestClassLoading {
   private static Class<?> masterCoprocessor = TestMasterCoprocessor.class;
 
   private static final String[] regionServerSystemCoprocessors =
-      new String[]{
-      regionServerCoprocessor.getSimpleName()
-  };
+      new String[]{ regionServerCoprocessor.getSimpleName() };
 
   private static final String[] masterRegionServerSystemCoprocessors = new String[] {
       regionCoprocessor1.getSimpleName(), MultiRowMutationEndpoint.class.getSimpleName(),
@@ -211,7 +208,9 @@ public class TestClassLoading {
           found2_k2 = found2_k2 && (conf.get("k2") != null);
           found2_k3 = found2_k3 && (conf.get("k3") != null);
         } else {
-          found2_k1 = found2_k2 = found2_k3 = false;
+          found2_k1 = false;
+          found2_k2 = false;
+          found2_k3 = false;
         }
         regionsActiveClassLoaders
             .put(region, ((CoprocessorHost) region.getCoprocessorHost()).getExternalClassLoaders());
@@ -571,6 +570,4 @@ public class TestClassLoading {
     // Now wait a bit longer for the coprocessor hosts to load the CPs
     Thread.sleep(1000);
   }
-
 }
-

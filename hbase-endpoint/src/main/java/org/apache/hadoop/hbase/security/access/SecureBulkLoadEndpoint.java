@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -45,9 +49,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +61,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @Deprecated
 public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements RegionCoprocessor {
-
   public static final long VERSION = 0L;
 
   private static final Logger LOG = LoggerFactory.getLogger(SecureBulkLoadEndpoint.class);
@@ -82,7 +82,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
 
   @Override
   public void prepareBulkLoad(RpcController controller, PrepareBulkLoadRequest request,
-      RpcCallback<PrepareBulkLoadResponse> done) {
+          RpcCallback<PrepareBulkLoadResponse> done) {
     try {
       SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
 
@@ -100,7 +100,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
    */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest
     convert(PrepareBulkLoadRequest request)
-  throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
+    throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
     byte [] bytes = request.toByteArray();
     org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest.Builder
           builder =
@@ -112,7 +112,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
 
   @Override
   public void cleanupBulkLoad(RpcController controller, CleanupBulkLoadRequest request,
-      RpcCallback<CleanupBulkLoadResponse> done) {
+          RpcCallback<CleanupBulkLoadResponse> done) {
     try {
       SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
       secureBulkLoadManager.cleanupBulkLoad((HRegion) this.env.getRegion(), convert(request));
@@ -127,7 +127,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
    *  Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
    */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest
-  convert(CleanupBulkLoadRequest request)
+    convert(CleanupBulkLoadRequest request)
       throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
     byte [] bytes = request.toByteArray();
     org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest.Builder
@@ -140,7 +140,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
 
   @Override
   public void secureBulkLoadHFiles(RpcController controller, SecureBulkLoadHFilesRequest request,
-      RpcCallback<SecureBulkLoadHFilesResponse> done) {
+          RpcCallback<SecureBulkLoadHFilesResponse> done) {
     boolean loaded = false;
     Map<byte[], List<Path>> map = null;
     try {
@@ -159,7 +159,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
    *  Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
    */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest
-  convert(BulkLoadHFileRequest request)
+    convert(BulkLoadHFileRequest request)
       throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
     byte [] bytes = request.toByteArray();
     org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest.Builder
@@ -171,7 +171,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
   }
 
   private BulkLoadHFileRequest ConvertSecureBulkLoadHFilesRequest(
-      SecureBulkLoadHFilesRequest request) {
+          SecureBulkLoadHFilesRequest request) {
     BulkLoadHFileRequest.Builder bulkLoadHFileRequest = BulkLoadHFileRequest.newBuilder();
     RegionSpecifier region =
         ProtobufUtil.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, this.env

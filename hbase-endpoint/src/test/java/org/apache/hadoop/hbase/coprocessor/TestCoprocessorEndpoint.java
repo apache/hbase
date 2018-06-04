@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,6 @@ import org.slf4j.LoggerFactory;
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorEndpoint {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCoprocessorEndpoint.class);
@@ -119,14 +118,14 @@ public class TestCoprocessorEndpoint {
   }
 
   private Map<byte [], Long> sum(final Table table, final byte [] family,
-      final byte [] qualifier, final byte [] start, final byte [] end)
-  throws ServiceException, Throwable {
+          final byte [] qualifier, final byte [] start, final byte [] end)
+          throws ServiceException, Throwable {
     return table.coprocessorService(ColumnAggregationProtos.ColumnAggregationService.class,
         start, end,
       new Batch.Call<ColumnAggregationProtos.ColumnAggregationService, Long>() {
         @Override
         public Long call(ColumnAggregationProtos.ColumnAggregationService instance)
-        throws IOException {
+          throws IOException {
           CoprocessorRpcUtils.BlockingRpcCallback<ColumnAggregationProtos.SumResponse> rpcCallback =
               new CoprocessorRpcUtils.BlockingRpcCallback<>();
           ColumnAggregationProtos.SumRequest.Builder builder =
@@ -191,26 +190,28 @@ public class TestCoprocessorEndpoint {
       // scan: for all regions
       final RpcController controller = new ServerRpcController();
       table.coprocessorService(TestRpcServiceProtos.TestProtobufRpcProto.class,
-          ROWS[0], ROWS[ROWS.length - 1],
-          new Batch.Call<TestRpcServiceProtos.TestProtobufRpcProto, TestProtos.EchoResponseProto>() {
-            public TestProtos.EchoResponseProto call(TestRpcServiceProtos.TestProtobufRpcProto instance)
-                throws IOException {
-              LOG.debug("Default response is " + TestProtos.EchoRequestProto.getDefaultInstance());
-              CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto> callback =
-                  new CoprocessorRpcUtils.BlockingRpcCallback<>();
-              instance.echo(controller, request, callback);
-              TestProtos.EchoResponseProto response = callback.get();
-              LOG.debug("Batch.Call returning result " + response);
-              return response;
-            }
-          },
-          new Batch.Callback<TestProtos.EchoResponseProto>() {
-            public void update(byte[] region, byte[] row, TestProtos.EchoResponseProto result) {
-              assertNotNull(result);
-              assertEquals("hello", result.getMessage());
-              results.put(region, result.getMessage());
-            }
+        ROWS[0], ROWS[ROWS.length - 1],
+        new Batch.Call<TestRpcServiceProtos.TestProtobufRpcProto, TestProtos.EchoResponseProto>() {
+          @Override
+          public TestProtos.EchoResponseProto call(
+              TestRpcServiceProtos.TestProtobufRpcProto instance) throws IOException {
+            LOG.debug("Default response is " + TestProtos.EchoRequestProto.getDefaultInstance());
+            CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto> callback =
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
+            instance.echo(controller, request, callback);
+            TestProtos.EchoResponseProto response = callback.get();
+            LOG.debug("Batch.Call returning result " + response);
+            return response;
           }
+        },
+        new Batch.Callback<TestProtos.EchoResponseProto>() {
+          @Override
+          public void update(byte[] region, byte[] row, TestProtos.EchoResponseProto result) {
+            assertNotNull(result);
+            assertEquals("hello", result.getMessage());
+            results.put(region, result.getMessage());
+          }
+        }
       );
       for (Map.Entry<byte[], String> e : results.entrySet()) {
         LOG.info("Got value "+e.getValue()+" for region "+Bytes.toStringBinary(e.getKey()));
@@ -224,26 +225,28 @@ public class TestCoprocessorEndpoint {
 
       // scan: for region 2 and region 3
       table.coprocessorService(TestRpcServiceProtos.TestProtobufRpcProto.class,
-          ROWS[rowSeperator1], ROWS[ROWS.length - 1],
-          new Batch.Call<TestRpcServiceProtos.TestProtobufRpcProto, TestProtos.EchoResponseProto>() {
-            public TestProtos.EchoResponseProto call(TestRpcServiceProtos.TestProtobufRpcProto instance)
-                throws IOException {
-              LOG.debug("Default response is " + TestProtos.EchoRequestProto.getDefaultInstance());
-              CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto> callback =
-                  new CoprocessorRpcUtils.BlockingRpcCallback<>();
-              instance.echo(controller, request, callback);
-              TestProtos.EchoResponseProto response = callback.get();
-              LOG.debug("Batch.Call returning result " + response);
-              return response;
-            }
-          },
-          new Batch.Callback<TestProtos.EchoResponseProto>() {
-            public void update(byte[] region, byte[] row, TestProtos.EchoResponseProto result) {
-              assertNotNull(result);
-              assertEquals("hello", result.getMessage());
-              results.put(region, result.getMessage());
-            }
+        ROWS[rowSeperator1], ROWS[ROWS.length - 1],
+        new Batch.Call<TestRpcServiceProtos.TestProtobufRpcProto, TestProtos.EchoResponseProto>() {
+          @Override
+          public TestProtos.EchoResponseProto call(
+              TestRpcServiceProtos.TestProtobufRpcProto instance) throws IOException {
+            LOG.debug("Default response is " + TestProtos.EchoRequestProto.getDefaultInstance());
+            CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto> callback =
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
+            instance.echo(controller, request, callback);
+            TestProtos.EchoResponseProto response = callback.get();
+            LOG.debug("Batch.Call returning result " + response);
+            return response;
           }
+        },
+        new Batch.Callback<TestProtos.EchoResponseProto>() {
+          @Override
+          public void update(byte[] region, byte[] row, TestProtos.EchoResponseProto result) {
+            assertNotNull(result);
+            assertEquals("hello", result.getMessage());
+            results.put(region, result.getMessage());
+          }
+        }
       );
       for (Map.Entry<byte[], String> e : results.entrySet()) {
         LOG.info("Got value "+e.getValue()+" for region "+Bytes.toStringBinary(e.getKey()));
@@ -348,6 +351,4 @@ public class TestCoprocessorEndpoint {
     }
     return ret;
   }
-
 }
-

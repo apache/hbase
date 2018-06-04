@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegi
 @Category({RegionServerTests.class, LargeTests.class})
 @Ignore // BROKEN. FIX OR REMOVE.
 public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionServerBulkLoad {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
@@ -86,8 +85,8 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
     final AtomicLong numCompactions = new AtomicLong();
     private TableName tableName;
 
-    public AtomicHFileLoader(TableName tableName, TestContext ctx,
-        byte targetFamilies[][]) throws IOException {
+    public AtomicHFileLoader(TableName tableName, TestContext ctx, byte[][] targetFamilies)
+            throws IOException {
       super(ctx);
       this.tableName = tableName;
     }
@@ -114,19 +113,19 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       final String bulkToken = new SecureBulkLoadEndpointClient(table).prepareBulkLoad(tableName);
       RpcControllerFactory rpcControllerFactory = new RpcControllerFactory(UTIL.getConfiguration());
       ClientServiceCallable<Void> callable =
-          new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
-              rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
-            @Override
-            protected Void rpcCall() throws Exception {
-              LOG.debug("Going to connect to server " + getLocation() + " for row " +
-                  Bytes.toStringBinary(getRow()));
-              try (Table table = conn.getTable(getTableName())) {
-                boolean loaded = new SecureBulkLoadEndpointClient(table).bulkLoadHFiles(famPaths,
-                    null, bulkToken, getLocation().getRegionInfo().getStartKey());
-              }
-              return null;
+        new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
+            rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            LOG.debug("Going to connect to server " + getLocation() + " for row " +
+                Bytes.toStringBinary(getRow()));
+            try (Table table = conn.getTable(getTableName())) {
+              boolean loaded = new SecureBulkLoadEndpointClient(table).bulkLoadHFiles(famPaths,
+                  null, bulkToken, getLocation().getRegionInfo().getStartKey());
             }
-          };
+            return null;
+          }
+        };
       RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(conf);
       RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
       caller.callWithRetries(callable, Integer.MAX_VALUE);
@@ -156,7 +155,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
   }
 
   void runAtomicBulkloadTest(TableName tableName, int millisToRun, int numScanners)
-      throws Exception {
+          throws Exception {
     setupTable(tableName, 10);
 
     TestContext ctx = new TestContext(UTIL.getConfiguration());

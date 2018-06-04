@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,7 +84,6 @@ import org.slf4j.LoggerFactory;
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestRowProcessorEndpoint {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRowProcessorEndpoint.class);
@@ -219,8 +218,7 @@ public class TestRowProcessorEndpoint {
     return result;
   }
 
-  private void concurrentExec(
-      final Runnable task, final int numThreads) throws Throwable {
+  private void concurrentExec(final Runnable task, final int numThreads) throws Throwable {
     startSignal = new CountDownLatch(numThreads);
     doneSignal = new CountDownLatch(numThreads);
     for (int i = 0; i < numThreads; ++i) {
@@ -313,10 +311,10 @@ public class TestRowProcessorEndpoint {
    * So they can be loaded with the endpoint on the coprocessor.
    */
   public static class RowProcessorEndpoint<S extends Message,T extends Message>
-  extends BaseRowProcessorEndpoint<S,T> {
+          extends BaseRowProcessorEndpoint<S,T> {
     public static class IncrementCounterProcessor extends
-        BaseRowProcessor<IncrementCounterProcessorTestProtos.IncCounterProcessorRequest,
-        IncrementCounterProcessorTestProtos.IncCounterProcessorResponse> {
+            BaseRowProcessor<IncrementCounterProcessorTestProtos.IncCounterProcessorRequest,
+                    IncrementCounterProcessorTestProtos.IncCounterProcessorResponse> {
       int counter = 0;
       byte[] row = new byte[0];
 
@@ -397,7 +395,7 @@ public class TestRowProcessorEndpoint {
     }
 
     public static class FriendsOfFriendsProcessor extends
-        BaseRowProcessor<FriendsOfFriendsProcessorRequest, FriendsOfFriendsProcessorResponse> {
+            BaseRowProcessor<FriendsOfFriendsProcessorRequest, FriendsOfFriendsProcessorResponse> {
       byte[] row = null;
       byte[] person = null;
       final Set<String> result = new HashSet<>();
@@ -482,7 +480,7 @@ public class TestRowProcessorEndpoint {
     }
 
     public static class RowSwapProcessor extends
-        BaseRowProcessor<RowSwapProcessorRequest, RowSwapProcessorResponse> {
+            BaseRowProcessor<RowSwapProcessorRequest, RowSwapProcessorResponse> {
       byte[] row1 = new byte[0];
       byte[] row2 = new byte[0];
 
@@ -586,8 +584,7 @@ public class TestRowProcessorEndpoint {
     }
 
     public static class TimeoutProcessor extends
-        BaseRowProcessor<TimeoutProcessorRequest, TimeoutProcessorResponse> {
-
+            BaseRowProcessor<TimeoutProcessorRequest, TimeoutProcessorResponse> {
       byte[] row = new byte[0];
 
       /**
@@ -643,8 +640,7 @@ public class TestRowProcessorEndpoint {
       }
     }
 
-    public static void doScan(
-        HRegion region, Scan scan, List<Cell> result) throws IOException {
+    public static void doScan(HRegion region, Scan scan, List<Cell> result) throws IOException {
       InternalScanner scanner = null;
       try {
         scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
@@ -652,7 +648,9 @@ public class TestRowProcessorEndpoint {
         result.clear();
         scanner.next(result);
       } finally {
-        if (scanner != null) scanner.close();
+        if (scanner != null) {
+          scanner.close();
+        }
       }
     }
   }
@@ -676,5 +674,4 @@ public class TestRowProcessorEndpoint {
     out.append("]");
     return out.toString();
   }
-
 }

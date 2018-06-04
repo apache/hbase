@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,7 +87,6 @@ import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class})
 public class TestSecureExport {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSecureExport.class);
@@ -146,12 +145,16 @@ public class TestSecureExport {
       USER_XO + "/" + LOCALHOST,
       USER_NONE + "/" + LOCALHOST);
   }
+
   private static User getUserByLogin(final String user) throws IOException {
-    return User.create(UserGroupInformation.loginUserFromKeytabAndReturnUGI(getPrinciple(user), KEYTAB_FILE.getAbsolutePath()));
+    return User.create(UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        getPrinciple(user), KEYTAB_FILE.getAbsolutePath()));
   }
+
   private static String getPrinciple(final String user) {
     return user + "/" + LOCALHOST + "@" + KDC.getRealm();
   }
+
   private static void setUpClusterKdc() throws Exception {
     HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setPrincipalForTesting(SERVER_PRINCIPAL + "@" + KDC.getRealm());
@@ -160,30 +163,42 @@ public class TestSecureExport {
     // the following key should be changed.
     // 1) DFS_NAMENODE_USER_NAME_KEY -> DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY
     // 2) DFS_DATANODE_USER_NAME_KEY -> DFS_DATANODE_KERBEROS_PRINCIPAL_KEY
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
+    UTIL.getConfiguration().set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+        SERVER_PRINCIPAL + "@" + KDC.getRealm());
+    UTIL.getConfiguration().set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY,
+        SERVER_PRINCIPAL + "@" + KDC.getRealm());
+    UTIL.getConfiguration().set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+        KEYTAB_FILE.getAbsolutePath());
+    UTIL.getConfiguration().set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY,
+        KEYTAB_FILE.getAbsolutePath());
     // set yarn principal
-    UTIL.getConfiguration().set(YarnConfiguration.RM_PRINCIPAL, SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().set(YarnConfiguration.NM_PRINCIPAL, SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, HTTP_PRINCIPAL + "@" + KDC.getRealm());
+    UTIL.getConfiguration().set(YarnConfiguration.RM_PRINCIPAL,
+        SERVER_PRINCIPAL + "@" + KDC.getRealm());
+    UTIL.getConfiguration().set(YarnConfiguration.NM_PRINCIPAL,
+        SERVER_PRINCIPAL + "@" + KDC.getRealm());
+    UTIL.getConfiguration().set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+        HTTP_PRINCIPAL + "@" + KDC.getRealm());
     UTIL.getConfiguration().setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
+    UTIL.getConfiguration().set(DFSConfigKeys.DFS_HTTP_POLICY_KEY,
+        HttpConfig.Policy.HTTPS_ONLY.name());
     UTIL.getConfiguration().set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, LOCALHOST + ":0");
     UTIL.getConfiguration().set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, LOCALHOST + ":0");
 
     File keystoresDir = new File(UTIL.getDataTestDir("keystore").toUri().getPath());
     keystoresDir.mkdirs();
     String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestSecureExport.class);
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir.getAbsolutePath(), sslConfDir, UTIL.getConfiguration(), false);
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir.getAbsolutePath(), sslConfDir,
+        UTIL.getConfiguration(), false);
 
     UTIL.getConfiguration().setBoolean("ignore.secure.ports.for.testing", true);
     UserGroupInformation.setConfiguration(UTIL.getConfiguration());
-    UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, UTIL.getConfiguration().get(
-      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY) + "," + Export.class.getName());
+    UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        UTIL.getConfiguration().get(
+            CoprocessorHost.REGION_COPROCESSOR_CONF_KEY) + "," + Export.class.getName());
   }
-  private static void addLabels(final Configuration conf, final List<String> users, final List<String> labels) throws Exception {
+
+  private static void addLabels(final Configuration conf, final List<String> users,
+      final List<String> labels) throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsProtos.VisibilityLabelsResponse> action
       = () -> {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -207,19 +222,21 @@ public class TestSecureExport {
   @After
   public void cleanup() throws IOException {
   }
+
   private static void clearOutput(Path path) throws IOException {
     FileSystem fs = path.getFileSystem(UTIL.getConfiguration());
     if (fs.exists(path)) {
       assertEquals(true, fs.delete(path, true));
     }
   }
+
   /**
    * Sets the security firstly for getting the correct default realm.
-   * @throws Exception
    */
   @BeforeClass
   public static void beforeClass() throws Exception {
-    UserProvider.setUserProviderForTesting(UTIL.getConfiguration(), HadoopSecurityEnabledUserProviderForTesting.class);
+    UserProvider.setUserProviderForTesting(UTIL.getConfiguration(),
+        HadoopSecurityEnabledUserProviderForTesting.class);
     setUpKdcServer();
     SecureTestUtil.enableSecurity(UTIL.getConfiguration());
     UTIL.getConfiguration().setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
@@ -252,11 +269,9 @@ public class TestSecureExport {
   /**
    * Test the ExportEndpoint's access levels. The {@link Export} test is ignored
    * since the access exceptions cannot be collected from the mappers.
-   *
-   * @throws java.io.IOException
    */
   @Test
-  public void testAccessCase() throws IOException, Throwable {
+  public void testAccessCase() throws Throwable {
     final String exportTable = name.getMethodName();
     TableDescriptor exportHtd = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
@@ -339,11 +354,13 @@ public class TestSecureExport {
     SecureTestUtil.verifyAllowed(deleteAction, getUserByLogin(USER_OWNER));
     fs.delete(openDir, true);
   }
+
   @Test
   public void testVisibilityLabels() throws IOException, Throwable {
     final String exportTable = name.getMethodName() + "_export";
     final String importTable = name.getMethodName() + "_import";
-    final TableDescriptor exportHtd = TableDescriptorBuilder.newBuilder(TableName.valueOf(exportTable))
+    final TableDescriptor exportHtd = TableDescriptorBuilder
+            .newBuilder(TableName.valueOf(exportTable))
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
             .setOwnerString(USER_OWNER)
             .build();
@@ -400,7 +417,8 @@ public class TestSecureExport {
         }
       };
       SecureTestUtil.verifyAllowed(exportAction, getUserByLogin(USER_OWNER));
-      final TableDescriptor importHtd = TableDescriptorBuilder.newBuilder(TableName.valueOf(importTable))
+      final TableDescriptor importHtd = TableDescriptorBuilder
+              .newBuilder(TableName.valueOf(importTable))
               .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYB))
               .setOwnerString(USER_OWNER)
               .build();
@@ -411,7 +429,8 @@ public class TestSecureExport {
           importTable,
           output.toString()
         };
-        assertEquals(0, ToolRunner.run(new Configuration(UTIL.getConfiguration()), new Import(), args));
+        assertEquals(0, ToolRunner.run(
+            new Configuration(UTIL.getConfiguration()), new Import(), args));
         return null;
       };
       SecureTestUtil.verifyAllowed(importAction, getUserByLogin(USER_OWNER));
