@@ -47,6 +47,8 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -93,6 +95,10 @@ public class TestRSGroups extends TestRSGroupsBase {
         NUM_SLAVES_BASE - 1);
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
 
+    initialize();
+  }
+
+  private static void initialize() throws Exception {
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((MiniHBaseCluster)cluster).getMaster();
@@ -433,4 +439,29 @@ public class TestRSGroups extends TestRSGroupsBase {
     admin.cloneSnapshot(snapshotName, clonedTableName);
   }
 
+  @Test
+  public void testRSGroupsWithHBaseQuota() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
+    restartHBaseCluster();
+    try {
+      TEST_UTIL.waitFor(90000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return admin.isTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
+        }
+      });
+    } finally {
+      TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, false);
+      restartHBaseCluster();
+    }
+  }
+
+  private void restartHBaseCluster() throws Exception {
+    LOG.info("\n\nShutting down cluster");
+    TEST_UTIL.shutdownMiniHBaseCluster();
+    LOG.info("\n\nSleeping a bit");
+    Thread.sleep(2000);
+    TEST_UTIL.restartHBaseCluster(NUM_SLAVES_BASE - 1);
+    initialize();
+  }
 }
