@@ -25,15 +25,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -46,6 +48,9 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.util.EntityUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A wrapper around HttpClient which provides some useful function and
@@ -64,6 +69,10 @@ public class Client {
   private HttpGet httpGet = null;
 
   private Map<String, String> extraHeaders;
+
+  private static final String AUTH_COOKIE = "hadoop.auth";
+  private static final String AUTH_COOKIE_EQ = AUTH_COOKIE + "=";
+  private static final String COOKIE = "Cookie";
 
   /**
    * Default Constructor
@@ -224,6 +233,12 @@ public class Client {
     long startTime = System.currentTimeMillis();
     if (resp != null) EntityUtils.consumeQuietly(resp.getEntity());
     resp = httpClient.execute(method);
+    if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+      // Authentication error
+      LOG.debug("Performing negotiation with the server.");
+      negotiate(method, uri);
+      resp = httpClient.execute(method);
+    }
 
     long endTime = System.currentTimeMillis();
     if (LOG.isTraceEnabled()) {
@@ -250,6 +265,40 @@ public class Client {
       return executePathOnly(cluster, method, headers, path);
     }
     return executeURI(method, headers, path);
+  }
+
+  /**
+   * Initiate client side Kerberos negotiation with the server.
+   * @param method method to inject the authentication token into.
+   * @param uri the String to parse as a URL.
+   * @throws IOException if unknown protocol is found.
+   */
+  private void negotiate(HttpUriRequest method, String uri) throws IOException {
+    try {
+      AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+      KerberosAuthenticator authenticator = new KerberosAuthenticator();
+      authenticator.authenticate(new URL(uri), token);
+      // Inject the obtained negotiated token in the method cookie
+      injectToken(method, token);
+    } catch (AuthenticationException e) {
+      LOG.error("Failed to negotiate with the server.", e);
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Helper method that injects an authentication token to send with the method.
+   * @param method method to inject the authentication token into.
+   * @param token authentication token to inject.
+   */
+  private void injectToken(HttpUriRequest method, AuthenticatedURL.Token token) {
+    String t = token.toString();
+    if (t != null) {
+      if (!t.startsWith("\"")) {
+        t = "\"" + t + "\"";
+      }
+      method.addHeader(COOKIE, AUTH_COOKIE_EQ + t);
+    }
   }
 
   /**
