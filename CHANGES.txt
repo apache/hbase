@@ -3,9 +3,10 @@ HBase Change Log
 Release Notes - HBase - Version 1.2.6.1
 
 ** Bug
+    * [HBASE-19188] - Build fails on branch-1 using Maven 3.5.2
     * [HBASE-20664] - Reduce the broad scope of outToken in ThriftHttpServlet
 
-Release Notes - HBase - Version 1.2.6
+Release Notes - HBase - Version 1.2.6 06/04/2017
 
 ** Sub-task
     * [HBASE-17925] - mvn assembly:single fails against hadoop3-alpha2
