@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +16,10 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.coprocessor;
+
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,15 +39,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-
 /**
  * The aggregation implementation at a region.
  */
 public class ColumnAggregationEndpoint extends ColumnAggregationService
-implements RegionCoprocessor {
+        implements RegionCoprocessor {
   private static final Logger LOG = LoggerFactory.getLogger(ColumnAggregationEndpoint.class);
   private RegionCoprocessorEnvironment env = null;
 
