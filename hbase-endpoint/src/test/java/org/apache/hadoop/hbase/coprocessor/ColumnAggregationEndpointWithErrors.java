@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.coprocessor;
+
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,18 +42,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-
 /**
  * Test coprocessor endpoint that always throws a {@link DoNotRetryIOException} for requests on
  * the last region in the table.  This allows tests to ensure correct error handling of
  * coprocessor endpoints throwing exceptions.
  */
 public class ColumnAggregationEndpointWithErrors
-    extends ColumnAggregationWithErrorsProtos.ColumnAggregationServiceWithErrors
-    implements RegionCoprocessor {
+        extends ColumnAggregationWithErrorsProtos.ColumnAggregationServiceWithErrors
+        implements RegionCoprocessor {
   private static final Logger LOG =
       LoggerFactory.getLogger(ColumnAggregationEndpointWithErrors.class);
 
@@ -76,7 +76,7 @@ public class ColumnAggregationEndpointWithErrors
 
   @Override
   public void sum(RpcController controller, ColumnAggregationWithErrorsSumRequest request,
-      RpcCallback<ColumnAggregationWithErrorsSumResponse> done) {
+          RpcCallback<ColumnAggregationWithErrorsSumResponse> done) {
     // aggregate at each region
     Scan scan = new Scan();
     // Family is required in pb. Qualifier is not.

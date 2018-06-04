@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,6 @@ import org.junit.rules.TestName;
 
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorTableEndpoint {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCoprocessorTableEndpoint.class);
@@ -81,7 +80,7 @@ public class TestCoprocessorTableEndpoint {
 
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    desc.addCoprocessor(org.apache.hadoop.hbase.coprocessor.ColumnAggregationEndpoint.class.getName());
+    desc.addCoprocessor(ColumnAggregationEndpoint.class.getName());
 
     createTable(desc);
     verifyTable(tableName);
@@ -96,7 +95,7 @@ public class TestCoprocessorTableEndpoint {
 
     createTable(desc);
 
-    desc.addCoprocessor(org.apache.hadoop.hbase.coprocessor.ColumnAggregationEndpoint.class.getName());
+    desc.addCoprocessor(ColumnAggregationEndpoint.class.getName());
     updateTable(desc);
 
     verifyTable(tableName);
@@ -113,24 +112,24 @@ public class TestCoprocessorTableEndpoint {
   private static Map<byte [], Long> sum(final Table table, final byte [] family,
     final byte [] qualifier, final byte [] start, final byte [] end)
       throws ServiceException, Throwable {
-  return table.coprocessorService(ColumnAggregationProtos.ColumnAggregationService.class,
+    return table.coprocessorService(ColumnAggregationProtos.ColumnAggregationService.class,
       start, end,
-    new Batch.Call<ColumnAggregationProtos.ColumnAggregationService, Long>() {
-      @Override
-      public Long call(ColumnAggregationProtos.ColumnAggregationService instance)
-      throws IOException {
-        CoprocessorRpcUtils.BlockingRpcCallback<ColumnAggregationProtos.SumResponse> rpcCallback =
-            new CoprocessorRpcUtils.BlockingRpcCallback<>();
-        ColumnAggregationProtos.SumRequest.Builder builder =
-          ColumnAggregationProtos.SumRequest.newBuilder();
-        builder.setFamily(ByteString.copyFrom(family));
-        if (qualifier != null && qualifier.length > 0) {
-          builder.setQualifier(ByteString.copyFrom(qualifier));
+      new Batch.Call<ColumnAggregationProtos.ColumnAggregationService, Long>() {
+        @Override
+        public Long call(ColumnAggregationProtos.ColumnAggregationService instance)
+          throws IOException {
+          CoprocessorRpcUtils.BlockingRpcCallback<ColumnAggregationProtos.SumResponse> rpcCallback =
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          ColumnAggregationProtos.SumRequest.Builder builder =
+            ColumnAggregationProtos.SumRequest.newBuilder();
+          builder.setFamily(ByteString.copyFrom(family));
+          if (qualifier != null && qualifier.length > 0) {
+            builder.setQualifier(ByteString.copyFrom(qualifier));
+          }
+          instance.sum(null, builder.build(), rpcCallback);
+          return rpcCallback.get().getSum();
         }
-        instance.sum(null, builder.build(), rpcCallback);
-        return rpcCallback.get().getSum();
-      }
-    });
+      });
   }
 
   private static final void createTable(HTableDescriptor desc) throws Exception {
