@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.http.log;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -106,9 +107,15 @@ public final class LogLevel {
         return;
       }
       response.setContentType("text/html");
-      String requestedURL = "header.jsp?pageTitle=Log Level";
-      request.getRequestDispatcher(requestedURL).include(request, response);
-      PrintWriter out = response.getWriter();
+      PrintWriter out;
+      try {
+        String headerPath = "header.jsp?pageTitle=Log Level";
+        request.getRequestDispatcher(headerPath).include(request, response);
+        out = response.getWriter();
+      } catch (FileNotFoundException e) {
+        // in case file is not found fall back to old design
+        out = ServletUtil.initHTML(response, "Log Level");
+      }
       out.println(FORMS);
 
       String logName = ServletUtil.getParameter(request, "log");
@@ -136,8 +143,14 @@ public final class LogLevel {
           out.println("Sorry, " + log.getClass() + " not supported.<br />");
         }
       }
-      out.println("</div>");
-      request.getRequestDispatcher("footer.jsp").include(request, response);
+
+      try {
+        String footerPath = "footer.jsp";
+        out.println("</div>");
+        request.getRequestDispatcher(footerPath).include(request, response);
+      } catch (FileNotFoundException e) {
+        out.println(ServletUtil.HTML_TAIL);
+      }
       out.close();
     }
 
