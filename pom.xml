@@ -303,6 +303,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+        <id>gxcheng</id>
+        <name>Guangxu Cheng</name>
+        <email>gxcheng@apache.org</email>
+        <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>huaxiangsun</id>
       <name>Huaxiang Sun</name>
       <email>huaxiangsun@apache.org</email>
