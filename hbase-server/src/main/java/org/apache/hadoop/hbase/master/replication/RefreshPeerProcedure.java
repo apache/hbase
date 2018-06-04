@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.ServerOperation;
+import org.apache.hadoop.hbase.procedure2.FailedRemoteDispatchException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -166,10 +167,12 @@ public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
       // retry
       dispatched = false;
     }
-    if (!env.getRemoteDispatcher().addOperationToNode(targetServer, this)) {
+    try {
+      env.getRemoteDispatcher().addOperationToNode(targetServer, this);
+    } catch (FailedRemoteDispatchException frde) {
       LOG.info("Can not add remote operation for refreshing peer {} for {} to {}, " +
-        "this usually because the server is already dead, " +
-        "give up and mark the procedure as complete", peerId, type, targetServer);
+        "this is usually because the server is already dead, " +
+        "give up and mark the procedure as complete", peerId, type, targetServer, frde);
       return null;
     }
     dispatched = true;
