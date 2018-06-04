@@ -195,6 +195,14 @@
       <artifactId>hbase-it</artifactId>
       <type>test-jar</type>
     </dependency>
+    <!-- Hamcrest is required by hbase-it (via junit), but as long as we're grabbing the hbase-it test-jar,
+         maven dependency resolution won't pick it up for us. -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-core</artifactId>
+      <!-- Overriding the scope in depMgmt -->
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
