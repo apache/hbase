@@ -483,7 +483,7 @@ public class Scan extends Query {
    * @return this
    * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
    *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated use {@link #withStartRow(byte[])} instead. This method may change the inclusive of
+   * @deprecated use {@link #withStopRow(byte[])} instead. This method may change the inclusive of
    *             the stop row to keep compatible with the old behavior.
    */
   @Deprecated
