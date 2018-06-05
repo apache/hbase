@@ -56,12 +56,12 @@ public class PreUpgradeValidator extends AbstractHBaseTool {
   private boolean validateDBE;
 
   /**
-   * Check DataBlockEncodings for column families.
+   * Check DataBlockEncodings of column families are compatible.
    *
-   * @return DataBlockEncoding compatible with HBase 2
+   * @return number of column families with incompatible DataBlockEncoding
    * @throws IOException if a remote or network exception occurs
    */
-  private boolean validateDBE() throws IOException {
+  private int validateDBE() throws IOException {
     int incompatibilities = 0;
 
     LOG.info("Validating Data Block Encodings");
@@ -92,17 +92,16 @@ public class PreUpgradeValidator extends AbstractHBaseTool {
           + "upgrade until these encodings are converted to a supported one.", incompatibilities);
       LOG.warn("Check http://hbase.apache.org/book.html#upgrade2.0.prefix-tree.removed "
           + "for instructions.");
-      return false;
     } else {
       LOG.info("The used Data Block Encodings are compatible with HBase 2.0.");
-      return true;
     }
+    return incompatibilities;
   }
 
   @Override
   protected void addOptions() {
     addOptNoArg("all", "Run all pre-upgrade validations");
-    addOptNoArg("validateDBE", "Validate DataBlockEncoding are compatible on the cluster");
+    addOptNoArg("validateDBE", "Validate DataBlockEncodings are compatible");
   }
 
   @Override
@@ -115,7 +114,7 @@ public class PreUpgradeValidator extends AbstractHBaseTool {
   protected int doWork() throws Exception {
     boolean validationFailed = false;
     if (validateDBE || validateAll) {
-      if (validateDBE()) {
+      if (validateDBE() > 0) {
         validationFailed = true;
       }
     }
