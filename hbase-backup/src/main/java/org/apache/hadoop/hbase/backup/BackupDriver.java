@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BACKUP_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_LIST;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_PATH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_PATH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_RECORD_NUMBER;
@@ -46,13 +50,12 @@ import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  *
@@ -152,10 +155,12 @@ public class BackupDriver extends AbstractHBaseTool {
     addOptNoArg(OPTION_DEBUG, OPTION_DEBUG_DESC);
     addOptWithArg(OPTION_TABLE, OPTION_TABLE_DESC);
     addOptWithArg(OPTION_BANDWIDTH, OPTION_BANDWIDTH_DESC);
+    addOptWithArg(OPTION_LIST, OPTION_BACKUP_LIST_DESC);
     addOptWithArg(OPTION_WORKERS, OPTION_WORKERS_DESC);
     addOptWithArg(OPTION_RECORD_NUMBER, OPTION_RECORD_NUMBER_DESC);
     addOptWithArg(OPTION_SET, OPTION_SET_DESC);
     addOptWithArg(OPTION_PATH, OPTION_PATH_DESC);
+    addOptWithArg(OPTION_KEEP, OPTION_KEEP_DESC);
     addOptWithArg(OPTION_YARN_QUEUE_NAME, OPTION_YARN_QUEUE_NAME_DESC);
 
   }

@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BACKUP_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_LIST;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_PATH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_PATH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_RECORD_NUMBER;
@@ -61,11 +65,11 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * General backup commands, options and usage messages
@@ -105,8 +109,7 @@ public final class BackupCommands {
 
   public static final String HISTORY_CMD_USAGE = "Usage: hbase backup history [options]";
 
-  public static final String DELETE_CMD_USAGE = "Usage: hbase backup delete <backup_id>\n"
-      + "  backup_id       Backup image id\n";
+  public static final String DELETE_CMD_USAGE = "Usage: hbase backup delete [options]";
 
   public static final String REPAIR_CMD_USAGE = "Usage: hbase backup repair\n";
 
@@ -560,29 +563,93 @@ public final class BackupCommands {
 
     @Override
     public void execute() throws IOException {
-      if (cmdline == null || cmdline.getArgs() == null || cmdline.getArgs().length < 2) {
+
+      if (cmdline == null || cmdline.getArgs() == null || cmdline.getArgs().length < 1) {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
 
+      if (!cmdline.hasOption(OPTION_KEEP) && !cmdline.hasOption(OPTION_LIST)) {
+        printUsage();
+        throw new IOException(INCORRECT_USAGE);
+      }
       super.execute();
+      if (cmdline.hasOption(OPTION_KEEP)) {
+        executeDeleteOlderThan(cmdline);
+      } else if (cmdline.hasOption(OPTION_LIST)) {
+        executeDeleteListOfBackups(cmdline);
+      }
+    }
 
-      String[] args = cmdline.getArgs();
-      String[] backupIds = new String[args.length - 1];
-      System.arraycopy(args, 1, backupIds, 0, backupIds.length);
-      try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
+    private void executeDeleteOlderThan(CommandLine cmdline) throws IOException {
+      String value = cmdline.getOptionValue(OPTION_KEEP);
+      int days = 0;
+      try {
+        days = Integer.parseInt(value);
+      } catch (NumberFormatException e) {
+        throw new IOException(value + " is not an integer number");
+      }
+      final long fdays = days;
+      BackupInfo.Filter dateFilter = new BackupInfo.Filter() {
+        @Override
+        public boolean apply(BackupInfo info) {
+          long currentTime = EnvironmentEdgeManager.currentTime();
+          long maxTsToDelete = currentTime - fdays * 24 * 3600 * 1000;
+          return info.getCompleteTs() <= maxTsToDelete;
+        }
+      };
+      List<BackupInfo> history = null;
+      try (final BackupSystemTable sysTable = new BackupSystemTable(conn);
+          BackupAdminImpl admin = new BackupAdminImpl(conn)) {
+        history = sysTable.getBackupHistory(-1, dateFilter);
+        String[] backupIds = convertToBackupIds(history);
         int deleted = admin.deleteBackups(backupIds);
-        System.out.println("Deleted " + deleted + " backups. Total requested: " + (args.length -1));
+        System.out.println("Deleted " + deleted + " backups. Total older than " + days + " days: "
+            + backupIds.length);
       } catch (IOException e) {
         System.err.println("Delete command FAILED. Please run backup repair tool to restore backup "
-                + "system integrity");
+            + "system integrity");
         throw e;
       }
+    }
+
+    private String[] convertToBackupIds(List<BackupInfo> history) {
+      String[] ids = new String[history.size()];
+      for (int i = 0; i < ids.length; i++) {
+        ids[i] = history.get(i).getBackupId();
+      }
+      return ids;
+    }
+
+    private void executeDeleteListOfBackups(CommandLine cmdline) throws IOException {
+      String value = cmdline.getOptionValue(OPTION_LIST);
+      String[] backupIds = value.split(",");
+
+      try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
+        int deleted = admin.deleteBackups(backupIds);
+        System.out.println("Deleted " + deleted + " backups. Total requested: " + backupIds.length);
+      } catch (IOException e) {
+        System.err.println("Delete command FAILED. Please run backup repair tool to restore backup "
+            + "system integrity");
+        throw e;
+      }
+
     }
 
     @Override
     protected void printUsage() {
       System.out.println(DELETE_CMD_USAGE);
+      Options options = new Options();
+      options.addOption(OPTION_KEEP, true, OPTION_KEEP_DESC);
+      options.addOption(OPTION_LIST, true, OPTION_BACKUP_LIST_DESC);
+
+      HelpFormatter helpFormatter = new HelpFormatter();
+      helpFormatter.setLeftPadding(2);
+      helpFormatter.setDescPadding(8);
+      helpFormatter.setWidth(100);
+      helpFormatter.setSyntaxPrefix("Options:");
+      helpFormatter.printHelp(" ", null, options, USAGE_FOOTER);
+
     }
   }
 

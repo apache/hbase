@@ -65,8 +65,9 @@ public interface BackupRestoreConstants {
   String OPTION_TABLE_DESC = "Table name. If specified, only backup images,"
       + " which contain this table will be listed.";
 
-  String OPTION_TABLE_LIST = "l";
+  String OPTION_LIST = "l";
   String OPTION_TABLE_LIST_DESC = "Table name list, comma-separated.";
+  String OPTION_BACKUP_LIST_DESC = "Backup ids list, comma-separated.";
 
   String OPTION_BANDWIDTH = "b";
   String OPTION_BANDWIDTH_DESC = "Bandwidth per task (MapReduce task) in MB/s";
@@ -79,6 +80,10 @@ public interface BackupRestoreConstants {
 
   String OPTION_PATH = "p";
   String OPTION_PATH_DESC = "Backup destination root directory path";
+
+  String OPTION_KEEP = "k";
+  String OPTION_KEEP_DESC = "Specifies maximum age of backup (in days) to keep during bulk delete";
+
 
   String OPTION_TABLE_MAPPING = "m";
   String OPTION_TABLE_MAPPING_DESC =

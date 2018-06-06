@@ -28,7 +28,10 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -90,7 +93,7 @@ public class TestBackupDelete extends TestBackupBase {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     System.setOut(new PrintStream(baos));
 
-    String[] args = new String[] { "delete", backupId };
+    String[] args = new String[] { "delete", "-l", backupId };
     // Run backup
 
     try {
@@ -101,6 +104,59 @@ public class TestBackupDelete extends TestBackupBase {
     }
     LOG.info("delete_backup");
     String output = baos.toString();
+    LOG.info(baos.toString());
+    assertTrue(output.indexOf("Deleted 1 backups") >= 0);
+  }
+
+  @Test
+  public void testBackupPurgeOldBackupsCommand() throws Exception {
+    LOG.info("test backup delete (purge old backups) on a single table with data: command-line");
+    List<TableName> tableList = Lists.newArrayList(table1);
+    EnvironmentEdgeManager.injectEdge(new EnvironmentEdge() {
+      // time - 2 days
+      @Override
+      public long currentTime() {
+        return System.currentTimeMillis() - 2 * 24 * 3600 * 1000 ;
+      }
+    });
+    String backupId = fullTableBackup(tableList);
+    assertTrue(checkSucceeded(backupId));
+
+    EnvironmentEdgeManager.reset();
+
+    LOG.info("backup complete");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(baos));
+
+    // Purge all backups which are older than 3 days
+    // Must return 0 (no backups were purged)
+    String[] args = new String[] { "delete", "-k", "3" };
+    // Run backup
+
+    try {
+      int ret = ToolRunner.run(conf1, new BackupDriver(), args);
+      assertTrue(ret == 0);
+    } catch (Exception e) {
+      LOG.error("failed", e);
+      Assert.fail(e.getMessage());
+    }
+    String output = baos.toString();
+    LOG.info(baos.toString());
+    assertTrue(output.indexOf("Deleted 0 backups") >= 0);
+
+    // Purge all backups which are older than 1 days
+    // Must return 1 deleted backup
+    args = new String[] { "delete", "-k", "1" };
+    // Run backup
+    baos.reset();
+    try {
+      int ret = ToolRunner.run(conf1, new BackupDriver(), args);
+      assertTrue(ret == 0);
+    } catch (Exception e) {
+      LOG.error("failed", e);
+      Assert.fail(e.getMessage());
+    }
+    output = baos.toString();
     LOG.info(baos.toString());
     assertTrue(output.indexOf("Deleted 1 backups") >= 0);
   }
