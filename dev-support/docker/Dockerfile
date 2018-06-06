@@ -27,7 +27,11 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
        pylint \
        python-dateutil \
        rsync \
+       make \
+       gcc \
+       libc6-dev \
        ruby \
+       ruby-dev \
        shellcheck \
        wget \
        && \
