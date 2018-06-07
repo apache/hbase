@@ -370,7 +370,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       }
       String msg = "Cached an already cached block: " + cacheKey + " cb:" + cb.getCacheKey();
       msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
-      LOG.warn(msg);
+      LOG.debug(msg);
       return;
     }
     long currentSize = size.get();
