@@ -225,6 +225,12 @@ public interface MetricsRegionServerSource extends BaseSource {
   String WRITE_REQUEST_COUNT = "writeRequestCount";
   String WRITE_REQUEST_COUNT_DESC =
       "Number of mutation requests this region server has answered.";
+  String READ_REQUEST_RATE = "readRequestRate";
+  String READ_REQUEST_RATE_DESC =
+      "Rate of answering the read requests by this region server per second.";
+  String WRITE_REQUEST_RATE = "writeRequestRate";
+  String WRITE_REQUEST_RATE_DESC =
+      "Rate of answering the mutation requests by this region server per second.";
   String CHECK_MUTATE_FAILED_COUNT = "checkMutateFailedCount";
   String CHECK_MUTATE_FAILED_COUNT_DESC =
       "Number of Check and Mutate calls that failed the checks.";

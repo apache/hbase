@@ -329,6 +329,10 @@ public class MetricsRegionServerSourceImpl
           .addGauge(Interns.info(RS_START_TIME_NAME, RS_START_TIME_DESC),
               rsWrap.getStartCode())
           .addGauge(Interns.info(AVERAGE_REGION_SIZE, AVERAGE_REGION_SIZE_DESC), rsWrap.getAverageRegionSize())
+          .addGauge(Interns.info(READ_REQUEST_RATE, READ_REQUEST_RATE_DESC),
+              rsWrap.getReadRequestsRate())
+          .addGauge(Interns.info(WRITE_REQUEST_RATE, WRITE_REQUEST_RATE_DESC),
+              rsWrap.getWriteRequestsRate())
           .addCounter(Interns.info(TOTAL_REQUEST_COUNT, TOTAL_REQUEST_COUNT_DESC),
               rsWrap.getTotalRequestCount())
           .addCounter(Interns.info(READ_REQUEST_COUNT, READ_REQUEST_COUNT_DESC),

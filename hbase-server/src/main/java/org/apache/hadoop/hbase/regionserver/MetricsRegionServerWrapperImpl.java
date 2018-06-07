@@ -65,6 +65,8 @@ class MetricsRegionServerWrapperImpl
   private volatile double requestsPerSecond = 0.0;
   private volatile long readRequestsCount = 0;
   private volatile long writeRequestsCount = 0;
+  private volatile double readRequestsRate = 0;
+  private volatile double writeRequestsRate = 0;
   private volatile long checkAndMutateChecksFailed = 0;
   private volatile long checkAndMutateChecksPassed = 0;
   private volatile long storefileIndexSize = 0;
@@ -392,6 +394,16 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public double getReadRequestsRate() {
+    return readRequestsRate;
+  }
+
+  @Override
+  public double getWriteRequestsRate() {
+    return writeRequestsRate;
+  }
+
+  @Override
   public long getRpcGetRequestsCount() {
     return regionServer.rpcServices.rpcGetRequestCount.get();
   }
@@ -503,6 +515,8 @@ class MetricsRegionServerWrapperImpl
 
     private long lastRan = 0;
     private long lastRequestCount = 0;
+    private long lastReadRequestsCount = 0;
+    private long lastWriteRequestsCount = 0;
 
     @Override
     synchronized public void run() {
@@ -615,6 +629,21 @@ class MetricsRegionServerWrapperImpl
           requestsPerSecond =
               (currentRequestCount - lastRequestCount) / ((currentTime - lastRan) / 1000.0);
           lastRequestCount = currentRequestCount;
+
+          long intervalReadRequestsCount = tempReadRequestsCount - lastReadRequestsCount;
+          long intervalWriteRequestsCount = tempWriteRequestsCount - lastWriteRequestsCount;
+
+          double readRequestsRatePerMilliSecond = ((double)intervalReadRequestsCount/
+              (double)period);
+          double writeRequestsRatePerMilliSecond = ((double)intervalWriteRequestsCount/
+              (double)period);
+
+          readRequestsRate = readRequestsRatePerMilliSecond * 1000.0;
+          writeRequestsRate = writeRequestsRatePerMilliSecond * 1000.0;
+
+          lastReadRequestsCount = tempReadRequestsCount;
+          lastWriteRequestsCount = tempWriteRequestsCount;
+
         }
         lastRan = currentTime;
 
