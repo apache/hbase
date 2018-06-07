@@ -101,6 +101,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public double getReadRequestsRatePerSecond() {
+    return 10.0;
+  }
+
+  @Override
   public long getTotalRowActionRequestCount() {
     return getReadRequestsCount() + getWriteRequestsCount();
   }
@@ -118,6 +123,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getWriteRequestsCount() {
     return 707;
+  }
+
+  @Override
+  public double getWriteRequestsRatePerSecond() {
+    return 10.0;
   }
 
   @Override
