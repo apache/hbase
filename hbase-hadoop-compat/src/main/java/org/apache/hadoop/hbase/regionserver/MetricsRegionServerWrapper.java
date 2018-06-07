@@ -141,6 +141,11 @@ public interface MetricsRegionServerWrapper {
   long getCpRequestsCount();
 
   /**
+   * Get the rate of read requests per second to regions hosted on this region server.
+   */
+  double getReadRequestsRatePerSecond();
+
+  /**
    * Get the number of filtered read requests to regions hosted on this region server.
    */
   long getFilteredReadRequestsCount();
@@ -149,6 +154,11 @@ public interface MetricsRegionServerWrapper {
    * Get the number of write requests to regions hosted on this region server.
    */
   long getWriteRequestsCount();
+
+  /**
+   * Get the rate of write requests per second to regions hosted on this region server.
+   */
+  double getWriteRequestsRatePerSecond();
 
   /**
    * Get the number of CAS operations that failed.

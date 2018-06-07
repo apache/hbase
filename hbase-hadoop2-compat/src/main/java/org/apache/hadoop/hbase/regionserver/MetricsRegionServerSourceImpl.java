@@ -546,7 +546,11 @@ public class MetricsRegionServerSourceImpl
             .addGauge(Interns.info(MOB_FILE_CACHE_COUNT, MOB_FILE_CACHE_COUNT_DESC),
                     rsWrap.getMobFileCacheCount())
             .addGauge(Interns.info(MOB_FILE_CACHE_HIT_PERCENT, MOB_FILE_CACHE_HIT_PERCENT_DESC),
-                    rsWrap.getMobFileCacheHitPercent());
+                    rsWrap.getMobFileCacheHitPercent())
+            .addGauge(Interns.info(READ_REQUEST_RATE_PER_SECOND, READ_REQUEST_RATE_DESC),
+                    rsWrap.getReadRequestsRatePerSecond())
+            .addGauge(Interns.info(WRITE_REQUEST_RATE_PER_SECOND, WRITE_REQUEST_RATE_DESC),
+                    rsWrap.getWriteRequestsRatePerSecond());
   }
 
   @Override

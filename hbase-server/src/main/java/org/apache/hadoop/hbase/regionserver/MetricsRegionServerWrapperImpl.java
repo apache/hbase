@@ -74,9 +74,11 @@ class MetricsRegionServerWrapperImpl
   private volatile long numReferenceFiles = 0;
   private volatile double requestsPerSecond = 0.0;
   private volatile long readRequestsCount = 0;
+  private volatile double readRequestsRatePerSecond = 0;
   private volatile long cpRequestsCount = 0;
   private volatile long filteredReadRequestsCount = 0;
   private volatile long writeRequestsCount = 0;
+  private volatile double writeRequestsRatePerSecond = 0;
   private volatile long checkAndMutateChecksFailed = 0;
   private volatile long checkAndMutateChecksPassed = 0;
   private volatile long storefileIndexSize = 0;
@@ -525,6 +527,11 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public double getReadRequestsRatePerSecond() {
+    return readRequestsRatePerSecond;
+  }
+
+  @Override
   public long getFilteredReadRequestsCount() {
     return filteredReadRequestsCount;
   }
@@ -532,6 +539,11 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getWriteRequestsCount() {
     return writeRequestsCount;
+  }
+
+  @Override
+  public double getWriteRequestsRatePerSecond() {
+    return writeRequestsRatePerSecond;
   }
 
   @Override
@@ -716,6 +728,8 @@ class MetricsRegionServerWrapperImpl
 
     private long lastRan = 0;
     private long lastRequestCount = 0;
+    private long lastReadRequestsCount = 0;
+    private long lastWriteRequestsCount = 0;
 
     @Override
     synchronized public void run() {
@@ -852,6 +866,21 @@ class MetricsRegionServerWrapperImpl
           requestsPerSecond = (currentRequestCount - lastRequestCount) /
               ((currentTime - lastRan) / 1000.0);
           lastRequestCount = currentRequestCount;
+
+          long intervalReadRequestsCount = tempReadRequestsCount - lastReadRequestsCount;
+          long intervalWriteRequestsCount = tempWriteRequestsCount - lastWriteRequestsCount;
+
+          double readRequestsRatePerMilliSecond = ((double)intervalReadRequestsCount/
+              (double)period);
+          double writeRequestsRatePerMilliSecond = ((double)intervalWriteRequestsCount/
+              (double)period);
+
+          readRequestsRatePerSecond = readRequestsRatePerMilliSecond * 1000.0;
+          writeRequestsRatePerSecond = writeRequestsRatePerMilliSecond * 1000.0;
+
+          lastReadRequestsCount = tempReadRequestsCount;
+          lastWriteRequestsCount = tempWriteRequestsCount;
+
         }
         lastRan = currentTime;
 

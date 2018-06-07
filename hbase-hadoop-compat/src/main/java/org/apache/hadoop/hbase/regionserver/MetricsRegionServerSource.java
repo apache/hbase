@@ -256,6 +256,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String READ_REQUEST_COUNT = "readRequestCount";
   String READ_REQUEST_COUNT_DESC =
       "Number of read requests with non-empty Results that this RegionServer has answered.";
+  String READ_REQUEST_RATE_PER_SECOND = "readRequestRatePerSecond";
+  String READ_REQUEST_RATE_DESC =
+      "Rate of answering the read requests by this region server per second.";
   String CP_REQUEST_COUNT = "cpRequestCount";
   String CP_REQUEST_COUNT_DESC =
       "Number of coprocessor service requests this region server has answered.";
@@ -265,6 +268,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String WRITE_REQUEST_COUNT = "writeRequestCount";
   String WRITE_REQUEST_COUNT_DESC =
       "Number of mutation requests this RegionServer has answered.";
+  String WRITE_REQUEST_RATE_PER_SECOND = "writeRequestRatePerSecond";
+  String WRITE_REQUEST_RATE_DESC =
+      "Rate of answering the mutation requests by this region server per second.";
   String CHECK_MUTATE_FAILED_COUNT = "checkMutateFailedCount";
   String CHECK_MUTATE_FAILED_COUNT_DESC =
       "Number of Check and Mutate calls that failed the checks.";
