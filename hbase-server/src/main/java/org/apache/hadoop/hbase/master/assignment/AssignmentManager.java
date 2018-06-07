@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -1235,9 +1237,14 @@ public class AssignmentManager implements ServerListener {
     // TODO: use a thread pool
     regionStateStore.visitMeta(new RegionStateStore.RegionStateVisitor() {
       @Override
-      public void visitRegionState(final RegionInfo regionInfo, final State state,
+      public void visitRegionState(Result result, final RegionInfo regionInfo, final State state,
           final ServerName regionLocation, final ServerName lastHost, final long openSeqNum) {
-        final RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
+        if (state == null && regionLocation == null && lastHost == null &&
+            openSeqNum == SequenceId.NO_SEQUENCE_ID) {
+          // This is a row with nothing in it.
+          LOG.warn("Skipping empty row={}", result);
+          return;
+        }
         State localState = state;
         if (localState == null) {
           // No region state column data in hbase:meta table! Are I doing a rolling upgrade from
@@ -1245,8 +1252,10 @@ public class AssignmentManager implements ServerListener {
           // In any of these cases, state is empty. For now, presume OFFLINE but there are probably
           // cases where we need to probe more to be sure this correct; TODO informed by experience.
           LOG.info(regionInfo.getEncodedName() + " regionState=null; presuming " + State.OFFLINE);
+
           localState = State.OFFLINE;
         }
+        final RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
         synchronized (regionNode) {
           if (!regionNode.isInTransition()) {
             regionNode.setState(localState);
