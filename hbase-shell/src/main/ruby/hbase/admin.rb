@@ -86,6 +86,19 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Switch compaction on/off at runtime on a region server
+    def compaction_switch(on_or_off, regionserver_names)
+      region_servers = regionserver_names.flatten.compact
+      servers = java.util.ArrayList.new
+      if region_servers.any?
+        region_servers.each do |s|
+          servers.add(s)
+        end
+      end
+      @admin.compactionSwitch(java.lang.Boolean.valueOf(on_or_off), servers)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Gets compaction state for specified table
     def getCompactionState(table_name)
       @admin.getCompactionState(TableName.valueOf(table_name)).name

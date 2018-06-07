@@ -43,4 +43,10 @@ public interface CompactionRequester {
    */
   void requestCompaction(HRegion region, HStore store, String why, int priority,
       CompactionLifeCycleTracker tracker, @Nullable User user) throws IOException;
+
+  /**
+   * on/off compaction
+   */
+  void switchCompaction(boolean onOrOff);
+
 }

@@ -734,6 +734,13 @@ possible configurations would overwhelm and obscure the important.
       occur, it takes longer to complete.</description>
   </property>
   <property>
+    <name>hbase.regionserver.compaction.enabled</name>
+    <value>true</value>
+    <description>Enable/disable compactions on by setting true/false.
+      We can further switch compactions dynamically with the
+      compaction_switch shell command.</description>
+  </property>
+  <property>
     <name>hbase.hstore.flusher.count</name>
     <value>2</value>
     <description> The number of flush threads. With fewer threads, the MemStore flushes will be

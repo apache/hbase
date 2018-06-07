@@ -114,6 +114,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompac
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
@@ -1262,6 +1264,51 @@ public class HBaseAdmin implements Admin {
   public void compactRegion(final byte[] regionName, final byte[] columnFamily)
     throws IOException {
     compactRegion(regionName, columnFamily, false);
+  }
+
+  @Override
+  public Map<ServerName, Boolean> compactionSwitch(boolean switchState, List<String>
+      serverNamesList) throws IOException {
+    List<ServerName> serverList = new ArrayList<>();
+    if (serverNamesList.isEmpty()) {
+      ClusterMetrics status = getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
+      serverList.addAll(status.getLiveServerMetrics().keySet());
+    } else {
+      for (String regionServerName: serverNamesList) {
+        ServerName serverName = null;
+        try {
+          serverName = ServerName.valueOf(regionServerName);
+        } catch (Exception e) {
+          throw new IllegalArgumentException(String.format("Invalid ServerName format: %s",
+              regionServerName));
+        }
+        if (serverName == null) {
+          throw new IllegalArgumentException(String.format("Null ServerName: %s",
+              regionServerName));
+        }
+        serverList.add(serverName);
+      }
+    }
+    Map<ServerName, Boolean> res = new HashMap<>(serverList.size());
+    for (ServerName serverName: serverList) {
+      boolean prev_state = switchCompact(this.connection.getAdmin(serverName), switchState);
+      res.put(serverName, prev_state);
+    }
+    return res;
+  }
+
+  private Boolean switchCompact(AdminService.BlockingInterface admin, boolean onOrOff)
+      throws IOException {
+    return executeCallable(new RpcRetryingCallable<Boolean>() {
+      @Override protected Boolean rpcCall(int callTimeout) throws Exception {
+        HBaseRpcController controller = rpcControllerFactory.newController();
+        CompactionSwitchRequest request =
+            CompactionSwitchRequest.newBuilder().setEnabled(onOrOff).build();
+        CompactionSwitchResponse compactionSwitchResponse =
+            admin.compactionSwitch(controller, request);
+        return compactionSwitchResponse.getPrevState();
+      }
+    });
   }
 
   @Override

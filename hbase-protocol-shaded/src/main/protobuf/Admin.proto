@@ -157,6 +157,14 @@ message CompactRegionRequest {
 message CompactRegionResponse {
 }
 
+message CompactionSwitchRequest {
+  required bool enabled = 1;
+}
+
+message CompactionSwitchResponse {
+  required bool prev_state = 1;
+}
+
 message UpdateFavoredNodesRequest {
   repeated RegionUpdateInfo update_info = 1;
 
@@ -292,6 +300,9 @@ service AdminService {
 
   rpc FlushRegion(FlushRegionRequest)
     returns(FlushRegionResponse);
+
+  rpc CompactionSwitch(CompactionSwitchRequest)
+    returns(CompactionSwitchResponse);
 
   rpc CompactRegion(CompactRegionRequest)
     returns(CompactRegionResponse);

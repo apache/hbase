@@ -1845,6 +1845,14 @@ See <<managed.compactions>>.
 Compactions do not perform region merges.
 See <<ops.regionmgt.merge>> for more information on region merging.
 
+.Compaction Switch
+We can switch on and off the compactions at region servers. Switching off compactions will also
+interrupt any currently ongoing compactions. It can be done dynamically using the "compaction_switch"
+command from hbase shell. If done from the command line, this setting will be lost on restart of the
+server. To persist the changes across region servers modify the configuration hbase.regionserver
+.compaction.enabled in hbase-site.xml and restart HBase.
+
+
 [[compaction.file.selection]]
 ===== Compaction Policy - HBase 0.96.x and newer
 
