@@ -40,12 +40,15 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -338,7 +341,40 @@ public class TestFSUtils {
 
   @Test
   public void testSetStoragePolicyDefault() throws Exception {
+    verifyNoHDFSApiInvocationForDefaultPolicy();
     verifyFileInDirWithStoragePolicy(HConstants.DEFAULT_WAL_STORAGE_POLICY);
+  }
+
+  /**
+   * Note: currently the default policy is set to defer to HDFS and this case is to verify the
+   * logic, will need to remove the check if the default policy is changed
+   */
+  private void verifyNoHDFSApiInvocationForDefaultPolicy() {
+    FileSystem testFs = new AlwaysFailSetStoragePolicyFileSystem();
+    // There should be no exception thrown when setting to default storage policy, which indicates
+    // the HDFS API hasn't been called
+    try {
+      FSUtils.setStoragePolicy(testFs, new Path("non-exist"), HConstants.DEFAULT_WAL_STORAGE_POLICY,
+        true);
+    } catch (IOException e) {
+      Assert.fail("Should have bypassed the FS API when setting default storage policy");
+    }
+    // There should be exception thrown when given non-default storage policy, which indicates the
+    // HDFS API has been called
+    try {
+      FSUtils.setStoragePolicy(testFs, new Path("non-exist"), "HOT", true);
+      Assert.fail("Should have invoked the FS API but haven't");
+    } catch (IOException e) {
+      // expected given an invalid path
+    }
+  }
+
+  class AlwaysFailSetStoragePolicyFileSystem extends DistributedFileSystem {
+    @Override
+    public void setStoragePolicy(final Path src, final String policyName)
+            throws IOException {
+      throw new IOException("The setStoragePolicy method is invoked");
+    }
   }
 
   /* might log a warning, but still work. (always warning on Hadoop < 2.6.0) */
@@ -347,10 +383,12 @@ public class TestFSUtils {
     verifyFileInDirWithStoragePolicy("ALL_SSD");
   }
 
+  final String INVALID_STORAGE_POLICY = "1772";
+
   /* should log a warning, but still work. (different warning on Hadoop < 2.6.0) */
   @Test
   public void testSetStoragePolicyInvalid() throws Exception {
-    verifyFileInDirWithStoragePolicy("1772");
+    verifyFileInDirWithStoragePolicy(INVALID_STORAGE_POLICY);
   }
 
   // Here instead of TestCommonFSUtils because we need a minicluster
@@ -365,12 +403,25 @@ public class TestFSUtils {
       Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
       fs.mkdirs(testDir);
 
-      FSUtils.setStoragePolicy(fs, conf, testDir, HConstants.WAL_STORAGE_POLICY,
-          HConstants.DEFAULT_WAL_STORAGE_POLICY);
+      String storagePolicy =
+          conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
+      FSUtils.setStoragePolicy(fs, testDir, storagePolicy);
 
       String file = UUID.randomUUID().toString();
       Path p = new Path(testDir, file);
       WriteDataToHDFS(fs, p, 4096);
+      HFileSystem hfs = new HFileSystem(fs);
+      String policySet = hfs.getStoragePolicyName(p);
+      LOG.debug("The storage policy of path " + p + " is " + policySet);
+      if (policy.equals(HConstants.DEFER_TO_HDFS_STORAGE_POLICY)
+              || policy.equals(INVALID_STORAGE_POLICY)) {
+        String hdfsDefaultPolicy = hfs.getStoragePolicyName(hfs.getHomeDirectory());
+        LOG.debug("The default hdfs storage policy (indicated by home path: "
+                + hfs.getHomeDirectory() + ") is " + hdfsDefaultPolicy);
+        Assert.assertEquals(hdfsDefaultPolicy, policySet);
+      } else {
+        Assert.assertEquals(policy, policySet);
+      }
       // will assert existance before deleting.
       cleanupFile(fs, testDir);
     } finally {
