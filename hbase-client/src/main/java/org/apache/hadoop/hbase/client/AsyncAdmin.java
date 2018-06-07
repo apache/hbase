@@ -1240,4 +1240,17 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void>  cloneTableSchema(final TableName tableName,
       final TableName newTableName, final boolean preserveSplits);
+
+  /**
+   * Turn the compaction on or off. Disabling compactions will also interrupt any currently ongoing
+   * compactions. This state is ephemeral. The setting will be lost on restart. Compaction
+   * can also be enabled/disabled by modifying configuration hbase.regionserver.compaction.enabled
+   * in hbase-site.xml.
+   *
+   * @param switchState     Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @param serverNamesList list of region servers.
+   * @return Previous compaction states for region servers
+   */
+  CompletableFuture<Map<ServerName, Boolean>> compactionSwitch(boolean switchState,
+      List<String> serverNamesList);
 }

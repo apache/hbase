@@ -334,6 +334,7 @@ Shell.load_command_group(
     is_in_maintenance_mode
     close_region
     compact
+    compaction_switch
     flush
     major_compact
     move

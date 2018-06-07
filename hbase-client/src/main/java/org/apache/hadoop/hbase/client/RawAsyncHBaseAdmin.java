@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -104,6 +105,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -2984,6 +2987,85 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 });
           });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Map<ServerName, Boolean>> compactionSwitch(boolean switchState,
+      List<String> serverNamesList) {
+    CompletableFuture<Map<ServerName, Boolean>> future = new CompletableFuture<>();
+    getRegionServerList(serverNamesList).whenComplete((serverNames, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      //Accessed by multiple threads.
+      Map<ServerName, Boolean> serverStates = new ConcurrentHashMap<>(serverNames.size());
+      List<CompletableFuture<Boolean>> futures = new ArrayList<>(serverNames.size());
+      serverNames.stream().forEach(serverName -> {
+        futures.add(switchCompact(serverName, switchState).whenComplete((serverState, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            serverStates.put(serverName, serverState);
+          }
+        }));
+      });
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
+          .whenComplete((ret, err3) -> {
+            if (!future.isCompletedExceptionally()) {
+              if (err3 != null) {
+                future.completeExceptionally(err3);
+              } else {
+                future.complete(serverStates);
+              }
+            }
+          });
+    });
+    return future;
+  }
+
+  private CompletableFuture<List<ServerName>> getRegionServerList(List<String> serverNamesList) {
+    CompletableFuture<List<ServerName>> future = new CompletableFuture<>();
+    if (serverNamesList.isEmpty()) {
+      CompletableFuture<ClusterMetrics> clusterMetricsCompletableFuture =
+          getClusterMetrics(EnumSet.of(Option
+              .LIVE_SERVERS));
+      clusterMetricsCompletableFuture.whenComplete((clusterMetrics, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          future.complete(new ArrayList<>(clusterMetrics.getLiveServerMetrics().keySet()));
+        }
+      });
+      return future;
+    } else {
+      List<ServerName> serverList = new ArrayList<>();
+      for (String regionServerName: serverNamesList) {
+        ServerName serverName = null;
+        try {
+          serverName = ServerName.valueOf(regionServerName);
+        } catch (Exception e) {
+          future.completeExceptionally(new IllegalArgumentException(
+              String.format("ServerName format: %s", regionServerName)));
+        }
+        if (serverName == null) {
+          future.completeExceptionally(new IllegalArgumentException(
+              String.format("Null ServerName: %s", regionServerName)));
+        }
+      }
+      future.complete(serverList);
+    }
+    return future;
+  }
+
+  private CompletableFuture<Boolean> switchCompact(ServerName serverName, boolean onOrOff) {
+    return this
+        .<Boolean>newAdminCaller()
+        .serverName(serverName)
+        .action((controller, stub) -> this.<CompactionSwitchRequest, CompactionSwitchResponse,
+            Boolean>adminCall(controller, stub,
+            CompactionSwitchRequest.newBuilder().setEnabled(onOrOff).build(), (s, c, req, done) ->
+            s.compactionSwitch(c, req, done), resp -> resp.getPrevState())).call();
   }
 
   @Override

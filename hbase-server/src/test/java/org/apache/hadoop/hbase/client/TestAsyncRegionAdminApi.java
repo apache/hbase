@@ -26,6 +26,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -304,6 +306,42 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     Thread.sleep(5000);
     int countAfterMajorCompaction = countStoreFilesInFamilies(regions, families);
     assertEquals(3, countAfterMajorCompaction);
+  }
+
+  @Test
+  public void testCompactionSwitchStates() throws Exception {
+    // Create a table with regions
+    byte[] family = Bytes.toBytes("family");
+    byte[][] families = {family, Bytes.add(family, Bytes.toBytes("2")),
+        Bytes.add(family, Bytes.toBytes("3"))};
+    createTableWithDefaultConf(tableName, null, families);
+    loadData(tableName, families, 3000, 8);
+    List<Region> regions = new ArrayList<>();
+    TEST_UTIL
+        .getHBaseCluster()
+        .getLiveRegionServerThreads()
+        .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getRegions(tableName)));
+    CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture =
+        admin.compactionSwitch(true, new ArrayList<>());
+    Map<ServerName, Boolean> pairs = listCompletableFuture.get();
+    for (Map.Entry<ServerName, Boolean> p : pairs.entrySet()) {
+      assertEquals("Default compaction state, expected=enabled actual=disabled",
+          true, p.getValue());
+    }
+    CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture1 =
+        admin.compactionSwitch(false, new ArrayList<>());
+    Map<ServerName, Boolean> pairs1 = listCompletableFuture1.get();
+    for (Map.Entry<ServerName, Boolean> p : pairs1.entrySet()) {
+      assertEquals("Last compaction state, expected=enabled actual=disabled",
+          true, p.getValue());
+    }
+    CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture2 =
+        admin.compactionSwitch(true, new ArrayList<>());
+    Map<ServerName, Boolean> pairs2 = listCompletableFuture2.get();
+    for (Map.Entry<ServerName, Boolean> p : pairs2.entrySet()) {
+      assertEquals("Last compaction state, expected=disabled actual=enabled",
+          false, p.getValue());
+    }
   }
 
   @Test

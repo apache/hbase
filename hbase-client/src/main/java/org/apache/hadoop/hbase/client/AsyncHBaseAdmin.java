@@ -752,4 +752,10 @@ class AsyncHBaseAdmin implements AsyncAdmin {
       boolean preserveSplits) {
     return wrap(rawAdmin.cloneTableSchema(tableName, newTableName, preserveSplits));
   }
+
+  @Override
+  public CompletableFuture<Map<ServerName, Boolean>> compactionSwitch(boolean switchState,
+      List<String> serverNamesList) {
+    return wrap(rawAdmin.compactionSwitch(switchState, serverNamesList));
+  }
 }
