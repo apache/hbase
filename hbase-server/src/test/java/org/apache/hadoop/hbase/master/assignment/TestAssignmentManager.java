@@ -765,6 +765,8 @@ public class TestAssignmentManager {
         case 0: throw new ServerNotRunningYetException("wait on server startup");
         case 1: throw new SocketTimeoutException("simulate socket timeout");
         case 2: throw new RemoteException("java.io.IOException", "unexpected exception");
+        default:
+          // fall out
       }
       return super.sendRequest(server, req);
     }
@@ -785,6 +787,8 @@ public class TestAssignmentManager {
           LOG.info("Return transition report that FAILED_OPEN/FAILED_OPENING response");
           sendTransitionReport(server, openReq.getRegion(), TransitionCode.FAILED_OPEN);
           return OpenRegionResponse.RegionOpeningState.FAILED_OPENING;
+        default:
+          // fall out
       }
       // The procedure on master will just hang forever because nothing comes back
       // from the RS in this case.

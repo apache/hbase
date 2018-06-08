@@ -83,6 +83,7 @@
                 <arg>-XepDisableWarningsInGeneratedCode</arg>
                 <arg>-Xep:FallThrough:OFF</arg> <!-- already in findbugs -->
                 <arg>-Xep:ClassNewInstance:ERROR</arg>
+                <arg>-Xep:MissingDefault:ERROR</arg>
               </compilerArgs>
               <annotationProcessorPaths>
                 <path>

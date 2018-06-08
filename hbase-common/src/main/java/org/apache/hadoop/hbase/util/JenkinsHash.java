@@ -101,7 +101,7 @@ public class JenkinsHash extends Hash {
    * <p>Use for hash table lookup, or anything where one collision in 2^^32 is
    * acceptable.  Do NOT use for cryptographic purposes.
   */
-  @SuppressWarnings("fallthrough")
+  @SuppressWarnings({"fallthrough", "MissingDefault"})
   @Override
   public <T> int hash(HashKey<T> hashKey, int initval) {
     int length = hashKey.length();

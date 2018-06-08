@@ -61,7 +61,6 @@
     <module name="EqualsHashCode"/>
     <module name="IllegalInstantiation"/>
     <module name="InnerAssignment"/>
-    <module name="MissingSwitchDefault"/>
     <module name="NoFinalizer"/>
 
     <!-- Import Checks
