@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.BaseConfigurable;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
+import java.util.Map;
+
 /**
  * Base class for file cleaners which allows subclasses to implement a simple
  * isFileDeletable method (which used to be the FileCleanerDelegate contract).
@@ -37,6 +39,11 @@ implements FileCleanerDelegate {
       public boolean apply(FileStatus file) {
         return isFileDeletable(file);
       }});
+  }
+
+  @Override
+  public void init(Map<String, Object> params) {
+    // subclass could override it if needed.
   }
 
   /**
