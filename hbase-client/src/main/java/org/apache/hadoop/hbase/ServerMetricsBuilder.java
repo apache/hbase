@@ -48,14 +48,23 @@ public final class ServerMetricsBuilder {
     return newBuilder(sn).build();
   }
 
+  public static ServerMetrics of(ServerName sn, int versionNumber) {
+    return newBuilder(sn).setVersionNumber(versionNumber).build();
+  }
+
   public static ServerMetrics toServerMetrics(ClusterStatusProtos.LiveServerInfo serverInfo) {
-    return toServerMetrics(ProtobufUtil.toServerName(serverInfo.getServer()),
+    return toServerMetrics(ProtobufUtil.toServerName(serverInfo.getServer()), 0,
         serverInfo.getServerLoad());
   }
 
   public static ServerMetrics toServerMetrics(ServerName serverName,
       ClusterStatusProtos.ServerLoad serverLoadPB) {
-    return ServerMetricsBuilder.newBuilder(serverName)
+    return toServerMetrics(serverName, 0, serverLoadPB);
+  }
+
+  public static ServerMetrics toServerMetrics(ServerName serverName, int versionNumber,
+      ClusterStatusProtos.ServerLoad serverLoadPB) {
+    return ServerMetricsBuilder.newBuilder(serverName).setVersionNumber(versionNumber)
         .setRequestCountPerSecond(serverLoadPB.getNumberOfRequests())
         .setRequestCount(serverLoadPB.getTotalNumberOfRequests())
         .setInfoServerPort(serverLoadPB.getInfoServerPort())
@@ -110,6 +119,7 @@ public final class ServerMetricsBuilder {
   }
 
   private final ServerName serverName;
+  private int versionNumber;
   private long requestCountPerSecond;
   private long requestCount;
   private Size usedHeapSize = Size.ZERO;
@@ -124,6 +134,11 @@ public final class ServerMetricsBuilder {
   private long lastReportTimestamp = 0;
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
+  }
+
+  public ServerMetricsBuilder setVersionNumber(int versionNumber) {
+    this.versionNumber = versionNumber;
+    return this;
   }
 
   public ServerMetricsBuilder setRequestCountPerSecond(long value) {
@@ -184,6 +199,7 @@ public final class ServerMetricsBuilder {
   public ServerMetrics build() {
     return new ServerMetricsImpl(
         serverName,
+        versionNumber,
         requestCountPerSecond,
         requestCount,
         usedHeapSize,
@@ -199,6 +215,7 @@ public final class ServerMetricsBuilder {
 
   private static class ServerMetricsImpl implements ServerMetrics {
     private final ServerName serverName;
+    private final int versionNumber;
     private final long requestCountPerSecond;
     private final long requestCount;
     private final Size usedHeapSize;
@@ -212,11 +229,13 @@ public final class ServerMetricsBuilder {
     private final long reportTimestamp;
     private final long lastReportTimestamp;
 
-    ServerMetricsImpl(ServerName serverName, long requestCountPerSecond, long requestCount,
-      Size usedHeapSize, Size maxHeapSize, int infoServerPort, List<ReplicationLoadSource> sources,
-      ReplicationLoadSink sink, Map<byte[], RegionMetrics> regionStatus,
-      Set<String> coprocessorNames, long reportTimestamp, long lastReportTimestamp) {
+    ServerMetricsImpl(ServerName serverName, int versionNumber, long requestCountPerSecond,
+        long requestCount, Size usedHeapSize, Size maxHeapSize, int infoServerPort,
+        List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
+        Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
+        long lastReportTimestamp) {
       this.serverName = Preconditions.checkNotNull(serverName);
+      this.versionNumber = versionNumber;
       this.requestCountPerSecond = requestCountPerSecond;
       this.requestCount = requestCount;
       this.usedHeapSize = Preconditions.checkNotNull(usedHeapSize);
@@ -234,6 +253,12 @@ public final class ServerMetricsBuilder {
     public ServerName getServerName() {
       return serverName;
     }
+
+    @Override
+    public int getVersionNumber() {
+      return versionNumber;
+    }
+
     @Override
     public long getRequestCountPerSecond() {
       return requestCountPerSecond;

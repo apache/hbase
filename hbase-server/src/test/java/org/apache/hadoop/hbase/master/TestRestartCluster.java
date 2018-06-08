@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -209,6 +210,33 @@ public class TestRestartCluster {
         "Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
       assertEquals(entry.getKey().toString(), oldServer.getAddress(), currentServer.getAddress());
       assertNotEquals(oldServer.getStartcode(), currentServer.getStartcode());
+    }
+  }
+
+  @Test
+  public void testNewStartedRegionServerVersion() throws Exception {
+    UTIL.startMiniCluster(1);
+
+    // Start 3 new region server
+    Thread t = new Thread(() -> {
+      for (int i = 0; i < 3; i++) {
+        try {
+          JVMClusterUtil.RegionServerThread newRS = UTIL.getMiniHBaseCluster().startRegionServer();
+          newRS.waitForServerOnline();
+        } catch (IOException e) {
+          LOG.error("Failed to start a new RS", e);
+        }
+      }
+    });
+    t.start();
+
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    while (t.isAlive()) {
+      List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
+      for (ServerName serverName : serverNames) {
+        assertNotEquals(0, master.getServerManager().getServerVersion(serverName));
+      }
+      Thread.sleep(100);
     }
   }
 }

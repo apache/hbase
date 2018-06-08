@@ -913,7 +913,7 @@ public class AssignmentManager implements ServerListener {
     master.getMasterProcedureExecutor().submitProcedure(createSplitProcedure(parent, splitKey));
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the split
-    if (regionStates.getOrCreateServer(serverName).getVersionNumber() < 0x0200000) {
+    if (master.getServerManager().getServerVersion(serverName) < 0x0200000) {
       throw new UnsupportedOperationException(String.format(
         "Split handled by the master: parent=%s hriA=%s hriB=%s", parent.getShortNameToLog(), hriA, hriB));
     }
@@ -936,7 +936,7 @@ public class AssignmentManager implements ServerListener {
     master.getMasterProcedureExecutor().submitProcedure(createMergeProcedure(hriA, hriB));
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the merge
-    if (regionStates.getOrCreateServer(serverName).getVersionNumber() < 0x0200000) {
+    if (master.getServerManager().getServerVersion(serverName) < 0x0200000) {
       throw new UnsupportedOperationException(String.format(
         "Merge not handled yet: regionState=%s merged=%s hriA=%s hriB=%s", state, merged, hriA,
           hriB));
@@ -948,13 +948,13 @@ public class AssignmentManager implements ServerListener {
   // ============================================================================================
   /**
    * the master will call this method when the RS send the regionServerReport().
-   * the report will contains the "hbase version" and the "online regions".
+   * the report will contains the "online regions".
    * this method will check the the online regions against the in-memory state of the AM,
    * if there is a mismatch we will try to fence out the RS with the assumption
    * that something went wrong on the RS side.
    */
-  public void reportOnlineRegions(final ServerName serverName,
-      final int versionNumber, final Set<byte[]> regionNames) throws YouAreDeadException {
+  public void reportOnlineRegions(final ServerName serverName, final Set<byte[]> regionNames)
+      throws YouAreDeadException {
     if (!isRunning()) return;
     if (LOG.isTraceEnabled()) {
       LOG.trace("ReportOnlineRegions " + serverName + " regionCount=" + regionNames.size() +
@@ -965,9 +965,7 @@ public class AssignmentManager implements ServerListener {
 
     final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
 
-    // update the server version number. This will be used for live upgrades.
     synchronized (serverNode) {
-      serverNode.setVersionNumber(versionNumber);
       if (serverNode.isInState(ServerState.SPLITTING, ServerState.OFFLINE)) {
         LOG.warn("Got a report from a server result in state " + serverNode.getState());
         return;
@@ -1909,11 +1907,6 @@ public class AssignmentManager implements ServerListener {
 
     // just in case, wake procedures waiting for this server report
     wakeServerReportEvent(serverNode);
-  }
-
-  public int getServerVersion(final ServerName serverName) {
-    final ServerStateNode node = regionStates.getServerNode(serverName);
-    return node != null ? node.getVersionNumber() : 0;
   }
 
   private void killRegionServer(final ServerName serverName) {

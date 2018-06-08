@@ -32,6 +32,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ServerMetrics {
 
   ServerName getServerName();
+
+  /**
+   * @return the version number of a regionserver.
+   */
+  default int getVersionNumber() {
+    return 0;
+  }
+
   /**
    * @return the number of requests per second.
    */

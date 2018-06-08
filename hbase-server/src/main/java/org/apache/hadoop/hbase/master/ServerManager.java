@@ -222,11 +222,13 @@ public class ServerManager {
   /**
    * Let the server manager know a new regionserver has come online
    * @param request the startup request
+   * @param versionNumber the version of the new regionserver
    * @param ia the InetAddress from which request is received
    * @return The ServerName we know this server as.
    * @throws IOException
    */
-  ServerName regionServerStartup(RegionServerStartupRequest request, InetAddress ia)
+  ServerName regionServerStartup(RegionServerStartupRequest request, int versionNumber,
+      InetAddress ia)
       throws IOException {
     // Test for case where we get a region startup message from a regionserver
     // that has been quickly restarted but whose znode expiration handler has
@@ -242,7 +244,7 @@ public class ServerManager {
       request.getServerStartCode());
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
-    if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn))) {
+    if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber))) {
       LOG.warn("THIS SHOULD NOT HAPPEN, RegionServerStartup"
         + " could not record the server: " + sn);
     }
@@ -1057,5 +1059,10 @@ public class ServerManager {
     for (RegionInfo hri: regions) {
       removeRegion(hri);
     }
+  }
+
+  public int getServerVersion(final ServerName serverName) {
+    ServerMetrics serverMetrics = onlineServers.get(serverName);
+    return serverMetrics != null ? serverMetrics.getVersionNumber() : 0;
   }
 }
