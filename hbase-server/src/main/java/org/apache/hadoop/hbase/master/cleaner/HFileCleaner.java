@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -35,16 +36,23 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
 
   public static final String MASTER_HFILE_CLEANER_PLUGINS = "hbase.master.hfilecleaner.plugins";
 
+  public HFileCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
+      Path directory) {
+    this(period, stopper, conf, fs, directory, null);
+  }
+
   /**
    * @param period the period of time to sleep between each run
    * @param stopper the stopper
    * @param conf configuration to use
    * @param fs handle to the FS
    * @param directory directory to be cleaned
+   * @param params params could be used in subclass of BaseHFileCleanerDelegate
    */
   public HFileCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
-      Path directory) {
-    super("HFileCleaner", period, stopper, conf, fs, directory, MASTER_HFILE_CLEANER_PLUGINS);
+                      Path directory, Map<String, Object> params) {
+    super("HFileCleaner", period, stopper, conf, fs,
+      directory, MASTER_HFILE_CLEANER_PLUGINS, params);
   }
 
   @Override

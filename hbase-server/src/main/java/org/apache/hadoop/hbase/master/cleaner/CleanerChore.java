@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.cleaner;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
@@ -144,6 +145,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private final Path oldFileDir;
   private final Configuration conf;
   protected List<T> cleanersChain;
+  protected Map<String, Object> params;
   private AtomicBoolean enabled = new AtomicBoolean(true);
 
   public static void initChorePool(Configuration conf) {
@@ -151,6 +153,12 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       POOL = new DirScanPool(conf);
     }
   }
+
+  public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
+                      FileSystem fs, Path oldFileDir, String confKey) {
+    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, null);
+  }
+
 
   /**
    * @param name name of the chore being run
@@ -160,9 +168,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param fs handle to the FS
    * @param oldFileDir the path to the archived files
    * @param confKey configuration key for the classes to instantiate
+   * @param params members could be used in cleaner
    */
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-      FileSystem fs, Path oldFileDir, String confKey) {
+      FileSystem fs, Path oldFileDir, String confKey, Map<String, Object> params) {
     super(name, s, sleepPeriod);
 
     Preconditions.checkNotNull(POOL, "Chore's pool isn't initialized, please call"
@@ -170,7 +179,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     this.fs = fs;
     this.oldFileDir = oldFileDir;
     this.conf = conf;
-
+    this.params = params;
     initCleanerChain(confKey);
   }
 
@@ -249,6 +258,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       @SuppressWarnings("unchecked")
       T cleaner = (T) c.getDeclaredConstructor().newInstance();
       cleaner.setConf(conf);
+      cleaner.init(this.params);
       return cleaner;
     } catch (Exception e) {
       LOG.warn("Can NOT create CleanerDelegate: " + className, e);

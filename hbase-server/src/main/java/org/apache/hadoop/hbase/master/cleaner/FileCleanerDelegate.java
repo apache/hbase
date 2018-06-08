@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import java.util.Map;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.FileStatus;
@@ -36,4 +38,10 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
    * @return files that are ok to delete according to this cleaner
    */
   Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files);
+
+
+  /**
+   * this method is used to pass some instance into subclass
+   * */
+  void init(Map<String, Object> params);
 }
