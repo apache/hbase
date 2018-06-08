@@ -125,7 +125,7 @@ public class MockMasterServices extends MockNoopMasterServices {
         // Make a report with current state of the server 'serverName' before we call wait..
         SortedSet<byte []> regions = regionsToRegionServers.get(serverName);
         try {
-          getAssignmentManager().reportOnlineRegions(serverName, 0,
+          getAssignmentManager().reportOnlineRegions(serverName,
               regions == null? new HashSet<byte []>(): regions);
         } catch (YouAreDeadException e) {
           throw new RuntimeException(e);

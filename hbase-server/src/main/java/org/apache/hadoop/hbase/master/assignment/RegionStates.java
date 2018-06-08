@@ -338,7 +338,6 @@ public class RegionStates {
     private final ServerName serverName;
 
     private volatile ServerState state = ServerState.ONLINE;
-    private volatile int versionNumber = 0;
 
     public ServerStateNode(final ServerName serverName) {
       this.serverName = serverName;
@@ -352,10 +351,6 @@ public class RegionStates {
 
     public ServerState getState() {
       return state;
-    }
-
-    public int getVersionNumber() {
-      return versionNumber;
     }
 
     public ProcedureEvent<?> getReportEvent() {
@@ -378,10 +373,6 @@ public class RegionStates {
 
     public void setState(final ServerState state) {
       this.state = state;
-    }
-
-    public void setVersionNumber(final int versionNumber) {
-      this.versionNumber = versionNumber;
     }
 
     public Set<RegionStateNode> getRegions() {

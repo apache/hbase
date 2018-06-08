@@ -452,14 +452,14 @@ public class MasterRpcServices extends RSRpcServices
       RpcController controller, RegionServerReportRequest request) throws ServiceException {
     try {
       master.checkServiceStarted();
+      int version = VersionInfoUtil.getCurrentClientVersionNumber();
       ClusterStatusProtos.ServerLoad sl = request.getLoad();
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
       ServerMetrics oldLoad = master.getServerManager().getLoad(serverName);
-      ServerMetrics newLoad = ServerMetricsBuilder.toServerMetrics(serverName, sl);
+      ServerMetrics newLoad = ServerMetricsBuilder.toServerMetrics(serverName, version, sl);
       master.getServerManager().regionServerReport(serverName, newLoad);
-      int version = VersionInfoUtil.getCurrentClientVersionNumber();
-      master.getAssignmentManager().reportOnlineRegions(serverName,
-        version, newLoad.getRegionMetrics().keySet());
+      master.getAssignmentManager()
+          .reportOnlineRegions(serverName, newLoad.getRegionMetrics().keySet());
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
         master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
@@ -477,11 +477,12 @@ public class MasterRpcServices extends RSRpcServices
     // Register with server manager
     try {
       master.checkServiceStarted();
+      int version = VersionInfoUtil.getCurrentClientVersionNumber();
       InetAddress ia = master.getRemoteInetAddress(
         request.getPort(), request.getServerStartCode());
       // if regionserver passed hostname to use,
       // then use it instead of doing a reverse DNS lookup
-      ServerName rs = master.getServerManager().regionServerStartup(request, ia);
+      ServerName rs = master.getServerManager().regionServerStartup(request, version, ia);
 
       // Send back some config info
       RegionServerStartupResponse.Builder resp = createConfigurationSubset();
