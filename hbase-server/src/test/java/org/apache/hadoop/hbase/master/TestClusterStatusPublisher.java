@@ -62,6 +62,7 @@ public class TestClusterStatusPublisher {
   @Test
   public void testMaxSend() {
     ClusterStatusPublisher csp = new ClusterStatusPublisher() {
+      @SuppressWarnings("MissingDefault")
       @Override
       protected List<Pair<ServerName, Long>> getDeadServers(long since) {
         List<Pair<ServerName, Long>> res = new ArrayList<>();

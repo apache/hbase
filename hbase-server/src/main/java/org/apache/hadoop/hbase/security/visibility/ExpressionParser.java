@@ -306,7 +306,8 @@ public class ExpressionParser {
       return Operator.OR;
     case NOT:
       return Operator.NOT;
+    default:
+      return null;
     }
-    return null;
   }
 }
