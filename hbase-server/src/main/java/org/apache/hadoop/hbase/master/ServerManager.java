@@ -1061,6 +1061,9 @@ public class ServerManager {
     }
   }
 
+  /**
+   * May return 0 when server is not online.
+   */
   public int getServerVersion(final ServerName serverName) {
     ServerMetrics serverMetrics = onlineServers.get(serverName);
     return serverMetrics != null ? serverMetrics.getVersionNumber() : 0;
