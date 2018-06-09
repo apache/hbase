@@ -150,7 +150,7 @@ RUN echo 'gem: --no-rdoc --no-ri' >> /root/.gemrc
 RUN apt-add-repository ppa:brightbox/ruby-ng
 RUN apt-get -q update
 
-RUN apt-get -q install --no-install-recommends -y ruby2.2 ruby-switch
+RUN apt-get -q install --no-install-recommends -y ruby2.2 ruby2.2-dev ruby-switch
 RUN ruby-switch --set ruby2.2
 
 ####
