@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -109,9 +110,11 @@ public class RSProcedureDispatcher
       final Set<RemoteProcedure> remoteProcedures) {
     final int rsVersion = master.getServerManager().getServerVersion(serverName);
     if (rsVersion >= RS_VERSION_WITH_EXEC_PROCS) {
-      LOG.trace("Using procedure batch rpc execution for serverName={} version={}",
-        serverName, rsVersion);
+      LOG.trace("Using procedure batch rpc execution for serverName={} version={}", serverName,
+        rsVersion);
       submitTask(new ExecuteProceduresRemoteCall(serverName, remoteProcedures));
+    } else if (rsVersion == 0 && !master.getServerManager().isServerOnline(serverName)) {
+      submitTask(new DeadRSRemoteCall(serverName, remoteProcedures));
     } else {
       LOG.info(String.format(
         "Fallback to compat rpc execution for serverName=%s version=%s",
@@ -270,12 +273,26 @@ public class RSProcedureDispatcher
     }
   }
 
+  private class DeadRSRemoteCall extends ExecuteProceduresRemoteCall {
+
+    public DeadRSRemoteCall(ServerName serverName, Set<RemoteProcedure> remoteProcedures) {
+      super(serverName, remoteProcedures);
+    }
+
+    @Override
+    public Void call() {
+      remoteCallFailed(procedureEnv,
+        new RegionServerStoppedException("Server " + getServerName() + " is not online"));
+      return null;
+    }
+  }
+
   // ==========================================================================
   //  Compatibility calls
   // ==========================================================================
   protected class ExecuteProceduresRemoteCall extends AbstractRSRemoteCall
       implements RemoteProcedureResolver {
-    private final Set<RemoteProcedure> remoteProcedures;
+    protected final Set<RemoteProcedure> remoteProcedures;
 
     private ExecuteProceduresRequest.Builder request = null;
 
@@ -334,7 +351,7 @@ public class RSProcedureDispatcher
       }
     }
 
-    private void remoteCallFailed(final MasterProcedureEnv env, final IOException e) {
+    protected void remoteCallFailed(final MasterProcedureEnv env, final IOException e) {
       for (RemoteProcedure proc : remoteProcedures) {
         proc.remoteCallFailed(env, getServerName(), e);
       }
