@@ -22,5 +22,5 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public enum LockedResourceType {
-  SERVER, NAMESPACE, TABLE, REGION, PEER
+  SERVER, NAMESPACE, TABLE, REGION, PEER, META
 }

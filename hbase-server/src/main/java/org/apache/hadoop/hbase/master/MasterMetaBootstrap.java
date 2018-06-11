@@ -21,14 +21,12 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -44,12 +42,10 @@ import org.slf4j.LoggerFactory;
 public class MasterMetaBootstrap {
   private static final Logger LOG = LoggerFactory.getLogger(MasterMetaBootstrap.class);
 
-  private final MonitoredTask status;
   private final HMaster master;
 
-  public MasterMetaBootstrap(final HMaster master, final MonitoredTask status) {
+  public MasterMetaBootstrap(HMaster master) {
     this.master = master;
-    this.status = status;
   }
 
   public void recoverMeta() throws InterruptedException, IOException {
@@ -58,7 +54,7 @@ public class MasterMetaBootstrap {
     // Now we can start the TableStateManager. It is backed by hbase:meta.
     master.getTableStateManager().start();
     // Enable server crash procedure handling
-    enableCrashedServerProcessing(false);
+    enableCrashedServerProcessing();
   }
 
   public void processDeadServers() {
@@ -142,8 +138,7 @@ public class MasterMetaBootstrap {
     }
   }
 
-  private void enableCrashedServerProcessing(final boolean waitForMeta)
-      throws InterruptedException {
+  private void enableCrashedServerProcessing() throws InterruptedException {
     // If crashed server processing is disabled, we enable it and expire those dead but not expired
     // servers. This is required so that if meta is assigning to a server which dies after
     // assignMeta starts assignment, ServerCrashProcedure can re-assign it. Otherwise, we will be
@@ -151,10 +146,6 @@ public class MasterMetaBootstrap {
     if (!master.isServerCrashProcessingEnabled()) {
       master.setServerCrashProcessingEnabled(true);
       master.getServerManager().processQueuedDeadServers();
-    }
-
-    if (waitForMeta) {
-      master.getMetaTableLocator().waitMetaRegionLocation(master.getZooKeeper());
     }
   }
 }

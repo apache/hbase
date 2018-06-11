@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.Set;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -54,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 @InterfaceAudience.Private
 public class RecoverMetaProcedure
     extends StateMachineProcedure<MasterProcedureEnv, MasterProcedureProtos.RecoverMetaState>
-    implements TableProcedureInterface {
+    implements MetaProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(RecoverMetaProcedure.class);
 
   private ServerName failedMetaServer;
@@ -125,21 +123,25 @@ public class RecoverMetaProcedure
           LOG.info("Start " + this);
           if (shouldSplitWal) {
             // TODO: Matteo. We BLOCK here but most important thing to be doing at this moment.
+            AssignmentManager am = env.getMasterServices().getAssignmentManager();
             if (failedMetaServer != null) {
+              am.getRegionStates().metaLogSplitting(failedMetaServer);
               master.getMasterWalManager().splitMetaLog(failedMetaServer);
+              am.getRegionStates().metaLogSplit(failedMetaServer);
             } else {
               ServerName serverName =
                   master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper());
               Set<ServerName> previouslyFailedServers =
                   master.getMasterWalManager().getFailedServersFromLogFolders();
               if (serverName != null && previouslyFailedServers.contains(serverName)) {
+                am.getRegionStates().metaLogSplitting(serverName);
                 master.getMasterWalManager().splitMetaLog(serverName);
+                am.getRegionStates().metaLogSplit(serverName);
               }
             }
           }
           setNextState(RecoverMetaState.RECOVER_META_ASSIGN_REGIONS);
           break;
-
         case RECOVER_META_ASSIGN_REGIONS:
           RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
               RegionInfoBuilder.FIRST_META_REGIONINFO, this.replicaId);
@@ -258,7 +260,7 @@ public class RecoverMetaProcedure
 
   @Override
   protected LockState acquireLock(MasterProcedureEnv env) {
-    if (env.getProcedureScheduler().waitTableExclusiveLock(this, TableName.META_TABLE_NAME)) {
+    if (env.getProcedureScheduler().waitMetaExclusiveLock(this)) {
       return LockState.LOCK_EVENT_WAIT;
     }
     return LockState.LOCK_ACQUIRED;
@@ -266,22 +268,12 @@ public class RecoverMetaProcedure
 
   @Override
   protected void releaseLock(MasterProcedureEnv env) {
-    env.getProcedureScheduler().wakeTableExclusiveLock(this, TableName.META_TABLE_NAME);
+    env.getProcedureScheduler().wakeMetaExclusiveLock(this);
   }
 
   @Override
   protected void completionCleanup(MasterProcedureEnv env) {
     ProcedurePrepareLatch.releaseLatch(syncLatch, this);
-  }
-
-  @Override
-  public TableName getTableName() {
-    return TableName.META_TABLE_NAME;
-  }
-
-  @Override
-  public TableOperationType getTableOperationType() {
-    return TableOperationType.ENABLE;
   }
 
   /**

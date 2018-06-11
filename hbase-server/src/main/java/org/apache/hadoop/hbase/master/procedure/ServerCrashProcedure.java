@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,8 +55,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
  */
 @InterfaceAudience.Private
 public class ServerCrashProcedure
-extends StateMachineProcedure<MasterProcedureEnv, ServerCrashState>
-implements ServerProcedureInterface {
+    extends StateMachineProcedure<MasterProcedureEnv, ServerCrashState>
+    implements ServerProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(ServerCrashProcedure.class);
 
   /**
@@ -163,11 +163,11 @@ implements ServerProcedureInterface {
                 "; cycles=" + getCycles());
             }
             // Handle RIT against crashed server. Will cancel any ongoing assigns/unassigns.
-            // Returns list of regions we need to reassign. NOTE: there is nothing to stop a
-            // dispatch happening AFTER this point. Check for the condition if a dispatch RPC fails
-            // inside in AssignProcedure/UnassignProcedure. AssignProcedure just keeps retrying.
-            // UnassignProcedure is more complicated. See where it does the check by calling
-            // am#isDeadServerProcessed.
+            // Returns list of regions we need to reassign.
+            // NOTE: there is nothing to stop a dispatch happening AFTER this point. Check for the
+            // condition if a dispatch RPC fails inside in AssignProcedure/UnassignProcedure.
+            // AssignProcedure just keeps retrying. UnassignProcedure is more complicated. See where
+            // it does the check by calling am#isLogSplittingDone.
             List<RegionInfo> toAssign = handleRIT(env, regionsOnCrashedServer);
             AssignmentManager am = env.getAssignmentManager();
             // CreateAssignProcedure will try to use the old location for the region deploy.

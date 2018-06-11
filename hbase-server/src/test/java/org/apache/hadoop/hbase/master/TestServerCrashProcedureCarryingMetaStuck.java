@@ -40,28 +40,19 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/**
- * Testcase for HBASE-20634
- */
 @Category({ MasterTests.class, LargeTests.class })
-public class TestServerCrashProcedureStuck {
+public class TestServerCrashProcedureCarryingMetaStuck {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerCrashProcedureStuck.class);
+    HBaseClassTestRule.forClass(TestServerCrashProcedureCarryingMetaStuck.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private static TableName TABLE_NAME = TableName.valueOf("test");
-
-  private static byte[] CF = Bytes.toBytes("cf");
 
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(3);
     UTIL.getAdmin().balancerSwitch(false, true);
-    UTIL.createTable(TABLE_NAME, CF);
-    UTIL.waitTableAvailable(TABLE_NAME);
   }
 
   @AfterClass
@@ -73,13 +64,13 @@ public class TestServerCrashProcedureStuck {
   public void test() throws Exception {
     RegionServerThread rsThread = null;
     for (RegionServerThread t : UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
-      if (!t.getRegionServer().getRegions(TABLE_NAME).isEmpty()) {
+      if (!t.getRegionServer().getRegions(TableName.META_TABLE_NAME).isEmpty()) {
         rsThread = t;
         break;
       }
     }
     HRegionServer rs = rsThread.getRegionServer();
-    RegionInfo hri = rs.getRegions(TABLE_NAME).get(0).getRegionInfo();
+    RegionInfo hri = rs.getRegions(TableName.META_TABLE_NAME).get(0).getRegionInfo();
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ProcedureExecutor<MasterProcedureEnv> executor = master.getMasterProcedureExecutor();
     DummyRegionProcedure proc = new DummyRegionProcedure(executor.getEnvironment(), hri);

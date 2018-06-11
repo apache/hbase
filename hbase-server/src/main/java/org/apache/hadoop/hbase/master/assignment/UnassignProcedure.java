@@ -310,12 +310,29 @@ public class UnassignProcedure extends RegionTransitionProcedure {
           exception.getClass().getSimpleName());
       if (!env.getMasterServices().getServerManager().expireServer(serverName)) {
         // Failed to queue an expire. Lots of possible reasons including it may be already expired.
-        // If so, is it beyond the state where we will be woken-up if go ahead and suspend the
-        // procedure. Look for this rare condition.
-        if (env.getAssignmentManager().isDeadServerProcessed(serverName)) {
+        // In ServerCrashProcedure and RecoverMetaProcedure, there is a handleRIT stage where we
+        // will iterator over all the RIT procedures for the related regions of a crashed RS and
+        // fail them with ServerCrashException. You can see the isSafeToProceed method above for
+        // more details.
+        // This can work for most cases, but since we do not hold the region lock in handleRIT,
+        // there could be race that we arrive here after the handleRIT stage of the SCP. So here we
+        // need to check whether it is safe to quit.
+        // Notice that, the first assumption is that we can only quit after the log splitting is
+        // done, as MRP can schedule an AssignProcedure right after us, and if the log splitting has
+        // not been done then there will be data loss. And in SCP, we will change the state from
+        // SPLITTING to OFFLINE(or SPLITTING_META_DONE for meta log processing) after finishing the
+        // log splitting, and then calling handleRIT, so checking the state here can be a safe
+        // fence. If the state is not OFFLINE(or SPLITTING_META_DONE), then we can just leave this
+        // procedure in suspended state as we can make sure that the handleRIT has not been executed
+        // yet and it will wake us up later. And if the state is OFFLINE(or SPLITTING_META_DONE), we
+        // can safely quit since there will be no data loss. There could be duplicated
+        // AssignProcedures for the same region but it is OK as we will do a check at the beginning
+        // of AssignProcedure to prevent double assign. And there we have region lock so there will
+        // be no race.
+        if (env.getAssignmentManager().isLogSplittingDone(serverName, isMeta())) {
           // Its ok to proceed with this unassign.
-          LOG.info("{} is dead and processed; moving procedure to finished state; {}",
-              serverName, this);
+          LOG.info("{} is dead and processed; moving procedure to finished state; {}", serverName,
+            this);
           proceed(env, regionNode);
           // Return true; wake up the procedure so we can act on proceed.
           return true;

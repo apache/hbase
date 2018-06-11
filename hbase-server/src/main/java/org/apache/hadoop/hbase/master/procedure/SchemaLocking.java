@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.procedure2.LockedResourceType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+
 /**
  * <p>
  * Locks on namespaces, tables, and regions.
@@ -49,6 +51,7 @@ class SchemaLocking {
   // Single map for all regions irrespective of tables. Key is encoded region name.
   private final Map<String, LockAndQueue> regionLocks = new HashMap<>();
   private final Map<String, LockAndQueue> peerLocks = new HashMap<>();
+  private final LockAndQueue metaLock = new LockAndQueue();
 
   private <T> LockAndQueue getLock(Map<T, LockAndQueue> map, T key) {
     LockAndQueue lock = map.get(key);
@@ -73,6 +76,10 @@ class SchemaLocking {
 
   LockAndQueue getRegionLock(String encodedRegionName) {
     return getLock(regionLocks, encodedRegionName);
+  }
+
+  LockAndQueue getMetaLock() {
+    return metaLock;
   }
 
   LockAndQueue removeRegionLock(String encodedRegionName) {
@@ -144,6 +151,8 @@ class SchemaLocking {
     addToLockedResources(lockedResources, regionLocks, Function.identity(),
       LockedResourceType.REGION);
     addToLockedResources(lockedResources, peerLocks, Function.identity(), LockedResourceType.PEER);
+    addToLockedResources(lockedResources, ImmutableMap.of(TableName.META_TABLE_NAME, metaLock),
+      tn -> tn.getNameAsString(), LockedResourceType.META);
     return lockedResources;
   }
 
@@ -169,6 +178,8 @@ class SchemaLocking {
       case PEER:
         queue = peerLocks.get(resourceName);
         break;
+      case META:
+        queue = metaLock;
       default:
         queue = null;
         break;
@@ -193,7 +204,8 @@ class SchemaLocking {
     return "serverLocks=" + filterUnlocked(this.serverLocks) + ", namespaceLocks=" +
       filterUnlocked(this.namespaceLocks) + ", tableLocks=" + filterUnlocked(this.tableLocks) +
       ", regionLocks=" + filterUnlocked(this.regionLocks) + ", peerLocks=" +
-      filterUnlocked(this.peerLocks);
+      filterUnlocked(this.peerLocks) + ", metaLocks=" +
+      filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock));
   }
 
   private String filterUnlocked(Map<?, LockAndQueue> locks) {

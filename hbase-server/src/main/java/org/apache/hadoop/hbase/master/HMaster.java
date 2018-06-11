@@ -910,7 +910,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // Bring up hbase:meta. recoverMeta is a blocking call waiting until hbase:meta is deployed.
     // It also starts the TableStateManager.
-    MasterMetaBootstrap metaBootstrap = createMetaBootstrap(this, status);
+    MasterMetaBootstrap metaBootstrap = createMetaBootstrap();
     metaBootstrap.recoverMeta();
 
     //Initialize after meta as it scans meta
@@ -1055,12 +1055,18 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
+   * <p>
    * Create a {@link MasterMetaBootstrap} instance.
+   * </p>
+   * <p>
+   * Will be overridden in tests.
+   * </p>
    */
-  MasterMetaBootstrap createMetaBootstrap(final HMaster master, final MonitoredTask status) {
+  @VisibleForTesting
+  protected MasterMetaBootstrap createMetaBootstrap() {
     // We put this out here in a method so can do a Mockito.spy and stub it out
     // w/ a mocked up MasterMetaBootstrap.
-    return new MasterMetaBootstrap(master, status);
+    return new MasterMetaBootstrap(this);
   }
 
   /**
@@ -3161,7 +3167,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.preGetLocks();
     }
 
-    MasterProcedureScheduler procedureScheduler = procedureExecutor.getEnvironment().getProcedureScheduler();
+    MasterProcedureScheduler procedureScheduler =
+      procedureExecutor.getEnvironment().getProcedureScheduler();
 
     final List<LockedResource> lockedResources = procedureScheduler.getLocks();
 
@@ -3606,11 +3613,13 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public boolean recoverMeta() throws IOException {
-    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
+    // we need to block here so the latch should be greater than the current version to make sure
+    // that we will block.
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(Integer.MAX_VALUE, 0);
     procedureExecutor.submitProcedure(new RecoverMetaProcedure(null, true, latch));
     latch.await();
-    LOG.info("hbase:meta deployed at=" +
-        getMetaTableLocator().getMetaRegionLocation(getZooKeeper()));
+    LOG.info("hbase:meta deployed at={}",
+      getMetaTableLocator().getMetaRegionLocation(getZooKeeper()));
     return assignmentManager.isMetaInitialized();
   }
 

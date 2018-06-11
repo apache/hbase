@@ -17,16 +17,20 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.procedure2.LockStatus;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public interface PeerProcedureInterface {
+class MetaQueue extends Queue<TableName> {
 
-  enum PeerOperationType {
-    ADD, REMOVE, ENABLE, DISABLE, UPDATE_CONFIG, REFRESH
+  protected MetaQueue(LockStatus lockStatus) {
+    super(TableName.META_TABLE_NAME, 1, lockStatus);
   }
 
-  String getPeerId();
-
-  PeerOperationType getPeerOperationType();
+  @Override
+  boolean requireExclusiveLock(Procedure<?> proc) {
+    return true;
+  }
 }

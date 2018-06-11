@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.master.procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public interface PeerProcedureInterface {
+public interface MetaProcedureInterface {
 
-  enum PeerOperationType {
-    ADD, REMOVE, ENABLE, DISABLE, UPDATE_CONFIG, REFRESH
+  enum MetaOperationType {
+    RECOVER
   }
 
-  String getPeerId();
-
-  PeerOperationType getPeerOperationType();
+  default MetaOperationType getMetaOperationType() {
+    return MetaOperationType.RECOVER;
+  }
 }
