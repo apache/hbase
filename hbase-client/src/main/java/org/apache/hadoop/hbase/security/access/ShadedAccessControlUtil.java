@@ -274,4 +274,15 @@ public class ShadedAccessControlUtil {
     }
     return builder.build();
   }
+
+  /**
+   * Converts a user permission proto to a client user permission object.
+   *
+   * @param proto the protobuf UserPermission
+   * @return the converted UserPermission
+   */
+  public static UserPermission toUserPermission(org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission proto) {
+    return new UserPermission(proto.getUser().toByteArray(),
+        toTablePermission(proto.getPermission()));
+  }
 }
