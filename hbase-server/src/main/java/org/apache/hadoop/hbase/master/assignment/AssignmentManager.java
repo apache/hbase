@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -79,22 +78,24 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
-import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 
 /**
  * The AssignmentManager is the coordinator for region assign/unassign operations.
@@ -966,7 +967,7 @@ public class AssignmentManager implements ServerListener {
     final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
 
     synchronized (serverNode) {
-      if (serverNode.isInState(ServerState.SPLITTING, ServerState.OFFLINE)) {
+      if (!serverNode.isInState(ServerState.ONLINE)) {
         LOG.warn("Got a report from a server result in state " + serverNode.getState());
         return;
       }
@@ -1918,22 +1919,38 @@ public class AssignmentManager implements ServerListener {
   }
 
   /**
+   * <p>
    * This is a very particular check. The {@link org.apache.hadoop.hbase.master.ServerManager} is
-   * where you go to check on state of 'Servers', what Servers are online, etc. Here we are
-   * checking the state of a server that is post expiration, a ServerManager function that moves a
-   * server from online to dead. Here we are seeing if the server has moved beyond a particular
-   * point in the recovery process such that it is safe to move on with assigns; etc.
-   * @return True if this Server does not exist or if does and it is marked as OFFLINE (which
-   *   happens after all WALs have been split on this server making it so assigns, etc. can
-   *   proceed). If null, presumes the ServerStateNode was cleaned up by SCP.
+   * where you go to check on state of 'Servers', what Servers are online, etc.
+   * </p>
+   * <p>
+   * Here we are checking the state of a server that is post expiration, a ServerManager function
+   * that moves a server from online to dead. Here we are seeing if the server has moved beyond a
+   * particular point in the recovery process such that it is safe to move on with assigns; etc.
+   * </p>
+   * <p>
+   * For now it is only used in
+   * {@link UnassignProcedure#remoteCallFailed(MasterProcedureEnv, RegionStateNode, IOException)} to
+   * see whether we can safely quit without losing data.
+   * </p>
+   * @param meta whether to check for meta log splitting
+   * @return {@code true} if the server does not exist or the log splitting is done, i.e, the server
+   *         is in OFFLINE state, or for meta log, is in SPLITTING_META_DONE state. If null,
+   *         presumes the ServerStateNode was cleaned up by SCP.
+   * @see UnassignProcedure#remoteCallFailed(MasterProcedureEnv, RegionStateNode, IOException)
    */
-  boolean isDeadServerProcessed(final ServerName serverName) {
+  boolean isLogSplittingDone(ServerName serverName, boolean meta) {
     ServerStateNode ssn = this.regionStates.getServerNode(serverName);
     if (ssn == null) {
       return true;
     }
+    ServerState[] inState =
+      meta
+        ? new ServerState[] { ServerState.SPLITTING_META_DONE, ServerState.SPLITTING,
+          ServerState.OFFLINE }
+        : new ServerState[] { ServerState.OFFLINE };
     synchronized (ssn) {
-      return ssn.isOffline();
+      return ssn.isInState(inState);
     }
   }
 

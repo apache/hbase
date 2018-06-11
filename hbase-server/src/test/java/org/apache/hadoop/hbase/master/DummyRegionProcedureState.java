@@ -15,18 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.procedure;
+package org.apache.hadoop.hbase.master;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
-@InterfaceAudience.Private
-public interface PeerProcedureInterface {
-
-  enum PeerOperationType {
-    ADD, REMOVE, ENABLE, DISABLE, UPDATE_CONFIG, REFRESH
-  }
-
-  String getPeerId();
-
-  PeerOperationType getPeerOperationType();
+public enum DummyRegionProcedureState {
+  STATE
 }

@@ -17,31 +17,16 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * Procedures that operates on a specific Table (e.g. create, delete, snapshot, ...)
- * must implement this interface to allow the system handle the lock/concurrency problems.
- */
 @InterfaceAudience.Private
-public interface TableProcedureInterface {
-  public enum TableOperationType {
-    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
-    REGION_EDIT, REGION_SPLIT, REGION_MERGE, REGION_ASSIGN, REGION_UNASSIGN,
-      REGION_GC, MERGED_REGIONS_GC/* region operations */
-  };
+public interface MetaProcedureInterface {
 
-  /**
-   * @return the name of the table the procedure is operating on
-   */
-  TableName getTableName();
+  enum MetaOperationType {
+    RECOVER
+  }
 
-  /**
-   * Given an operation type we can take decisions about what to do with pending operations.
-   * e.g. if we get a delete and we have some table operation pending (e.g. add column)
-   * we can abort those operations.
-   * @return the operation type that the procedure is executing.
-   */
-  TableOperationType getTableOperationType();
+  default MetaOperationType getMetaOperationType() {
+    return MetaOperationType.RECOVER;
+  }
 }

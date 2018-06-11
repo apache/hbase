@@ -318,12 +318,26 @@ public class RegionStates {
     ONLINE,
 
     /**
+     * Only server which carries meta can have this state. We will split wal for meta and then
+     * assign meta first before splitting other wals.
+     */
+    SPLITTING_META,
+
+    /**
+     * Indicate that the meta splitting is done. We need this state so that the UnassignProcedure
+     * for meta can safely quit. See the comments in UnassignProcedure.remoteCallFailed for more
+     * details.
+     */
+    SPLITTING_META_DONE,
+
+    /**
      * Server expired/crashed. Currently undergoing WAL splitting.
      */
     SPLITTING,
 
     /**
-     * WAL splitting done.
+     * WAL splitting done. This state will be used to tell the UnassignProcedure that it can safely
+     * quit. See the comments in UnassignProcedure.remoteCallFailed for more details.
      */
     OFFLINE
   }
@@ -357,10 +371,6 @@ public class RegionStates {
       return reportEvent;
     }
 
-    public boolean isOffline() {
-      return this.state.equals(ServerState.OFFLINE);
-    }
-
     public boolean isInState(final ServerState... expected) {
       boolean expectedState = false;
       if (expected != null) {
@@ -371,7 +381,7 @@ public class RegionStates {
       return expectedState;
     }
 
-    public void setState(final ServerState state) {
+    private void setState(final ServerState state) {
       this.state = state;
     }
 
@@ -612,18 +622,40 @@ public class RegionStates {
   }
 
   // ============================================================================================
-  //  TODO: split helpers
+  // Split helpers
+  // These methods will only be called in ServerCrashProcedure, and at the end of SCP we will remove
+  // the ServerStateNode by calling removeServer.
   // ============================================================================================
 
+  private void setServerState(ServerName serverName, ServerState state) {
+    ServerStateNode serverNode = getOrCreateServer(serverName);
+    synchronized (serverNode) {
+      serverNode.setState(state);
+    }
+  }
+
   /**
-   * Call this when we start log splitting a crashed Server.
+   * Call this when we start meta log splitting a crashed Server.
+   * @see #metaLogSplit(ServerName)
+   */
+  public void metaLogSplitting(ServerName serverName) {
+    setServerState(serverName, ServerState.SPLITTING_META);
+  }
+
+  /**
+   * Called after we've split the meta logs on a crashed Server.
+   * @see #metaLogSplitting(ServerName)
+   */
+  public void metaLogSplit(ServerName serverName) {
+    setServerState(serverName, ServerState.SPLITTING_META_DONE);
+  }
+
+  /**
+   * Call this when we start log splitting for a crashed Server.
    * @see #logSplit(ServerName)
    */
   public void logSplitting(final ServerName serverName) {
-    final ServerStateNode serverNode = getOrCreateServer(serverName);
-    synchronized (serverNode) {
-      serverNode.setState(ServerState.SPLITTING);
-    }
+    setServerState(serverName, ServerState.SPLITTING);
   }
 
   /**
@@ -631,17 +663,7 @@ public class RegionStates {
    * @see #logSplitting(ServerName)
    */
   public void logSplit(final ServerName serverName) {
-    final ServerStateNode serverNode = getOrCreateServer(serverName);
-    synchronized (serverNode) {
-      serverNode.setState(ServerState.OFFLINE);
-    }
-  }
-
-  public void logSplit(final RegionInfo regionInfo) {
-    final RegionStateNode regionNode = getRegionStateNode(regionInfo);
-    synchronized (regionNode) {
-      regionNode.setState(State.SPLIT);
-    }
+    setServerState(serverName, ServerState.OFFLINE);
   }
 
   @VisibleForTesting
