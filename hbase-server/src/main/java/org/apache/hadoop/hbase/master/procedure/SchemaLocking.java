@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.procedure2.LockedResourceType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+
 /**
  * <p>
  * Locks on namespaces, tables, and regions.
@@ -48,7 +50,7 @@ class SchemaLocking {
   private final Map<TableName, LockAndQueue> tableLocks = new HashMap<>();
   // Single map for all regions irrespective of tables. Key is encoded region name.
   private final Map<String, LockAndQueue> regionLocks = new HashMap<>();
-  private final Map<String, LockAndQueue> peerLocks = new HashMap<>();
+  private final LockAndQueue metaLock = new LockAndQueue();
 
   private <T> LockAndQueue getLock(Map<T, LockAndQueue> map, T key) {
     LockAndQueue lock = map.get(key);
@@ -75,20 +77,16 @@ class SchemaLocking {
     return getLock(regionLocks, encodedRegionName);
   }
 
+  LockAndQueue getMetaLock() {
+    return metaLock;
+  }
+
   LockAndQueue removeRegionLock(String encodedRegionName) {
     return regionLocks.remove(encodedRegionName);
   }
 
   LockAndQueue getServerLock(ServerName serverName) {
     return getLock(serverLocks, serverName);
-  }
-
-  LockAndQueue getPeerLock(String peerId) {
-    return getLock(peerLocks, peerId);
-  }
-
-  LockAndQueue removePeerLock(String peerId) {
-    return peerLocks.remove(peerId);
   }
 
   private LockedResource createLockedResource(LockedResourceType resourceType, String resourceName,
@@ -143,6 +141,8 @@ class SchemaLocking {
       LockedResourceType.TABLE);
     addToLockedResources(lockedResources, regionLocks, Function.identity(),
       LockedResourceType.REGION);
+    addToLockedResources(lockedResources, ImmutableMap.of(TableName.META_TABLE_NAME, metaLock),
+      tn -> tn.getNameAsString(), LockedResourceType.META);
     return lockedResources;
   }
 
@@ -165,6 +165,8 @@ class SchemaLocking {
       case REGION:
         queue = regionLocks.get(resourceName);
         break;
+      case META:
+        queue = metaLock;
       default:
         queue = null;
     }
@@ -180,15 +182,14 @@ class SchemaLocking {
     namespaceLocks.clear();
     tableLocks.clear();
     regionLocks.clear();
-    peerLocks.clear();
   }
 
   @Override
   public String toString() {
     return "serverLocks=" + filterUnlocked(this.serverLocks) + ", namespaceLocks=" +
       filterUnlocked(this.namespaceLocks) + ", tableLocks=" + filterUnlocked(this.tableLocks) +
-      ", regionLocks=" + filterUnlocked(this.regionLocks) + ", peerLocks=" +
-      filterUnlocked(this.peerLocks);
+      ", regionLocks=" + filterUnlocked(this.regionLocks) + ", metaLocks=" +
+      filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock));
   }
 
   private String filterUnlocked(Map<?, LockAndQueue> locks) {

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.master;
 
-package org.apache.hadoop.hbase.procedure2;
-
-import org.apache.yetus.audience.InterfaceAudience;
-
-@InterfaceAudience.Private
-public enum LockedResourceType {
-  SERVER, NAMESPACE, TABLE, REGION, META
+public enum DummyRegionProcedureState {
+  STATE
 }

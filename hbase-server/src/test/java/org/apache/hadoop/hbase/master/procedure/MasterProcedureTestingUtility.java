@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.master.MasterMetaBootstrap;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -98,8 +96,7 @@ public class MasterProcedureTestingUtility {
         public Void call() throws Exception {
           final AssignmentManager am = env.getAssignmentManager();
           am.start();
-          MasterMetaBootstrap metaBootstrap = new MasterMetaBootstrap(master,
-              TaskMonitor.get().createStatus("meta"));
+          MasterMetaBootstrap metaBootstrap = new MasterMetaBootstrap(master);
           metaBootstrap.recoverMeta();
           metaBootstrap.processDeadServers();
           am.joinCluster();

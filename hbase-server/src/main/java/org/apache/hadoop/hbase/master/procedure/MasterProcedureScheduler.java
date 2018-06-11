@@ -98,12 +98,17 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     (n, k) -> n.compareKey((ServerName) k);
   private final static AvlKeyComparator<TableQueue> TABLE_QUEUE_KEY_COMPARATOR =
     (n, k) -> n.compareKey((TableName) k);
+  private final static AvlKeyComparator<MetaQueue> META_QUEUE_KEY_COMPARATOR =
+    (n, k) -> n.compareKey((TableName) k);
 
   private final FairQueue<ServerName> serverRunQueue = new FairQueue<>();
   private final FairQueue<TableName> tableRunQueue = new FairQueue<>();
+  private final FairQueue<TableName> metaRunQueue = new FairQueue<>();
 
   private final ServerQueue[] serverBuckets = new ServerQueue[128];
   private TableQueue tableMap = null;
+  private MetaQueue metaMap = null;
+
   private final SchemaLocking locking = new SchemaLocking();
 
   @Override
@@ -113,7 +118,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   @Override
   protected void enqueue(final Procedure proc, final boolean addFront) {
-    if (isTableProcedure(proc)) {
+    if (isMetaProcedure(proc)) {
+      doAdd(metaRunQueue, getMetaQueue(), proc, addFront);
+    } else if (isTableProcedure(proc)) {
       doAdd(tableRunQueue, getTableQueue(getTableName(proc)), proc, addFront);
     } else if (isServerProcedure(proc)) {
       doAdd(serverRunQueue, getServerQueue(getServerName(proc)), proc, addFront);
@@ -145,15 +152,20 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   @Override
   protected boolean queueHasRunnables() {
-    return tableRunQueue.hasRunnables() || serverRunQueue.hasRunnables();
+    return metaRunQueue.hasRunnables() || tableRunQueue.hasRunnables() ||
+      serverRunQueue.hasRunnables();
   }
 
   @Override
   protected Procedure dequeue() {
+    // meta procedure is always the first priority
+    Procedure<?> pollResult = doPoll(metaRunQueue);
     // For now, let server handling have precedence over table handling; presumption is that it
     // is more important handling crashed servers than it is running the
     // enabling/disabling tables, etc.
-    Procedure pollResult = doPoll(serverRunQueue);
+    if (pollResult == null) {
+      pollResult = doPoll(serverRunQueue);
+    }
     if (pollResult == null) {
       pollResult = doPoll(tableRunQueue);
     }
@@ -247,24 +259,23 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
   }
 
+  private int queueSize(Queue<?> head) {
+    int count = 0;
+    AvlTreeIterator<Queue<?>> iter = new AvlTreeIterator<Queue<?>>(head);
+    while (iter.hasNext()) {
+      count += iter.next().size();
+    }
+    return count;
+  }
+
   @Override
   protected int queueSize() {
     int count = 0;
-
-    // Server queues
-    final AvlTreeIterator<ServerQueue> serverIter = new AvlTreeIterator<>();
-    for (int i = 0; i < serverBuckets.length; ++i) {
-      serverIter.seekFirst(serverBuckets[i]);
-      while (serverIter.hasNext()) {
-        count += serverIter.next().size();
-      }
+    for (ServerQueue serverMap : serverBuckets) {
+      count += queueSize(serverMap);
     }
-
-    // Table queues
-    final AvlTreeIterator<TableQueue> tableIter = new AvlTreeIterator<>(tableMap);
-    while (tableIter.hasNext()) {
-      count += tableIter.next().size();
-    }
+    count += queueSize(tableMap);
+    count += queueSize(metaMap);
     return count;
   }
 
@@ -359,6 +370,23 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private static ServerName getServerName(Procedure proc) {
     return ((ServerProcedureInterface)proc).getServerName();
+  }
+
+  // ============================================================================
+  //  Meta Queue Lookup Helpers
+  // ============================================================================
+  private MetaQueue getMetaQueue() {
+    MetaQueue node = AvlTree.get(metaMap, TableName.META_TABLE_NAME, META_QUEUE_KEY_COMPARATOR);
+    if (node != null) {
+      return node;
+    }
+    node = new MetaQueue(locking.getMetaLock());
+    metaMap = AvlTree.insert(metaMap, node);
+    return node;
+  }
+
+  private static boolean isMetaProcedure(Procedure<?> proc) {
+    return proc instanceof MetaProcedureInterface;
   }
 
   // ============================================================================
@@ -744,6 +772,49 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final LockAndQueue lock = locking.getServerLock(serverName);
       lock.releaseExclusiveLock(procedure);
       addToRunQueue(serverRunQueue, getServerQueue(serverName));
+      int waitingCount = wakeWaitingProcedures(lock);
+      wakePollIfNeeded(waitingCount);
+    } finally {
+      schedUnlock();
+    }
+  }
+
+  // ============================================================================
+  // Meta Locking Helpers
+  // ============================================================================
+  /**
+   * Try to acquire the exclusive lock on meta.
+   * @see #wakeMetaExclusiveLock(Procedure)
+   * @param procedure the procedure trying to acquire the lock
+   * @return true if the procedure has to wait for meta to be available
+   */
+  public boolean waitMetaExclusiveLock(Procedure<?> procedure) {
+    schedLock();
+    try {
+      final LockAndQueue lock = locking.getMetaLock();
+      if (lock.tryExclusiveLock(procedure)) {
+        removeFromRunQueue(metaRunQueue, getMetaQueue());
+        return false;
+      }
+      waitProcedure(lock, procedure);
+      logLockedResource(LockedResourceType.META, TableName.META_TABLE_NAME.getNameAsString());
+      return true;
+    } finally {
+      schedUnlock();
+    }
+  }
+
+  /**
+   * Wake the procedures waiting for meta.
+   * @see #waitMetaExclusiveLock(Procedure)
+   * @param procedure the procedure releasing the lock
+   */
+  public void wakeMetaExclusiveLock(Procedure<?> procedure) {
+    schedLock();
+    try {
+      final LockAndQueue lock = locking.getMetaLock();
+      lock.releaseExclusiveLock(procedure);
+      addToRunQueue(metaRunQueue, getMetaQueue());
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {

@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -259,8 +258,8 @@ public class TestMasterNoCluster {
 
     HMaster master = new HMaster(conf) {
       @Override
-      MasterMetaBootstrap createMetaBootstrap(final HMaster master, final MonitoredTask status) {
-        return new MasterMetaBootstrap(this, status) {
+      protected MasterMetaBootstrap createMetaBootstrap() {
+        return new MasterMetaBootstrap(this) {
           @Override
           protected void assignMetaReplicas()
               throws IOException, InterruptedException, KeeperException {

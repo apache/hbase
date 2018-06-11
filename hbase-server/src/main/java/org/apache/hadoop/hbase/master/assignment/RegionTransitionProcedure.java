@@ -220,7 +220,7 @@ public abstract class RegionTransitionProcedure
   }
 
   @Override
-  public void remoteCallFailed(final MasterProcedureEnv env,
+  public synchronized void remoteCallFailed(final MasterProcedureEnv env,
       final ServerName serverName, final IOException exception) {
     final RegionStateNode regionNode = getRegionState(env);
     LOG.warn("Remote call failed {}; {}; {}; exception={}", serverName,
