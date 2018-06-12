@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -449,6 +450,24 @@ public class ReplicationSourceManager implements ReplicationListener {
     void exec() throws ReplicationException;
   }
 
+  /**
+   * Refresh replication source will terminate the old source first, then the source thread will be
+   * interrupted. Need to handle it instead of abort the region server.
+   */
+  private void interruptOrAbortWhenFail(ReplicationQueueOperation op) {
+    try {
+      op.exec();
+    } catch (ReplicationException e) {
+      if (e.getCause() != null && e.getCause() instanceof KeeperException.SystemErrorException
+          && e.getCause().getCause() != null && e.getCause()
+          .getCause() instanceof InterruptedException) {
+        throw new RuntimeException(
+            "Thread is interrupted, the replication source may be terminated");
+      }
+      server.abort("Failed to operate on replication queue", e);
+    }
+  }
+
   private void abortWhenFail(ReplicationQueueOperation op) {
     try {
       op.exec();
@@ -484,8 +503,9 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void logPositionAndCleanOldLogs(String queueId, boolean queueRecovered,
       WALEntryBatch entryBatch) {
     String fileName = entryBatch.getLastWalPath().getName();
-    abortWhenFail(() -> this.queueStorage.setWALPosition(server.getServerName(), queueId, fileName,
-      entryBatch.getLastWalPosition(), entryBatch.getLastSeqIds()));
+    interruptOrAbortWhenFail(() -> this.queueStorage
+        .setWALPosition(server.getServerName(), queueId, fileName, entryBatch.getLastWalPosition(),
+            entryBatch.getLastSeqIds()));
     cleanOldLogs(fileName, entryBatch.isEndOfFile(), queueId, queueRecovered);
   }
 
@@ -523,7 +543,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
     LOG.debug("Removing {} logs in the list: {}", walSet.size(), walSet);
     for (String wal : walSet) {
-      abortWhenFail(() -> this.queueStorage.removeWAL(server.getServerName(), id, wal));
+      interruptOrAbortWhenFail(() -> this.queueStorage.removeWAL(server.getServerName(), id, wal));
     }
     walSet.clear();
   }
@@ -886,7 +906,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   public void cleanUpHFileRefs(String peerId, List<String> files) {
-    abortWhenFail(() -> this.queueStorage.removeHFileRefs(peerId, files));
+    interruptOrAbortWhenFail(() -> this.queueStorage.removeHFileRefs(peerId, files));
   }
 
   int activeFailoverTaskCount() {

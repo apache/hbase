@@ -499,9 +499,29 @@ public class ReplicationSource implements ReplicationSourceInterface {
     Collection<ReplicationSourceShipper> workers = workerThreads.values();
     for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
-      worker.entryReader.interrupt();
-      worker.interrupt();
+      worker.entryReader.setReaderRunning(false);
     }
+
+    for (ReplicationSourceShipper worker : workers) {
+      if (worker.isAlive() || worker.entryReader.isAlive()) {
+        try {
+          // Wait worker to stop
+          Thread.sleep(this.sleepForRetries);
+        } catch (InterruptedException e) {
+          LOG.info("Interrupted while waiting " + worker.getName() + " to stop");
+          Thread.currentThread().interrupt();
+        }
+        // If worker still is alive after waiting, interrupt it
+        if (worker.isAlive()) {
+          worker.interrupt();
+        }
+        // If entry reader is alive after waiting, interrupt it
+        if (worker.entryReader.isAlive()) {
+          worker.entryReader.interrupt();
+        }
+      }
+    }
+
     if (this.replicationEndpoint != null) {
       this.replicationEndpoint.stop();
     }
