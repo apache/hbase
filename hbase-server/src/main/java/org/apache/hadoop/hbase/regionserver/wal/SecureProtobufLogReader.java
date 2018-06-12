@@ -141,6 +141,7 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
       this.cellDecoder = codec.getDecoder(this.inputStream);
       // We do not support compression with WAL encryption
       this.compressionContext = null;
+      this.byteStringUncompressor = WALCellCodec.getNoneUncompressor();
       this.hasCompression = false;
     } else {
       super.initAfterCompression(cellCodecClsName);

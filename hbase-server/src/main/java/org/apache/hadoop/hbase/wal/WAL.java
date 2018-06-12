@@ -283,7 +283,9 @@ public interface WAL extends Closeable, WALFileLengthProvider {
      *
      * @param compressionContext
      *          Compression context
+     * @deprecated deparcated since hbase 2.1.0
      */
+    @Deprecated
     public void setCompressionContext(CompressionContext compressionContext) {
       key.setCompressionContext(compressionContext);
     }

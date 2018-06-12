@@ -47,7 +47,6 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public void append(Entry entry) throws IOException {
-    entry.setCompressionContext(compressionContext);
     entry.getKey().getBuilder(compressor).
         setFollowingKvCount(entry.getEdit().size()).build().writeDelimitedTo(output);
     for (Cell cell : entry.getEdit().getCells()) {

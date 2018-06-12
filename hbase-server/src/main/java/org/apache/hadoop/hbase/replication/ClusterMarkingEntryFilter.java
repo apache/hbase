@@ -60,8 +60,6 @@ public class ClusterMarkingEntryFilter implements WALEntryFilter {
       if (edit != null && !edit.isEmpty()) {
         // Mark that the current cluster has the change
         logKey.addClusterId(clusterId);
-        // We need to set the CC to null else it will be compressed when sent to the sink
-        entry.setCompressionContext(null);
         return entry;
       }
     }

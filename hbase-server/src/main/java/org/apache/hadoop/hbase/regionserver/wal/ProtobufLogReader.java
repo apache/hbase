@@ -312,6 +312,8 @@ public class ProtobufLogReader extends ReaderBase {
     this.cellDecoder = codec.getDecoder(this.inputStream);
     if (this.hasCompression) {
       this.byteStringUncompressor = codec.getByteStringUncompressor();
+    } else {
+      this.byteStringUncompressor = WALCellCodec.getNoneUncompressor();
     }
   }
 

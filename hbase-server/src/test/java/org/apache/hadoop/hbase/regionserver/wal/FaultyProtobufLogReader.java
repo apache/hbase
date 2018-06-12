@@ -45,9 +45,6 @@ public class FaultyProtobufLogReader extends ProtobufLogReader {
       boolean b;
       do {
         Entry e = new Entry();
-        if (compressionContext != null) {
-          e.setCompressionContext(compressionContext);
-        }
         b = readNext(e);
         nextQueue.offer(e);
         numberOfFileEntries++;
