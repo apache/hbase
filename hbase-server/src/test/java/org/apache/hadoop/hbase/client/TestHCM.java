@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -922,6 +923,15 @@ public class TestHCM {
     RegionLocations rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
 
+    // We're now going to test getAllRegionLocations() whether or not cache all region locations
+    conn.clearRegionCache(TABLE_NAME);
+    conn.getRegionLocator(TABLE_NAME).getAllRegionLocations();
+    assertNotNull("Can't get cached location for row aaa",
+        conn.getCachedLocation(TABLE_NAME,Bytes.toBytes("aaa")));
+    for(byte[] startKey:KEYS_FOR_HBA_CREATE_TABLE){
+      assertNotNull("Can't get cached location for row "+
+          Bytes.toString(startKey),conn.getCachedLocation(TABLE_NAME,startKey));
+    }
     // We're now going to move the region and check that it works for the client
     // First a new put to add the location in the cache
     conn.clearRegionCache(TABLE_NAME);
