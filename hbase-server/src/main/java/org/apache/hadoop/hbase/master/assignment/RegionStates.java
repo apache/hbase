@@ -34,6 +34,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -570,6 +571,18 @@ public class RegionStates {
   }
 
   /**
+   * @return Returns regions for a table which are open or about to be open (OPEN or OPENING)
+   */
+  public List<RegionInfo> getOpenRegionsOfTable(final TableName table) {
+    // We want to get regions which are already open on the cluster or are about to be open.
+    // The use-case is for identifying regions which need to be re-opened to ensure they see some
+    // new configuration. Regions in OPENING now are presently being opened by a RS, so we can
+    // assume that they will imminently be OPEN but may not see our configuration change
+    return getRegionsOfTable(
+        table, (state) -> state.isInState(State.OPEN) || state.isInState(State.OPENING));
+  }
+
+  /**
    * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
    */
   public List<RegionInfo> getRegionsOfTable(final TableName table) {
@@ -577,15 +590,25 @@ public class RegionStates {
   }
 
   /**
+   * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
+   */
+  public List<RegionInfo> getRegionsOfTable(final TableName table, boolean offline) {
+    return getRegionsOfTable(table, (state) -> include(state, offline));
+  }
+
+  /**
    * @return Return the regions of the table; does not include OFFLINE unless you set
    * <code>offline</code> to true. Does not include regions that are in the
    * {@link State#SPLIT} state.
    */
-  public List<RegionInfo> getRegionsOfTable(final TableName table, final boolean offline) {
+  public List<RegionInfo> getRegionsOfTable(
+      final TableName table, Predicate<RegionStateNode> filter) {
     final ArrayList<RegionStateNode> nodes = getTableRegionStateNodes(table);
     final ArrayList<RegionInfo> hris = new ArrayList<RegionInfo>(nodes.size());
     for (RegionStateNode node: nodes) {
-      if (include(node, offline)) hris.add(node.getRegionInfo());
+      if (filter.test(node)) {
+        hris.add(node.getRegionInfo());
+      }
     }
     return hris;
   }
