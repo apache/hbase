@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -184,6 +185,10 @@ public class ReplicationSourceShipper extends Thread {
         // Clean up hfile references
         for (Entry entry : entries) {
           cleanUpHFileRefs(entry.getEdit());
+
+          TableName tableName = entry.getKey().getTableName();
+          source.getSourceMetrics().setAgeOfLastShippedOpByTable(entry.getKey().getWriteTime(),
+              tableName.getNameAsString());
         }
         // Log and clean up WAL logs
         updateLogPosition(entryBatch);
@@ -199,8 +204,8 @@ public class ReplicationSourceShipper extends Thread {
         source.getSourceMetrics().setAgeOfLastShippedOp(
           entries.get(entries.size() - 1).getKey().getWriteTime(), walGroupId);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Replicated " + entries.size() + " entries or " + entryBatch.getNbOperations()
-              + " operations in " + ((endTimeNs - startTimeNs) / 1000000) + " ms");
+          LOG.trace("Replicated {} entries or {} operations in {} ms",
+              entries.size(), entryBatch.getNbOperations(), (endTimeNs - startTimeNs) / 1000000);
         }
         break;
       } catch (Exception ex) {

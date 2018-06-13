@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 /**
  * This class is for maintaining the various replication statistics for a source and publishing them
  * through the metrics interfaces.
@@ -45,7 +47,7 @@ public class MetricsSource implements BaseSource {
 
   private final MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
-
+  private Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable;
 
   /**
    * Constructor used to register the metrics
@@ -58,6 +60,7 @@ public class MetricsSource implements BaseSource {
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
     globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    singleSourceSourceByTable = new HashMap<>();
   }
 
   /**
@@ -67,10 +70,12 @@ public class MetricsSource implements BaseSource {
    * @param globalSourceSource Class to monitor global-scoped metrics
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
-                       MetricsReplicationSourceSource globalSourceSource) {
+                       MetricsReplicationSourceSource globalSourceSource,
+                       Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
     this.globalSourceSource = globalSourceSource;
+    this.singleSourceSourceByTable = singleSourceSourceByTable;
   }
 
   /**
@@ -83,6 +88,19 @@ public class MetricsSource implements BaseSource {
     singleSourceSource.setLastShippedAge(age);
     globalSourceSource.setLastShippedAge(age);
     this.lastTimestamps.put(walGroup, timestamp);
+  }
+
+  /**
+   * Set the age of the last edit that was shipped group by table
+   * @param timestamp write time of the edit
+   * @param tableName String as group and tableName
+   */
+  public void setAgeOfLastShippedOpByTable(long timestamp, String tableName) {
+    long age = EnvironmentEdgeManager.currentTime() - timestamp;
+    this.getSingleSourceSourceByTable().computeIfAbsent(
+        tableName, t -> CompatibilitySingletonFactory
+            .getInstance(MetricsReplicationSourceFactory.class).getSource(t))
+            .setLastShippedAge(age);
   }
 
   /**
@@ -348,5 +366,10 @@ public class MetricsSource implements BaseSource {
   @Override
   public String getMetricsName() {
     return globalSourceSource.getMetricsName();
+  }
+
+  @VisibleForTesting
+  public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
+    return singleSourceSourceByTable;
   }
 }
