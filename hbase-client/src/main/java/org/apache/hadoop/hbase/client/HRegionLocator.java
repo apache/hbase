@@ -21,14 +21,11 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NavigableMap;
-import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -86,14 +83,12 @@ public class HRegionLocator implements RegionLocator {
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
     TableName tableName = getName();
-    NavigableMap<HRegionInfo, ServerName> locations =
-        MetaScanner.allTableRegions(this.connection, tableName);
-    ArrayList<HRegionLocation> regions = new ArrayList<>(locations.size());
-    for (Entry<HRegionInfo, ServerName> entry : locations.entrySet()) {
-      regions.add(new HRegionLocation(entry.getKey(), entry.getValue()));
-    }
-    if (regions.size() > 0) {
-      connection.cacheLocation(tableName, new RegionLocations(regions));
+    ArrayList<HRegionLocation> regions = new ArrayList<>();
+    for (RegionLocations locations : listRegionLocations()) {
+      for (HRegionLocation location : locations.getRegionLocations()) {
+        regions.add(location);
+      }
+      connection.cacheLocation(tableName, locations);
     }
     return regions;
   }
