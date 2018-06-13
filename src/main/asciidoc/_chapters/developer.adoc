@@ -870,6 +870,50 @@ See link:http://search-hadoop.com/m/DHED4dhFaU[HBase, mail # dev - On
                 recent discussion clarifying ASF release policy].
 for how we arrived at this process.
 
+[[hbase.release.announcement]]
+== Announcing Releases
+
+Once an RC has passed successfully and the needed artifacts have been staged for disribution, you'll need to let everyone know about our shiny new release. It's not a requirement, but to make things easier for release managers we have a template you can start with. Be sure you replace \_version_ and other markers with the relevant version numbers. You should manually verify all links before sending.
+
+[source,email]
+----
+The HBase team is happy to announce the immediate availability of HBase _version_.
+
+Apache HBase™ is an open-source, distributed, versioned, non-relational database.
+Apache HBase gives you low latency random access to billions of rows with
+millions of columns atop non-specialized hardware. To learn more about HBase,
+see https://hbase.apache.org/.
+
+HBase _version_ is the _nth_ minor release in the HBase _major_.x line, which aims to
+improve the stability and reliability of HBase. This release includes roughly
+XXX resolved issues not covered by previous _major_.x releases.
+
+Notable new features include:
+- List text descriptions of features that fit on one line
+- Including if JDK or Hadoop support versions changes
+- If the "stable" pointer changes, call that out
+- For those with obvious JIRA IDs, include them (HBASE-YYYYY)
+
+The full list of issues can be found in the included CHANGES.md and RELEASENOTES.md,
+or via our issue tracker:
+
+    https://s.apache.org/hbase-_version_-jira
+
+To download please follow the links and instructions on our website:
+
+    https://hbase.apache.org/downloads.html
+
+
+Question, comments, and problems are always welcome at: dev@hbase.apache.org.
+
+Thanks to all who contributed and made this release possible.
+
+Cheers,
+The HBase Dev Team
+----
+
+You should sent this message to the following lists: dev@hbase.apache.org, user@hbase.apache.org, announce@apache.org. If you'd like a spot check before sending, feel free to ask via jira or the dev list.
+
 [[documentation]]
 == Generating the HBase Reference Guide
 

@@ -86,8 +86,16 @@ for warning about incompatible changes). All effort will be made to provide a de
 * Example: Old compiled Coprocessor, Filter, or Plugin code will work unchanged with the new jars.
 
 .Dependency Compatibility
-* An upgrade of HBase will not require an incompatible upgrade of a dependent project, including the Java runtime.
-* Example: An upgrade of Hadoop will not invalidate any of the compatibilities guarantees we made.
+* An upgrade of HBase will not require an incompatible upgrade of a dependent project, except for Apache Hadoop.
+* An upgrade of HBase will not require an incompatible upgrade of the Java runtime.
+* Example: Upgrading HBase to a version that supports _Dependency Compatibility_ won't require that you upgrade your Apache ZooKeeper service.
+* Example: If your current version of HBase supported running on JDK 8, then an upgrade to a version that supports _Dependency Compatibility_ will also run on JDK 8.
+
+.Hadoop Versions
+[TIP]
+====
+Previously, we tried to maintain dependency compatibility for the underly Hadoop service but over the last few years this has proven untenable. While the HBase project attempts to maintain support for older versions of Hadoop, we drop the "supported" designator for minor versions that fail to continue to see releases. Additionally, the Hadoop project has its own set of compatibility guidelines, which means in some cases having to update to a newer supported minor release might break some of our compatibility promises.
+====
 
 .Operational Compatibility
 * Metric changes

@@ -186,20 +186,20 @@ creation or mutation, and `DELETE` for deletion.
 
 |/_table_/schema
 |POST
-|Create a new table, or replace an existing table's schema
+|Update an existing table with the provided schema fragment
 |curl -vi -X POST \
   -H "Accept: text/xml" \
   -H "Content-Type: text/xml" \
-  -d '&lt;?xml version="1.0" encoding="UTF-8"?>&lt;TableSchema name="users">&lt;ColumnSchema name="cf" />&lt;/TableSchema>' \
+  -d '&lt;?xml version="1.0" encoding="UTF-8"?>&lt;TableSchema name="users">&lt;ColumnSchema name="cf" KEEP_DELETED_CELLS="true" />&lt;/TableSchema>' \
   "http://example.com:8000/users/schema"
 
 |/_table_/schema
 |PUT
-|Update an existing table with the provided schema fragment
+|Create a new table, or replace an existing table's schema
 |curl -vi -X PUT \
   -H "Accept: text/xml" \
   -H "Content-Type: text/xml" \
-  -d '&lt;?xml version="1.0" encoding="UTF-8"?>&lt;TableSchema name="users">&lt;ColumnSchema name="cf" KEEP_DELETED_CELLS="true" />&lt;/TableSchema>' \
+  -d '&lt;?xml version="1.0" encoding="UTF-8"?>&lt;TableSchema name="users">&lt;ColumnSchema name="cf" />&lt;/TableSchema>' \
   "http://example.com:8000/users/schema"
 
 |/_table_/schema
