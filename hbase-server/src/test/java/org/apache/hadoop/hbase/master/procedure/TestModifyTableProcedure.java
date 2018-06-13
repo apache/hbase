@@ -26,7 +26,10 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -201,24 +204,25 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Modify multiple properties of the table.
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
-    boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
-    htd.setCompactionEnabled(newCompactionEnableOption);
-    htd.addFamily(new HColumnDescriptor(cf2));
-    htd.removeFamily(Bytes.toBytes(cf3));
-    htd.setRegionReplication(3);
+    TableDescriptor oldDescriptor = UTIL.getAdmin().getDescriptor(tableName);
+    TableDescriptor newDescriptor = TableDescriptorBuilder.newBuilder(oldDescriptor)
+        .setCompactionEnabled(!oldDescriptor.isCompactionEnabled())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf2))
+        .removeColumnFamily(Bytes.toBytes(cf3))
+        .setRegionReplication(3)
+        .build();
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd));
+      new ModifyTableProcedure(procExec.getEnvironment(), newDescriptor));
 
     // Restart the executor and execute the step twice
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     // Validate descriptor
-    HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
-    assertEquals(newCompactionEnableOption, currentHtd.isCompactionEnabled());
-    assertEquals(2, currentHtd.getFamiliesKeys().size());
+    TableDescriptor currentDescriptor = UTIL.getAdmin().getDescriptor(tableName);
+    assertEquals(newDescriptor.isCompactionEnabled(), currentDescriptor.isCompactionEnabled());
+    assertEquals(2, newDescriptor.getColumnFamilyNames().size());
 
     // cf2 should be added cf3 should be removed
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
