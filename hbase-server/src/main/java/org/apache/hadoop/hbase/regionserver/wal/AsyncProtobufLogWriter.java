@@ -120,7 +120,6 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   @Override
   public void append(Entry entry) {
     int buffered = output.buffered();
-    entry.setCompressionContext(compressionContext);
     try {
       entry.getKey().
         getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()

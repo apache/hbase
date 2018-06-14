@@ -92,9 +92,6 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
     if (e == null) {
       e = new Entry();
     }
-    if (compressionContext != null) {
-      e.setCompressionContext(compressionContext);
-    }
 
     boolean hasEntry = false;
     try {

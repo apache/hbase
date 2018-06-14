@@ -183,6 +183,8 @@ public abstract class AbstractProtobufLogWriter {
     this.cellEncoder = codec.getEncoder(getOutputStreamForCellEncoder());
     if (doCompress) {
       this.compressor = codec.getByteStringCompressor();
+    } else {
+      this.compressor = WALCellCodec.getNoneCompressor();
     }
   }
 
@@ -198,6 +200,7 @@ public abstract class AbstractProtobufLogWriter {
       this.cellEncoder = codec.getEncoder(getOutputStreamForCellEncoder());
       // We do not support compression
       this.compressionContext = null;
+      this.compressor = WALCellCodec.getNoneCompressor();
     } else {
       initAfterHeader0(doCompress);
     }

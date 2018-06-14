@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
@@ -276,16 +275,6 @@ public interface WAL extends Closeable, WALFileLengthProvider {
      */
     public WALKeyImpl getKey() {
       return key;
-    }
-
-    /**
-     * Set compression context for this entry.
-     *
-     * @param compressionContext
-     *          Compression context
-     */
-    public void setCompressionContext(CompressionContext compressionContext) {
-      key.setCompressionContext(compressionContext);
     }
 
     @Override
