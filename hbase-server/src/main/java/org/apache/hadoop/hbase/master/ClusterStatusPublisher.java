@@ -187,8 +187,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
     }
 
     // We're sending the new deads first.
-    List<Map.Entry<ServerName, Integer>> entries = new ArrayList<>();
-    entries.addAll(lastSent.entrySet());
+    List<Map.Entry<ServerName, Integer>> entries = new ArrayList<>(lastSent.entrySet());
     Collections.sort(entries, new Comparator<Map.Entry<ServerName, Integer>>() {
       @Override
       public int compare(Map.Entry<ServerName, Integer> o1, Map.Entry<ServerName, Integer> o2) {
