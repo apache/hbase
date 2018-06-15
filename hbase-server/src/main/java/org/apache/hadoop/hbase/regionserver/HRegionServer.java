@@ -1813,6 +1813,11 @@ public class HRegionServer extends HasThread implements
       throw new RegionServerRunningException(
           "Region server has already created directory at " + this.serverName.toString());
     }
+    // Always create wal directory as now we need this when master restarts to find out the live
+    // region servers.
+    if (!this.walFs.mkdirs(logDir)) {
+      throw new IOException("Can not create wal directory " + logDir);
+    }
     // Instantiate replication if replication enabled. Pass it the log directories.
     createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir,
       factory.getWALProvider());
