@@ -1074,9 +1074,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         ". check running procedures to see if something is stuck.");
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Roll new state log: " + logId);
-    }
+    LOG.info("Rolled new Procedure Store WAL, id={}", logId);
     return true;
   }
 

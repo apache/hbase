@@ -135,7 +135,7 @@ public class AssignmentManager implements ServerListener {
 
   public static final String RIT_CHORE_INTERVAL_MSEC_CONF_KEY =
       "hbase.assignment.rit.chore.interval.msec";
-  private static final int DEFAULT_RIT_CHORE_INTERVAL_MSEC = 5 * 1000;
+  private static final int DEFAULT_RIT_CHORE_INTERVAL_MSEC = 60 * 1000;
 
   public static final String ASSIGN_MAX_ATTEMPTS =
       "hbase.assignment.maximum.attempts";
