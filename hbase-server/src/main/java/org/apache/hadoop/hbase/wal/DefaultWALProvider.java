@@ -380,7 +380,8 @@ public class DefaultWALProvider implements WALProvider {
     Writer writer = null;
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();
-      writer.init(fs, path, conf, overwritable);
+      FileSystem rootFs = FileSystem.get(path.toUri(), conf);
+      writer.init(rootFs, path, conf, overwritable);
       return writer;
     } catch (Exception e) {
       LOG.debug("Error instantiating log writer.", e);
