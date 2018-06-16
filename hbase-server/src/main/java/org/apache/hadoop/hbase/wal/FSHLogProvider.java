@@ -73,7 +73,8 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     Writer writer = null;
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();
-      writer.init(fs, path, conf, overwritable, blocksize);
+      FileSystem rootFs = FileSystem.get(path.toUri(), conf);
+      writer.init(rootFs, path, conf, overwritable, blocksize);
       return writer;
     } catch (Exception e) { 
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {

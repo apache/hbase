@@ -390,8 +390,8 @@ public class TestWALSplit {
         new Entry(new WALKeyImpl(encoded,
             TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
             new WALEdit());
-    Path p = WALSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR,
-        FILENAME_BEING_SPLIT);
+    Path p = WALSplitter.getRegionSplitEditsPath(entry,
+        FILENAME_BEING_SPLIT, conf);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
   }
@@ -416,8 +416,8 @@ public class TestWALSplit {
     assertEquals(HConstants.RECOVERED_EDITS_DIR, parent.getName());
     fs.createNewFile(parent); // create a recovered.edits file
 
-    Path p = WALSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR,
-        FILENAME_BEING_SPLIT);
+    Path p = WALSplitter.getRegionSplitEditsPath(entry,
+        FILENAME_BEING_SPLIT, conf);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     WALFactory.createRecoveredEditsWriter(fs, p, conf).close();
