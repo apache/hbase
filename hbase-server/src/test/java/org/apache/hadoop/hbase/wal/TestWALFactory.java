@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -126,6 +127,7 @@ public class TestWALFactory {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    CommonFSUtils.setWALRootDir(TEST_UTIL.getConfiguration(), new Path("file:///tmp/wal"));
     // Make block sizes small.
     TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
     // needed for testAppendClose()
@@ -176,7 +178,7 @@ public class TestWALFactory {
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
     final int howmany = 3;
     RegionInfo[] infos = new RegionInfo[3];
-    Path tabledir = FSUtils.getTableDir(hbaseWALDir, tableName);
+    Path tabledir = FSUtils.getTableDir(hbaseDir, tableName);
     fs.mkdirs(tabledir);
     for (int i = 0; i < howmany; i++) {
       infos[i] = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("" + i))
