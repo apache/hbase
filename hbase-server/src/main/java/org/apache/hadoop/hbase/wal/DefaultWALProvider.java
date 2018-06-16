@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import java.io.Closeable;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -370,8 +367,9 @@ public class DefaultWALProvider implements WALProvider {
         ProtobufLogWriter.class, Writer.class);
     Writer writer = null;
     try {
-      writer = logWriterClass.newInstance();
-      writer.init(fs, path, conf, overwritable);
+      writer = logWriterClass.getDeclaredConstructor().newInstance();
+      FileSystem rootFs = FileSystem.get(path.toUri(), conf);
+      writer.init(rootFs, path, conf, overwritable);
       return writer;
     } catch (Exception e) {
       LOG.debug("Error instantiating log writer.", e);
