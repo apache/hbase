@@ -1860,7 +1860,7 @@ public class ProcedureExecutor<TEnvironment> {
 
         // WARN the worker is stuck
         stuckCount++;
-        LOG.warn("Worker stuck {} run time {}", worker,
+        LOG.warn("Worker stuck {}, run time {}", worker,
           StringUtils.humanTimeDiff(worker.getCurrentRunTime()));
       }
       return stuckCount;
