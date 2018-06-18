@@ -77,6 +77,10 @@ class SchemaLocking {
     return getLock(regionLocks, encodedRegionName);
   }
 
+  /**
+   * @deprecated Since 2.0.2
+   */
+  @Deprecated
   LockAndQueue getMetaLock() {
     return metaLock;
   }

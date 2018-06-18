@@ -322,11 +322,6 @@ public interface MasterServices extends Server {
   TableDescriptors getTableDescriptors();
 
   /**
-   * @return true if master enables ServerShutdownHandler;
-   */
-  boolean isServerCrashProcessingEnabled();
-
-  /**
    * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint.
    *
    * <p>
@@ -489,13 +484,6 @@ public interface MasterServices extends Server {
    * there if so.
    */
   public void checkIfShouldMoveSystemRegionAsync();
-
-  /**
-   * Recover meta table. Will result in no-op is meta is already initialized. Any code that has
-   * access to master and requires to access meta during process initialization can call this
-   * method to make sure meta is initialized.
-   */
-  boolean recoverMeta() throws IOException;
 
   String getClientIdAuditPrefix();
 

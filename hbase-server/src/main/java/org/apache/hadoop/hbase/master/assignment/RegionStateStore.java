@@ -130,23 +130,24 @@ public class RegionStateStore {
   public void updateRegionLocation(RegionStates.RegionStateNode regionStateNode)
       throws IOException {
     if (regionStateNode.getRegionInfo().isMetaRegion()) {
-      updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation());
+      updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
+        regionStateNode.getState());
     } else {
-      long openSeqNum = regionStateNode.getState() == State.OPEN ?
-          regionStateNode.getOpenSeqNum() : HConstants.NO_SEQNUM;
+      long openSeqNum = regionStateNode.getState() == State.OPEN ? regionStateNode.getOpenSeqNum()
+        : HConstants.NO_SEQNUM;
       updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
           regionStateNode.getRegionLocation(), openSeqNum,
           // The regionStateNode may have no procedure in a test scenario; allow for this.
-          regionStateNode.getProcedure() != null?
-              regionStateNode.getProcedure().getProcId(): Procedure.NO_PROC_ID);
+          regionStateNode.getProcedure() != null ? regionStateNode.getProcedure().getProcId()
+              : Procedure.NO_PROC_ID);
     }
   }
 
-  private void updateMetaLocation(final RegionInfo regionInfo, final ServerName serverName)
+  private void updateMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
       throws IOException {
     try {
-      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName,
-        regionInfo.getReplicaId(), State.OPEN);
+      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
+        state);
     } catch (KeeperException e) {
       throw new IOException(e);
     }

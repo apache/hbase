@@ -150,7 +150,6 @@ public class TestAssignmentManager {
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
     am.wakeMetaLoadedEvent();
-    am.setFailoverCleanupDone(true);
   }
 
   @After
@@ -427,18 +426,15 @@ public class TestAssignmentManager {
     am = master.getAssignmentManager();
 
     // Assign meta
-    master.setServerCrashProcessingEnabled(false);
     rsDispatcher.setMockRsExecutor(new HangThenRSRestartExecutor());
     am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    assertEquals(true, am.isMetaInitialized());
+    assertEquals(true, am.isMetaAssigned());
 
     // set it back as default, see setUpMeta()
-    master.setServerCrashProcessingEnabled(true);
     am.wakeMetaLoadedEvent();
-    am.setFailoverCleanupDone(true);
   }
 
-  private Future<byte[]> submitProcedure(final Procedure proc) {
+  private Future<byte[]> submitProcedure(final Procedure<?> proc) {
     return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
@@ -449,7 +445,7 @@ public class TestAssignmentManager {
       LOG.info("ExecutionException", e);
       Exception ee = (Exception)e.getCause();
       if (ee instanceof InterruptedIOException) {
-        for (Procedure p: this.master.getMasterProcedureExecutor().getProcedures()) {
+        for (Procedure<?> p: this.master.getMasterProcedureExecutor().getProcedures()) {
           LOG.info(p.toStringDetails());
         }
       }
@@ -489,13 +485,6 @@ public class TestAssignmentManager {
   private AssignProcedure createAndSubmitAssign(TableName tableName, int regionId) {
     RegionInfo hri = createRegionInfo(tableName, regionId);
     AssignProcedure proc = am.createAssignProcedure(hri);
-    master.getMasterProcedureExecutor().submitProcedure(proc);
-    return proc;
-  }
-
-  private UnassignProcedure createAndSubmitUnassign(TableName tableName, int regionId) {
-    RegionInfo hri = createRegionInfo(tableName, regionId);
-    UnassignProcedure proc = am.createUnassignProcedure(hri, null, false);
     master.getMasterProcedureExecutor().submitProcedure(proc);
     return proc;
   }

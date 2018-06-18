@@ -18,10 +18,9 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.mockito.Mockito.mock;
-
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
@@ -53,8 +52,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-
-import com.google.protobuf.Service;
 
 public class MockNoopMasterServices implements MasterServices {
   private final Configuration conf;
@@ -209,16 +206,6 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public TableDescriptors getTableDescriptors() {
     return null;
-  }
-
-  private boolean serverCrashProcessingEnabled = true;
-
-  public void setServerCrashProcessingEnabled(boolean b) {
-    serverCrashProcessingEnabled = b;
-  }
-  @Override
-  public boolean isServerCrashProcessingEnabled() {
-    return serverCrashProcessingEnabled;
   }
 
   @Override
@@ -443,11 +430,6 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public void checkIfShouldMoveSystemRegionAsync() {
-  }
-
-  @Override
-  public boolean recoverMeta() throws IOException {
-    return false;
   }
 
   @Override

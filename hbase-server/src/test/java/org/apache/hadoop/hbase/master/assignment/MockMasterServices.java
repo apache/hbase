@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SortedSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -56,11 +55,18 @@ import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.security.Superusers;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.zookeeper.KeeperException;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -70,10 +76,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrException;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 
 /**
@@ -174,7 +176,7 @@ public class MockMasterServices extends MockNoopMasterServices {
   }
 
   public void start(final int numServes, final RSProcedureDispatcher remoteDispatcher)
-      throws IOException {
+      throws IOException, KeeperException {
     startProcedureExecutor(remoteDispatcher);
     this.assignmentManager.start();
     for (int i = 0; i < numServes; ++i) {
@@ -217,17 +219,14 @@ public class MockMasterServices extends MockNoopMasterServices {
   private void startProcedureExecutor(final RSProcedureDispatcher remoteDispatcher)
       throws IOException {
     final Configuration conf = getConfiguration();
-    final Path logDir = new Path(fileSystemManager.getRootDir(),
-        WALProcedureStore.MASTER_PROCEDURE_LOGDIR);
-
     this.procedureStore = new NoopProcedureStore();
     this.procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
 
     this.procedureEnv = new MasterProcedureEnv(this,
        remoteDispatcher != null ? remoteDispatcher : new RSProcedureDispatcher(this));
 
-    this.procedureExecutor = new ProcedureExecutor(conf, procedureEnv, procedureStore,
-        procedureEnv.getProcedureScheduler());
+    this.procedureExecutor = new ProcedureExecutor<>(conf, procedureEnv, procedureStore,
+      procedureEnv.getProcedureScheduler());
 
     final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS,
         Math.max(Runtime.getRuntime().availableProcessors(),
@@ -236,7 +235,7 @@ public class MockMasterServices extends MockNoopMasterServices {
         MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
         MasterProcedureConstants.DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION);
     this.procedureStore.start(numThreads);
-    this.procedureExecutor.start(numThreads, abortOnCorruption);
+    ProcedureTestingUtility.initAndStartWorkers(procedureExecutor, numThreads, abortOnCorruption);
     this.procedureEnv.getRemoteDispatcher().start();
   }
 

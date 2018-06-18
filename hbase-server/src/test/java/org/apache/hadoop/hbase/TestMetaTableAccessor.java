@@ -108,8 +108,6 @@ public class TestMetaTableAccessor {
    * Does {@link MetaTableAccessor#getRegion(Connection, byte[])} and a write
    * against hbase:meta while its hosted server is restarted to prove our retrying
    * works.
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test public void testRetrying()
   throws IOException, InterruptedException {

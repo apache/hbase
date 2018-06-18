@@ -1334,9 +1334,17 @@ public class MetaTableAccessor {
    */
   public static void putsToMetaTable(final Connection connection, final List<Put> ps)
       throws IOException {
+    if (ps.isEmpty()) {
+      return;
+    }
     try (Table t = getMetaHTable(connection)) {
       debugLogMutations(ps);
-      t.put(ps);
+      // the implementation for putting a single Put is much simpler so here we do a check first.
+      if (ps.size() == 1) {
+        t.put(ps.get(0));
+      } else {
+        t.put(ps);
+      }
     }
   }
 

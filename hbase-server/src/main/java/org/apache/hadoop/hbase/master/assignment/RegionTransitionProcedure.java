@@ -428,9 +428,11 @@ public abstract class RegionTransitionProcedure
   @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
     // Unless we are assigning meta, wait for meta to be available and loaded.
-    if (!isMeta() && (env.waitFailoverCleanup(this) ||
-        env.getAssignmentManager().waitMetaInitialized(this, getRegionInfo()))) {
-      return LockState.LOCK_EVENT_WAIT;
+    if (!isMeta()) {
+      AssignmentManager am = env.getAssignmentManager();
+      if (am.waitMetaLoaded(this) || am.waitMetaAssigned(this, regionInfo)) {
+        return LockState.LOCK_EVENT_WAIT;
+      }
     }
 
     // TODO: Revisit this and move it to the executor
@@ -439,8 +441,7 @@ public abstract class RegionTransitionProcedure
         LOG.debug(LockState.LOCK_EVENT_WAIT + " pid=" + getProcId() + " " +
           env.getProcedureScheduler().dumpLocks());
       } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        // ignore, just for logging
       }
       return LockState.LOCK_EVENT_WAIT;
     }

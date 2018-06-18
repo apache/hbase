@@ -19,12 +19,14 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MasterWalManager;
@@ -83,11 +85,8 @@ public class ServerCrashProcedure
    * @param shouldSplitWal True if we should split WALs as part of crashed server processing.
    * @param carryingMeta True if carrying hbase:meta table region.
    */
-  public ServerCrashProcedure(
-      final MasterProcedureEnv env,
-      final ServerName serverName,
-      final boolean shouldSplitWal,
-      final boolean carryingMeta) {
+  public ServerCrashProcedure(final MasterProcedureEnv env, final ServerName serverName,
+      final boolean shouldSplitWal, final boolean carryingMeta) {
     this.serverName = serverName;
     this.shouldSplitWal = shouldSplitWal;
     this.carryingMeta = carryingMeta;
@@ -119,18 +118,32 @@ public class ServerCrashProcedure
           LOG.info("Start " + this);
           // If carrying meta, process it first. Else, get list of regions on crashed server.
           if (this.carryingMeta) {
-            setNextState(ServerCrashState.SERVER_CRASH_PROCESS_META);
+            setNextState(ServerCrashState.SERVER_CRASH_SPLIT_META_LOGS);
           } else {
             setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
           }
           break;
-
+        case SERVER_CRASH_SPLIT_META_LOGS:
+          splitMetaLogs(env);
+          setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
+          break;
+        case SERVER_CRASH_ASSIGN_META:
+          handleRIT(env, Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO));
+          addChildProcedure(env.getAssignmentManager()
+            .createAssignProcedure(RegionInfoBuilder.FIRST_META_REGIONINFO));
+          setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
+          break;
+        case SERVER_CRASH_PROCESS_META:
+          // not used any more but still leave it here to keep compatible as there maybe old SCP
+          // which is stored in ProcedureStore which has this state.
+          processMeta(env);
+          setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
+          break;
         case SERVER_CRASH_GET_REGIONS:
           // If hbase:meta is not assigned, yield.
           if (env.getAssignmentManager().waitMetaLoaded(this)) {
             throw new ProcedureSuspendedException();
           }
-
           this.regionsOnCrashedServer = services.getAssignmentManager().getRegionStates()
             .getServerRegionInfoSet(serverName);
           // Where to go next? Depends on whether we should split logs at all or
@@ -141,17 +154,10 @@ public class ServerCrashProcedure
             setNextState(ServerCrashState.SERVER_CRASH_SPLIT_LOGS);
           }
           break;
-
-        case SERVER_CRASH_PROCESS_META:
-          processMeta(env);
-          setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
-          break;
-
         case SERVER_CRASH_SPLIT_LOGS:
           splitLogs(env);
           setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
           break;
-
         case SERVER_CRASH_ASSIGN:
           // If no regions to assign, skip assign and skip to the finish.
           // Filter out meta regions. Those are handled elsewhere in this procedure.
@@ -177,18 +183,15 @@ public class ServerCrashProcedure
             setNextState(ServerCrashState.SERVER_CRASH_FINISH);
           }
           break;
-
         case SERVER_CRASH_HANDLE_RIT2:
           // Noop. Left in place because we used to call handleRIT here for a second time
           // but no longer necessary since HBASE-20634.
           setNextState(ServerCrashState.SERVER_CRASH_FINISH);
           break;
-
         case SERVER_CRASH_FINISH:
           services.getAssignmentManager().getRegionStates().removeServer(serverName);
           services.getServerManager().getDeadServers().finish(serverName);
           return Flow.NO_MORE_STATE;
-
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
@@ -198,11 +201,6 @@ public class ServerCrashProcedure
     return Flow.HAS_MORE_STATE;
   }
 
-
-  /**
-   * @param env
-   * @throws IOException
-   */
   private void processMeta(final MasterProcedureEnv env) throws IOException {
     LOG.debug("{}; processing hbase:meta", this);
 
@@ -227,10 +225,18 @@ public class ServerCrashProcedure
       RegionReplicaUtil.isDefaultReplica(hri);
   }
 
+  private void splitMetaLogs(MasterProcedureEnv env) throws IOException {
+    LOG.debug("Splitting meta WALs {}", this);
+    MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
+    AssignmentManager am = env.getMasterServices().getAssignmentManager();
+    am.getRegionStates().metaLogSplitting(serverName);
+    mwm.splitMetaLog(serverName);
+    am.getRegionStates().metaLogSplit(serverName);
+    LOG.debug("Done splitting meta WALs {}", this);
+  }
+
   private void splitLogs(final MasterProcedureEnv env) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Splitting WALs " + this);
-    }
+    LOG.debug("Splitting WALs {}", this);
     MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
     // TODO: For Matteo. Below BLOCKs!!!! Redo so can relinquish executor while it is running.
@@ -271,9 +277,6 @@ public class ServerCrashProcedure
 
   @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
-    // TODO: Put this BACK AFTER AMv2 goes in!!!!
-    // if (env.waitFailoverCleanup(this)) return LockState.LOCK_EVENT_WAIT;
-    if (env.waitServerCrashProcessingEnabled(this)) return LockState.LOCK_EVENT_WAIT;
     if (env.getProcedureScheduler().waitServerExclusiveLock(this, getServerName())) {
       return LockState.LOCK_EVENT_WAIT;
     }

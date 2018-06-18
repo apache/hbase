@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -80,6 +81,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -120,13 +122,14 @@ import org.apache.hadoop.hbase.master.procedure.DeleteNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.InitMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
-import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -223,7 +226,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings("deprecation")
 public class HMaster extends HRegionServer implements MasterServices {
-  private static Logger LOG = LoggerFactory.getLogger(HMaster.class.getName());
+  private static Logger LOG = LoggerFactory.getLogger(HMaster.class);
 
   /**
    * Protection against zombie master. Started once Master accepts active responsibility and
@@ -335,10 +338,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   // flag set after master services are started,
   // initialization may have not completed yet.
   volatile boolean serviceStarted = false;
-
-  // flag set after we complete assignMeta.
-  private final ProcedureEvent serverCrashProcessingEnabled =
-    new ProcedureEvent("server crash processing");
 
   // Maximum time we should run balancer for
   private final int maxBlancingTime;
@@ -547,18 +546,20 @@ public class HMaster extends HRegionServer implements MasterServices {
   public void run() {
     try {
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-        try {
-          int infoPort = putUpJettyServer();
-          startActiveMasterManager(infoPort);
-        } catch (Throwable t) {
-          // Make sure we log the exception.
-          String error = "Failed to become Active Master";
-          LOG.error(error, t);
-          // Abort should have been called already.
-          if (!isAborted()) {
-            abort(error, t);
+        Threads.setDaemonThreadRunning(new Thread(() -> {
+          try {
+            int infoPort = putUpJettyServer();
+            startActiveMasterManager(infoPort);
+          } catch (Throwable t) {
+            // Make sure we log the exception.
+            String error = "Failed to become Active Master";
+            LOG.error(error, t);
+            // Abort should have been called already.
+            if (!isAborted()) {
+              abort(error, t);
+            }
           }
-        }
+        }));
       }
       // Fall in here even if we have been aborted. Need to run the shutdown services and
       // the super run call will do this for us.
@@ -708,7 +709,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * Initialize all ZK based system trackers.
+   * Initialize all ZK based system trackers. But do not include {@link RegionServerTracker}, it
+   * should have already been initialized along with {@link ServerManager}.
    * Will be overridden in tests.
    */
   @VisibleForTesting
@@ -727,14 +729,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.splitOrMergeTracker = new SplitOrMergeTracker(zooKeeper, conf, this);
     this.splitOrMergeTracker.start();
 
-    // Create Assignment Manager
-    this.assignmentManager = new AssignmentManager(this);
-    this.assignmentManager.start();
-
     this.replicationManager = new ReplicationManager(conf, zooKeeper, this);
-
-    this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
-    this.regionServerTracker.start();
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
@@ -764,17 +759,37 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * Finish initialization of HMaster after becoming the primary master.
    *
-   * <ol>
-   * <li>Initialize master components - file system manager, server manager,
-   *     assignment manager, region server tracker, etc</li>
-   * <li>Start necessary service threads - balancer, catalog janior,
-   *     executor services, etc</li>
-   * <li>Set cluster as UP in ZooKeeper</li>
-   * <li>Wait for RegionServers to check-in</li>
-   * <li>Split logs and perform data recovery, if necessary</li>
-   * <li>Ensure assignment of meta/namespace regions<li>
-   * <li>Handle either fresh cluster start or master failover</li>
+   * The startup order is a bit complicated but very important, do not change it unless you know
+   * what you are doing.
+   * <li>Initialize file system based components - file system manager, wal manager, table
+   * descriptors, etc</li>
+   * <li>Publish cluster id</li>
+   * <li>Here comes the most complicated part - initialize server manager, assignment manager and
+   * region server tracker
+   * <ol type='i'>
+   * <li>Create server manager</li>
+   * <li>Create procedure executor, load the procedures, but do not start workers. We will start it
+   * later after we finish scheduling SCPs to avoid scheduling duplicated SCPs for the same
+   * server</li>
+   * <li>Create assignment manager and start it, load the meta region state, but do not load data
+   * from meta region</li>
+   * <li>Start region server tracker, construct the online servers set and find out dead servers and
+   * schedule SCP for them. The online servers will be constructed by scanning zk, and we will also
+   * scan the wal directory to find out possible live region servers, and the differences between
+   * these two sets are the dead servers</li>
    * </ol>
+   * </li>
+   * <li>If this is a new deploy, schedule a InitMetaProcedure to initialize meta</li>
+   * <li>Start necessary service threads - balancer, catalog janior, executor services, and also the
+   * procedure executor, etc. Notice that the balancer must be created first as assignment manager
+   * may use it when assigning regions.</li>
+   * <li>Wait for meta to be initialized if necesssary, start table state manager.</li>
+   * <li>Wait for enough region servers to check-in</li>
+   * <li>Let assignment manager load data from meta and construct region states</li>
+   * <li>Start all other things such as chore services, etc</li>
+   * <p/>
+   * Notice that now we will not schedule a special procedure to make meta online(unless the first
+   * time where meta has not been created yet), we will rely on SCP to bring meta online.
    */
   private void finishActiveMasterInitialization(MonitoredTask status)
       throws IOException, InterruptedException, KeeperException {
@@ -813,10 +828,20 @@ public class HMaster extends HRegionServer implements MasterServices {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.clusterId = clusterId.toString();
 
-    this.serverManager = createServerManager(this);
 
-    // This manager is started AFTER hbase:meta is confirmed on line.
-    // See inside metaBootstrap.recoverMeta(); below. Shouldn't be so cryptic!
+
+    status.setStatus("Initialze ServerManager and schedule SCP for crash servers");
+    this.serverManager = createServerManager(this);
+    createProcedureExecutor();
+    // Create Assignment Manager
+    this.assignmentManager = new AssignmentManager(this);
+    this.assignmentManager.start();
+    this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
+    this.regionServerTracker.start(
+      procedureExecutor.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
+        .map(p -> ((ServerCrashProcedure) p).getServerName()).collect(Collectors.toSet()),
+      walManager.getLiveServersFromWALDir());
+    // This manager will be started AFTER hbase:meta is confirmed on line.
     // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
     // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
     this.tableStateManager =
@@ -845,10 +870,37 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.setStatus("Initializing master coprocessors");
     this.cpHost = new MasterCoprocessorHost(this, this.conf);
 
+    status.setStatus("Initializing meta table if this is a new deploy");
+    InitMetaProcedure initMetaProc = null;
+    if (assignmentManager.getRegionStates().getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO)
+      .isOffline()) {
+      Optional<Procedure<?>> optProc = procedureExecutor.getProcedures().stream()
+        .filter(p -> p instanceof InitMetaProcedure).findAny();
+      if (optProc.isPresent()) {
+        initMetaProc = (InitMetaProcedure) optProc.get();
+      } else {
+        // schedule an init meta procedure if meta has not been deployed yet
+        initMetaProc = new InitMetaProcedure();
+        procedureExecutor.submitProcedure(initMetaProc);
+      }
+    }
+    if (this.balancer instanceof FavoredNodesPromoter) {
+      favoredNodesManager = new FavoredNodesManager(this);
+    }
+
+    // initialize load balancer
+    this.balancer.setMasterServices(this);
+    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
+    this.balancer.initialize();
+
     // start up all service threads.
     status.setStatus("Initializing master service threads");
     startServiceThreads();
-
+    // wait meta to be initialized after we start procedure executor
+    if (initMetaProc != null) {
+      initMetaProc.await();
+    }
+    tableStateManager.start();
     // Wake up this server to check in
     sleeper.skipSleepCycle();
 
@@ -860,27 +912,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     LOG.info(Objects.toString(status));
     waitForRegionServers(status);
 
-    if (this.balancer instanceof FavoredNodesPromoter) {
-      favoredNodesManager = new FavoredNodesManager(this);
-    }
-
-    //initialize load balancer
-    this.balancer.setMasterServices(this);
-    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
-    this.balancer.initialize();
-
-    // Make sure meta assigned before proceeding.
-    status.setStatus("Recovering  Meta Region");
-
     // Check if master is shutting down because issue initializing regionservers or balancer.
     if (isStopped()) {
       return;
     }
-
-    // Bring up hbase:meta. recoverMeta is a blocking call waiting until hbase:meta is deployed.
-    // It also starts the TableStateManager.
-    MasterMetaBootstrap metaBootstrap = createMetaBootstrap();
-    metaBootstrap.recoverMeta();
 
     //Initialize after meta as it scans meta
     if (favoredNodesManager != null) {
@@ -889,9 +924,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       snapshotOfRegionAssignment.initialize();
       favoredNodesManager.initialize(snapshotOfRegionAssignment);
     }
-
-    status.setStatus("Submitting log splitting work for previously failed region servers");
-    metaBootstrap.processDeadServers();
 
     // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
@@ -933,6 +965,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     setInitialized(true);
     assignmentManager.checkIfShouldMoveSystemRegionAsync();
     status.setStatus("Assign meta replicas");
+    MasterMetaBootstrap metaBootstrap = createMetaBootstrap();
     metaBootstrap.assignMetaReplicas();
     status.setStatus("Starting quota manager");
     initQuotaManager();
@@ -1075,7 +1108,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void initQuotaManager() throws IOException {
     MasterQuotaManager quotaManager = new MasterQuotaManager(this);
-    this.assignmentManager.setRegionStateListener(quotaManager);
     quotaManager.start();
     this.quotaManager = quotaManager;
   }
@@ -1221,10 +1253,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (this.mpmHost != null) this.mpmHost.stop("server shutting down.");
   }
 
-  private void startProcedureExecutor() throws IOException {
-    final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
-    procedureStore = new WALProcedureStore(conf,
-        new MasterProcedureEnv.WALStoreLeaseRecovery(this));
+  private void createProcedureExecutor() throws IOException {
+    MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
+    procedureStore =
+      new WALProcedureStore(conf, new MasterProcedureEnv.WALStoreLeaseRecovery(this));
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
     MasterProcedureScheduler procedureScheduler = procEnv.getProcedureScheduler();
     procedureExecutor = new ProcedureExecutor<>(conf, procEnv, procedureStore, procedureScheduler);
@@ -1237,8 +1269,15 @@ public class HMaster extends HRegionServer implements MasterServices {
       conf.getBoolean(MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
         MasterProcedureConstants.DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION);
     procedureStore.start(numThreads);
-    procedureExecutor.start(numThreads, abortOnCorruption);
+    // Just initialize it but do not start the workers, we will start the workers later by calling
+    // startProcedureExecutor. See the javadoc for finishActiveMasterInitialization for more
+    // details.
+    procedureExecutor.init(numThreads, abortOnCorruption);
     procEnv.getRemoteDispatcher().start();
+  }
+
+  private void startProcedureExecutor() throws IOException {
+    procedureExecutor.startWorkers();
   }
 
   private void stopProcedureExecutor() {
@@ -2836,25 +2875,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * ServerCrashProcessingEnabled is set false before completing assignMeta to prevent processing
-   * of crashed servers.
-   * @return true if assignMeta has completed;
-   */
-  @Override
-  public boolean isServerCrashProcessingEnabled() {
-    return serverCrashProcessingEnabled.isReady();
-  }
-
-  @VisibleForTesting
-  public void setServerCrashProcessingEnabled(final boolean b) {
-    procedureExecutor.getEnvironment().setEventReady(serverCrashProcessingEnabled, b);
-  }
-
-  public ProcedureEvent getServerCrashProcessingEnabledEvent() {
-    return serverCrashProcessingEnabled;
-  }
-
-  /**
    * Compute the average load across all region servers.
    * Currently, this uses a very naive computation - just uses the number of
    * regions being served, ignoring stats about number of requests.
@@ -3622,18 +3642,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public LockManager getLockManager() {
     return lockManager;
-  }
-
-  @Override
-  public boolean recoverMeta() throws IOException {
-    // we need to block here so the latch should be greater than the current version to make sure
-    // that we will block.
-    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(Integer.MAX_VALUE, 0);
-    procedureExecutor.submitProcedure(new RecoverMetaProcedure(null, true, latch));
-    latch.await();
-    LOG.info("hbase:meta deployed at={}",
-      getMetaTableLocator().getMetaRegionLocation(getZooKeeper()));
-    return assignmentManager.isMetaInitialized();
   }
 
   public QuotaObserverChore getQuotaObserverChore() {

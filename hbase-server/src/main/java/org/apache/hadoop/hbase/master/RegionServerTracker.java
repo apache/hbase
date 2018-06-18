@@ -73,8 +73,8 @@ public class RegionServerTracker extends ZKListener {
     super(watcher);
     this.server = server;
     this.serverManager = serverManager;
-    executor = Executors.newSingleThreadExecutor(
-    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("RegionServerTracker-%d").build());
+    this.executor = Executors.newSingleThreadExecutor(
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("RegionServerTracker-%d").build());
   }
 
   private Pair<ServerName, RegionServerInfo> getServerInfo(String name)
@@ -108,9 +108,19 @@ public class RegionServerTracker extends ZKListener {
   /**
    * Starts the tracking of online RegionServers.
    *
-   * All RSs will be tracked after this method is called.
+   * Starts the tracking of online RegionServers. All RSes will be tracked after this method is
+   * called.
+   * <p/>
+   * In this method, we will also construct the region server sets in {@link ServerManager}. If a
+   * region server is dead between the crash of the previous master instance and the start of the
+   * current master instance, we will schedule a SCP for it. This is done in
+   * {@link ServerManager#findOutDeadServersAndProcess(Set, Set)}, we call it here under the lock
+   * protection to prevent concurrency issues with server expiration operation.
+   * @param deadServersFromPE the region servers which already have SCP associated.
+   * @param liveServersFromWALDir the live region servers from wal directory.
    */
-  public void start() throws KeeperException, IOException {
+  public void start(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersFromWALDir)
+      throws KeeperException, IOException {
     watcher.registerListener(this);
     synchronized (this) {
       List<String> servers =
@@ -126,6 +136,7 @@ public class RegionServerTracker extends ZKListener {
           : ServerMetricsBuilder.of(serverName);
         serverManager.checkAndRecordNewServer(serverName, serverMetrics);
       }
+      serverManager.findOutDeadServersAndProcess(deadServersFromPE, liveServersFromWALDir);
     }
   }
 

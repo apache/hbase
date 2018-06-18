@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -39,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * Used by the HMaster on startup to split meta logs and assign the meta table.
  */
 @InterfaceAudience.Private
-public class MasterMetaBootstrap {
+class MasterMetaBootstrap {
   private static final Logger LOG = LoggerFactory.getLogger(MasterMetaBootstrap.class);
 
   private final HMaster master;
@@ -48,35 +47,12 @@ public class MasterMetaBootstrap {
     this.master = master;
   }
 
-  public void recoverMeta() throws InterruptedException, IOException {
-    // This is a blocking call that waits until hbase:meta is deployed.
-    master.recoverMeta();
-    // Now we can start the TableStateManager. It is backed by hbase:meta.
-    master.getTableStateManager().start();
-    // Enable server crash procedure handling
-    enableCrashedServerProcessing();
-  }
-
-  public void processDeadServers() {
-    // get a list for previously failed RS which need log splitting work
-    // we recover hbase:meta region servers inside master initialization and
-    // handle other failed servers in SSH in order to start up master node ASAP
-    Set<ServerName> previouslyFailedServers =
-        master.getMasterWalManager().getFailedServersFromLogFolders();
-
-    // Master has recovered hbase:meta region server and we put
-    // other failed region servers in a queue to be handled later by SSH
-    for (ServerName tmpServer : previouslyFailedServers) {
-      master.getServerManager().processDeadServer(tmpServer, true);
-    }
-  }
-
   /**
    * For assigning hbase:meta replicas only.
    * TODO: The way this assign runs, nothing but chance to stop all replicas showing up on same
    * server as the hbase:meta region.
    */
-  protected void assignMetaReplicas()
+  void assignMetaReplicas()
       throws IOException, InterruptedException, KeeperException {
     int numReplicas = master.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
            HConstants.DEFAULT_META_REPLICA_NUM);
@@ -85,7 +61,7 @@ public class MasterMetaBootstrap {
       return;
     }
     final AssignmentManager assignmentManager = master.getAssignmentManager();
-    if (!assignmentManager.isMetaInitialized()) {
+    if (!assignmentManager.isMetaLoaded()) {
       throw new IllegalStateException("hbase:meta must be initialized first before we can " +
           "assign out its replicas");
     }
@@ -135,17 +111,6 @@ public class MasterMetaBootstrap {
       // ignore the exception since we don't want the master to be wedged due to potential
       // issues in the cleanup of the extra regions. We can do that cleanup via hbck or manually
       LOG.warn("Ignoring exception " + ex);
-    }
-  }
-
-  private void enableCrashedServerProcessing() throws InterruptedException {
-    // If crashed server processing is disabled, we enable it and expire those dead but not expired
-    // servers. This is required so that if meta is assigning to a server which dies after
-    // assignMeta starts assignment, ServerCrashProcedure can re-assign it. Otherwise, we will be
-    // stuck here waiting forever if waitForMeta is specified.
-    if (!master.isServerCrashProcessingEnabled()) {
-      master.setServerCrashProcessingEnabled(true);
-      master.getServerManager().processQueuedDeadServers();
     }
   }
 }
