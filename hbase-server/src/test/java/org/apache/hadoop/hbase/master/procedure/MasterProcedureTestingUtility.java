@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterMetaBootstrap;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -85,7 +84,6 @@ public class MasterProcedureTestingUtility {
             env.getMasterServices().getServerManager().removeRegion(regionState.getRegion());
           }
           am.stop();
-          master.setServerCrashProcessingEnabled(false);
           master.setInitialized(false);
           return null;
         }
@@ -96,9 +94,6 @@ public class MasterProcedureTestingUtility {
         public Void call() throws Exception {
           final AssignmentManager am = env.getAssignmentManager();
           am.start();
-          MasterMetaBootstrap metaBootstrap = new MasterMetaBootstrap(master);
-          metaBootstrap.recoverMeta();
-          metaBootstrap.processDeadServers();
           am.joinCluster();
           master.setInitialized(true);
           return null;

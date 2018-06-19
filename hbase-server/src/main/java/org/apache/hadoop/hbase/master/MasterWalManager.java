@@ -26,7 +26,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -142,10 +143,34 @@ public class MasterWalManager {
     return this.fsOk;
   }
 
+  public Set<ServerName> getLiveServersFromWALDir() throws IOException {
+    Path walDirPath = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
+    FileStatus[] walDirForLiveServers = FSUtils.listStatus(fs, walDirPath,
+      p -> !p.getName().endsWith(AbstractFSWALProvider.SPLITTING_EXT));
+    if (walDirForLiveServers == null) {
+      return Collections.emptySet();
+    }
+    return Stream.of(walDirForLiveServers).map(s -> {
+      ServerName serverName = AbstractFSWALProvider.getServerNameFromWALDirectoryName(s.getPath());
+      if (serverName == null) {
+        LOG.warn("Log folder {} doesn't look like its name includes a " +
+          "region server name; leaving in place. If you see later errors about missing " +
+          "write ahead logs they may be saved in this location.", s.getPath());
+        return null;
+      }
+      return serverName;
+    }).filter(s -> s != null).collect(Collectors.toSet());
+  }
+
   /**
    * Inspect the log directory to find dead servers which need recovery work
    * @return A set of ServerNames which aren't running but still have WAL files left in file system
+   * @deprecated With proc-v2, we can record the crash server with procedure store, so do not need
+   *             to scan the wal directory to find out the splitting wal directory any more. Leave
+   *             it here only because {@code RecoverMetaProcedure}(which is also deprecated) uses
+   *             it.
    */
+  @Deprecated
   public Set<ServerName> getFailedServersFromLogFolders() {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
@@ -240,6 +265,7 @@ public class MasterWalManager {
     boolean needReleaseLock = false;
     if (!this.services.isInitialized()) {
       // during master initialization, we could have multiple places splitting a same wal
+      // XXX: Does this still exist after we move to proc-v2?
       this.splitLogLock.lock();
       needReleaseLock = true;
     }

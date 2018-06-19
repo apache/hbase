@@ -22,6 +22,11 @@ import org.apache.hadoop.hbase.procedure2.LockStatus;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * @deprecated only used for {@link RecoverMetaProcedure}. Should be removed along with
+ *             {@link RecoverMetaProcedure}.
+ */
+@Deprecated
 @InterfaceAudience.Private
 class MetaQueue extends Queue<TableName> {
 

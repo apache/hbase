@@ -53,7 +53,7 @@ public class TestProcedureReplayOrder {
 
   private static final int NUM_THREADS = 16;
 
-  private ProcedureExecutor<Void> procExecutor;
+  private ProcedureExecutor<TestProcedureEnv> procExecutor;
   private TestProcedureEnv procEnv;
   private ProcedureStore procStore;
 
@@ -74,9 +74,9 @@ public class TestProcedureReplayOrder {
     logDir = new Path(testDir, "proc-logs");
     procEnv = new TestProcedureEnv();
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procStore.start(NUM_THREADS);
-    procExecutor.start(1, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, 1, true);
   }
 
   @After

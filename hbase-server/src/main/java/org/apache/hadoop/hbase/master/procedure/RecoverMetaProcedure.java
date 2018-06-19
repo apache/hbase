@@ -48,7 +48,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
  * This procedure recovers meta from prior shutdown/ crash of a server, and brings meta online by
  * assigning meta region/s. Any place where meta is accessed and requires meta to be online, need to
  * submit this procedure instead of duplicating steps to recover meta in the code.
+ * <p/>
+ * @deprecated Do not use any more, leave it here only for compatible. The recovery work will be
+ *             done in {@link ServerCrashProcedure} directly, and the initial work for meta table
+ *             will be done by {@link InitMetaProcedure}.
+ * @see ServerCrashProcedure
+ * @see InitMetaProcedure
  */
+@Deprecated
 @InterfaceAudience.Private
 public class RecoverMetaProcedure
     extends StateMachineProcedure<MasterProcedureEnv, MasterProcedureProtos.RecoverMetaState>
@@ -281,7 +288,7 @@ public class RecoverMetaProcedure
    * already initialized
    */
   private boolean isRunRequired() {
-    return failedMetaServer != null || !master.getAssignmentManager().isMetaInitialized();
+    return failedMetaServer != null || !master.getAssignmentManager().isMetaAssigned();
   }
 
   /**

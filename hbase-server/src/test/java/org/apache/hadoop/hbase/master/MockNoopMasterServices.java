@@ -211,16 +211,6 @@ public class MockNoopMasterServices implements MasterServices {
     return null;
   }
 
-  private boolean serverCrashProcessingEnabled = true;
-
-  public void setServerCrashProcessingEnabled(boolean b) {
-    serverCrashProcessingEnabled = b;
-  }
-  @Override
-  public boolean isServerCrashProcessingEnabled() {
-    return serverCrashProcessingEnabled;
-  }
-
   @Override
   public boolean registerService(Service instance) {
     return false;
@@ -447,11 +437,6 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public void checkIfShouldMoveSystemRegionAsync() {
-  }
-
-  @Override
-  public boolean recoverMeta() throws IOException {
-    return false;
   }
 
   @Override

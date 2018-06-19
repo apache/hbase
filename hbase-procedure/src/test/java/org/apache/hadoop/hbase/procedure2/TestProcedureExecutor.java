@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -71,8 +70,8 @@ public class TestProcedureExecutor {
   }
 
   private void createNewExecutor(final Configuration conf, final int numThreads) throws Exception {
-    procExecutor = new ProcedureExecutor(conf, procEnv, procStore);
-    procExecutor.start(numThreads, true);
+    procExecutor = new ProcedureExecutor<>(conf, procEnv, procStore);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, numThreads, true);
   }
 
   @Test
