@@ -38,8 +38,10 @@ public class FairQueue<T extends Comparable<T>> {
       return;
     }
     // Find the one which priority is less than us
-    // For now only TableQueue has priority, and there are only a small number of tables which
-    // have higher priority so this will not be an expensive operation.
+    // For now only TableQueue and ServerQueue has priority. For TableQueue there are only a small
+    // number of tables which have higher priority, and for ServerQueue there is only one server
+    // which could carry meta which leads to a higher priority, so this will not be an expensive
+    // operation.
     Queue<T> base = queueHead;
     do {
       if (base.getPriority() < queue.getPriority()) {

@@ -128,7 +128,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     } else if (isTableProcedure(proc)) {
       doAdd(tableRunQueue, getTableQueue(getTableName(proc)), proc, addFront);
     } else if (isServerProcedure(proc)) {
-      doAdd(serverRunQueue, getServerQueue(getServerName(proc)), proc, addFront);
+      ServerProcedureInterface spi = (ServerProcedureInterface) proc;
+      doAdd(serverRunQueue, getServerQueue(spi.getServerName(), spi), proc, addFront);
     } else if (isPeerProcedure(proc)) {
       doAdd(peerRunQueue, getPeerQueue(getPeerId(proc)), proc, addFront);
     } else {
@@ -317,10 +318,11 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         return;
       }
     } else if (proc instanceof PeerProcedureInterface) {
-      PeerProcedureInterface iProcPeer = (PeerProcedureInterface) proc;
-      tryCleanupPeerQueue(iProcPeer.getPeerId(), proc);
+      tryCleanupPeerQueue(getPeerId(proc), proc);
+    } else if (proc instanceof ServerProcedureInterface) {
+      tryCleanupServerQueue(getServerName(proc), proc);
     } else {
-      // No cleanup for ServerProcedureInterface types, yet.
+      // No cleanup for other procedure types, yet.
       return;
     }
   }
@@ -367,14 +369,50 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // ============================================================================
   //  Server Queue Lookup Helpers
   // ============================================================================
-  private ServerQueue getServerQueue(ServerName serverName) {
+  private ServerQueue getServerQueue(ServerName serverName, ServerProcedureInterface proc) {
     final int index = getBucketIndex(serverBuckets, serverName.hashCode());
     ServerQueue node = AvlTree.get(serverBuckets[index], serverName, SERVER_QUEUE_KEY_COMPARATOR);
-    if (node != null) return node;
-
-    node = new ServerQueue(serverName, locking.getServerLock(serverName));
+    if (node != null) {
+      return node;
+    }
+    int priority;
+    if (proc != null) {
+      priority = MasterProcedureUtil.getServerPriority(proc);
+    } else {
+      LOG.warn("Usually this should not happen as proc can only be null when calling from " +
+        "wait/wake lock, which means at least we should have one procedure in the queue which " +
+        "wants to acquire the lock or just released the lock.");
+      priority = 1;
+    }
+    node = new ServerQueue(serverName, priority, locking.getServerLock(serverName));
     serverBuckets[index] = AvlTree.insert(serverBuckets[index], node);
     return node;
+  }
+
+  private void removeServerQueue(ServerName serverName) {
+    int index = getBucketIndex(serverBuckets, serverName.hashCode());
+    serverBuckets[index] =
+      AvlTree.remove(serverBuckets[index], serverName, SERVER_QUEUE_KEY_COMPARATOR);
+    locking.removeServerLock(serverName);
+  }
+
+  private void tryCleanupServerQueue(ServerName serverName, Procedure<?> proc) {
+    schedLock();
+    try {
+      int index = getBucketIndex(serverBuckets, serverName.hashCode());
+      ServerQueue node = AvlTree.get(serverBuckets[index], serverName, SERVER_QUEUE_KEY_COMPARATOR);
+      if (node == null) {
+        return;
+      }
+
+      LockAndQueue lock = locking.getServerLock(serverName);
+      if (node.isEmpty() && lock.tryExclusiveLock(proc)) {
+        removeFromRunQueue(serverRunQueue, node);
+        removeServerQueue(serverName);
+      }
+    } finally {
+      schedUnlock();
+    }
   }
 
   private static int getBucketIndex(Object[] buckets, int hashCode) {
@@ -810,7 +848,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getServerLock(serverName);
       if (lock.tryExclusiveLock(procedure)) {
-        removeFromRunQueue(serverRunQueue, getServerQueue(serverName));
+        // We do not need to create a new queue so just pass null, as in tests we may pass
+        // procedures other than ServerProcedureInterface
+        removeFromRunQueue(serverRunQueue, getServerQueue(serverName, null));
         return false;
       }
       waitProcedure(lock, procedure);
@@ -832,7 +872,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getServerLock(serverName);
       lock.releaseExclusiveLock(procedure);
-      addToRunQueue(serverRunQueue, getServerQueue(serverName));
+      // We do not need to create a new queue so just pass null, as in tests we may pass procedures
+      // other than ServerProcedureInterface
+      addToRunQueue(serverRunQueue, getServerQueue(serverName, null));
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {

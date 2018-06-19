@@ -25,8 +25,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class ServerQueue extends Queue<ServerName> {
 
-  public ServerQueue(ServerName serverName, LockStatus serverLock) {
-    super(serverName, serverLock);
+  public ServerQueue(ServerName serverName, int priority, LockStatus serverLock) {
+    super(serverName, priority, serverLock);
   }
 
   @Override
