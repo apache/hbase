@@ -95,6 +95,10 @@ class SchemaLocking {
     return getLock(serverLocks, serverName);
   }
 
+  LockAndQueue removeServerLock(ServerName serverName) {
+    return serverLocks.remove(serverName);
+  }
+
   LockAndQueue getPeerLock(String peerId) {
     return getLock(peerLocks, peerId);
   }
