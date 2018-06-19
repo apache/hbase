@@ -253,3 +253,18 @@ message CacheEvictionStats {
   optional int64 max_cache_size = 3;
   repeated RegionExceptionMessage exception = 4;
 }
+
+message FlushedStoreSequenceId {
+  required bytes family = 1;
+  required uint64 seqId = 2;
+}
+
+message FlushedRegionSequenceId {
+  required bytes regionEncodedName = 1;
+  required uint64 seqId = 2;
+  repeated FlushedStoreSequenceId stores = 3;
+}
+
+message FlushedSequenceId {
+  repeated FlushedRegionSequenceId regionSequenceId = 1;
+}
