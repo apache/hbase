@@ -170,11 +170,10 @@ public final class MasterProcedureUtil {
   }
 
   /**
-   * Return the total levels of table priority. Now we have 3 levels, for meta table, other system
-   * tables and user tables. Notice that the actual value of priority should be decreased from this
-   * value down to 1.
+   * Return the priority for the given procedure. For now we only have two priorities, 100 for
+   * server carrying meta, and 1 for others.
    */
-  public static int getTablePriorityLevels() {
-    return 3;
+  public static int getServerPriority(ServerProcedureInterface proc) {
+    return proc.hasMetaTableRegion() ? 100 : 1;
   }
 }

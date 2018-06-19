@@ -93,6 +93,10 @@ class SchemaLocking {
     return getLock(serverLocks, serverName);
   }
 
+  LockAndQueue removeServerLock(ServerName serverName) {
+    return serverLocks.remove(serverName);
+  }
+
   private LockedResource createLockedResource(LockedResourceType resourceType, String resourceName,
       LockAndQueue queue) {
     LockType lockType;
