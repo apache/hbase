@@ -25,13 +25,11 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -179,41 +177,6 @@ public class ServerManager {
   private final long warningSkew;
 
   private final RpcControllerFactory rpcControllerFactory;
-
-  /**
-   * Set of region servers which are dead but not processed immediately. If one
-   * server died before master enables ServerShutdownHandler, the server will be
-   * added to this set and will be processed through calling
-   * {@link ServerManager#processQueuedDeadServers()} by master.
-   * <p>
-   * A dead server is a server instance known to be dead, not listed in the /hbase/rs
-   * znode any more. It may have not been submitted to ServerShutdownHandler yet
-   * because the handler is not enabled.
-   * <p>
-   * A dead server, which has been submitted to ServerShutdownHandler while the
-   * handler is not enabled, is queued up.
-   * <p>
-   * So this is a set of region servers known to be dead but not submitted to
-   * ServerShutdownHandler for processing yet.
-   */
-  private Set<ServerName> queuedDeadServers = new HashSet<>();
-
-  /**
-   * Set of region servers which are dead and submitted to ServerShutdownHandler to process but not
-   * fully processed immediately.
-   * <p>
-   * If one server died before assignment manager finished the failover cleanup, the server will be
-   * added to this set and will be processed through calling
-   * {@link ServerManager#processQueuedDeadServers()} by assignment manager.
-   * <p>
-   * The Boolean value indicates whether log split is needed inside ServerShutdownHandler
-   * <p>
-   * ServerShutdownHandler processes a dead server submitted to the handler after the handler is
-   * enabled. It may not be able to complete the processing because meta is not yet online or master
-   * is currently in startup mode. In this case, the dead server will be parked in this set
-   * temporarily.
-   */
-  private Map<ServerName, Boolean> requeuedDeadServers = new ConcurrentHashMap<>();
 
   /** Listeners that are called on server events. */
   private List<ServerListener> listeners = new CopyOnWriteArrayList<>();
@@ -378,6 +341,26 @@ public class ServerManager {
   }
 
   /**
+   * Find out the region servers crashed between the crash of the previous master instance and the
+   * current master instance and schedule SCP for them.
+   * <p/>
+   * Since the {@code RegionServerTracker} has already helped us to construct the online servers set
+   * by scanning zookeeper, now we can compare the online servers with {@code liveServersFromWALDir}
+   * to find out whether there are servers which are already dead.
+   * <p/>
+   * Must be called inside the initialization method of {@code RegionServerTracker} to avoid
+   * concurrency issue.
+   * @param deadServersFromPE the region servers which already have SCP associated.
+   * @param liveServersFromWALDir the live region servers from wal directory.
+   */
+  void findOutDeadServersAndProcess(Set<ServerName> deadServersFromPE,
+      Set<ServerName> liveServersFromWALDir) {
+    deadServersFromPE.forEach(deadservers::add);
+    liveServersFromWALDir.stream().filter(sn -> !onlineServers.containsKey(sn))
+      .forEach(this::expireServer);
+  }
+
+  /**
    * Checks if the clock skew between the server and the master. If the clock skew exceeds the
    * configured max, it will throw an exception; if it exceeds the configured warning threshold,
    * it will log a warning but start normally.
@@ -386,7 +369,7 @@ public class ServerManager {
    * @throws ClockOutOfSyncException if the skew exceeds the configured max value
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
-  throws ClockOutOfSyncException {
+      throws ClockOutOfSyncException {
     long skew = Math.abs(System.currentTimeMillis() - serverCurrentTime);
     if (skew > maxSkew) {
       String message = "Server " + serverName + " has been " +
@@ -406,9 +389,7 @@ public class ServerManager {
    * If this server is on the dead list, reject it with a YouAreDeadException.
    * If it was dead but came back with a new start code, remove the old entry
    * from the dead list.
-   * @param serverName
    * @param what START or REPORT
-   * @throws org.apache.hadoop.hbase.YouAreDeadException
    */
   private void checkIsDead(final ServerName serverName, final String what)
       throws YouAreDeadException {
@@ -589,13 +570,12 @@ public class ServerManager {
     return ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
   }
 
-  /*
-   * Expire the passed server.  Add it to list of dead servers and queue a
-   * shutdown processing.
-   * @return True if we queued a ServerCrashProcedure else false if we did not (could happen
-   * for many reasons including the fact that its this server that is going down or we already
-   * have queued an SCP for this server or SCP processing is currently disabled because we are
-   * in startup phase).
+  /**
+   * Expire the passed server. Add it to list of dead servers and queue a shutdown processing.
+   * @return True if we queued a ServerCrashProcedure else false if we did not (could happen for
+   *         many reasons including the fact that its this server that is going down or we already
+   *         have queued an SCP for this server or SCP processing is currently disabled because we
+   *         are in startup phase).
    */
   public synchronized boolean expireServer(final ServerName serverName) {
     // THIS server is going down... can't handle our own expiration.
@@ -604,18 +584,6 @@ public class ServerManager {
         master.stop("We lost our znode?");
       }
       return false;
-    }
-    // No SCP handling during startup.
-    if (!master.isServerCrashProcessingEnabled()) {
-      LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
-          + "delay expiring server " + serverName);
-      // Even though we delay expire of this server, we still need to handle Meta's RIT
-      // that are against the crashed server; since when we do RecoverMetaProcedure,
-      // the SCP is not enabled yet and Meta's RIT may be suspend forever. See HBase-19287
-      master.getAssignmentManager().handleMetaRITOnCrashedServer(serverName);
-      this.queuedDeadServers.add(serverName);
-      // Return true because though on SCP queued, there will be one queued later.
-      return true;
     }
     if (this.deadservers.isDeadServer(serverName)) {
       LOG.warn("Expiration called on {} but crash processing already in progress", serverName);
@@ -663,52 +631,6 @@ public class ServerManager {
       onlineServers.notifyAll();
     }
     this.rsAdmins.remove(sn);
-  }
-
-  public synchronized void processDeadServer(final ServerName serverName, boolean shouldSplitWal) {
-    // When assignment manager is cleaning up the zookeeper nodes and rebuilding the
-    // in-memory region states, region servers could be down. Meta table can and
-    // should be re-assigned, log splitting can be done too. However, it is better to
-    // wait till the cleanup is done before re-assigning user regions.
-    //
-    // We should not wait in the server shutdown handler thread since it can clog
-    // the handler threads and meta table could not be re-assigned in case
-    // the corresponding server is down. So we queue them up here instead.
-    if (!master.getAssignmentManager().isFailoverCleanupDone()) {
-      requeuedDeadServers.put(serverName, shouldSplitWal);
-      return;
-    }
-
-    this.deadservers.add(serverName);
-    master.getAssignmentManager().submitServerCrash(serverName, shouldSplitWal);
-  }
-
-  /**
-   * Process the servers which died during master's initialization. It will be
-   * called after HMaster#assignMeta and AssignmentManager#joinCluster.
-   * */
-  synchronized void processQueuedDeadServers() {
-    if (!master.isServerCrashProcessingEnabled()) {
-      LOG.info("Master hasn't enabled ServerShutdownHandler");
-    }
-    Iterator<ServerName> serverIterator = queuedDeadServers.iterator();
-    while (serverIterator.hasNext()) {
-      ServerName tmpServerName = serverIterator.next();
-      expireServer(tmpServerName);
-      serverIterator.remove();
-      requeuedDeadServers.remove(tmpServerName);
-    }
-
-    if (!master.getAssignmentManager().isFailoverCleanupDone()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("AssignmentManager failover cleanup not done.");
-      }
-    }
-
-    for (Map.Entry<ServerName, Boolean> entry : requeuedDeadServers.entrySet()) {
-      processDeadServer(entry.getKey(), entry.getValue());
-    }
-    requeuedDeadServers.clear();
   }
 
   /*
@@ -975,13 +897,6 @@ public class ServerManager {
     return new ArrayList<>(this.drainingServers);
   }
 
-  /**
-   * @return A copy of the internal set of deadNotExpired servers.
-   */
-  Set<ServerName> getDeadNotExpiredServers() {
-    return new HashSet<>(this.queuedDeadServers);
-  }
-
   public boolean isServerOnline(ServerName serverName) {
     return serverName != null && onlineServers.containsKey(serverName);
   }
@@ -993,9 +908,7 @@ public class ServerManager {
    * master any more, for example, a very old previous instance).
    */
   public synchronized boolean isServerDead(ServerName serverName) {
-    return serverName == null || deadservers.isDeadServer(serverName)
-      || queuedDeadServers.contains(serverName)
-      || requeuedDeadServers.containsKey(serverName);
+    return serverName == null || deadservers.isDeadServer(serverName);
   }
 
   public void shutdownCluster() {
@@ -1061,8 +974,6 @@ public class ServerManager {
     final List<ServerName> drainingServersCopy = getDrainingServersList();
     destServers.removeAll(drainingServersCopy);
 
-    // Remove the deadNotExpired servers from the server list.
-    removeDeadNotExpiredServers(destServers);
     return destServers;
   }
 
@@ -1071,23 +982,6 @@ public class ServerManager {
    */
   public List<ServerName> createDestinationServersList(){
     return createDestinationServersList(null);
-  }
-
-    /**
-    * Loop through the deadNotExpired server list and remove them from the
-    * servers.
-    * This function should be used carefully outside of this class. You should use a high level
-    *  method such as {@link #createDestinationServersList()} instead of managing you own list.
-    */
-  void removeDeadNotExpiredServers(List<ServerName> servers) {
-    Set<ServerName> deadNotExpiredServersCopy = this.getDeadNotExpiredServers();
-    if (!deadNotExpiredServersCopy.isEmpty()) {
-      for (ServerName server : deadNotExpiredServersCopy) {
-        LOG.debug("Removing dead but not expired server: " + server
-          + " from eligible server pool.");
-        servers.remove(server);
-      }
-    }
   }
 
   /**
@@ -1258,7 +1152,6 @@ public class ServerManager {
       }
     }
   }
-
 
   private class FlushedSequenceIdFlusher extends ScheduledChore {
 

@@ -70,6 +70,12 @@ public class ProcedureTestingUtility {
     restart(procExecutor, false, true, null, null);
   }
 
+  public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
+      boolean abortOnCorruption) throws IOException {
+    procExecutor.init(numThreads, abortOnCorruption);
+    procExecutor.startWorkers();
+  }
+
   public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor,
       final boolean avoidTestKillDuringRestart, final boolean failOnCorrupted,
       final Callable<Void> stopAction, final Callable<Void> startAction)
@@ -98,7 +104,7 @@ public class ProcedureTestingUtility {
     // re-start
     LOG.info("RESTART - Start");
     procStore.start(storeThreads);
-    procExecutor.start(execThreads, failOnCorrupted);
+    initAndStartWorkers(procExecutor, execThreads, failOnCorrupted);
     if (startAction != null) {
       startAction.call();
     }
@@ -183,7 +189,7 @@ public class ProcedureTestingUtility {
     NoopProcedureStore procStore = new NoopProcedureStore();
     ProcedureExecutor<TEnv> procExecutor = new ProcedureExecutor<>(conf, env, procStore);
     procStore.start(1);
-    procExecutor.start(1, false);
+    initAndStartWorkers(procExecutor, 1, false);
     try {
       return submitAndWait(procExecutor, proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
     } finally {

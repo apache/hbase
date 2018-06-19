@@ -498,7 +498,7 @@ public class SplitTableRegionProcedure
     try {
       env.getMasterServices().getMasterQuotaManager().onRegionSplit(this.getParentRegion());
     } catch (QuotaExceededException e) {
-      env.getAssignmentManager().getRegionNormalizer().planSkipped(this.getParentRegion(),
+      env.getMasterServices().getRegionNormalizer().planSkipped(this.getParentRegion(),
           NormalizationPlan.PlanType.SPLIT);
       throw e;
     }

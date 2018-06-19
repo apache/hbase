@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -70,8 +68,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     }
 
     private boolean isRunning() {
-      return master.isActiveMaster() && !master.isStopped() &&
-        !master.isStopping() && !master.isAborted();
+      return !master.isStopped() && !master.isStopping() && !master.isAborted();
     }
   }
 
@@ -153,17 +150,6 @@ public class MasterProcedureEnv implements ConfigurationObserver {
 
   public boolean waitInitialized(Procedure<?> proc) {
     return master.getInitializedEvent().suspendIfNotReady(proc);
-  }
-
-  public boolean waitServerCrashProcessingEnabled(Procedure<?> proc) {
-    if (master instanceof HMaster) {
-      return ((HMaster)master).getServerCrashProcessingEnabledEvent().suspendIfNotReady(proc);
-    }
-    return false;
-  }
-
-  public boolean waitFailoverCleanup(Procedure<?> proc) {
-    return master.getAssignmentManager().getFailoverCleanupEvent().suspendIfNotReady(proc);
   }
 
   public void setEventReady(ProcedureEvent<?> event, boolean isReady) {

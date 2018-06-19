@@ -46,19 +46,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
 
 /**
- * <p>
  * Tracks the online region servers via ZK.
- * </p>
- * <p>
+ * <p/>
  * Handling of new RSs checking in is done via RPC. This class is only responsible for watching for
  * expired nodes. It handles listening for changes in the RS node list. The only exception is when
  * master restart, we will use the list fetched from zk to construct the initial set of live region
  * servers.
- * </p>
- * <p>
+ * <p/>
  * If an RS node gets deleted, this automatically handles calling of
  * {@link ServerManager#expireServer(ServerName)}
- * </p>
  */
 @InterfaceAudience.Private
 public class RegionServerTracker extends ZKListener {
@@ -76,7 +72,7 @@ public class RegionServerTracker extends ZKListener {
     super(watcher);
     this.server = server;
     this.serverManager = serverManager;
-    executor = Executors.newSingleThreadExecutor(
+    this.executor = Executors.newSingleThreadExecutor(
       new ThreadFactoryBuilder().setDaemon(true).setNameFormat("RegionServerTracker-%d").build());
   }
 
@@ -109,14 +105,19 @@ public class RegionServerTracker extends ZKListener {
   }
 
   /**
-   * <p>
-   * Starts the tracking of online RegionServers.
-   * </p>
-   * <p>
-   * All RSs will be tracked after this method is called.
-   * </p>
+   * Starts the tracking of online RegionServers. All RSes will be tracked after this method is
+   * called.
+   * <p/>
+   * In this method, we will also construct the region server sets in {@link ServerManager}. If a
+   * region server is dead between the crash of the previous master instance and the start of the
+   * current master instance, we will schedule a SCP for it. This is done in
+   * {@link ServerManager#findOutDeadServersAndProcess(Set, Set)}, we call it here under the lock
+   * protection to prevent concurrency issues with server expiration operation.
+   * @param deadServersFromPE the region servers which already have SCP associated.
+   * @param liveServersFromWALDir the live region servers from wal directory.
    */
-  public void start() throws KeeperException, IOException {
+  public void start(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersFromWALDir)
+      throws KeeperException, IOException {
     watcher.registerListener(this);
     synchronized (this) {
       List<String> servers =
@@ -132,6 +133,7 @@ public class RegionServerTracker extends ZKListener {
           : ServerMetricsBuilder.of(serverName);
         serverManager.checkAndRecordNewServer(serverName, serverMetrics);
       }
+      serverManager.findOutDeadServersAndProcess(deadServersFromPE, liveServersFromWALDir);
     }
   }
 

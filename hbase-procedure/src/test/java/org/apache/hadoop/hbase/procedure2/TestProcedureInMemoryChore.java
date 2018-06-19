@@ -53,17 +53,16 @@ public class TestProcedureInMemoryChore {
 
   private HBaseCommonTestingUtility htu;
 
-  @SuppressWarnings("rawtypes")
   @Before
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
 
     procEnv = new TestProcEnv();
     procStore = new NoopProcedureStore();
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procExecutor.testing = new ProcedureExecutor.Testing();
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
   @After
