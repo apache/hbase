@@ -28,7 +28,7 @@ under the License.
 <section name="Downloads">
   <p>The below table lists mirrored release artifacts and their associated hashes and signatures
   available ONLY at apache.org. The keys used to sign releases can be found in our published
-  <a href="http://www.apache.org/dist/hbase/KEYS">KEYS</a> file. See
+  <a href="https://www.apache.org/dist/hbase/KEYS">KEYS</a> file. See
   <a href="https://www.apache.org/dyn/closer.cgi#verify">Verify The Integrity Of The Files</a> for
   how to verify your mirrored downloads.
   </p>
