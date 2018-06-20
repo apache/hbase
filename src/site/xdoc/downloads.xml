@@ -54,10 +54,10 @@ under the License.
         <a href="https://apache.org/dist/hbase/2.0.1/compatibility_report_2.0.0vs2.0.1.html">2.0.0 vs 2.0.1</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.1/CHANGES.md">2.0.1 Changes</a>
+        <a href="https://apache.org/dist/hbase/2.0.1/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.1/RELEASENOTES.md">2.0.1 Release Notes</a>
+        <a href="https://apache.org/dist/hbase/2.0.1/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
         <a href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=commit;h=987f7b6d37c2fcacc942cc66e5c5122aba8fdfbe">987f7b6d37c2fcacc942cc66e5c5122aba8fdfbe</a>
@@ -78,10 +78,10 @@ under the License.
         <a href="https://apache.org/dist/hbase/2.0.0/compatibiliity_report_1.2.6vs2.0.0.html">1.2.6 vs 2.0.0</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.0/CHANGES.md">2.0.0 Changes</a>
+        <a href="https://apache.org/dist/hbase/2.0.0/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.0/RELEASENOTES.md">2.0.0 Release Notes</a>
+        <a href="https://apache.org/dist/hbase/2.0.0/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
         <a href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=commit;h=7483b111e4da77adbfc8062b3b22cbe7c2cb91c1">7483b111e4da77adbfc8062b3b22cbe7c2cb91c1</a>
