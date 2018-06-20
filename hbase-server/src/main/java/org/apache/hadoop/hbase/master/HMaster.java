@@ -2157,74 +2157,76 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public long addColumn(
-      final TableName tableName,
-      final ColumnFamilyDescriptor column,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException {
+  public long addColumn(final TableName tableName, final ColumnFamilyDescriptor column,
+      final long nonceGroup, final long nonce) throws IOException {
     checkInitialized();
     checkTableExists(tableName);
 
-    TableDescriptor old = getTableDescriptors().get(tableName);
-    if (old.hasColumnFamily(column.getName())) {
-      throw new InvalidFamilyOperationException("Column family '" + column.getNameAsString()
-          + "' in table '" + tableName + "' already exists so cannot be added");
-    }
+    return modifyTable(tableName, new TableDescriptorGetter() {
 
-    TableDescriptor newDesc = TableDescriptorBuilder
-        .newBuilder(old).setColumnFamily(column).build();
-    return modifyTable(tableName, newDesc, nonceGroup, nonce);
+      @Override
+      public TableDescriptor get() throws IOException {
+        TableDescriptor old = getTableDescriptors().get(tableName);
+        if (old.hasColumnFamily(column.getName())) {
+          throw new InvalidFamilyOperationException("Column family '" + column.getNameAsString()
+              + "' in table '" + tableName + "' already exists so cannot be added");
+        }
+
+        return TableDescriptorBuilder.newBuilder(old).setColumnFamily(column).build();
+      }
+    }, nonceGroup, nonce);
+  }
+
+  /**
+   * Implement to return TableDescriptor after pre-checks
+   */
+  protected interface TableDescriptorGetter {
+    TableDescriptor get() throws IOException;
   }
 
   @Override
-  public long modifyColumn(
-      final TableName tableName,
-      final ColumnFamilyDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException {
+  public long modifyColumn(final TableName tableName, final ColumnFamilyDescriptor descriptor,
+      final long nonceGroup, final long nonce) throws IOException {
     checkInitialized();
     checkTableExists(tableName);
+    return modifyTable(tableName, new TableDescriptorGetter() {
 
-    TableDescriptor old = getTableDescriptors().get(tableName);
-    if (! old.hasColumnFamily(descriptor.getName())) {
-      throw new InvalidFamilyOperationException("Family '" + descriptor.getNameAsString()
-          + "' does not exist, so it cannot be modified");
-    }
+      @Override
+      public TableDescriptor get() throws IOException {
+        TableDescriptor old = getTableDescriptors().get(tableName);
+        if (!old.hasColumnFamily(descriptor.getName())) {
+          throw new InvalidFamilyOperationException("Family '" + descriptor.getNameAsString()
+              + "' does not exist, so it cannot be modified");
+        }
 
-    TableDescriptor td = TableDescriptorBuilder
-        .newBuilder(old)
-        .modifyColumnFamily(descriptor)
-        .build();
-
-    return modifyTable(tableName, td, nonceGroup, nonce);
+        return TableDescriptorBuilder.newBuilder(old).modifyColumnFamily(descriptor).build();
+      }
+    }, nonceGroup, nonce);
   }
 
   @Override
-  public long deleteColumn(
-      final TableName tableName,
-      final byte[] columnName,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException {
+  public long deleteColumn(final TableName tableName, final byte[] columnName,
+      final long nonceGroup, final long nonce) throws IOException {
     checkInitialized();
     checkTableExists(tableName);
 
-    TableDescriptor old = getTableDescriptors().get(tableName);
+    return modifyTable(tableName, new TableDescriptorGetter() {
 
-    if (! old.hasColumnFamily(columnName)) {
-      throw new InvalidFamilyOperationException("Family '" + Bytes.toString(columnName)
-          + "' does not exist, so it cannot be deleted");
-    }
-    if (old.getColumnFamilyCount() == 1) {
-      throw new InvalidFamilyOperationException("Family '" + Bytes.toString(columnName)
-          + "' is the only column family in the table, so it cannot be deleted");
-    }
+      @Override
+      public TableDescriptor get() throws IOException {
+        TableDescriptor old = getTableDescriptors().get(tableName);
 
-    TableDescriptor td = TableDescriptorBuilder
-        .newBuilder(old).removeColumnFamily(columnName).build();
-    return modifyTable(tableName, td, nonceGroup, nonce);
+        if (!old.hasColumnFamily(columnName)) {
+          throw new InvalidFamilyOperationException("Family '" + Bytes.toString(columnName)
+              + "' does not exist, so it cannot be deleted");
+        }
+        if (old.getColumnFamilyCount() == 1) {
+          throw new InvalidFamilyOperationException("Family '" + Bytes.toString(columnName)
+              + "' is the only column family in the table, so it cannot be deleted");
+        }
+        return TableDescriptorBuilder.newBuilder(old).removeColumnFamily(columnName).build();
+      }
+    }, nonceGroup, nonce);
   }
 
   @Override
@@ -2352,40 +2354,54 @@ public class HMaster extends HRegionServer implements MasterServices {
     return result.get();
   }
 
+  private long modifyTable(final TableName tableName,
+      final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce)
+      throws IOException {
+    return MasterProcedureUtil
+        .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+          @Override
+          protected void run() throws IOException {
+            TableDescriptor newDescriptor = newDescriptorGetter.get();
+            sanityCheckTableDescriptor(newDescriptor);
+            TableDescriptor oldDescriptor = getMaster().getTableDescriptors().get(tableName);
+            getMaster().getMasterCoprocessorHost().preModifyTable(tableName, oldDescriptor,
+              newDescriptor);
+
+            LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
+
+            // Execute the operation synchronously - wait for the operation completes before
+            // continuing.
+            //
+            // We need to wait for the procedure to potentially fail due to "prepare" sanity
+            // checks. This will block only the beginning of the procedure. See HBASE-19953.
+            ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
+            submitProcedure(
+              new ModifyTableProcedure(procedureExecutor.getEnvironment(), newDescriptor, latch));
+            latch.await();
+
+            getMaster().getMasterCoprocessorHost().postModifyTable(tableName, oldDescriptor,
+              newDescriptor);
+          }
+
+          @Override
+          protected String getDescription() {
+            return "ModifyTableProcedure";
+          }
+        });
+
+  }
+
   @Override
   public long modifyTable(final TableName tableName, final TableDescriptor newDescriptor,
       final long nonceGroup, final long nonce) throws IOException {
     checkInitialized();
-    sanityCheckTableDescriptor(newDescriptor);
-
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+    return modifyTable(tableName, new TableDescriptorGetter() {
       @Override
-      protected void run() throws IOException {
-        TableDescriptor oldDescriptor = getMaster().getTableDescriptors().get(tableName);
-        getMaster().getMasterCoprocessorHost()
-          .preModifyTable(tableName, oldDescriptor, newDescriptor);
-
-        LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
-
-        // Execute the operation synchronously - wait for the operation completes before continuing.
-        //
-        // We need to wait for the procedure to potentially fail due to "prepare" sanity
-        // checks. This will block only the beginning of the procedure. See HBASE-19953.
-        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-        submitProcedure(
-          new ModifyTableProcedure(procedureExecutor.getEnvironment(), newDescriptor, latch));
-        latch.await();
-
-        getMaster().getMasterCoprocessorHost()
-          .postModifyTable(tableName, oldDescriptor, newDescriptor);
+      public TableDescriptor get() throws IOException {
+        return newDescriptor;
       }
+    }, nonceGroup, nonce);
 
-      @Override
-      protected String getDescription() {
-        return "ModifyTableProcedure";
-      }
-    });
   }
 
   public long restoreSnapshot(final SnapshotDescription snapshotDesc,

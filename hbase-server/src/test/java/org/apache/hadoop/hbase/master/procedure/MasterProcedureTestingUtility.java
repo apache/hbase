@@ -410,6 +410,7 @@ public class MasterProcedureTestingUtility {
    *<p>It does
    * <ol><li>Execute step N - kill the executor before store update
    * <li>Restart executor/store
+   * <li>Executes hook for each step twice
    * <li>Execute step N - and then save to store
    * </ol>
    *
@@ -420,16 +421,37 @@ public class MasterProcedureTestingUtility {
    * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long, int, boolean)
    */
   public static void testRecoveryAndDoubleExecution(
-      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId) throws Exception {
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId, final StepHook hook)
+      throws Exception {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
     for (int i = 0; !procExec.isFinished(procId); ++i) {
       LOG.info("Restart " + i + " exec state=" + procExec.getProcedure(procId));
+      if (hook != null) {
+        assertTrue(hook.execute(i));
+      }
       restartMasterProcedureExecutor(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     }
     assertEquals(true, procExec.isRunning());
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+  }
+
+  public static void testRecoveryAndDoubleExecution(
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId) throws Exception {
+    testRecoveryAndDoubleExecution(procExec, procId, null);
+  }
+
+  /**
+   * Hook which will be executed on each step
+   */
+  public interface StepHook{
+    /**
+     * @param step Step no. at which this will be executed
+     * @return false if test should fail otherwise true
+     * @throws IOException
+     */
+    boolean execute(int step) throws IOException;
   }
 
   /**
