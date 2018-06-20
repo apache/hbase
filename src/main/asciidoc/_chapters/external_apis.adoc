@@ -851,23 +851,14 @@ println(Bytes.toString(value))
 === Setting the Classpath
 
 To use Jython with HBase, your CLASSPATH must include HBase's classpath as well as
-the Jython JARs required by your code. First, use the following command on a server
-running the HBase RegionServer process, to get HBase's classpath.
+the Jython JARs required by your code.
+
+Set the path to directory containing the `jython.jar` and each additional Jython-related JAR needed for
+your project. Then export HBASE_CLASSPATH pointing to the $JYTHON_HOME env. variable.
 
 [source, bash]
 ----
-$ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'print $1'}
-
-/usr/lib/hadoop/lib/native:/usr/lib/hbase/lib/native/Linux-amd64-64
-----
-
-Set the `$CLASSPATH` environment variable to include the path you found in the previous
-step, plus the path to `jython.jar` and each additional Jython-related JAR needed for
-your project.
-
-[source, bash]
-----
-$ export CLASSPATH=$CLASSPATH:/usr/lib/hadoop/lib/native:/usr/lib/hbase/lib/native/Linux-amd64-64:/path/to/jython.jar
+$ export HBASE_CLASSPATH=/directory/jython.jar
 ----
 
 Start a Jython shell with HBase and Hadoop JARs in the classpath:
@@ -877,55 +868,52 @@ $ bin/hbase org.python.util.jython
 
 .Table Creation, Population, Get, and Delete with Jython
 ====
-The following Jython code example creates a table, populates it with data, fetches
-the data, and deletes the table.
+The following Jython code example checks for table,
+if it exists, deletes it and then creates it. Then it
+populates the table with data and fetches the data.
 
 [source,jython]
 ----
 import java.lang
-from org.apache.hadoop.hbase import HBaseConfiguration, HTableDescriptor, HColumnDescriptor, HConstants, TableName
-from org.apache.hadoop.hbase.client import HBaseAdmin, HTable, Get
-from org.apache.hadoop.hbase.io import Cell, RowResult
+from org.apache.hadoop.hbase import HBaseConfiguration, HTableDescriptor, HColumnDescriptor, TableName
+from org.apache.hadoop.hbase.client import Admin, Connection, ConnectionFactory, Get, Put, Result, Table
+from org.apache.hadoop.conf import Configuration
 
 # First get a conf object.  This will read in the configuration
 # that is out in your hbase-*.xml files such as location of the
 # hbase master node.
-conf = HBaseConfiguration()
+conf = HBaseConfiguration.create()
+connection = ConnectionFactory.createConnection(conf)
+admin = connection.getAdmin()
 
-# Create a table named 'test' that has two column families,
-# one named 'content, and the other 'anchor'.  The colons
-# are required for column family names.
-tablename = TableName.valueOf("test")
+# Create a table named 'test' that has a column family
+# named 'content'.
+tableName = TableName.valueOf("test")
+table = connection.getTable(tableName)
 
-desc = HTableDescriptor(tablename)
-desc.addFamily(HColumnDescriptor("content:"))
-desc.addFamily(HColumnDescriptor("anchor:"))
-admin = HBaseAdmin(conf)
+desc = HTableDescriptor(tableName)
+desc.addFamily(HColumnDescriptor("content"))
 
 # Drop and recreate if it exists
-if admin.tableExists(tablename):
-    admin.disableTable(tablename)
-    admin.deleteTable(tablename)
-admin.createTable(desc)
+if admin.tableExists(tableName):
+    admin.disableTable(tableName)
+    admin.deleteTable(tableName)
 
-tables = admin.listTables()
-table = HTable(conf, tablename)
+admin.createTable(desc)
 
 # Add content to 'column:' on a row named 'row_x'
 row = 'row_x'
-update = Get(row)
-update.put('content:', 'some content')
-table.commit(update)
+put = Put(row)
+put.addColumn("content", "qual", "some content")
+table.put(put)
 
 # Now fetch the content just added, returns a byte[]
-data_row = table.get(row, "content:")
-data = java.lang.String(data_row.value, "UTF8")
+get = Get(row)
+
+result = table.get(get)
+data = java.lang.String(result.getValue("content", "qual"), "UTF8")
 
 print "The fetched row contains the value '%s'" % data
-
-# Delete the table.
-admin.disableTable(desc.getName())
-admin.deleteTable(desc.getName())
 ----
 ====
 
@@ -935,24 +923,23 @@ This example scans a table and returns the results that match a given family qua
 
 [source, jython]
 ----
-# Print all rows that are members of a particular column family
-# by passing a regex for family qualifier
-
 import java.lang
+from org.apache.hadoop.hbase import TableName, HBaseConfiguration
+from org.apache.hadoop.hbase.client import Connection, ConnectionFactory, Result, ResultScanner, Table, Admin
+from org.apache.hadoop.conf import Configuration
+conf = HBaseConfiguration.create()
+connection = ConnectionFactory.createConnection(conf)
+admin = connection.getAdmin()
+tableName = TableName.valueOf('wiki')
+table = connection.getTable(tableName)
 
-from org.apache.hadoop.hbase import HBaseConfiguration
-from org.apache.hadoop.hbase.client import HTable
-
-conf = HBaseConfiguration()
-
-table = HTable(conf, "wiki")
-col = "title:.*$"
-
-scanner = table.getScanner([col], "")
+cf = "title"
+attr = "attr"
+scanner = table.getScanner(cf)
 while 1:
     result = scanner.next()
     if not result:
-        break
-    print java.lang.String(result.row), java.lang.String(result.get('title:').value)
+       break
+    print java.lang.String(result.row), java.lang.String(result.getValue(cf, attr))
 ----
 ====
