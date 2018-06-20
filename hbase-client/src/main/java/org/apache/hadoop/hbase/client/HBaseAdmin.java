@@ -348,11 +348,13 @@ public class HBaseAdmin implements Admin {
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
     ModifyTableResponse response = executeCallable(
       new MasterCallable<ModifyTableResponse>(getConnection(), getRpcControllerFactory()) {
+        Long nonceGroup = ng.getNonceGroup();
+        Long nonce = ng.newNonce();
         @Override
         protected ModifyTableResponse rpcCall() throws Exception {
           setPriority(td.getTableName());
           ModifyTableRequest request = RequestConverter.buildModifyTableRequest(
-            td.getTableName(), td, ng.getNonceGroup(), ng.newNonce());
+            td.getTableName(), td, nonceGroup, nonce);
           return master.modifyTable(getRpcController(), request);
         }
       });
@@ -644,11 +646,13 @@ public class HBaseAdmin implements Admin {
 
     CreateTableResponse response = executeCallable(
       new MasterCallable<CreateTableResponse>(getConnection(), getRpcControllerFactory()) {
+        Long nonceGroup = ng.getNonceGroup();
+        Long nonce = ng.newNonce();
         @Override
         protected CreateTableResponse rpcCall() throws Exception {
           setPriority(desc.getTableName());
           CreateTableRequest request = RequestConverter.buildCreateTableRequest(
-            desc, splitKeys, ng.getNonceGroup(), ng.newNonce());
+            desc, splitKeys, nonceGroup, nonce);
           return master.createTable(getRpcController(), request);
         }
       });
@@ -694,11 +698,13 @@ public class HBaseAdmin implements Admin {
   public Future<Void> deleteTableAsync(final TableName tableName) throws IOException {
     DeleteTableResponse response = executeCallable(
       new MasterCallable<DeleteTableResponse>(getConnection(), getRpcControllerFactory()) {
+        Long nonceGroup = ng.getNonceGroup();
+        Long nonce = ng.newNonce();
         @Override
         protected DeleteTableResponse rpcCall() throws Exception {
           setPriority(tableName);
           DeleteTableRequest req =
-              RequestConverter.buildDeleteTableRequest(tableName, ng.getNonceGroup(),ng.newNonce());
+              RequestConverter.buildDeleteTableRequest(tableName, nonceGroup,nonce);
           return master.deleteTable(getRpcController(), req);
         }
       });
@@ -775,12 +781,14 @@ public class HBaseAdmin implements Admin {
     TruncateTableResponse response =
         executeCallable(new MasterCallable<TruncateTableResponse>(getConnection(),
             getRpcControllerFactory()) {
+          Long nonceGroup = ng.getNonceGroup();
+          Long nonce = ng.newNonce();
           @Override
           protected TruncateTableResponse rpcCall() throws Exception {
             setPriority(tableName);
             LOG.info("Started truncating " + tableName);
             TruncateTableRequest req = RequestConverter.buildTruncateTableRequest(
-              tableName, preserveSplits, ng.getNonceGroup(), ng.newNonce());
+              tableName, preserveSplits, nonceGroup, nonce);
             return master.truncateTable(getRpcController(), req);
           }
         });
@@ -838,12 +846,14 @@ public class HBaseAdmin implements Admin {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     EnableTableResponse response = executeCallable(
       new MasterCallable<EnableTableResponse>(getConnection(), getRpcControllerFactory()) {
+        Long nonceGroup = ng.getNonceGroup();
+        Long nonce = ng.newNonce();
         @Override
         protected EnableTableResponse rpcCall() throws Exception {
           setPriority(tableName);
           LOG.info("Started enable of " + tableName);
           EnableTableRequest req =
-              RequestConverter.buildEnableTableRequest(tableName, ng.getNonceGroup(),ng.newNonce());
+              RequestConverter.buildEnableTableRequest(tableName, nonceGroup, nonce);
           return master.enableTable(getRpcController(),req);
         }
       });
@@ -901,13 +911,15 @@ public class HBaseAdmin implements Admin {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     DisableTableResponse response = executeCallable(
       new MasterCallable<DisableTableResponse>(getConnection(), getRpcControllerFactory()) {
+        Long nonceGroup = ng.getNonceGroup();
+        Long nonce = ng.newNonce();
         @Override
         protected DisableTableResponse rpcCall() throws Exception {
           setPriority(tableName);
           LOG.info("Started disable of " + tableName);
           DisableTableRequest req =
               RequestConverter.buildDisableTableRequest(
-                tableName, ng.getNonceGroup(), ng.newNonce());
+                tableName, nonceGroup, nonce);
           return master.disableTable(getRpcController(), req);
         }
       });
@@ -1019,12 +1031,13 @@ public class HBaseAdmin implements Admin {
     AddColumnResponse response =
         executeCallable(new MasterCallable<AddColumnResponse>(getConnection(),
             getRpcControllerFactory()) {
+          Long nonceGroup = ng.getNonceGroup();
+          Long nonce = ng.newNonce();
           @Override
           protected AddColumnResponse rpcCall() throws Exception {
             setPriority(tableName);
             AddColumnRequest req =
-                RequestConverter.buildAddColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
-                  ng.newNonce());
+                RequestConverter.buildAddColumnRequest(tableName, columnFamily, nonceGroup, nonce);
             return master.addColumn(getRpcController(), req);
           }
         });
@@ -1068,12 +1081,14 @@ public class HBaseAdmin implements Admin {
     DeleteColumnResponse response =
         executeCallable(new MasterCallable<DeleteColumnResponse>(getConnection(),
             getRpcControllerFactory()) {
+          Long nonceGroup = ng.getNonceGroup();
+          Long nonce = ng.newNonce();
           @Override
           protected DeleteColumnResponse rpcCall() throws Exception {
             setPriority(tableName);
             DeleteColumnRequest req =
                 RequestConverter.buildDeleteColumnRequest(tableName, columnFamily,
-                  ng.getNonceGroup(), ng.newNonce());
+                  nonceGroup, nonce);
             return master.deleteColumn(getRpcController(), req);
           }
         });
@@ -1105,12 +1120,14 @@ public class HBaseAdmin implements Admin {
     ModifyColumnResponse response =
         executeCallable(new MasterCallable<ModifyColumnResponse>(getConnection(),
             getRpcControllerFactory()) {
+          Long nonceGroup = ng.getNonceGroup();
+          Long nonce = ng.newNonce();
           @Override
           protected ModifyColumnResponse rpcCall() throws Exception {
             setPriority(tableName);
             ModifyColumnRequest req =
                 RequestConverter.buildModifyColumnRequest(tableName, columnFamily,
-                  ng.getNonceGroup(), ng.newNonce());
+                  nonceGroup, nonce);
             return master.modifyColumn(getRpcController(), req);
           }
         });
@@ -1719,14 +1736,16 @@ public class HBaseAdmin implements Admin {
     MergeTableRegionsResponse response =
         executeCallable(new MasterCallable<MergeTableRegionsResponse>(getConnection(),
             getRpcControllerFactory()) {
+          Long nonceGroup = ng.getNonceGroup();
+          Long nonce = ng.newNonce();
       @Override
       protected MergeTableRegionsResponse rpcCall() throws Exception {
         MergeTableRegionsRequest request = RequestConverter
             .buildMergeTableRegionsRequest(
                 encodedNameofRegionsToMerge,
                 forcible,
-                ng.getNonceGroup(),
-                ng.newNonce());
+                nonceGroup,
+                nonce);
         return master.mergeTableRegions(getRpcController(), request);
       }
     });
@@ -1813,11 +1832,13 @@ public class HBaseAdmin implements Admin {
 
     SplitTableRegionResponse response = executeCallable(
         new MasterCallable<SplitTableRegionResponse>(getConnection(), getRpcControllerFactory()) {
+          Long nonceGroup = ng.getNonceGroup();
+          Long nonce = ng.newNonce();
           @Override
           protected SplitTableRegionResponse rpcCall() throws Exception {
             setPriority(tableName);
             SplitTableRegionRequest request = RequestConverter
-                .buildSplitTableRegionRequest(hri, splitPoint, ng.getNonceGroup(), ng.newNonce());
+                .buildSplitTableRegionRequest(hri, splitPoint, nonceGroup, nonce);
             return master.splitRegion(getRpcController(), request);
           }
         });
@@ -2847,12 +2868,14 @@ public class HBaseAdmin implements Admin {
 
     RestoreSnapshotResponse response = executeCallable(
         new MasterCallable<RestoreSnapshotResponse>(getConnection(), getRpcControllerFactory()) {
+          Long nonceGroup = ng.getNonceGroup();
+          Long nonce = ng.newNonce();
       @Override
       protected RestoreSnapshotResponse rpcCall() throws Exception {
         final RestoreSnapshotRequest request = RestoreSnapshotRequest.newBuilder()
             .setSnapshot(snapshot)
-            .setNonceGroup(ng.getNonceGroup())
-            .setNonce(ng.newNonce())
+            .setNonceGroup(nonceGroup)
+            .setNonce(nonce)
             .setRestoreACL(restoreAcl)
             .build();
         return master.restoreSnapshot(getRpcController(), request);
