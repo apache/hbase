@@ -21,21 +21,28 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility.StepHook;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.NonceKey;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -266,6 +273,70 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     // cf2 should be added cf3 should be removed
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
       tableName, regions, "cf1", cf2);
+  }
+
+  @Test
+  public void testColumnFamilyAdditionTwiceWithNonce() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String cf2 = "cf2";
+    final String cf3 = "cf3";
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    // create the table
+    RegionInfo[] regions =
+        MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1", cf3);
+
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+    // Modify multiple properties of the table.
+    final HTableDescriptor htd =
+        new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
+    boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
+    htd.setCompactionEnabled(newCompactionEnableOption);
+    htd.addFamily(new HColumnDescriptor(cf2));
+
+    PerClientRandomNonceGenerator nonceGenerator = PerClientRandomNonceGenerator.get();
+    long nonceGroup = nonceGenerator.getNonceGroup();
+    long newNonce = nonceGenerator.newNonce();
+    NonceKey nonceKey = new NonceKey(nonceGroup, newNonce);
+    procExec.registerNonce(nonceKey);
+
+    // Start the Modify procedure && kill the executor
+    final long procId = procExec
+        .submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceKey);
+
+    // Restart the executor after MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR and try to add column family
+    // as nonce are there , we should not fail
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, new StepHook() {
+      @Override
+      public boolean execute(int step) throws IOException {
+        if (step == 3) {
+          return procId == UTIL.getHBaseCluster().getMaster().addColumn(tableName,
+            ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf2)).build(), nonceGroup,
+            newNonce);
+        }
+        return true;
+      }
+    });
+
+    //Try with different nonce, now it should fail the checks
+    try {
+      UTIL.getHBaseCluster().getMaster().addColumn(tableName,
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf2)).build(), nonceGroup,
+        nonceGenerator.newNonce());
+      Assert.fail();
+    } catch (InvalidFamilyOperationException e) {
+    }
+
+    // Validate descriptor
+    HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
+    assertEquals(newCompactionEnableOption, currentHtd.isCompactionEnabled());
+    assertEquals(3, currentHtd.getFamiliesKeys().size());
+    assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf2)));
+    assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf3)));
+
+    // cf2 should be added
+    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
+      tableName, regions, "cf1", cf2, cf3);
   }
 
   @Test
