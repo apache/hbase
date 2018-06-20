@@ -275,8 +275,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               // next header, will not have happened...so, pass in the onDiskSize gotten from the
               // cached block. This 'optimization' triggers extremely rarely I'd say.
               long onDiskSize = prevBlock != null? prevBlock.getNextBlockOnDiskSize(): -1;
-              HFileBlock block = readBlock(offset, onDiskSize, true, false, false, false,
-                  null, null);
+              HFileBlock block = readBlock(offset, onDiskSize, /*cacheBlock=*/true,
+                  /*pread=*/true, false, false, null, null);
               // Need not update the current block. Ideally here the readBlock won't find the
               // block in cache. We call this readBlock so that block data is read from FS and
               // cached in BC. So there is no reference count increment that happens here.
