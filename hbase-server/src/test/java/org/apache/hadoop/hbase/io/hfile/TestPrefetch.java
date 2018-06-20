@@ -79,8 +79,33 @@ public class TestPrefetch {
 
   @Test
   public void testPrefetch() throws Exception {
-    Path storeFile = writeStoreFile();
+    Path storeFile = writeStoreFile("TestPrefetch");
     readStoreFile(storeFile);
+  }
+
+  @Test
+  public void testPrefetchRace() throws Exception {
+    for (int i = 0; i < 10; i++) {
+      Path storeFile = writeStoreFile("TestPrefetchRace-" + i);
+      readStoreFileLikeScanner(storeFile);
+    }
+  }
+
+  /**
+   * Read a storefile in the same manner as a scanner -- using non-positional reads and
+   * without waiting for prefetch to complete.
+   */
+  private void readStoreFileLikeScanner(Path storeFilePath) throws Exception {
+    // Open the file
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
+    do {
+      long offset = 0;
+      while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+        HFileBlock block = reader.readBlock(offset, -1, false, /*pread=*/false,
+            false, true, null, null);
+        offset += block.getOnDiskSizeWithHeader();
+      }
+    } while (!reader.prefetchComplete());
   }
 
   private void readStoreFile(Path storeFilePath) throws Exception {
@@ -108,8 +133,8 @@ public class TestPrefetch {
     }
   }
 
-  private Path writeStoreFile() throws IOException {
-    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), "TestPrefetch");
+  private Path writeStoreFile(String fname) throws IOException {
+    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
     HFileContext meta = new HFileContextBuilder()
       .withBlockSize(DATA_BLOCK_SIZE)
       .build();
