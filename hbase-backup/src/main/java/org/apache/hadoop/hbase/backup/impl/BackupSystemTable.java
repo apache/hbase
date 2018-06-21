@@ -1174,25 +1174,16 @@ public final class BackupSystemTable implements Closeable {
     LOG.trace("Backup set list");
 
     List<String> list = new ArrayList<>();
-    Table table = null;
-    ResultScanner scanner = null;
-    try {
-      table = connection.getTable(tableName);
+    try (Table table = connection.getTable(tableName)) {
       Scan scan = createScanForBackupSetList();
       scan.setMaxVersions(1);
-      scanner = table.getScanner(scan);
-      Result res;
-      while ((res = scanner.next()) != null) {
-        res.advance();
-        list.add(cellKeyToBackupSetName(res.current()));
-      }
-      return list;
-    } finally {
-      if (scanner != null) {
-        scanner.close();
-      }
-      if (table != null) {
-        table.close();
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        Result res;
+        while ((res = scanner.next()) != null) {
+          res.advance();
+          list.add(cellKeyToBackupSetName(res.current()));
+        }
+        return list;
       }
     }
   }
@@ -1207,24 +1198,16 @@ public final class BackupSystemTable implements Closeable {
     if (LOG.isTraceEnabled()) {
       LOG.trace(" Backup set describe: " + name);
     }
-    Table table = null;
-    try {
-      table = connection.getTable(tableName);
+    try (Table table = connection.getTable(tableName)) {
       Get get = createGetForBackupSet(name);
       Result res = table.get(get);
-
       if (res.isEmpty()) {
         return null;
       }
-
       res.advance();
       String[] tables = cellValueToBackupSet(res.current());
       return Arrays.asList(tables).stream().map(item -> TableName.valueOf(item))
           .collect(Collectors.toList());
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
