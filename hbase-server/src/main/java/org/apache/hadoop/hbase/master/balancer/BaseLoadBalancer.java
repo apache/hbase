@@ -888,8 +888,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           }
         }
         if (leastLoadedServerIndex != -1) {
-          LOG.debug("Pick the least loaded server " + servers[leastLoadedServerIndex].getHostname()
-            + " with better locality for region " + regions[region]);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(
+              "Pick the least loaded server " + servers[leastLoadedServerIndex].getHostname()
+                  + " with better locality for region " + regions[region]);
+          }
         }
         return leastLoadedServerIndex;
       } else {
