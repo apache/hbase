@@ -1050,12 +1050,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Starts the hbase cluster up again after shutting it down previously in a
    * test.  Use this if you want to keep dfs/zk up and just stop/start hbase.
    * @param servers number of region servers
-   * @throws IOException
    */
   public void restartHBaseCluster(int servers) throws IOException, InterruptedException {
-    if(connection != null){
-      connection.close();
-      connection = null;
+    if (hbaseAdmin != null) {
+      hbaseAdmin.close();
+      hbaseAdmin = null;
+    }
+    if (this.connection != null) {
+      this.connection.close();
+      this.connection = null;
     }
     this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
     // Don't leave here till we've done a successful scan of the hbase:meta
@@ -1091,10 +1094,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public void shutdownMiniCluster() throws Exception {
     LOG.info("Shutting down minicluster");
-    if (this.connection != null && !this.connection.isClosed()) {
-      this.connection.close();
-      this.connection = null;
-    }
     shutdownMiniHBaseCluster();
     shutdownMiniDFSCluster();
     shutdownMiniZKCluster();
@@ -1106,14 +1105,16 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Shutdown HBase mini cluster.  Does not shutdown zk or dfs if running.
-   * @throws IOException
    */
   public void shutdownMiniHBaseCluster() throws IOException {
     if (hbaseAdmin != null) {
       hbaseAdmin.close();
       hbaseAdmin = null;
     }
-
+    if (this.connection != null) {
+      this.connection.close();
+      this.connection = null;
+    }
     // unset the configuration for MIN and MAX RS to start
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1);
@@ -1123,7 +1124,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.hbaseCluster.waitUntilShutDown();
       this.hbaseCluster = null;
     }
-
     if (zooKeeperWatcher != null) {
       zooKeeperWatcher.close();
       zooKeeperWatcher = null;
