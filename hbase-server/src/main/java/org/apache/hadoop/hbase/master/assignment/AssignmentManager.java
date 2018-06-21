@@ -698,18 +698,6 @@ public class AssignmentManager implements ServerListener {
     return procs.toArray(UNASSIGN_PROCEDURE_ARRAY_TYPE);
   }
 
-  public MoveRegionProcedure[] createReopenProcedures(final Collection<RegionInfo> regionInfo)
-  throws IOException {
-    final MoveRegionProcedure[] procs = new MoveRegionProcedure[regionInfo.size()];
-    int index = 0;
-    for (RegionInfo hri: regionInfo) {
-      final ServerName serverName = regionStates.getRegionServerOfRegion(hri);
-      final RegionPlan plan = new RegionPlan(hri, serverName, serverName);
-      procs[index++] = createMoveRegionProcedure(plan);
-    }
-    return procs;
-  }
-
   /**
    * Called by things like DisableTableProcedure to get a list of UnassignProcedure
    * to unassign the regions of the table.
@@ -748,22 +736,21 @@ public class AssignmentManager implements ServerListener {
     return proc;
   }
 
-  public MoveRegionProcedure createMoveRegionProcedure(final RegionPlan plan)
-      throws HBaseIOException {
+  private MoveRegionProcedure createMoveRegionProcedure(RegionPlan plan) throws HBaseIOException {
     if (plan.getRegionInfo().getTable().isSystemTable()) {
       List<ServerName> exclude = getExcludedServersForSystemTable();
       if (plan.getDestination() != null && exclude.contains(plan.getDestination())) {
         try {
-          LOG.info("Can not move " + plan.getRegionInfo() + " to " + plan.getDestination()
-              + " because the server is not with highest version");
+          LOG.info("Can not move " + plan.getRegionInfo() + " to " + plan.getDestination() +
+            " because the server is not with highest version");
           plan.setDestination(getBalancer().randomAssignment(plan.getRegionInfo(),
-              this.master.getServerManager().createDestinationServersList(exclude)));
+            this.master.getServerManager().createDestinationServersList(exclude)));
         } catch (HBaseIOException e) {
           LOG.warn(e.toString(), e);
         }
       }
     }
-    return new MoveRegionProcedure(getProcedureEnvironment(), plan);
+    return new MoveRegionProcedure(getProcedureEnvironment(), plan, true);
   }
 
 

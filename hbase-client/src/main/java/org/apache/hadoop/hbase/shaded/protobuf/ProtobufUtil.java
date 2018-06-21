@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -3126,6 +3127,22 @@ public final class ProtobufUtil {
       rib.setOffline(proto.getOffline());
     }
     return rib.build();
+  }
+
+  public static HBaseProtos.RegionLocation toRegionLocation(HRegionLocation loc) {
+    HBaseProtos.RegionLocation.Builder builder = HBaseProtos.RegionLocation.newBuilder();
+    builder.setRegionInfo(toRegionInfo(loc.getRegion()));
+    if (loc.getServerName() != null) {
+      builder.setServerName(toServerName(loc.getServerName()));
+    }
+    builder.setSeqNum(loc.getSeqNum());
+    return builder.build();
+  }
+
+  public static HRegionLocation toRegionLocation(HBaseProtos.RegionLocation proto) {
+    org.apache.hadoop.hbase.client.RegionInfo regionInfo = toRegionInfo(proto.getRegionInfo());
+    ServerName serverName = proto.hasServerName() ? toServerName(proto.getServerName()) : null;
+    return new HRegionLocation(regionInfo, serverName, proto.getSeqNum());
   }
 
   public static List<SnapshotDescription> toSnapshotDescriptionList(

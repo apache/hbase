@@ -35,8 +35,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -571,46 +573,115 @@ public class RegionStates {
   }
 
   /**
-   * @return Returns regions for a table which are open or about to be open (OPEN or OPENING)
-   */
-  public List<RegionInfo> getOpenRegionsOfTable(final TableName table) {
-    // We want to get regions which are already open on the cluster or are about to be open.
-    // The use-case is for identifying regions which need to be re-opened to ensure they see some
-    // new configuration. Regions in OPENING now are presently being opened by a RS, so we can
-    // assume that they will imminently be OPEN but may not see our configuration change
-    return getRegionsOfTable(
-        table, (state) -> state.isInState(State.OPEN) || state.isInState(State.OPENING));
-  }
-
-  /**
    * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
    */
   public List<RegionInfo> getRegionsOfTable(final TableName table) {
     return getRegionsOfTable(table, false);
   }
 
+  private HRegionLocation createRegionForReopen(RegionStateNode node) {
+    synchronized (node) {
+      if (!include(node, false)) {
+        return null;
+      }
+      if (node.isInState(State.OPEN)) {
+        return new HRegionLocation(node.getRegionInfo(), node.getRegionLocation(),
+          node.getOpenSeqNum());
+      } else if (node.isInState(State.OPENING)) {
+        return new HRegionLocation(node.getRegionInfo(), node.getRegionLocation(), -1);
+      } else {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * Get the regions to be reopened when modifying a table.
+   * <p/>
+   * Notice that the {@code openSeqNum} in the returned HRegionLocation is also used to indicate the
+   * state of this region, positive means the region is in {@link State#OPEN}, -1 means
+   * {@link State#OPENING}. And for regions in other states we do not need reopen them.
+   */
+  public List<HRegionLocation> getRegionsOfTableForReopen(TableName tableName) {
+    return getTableRegionStateNodes(tableName).stream().map(this::createRegionForReopen)
+      .filter(r -> r != null).collect(Collectors.toList());
+  }
+
+  /**
+   * Check whether the region has been reopened. The meaning of the {@link HRegionLocation} is the
+   * same with {@link #getRegionsOfTableForReopen(TableName)}.
+   * <p/>
+   * For a region which is in {@link State#OPEN} before, if the region state is changed or the open
+   * seq num is changed, we can confirm that it has been reopened.
+   * <p/>
+   * For a region which is in {@link State#OPENING} before, usually it will be in {@link State#OPEN}
+   * now and we will schedule a MRP to reopen it. But there are several exceptions:
+   * <ul>
+   * <li>The region is in state other than {@link State#OPEN} or {@link State#OPENING}.</li>
+   * <li>The location of the region has been changed</li>
+   * </ul>
+   * Of course the region could still be in {@link State#OPENING} state and still on the same
+   * server, then here we will still return a {@link HRegionLocation} for it, just like
+   * {@link #getRegionsOfTableForReopen(TableName)}.
+   * @param oldLoc the previous state/location of this region
+   * @return null if the region has been reopened, otherwise a new {@link HRegionLocation} which
+   *         means we still need to reopen the region.
+   * @see #getRegionsOfTableForReopen(TableName)
+   */
+  public HRegionLocation checkReopened(HRegionLocation oldLoc) {
+    RegionStateNode node = getRegionStateNode(oldLoc.getRegion());
+    synchronized (node) {
+      if (oldLoc.getSeqNum() >= 0) {
+        // in OPEN state before
+        if (node.isInState(State.OPEN)) {
+          if (node.getOpenSeqNum() > oldLoc.getSeqNum()) {
+            // normal case, the region has been reopened
+            return null;
+          } else {
+            // the open seq num does not change, need to reopen again
+            return new HRegionLocation(node.getRegionInfo(), node.getRegionLocation(),
+              node.getOpenSeqNum());
+          }
+        } else {
+          // the state has been changed so we can make sure that the region has been reopened(not
+          // finished maybe, but not a problem).
+          return null;
+        }
+      } else {
+        // in OPENING state before
+        if (!node.isInState(State.OPEN, State.OPENING)) {
+          // not in OPEN or OPENING state, then we can make sure that the region has been
+          // reopened(not finished maybe, but not a problem)
+          return null;
+        } else {
+          if (!node.getRegionLocation().equals(oldLoc.getServerName())) {
+            // the region has been moved, so we can make sure that the region has been reopened.
+            return null;
+          }
+          // normal case, we are still in OPENING state, or the reopen has been opened and the state
+          // is changed to OPEN.
+          long openSeqNum = node.isInState(State.OPEN) ? node.getOpenSeqNum() : -1;
+          return new HRegionLocation(node.getRegionInfo(), node.getRegionLocation(), openSeqNum);
+        }
+      }
+    }
+  }
+
   /**
    * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
    */
-  public List<RegionInfo> getRegionsOfTable(final TableName table, boolean offline) {
-    return getRegionsOfTable(table, (state) -> include(state, offline));
+  public List<RegionInfo> getRegionsOfTable(TableName table, boolean offline) {
+    return getRegionsOfTable(table, state -> include(state, offline));
   }
 
   /**
    * @return Return the regions of the table; does not include OFFLINE unless you set
-   * <code>offline</code> to true. Does not include regions that are in the
-   * {@link State#SPLIT} state.
+   *         <code>offline</code> to true. Does not include regions that are in the
+   *         {@link State#SPLIT} state.
    */
-  public List<RegionInfo> getRegionsOfTable(
-      final TableName table, Predicate<RegionStateNode> filter) {
-    final ArrayList<RegionStateNode> nodes = getTableRegionStateNodes(table);
-    final ArrayList<RegionInfo> hris = new ArrayList<RegionInfo>(nodes.size());
-    for (RegionStateNode node: nodes) {
-      if (filter.test(node)) {
-        hris.add(node.getRegionInfo());
-      }
-    }
-    return hris;
+  private List<RegionInfo> getRegionsOfTable(TableName table, Predicate<RegionStateNode> filter) {
+    return getTableRegionStateNodes(table).stream().filter(filter).map(n -> n.getRegionInfo())
+      .collect(Collectors.toList());
   }
 
   /**
