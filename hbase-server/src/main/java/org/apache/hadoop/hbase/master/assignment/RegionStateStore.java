@@ -116,11 +116,13 @@ public class RegionStateStore {
 
       final ServerName lastHost = hrl.getServerName();
       final ServerName regionLocation = getRegionServer(result, replicaId);
-      final long openSeqNum = -1;
+      final long openSeqNum = hrl.getSeqNum();
 
       // TODO: move under trace, now is visible for debugging
-      LOG.info("Load hbase:meta entry region={}, regionState={}, lastHost={}, " +
-          "regionLocation={}", regionInfo.getEncodedName(), state, lastHost, regionLocation);
+      LOG.info(
+        "Load hbase:meta entry region={}, regionState={}, lastHost={}, " +
+          "regionLocation={}, openSeqNum={}",
+        regionInfo.getEncodedName(), state, lastHost, regionLocation, openSeqNum);
       visitor.visitRegionState(result, regionInfo, state, regionLocation, lastHost, openSeqNum);
     }
   }

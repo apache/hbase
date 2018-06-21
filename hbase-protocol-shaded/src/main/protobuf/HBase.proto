@@ -253,3 +253,9 @@ message CacheEvictionStats {
   optional int64 max_cache_size = 3;
   repeated RegionExceptionMessage exception = 4;
 }
+
+message RegionLocation {
+  required RegionInfo region_info = 1;
+  optional ServerName server_name = 2;
+  required int64 seq_num = 3;
+}

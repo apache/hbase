@@ -56,11 +56,14 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
   }
 
   /**
-   * @throws IOException If the cluster is offline or master is stopping or if table is disabled
-   *   or non-existent.
+   * @param check whether we should do some checks in the constructor. We will skip the checks if we
+   *          are reopening a region as this may fail the whole procedure and cause stuck. We will
+   *          do the check later when actually executing the procedure so not a big problem.
+   * @throws IOException If the cluster is offline or master is stopping or if table is disabled or
+   *           non-existent.
    */
-  public MoveRegionProcedure(final MasterProcedureEnv env, final RegionPlan plan)
-  throws HBaseIOException {
+  public MoveRegionProcedure(MasterProcedureEnv env, RegionPlan plan, boolean check)
+      throws HBaseIOException {
     super(env, plan.getRegionInfo());
     this.plan = plan;
     preflightChecks(env, true);
@@ -70,9 +73,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final MoveRegionState state)
       throws InterruptedException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
     switch (state) {
       case MOVE_REGION_PREPARE:
         // Check context again and that region is online; do it here after we have lock on region.
