@@ -268,3 +268,9 @@ message FlushedRegionSequenceId {
 message FlushedSequenceId {
   repeated FlushedRegionSequenceId regionSequenceId = 1;
 }
+
+message RegionLocation {
+  required RegionInfo region_info = 1;
+  optional ServerName server_name = 2;
+  required int64 seq_num = 3;
+}

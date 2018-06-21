@@ -441,11 +441,14 @@ message DisablePeerStateData {
 }
 
 enum ReopenTableRegionsState {
-  REOPEN_TABLE_REGIONS_REOPEN_ALL_REGIONS = 1;
+  REOPEN_TABLE_REGIONS_GET_REGIONS = 1;
+  REOPEN_TABLE_REGIONS_REOPEN_REGIONS = 2;
+  REOPEN_TABLE_REGIONS_CONFIRM_REOPENED = 3;
 }
 
 message ReopenTableRegionsStateData {
   required TableName table_name = 1;
+  repeated RegionLocation region = 2;
 }
 
 enum InitMetaState {
