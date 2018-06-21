@@ -1473,6 +1473,9 @@ Some use cases for cluster replication include:
 NOTE: Replication is enabled at the granularity of the column family.
 Before enabling replication for a column family, create the table and all column families to be replicated, on the destination cluster.
 
+NOTE: Replication is asynchronous as we send WAL to another cluster in background, which means that when you want to do recovery through replication, you could loss some data. To address this problem, we have introduced a new feature called synchronous replication. As the mechanism is a bit different so we use a separated section to describe it. Please see
+<<Synchronous Replication,Synchronous Replication>>.
+
 === Replication Overview
 
 Cluster replication uses a source-push methodology.
