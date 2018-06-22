@@ -799,6 +799,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       s.setConsistency(Consistency.TIMELINE);
     }
     int maxAttempts = (retry ? numTries : 1);
+    boolean relocateMeta = false;
     for (int tries = 0; ; tries++) {
       if (tries >= maxAttempts) {
         throw new NoServerForRegionException("Unable to find region for "
@@ -824,6 +825,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           if (locations != null && locations.getRegionLocation(replicaId) != null) {
             return locations;
           }
+        }
+        if (relocateMeta) {
+          relocateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
+            RegionInfo.DEFAULT_REPLICA_ID);
         }
         s.resetMvccReadPoint();
         try (ReversedClientScanner rcs =
@@ -904,10 +909,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           throw e;
         }
         // Only relocate the parent region if necessary
-        if(!(e instanceof RegionOfflineException ||
-            e instanceof NoServerForRegionException)) {
-          relocateRegion(TableName.META_TABLE_NAME, metaStartKey, replicaId);
-        }
+        relocateMeta =
+          !(e instanceof RegionOfflineException || e instanceof NoServerForRegionException);
       } finally {
         userRegionLock.unlock();
       }
