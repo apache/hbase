@@ -340,6 +340,8 @@ public class MetricsRegionServerSourceImpl
                       TOTAL_ROW_ACTION_REQUEST_COUNT_DESC), rsWrap.getTotalRowActionRequestCount())
               .addCounter(Interns.info(READ_REQUEST_COUNT, READ_REQUEST_COUNT_DESC),
                       rsWrap.getReadRequestsCount())
+              .addCounter(Interns.info(CP_REQUEST_COUNT, CP_REQUEST_COUNT_DESC),
+                      rsWrap.getCpRequestsCount())
               .addCounter(Interns.info(FILTERED_READ_REQUEST_COUNT,
                       FILTERED_READ_REQUEST_COUNT_DESC), rsWrap.getFilteredReadRequestsCount())
               .addCounter(Interns.info(WRITE_REQUEST_COUNT, WRITE_REQUEST_COUNT_DESC),

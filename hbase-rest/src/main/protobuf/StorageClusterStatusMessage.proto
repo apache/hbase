@@ -32,6 +32,7 @@ message StorageClusterStatus {
     optional int32 totalStaticBloomSizeKB = 11;
     optional int64 totalCompactingKVs = 12;
     optional int64 currentCompactedKVs = 13;
+    optional int64 cpRequestsCount = 14;
   }
   message Node {
     required string name = 1;    // name:port

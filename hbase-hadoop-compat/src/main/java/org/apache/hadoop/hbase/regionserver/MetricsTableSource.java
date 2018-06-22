@@ -29,6 +29,8 @@ public interface MetricsTableSource extends Comparable<MetricsTableSource> {
 
   String READ_REQUEST_COUNT = "readRequestCount";
   String READ_REQUEST_COUNT_DESC = "Number of read requests";
+  String CP_REQUEST_COUNT = "cpRequestCount";
+  String CP_REQUEST_COUNT_DESC = "Number of coprocessor service requests";
   String WRITE_REQUEST_COUNT = "writeRequestCount";
   String WRITE_REQUEST_COUNT_DESC = "Number of write requests";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";

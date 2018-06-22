@@ -57,6 +57,7 @@ public final class RegionMetricsBuilder {
         .setLastMajorCompactionTimestamp(regionLoadPB.getLastMajorCompactionTs())
         .setMemStoreSize(new Size(regionLoadPB.getMemStoreSizeMB(), Size.Unit.MEGABYTE))
         .setReadRequestCount(regionLoadPB.getReadRequestsCount())
+        .setCpRequestCount(regionLoadPB.getCpRequestsCount())
         .setWriteRequestCount(regionLoadPB.getWriteRequestsCount())
         .setStoreFileIndexSize(new Size(regionLoadPB.getStorefileIndexSizeKB(),
           Size.Unit.KILOBYTE))
@@ -102,6 +103,7 @@ public final class RegionMetricsBuilder {
         .setLastMajorCompactionTs(regionMetrics.getLastMajorCompactionTimestamp())
         .setMemStoreSizeMB((int) regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE))
         .setReadRequestsCount(regionMetrics.getReadRequestCount())
+        .setCpRequestsCount(regionMetrics.getCpRequestCount())
         .setWriteRequestsCount(regionMetrics.getWriteRequestCount())
         .setStorefileIndexSizeKB((long) regionMetrics.getStoreFileIndexSize()
           .get(Size.Unit.KILOBYTE))
@@ -134,6 +136,7 @@ public final class RegionMetricsBuilder {
   private Size uncompressedStoreFileSize = Size.ZERO;
   private long writeRequestCount;
   private long readRequestCount;
+  private long cpRequestCount;
   private long filteredReadRequestCount;
   private long completedSequenceId;
   private Map<byte[], Long> storeSequenceIds = Collections.emptyMap();
@@ -195,6 +198,10 @@ public final class RegionMetricsBuilder {
     this.readRequestCount = value;
     return this;
   }
+  public RegionMetricsBuilder setCpRequestCount(long value) {
+    this.cpRequestCount = value;
+    return this;
+  }
   public RegionMetricsBuilder setFilteredReadRequestCount(long value) {
     this.filteredReadRequestCount = value;
     return this;
@@ -231,6 +238,7 @@ public final class RegionMetricsBuilder {
         uncompressedStoreFileSize,
         writeRequestCount,
         readRequestCount,
+        cpRequestCount,
         filteredReadRequestCount,
         completedSequenceId,
         storeSequenceIds,
@@ -253,6 +261,7 @@ public final class RegionMetricsBuilder {
     private final Size uncompressedStoreFileSize;
     private final long writeRequestCount;
     private final long readRequestCount;
+    private final long cpRequestCount;
     private final long filteredReadRequestCount;
     private final long completedSequenceId;
     private final Map<byte[], Long> storeSequenceIds;
@@ -272,6 +281,7 @@ public final class RegionMetricsBuilder {
         Size uncompressedStoreFileSize,
         long writeRequestCount,
         long readRequestCount,
+        long cpRequestCount,
         long filteredReadRequestCount,
         long completedSequenceId,
         Map<byte[], Long> storeSequenceIds,
@@ -291,6 +301,7 @@ public final class RegionMetricsBuilder {
       this.uncompressedStoreFileSize = Preconditions.checkNotNull(uncompressedStoreFileSize);
       this.writeRequestCount = writeRequestCount;
       this.readRequestCount = readRequestCount;
+      this.cpRequestCount = cpRequestCount;
       this.filteredReadRequestCount = filteredReadRequestCount;
       this.completedSequenceId = completedSequenceId;
       this.storeSequenceIds = Preconditions.checkNotNull(storeSequenceIds);
@@ -326,6 +337,11 @@ public final class RegionMetricsBuilder {
     @Override
     public long getReadRequestCount() {
       return readRequestCount;
+    }
+
+    @Override
+    public long getCpRequestCount() {
+      return cpRequestCount;
     }
 
     @Override
@@ -415,6 +431,8 @@ public final class RegionMetricsBuilder {
           this.getMemStoreSize());
       Strings.appendKeyValue(sb, "readRequestCount",
           this.getReadRequestCount());
+      Strings.appendKeyValue(sb, "cpRequestCount",
+          this.getCpRequestCount());
       Strings.appendKeyValue(sb, "writeRequestCount",
           this.getWriteRequestCount());
       Strings.appendKeyValue(sb, "rootLevelIndexSize",

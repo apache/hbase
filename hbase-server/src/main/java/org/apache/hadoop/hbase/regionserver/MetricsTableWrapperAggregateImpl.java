@@ -76,8 +76,10 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
         metricsTable.setStoreFilesSize(metricsTable.getStoreFilesSize() + tempStorefilesSize);
         metricsTable.setTableSize(metricsTable.getMemStoresSize() + metricsTable.getStoreFilesSize());
         metricsTable.setReadRequestsCount(metricsTable.getReadRequestsCount() + r.getReadRequestsCount());
+        metricsTable.setCpRequestsCount(metricsTable.getCpRequestsCount() + r.getCpRequestsCount());
         metricsTable.setWriteRequestsCount(metricsTable.getWriteRequestsCount() + r.getWriteRequestsCount());
-        metricsTable.setTotalRequestsCount(metricsTable.getReadRequestsCount() + metricsTable.getWriteRequestsCount());
+        metricsTable.setTotalRequestsCount(metricsTable.getReadRequestsCount()
+            + metricsTable.getWriteRequestsCount() + metricsTable.getCpRequestsCount());
       }
 
       for(Map.Entry<TableName, MetricsTableValues> entry : localMetricsTableMap.entrySet()) {
@@ -108,55 +110,71 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   @Override
   public long getReadRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
+    } else {
       return metricsTable.getReadRequestsCount();
+    }
+  }
+
+  @Override
+  public long getCpRequestsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    } else {
+      return metricsTable.getCpRequestsCount();
+    }
   }
 
   @Override
   public long getWriteRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
+    } else {
       return metricsTable.getWriteRequestsCount();
+    }
   }
 
   @Override
   public long getTotalRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
+    } else {
       return metricsTable.getTotalRequestsCount();
+    }
   }
 
   @Override
   public long getMemStoresSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
+    } else {
       return metricsTable.getMemStoresSize();
+    }
   }
 
   @Override
   public long getStoreFilesSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
+    } else {
       return metricsTable.getStoreFilesSize();
+    }
   }
 
   @Override
   public long getTableSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null)
+    if (metricsTable == null) {
       return 0;
-    else
+    } else {
       return metricsTable.getTableSize();
+    }
   }
 
   @Override
@@ -168,6 +186,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
     private long totalRequestsCount;
     private long readRequestsCount;
+    private long cpRequestsCount;
     private long writeRequestsCount;
     private long memstoresSize;
     private long storeFilesSize;
@@ -187,6 +206,14 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
     public void setReadRequestsCount(long readRequestsCount) {
       this.readRequestsCount = readRequestsCount;
+    }
+
+    public long getCpRequestsCount() {
+      return cpRequestsCount;
+    }
+
+    public void setCpRequestsCount(long cpRequestsCount) {
+      this.cpRequestsCount = cpRequestsCount;
     }
 
     public long getWriteRequestsCount() {

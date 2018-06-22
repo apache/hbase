@@ -31,12 +31,14 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 class BalancerRegionLoad {
   private final long readRequestsCount;
+  private final long cpRequestsCount;
   private final long writeRequestsCount;
   private final int memStoreSizeMB;
   private final int storefileSizeMB;
 
   BalancerRegionLoad(RegionMetrics regionMetrics) {
     readRequestsCount = regionMetrics.getReadRequestCount();
+    cpRequestsCount = regionMetrics.getCpRequestCount();
     writeRequestsCount = regionMetrics.getWriteRequestCount();
     memStoreSizeMB = (int) regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE);
     storefileSizeMB = (int) regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
@@ -44,6 +46,10 @@ class BalancerRegionLoad {
 
   public long getReadRequestsCount() {
     return readRequestsCount;
+  }
+
+  public long getCpRequestsCount() {
+    return cpRequestsCount;
   }
 
   public long getWriteRequestsCount() {

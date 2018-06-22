@@ -56,6 +56,8 @@ public class TestServerMetrics {
         .mapToDouble(v -> v.getStoreFileIndexSize().get(Size.Unit.KILOBYTE)).sum(), 0);
     assertEquals(((long) Integer.MAX_VALUE) * 2,
         metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getReadRequestCount()).sum());
+    assertEquals(100,
+        metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getCpRequestCount()).sum());
     assertEquals(300,
         metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getFilteredReadRequestCount())
             .sum());
@@ -106,6 +108,7 @@ public class TestServerMetrics {
             .setStorefiles(13).setStoreUncompressedSizeMB(23).setStorefileSizeMB(300)
             .setFilteredReadRequestsCount(200).setStorefileIndexSizeKB(40).setRootIndexSizeKB(303)
             .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE)
+            .setCpRequestsCount(100)
             .build();
 
     ClusterStatusProtos.ServerLoad sl =

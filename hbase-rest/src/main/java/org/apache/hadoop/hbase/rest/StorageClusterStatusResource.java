@@ -92,6 +92,7 @@ public class StorageClusterStatusResource extends ResourceBase {
             (int) region.getMemStoreSize().get(Size.Unit.MEGABYTE),
             (long) region.getStoreFileIndexSize().get(Size.Unit.KILOBYTE),
             region.getReadRequestCount(),
+            region.getCpRequestCount(),
             region.getWriteRequestCount(),
             (int) region.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE),
             (int) region.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE),

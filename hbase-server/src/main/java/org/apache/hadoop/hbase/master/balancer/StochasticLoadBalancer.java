@@ -189,6 +189,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
     regionLoadFunctions = new CostFromRegionLoadFunction[] {
       new ReadRequestCostFunction(conf),
+      new CPRequestCostFunction(conf),
       new WriteRequestCostFunction(conf),
       new MemStoreSizeCostFunction(conf),
       new StoreFileCostFunction(conf)
@@ -208,6 +209,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       regionLoadFunctions[1],
       regionLoadFunctions[2],
       regionLoadFunctions[3],
+      regionLoadFunctions[4]
     };
     curFunctionCosts= new Double[costFunctions.length];
     tempFunctionCosts= new Double[costFunctions.length];
@@ -1476,6 +1478,28 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   /**
+   * Compute the cost of total number of coprocessor requests  The more unbalanced the higher the
+   * computed cost will be.  This uses a rolling average of regionload.
+   */
+
+  static class CPRequestCostFunction extends CostFromRegionLoadAsRateFunction {
+
+    private static final String CP_REQUEST_COST_KEY =
+        "hbase.master.balancer.stochastic.cpRequestCost";
+    private static final float DEFAULT_CP_REQUEST_COST = 5;
+
+    CPRequestCostFunction(Configuration conf) {
+      super(conf);
+      this.setMultiplier(conf.getFloat(CP_REQUEST_COST_KEY, DEFAULT_CP_REQUEST_COST));
+    }
+
+    @Override
+    protected double getCostFromRl(BalancerRegionLoad rl) {
+      return rl.getCpRequestsCount();
+    }
+  }
+
+  /**
    * Compute the cost of total number of write requests.  The more unbalanced the higher the
    * computed cost will be.  This uses a rolling average of regionload.
    */
@@ -1678,6 +1702,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return rl.getMemStoreSizeMB();
     }
   }
+
   /**
    * Compute the cost of total open storefiles size.  The more unbalanced the higher the
    * computed cost will be.  This uses a rolling average of regionload.

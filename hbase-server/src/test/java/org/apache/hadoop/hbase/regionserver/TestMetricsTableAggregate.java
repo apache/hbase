@@ -43,11 +43,12 @@ public class TestMetricsTableAggregate {
     String tableName = "testTableMetrics";
     MetricsTableWrapperStub tableWrapper = new MetricsTableWrapperStub(tableName);
     CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-    .createTable(tableName, tableWrapper);
+        .createTable(tableName, tableWrapper);
     MetricsTableAggregateSource agg = CompatibilitySingletonFactory
         .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
 
     HELPER.assertCounter("Namespace_default_table_testTableMetrics_metric_readRequestCount", 10, agg);
+    HELPER.assertCounter("Namespace_default_table_testTableMetrics_metric_cpRequestCount", 15, agg);
     HELPER.assertCounter("Namespace_default_table_testTableMetrics_metric_writeRequestCount", 20, agg);
     HELPER.assertCounter("Namespace_default_table_testTableMetrics_metric_totalRequestCount", 30, agg);
 

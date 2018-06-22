@@ -136,6 +136,11 @@ public interface MetricsRegionServerWrapper {
   long getReadRequestsCount();
 
   /**
+   * Get the number of coprocessor requests to regions hosted on this region server.
+   */
+  long getCpRequestsCount();
+
+  /**
    * Get the number of filtered read requests to regions hosted on this region server.
    */
   long getFilteredReadRequestsCount();

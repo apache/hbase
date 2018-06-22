@@ -140,6 +140,9 @@ public interface Region extends ConfigurationObserver {
   /** @return read requests count for this region */
   long getReadRequestsCount();
 
+  /** @return coprocessor requests count for this region */
+  long getCpRequestsCount();
+
   /** @return filtered read requests count for this region */
   long getFilteredReadRequestsCount();
 

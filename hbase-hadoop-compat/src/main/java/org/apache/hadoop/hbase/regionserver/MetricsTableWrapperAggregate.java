@@ -33,6 +33,11 @@ public interface MetricsTableWrapperAggregate {
   long getReadRequestsCount(String table);
 
   /**
+   * Get the number of CoprocessorService requests that have been issued against this table
+   */
+  long getCpRequestsCount(String table);
+
+  /**
    * Get the number of write requests that have been issued against this table
    */
   long getWriteRequestsCount(String table);

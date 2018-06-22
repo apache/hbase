@@ -256,6 +256,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String READ_REQUEST_COUNT = "readRequestCount";
   String READ_REQUEST_COUNT_DESC =
       "Number of read requests with non-empty Results that this RegionServer has answered.";
+  String CP_REQUEST_COUNT = "cpRequestCount";
+  String CP_REQUEST_COUNT_DESC =
+      "Number of coprocessor service requests this region server has answered.";
   String FILTERED_READ_REQUEST_COUNT = "filteredReadRequestCount";
   String FILTERED_READ_REQUEST_COUNT_DESC =
     "Number of filtered read requests this RegionServer has answered.";

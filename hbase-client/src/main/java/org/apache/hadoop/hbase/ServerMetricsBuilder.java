@@ -324,6 +324,7 @@ public final class ServerMetricsBuilder {
       long storefileIndexSizeKB = 0;
       long rootLevelIndexSizeKB = 0;
       long readRequestsCount = 0;
+      long cpRequestsCount = 0;
       long writeRequestsCount = 0;
       long filteredReadRequestsCount = 0;
       long bloomFilterSizeMB = 0;
@@ -337,6 +338,7 @@ public final class ServerMetricsBuilder {
         memStoreSizeMB += r.getMemStoreSize().get(Size.Unit.MEGABYTE);
         storefileIndexSizeKB += r.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
         readRequestsCount += r.getReadRequestCount();
+        cpRequestsCount += r.getCpRequestCount();
         writeRequestsCount += r.getWriteRequestCount();
         filteredReadRequestsCount += r.getFilteredReadRequestCount();
         rootLevelIndexSizeKB += r.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE);
@@ -360,6 +362,7 @@ public final class ServerMetricsBuilder {
       }
       Strings.appendKeyValue(sb, "memstoreSizeMB", memStoreSizeMB);
       Strings.appendKeyValue(sb, "readRequestsCount", readRequestsCount);
+      Strings.appendKeyValue(sb, "cpRequestsCount", cpRequestsCount);
       Strings.appendKeyValue(sb, "filteredReadRequestsCount", filteredReadRequestsCount);
       Strings.appendKeyValue(sb, "writeRequestsCount", writeRequestsCount);
       Strings.appendKeyValue(sb, "rootIndexSizeKB", rootLevelIndexSizeKB);

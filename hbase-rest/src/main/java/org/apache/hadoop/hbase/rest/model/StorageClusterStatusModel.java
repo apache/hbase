@@ -85,6 +85,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *   &lt;attribute name="memstoreSizeMB" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="storefileIndexSizeMB" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="readRequestsCount" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="cpRequestsCount" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="writeRequestsCount" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="rootIndexSizeKB" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="totalStaticIndexSizeKB" type="int"&gt;&lt;/attribute&gt;
@@ -119,6 +120,7 @@ public class StorageClusterStatusModel
       private int memstoreSizeMB;
       private long storefileIndexSizeKB;
       private long readRequestsCount;
+      private long cpRequestsCount;
       private long writeRequestsCount;
       private int rootIndexSizeKB;
       private int totalStaticIndexSizeKB;
@@ -151,8 +153,8 @@ public class StorageClusterStatusModel
        */
       public Region(byte[] name, int stores, int storefiles,
           int storefileSizeMB, int memstoreSizeMB, long storefileIndexSizeKB,
-          long readRequestsCount, long writeRequestsCount, int rootIndexSizeKB,
-          int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
+          long readRequestsCount, long cpRequestsCount, long writeRequestsCount,
+          int rootIndexSizeKB, int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
           long totalCompactingKVs, long currentCompactedKVs) {
         this.name = name;
         this.stores = stores;
@@ -161,6 +163,7 @@ public class StorageClusterStatusModel
         this.memstoreSizeMB = memstoreSizeMB;
         this.storefileIndexSizeKB = storefileIndexSizeKB;
         this.readRequestsCount = readRequestsCount;
+        this.cpRequestsCount = cpRequestsCount;
         this.writeRequestsCount = writeRequestsCount;
         this.rootIndexSizeKB = rootIndexSizeKB;
         this.totalStaticIndexSizeKB = totalStaticIndexSizeKB;
@@ -226,6 +229,14 @@ public class StorageClusterStatusModel
       }
 
       /**
+       * @return the current total read requests made to region
+       */
+      @XmlAttribute
+      public long getCpRequestsCount() {
+        return cpRequestsCount;
+      }
+
+      /**
        * @return the current total write requests made to region
        */
       @XmlAttribute
@@ -278,6 +289,13 @@ public class StorageClusterStatusModel
        */
       public void setReadRequestsCount(long readRequestsCount) {
         this.readRequestsCount = readRequestsCount;
+      }
+
+      /**
+       * @param cpRequestsCount The current total read requests made to region
+       */
+      public void setCpRequestsCount(long cpRequestsCount) {
+        this.cpRequestsCount = cpRequestsCount;
       }
 
       /**
@@ -383,11 +401,11 @@ public class StorageClusterStatusModel
      */
     public void addRegion(byte[] name, int stores, int storefiles,
         int storefileSizeMB, int memstoreSizeMB, long storefileIndexSizeKB,
-        long readRequestsCount, long writeRequestsCount, int rootIndexSizeKB,
-        int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
+        long readRequestsCount, long cpRequestsCount, long writeRequestsCount,
+        int rootIndexSizeKB, int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
         long totalCompactingKVs, long currentCompactedKVs) {
       regions.add(new Region(name, stores, storefiles, storefileSizeMB,
-        memstoreSizeMB, storefileIndexSizeKB, readRequestsCount,
+        memstoreSizeMB, storefileIndexSizeKB, readRequestsCount, cpRequestsCount,
         writeRequestsCount, rootIndexSizeKB, totalStaticIndexSizeKB,
         totalStaticBloomSizeKB, totalCompactingKVs, currentCompactedKVs));
     }
@@ -683,6 +701,8 @@ public class StorageClusterStatusModel
           sb.append(region.storefileIndexSizeKB);
           sb.append("\n            readRequestsCount=");
           sb.append(region.readRequestsCount);
+          sb.append("\n            cpRequestsCount=");
+          sb.append(region.cpRequestsCount);
           sb.append("\n            writeRequestsCount=");
           sb.append(region.writeRequestsCount);
           sb.append("\n            rootIndexSizeKB=");
@@ -737,6 +757,7 @@ public class StorageClusterStatusModel
         regionBuilder.setMemStoreSizeMB(region.memstoreSizeMB);
         regionBuilder.setStorefileIndexSizeKB(region.storefileIndexSizeKB);
         regionBuilder.setReadRequestsCount(region.readRequestsCount);
+        regionBuilder.setCpRequestsCount(region.cpRequestsCount);
         regionBuilder.setWriteRequestsCount(region.writeRequestsCount);
         regionBuilder.setRootIndexSizeKB(region.rootIndexSizeKB);
         regionBuilder.setTotalStaticIndexSizeKB(region.totalStaticIndexSizeKB);
@@ -783,6 +804,7 @@ public class StorageClusterStatusModel
           region.getMemStoreSizeMB(),
           region.getStorefileIndexSizeKB(),
           region.getReadRequestsCount(),
+          region.getCpRequestsCount(),
           region.getWriteRequestsCount(),
           region.getRootIndexSizeKB(),
           region.getTotalStaticIndexSizeKB(),

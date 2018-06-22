@@ -306,6 +306,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // Number of requests
   // Count rows for scan
   final LongAdder readRequestsCount = new LongAdder();
+  final LongAdder cpRequestsCount = new LongAdder();
   final LongAdder filteredReadRequestsCount = new LongAdder();
   // Count rows for multi row mutations
   final LongAdder writeRequestsCount = new LongAdder();
@@ -1268,6 +1269,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public long getReadRequestsCount() {
     return readRequestsCount.sum();
+  }
+
+  @Override
+  public long getCpRequestsCount() {
+    return cpRequestsCount.sum();
   }
 
   @Override
@@ -8005,14 +8011,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       51 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
-      (14 * Bytes.SIZEOF_LONG) +
+      (15 * Bytes.SIZEOF_LONG) +
       3 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
   // 6 x LongAdder - numMutationsWithoutWAL, dataInMemoryWithoutWAL,
   //   checkAndMutateChecksPassed, checkAndMutateChecksFailed, readRequestsCount,
-  //   writeRequestsCount
+  //   writeRequestsCount, cpRequestsCount
   // 1 x HRegion$WriteState - writestate
   // 1 x RegionCoprocessorHost - coprocessorHost
   // 1 x RegionSplitPolicy - splitPolicy
@@ -8100,6 +8106,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     com.google.protobuf.Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
 
+    cpRequestsCount.increment();
     String methodName = call.getMethodName();
     com.google.protobuf.Descriptors.MethodDescriptor methodDesc =
         CoprocessorRpcUtils.getMethodDescriptor(methodName, serviceDesc);

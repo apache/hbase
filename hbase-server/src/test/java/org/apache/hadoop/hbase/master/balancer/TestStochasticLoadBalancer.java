@@ -25,10 +25,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.TreeMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -116,6 +120,81 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       },
   };
 
+  private ServerMetrics mockServerMetricsWithCpRequests(ServerName server,
+      List<RegionInfo> regionsOnServer, long cpRequestCount) {
+    ServerMetrics serverMetrics = mock(ServerMetrics.class);
+    Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for(RegionInfo info : regionsOnServer){
+      RegionMetrics rl = mock(RegionMetrics.class);
+      when(rl.getReadRequestCount()).thenReturn(0L);
+      when(rl.getCpRequestCount()).thenReturn(cpRequestCount);
+      when(rl.getWriteRequestCount()).thenReturn(0L);
+      when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
+      when(rl.getStoreFileSize()).thenReturn(Size.ZERO);
+      regionLoadMap.put(info.getEncodedNameAsBytes(), rl);
+    }
+    when(serverMetrics.getRegionMetrics()).thenReturn(regionLoadMap);
+    return serverMetrics;
+  }
+
+  @Test
+  public void testCPRequestCost() {
+    // in order to pass needsBalance judgement
+    conf.setFloat("hbase.master.balancer.stochastic.cpRequestCost", 10000f);
+    loadBalancer.setConf(conf);
+    // mock cluster State
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<ServerName, List<RegionInfo>>();
+    ServerName serverA = randomServer(3).getServerName();
+    ServerName serverB = randomServer(3).getServerName();
+    ServerName serverC = randomServer(3).getServerName();
+    List<RegionInfo> regionsOnServerA = randomRegions(3);
+    List<RegionInfo> regionsOnServerB = randomRegions(3);
+    List<RegionInfo> regionsOnServerC = randomRegions(3);
+    clusterState.put(serverA, regionsOnServerA);
+    clusterState.put(serverB, regionsOnServerB);
+    clusterState.put(serverC, regionsOnServerC);
+    // mock ClusterMetrics
+    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
+    serverMetricsMap.put(serverA, mockServerMetricsWithCpRequests(serverA, regionsOnServerA, 0));
+    serverMetricsMap.put(serverB, mockServerMetricsWithCpRequests(serverB, regionsOnServerB, 0));
+    serverMetricsMap.put(serverC, mockServerMetricsWithCpRequests(serverC, regionsOnServerC, 0));
+    ClusterMetrics clusterStatus = mock(ClusterMetrics.class);
+    when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+    loadBalancer.setClusterMetrics(clusterStatus);
+
+    // CPRequestCostFunction are Rate based, So doing setClusterMetrics again
+    // this time, regions on serverA with more cpRequestCount load
+    // serverA : 1000,1000,1000
+    // serverB : 0,0,0
+    // serverC : 0,0,0
+    // so should move two regions from serverA to serverB & serverC
+    serverMetricsMap = new TreeMap<>();
+    serverMetricsMap.put(serverA, mockServerMetricsWithCpRequests(serverA,
+        regionsOnServerA, 1000));
+    serverMetricsMap.put(serverB, mockServerMetricsWithCpRequests(serverB, regionsOnServerB, 0));
+    serverMetricsMap.put(serverC, mockServerMetricsWithCpRequests(serverC, regionsOnServerC, 0));
+    clusterStatus = mock(ClusterMetrics.class);
+    when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+    loadBalancer.setClusterMetrics(clusterStatus);
+
+    List<RegionPlan> plans = loadBalancer.balanceCluster(clusterState);
+    Set<RegionInfo> regionsMoveFromServerA = new HashSet<>();
+    Set<ServerName> targetServers = new HashSet<>();
+    for(RegionPlan plan : plans) {
+      if(plan.getSource().equals(serverA)) {
+        regionsMoveFromServerA.add(plan.getRegionInfo());
+        targetServers.add(plan.getDestination());
+      }
+    }
+    // should move 2 regions from serverA, one moves to serverB, the other moves to serverC
+    assertEquals(2, regionsMoveFromServerA.size());
+    assertEquals(2, targetServers.size());
+    assertTrue(regionsOnServerA.containsAll(regionsMoveFromServerA));
+    // reset config
+    conf.setFloat("hbase.master.balancer.stochastic.cpRequestCost", 5f);
+    loadBalancer.setConf(conf);
+  }
+
   @Test
   public void testKeepRegionLoad() throws Exception {
 
@@ -126,6 +205,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
       RegionMetrics rl = mock(RegionMetrics.class);
       when(rl.getReadRequestCount()).thenReturn(0L);
+      when(rl.getCpRequestCount()).thenReturn(0L);
       when(rl.getWriteRequestCount()).thenReturn(0L);
       when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
       when(rl.getStoreFileSize()).thenReturn(new Size(i, Size.Unit.MEGABYTE));
@@ -291,6 +371,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     for (int i = 1; i < 5; i++) {
       BalancerRegionLoad regionLoad = mock(BalancerRegionLoad.class);
       when(regionLoad.getReadRequestsCount()).thenReturn(new Long(i));
+      when(regionLoad.getCpRequestsCount()).thenReturn(new Long(i));
       when(regionLoad.getStorefileSizeMB()).thenReturn(i);
       regionLoads.add(regionLoad);
     }
@@ -300,6 +381,12 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         new StochasticLoadBalancer.ReadRequestCostFunction(conf);
     double rateResult = readCostFunction.getRegionLoadCost(regionLoads);
     // read requests are treated as a rate so the average rate here is simply 1
+    assertEquals(1, rateResult, 0.01);
+
+    StochasticLoadBalancer.CPRequestCostFunction cpCostFunction =
+        new StochasticLoadBalancer.CPRequestCostFunction(conf);
+    rateResult = cpCostFunction.getRegionLoadCost(regionLoads);
+    // coprocessor requests are treated as a rate so the average rate here is simply 1
     assertEquals(1, rateResult, 0.01);
 
     StochasticLoadBalancer.StoreFileCostFunction storeFileCostFunction =

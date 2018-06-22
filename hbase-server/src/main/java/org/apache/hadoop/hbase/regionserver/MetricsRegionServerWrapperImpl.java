@@ -74,6 +74,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long numReferenceFiles = 0;
   private volatile double requestsPerSecond = 0.0;
   private volatile long readRequestsCount = 0;
+  private volatile long cpRequestsCount = 0;
   private volatile long filteredReadRequestsCount = 0;
   private volatile long writeRequestsCount = 0;
   private volatile long checkAndMutateChecksFailed = 0;
@@ -519,6 +520,11 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getCpRequestsCount() {
+    return cpRequestsCount;
+  }
+
+  @Override
   public long getFilteredReadRequestsCount() {
     return filteredReadRequestsCount;
   }
@@ -727,7 +733,7 @@ class MetricsRegionServerWrapperImpl
         long avgAgeNumerator = 0, numHFiles = 0;
         long tempMinStoreFileAge = Long.MAX_VALUE;
         long tempReadRequestsCount = 0, tempFilteredReadRequestsCount = 0,
-          tempWriteRequestsCount = 0;
+          tempWriteRequestsCount = 0, tempCpRequestsCount = 0;
         long tempCheckAndMutateChecksFailed = 0;
         long tempCheckAndMutateChecksPassed = 0;
         long tempStorefileIndexSize = 0;
@@ -758,6 +764,7 @@ class MetricsRegionServerWrapperImpl
           tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
           tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
           tempReadRequestsCount += r.getReadRequestsCount();
+          tempCpRequestsCount += r.getCpRequestsCount();
           tempFilteredReadRequestsCount += r.getFilteredReadRequestsCount();
           tempWriteRequestsCount += r.getWriteRequestsCount();
           tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
@@ -873,6 +880,7 @@ class MetricsRegionServerWrapperImpl
 
         numReferenceFiles= tempNumReferenceFiles;
         readRequestsCount = tempReadRequestsCount;
+        cpRequestsCount = tempCpRequestsCount;
         filteredReadRequestsCount = tempFilteredReadRequestsCount;
         writeRequestsCount = tempWriteRequestsCount;
         checkAndMutateChecksFailed = tempCheckAndMutateChecksFailed;

@@ -139,6 +139,9 @@ message RegionLoad {
 
   /** the current total filtered read requests made to region */
   optional uint64 filtered_read_requests_count = 19;
+
+  /** the current total coprocessor requests made to region */
+  optional uint64 cp_requests_count = 20;
 }
 
 /* Server-level protobufs */

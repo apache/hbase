@@ -32,6 +32,11 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
+  public long getCpRequestsCount(String table) {
+    return 15;
+  }
+
+  @Override
   public long getWriteRequestsCount(String table) {
     return 20;
   }

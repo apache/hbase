@@ -66,10 +66,16 @@ public interface RegionMetrics {
   long getWriteRequestCount();
 
   /**
-   * @return the number of write requests and read requests made to region
+   * @return the number of coprocessor service requests made to region
+   */
+  public long getCpRequestCount();
+
+  /**
+   * @return the number of write requests and read requests and coprocessor
+   *         service requests made to region
    */
   default long getRequestCount() {
-    return getReadRequestCount() + getWriteRequestCount();
+    return getReadRequestCount() + getWriteRequestCount() + getCpRequestCount();
   }
 
   /**

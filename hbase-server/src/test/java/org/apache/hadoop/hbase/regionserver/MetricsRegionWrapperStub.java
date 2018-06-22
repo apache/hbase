@@ -101,6 +101,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public long getCpRequestCount() {
+    return 108;
+  }
+
+  @Override
   public long getWriteRequestCount() {
     return 106;
   }

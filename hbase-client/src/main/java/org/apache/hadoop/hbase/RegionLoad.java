@@ -94,6 +94,11 @@ public class RegionLoad implements RegionMetrics {
   }
 
   @Override
+  public long getCpRequestCount() {
+    return metrics.getCpRequestCount();
+  }
+
+  @Override
   public long getFilteredReadRequestCount() {
     return metrics.getFilteredReadRequestCount();
   }

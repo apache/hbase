@@ -125,6 +125,9 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         mrb.addCounter(Interns.info(tableNamePrefix + MetricsTableSource.READ_REQUEST_COUNT,
           MetricsTableSource.READ_REQUEST_COUNT_DESC),
           tableWrapperAgg.getReadRequestsCount(tableName.getNameAsString()));
+        mrb.addCounter(Interns.info(tableNamePrefix + MetricsTableSource.CP_REQUEST_COUNT,
+          MetricsTableSource.CP_REQUEST_COUNT_DESC),
+          tableWrapperAgg.getCpRequestsCount(tableName.getNameAsString()));
         mrb.addCounter(Interns.info(tableNamePrefix + MetricsTableSource.WRITE_REQUEST_COUNT,
           MetricsTableSource.WRITE_REQUEST_COUNT_DESC),
           tableWrapperAgg.getWriteRequestsCount(tableName.getNameAsString()));

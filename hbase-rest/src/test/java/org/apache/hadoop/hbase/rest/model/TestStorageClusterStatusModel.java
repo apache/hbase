@@ -68,16 +68,17 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
       "{\"regions\":2,\"requests\":0,\"averageLoad\":1.0,\"LiveNodes\":[{\"name\":\"test1\"," +
           "\"Region\":[{\"name\":\"aGJhc2U6cm9vdCwsMA==\",\"stores\":1,\"storefiles\":1," +
           "\"storefileSizeMB\":0,\"memStoreSizeMB\":0,\"storefileIndexSizeKB\":0," +
-          "\"readRequestsCount\":1,\"writeRequestsCount\":2,\"rootIndexSizeKB\":1," +
-          "\"totalStaticIndexSizeKB\":1,\"totalStaticBloomSizeKB\":1,\"totalCompactingKVs\":1," +
-          "\"currentCompactedKVs\":1}],\"requests\":0,\"startCode\":1245219839331," +
-          "\"heapSizeMB\":128,\"maxHeapSizeMB\":1024},{\"name\":\"test2\"," +
-          "\"Region\":[{\"name\":\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\",\"stores\":1," +
-          "\"storefiles\":1,\"storefileSizeMB\":0,\"memStoreSizeMB\":0,\"storefileIndexSizeKB\":0," +
-          "\"readRequestsCount\":1,\"writeRequestsCount\":2,\"rootIndexSizeKB\":1," +
-          "\"totalStaticIndexSizeKB\":1,\"totalStaticBloomSizeKB\":1,\"totalCompactingKVs\":1," +
-          "\"currentCompactedKVs\":1}],\"requests\":0,\"startCode\":1245239331198," +
-          "\"heapSizeMB\":512,\"maxHeapSizeMB\":1024}],\"DeadNodes\":[]}";
+          "\"readRequestsCount\":1,\"cpRequestsCount\":1,\"writeRequestsCount\":2," +
+          "\"rootIndexSizeKB\":1,\"totalStaticIndexSizeKB\":1,\"totalStaticBloomSizeKB\":1," +
+          "\"totalCompactingKVs\":1,\"currentCompactedKVs\":1}],\"requests\":0," +
+          "\"startCode\":1245219839331,\"heapSizeMB\":128,\"maxHeapSizeMB\":1024}," +
+          "{\"name\":\"test2\",\"Region\":[{\"name\":\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\"," +
+          "\"stores\":1,\"storefiles\":1,\"storefileSizeMB\":0,\"memStoreSizeMB\":0," +
+          "\"storefileIndexSizeKB\":0,\"readRequestsCount\":1,\"cpRequestsCount\":1," +
+          "\"writeRequestsCount\":2,\"rootIndexSizeKB\":1,\"totalStaticIndexSizeKB\":1," +
+          "\"totalStaticBloomSizeKB\":1,\"totalCompactingKVs\":1,\"currentCompactedKVs\":1}]," +
+          "\"requests\":0,\"startCode\":1245239331198,\"heapSizeMB\":512," +
+          "\"maxHeapSizeMB\":1024}],\"DeadNodes\":[]}";
   }
 
   @Override
@@ -87,10 +88,10 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     model.setRequests(0);
     model.setAverageLoad(1.0);
     model.addLiveNode("test1", 1245219839331L, 128, 1024)
-      .addRegion(Bytes.toBytes("hbase:root,,0"), 1, 1, 0, 0, 0, 1, 2, 1, 1, 1, 1, 1);
+      .addRegion(Bytes.toBytes("hbase:root,,0"), 1, 1, 0, 0, 0, 1, 1, 2, 1, 1, 1, 1, 1);
     model.addLiveNode("test2", 1245239331198L, 512, 1024)
       .addRegion(Bytes.toBytes(TableName.META_TABLE_NAME+",,1246000043724"),1, 1, 0, 0, 0,
-          1, 2, 1, 1, 1, 1, 1);
+          1, 1, 2, 1, 1, 1, 1, 1);
     return model;
   }
 
