@@ -52,6 +52,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 /**
  * The asynchronous locator for regions other than meta.
  */
@@ -60,14 +62,22 @@ class AsyncNonMetaRegionLocator {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncNonMetaRegionLocator.class);
 
+  @VisibleForTesting
   static final String MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE =
     "hbase.client.meta.max.concurrent.locate.per.table";
 
   private static final int DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE = 8;
 
+  @VisibleForTesting
+  static String LOCATE_PREFETCH_LIMIT = "hbase.client.locate.prefetch.limit";
+
+  private static final int DEFAULT_LOCATE_PREFETCH_LIMIT = 10;
+
   private final AsyncConnectionImpl conn;
 
   private final int maxConcurrentLocateRequestPerTable;
+
+  private final int locatePrefetchLimit;
 
   private final ConcurrentMap<TableName, TableCache> cache = new ConcurrentHashMap<>();
 
@@ -168,6 +178,8 @@ class AsyncNonMetaRegionLocator {
     this.conn = conn;
     this.maxConcurrentLocateRequestPerTable = conn.getConfiguration().getInt(
       MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE, DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE);
+    this.locatePrefetchLimit =
+      conn.getConfiguration().getInt(LOCATE_PREFETCH_LIMIT, DEFAULT_LOCATE_PREFETCH_LIMIT);
   }
 
   private TableCache getTableCache(TableName tableName) {
@@ -223,9 +235,7 @@ class AsyncNonMetaRegionLocator {
       justification = "Called by lambda expression")
   private void addToCache(HRegionLocation loc) {
     addToCache(getTableCache(loc.getRegion().getTable()), loc);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Try adding " + loc + " to cache");
-    }
+    LOG.trace("Try adding {} to cache", loc);
   }
 
   private void complete(TableName tableName, LocateRequest req, HRegionLocation loc,
@@ -271,8 +281,10 @@ class AsyncNonMetaRegionLocator {
   // return whether we should stop the scan
   private boolean onScanNext(TableName tableName, LocateRequest req, Result result) {
     RegionLocations locs = MetaTableAccessor.getRegionLocations(result);
-    LOG.debug("The fetched location of '{}', row='{}', locateType={} is {}", tableName,
-      Bytes.toStringBinary(req.row), req.locateType, locs);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("The fetched location of '{}', row='{}', locateType={} is {}", tableName,
+        Bytes.toStringBinary(req.row), req.locateType, locs);
+    }
 
     if (locs == null || locs.getDefaultRegionLocation() == null) {
       complete(tableName, req, null,
@@ -294,8 +306,8 @@ class AsyncNonMetaRegionLocator {
     if (loc.getServerName() == null) {
       complete(tableName, req, null,
         new IOException(
-            String.format("No server address listed for region '%s', row='%s', locateType=%s",
-              info.getRegionNameAsString(), Bytes.toStringBinary(req.row), req.locateType)));
+          String.format("No server address listed for region '%s', row='%s', locateType=%s",
+            info.getRegionNameAsString(), Bytes.toStringBinary(req.row), req.locateType)));
       return true;
     }
     complete(tableName, req, loc, null);
@@ -360,7 +372,7 @@ class AsyncNonMetaRegionLocator {
       RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
     conn.getTable(META_TABLE_NAME)
       .scan(new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey, true)
-        .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(5)
+        .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(locatePrefetchLimit)
         .setReadType(ReadType.PREAD), new AdvancedScanResultConsumer() {
 
           private boolean completeNormally = false;
@@ -384,12 +396,41 @@ class AsyncNonMetaRegionLocator {
 
           @Override
           public void onNext(Result[] results, ScanController controller) {
-            for (Result result : results) {
-              tableNotFound = false;
-              if (onScanNext(tableName, req, result)) {
+            if (results.length == 0) {
+              return;
+            }
+            tableNotFound = false;
+            int i = 0;
+            for (; i < results.length; i++) {
+              if (onScanNext(tableName, req, results[i])) {
                 completeNormally = true;
                 controller.terminate();
-                return;
+                i++;
+                break;
+              }
+            }
+            // Add the remaining results into cache
+            if (i < results.length) {
+              TableCache tableCache = getTableCache(tableName);
+              for (; i < results.length; i++) {
+                RegionLocations locs = MetaTableAccessor.getRegionLocations(results[i]);
+                if (locs == null) {
+                  continue;
+                }
+                HRegionLocation loc = locs.getDefaultRegionLocation();
+                if (loc == null) {
+                  continue;
+                }
+                RegionInfo info = loc.getRegion();
+                if (info == null || info.isOffline() || info.isSplitParent() ||
+                  loc.getServerName() == null) {
+                  continue;
+                }
+                if (addToCache(tableCache, loc)) {
+                  synchronized (tableCache) {
+                    tableCache.clearCompletedRequests(Optional.of(loc));
+                  }
+                }
               }
             }
           }
@@ -480,5 +521,15 @@ class AsyncNonMetaRegionLocator {
         tableCache.allRequests.values().forEach(f -> f.completeExceptionally(error));
       }
     }
+  }
+
+  // only used for testing whether we have cached the location for a region.
+  @VisibleForTesting
+  HRegionLocation getRegionLocationInCache(TableName tableName, byte[] row) {
+    TableCache tableCache = cache.get(tableName);
+    if (tableCache == null) {
+      return null;
+    }
+    return locateRowInCache(tableCache, tableName, row);
   }
 }
