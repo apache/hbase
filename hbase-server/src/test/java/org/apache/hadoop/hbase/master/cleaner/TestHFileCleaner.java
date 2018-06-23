@@ -22,10 +22,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -252,6 +255,155 @@ public class TestHFileCleaner {
     @Override
     public ChoreService getChoreService() {
       return null;
+    }
+  }
+
+  @Test
+  public void testThreadCleanup() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
+    Server server = new DummyServer();
+    Path archivedHfileDir =
+        new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+
+    // setup the cleaner
+    FileSystem fs = UTIL.getDFSCluster().getFileSystem();
+    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
+    // clean up archive directory
+    fs.delete(archivedHfileDir, true);
+    fs.mkdirs(archivedHfileDir);
+    // create some file to delete
+    fs.createNewFile(new Path(archivedHfileDir, "dfd-dfd"));
+    // launch the chore
+    cleaner.chore();
+    // call cleanup
+    cleaner.cleanup();
+    // wait awhile for thread to die
+    Thread.sleep(100);
+    for (Thread thread : cleaner.getCleanerThreads()) {
+      Assert.assertFalse(thread.isAlive());
+    }
+  }
+
+  @Test
+  public void testLargeSmallIsolation() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    // no cleaner policies = delete all files
+    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
+    conf.setInt(HFileCleaner.HFILE_DELETE_THROTTLE_THRESHOLD, 512 * 1024);
+    Server server = new DummyServer();
+    Path archivedHfileDir =
+        new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+
+    // setup the cleaner
+    FileSystem fs = UTIL.getDFSCluster().getFileSystem();
+    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
+    // clean up archive directory
+    fs.delete(archivedHfileDir, true);
+    fs.mkdirs(archivedHfileDir);
+    // necessary set up
+    final int LARGE_FILE_NUM = 5;
+    final int SMALL_FILE_NUM = 20;
+    createFilesForTesting(LARGE_FILE_NUM, SMALL_FILE_NUM, fs, archivedHfileDir);
+    // call cleanup
+    cleaner.chore();
+
+    Assert.assertEquals(LARGE_FILE_NUM, cleaner.getNumOfDeletedLargeFiles());
+    Assert.assertEquals(SMALL_FILE_NUM, cleaner.getNumOfDeletedSmallFiles());
+  }
+
+  @Test(timeout = 60 * 1000)
+  public void testOnConfigurationChange() throws Exception {
+    // constants
+    final int ORIGINAL_THROTTLE_POINT = 512 * 1024;
+    final int ORIGINAL_QUEUE_SIZE = 512;
+    final int UPDATE_THROTTLE_POINT = 1024;// small enough to change large/small check
+    final int UPDATE_QUEUE_SIZE = 1024;
+    final int LARGE_FILE_NUM = 5;
+    final int SMALL_FILE_NUM = 20;
+
+    Configuration conf = UTIL.getConfiguration();
+    // no cleaner policies = delete all files
+    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
+    conf.setInt(HFileCleaner.HFILE_DELETE_THROTTLE_THRESHOLD, ORIGINAL_THROTTLE_POINT);
+    conf.setInt(HFileCleaner.LARGE_HFILE_DELETE_QUEUE_SIZE, ORIGINAL_QUEUE_SIZE);
+    conf.setInt(HFileCleaner.SMALL_HFILE_DELETE_QUEUE_SIZE, ORIGINAL_QUEUE_SIZE);
+    Server server = new DummyServer();
+    Path archivedHfileDir =
+        new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+
+    // setup the cleaner
+    FileSystem fs = UTIL.getDFSCluster().getFileSystem();
+    final HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
+    Assert.assertEquals(ORIGINAL_THROTTLE_POINT, cleaner.getThrottlePoint());
+    Assert.assertEquals(ORIGINAL_QUEUE_SIZE, cleaner.getLargeQueueSize());
+    Assert.assertEquals(ORIGINAL_QUEUE_SIZE, cleaner.getSmallQueueSize());
+
+    // clean up archive directory and create files for testing
+    fs.delete(archivedHfileDir, true);
+    fs.mkdirs(archivedHfileDir);
+    createFilesForTesting(LARGE_FILE_NUM, SMALL_FILE_NUM, fs, archivedHfileDir);
+
+    // call cleaner, run as daemon to test the interrupt-at-middle case
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        cleaner.chore();
+      }
+    };
+    t.setDaemon(true);
+    t.start();
+    // let the cleaner run for some while
+    Thread.sleep(20);
+
+    // trigger configuration change
+    Configuration newConf = new Configuration(conf);
+    newConf.setInt(HFileCleaner.HFILE_DELETE_THROTTLE_THRESHOLD, UPDATE_THROTTLE_POINT);
+    newConf.setInt(HFileCleaner.LARGE_HFILE_DELETE_QUEUE_SIZE, UPDATE_QUEUE_SIZE);
+    newConf.setInt(HFileCleaner.SMALL_HFILE_DELETE_QUEUE_SIZE, UPDATE_QUEUE_SIZE);
+    cleaner.onConfigurationChange(newConf);
+    LOG.debug("File deleted from large queue: " + cleaner.getNumOfDeletedLargeFiles()
+        + "; from small queue: " + cleaner.getNumOfDeletedSmallFiles());
+
+    // check values after change
+    Assert.assertEquals(UPDATE_THROTTLE_POINT, cleaner.getThrottlePoint());
+    Assert.assertEquals(UPDATE_QUEUE_SIZE, cleaner.getLargeQueueSize());
+    Assert.assertEquals(UPDATE_QUEUE_SIZE, cleaner.getSmallQueueSize());
+    Assert.assertEquals(2, cleaner.getCleanerThreads().size());
+
+    // wait until clean done and check
+    t.join();
+    LOG.debug("File deleted from large queue: " + cleaner.getNumOfDeletedLargeFiles()
+        + "; from small queue: " + cleaner.getNumOfDeletedSmallFiles());
+    Assert.assertTrue("Should delete more than " + LARGE_FILE_NUM
+        + " files from large queue but actually " + cleaner.getNumOfDeletedLargeFiles(),
+      cleaner.getNumOfDeletedLargeFiles() > LARGE_FILE_NUM);
+    Assert.assertTrue("Should delete less than " + SMALL_FILE_NUM
+        + " files from small queue but actually " + cleaner.getNumOfDeletedSmallFiles(),
+      cleaner.getNumOfDeletedSmallFiles() < SMALL_FILE_NUM);
+  }
+
+  private void createFilesForTesting(int largeFileNum, int smallFileNum, FileSystem fs,
+      Path archivedHfileDir) throws IOException {
+    final Random rand = new Random();
+    final byte[] large = new byte[1024 * 1024];
+    for (int i = 0; i < large.length; i++) {
+      large[i] = (byte) rand.nextInt(128);
+    }
+    final byte[] small = new byte[1024];
+    for (int i = 0; i < small.length; i++) {
+      small[i] = (byte) rand.nextInt(128);
+    }
+    // create large and small files
+    for (int i = 1; i <= largeFileNum; i++) {
+      FSDataOutputStream out = fs.create(new Path(archivedHfileDir, "large-file-" + i));
+      out.write(large);
+      out.close();
+    }
+    for (int i = 1; i <= smallFileNum; i++) {
+      FSDataOutputStream out = fs.create(new Path(archivedHfileDir, "small-file-" + i));
+      out.write(small);
+      out.close();
     }
   }
 }
