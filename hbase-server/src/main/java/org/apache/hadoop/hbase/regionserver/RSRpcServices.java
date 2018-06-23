@@ -1317,7 +1317,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throw new RegionServerStoppedException("File system not available");
     }
     if (!regionServer.isOnline()) {
-      throw new ServerNotRunningYetException("Server is not running yet");
+      throw new ServerNotRunningYetException("Server " + regionServer.serverName
+          + " is not running yet");
     }
   }
 
