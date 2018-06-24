@@ -212,16 +212,16 @@ public class SaslClientHandler extends ChannelDuplexHandler {
           }
         }
         saslToken = new byte[len];
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Will read input token of size " + saslToken.length
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Will read input token of size " + saslToken.length
               + " for processing by initSASLContext");
         }
         in.readBytes(saslToken);
 
         saslToken = evaluateChallenge(saslToken);
         if (saslToken != null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Will send token of size " + saslToken.length + " from initSASLContext.");
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Will send token of size " + saslToken.length + " from initSASLContext.");
           }
           writeSaslToken(ctx, saslToken);
         }
@@ -230,8 +230,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
       if (saslClient.isComplete()) {
         String qop = (String) saslClient.getNegotiatedProperty(Sasl.QOP);
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("SASL client context established. Negotiated QoP: " + qop);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("SASL client context established. Negotiated QoP: " + qop);
         }
 
         boolean useWrap = qop != null && !"auth".equalsIgnoreCase(qop);

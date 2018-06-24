@@ -200,8 +200,8 @@ public class HBaseSaslRpcClient {
           return false;
         }
         saslToken = new byte[len];
-        if (LOG.isDebugEnabled())
-          LOG.debug("Will read input token of size " + saslToken.length
+        if (LOG.isTraceEnabled())
+          LOG.trace("Will read input token of size " + saslToken.length
               + " for processing by initSASLContext");
         inStream.readFully(saslToken);
       }
@@ -209,8 +209,8 @@ public class HBaseSaslRpcClient {
       while (!saslClient.isComplete()) {
         saslToken = saslClient.evaluateChallenge(saslToken);
         if (saslToken != null) {
-          if (LOG.isDebugEnabled())
-            LOG.debug("Will send token of size " + saslToken.length
+          if (LOG.isTraceEnabled())
+            LOG.trace("Will send token of size " + saslToken.length
                 + " from initSASLContext.");
           outStream.writeInt(saslToken.length);
           outStream.write(saslToken, 0, saslToken.length);
@@ -219,14 +219,14 @@ public class HBaseSaslRpcClient {
         if (!saslClient.isComplete()) {
           readStatus(inStream);
           saslToken = new byte[inStream.readInt()];
-          if (LOG.isDebugEnabled())
-            LOG.debug("Will read input token of size " + saslToken.length
+          if (LOG.isTraceEnabled())
+            LOG.trace("Will read input token of size " + saslToken.length
                 + " for processing by initSASLContext");
           inStream.readFully(saslToken);
         }
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("SASL client context established. Negotiated QoP: "
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("SASL client context established. Negotiated QoP: "
             + saslClient.getNegotiatedProperty(Sasl.QOP));
       }
       return true;

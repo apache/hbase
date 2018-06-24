@@ -1514,8 +1514,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           throw e;
         }
         if (replyToken != null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Will send token of size " + replyToken.length
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Will send token of size " + replyToken.length
                 + " from saslServer.");
           }
           doRawSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null,
