@@ -220,8 +220,7 @@ class RegionLocationFinder {
         tableDescriptor = this.services.getTableDescriptors().get(tableName);
       }
     } catch (FileNotFoundException fnfe) {
-      LOG.debug("FileNotFoundException during getTableDescriptors." + " Current table name = "
-          + tableName, fnfe);
+      LOG.debug("tableName={}", tableName, fnfe);
     }
 
     return tableDescriptor;
@@ -277,8 +276,7 @@ class RegionLocationFinder {
         blockDistbn = cache.get(hri);
         return blockDistbn;
       } else {
-        LOG.debug("HDFSBlocksDistribution not found in cache for region "
-            + hri.getRegionNameAsString());
+        LOG.trace("HDFSBlocksDistribution not found in cache for {}", hri.getRegionNameAsString());
         blockDistbn = internalGetTopBlockLocation(hri);
         cache.put(hri, blockDistbn);
         return blockDistbn;

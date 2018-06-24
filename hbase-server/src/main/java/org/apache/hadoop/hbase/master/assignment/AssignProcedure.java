@@ -291,8 +291,11 @@ public class AssignProcedure extends RegionTransitionProcedure {
               " transition openSeqNum=" + openSeqNum + ", " + regionNode);
         }
         if (openSeqNum < regionNode.getOpenSeqNum()) {
-          LOG.warn("Skipping update of open seqnum with " + openSeqNum +
-              " because current seqnum=" + regionNode.getOpenSeqNum());
+          // Don't bother logging if openSeqNum == 0
+          if (openSeqNum != 0) {
+            LOG.warn("Skipping update of open seqnum with " + openSeqNum +
+                " because current seqnum=" + regionNode.getOpenSeqNum());
+          }
         } else {
           regionNode.setOpenSeqNum(openSeqNum);
         }
