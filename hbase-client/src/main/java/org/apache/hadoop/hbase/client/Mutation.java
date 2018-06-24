@@ -115,10 +115,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     super(clone);
     this.row = clone.getRow();
     this.ts = clone.getTimestamp();
-    this.familyMap = clone.getFamilyCellMap().entrySet().stream()
-      .collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue()), (k, v) -> {
-            throw new RuntimeException("collisions!!!");
-          }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
+    this.familyMap = clone.getFamilyCellMap().entrySet().stream().
+      collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue()), (k, v) -> {
+        throw new RuntimeException("collisions!!!");
+      }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
   }
 
   /**
