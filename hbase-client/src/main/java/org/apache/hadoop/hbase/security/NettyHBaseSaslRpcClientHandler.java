@@ -71,9 +71,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
   }
 
   private void writeResponse(ChannelHandlerContext ctx, byte[] response) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Will send token of size " + response.length + " from initSASLContext.");
-    }
+    LOG.trace("Sending token size={} from initSASLContext.", response.length);
     ctx.writeAndFlush(
       ctx.alloc().buffer(4 + response.length).writeInt(response.length).writeBytes(response));
   }
@@ -133,9 +131,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
       }
       return;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Will read input token of size " + len + " for processing by initSASLContext");
-    }
+    LOG.trace("Reading input token size={} for processing by initSASLContext", len);
     final byte[] challenge = new byte[len];
     msg.readBytes(challenge);
     byte[] response = ugi.doAs(new PrivilegedExceptionAction<byte[]>() {

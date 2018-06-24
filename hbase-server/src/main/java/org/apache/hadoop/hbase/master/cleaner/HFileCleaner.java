@@ -235,7 +235,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
           break;
         }
         if (task != null) {
-          LOG.debug("Removing {}", task.filePath);
+          LOG.trace("Removing {}", task.filePath);
           boolean succeed;
           try {
             succeed = this.fs.delete(task.filePath, false);
@@ -258,13 +258,13 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
   private void countDeletedFiles(boolean isLargeFile, boolean fromLargeQueue) {
     if (isLargeFile) {
       if (deletedLargeFiles.get() == Long.MAX_VALUE) {
-        LOG.info("Deleted more than Long.MAX_VALUE large files, reset counter to 0");
+        LOG.debug("Deleted more than Long.MAX_VALUE large files, reset counter to 0");
         deletedLargeFiles.set(0L);
       }
       deletedLargeFiles.incrementAndGet();
     } else {
       if (deletedSmallFiles.get() == Long.MAX_VALUE) {
-        LOG.info("Deleted more than Long.MAX_VALUE small files, reset counter to 0");
+        LOG.debug("Deleted more than Long.MAX_VALUE small files, reset counter to 0");
         deletedSmallFiles.set(0L);
       }
       if (fromLargeQueue) {
