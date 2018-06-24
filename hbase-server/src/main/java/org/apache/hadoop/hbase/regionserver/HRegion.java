@@ -3007,13 +3007,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     public abstract Mutation getMutation(int index);
+
     public abstract long getNonceGroup(int index);
+
     public abstract long getNonce(int index);
-    /** This method is potentially expensive and useful mostly for non-replay CP path. */
+
+    /**
+     * This method is potentially expensive and useful mostly for non-replay CP path.
+     */
     public abstract Mutation[] getMutationsForCoprocs();
+
     public abstract boolean isInReplay();
+
     public abstract long getOrigLogSeqNum();
+
     public abstract void startRegionOperation() throws IOException;
+
     public abstract void closeRegionOperation() throws IOException;
 
     /**
@@ -3032,8 +3041,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected abstract void checkAndPreparePut(final Put p) throws IOException;
 
     /**
-     *  If necessary, calls preBatchMutate() CP hook for a mini-batch and updates metrics, cell
-     *  count, tags and timestamp for all cells of all operations in a mini-batch.
+     * If necessary, calls preBatchMutate() CP hook for a mini-batch and updates metrics, cell
+     * count, tags and timestamp for all cells of all operations in a mini-batch.
      */
     public abstract void prepareMiniBatchOperations(MiniBatchOperationInProgress<Mutation>
         miniBatchOp, long timestamp, final List<RowLock> acquiredRowLocks) throws IOException;
@@ -3187,7 +3196,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         try {
           // if atomic then get exclusive lock, else shared lock
           rowLock = region.getRowLockInternal(mutation.getRow(), !isAtomic(), prevRowLock);
-        } catch (TimeoutIOException|InterruptedIOException e) {
+        } catch (TimeoutIOException | InterruptedIOException e) {
           // NOTE: We will retry when other exceptions, but we should stop if we receive
           // TimeoutIOException or InterruptedIOException as operation has timed out or
           // interrupted respectively.
@@ -3234,6 +3243,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       visitBatchOperations(true, nextIndexToProcess + miniBatchOp.size(), new Visitor() {
         private Pair<NonceKey, WALEdit> curWALEditForNonce;
+
         @Override
         public boolean visit(int index) throws IOException {
           Mutation m = getMutation(index);
@@ -3257,14 +3267,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           WALEdit walEdit = curWALEditForNonce.getSecond();
 
-          // Add WAL edits by CP
+          // Add WAL edits from CPs.
           WALEdit fromCP = walEditsFromCoprocessors[index];
           if (fromCP != null) {
             for (Cell cell : fromCP.getCells()) {
               walEdit.add(cell);
             }
           }
-          addFamilyMapToWALEdit(familyCellMaps[index], walEdit);
+          walEdit.add(familyCellMaps[index]);
 
           return true;
         }
@@ -3305,27 +3315,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         region.applyToMemStore(region.getStore(family), cells, false, memstoreAccounting);
       }
     }
-
-    /**
-     * Append the given map of family->edits to a WALEdit data structure.
-     * This does not write to the WAL itself.
-     * @param familyMap map of family->edits
-     * @param walEdit the destination entry to append into
-     */
-    private void addFamilyMapToWALEdit(Map<byte[], List<Cell>> familyMap,
-        WALEdit walEdit) {
-      for (List<Cell> edits : familyMap.values()) {
-        // Optimization: 'foreach' loop is not used. See:
-        // HBASE-12023 HRegion.applyFamilyMapToMemstore creates too many iterator objects
-        assert edits instanceof RandomAccess;
-        int listSize = edits.size();
-        for (int i=0; i < listSize; i++) {
-          Cell cell = edits.get(i);
-          walEdit.add(cell);
-        }
-      }
-    }
   }
+
 
   /**
    * Batch of mutation operations. Base class is shared with {@link ReplayBatchOperation} as most
