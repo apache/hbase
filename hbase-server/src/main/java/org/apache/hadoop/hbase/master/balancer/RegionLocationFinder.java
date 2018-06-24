@@ -285,8 +285,7 @@ class RegionLocationFinder {
         blockDistbn = cache.get(hri);
         return blockDistbn;
       } else {
-        LOG.debug("HDFSBlocksDistribution not found in cache for region "
-            + hri.getRegionNameAsString());
+        LOG.trace("HDFSBlocksDistribution not found in cache for region " + hri.getRegionNameAsString());
         blockDistbn = internalGetTopBlockLocation(hri);
         cache.put(hri, blockDistbn);
         return blockDistbn;
