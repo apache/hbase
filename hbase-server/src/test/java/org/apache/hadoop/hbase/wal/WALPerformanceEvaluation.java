@@ -28,7 +28,6 @@ import com.codahale.metrics.MetricRegistry;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
@@ -41,7 +40,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -182,7 +180,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             long now = System.nanoTime();
             Put put = setupPut(rand, key, value, numFamilies);
             WALEdit walEdit = new WALEdit();
-            addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
+            walEdit.add(put.getFamilyCellMap());
             RegionInfo hri = region.getRegionInfo();
             final WALKeyImpl logkey =
                 new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
@@ -560,15 +558,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       }
     }
     return put;
-  }
-
-  private void addFamilyMapToWALEdit(Map<byte[], List<Cell>> familyMap,
-      WALEdit walEdit) {
-    for (List<Cell> edits : familyMap.values()) {
-      for (Cell cell : edits) {
-        walEdit.add(cell);
-      }
-    }
   }
 
   private long runBenchmark(Runnable[] runnable, final int numThreads) throws InterruptedException {
