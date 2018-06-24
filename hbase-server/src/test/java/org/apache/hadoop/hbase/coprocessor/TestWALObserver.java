@@ -211,7 +211,7 @@ public class TestWALObserver {
 
     Map<byte[], List<Cell>> familyMap = p.getFamilyCellMap();
     WALEdit edit = new WALEdit();
-    addFamilyMapToWALEdit(familyMap, edit);
+    edit.add(familyMap);
 
     boolean foundFamily0 = false;
     boolean foundFamily2 = false;
@@ -430,24 +430,6 @@ public class TestWALObserver {
       p.addColumn(TEST_FAMILY[i], TEST_QUALIFIER[i], TEST_VALUE[i]);
     }
     return p;
-  }
-
-  /**
-   * Copied from HRegion.
-   *
-   * @param familyMap
-   *          map of family->edits
-   * @param walEdit
-   *          the destination entry to append into
-   */
-  private void addFamilyMapToWALEdit(Map<byte[], List<Cell>> familyMap,
-      WALEdit walEdit) {
-    for (List<Cell> edits : familyMap.values()) {
-      for (Cell cell : edits) {
-        // KeyValue v1 expectation. Cast for now until we go all Cell all the time. TODO.
-        walEdit.add(cell);
-      }
-    }
   }
 
   private Path runWALSplit(final Configuration c) throws IOException {
