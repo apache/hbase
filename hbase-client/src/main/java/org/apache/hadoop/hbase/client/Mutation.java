@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RawCell;
@@ -115,10 +116,9 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     this.row = clone.getRow();
     this.ts = clone.getTimestamp();
     this.familyMap = clone.getFamilyCellMap().entrySet().stream()
-      .collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue()),
-        (k, v) -> {
-          throw new RuntimeException("collisions!!!");
-        }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
+      .collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue()), (k, v) -> {
+            throw new RuntimeException("collisions!!!");
+          }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
   }
 
   /**
@@ -788,11 +788,18 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
 
-    if (cell.getFamilyArray() == null || cell.getFamilyLength() == 0) {
+    byte[] family;
+
+    if (cell instanceof IndividualBytesFieldCell) {
+      family = cell.getFamilyArray();
+    } else {
+      family = CellUtil.cloneFamily(cell);
+    }
+
+    if (family == null || family.length == 0) {
       throw new IllegalArgumentException("Family cannot be null");
     }
 
-    byte[] family = CellUtil.cloneFamily(cell);
     if (cell instanceof ExtendedCell) {
       getCellList(family).add(cell);
     } else {
