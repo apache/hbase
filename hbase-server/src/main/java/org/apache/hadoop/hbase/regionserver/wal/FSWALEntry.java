@@ -65,9 +65,10 @@ class FSWALEntry extends Entry {
     this.txid = txid;
     if (inMemstore) {
       // construct familyNames here to reduce the work of log sinker.
-      this.familyNames = collectFamilies(edit.getCells());
+      Set<byte []> families = edit.getFamilies();
+      this.familyNames = families != null? families: collectFamilies(edit.getCells());
     } else {
-      this.familyNames = Collections.<byte[]> emptySet();
+      this.familyNames = Collections.<byte[]>emptySet();
     }
   }
 
