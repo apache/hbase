@@ -519,7 +519,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   }
 
   public void checkPermission(String request) throws IOException {
-    accessChecker.requirePermission(getActiveUser(), request, Action.ADMIN);
+    accessChecker.requirePermission(getActiveUser(), request, null, Action.ADMIN);
   }
 
   /**

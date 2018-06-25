@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SingleResponse;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -226,6 +227,15 @@ public final class ResponseConverter {
     parameterBuilder.setValue(
       ByteString.copyFromUtf8(StringUtils.stringifyException(t)));
     return parameterBuilder.build();
+  }
+
+  /**
+   * Builds a protocol buffer HasPermissionResponse
+   */
+  public static HasPermissionResponse buildHasPermissionResponse(boolean hasPermission) {
+    HasPermissionResponse.Builder builder = HasPermissionResponse.newBuilder();
+    builder.setHasPermission(hasPermission);
+    return builder.build();
   }
 
 // End utilities for Client

@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -144,7 +145,7 @@ public class AccessControlLists {
 
     Set<Permission.Action> actionSet = new TreeSet<Permission.Action>();
     if(mergeExistingPermissions){
-      List<UserPermission> perms = getUserPermissions(conf, rowKey);
+      List<UserPermission> perms = getUserPermissions(conf, rowKey, null, null, null, false);
       UserPermission currentPerm = null;
       for (UserPermission perm : perms) {
         if (Bytes.equals(perm.getUser(), userPerm.getUser())
@@ -228,7 +229,8 @@ public class AccessControlLists {
       removePermissionRecord(conf, userPerm, t);
     } else {
       // Get all the global user permissions from the acl table
-      List<UserPermission> permsList = getUserPermissions(conf, userPermissionRowKey(userPerm));
+      List<UserPermission> permsList =
+          getUserPermissions(conf, userPermissionRowKey(userPerm), null, null, null, false);
       List<Permission.Action> remainingActions = new ArrayList<>();
       List<Permission.Action> dropActions = Arrays.asList(userPerm.getActions());
       for (UserPermission perm : permsList) {
@@ -430,8 +432,8 @@ public class AccessControlLists {
           if (entry == null) {
             entry = CellUtil.cloneRow(kv);
           }
-          Pair<String,TablePermission> permissionsOfUserOnTable =
-              parsePermissionRecord(entry, kv);
+          Pair<String, TablePermission> permissionsOfUserOnTable =
+              parsePermissionRecord(entry, kv, null, null, false, null);
           if (permissionsOfUserOnTable != null) {
             String username = permissionsOfUserOnTable.getFirst();
             TablePermission permissions = permissionsOfUserOnTable.getSecond();
@@ -474,7 +476,8 @@ public class AccessControlLists {
         scanner = table.getScanner(scan);
         try {
           for (Result row : scanner) {
-            ListMultimap<String,TablePermission> resultPerms = parsePermissions(row.getRow(), row);
+            ListMultimap<String, TablePermission> resultPerms =
+                parsePermissions(row.getRow(), row, null, null, null, false);
             allPerms.put(row.getRow(), resultPerms);
           }
         } finally {
@@ -488,28 +491,27 @@ public class AccessControlLists {
 
   public static ListMultimap<String, TablePermission> getTablePermissions(Configuration conf,
       TableName tableName) throws IOException {
-    return getPermissions(conf, tableName != null ? tableName.getName() : null, null);
+    return getPermissions(conf, tableName != null ? tableName.getName() : null, null, null, null,
+      null, false);
   }
 
   @VisibleForTesting
   public static ListMultimap<String, TablePermission> getNamespacePermissions(Configuration conf,
       String namespace) throws IOException {
-    return getPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null);
+    return getPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null, null, null, null,
+      false);
   }
 
   /**
-   * Reads user permission assignments stored in the <code>l:</code> column
-   * family of the first table row in <code>_acl_</code>.
-   *
+   * Reads user permission assignments stored in the <code>l:</code> column family of the first
+   * table row in <code>_acl_</code>.
    * <p>
-   * See {@link AccessControlLists class documentation} for the key structure
-   * used for storage.
+   * See {@link AccessControlLists class documentation} for the key structure used for storage.
    * </p>
    */
-  static ListMultimap<String, TablePermission> getPermissions(Configuration conf,
-      byte[] entryName, Table t) throws IOException {
+  static ListMultimap<String, TablePermission> getPermissions(Configuration conf, byte[] entryName,
+      Table t, byte[] cf, byte[] cq, String user, boolean hasFilterUser) throws IOException {
     if (entryName == null) entryName = ACL_GLOBAL_NAME;
-
     // for normal user tables, we just read the table row from _acl_
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
     Get get = new Get(entryName);
@@ -525,7 +527,7 @@ public class AccessControlLists {
       row = t.get(get);
     }
     if (!row.isEmpty()) {
-      perms = parsePermissions(entryName, row);
+      perms = parsePermissions(entryName, row, cf, cq, user, hasFilterUser);
     } else {
       LOG.info("No permissions found in " + ACL_TABLE_NAME + " for acl entry "
           + Bytes.toString(entryName));
@@ -535,34 +537,50 @@ public class AccessControlLists {
   }
 
   /**
-   * Returns the currently granted permissions for a given table as a list of
-   * user plus associated permissions.
+   * Returns the currently granted permissions for a given table as the specified user plus
+   * associated permissions.
    */
-  static List<UserPermission> getUserTablePermissions(
-      Configuration conf, TableName tableName) throws IOException {
-    return getUserPermissions(conf, tableName == null ? null : tableName.getName());
+  static List<UserPermission> getUserTablePermissions(Configuration conf, TableName tableName,
+      byte[] cf, byte[] cq, String userName, boolean hasFilterUser) throws IOException {
+    return getUserPermissions(conf, tableName == null ? null : tableName.getName(), cf, cq,
+      userName, hasFilterUser);
   }
 
-  static List<UserPermission> getUserNamespacePermissions(
-      Configuration conf, String namespace) throws IOException {
-    return getUserPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)));
+  /**
+   * Returns the currently granted permissions for a given namespace as the specified user plus
+   * associated permissions.
+   */
+  static List<UserPermission> getUserNamespacePermissions(Configuration conf, String namespace,
+      String user, boolean hasFilterUser) throws IOException {
+    return getUserPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null, null, user,
+      hasFilterUser);
   }
 
-  static List<UserPermission> getUserPermissions(
-      Configuration conf, byte[] entryName)
-          throws IOException {
-    ListMultimap<String,TablePermission> allPerms = getPermissions(
-        conf, entryName, null);
+  /**
+   * Returns the currently granted permissions for a given table/namespace with associated
+   * permissions based on the specified column family, column qualifier and user name.
+   * @param conf the configuration
+   * @param entryName Table name or the namespace
+   * @param cf Column family
+   * @param cq Column qualifier
+   * @param user User name to be filtered from permission as requested
+   * @param hasFilterUser true if filter user is provided, otherwise false.
+   * @return List of UserPermissions
+   * @throws IOException on failure
+   */
+  static List<UserPermission> getUserPermissions(Configuration conf, byte[] entryName, byte[] cf,
+      byte[] cq, String user, boolean hasFilterUser) throws IOException {
+    ListMultimap<String, TablePermission> allPerms =
+        getPermissions(conf, entryName, null, cf, cq, user, hasFilterUser);
 
     List<UserPermission> perms = new ArrayList<>();
-
-    if(isNamespaceEntry(entryName)) {  // Namespace
+    if (isNamespaceEntry(entryName)) { // Namespace
       for (Map.Entry<String, TablePermission> entry : allPerms.entries()) {
         UserPermission up = new UserPermission(Bytes.toBytes(entry.getKey()),
             entry.getValue().getNamespace(), entry.getValue().getActions());
         perms.add(up);
       }
-    } else {  // Table
+    } else { // Table
       for (Map.Entry<String, TablePermission> entry : allPerms.entries()) {
         UserPermission up = new UserPermission(Bytes.toBytes(entry.getKey()),
             entry.getValue().getTableName(), entry.getValue().getFamily(),
@@ -570,17 +588,21 @@ public class AccessControlLists {
         perms.add(up);
       }
     }
+
     return perms;
   }
 
-  private static ListMultimap<String, TablePermission> parsePermissions(
-      byte[] entryName, Result result) {
+  /**
+   * Parse and filter permission based on the specified column family, column qualifier and user
+   * name.
+   */
+  private static ListMultimap<String, TablePermission> parsePermissions(byte[] entryName,
+      Result result, byte[] cf, byte[] cq, String user, boolean hasFilterUser) {
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
     if (result != null && result.size() > 0) {
       for (Cell kv : result.rawCells()) {
-
-        Pair<String,TablePermission> permissionsOfUserOnTable =
-            parsePermissionRecord(entryName, kv);
+        Pair<String, TablePermission> permissionsOfUserOnTable =
+            parsePermissionRecord(entryName, kv, cf, cq, hasFilterUser, user);
 
         if (permissionsOfUserOnTable != null) {
           String username = permissionsOfUserOnTable.getFirst();
@@ -592,11 +614,10 @@ public class AccessControlLists {
     return perms;
   }
 
-  private static Pair<String, TablePermission> parsePermissionRecord(
-      byte[] entryName, Cell kv) {
+  private static Pair<String, TablePermission> parsePermissionRecord(byte[] entryName, Cell kv,
+      byte[] cf, byte[] cq, boolean filterPerms, String filterUser) {
     // return X given a set of permissions encoded in the permissionRecord kv.
     byte[] family = CellUtil.cloneFamily(kv);
-
     if (!Bytes.equals(family, ACL_LIST_FAMILY)) {
       return null;
     }
@@ -613,9 +634,25 @@ public class AccessControlLists {
     // TODO: avoid the string conversion to make this more efficient
     String username = Bytes.toString(key);
 
-    //Handle namespace entry
-    if(isNamespaceEntry(entryName)) {
-      return new Pair<>(username, new TablePermission(Bytes.toString(fromNamespaceEntry(entryName)), value));
+    // Retrieve group list for the filterUser if cell key is a group.
+    // Group list is not required when filterUser itself a group
+    List<String> filterUserGroups = null;
+    if (filterPerms) {
+      if (username.charAt(0) == '@' && !StringUtils.isEmpty(filterUser)
+          && filterUser.charAt(0) != '@') {
+        filterUserGroups = AccessChecker.getUserGroups(filterUser);
+      }
+    }
+
+    // Handle namespace entry
+    if (isNamespaceEntry(entryName)) {
+      // Filter the permissions cell record if client query
+      if (filterPerms && !validateFilterUser(username, filterUser, filterUserGroups)) {
+        return null;
+      }
+
+      return new Pair<>(username,
+          new TablePermission(Bytes.toString(fromNamespaceEntry(entryName)), value));
     }
 
     //Handle table and global entry
@@ -635,14 +672,71 @@ public class AccessControlLists {
       }
     }
 
-    return new Pair<>(username, new TablePermission(TableName.valueOf(entryName), permFamily, permQualifier, value));
+    // Filter the permissions cell record if client query
+    if (filterPerms) {
+      // ACL table contain 3 types of cell key entries; hbase:Acl, namespace and table. So to filter
+      // the permission cell records additional validations are required at CF, CQ and username.
+      // Here we can proceed based on client input whether it contain filterUser.
+      // Validate the filterUser when specified
+      if (filterUser != null && !validateFilterUser(username, filterUser, filterUserGroups)) {
+        return null;
+      }
+      if (!validateCFAndCQ(permFamily, cf, permQualifier, cq)) {
+        return null;
+      }
+    }
+
+    return new Pair<>(username,
+        new TablePermission(TableName.valueOf(entryName), permFamily, permQualifier, value));
+  }
+
+  /*
+   * Validate the cell key with the client filterUser if specified in the query input. 1. If cell
+   * key (username) is not a group then check whether client filterUser is equal to username 2. If
+   * cell key (username) is a group then check whether client filterUser belongs to the cell key
+   * group (username) 3. In case when both filterUser and username are group names then cell will be
+   * filtered if not equal.
+   */
+  private static boolean validateFilterUser(String username, String filterUser,
+      List<String> filterUserGroups) {
+    if (filterUserGroups == null) {
+      // Validate user name or group names whether equal
+      if (filterUser.equals(username)) {
+        return true;
+      }
+    } else {
+      // Check whether filter user belongs to the cell key group.
+      return filterUserGroups.contains(username.substring(1));
+    }
+    return false;
+  }
+
+  /*
+   * Validate the cell with client CF and CQ if specified in the query input. 1. If CF is NULL, then
+   * no need of further validation, result should include all CF and CQ. 2. IF CF specified and
+   * equal then validation required at CQ level if CF specified in client input, otherwise return
+   * all CQ records.
+   */
+  private static boolean validateCFAndCQ(byte[] permFamily, byte[] cf, byte[] permQualifier,
+      byte[] cq) {
+    boolean include = true;
+    if (cf != null) {
+      if (Bytes.equals(cf, permFamily)) {
+        if (cq != null && !Bytes.equals(cq, permQualifier)) {
+          // if CQ specified and didn't match then ignore this cell
+          include = false;
+        }
+      } else {
+        // if CF specified and didn't match then ignore this cell
+        include = false;
+      }
+    }
+    return include;
   }
 
   /**
-   * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances
-   * and returns the resulting byte array.
-   *
-   * Writes a set of permission [user: table permission]
+   * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances and returns the
+   * resulting byte array. Writes a set of permission [user: table permission]
    */
   public static byte[] writePermissionsAsBytes(ListMultimap<String, TablePermission> perms,
       Configuration conf) {

@@ -22,6 +22,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -29,7 +31,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.util.ByteStringer;
-
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -256,8 +258,31 @@ public class AccessControlUtil {
   }
 
   /**
+   * Converts a TablePermission proto to a client TablePermission object.
+   * @param proto the protobuf TablePermission
+   * @return the converted TablePermission
+   */
+  public static TablePermission toTablePermission(AccessControlProtos.TablePermission proto) {
+    List<Permission.Action> actions = toPermissionActions(proto.getActionList());
+    TableName table = null;
+    byte[] qualifier = null;
+    byte[] family = null;
+    if (!proto.hasTableName()) {
+      throw new IllegalStateException("TableName cannot be empty");
+    }
+    table = ProtobufUtil.toTableName(proto.getTableName());
+    if (proto.hasFamily()) {
+      family = proto.getFamily().toByteArray();
+    }
+    if (proto.hasQualifier()) {
+      qualifier = proto.getQualifier().toByteArray();
+    }
+    return new TablePermission(table, family, qualifier,
+        actions.toArray(new Permission.Action[actions.size()]));
+  }
+
+  /**
    * Converts a Permission proto to a client TablePermission object.
-   *
    * @param proto the protobuf Permission
    * @return the converted TablePermission
    */
@@ -539,6 +564,7 @@ public class AccessControlUtil {
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
+   * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param namespace the short name of the user to grant permissions
    * @param actions the permissions to be granted
@@ -562,10 +588,11 @@ public class AccessControlUtil {
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
+   * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param userShortName the short name of the user to revoke permissions
    * @param actions the permissions to be revoked
-   * @throws ServiceException
+   * @throws ServiceException on failure
    */
   public static void revoke(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName,
@@ -586,13 +613,14 @@ public class AccessControlUtil {
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
+   * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param userShortName the short name of the user to revoke permissions
    * @param tableName optional table name
    * @param f optional column family
    * @param q optional qualifier
    * @param actions the permissions to be revoked
-   * @throws ServiceException
+   * @throws ServiceException on failure
    */
   public static void revoke(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, TableName tableName,
@@ -612,11 +640,12 @@ public class AccessControlUtil {
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
+   * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param userShortName the short name of the user to revoke permissions
    * @param namespace optional table name
    * @param actions the permissions to be revoked
-   * @throws ServiceException
+   * @throws ServiceException on failure
    */
   public static void revoke(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, String namespace,
@@ -636,19 +665,36 @@ public class AccessControlUtil {
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
+   * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
-   * @throws ServiceException
+   * @throws ServiceException on failure
    */
   public static List<UserPermission> getUserPermissions(RpcController controller,
       AccessControlService.BlockingInterface protocol) throws ServiceException {
+    return getUserPermissions(controller, protocol, HConstants.EMPTY_STRING);
+  }
+
+  /**
+   * A utility used to get user's global permissions based on the specified user name.
+   * @param controller RpcController
+   * @param protocol the AccessControlService protocol proxy
+   * @param userName User name, if empty then all user permissions will be retrieved.
+   * @throws ServiceException
+   */
+  public static List<UserPermission> getUserPermissions(RpcController controller,
+      AccessControlService.BlockingInterface protocol, String userName) throws ServiceException {
     AccessControlProtos.GetUserPermissionsRequest.Builder builder =
         AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     builder.setType(AccessControlProtos.Permission.Type.Global);
+    if (!StringUtils.isEmpty(userName)) {
+      builder.setUserName(ByteString.copyFromUtf8(userName));
+    }
+
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
         protocol.getUserPermissions(controller, request);
     List<UserPermission> perms = new ArrayList<>(response.getUserPermissionCount());
-    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
+    for (AccessControlProtos.UserPermission perm : response.getUserPermissionList()) {
       perms.add(toUserPermission(perm));
     }
     return perms;
@@ -659,6 +705,7 @@ public class AccessControlUtil {
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
+   * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param t optional table name
    * @throws ServiceException
@@ -666,17 +713,44 @@ public class AccessControlUtil {
   public static List<UserPermission> getUserPermissions(RpcController controller,
       AccessControlService.BlockingInterface protocol,
       TableName t) throws ServiceException {
+    return getUserPermissions(controller, protocol, t, null, null, HConstants.EMPTY_STRING);
+  }
+
+  /**
+   * A utility used to get user table permissions based on the column family, column qualifier and
+   * user name.
+   * @param controller RpcController
+   * @param protocol the AccessControlService protocol proxy
+   * @param t optional table name
+   * @param columnFamily Column family
+   * @param columnQualifier Column qualifier
+   * @param userName User name, if empty then all user permissions will be retrieved.
+   * @throws ServiceException
+   */
+  public static List<UserPermission> getUserPermissions(RpcController controller,
+      AccessControlService.BlockingInterface protocol, TableName t, byte[] columnFamily,
+      byte[] columnQualifier, String userName) throws ServiceException {
     AccessControlProtos.GetUserPermissionsRequest.Builder builder =
         AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     if (t != null) {
       builder.setTableName(ProtobufUtil.toProtoTableName(t));
     }
+    if (Bytes.len(columnFamily) > 0) {
+      builder.setColumnFamily(ByteString.copyFrom(columnFamily));
+    }
+    if (Bytes.len(columnQualifier) > 0) {
+      builder.setColumnQualifier(ByteString.copyFrom(columnQualifier));
+    }
+    if (!StringUtils.isEmpty(userName)) {
+      builder.setUserName(ByteString.copyFromUtf8(userName));
+    }
+
     builder.setType(AccessControlProtos.Permission.Type.Table);
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
         protocol.getUserPermissions(controller, request);
     List<UserPermission> perms = new ArrayList<>(response.getUserPermissionCount());
-    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
+    for (AccessControlProtos.UserPermission perm : response.getUserPermissionList()) {
       perms.add(toUserPermission(perm));
     }
     return perms;
@@ -687,6 +761,7 @@ public class AccessControlUtil {
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
+   * @param controller RpcController
    * @param protocol the AccessControlService protocol proxy
    * @param namespace name of the namespace
    * @throws ServiceException
@@ -694,20 +769,78 @@ public class AccessControlUtil {
   public static List<UserPermission> getUserPermissions(RpcController controller,
       AccessControlService.BlockingInterface protocol,
       byte[] namespace) throws ServiceException {
+    return getUserPermissions(controller, protocol, namespace, HConstants.EMPTY_STRING);
+  }
+
+  /**
+   * A utility used to get permissions for selected namespace based on the specified user name.
+   * @param controller RpcController
+   * @param protocol the AccessControlService protocol proxy
+   * @param namespace name of the namespace
+   * @param userName User name, if empty then all user permissions will be retrieved.
+   * @throws ServiceException
+   */
+  public static List<UserPermission> getUserPermissions(RpcController controller,
+      AccessControlService.BlockingInterface protocol, byte[] namespace, String userName)
+      throws ServiceException {
     AccessControlProtos.GetUserPermissionsRequest.Builder builder =
         AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     if (namespace != null) {
       builder.setNamespaceName(ByteStringer.wrap(namespace));
+    }
+    if (!StringUtils.isEmpty(userName)) {
+      builder.setUserName(ByteString.copyFromUtf8(userName));
     }
     builder.setType(AccessControlProtos.Permission.Type.Namespace);
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
         protocol.getUserPermissions(controller, request);
     List<UserPermission> perms = new ArrayList<>(response.getUserPermissionCount());
-    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
+    for (AccessControlProtos.UserPermission perm : response.getUserPermissionList()) {
       perms.add(toUserPermission(perm));
     }
     return perms;
+  }
+
+  /**
+   * Validates whether specified user has permission to perform actions on the mentioned table,
+   * column family or column qualifier.
+   * @param controller RpcController
+   * @param protocol the AccessControlService protocol proxy
+   * @param tableName Table name, it shouldn't be null or empty.
+   * @param columnFamily The column family. Optional argument, can be empty. If empty then
+   *          validation will happen at table level.
+   * @param columnQualifier The column qualifier. Optional argument, can be empty. If empty then
+   *          validation will happen at table and column family level. columnQualifier will not be
+   *          considered if columnFamily is passed as null or empty.
+   * @param userName User name, it shouldn't be null or empty.
+   * @param actions Actions
+   * @return true if access allowed, otherwise false
+   * @throws ServiceException
+   */
+  public static boolean hasPermission(RpcController controller,
+      AccessControlService.BlockingInterface protocol, TableName tableName, byte[] columnFamily,
+      byte[] columnQualifier, String userName, Permission.Action[] actions)
+      throws ServiceException {
+    AccessControlProtos.TablePermission.Builder tablePermissionBuilder =
+        AccessControlProtos.TablePermission.newBuilder();
+    tablePermissionBuilder
+        .setTableName(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toProtoTableName(tableName));
+    if (Bytes.len(columnFamily) > 0) {
+      tablePermissionBuilder.setFamily(ByteStringer.wrap(columnFamily));
+    }
+    if (Bytes.len(columnQualifier) > 0) {
+      tablePermissionBuilder.setQualifier(ByteString.copyFrom(columnQualifier));
+    }
+    for (Permission.Action a : actions) {
+      tablePermissionBuilder.addAction(toPermissionAction(a));
+    }
+    AccessControlProtos.HasPermissionRequest request = AccessControlProtos.HasPermissionRequest
+        .newBuilder().setTablePermission(tablePermissionBuilder)
+        .setUserName(ByteString.copyFromUtf8(userName)).build();
+    AccessControlProtos.HasPermissionResponse response =
+        protocol.hasPermission(controller, request);
+    return response.getHasPermission();
   }
 
   /**

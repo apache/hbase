@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPer
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
@@ -88,6 +90,11 @@ public class TestMasterCoprocessorServices {
     @Override
     public void checkPermissions(RpcController controller, CheckPermissionsRequest request,
         RpcCallback<CheckPermissionsResponse> done) {}
+
+    @Override
+    public void hasPermission(RpcController controller, HasPermissionRequest request,
+        RpcCallback<HasPermissionResponse> done) {
+    }
   }
 
   private static class MockVisibilityController implements VisibilityLabelsService.Interface,

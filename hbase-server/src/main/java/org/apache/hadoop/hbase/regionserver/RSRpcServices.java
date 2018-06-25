@@ -1291,7 +1291,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   protected void requirePermission(String request, Permission.Action perm) throws IOException {
     if (accessChecker != null) {
-      accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, perm);
+      accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, null, perm);
     }
   }
 
