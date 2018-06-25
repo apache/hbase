@@ -26,11 +26,14 @@ HMaster master;
 <%import>
         java.util.*;
         org.apache.hadoop.hbase.master.HMaster;
+        org.apache.hadoop.hbase.procedure2.util.StringUtils;
+        org.apache.hadoop.hbase.replication.ReplicationLoadSource;
         org.apache.hadoop.hbase.RegionMetrics;
         org.apache.hadoop.hbase.ServerMetrics;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.Size;
         org.apache.hadoop.hbase.util.VersionInfo;
+        org.apache.hadoop.hbase.util.Pair;
         org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 
@@ -48,7 +51,8 @@ Arrays.sort(serverNames);
         <li class=""><a href="#tab_memoryStats" data-toggle="tab">Memory</a></li>
         <li class=""><a href="#tab_requestStats" data-toggle="tab">Requests</a></li>
         <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
-        <li class=""><a href="#tab_compactStas" data-toggle="tab">Compactions</a></li>
+        <li class=""><a href="#tab_compactStats" data-toggle="tab">Compactions</a></li>
+        <li class=""><a href="#tab_replicationStats" data-toggle="tab">Replications</a></li>
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
         <div class="tab-pane active" id="tab_baseStats">
@@ -63,8 +67,11 @@ Arrays.sort(serverNames);
         <div class="tab-pane" id="tab_storeStats">
             <& storeStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="tab_compactStas">
+        <div class="tab-pane" id="tab_compactStats">
             <& compactionStats; serverNames = serverNames; &>
+        </div>
+        <div class="tab-pane" id="tab_replicationStats">
+            <& replicationStats; serverNames = serverNames; &>
         </div>
     </div>
 </div>
@@ -111,7 +118,7 @@ Arrays.sort(serverNames);
     long startcode = serverName.getStartcode();
 </%java>
 <tr>
-    <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
+    <td><& serverNameLink; serverName=serverName; &></td>
     <td><% new Date(startcode) %></td>
     <td><% TraditionalBinaryPrefix.long2String(lastContact, "s", 1) %></td>
     <td><% version %></td>
@@ -158,7 +165,7 @@ for (ServerName serverName: serverNames) {
       }
 </%java>
 <tr>
-    <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
+    <td><& serverNameLink; serverName=serverName; &></td>
     <td><% TraditionalBinaryPrefix.long2String((long) sl.getUsedHeapSize().get(Size.Unit.MEGABYTE)
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
     <td><% TraditionalBinaryPrefix.long2String((long) sl.getMaxHeapSize().get(Size.Unit.MEGABYTE)
@@ -206,7 +213,7 @@ if (sl != null) {
   }
 </%java>
 <tr>
-<td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
+<td><& serverNameLink; serverName=serverName; &></td>
 <td><% sl.getRequestCountPerSecond() %></td>
 <td><% readRequestCount %></td>
 <td><% filteredReadRequestCount %></td>
@@ -259,7 +266,7 @@ if (sl != null) {
   }
 </%java>
 <tr>
-<td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
+<td><& serverNameLink; serverName=serverName; &></td>
 <td><% storeCount %></td>
 <td><% storeFileCount %></td>
 <td><% TraditionalBinaryPrefix.long2String(
@@ -312,7 +319,7 @@ if  (totalCompactingCells > 0) {
 }
 </%java>
 <tr>
-<td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
+<td><& serverNameLink; serverName=serverName; &></td>
 <td><% totalCompactingCells %></td>
 <td><% totalCompactedCells %></td>
 <td><% totalCompactingCells - totalCompactedCells %></td>
@@ -329,11 +336,74 @@ if  (totalCompactingCells > 0) {
 </table>
 </%def>
 
+<%def replicationStats>
+<%args>
+    ServerName [] serverNames;
+</%args>
+<%java>
+        HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>> replicationLoadSourceMap
+            = master.getReplicationLoad(serverNames);
+        List<String> peers = null;
+        if (replicationLoadSourceMap != null && replicationLoadSourceMap.size() > 0){
+            peers = new ArrayList<>(replicationLoadSourceMap.keySet());
+            Collections.sort(peers);
+        }
+</%java>
+
+<%if (replicationLoadSourceMap != null && replicationLoadSourceMap.size() > 0) %>
+
+<div class="tabbable">
+    <ul class="nav nav-tabs">
+        <%java>
+        String active = "active";
+        for (String peer : peers){
+        </%java>
+            <li class=<% active %>><a href="#tab_<% peer %>" data-toggle="tab">Peer <% peer %></a> </li>
+        <%java>
+        active = "";
+        }
+        </%java>
+    </ul>
+    <div class="tab-content">
+        <%java>
+            active = "active";
+            for (String peer : peers){
+        </%java>
+            <div class="tab-pane <% active %>" id="tab_<% peer %>">
+                <table class="table table-striped">
+                    <tr>
+                        <th>Server</th>
+                        <th>AgeOfLastShippedOp</th>
+                        <th>SizeOfLogQueue</th>
+                        <th>ReplicationLag</th>
+                    </tr>
+
+                    <%for Pair<ServerName, ReplicationLoadSource> pair: replicationLoadSourceMap.get(peer) %>
+                    <tr>
+                        <td><& serverNameLink; serverName=pair.getFirst(); &></td>
+                        <td><% StringUtils.humanTimeDiff(pair.getSecond().getAgeOfLastShippedOp()) %></td>
+                        <td><% pair.getSecond().getSizeOfLogQueue() %></td>
+                        <td><% StringUtils.humanTimeDiff(pair.getSecond().getReplicationLag()) %></td>
+                    </tr>
+                    </%for>
+        </table>
+            </div>
+        <%java>
+                active = "";
+                }
+        </%java>
+    </div>
+</div>
+<%else>
+    <p>No Peers Metrics</p>
+</%if>
+</%def>
+
+
 
 <%def serverNameLink>
         <%args>
         ServerName serverName;
-        ServerMetrics serverLoad;
         </%args>
         <%java>
         int infoPort = master.getRegionServerInfoPort(serverName);
@@ -352,7 +422,7 @@ if  (totalCompactingCells > 0) {
         ServerName serverName;
         </%args>
     <tr>
-    <td><& serverNameLink; serverName=serverName; serverLoad = null; &></td>
+    <td><& serverNameLink; serverName=serverName; &></td>
     <td></td>
     <td></td>
     <td></td>
