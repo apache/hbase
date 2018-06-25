@@ -96,6 +96,9 @@ message GetUserPermissionsRequest {
   optional Permission.Type type = 1;
   optional TableName table_name = 2;
   optional bytes namespace_name = 3;
+  optional bytes column_family = 4;
+  optional bytes column_qualifier = 5;
+  optional bytes user_name = 6;
 }
 
 message GetUserPermissionsResponse {
@@ -107,6 +110,15 @@ message CheckPermissionsRequest {
 }
 
 message CheckPermissionsResponse {
+}
+
+message HasPermissionRequest {
+  required TablePermission table_permission = 1;
+  required bytes user_name = 2;
+}
+
+message HasPermissionResponse {
+  optional bool has_permission = 1;
 }
 
 service AccessControlService {
@@ -121,4 +133,7 @@ service AccessControlService {
 
     rpc CheckPermissions(CheckPermissionsRequest)
       returns (CheckPermissionsResponse);
+
+    rpc HasPermission(HasPermissionRequest)
+      returns (HasPermissionResponse);
 }

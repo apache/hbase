@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
@@ -254,6 +256,13 @@ public class AuthResult {
     private Map<byte[], ? extends Collection<?>> families = null;
     byte[] family = null;
     byte[] qualifier = null;
+    // For extra parameters to be shown in audit log
+    private final Map<String, String> extraParams = new HashMap<String, String>(2);
+
+    public Params addExtraParam(String key, String value) {
+      extraParams.put(key, value);
+      return this;
+    }
 
     public Params setNamespace(String namespace) {
       this.namespace = namespace;
@@ -286,10 +295,29 @@ public class AuthResult {
       String[] params = new String[] {
           namespace != null ? "namespace=" + namespace : null,
           tableName != null ? "table=" + tableName.getNameWithNamespaceInclAsString() : null,
-          familiesString.length() > 0 ? "family=" + familiesString : null
+          familiesString.length() > 0 ? "family=" + familiesString : null,
+          extraParams.isEmpty() ? null : concatenateExtraParams()
       };
       return Joiner.on(",").skipNulls().join(params);
     }
 
+    /**
+     * @return extra parameter key/value string
+     */
+    private String concatenateExtraParams() {
+      final StringBuilder sb = new StringBuilder();
+      boolean first = true;
+      for (Entry<String, String> entry : extraParams.entrySet()) {
+        if (entry.getKey() != null && entry.getValue() != null) {
+          if (!first) {
+            sb.append(',');
+          }
+          first = false;
+          sb.append(entry.getKey() + '=');
+          sb.append(entry.getValue());
+        }
+      }
+      return sb.toString();
+    }
   }
 }

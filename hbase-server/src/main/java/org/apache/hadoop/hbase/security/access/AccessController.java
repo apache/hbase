@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -98,6 +99,8 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionResponse;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
@@ -119,6 +122,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -240,8 +244,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   private void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
-    Map<byte[], ListMultimap<String,TablePermission>> tables =
-        AccessControlLists.loadAll(region);
+    Map<byte[], ListMultimap<String, TablePermission>> tables = AccessControlLists.loadAll(region);
     // For each table, write out the table's permissions to the respective
     // znode for that table.
     for (Map.Entry<byte[], ListMultimap<String,TablePermission>> t:
@@ -284,7 +287,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       for (byte[] entry : entries) {
         currentEntry = entry;
         ListMultimap<String, TablePermission> perms =
-            AccessControlLists.getPermissions(conf, entry, t);
+            AccessControlLists.getPermissions(conf, entry, t, null, null, null, false);
         byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
         zkw.writeToZookeeper(entry, serialized);
       }
@@ -295,31 +298,29 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * Check the current user for authorization to perform a specific action
-   * against the given set of row data.
-   *
-   * <p>Note: Ordering of the authorization checks
-   * has been carefully optimized to short-circuit the most common requests
-   * and minimize the amount of processing required.</p>
-   *
+   * Check the current user for authorization to perform a specific action against the given set of
+   * row data.
+   * <p>
+   * Note: Ordering of the authorization checks has been carefully optimized to short-circuit the
+   * most common requests and minimize the amount of processing required.
+   * </p>
+   * @param request User request
+   * @param user User name
    * @param permRequest the action being requested
    * @param e the coprocessor environment
-   * @param families the map of column families to qualifiers present in
-   * the request
+   * @param tableName Table name
+   * @param families the map of column families to qualifiers present in the request
    * @return an authorization result
    */
   private AuthResult permissionGranted(String request, User user, Action permRequest,
-      RegionCoprocessorEnvironment e,
-      Map<byte [], ? extends Collection<?>> families) {
-    RegionInfo hri = e.getRegion().getRegionInfo();
-    TableName tableName = hri.getTable();
-
+      RegionCoprocessorEnvironment e, TableName tableName,
+      Map<byte[], ? extends Collection<?>> families) {
     // 1. All users need read access to hbase:meta table.
     // this is a very common operation, so deal with it quickly.
-    if (hri.isMetaRegion()) {
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
       if (permRequest == Action.READ) {
-        return AuthResult.allow(request, "All users allowed", user,
-          permRequest, tableName, families);
+        return AuthResult.allow(request, "All users allowed", user, permRequest, tableName,
+          families);
       }
     }
 
@@ -398,7 +399,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       Map<byte [], ? extends Collection<?>> families, Action... actions) {
     AuthResult result = null;
     for (Action action: actions) {
-      result = permissionGranted(opType.toString(), user, action, e, families);
+      result = permissionGranted(opType.toString(), user, action, e,
+        e.getRegion().getRegionInfo().getTable(), families);
       if (!result.isAllowed()) {
         return result;
       }
@@ -413,14 +415,14 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   public void requirePermission(ObserverContext<?> ctx, String request,
       Action perm) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), request, perm);
+    accessChecker.requirePermission(getActiveUser(ctx), request, null, perm);
   }
 
   public void requireGlobalPermission(ObserverContext<?> ctx, String request,
       Action perm, TableName tableName,
       Map<byte[], ? extends Collection<byte[]>> familyMap) throws IOException {
-    accessChecker.requireGlobalPermission(getActiveUser(ctx),
-        request, perm,tableName, familyMap);
+    accessChecker.requireGlobalPermission(getActiveUser(ctx), request, perm, tableName, familyMap,
+      null);
   }
 
   public void requireGlobalPermission(ObserverContext<?> ctx, String request,
@@ -432,7 +434,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void requireNamespacePermission(ObserverContext<?> ctx, String request, String namespace,
       Action... permissions) throws IOException {
     accessChecker.requireNamespacePermission(getActiveUser(ctx),
-        request, namespace, permissions);
+        request, namespace, null, permissions);
   }
 
   public void requireNamespacePermission(ObserverContext<?> ctx, String request, String namespace,
@@ -446,7 +448,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void requirePermission(ObserverContext<?> ctx, String request, TableName tableName,
       byte[] family, byte[] qualifier, Action... permissions) throws IOException {
     accessChecker.requirePermission(getActiveUser(ctx), request,
-        tableName, family, qualifier, permissions);
+        tableName, family, qualifier, null, permissions);
   }
 
   public void requireTablePermission(ObserverContext<?> ctx, String request,
@@ -936,7 +938,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        List<UserPermission> acls = AccessControlLists.getUserTablePermissions(conf, tableName);
+        List<UserPermission> acls =
+            AccessControlLists.getUserTablePermissions(conf, tableName, null, null, null, false);
         if (acls != null) {
           tableAcls.put(tableName, acls);
         }
@@ -1040,7 +1043,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void preGetLocks(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
     User user = getActiveUser(ctx);
-    accessChecker.requirePermission(user, "getLocks", Action.ADMIN);
+    accessChecker.requirePermission(user, "getLocks", null, Action.ADMIN);
   }
 
   @Override
@@ -1152,7 +1155,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           "Snapshot owner check allowed", user, null, null, null);
       AccessChecker.logResult(result);
     } else {
-      accessChecker.requirePermission(user, "listSnapshot " + snapshot.getName(), Action.ADMIN);
+      accessChecker.requirePermission(user, "listSnapshot " + snapshot.getName(), null,
+        Action.ADMIN);
     }
   }
 
@@ -1168,7 +1172,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         "Snapshot owner check allowed", user, null, hTableDescriptor.getTableName(), null);
       AccessChecker.logResult(result);
     } else {
-      accessChecker.requirePermission(user, "cloneSnapshot " + snapshot.getName(), Action.ADMIN);
+      accessChecker.requirePermission(user, "cloneSnapshot " + snapshot.getName(), null,
+        Action.ADMIN);
     }
   }
 
@@ -1179,9 +1184,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User user = getActiveUser(ctx);
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)) {
       accessChecker.requirePermission(user, "restoreSnapshot " + snapshot.getName(),
-          hTableDescriptor.getTableName(), null, null, Permission.Action.ADMIN);
+        hTableDescriptor.getTableName(), null, null, null, Permission.Action.ADMIN);
     } else {
-      accessChecker.requirePermission(user, "restoreSnapshot " + snapshot.getName(), Action.ADMIN);
+      accessChecker.requirePermission(user, "restoreSnapshot " + snapshot.getName(), null,
+        Action.ADMIN);
     }
   }
 
@@ -1195,7 +1201,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           "Snapshot owner check allowed", user, null, null, null);
       AccessChecker.logResult(result);
     } else {
-      accessChecker.requirePermission(user, "deleteSnapshot " + snapshot.getName(), Action.ADMIN);
+      accessChecker.requirePermission(user, "deleteSnapshot " + snapshot.getName(), null,
+        Action.ADMIN);
     }
   }
 
@@ -1255,8 +1262,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     while (itr.hasNext()) {
       NamespaceDescriptor desc = itr.next();
       try {
-        accessChecker.requireNamespacePermission(user, "listNamespaces",
-            desc.getName(), Action.ADMIN);
+        accessChecker.requireNamespacePermission(user, "listNamespaces", desc.getName(), null,
+          Action.ADMIN);
       } catch (AccessDeniedException e) {
         itr.remove();
       }
@@ -1971,10 +1978,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User user = getActiveUser(ctx);
     for(Pair<byte[],String> el : familyPaths) {
       accessChecker.requirePermission(user, "preBulkLoadHFile",
-          ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(),
-          el.getFirst(),
-          null,
-          Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), el.getFirst(), null,
+        null, Action.CREATE);
     }
   }
 
@@ -2048,11 +2053,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           case Global :
           case Table :
             accessChecker.requirePermission(caller, "grant", perm.getTableName(),
-                perm.getFamily(), perm.getQualifier(), Action.ADMIN);
+                perm.getFamily(), perm.getQualifier(), null, Action.ADMIN);
             break;
           case Namespace :
             accessChecker.requireNamespacePermission(caller, "grant", perm.getNamespace(),
-                Action.ADMIN);
+                null, Action.ADMIN);
            break;
         }
 
@@ -2106,11 +2111,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           case Global :
           case Table :
             accessChecker.requirePermission(caller, "revoke", perm.getTableName(), perm.getFamily(),
-              perm.getQualifier(), Action.ADMIN);
+              perm.getQualifier(), null, Action.ADMIN);
             break;
           case Namespace :
             accessChecker.requireNamespacePermission(caller, "revoke", perm.getNamespace(),
-                Action.ADMIN);
+                null, Action.ADMIN);
             break;
         }
 
@@ -2156,42 +2161,73 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User caller = RpcServer.getRequestUser().orElse(null);
 
         List<UserPermission> perms = null;
+        // Initialize username, cf and cq. Set to null if request doesn't have.
+        final String userName = request.hasUserName() ? request.getUserName().toStringUtf8() : null;
+        final byte[] cf =
+            request.hasColumnFamily() ? request.getColumnFamily().toByteArray() : null;
+        final byte[] cq =
+            request.hasColumnQualifier() ? request.getColumnQualifier().toByteArray() : null;
+
         if (request.getType() == AccessControlProtos.Permission.Type.Table) {
           final TableName table = request.hasTableName() ?
             ProtobufUtil.toTableName(request.getTableName()) : null;
-          accessChecker.requirePermission(caller, "userPermissions",
-              table, null, null, Action.ADMIN);
+          accessChecker.requirePermission(caller, "userPermissions", table, cf, cq, userName,
+            Action.ADMIN);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
-              return AccessControlLists.getUserTablePermissions(regionEnv.getConfiguration(), table);
+              if (cf != null || userName != null) {
+                // retrieve permission based on the requested parameters
+                return AccessControlLists.getUserTablePermissions(regionEnv.getConfiguration(),
+                  table, cf, cq, userName, true);
+              } else {
+                return AccessControlLists.getUserTablePermissions(regionEnv.getConfiguration(),
+                  table, null, null, null, false);
+              }
             }
           });
         } else if (request.getType() == AccessControlProtos.Permission.Type.Namespace) {
           final String namespace = request.getNamespaceName().toStringUtf8();
           accessChecker.requireNamespacePermission(caller, "userPermissions",
-              namespace, Action.ADMIN);
+            namespace,userName, Action.ADMIN);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
-              return AccessControlLists.getUserNamespacePermissions(regionEnv.getConfiguration(),
-                namespace);
+              if (userName != null) {
+                // retrieve permission based on the requested parameters
+                return AccessControlLists.getUserNamespacePermissions(regionEnv.getConfiguration(),
+                  namespace, userName, true);
+              } else {
+                return AccessControlLists.getUserNamespacePermissions(regionEnv.getConfiguration(),
+                  namespace, null, false);
+              }
             }
           });
         } else {
-          accessChecker.requirePermission(caller, "userPermissions", Action.ADMIN);
+          accessChecker.requirePermission(caller, "userPermissions", userName, Action.ADMIN);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
-              return AccessControlLists.getUserPermissions(regionEnv.getConfiguration(), null);
+              if (userName != null) {
+                // retrieve permission based on the requested parameters
+                return AccessControlLists.getUserPermissions(regionEnv.getConfiguration(), null,
+                  null, null, userName, true);
+              } else {
+                return AccessControlLists.getUserPermissions(regionEnv.getConfiguration(), null,
+                  null, null, null, false);
+              }
             }
           });
-          // Adding superusers explicitly to the result set as AccessControlLists do not store them.
-          // Also using acl as table name to be inline  with the results of global admin and will
-          // help in avoiding any leakage of information about being superusers.
-          for (String user: Superusers.getSuperUsers()) {
-            perms.add(new UserPermission(Bytes.toBytes(user), AccessControlLists.ACL_TABLE_NAME,
-                null, Action.values()));
+
+          // Skip super users when filter user is specified
+          if (userName == null) {
+            // Adding superusers explicitly to the result set as AccessControlLists do not store
+            // them. Also using acl as table name to be inline with the results of global admin and
+            // will help in avoiding any leakage of information about being superusers.
+            for (String user : Superusers.getSuperUsers()) {
+              perms.add(new UserPermission(Bytes.toBytes(user), AccessControlLists.ACL_TABLE_NAME,
+                  null, Action.values()));
+            }
           }
         }
         response = AccessControlUtil.buildGetUserPermissionsResponse(perms);
@@ -2243,7 +2279,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             }
 
             AuthResult result = permissionGranted("checkPermissions", user, action, regionEnv,
-              familyMap);
+              regionEnv.getRegion().getRegionInfo().getTable(), familyMap);
             AccessChecker.logResult(result);
             if (!result.isAllowed()) {
               // Even if passive we need to throw an exception here, we support checking
@@ -2549,5 +2585,52 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       return optionalUser.get();
     }
     return userProvider.getCurrent();
+  }
+
+  @Override
+  public void hasPermission(RpcController controller, HasPermissionRequest request,
+      RpcCallback<HasPermissionResponse> done) {
+    // Converts proto to a TablePermission object.
+    TablePermission tPerm = AccessControlUtil.toTablePermission(request.getTablePermission());
+    // Check input user name
+    if (!request.hasUserName()) {
+      throw new IllegalStateException("Input username cannot be empty");
+    }
+    final String inputUserName = request.getUserName().toStringUtf8();
+    AccessControlProtos.HasPermissionResponse response = null;
+    try {
+      User caller = RpcServer.getRequestUser().orElse(null);
+      // User instance for the input user name
+      User filterUser = accessChecker.validateCallerWithFilterUser(caller, tPerm, inputUserName);
+
+      // Initialize family and qualifier map
+      Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
+      if (tPerm.getFamily() != null) {
+        if (tPerm.getQualifier() != null) {
+          Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
+          qualifiers.add(tPerm.getQualifier());
+          familyMap.put(tPerm.getFamily(), qualifiers);
+        } else {
+          familyMap.put(tPerm.getFamily(), null);
+        }
+      }
+
+      // Iterate each action and check whether permission granted
+      boolean hasPermission = false;
+      for (Action action : tPerm.getActions()) {
+        AuthResult result = permissionGranted("hasPermission", filterUser, action, regionEnv,
+          tPerm.getTableName(), familyMap);
+        if (!result.isAllowed()) {
+          hasPermission = false;
+          // Break the loop is any action is not allowed
+          break;
+        }
+        hasPermission = true;
+      }
+      response = ResponseConverter.buildHasPermissionResponse(hasPermission);
+    } catch (IOException ioe) {
+      ResponseConverter.setControllerException(controller, ioe);
+    }
+    done.run(response);
   }
 }
