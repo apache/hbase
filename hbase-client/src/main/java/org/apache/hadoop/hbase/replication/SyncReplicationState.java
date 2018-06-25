@@ -68,7 +68,10 @@ public enum SyncReplicationState {
   }
 
   public static SyncReplicationState parseFrom(byte[] bytes) throws InvalidProtocolBufferException {
+    if (bytes == null) {
+      return SyncReplicationState.NONE;
+    }
     return ReplicationPeerConfigUtil.toSyncReplicationState(ReplicationProtos.SyncReplicationState
-      .parseFrom(Arrays.copyOfRange(bytes, ProtobufUtil.lengthOfPBMagic(), bytes.length)));
+        .parseFrom(Arrays.copyOfRange(bytes, ProtobufUtil.lengthOfPBMagic(), bytes.length)));
   }
 }
