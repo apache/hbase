@@ -172,6 +172,7 @@ import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
@@ -3694,6 +3695,32 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public ReplicationPeerManager getReplicationPeerManager() {
     return replicationPeerManager;
+  }
+
+  public HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>>
+      getReplicationLoad(ServerName[] serverNames) {
+    List<ReplicationPeerDescription> peerList = this.getReplicationPeerManager().listPeers(null);
+    if (peerList == null) {
+      return null;
+    }
+    HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>> replicationLoadSourceMap =
+        new HashMap<>(peerList.size());
+    peerList.stream()
+        .forEach(peer -> replicationLoadSourceMap.put(peer.getPeerId(), new ArrayList()));
+    for (ServerName serverName : serverNames) {
+      List<ReplicationLoadSource> replicationLoadSources =
+          getServerManager().getLoad(serverName).getReplicationLoadSourceList();
+      for (ReplicationLoadSource replicationLoadSource : replicationLoadSources) {
+        replicationLoadSourceMap.get(replicationLoadSource.getPeerID())
+            .add(new Pair<>(serverName, replicationLoadSource));
+      }
+    }
+    for (List<Pair<ServerName, ReplicationLoadSource>> loads : replicationLoadSourceMap.values()) {
+      if (loads.size() > 0) {
+        loads.sort(Comparator.comparingLong(load -> (-1) * load.getSecond().getReplicationLag()));
+      }
+    }
+    return replicationLoadSourceMap;
   }
 
   /**

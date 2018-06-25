@@ -31,8 +31,11 @@ AssignmentManager assignmentManager = null;
 <%import>
 java.util.*;
 java.io.IOException;
+org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 org.apache.hadoop.hbase.client.RegionInfo;
 org.apache.hadoop.hbase.client.TableDescriptor;
+org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
 org.apache.hadoop.hbase.HTableDescriptor;
@@ -258,6 +261,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     </div>
                 </div>
             </div>
+        </section>
+        <section>
+            <h2>Peers</h2>
+            <& peerConfigs &>
         </section>
         <%if master.getAssignmentManager() != null %>
         <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
@@ -568,4 +575,56 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
 </table>
 </%if>
+</%def>
+
+<%def peerConfigs>
+<%java>
+    List<ReplicationPeerDescription> peers = null;
+    if (master.getReplicationPeerManager() != null) {
+        peers = master.getReplicationPeerManager().listPeers(null);
+    }
+</%java>
+<table class="table table-striped">
+    <tr>
+        <th>Peer Id</th>
+        <th>Cluster Key</th>
+        <th>State</th>
+        <th>IsSerial</th>
+        <th>Bandwidth</th>
+        <th>ReplicateAll</th>
+        <th>Namespaces</th>
+        <th>Exclude Namespaces</th>
+        <th>Table Cfs</th>
+        <th>Exclude Table Cfs</th>
+    </tr>
+<%if (peers != null && peers.size() > 0)%>
+    <%for ReplicationPeerDescription peer : peers %>
+    <%java>
+        String peerId = peer.getPeerId();
+        ReplicationPeerConfig peerConfig = peer.getPeerConfig();
+    </%java>
+    <tr>
+        <td><% peerId %></td>
+        <td><% peerConfig.getClusterKey() %></td>
+        <td><% peer.isEnabled() ? "ENABLED" : "DISABLED" %></td>
+        <td><% peerConfig.isSerial() %></td>
+        <td><% peerConfig.getBandwidth() == 0? "UNLIMITED" : StringUtils.humanReadableInt(peerConfig.getBandwidth()) %></td>
+        <td><% peerConfig.replicateAllUserTables() %></td>
+        <td>
+           <% peerConfig.getNamespaces() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getNamespaces()).replaceAll(";", "; ") %>
+        </td>
+        <td>
+            <% peerConfig.getExcludeNamespaces() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getExcludeNamespaces()).replaceAll(";", "; ") %>
+        </td>
+        <td>
+           <% peerConfig.getTableCFsMap() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getTableCFsMap()).replaceAll(";", "; ") %>
+        </td>
+        <td>
+           <% peerConfig.getExcludeTableCFsMap() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getExcludeTableCFsMap()).replaceAll(";", "; ") %>
+        </td>
+    </tr>
+    </%for>
+</%if>
+<tr><td>Total: <% (peers != null) ? peers.size() : 0 %></td></tr>
+</table>
 </%def>
