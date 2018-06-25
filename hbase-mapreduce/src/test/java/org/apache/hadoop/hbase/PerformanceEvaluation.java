@@ -1138,6 +1138,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     void updateScanMetrics(final ScanMetrics metrics) {
+      if (metrics == null) return;
       Map<String,Long> metricsMap = metrics.getMetricsMap();
       Long rpcCalls = metricsMap.get(ScanMetrics.RPC_CALLS_METRIC_NAME);
       if (rpcCalls != null) {
