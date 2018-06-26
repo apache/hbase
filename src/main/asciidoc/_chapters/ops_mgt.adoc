@@ -898,7 +898,8 @@ $ bin/hbase pre-upgrade validate-cp -table .*
 It validates every table level co-processors where the table name matches to `.*` regular expression.
 
 ==== DataBlockEncoding validation
-HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families.
+HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families. For further information
+please check <<upgrade2.0.prefix-tree.removed,_prefix-tree_ encoding removed>>.
 To verify that none of the column families are using incompatible Data Block Encodings in the cluster run the following command.
 
 [source, bash]
@@ -906,8 +907,103 @@ To verify that none of the column families are using incompatible Data Block Enc
 $ bin/hbase pre-upgrade validate-dbe
 ----
 
-This check validates all column families and print out any incompatibilities.
-To change `PREFIX_TREE` encoding to supported one check <<upgrade2.0.prefix-tree.removed,_prefix-tree_ encoding removed>>.
+This check validates all column families and print out any incompatibilities. For example:
+
+----
+2018-07-13 09:58:32,028 WARN  [main] tool.DataBlockEncodingValidator: Incompatible DataBlockEncoding for table: t, cf: f, encoding: PREFIX_TREE
+----
+
+Which means that Data Block Encoding of table `t`, column family `f` is incompatible. To fix, use `alter` command in HBase shell:
+
+----
+alter 't', { NAME => 'f', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
+----
+
+Please also validate HFiles, which is described in the next section.
+
+==== HFile Content validation
+Even though Data Block Encoding is changed from `PREFIX_TREE` it is still possible to have HFiles that contain data encoded that way.
+To verify that HFiles are readable with HBase 2 please use _HFile content validator_.
+
+[source, bash]
+----
+$ bin/hbase pre-upgrade validate-hfile
+----
+
+The tool will log the corrupt HFiles and details about the root cause.
+If the problem is about PREFIX_TREE encoding it is necessary to change encodings before upgrading to HBase 2.
+
+The following log message shows an example of incorrect HFiles.
+
+----
+2018-06-05 16:20:46,976 WARN  [hfilevalidator-pool1-t3] hbck.HFileCorruptionChecker: Found corrupt HFile hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+org.apache.hadoop.hbase.io.hfile.CorruptHFileException: Problem reading HFile Trailer from file hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+    ...
+Caused by: java.io.IOException: Invalid data block encoding type in file info: PREFIX_TREE
+    ...
+Caused by: java.lang.IllegalArgumentException: No enum constant org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.PREFIX_TREE
+    ...
+2018-06-05 16:20:47,322 INFO  [main] tool.HFileContentValidator: Corrupted file: hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+2018-06-05 16:20:47,383 INFO  [main] tool.HFileContentValidator: Corrupted file: hdfs://example.com:8020/hbase/archive/data/default/t/56be41796340b757eb7fff1eb5e2a905/f/29c641ae91c34fc3bee881f45436b6d1
+----
+
+===== Fixing PREFIX_TREE errors
+
+It's possible to get `PREFIX_TREE` errors after changing Data Block Encoding to a supported one. It can happen
+because there are some HFiles which still encoded with `PREFIX_TREE` or there are still some snapshots.
+
+For fixing HFiles, please run a major compaction on the table (it was `default:t` according to the log message):
+
+----
+major_compact 't'
+----
+
+HFiles can be referenced from snapshots, too. It's the case when the HFile is located under `archive/data`.
+The first step is to determine which snapshot references that HFile (the name of the file was `29c641ae91c34fc3bee881f45436b6d1`
+according to the logs):
+
+[source, bash]
+----
+for snapshot in $(hbase snapshotinfo -list-snapshots 2> /dev/null | tail -n -1 | cut -f 1 -d \|);
+do
+  echo "checking snapshot named '${snapshot}'";
+  hbase snapshotinfo -snapshot "${snapshot}" -files 2> /dev/null | grep 29c641ae91c34fc3bee881f45436b6d1;
+done
+----
+
+The output of this shell script is:
+
+----
+checking snapshot named 't_snap'
+   1.0 K t/56be41796340b757eb7fff1eb5e2a905/f/29c641ae91c34fc3bee881f45436b6d1 (archive)
+----
+
+Which means `t_snap` snapshot references the incompatible HFile. If the snapshot is still needed,
+then it has to be recreated with HBase shell:
+
+----
+# creating a new namespace for the cleanup process
+create_namespace 'pre_upgrade_cleanup'
+
+# creating a new snapshot
+clone_snapshot 't_snap', 'pre_upgrade_cleanup:t'
+alter 'pre_upgrade_cleanup:t', { NAME => 'f', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
+major_compact 'pre_upgrade_cleanup:t'
+
+# removing the invalid snapshot
+delete_snapshot 't_snap'
+
+# creating a new snapshot
+snapshot 'pre_upgrade_cleanup:t', 't_snap'
+
+# removing temporary table
+disable 'pre_upgrade_cleanup:t'
+drop 'pre_upgrade_cleanup:t'
+drop_namespace 'pre_upgrade_cleanup'
+----
+
+For further information, please refer to
+link:https://issues.apache.org/jira/browse/HBASE-20649?focusedCommentId=16535476#comment-16535476[HBASE-20649].
 
 [[ops.regionmgt]]
 == Region Management
