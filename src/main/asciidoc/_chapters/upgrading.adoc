@@ -647,7 +647,34 @@ good justification to add it back, bring it our notice (dev@hbase.apache.org).
 
 [[upgrade2.0.rolling.upgrades]]
 ==== Rolling Upgrade from 1.x to 2.x
-There is no rolling upgrade from HBase 1.x+ to HBase 2.x+. In order to perform a zero downtime upgrade, you will need to run an additional cluster in parallel and handle failover in application logic.
+
+Rolling upgrades are currently an experimental feature.
+They have had limited testing. There are likely corner
+cases as yet uncovered in our
+limited experience so you should be careful if you go this
+route. The stop/upgrade/start described in the next section,
+<<upgrade2.0.process>>, is the safest route.
+
+That said, the below is a prescription for a
+rolling upgrade of a 1.4 cluster.
+
+.Pre-Requirements
+* Upgrade to the latest 1.4.x release. Pre 1.4 releases may also work but are not tested, so please upgrade to 1.4.3+ before upgrading to 2.x, unless you are an expert and familiar with the region assignment and crash processing. See the section <<upgrade1.4>> on how to upgrade to 1.4.x.
+* Make sure that the zk-less assignment is enabled, i.e, set `hbase.assignment.usezk` to `false`. This is the most important thing. It allows the 1.x master to assign/unassign regions to/from 2.x region servers. See the release note section of link:https://issues.apache.org/jira/browse/HBASE-11059[HBASE-11059] on how to migrate from zk based assignment to zk less assignment.
+* We have tested rolling upgrading from 1.4.3 to 2.1.0, but it should also work if you want to upgrade to 2.0.x.
+
+.Instructions
+. Unload a region server and upgrade it to 2.1.0. With link:https://issues.apache.org/jira/browse/HBASE-17931[HBASE-17931] in place, the meta region and regions for other system tables will be moved to this region server immediately. If not, please move them manually to the new region server. This is very important because
+** The schema of meta region is hard coded, if meta is on an old region server, then the new region servers can not access it as it does not have some families, for example, table state.
+** Client with lower version can communicate with server with higher version, but not vice versa. If the meta region is on an old region server, the new region server will use a client with higher version to communicate with a server with lower version, this may introduce strange problems.
+. Rolling upgrade all other region servers.
+. Upgrading masters.
+
+It is OK that during the rolling upgrading there are region server crashes. The 1.x master can assign regions to both 1.x and 2.x region servers, and link:https://issues.apache.org/jira/browse/HBASE-19166[HBASE-19166] fixed a problem so that 1.x region server can also read the WALs written by 2.x region server and split them.
+
+NOTE: please read the <<Changes of Note!,Changes of Note!>> section carefully before rolling upgrading. Make sure that you do not use the removed features in 2.0, for example, the prefix-tree encoding, the old hfile format, etc. They could both fail the upgrading and leave the cluster in an intermediate state and hard to recover.
+
+NOTE: If you have success running this prescription, please notify the dev list with a note on your experience and/or update the above with any deviations you may have taken so others going this route can benefit from your efforts.
 
 [[upgrade2.0.process]]
 ==== Upgrade process from 1.x to 2.x
