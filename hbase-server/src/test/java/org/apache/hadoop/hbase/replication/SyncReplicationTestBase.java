@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -50,7 +51,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -229,18 +229,18 @@ public class SyncReplicationTestBase {
     try {
       rps.getPeerSyncReplicationState(peerId);
       fail("Should throw exception when get the sync replication state of a removed peer.");
-    } catch (NullPointerException e) {
+    } catch (ReplicationException e) {
       // ignore.
     }
     try {
       rps.getPeerNewSyncReplicationState(peerId);
       fail("Should throw exception when get the new sync replication state of a removed peer");
-    } catch (NullPointerException e) {
+    } catch (ReplicationException e) {
       // ignore.
     }
     try (FileSystem fs = utility.getTestFileSystem()) {
-      Assert.assertFalse(fs.exists(getRemoteWALDir(remoteWALDir, peerId)));
-      Assert.assertFalse(fs.exists(getReplayRemoteWALs(remoteWALDir, peerId)));
+      assertFalse(fs.exists(getRemoteWALDir(remoteWALDir, peerId)));
+      assertFalse(fs.exists(getReplayRemoteWALs(remoteWALDir, peerId)));
     }
   }
 
@@ -260,10 +260,10 @@ public class SyncReplicationTestBase {
       try {
         ReplicationProtbufUtil.replicateWALEntry(connection.getAdmin(regionServer.getServerName()),
           entries, null, null, null);
-        Assert.fail("Should throw IOException when sync-replication state is in A or DA");
+        fail("Should throw IOException when sync-replication state is in A or DA");
       } catch (DoNotRetryIOException e) {
-        Assert.assertTrue(e.getMessage().contains("Reject to apply to sink cluster"));
-        Assert.assertTrue(e.getMessage().contains(TABLE_NAME.toString()));
+        assertTrue(e.getMessage().contains("Reject to apply to sink cluster"));
+        assertTrue(e.getMessage().contains(TABLE_NAME.toString()));
       }
     }
   }

@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -38,6 +39,8 @@ import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -177,8 +180,39 @@ public class TestZKReplicationPeerStorage {
 
     try {
       STORAGE.getPeerConfig(toRemove);
-      fail("Should throw a ReplicationException when get peer config of a peerId");
+      fail("Should throw a ReplicationException when getting peer config of a removed peer");
     } catch (ReplicationException e) {
     }
+  }
+
+  @Test
+  public void testNoSyncReplicationState()
+      throws ReplicationException, KeeperException, IOException {
+    // This could happen for a peer created before we introduce sync replication.
+    String peerId = "testNoSyncReplicationState";
+    try {
+      STORAGE.getPeerSyncReplicationState(peerId);
+      fail("Should throw a ReplicationException when getting state of inexist peer");
+    } catch (ReplicationException e) {
+      // expected
+    }
+    try {
+      STORAGE.getPeerNewSyncReplicationState(peerId);
+      fail("Should throw a ReplicationException when getting state of inexist peer");
+    } catch (ReplicationException e) {
+      // expected
+    }
+    STORAGE.addPeer(peerId, getConfig(0), true, SyncReplicationState.NONE);
+    // delete the sync replication state node to simulate
+    ZKUtil.deleteNode(UTIL.getZooKeeperWatcher(), STORAGE.getSyncReplicationStateNode(peerId));
+    ZKUtil.deleteNode(UTIL.getZooKeeperWatcher(), STORAGE.getNewSyncReplicationStateNode(peerId));
+    // should not throw exception as the peer exists
+    assertEquals(SyncReplicationState.NONE, STORAGE.getPeerSyncReplicationState(peerId));
+    assertEquals(SyncReplicationState.NONE, STORAGE.getPeerNewSyncReplicationState(peerId));
+    // make sure we create the node for the old format peer
+    assertNotEquals(-1,
+      ZKUtil.checkExists(UTIL.getZooKeeperWatcher(), STORAGE.getSyncReplicationStateNode(peerId)));
+    assertNotEquals(-1, ZKUtil.checkExists(UTIL.getZooKeeperWatcher(),
+      STORAGE.getNewSyncReplicationStateNode(peerId)));
   }
 }

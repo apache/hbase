@@ -93,7 +93,8 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
     return ZNodePaths.joinZNode(getPeerNode(peerId), SYNC_REPLICATION_STATE_ZNODE);
   }
 
-  private String getNewSyncReplicationStateNode(String peerId) {
+  @VisibleForTesting
+  public String getNewSyncReplicationStateNode(String peerId) {
     return ZNodePaths.joinZNode(getPeerNode(peerId), NEW_SYNC_REPLICATION_STATE_ZNODE);
   }
 
@@ -221,6 +222,16 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
       throws ReplicationException {
     try {
       byte[] data = ZKUtil.getData(zookeeper, path);
+      if (data == null || data.length == 0) {
+        if (ZKUtil.checkExists(zookeeper, getPeerNode(peerId)) != -1) {
+          // should be a peer from previous version, set the sync replication state for it.
+          ZKUtil.createSetData(zookeeper, path, NONE_STATE_ZNODE_BYTES);
+          return SyncReplicationState.NONE;
+        } else {
+          throw new ReplicationException(
+            "Replication peer sync state shouldn't be empty, peerId=" + peerId);
+        }
+      }
       return SyncReplicationState.parseFrom(data);
     } catch (KeeperException | InterruptedException | IOException e) {
       throw new ReplicationException(
