@@ -137,6 +137,10 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     public RegionInfo getRegion() {
       return delegate.getRegionInfo();
     }
+
+    TableSnapshotInputFormatImpl.InputSplit getDelegate() {
+      return this.delegate;
+    }
   }
 
   @VisibleForTesting
