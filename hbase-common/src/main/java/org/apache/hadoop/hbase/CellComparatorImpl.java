@@ -74,7 +74,7 @@ public class CellComparatorImpl implements CellComparator {
     int diff = 0;
     // "Peel off" the most common path.
     if (a instanceof ByteBufferKeyValue && b instanceof ByteBufferKeyValue) {
-      diff = BBKVComparator.compare((ByteBufferKeyValue)a, (ByteBufferKeyValue)b);
+      diff = BBKVComparator.compare((ByteBufferKeyValue)a, (ByteBufferKeyValue)b, ignoreSequenceid);
       if (diff != 0) {
         return diff;
       }

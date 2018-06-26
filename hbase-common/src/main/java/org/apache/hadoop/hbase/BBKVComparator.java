@@ -73,7 +73,7 @@ public class BBKVComparator implements Comparator {
   public int compare(Object l, Object r) {
     // LOG.info("ltype={} rtype={}", l, r);
     if ((l instanceof ByteBufferKeyValue) && (r instanceof ByteBufferKeyValue)) {
-      return compare((ByteBufferKeyValue)l, (ByteBufferKeyValue)r);
+      return compare((ByteBufferKeyValue)l, (ByteBufferKeyValue)r, false);
     }
     // Skip calling compare(Object, Object) and go direct to compare(Cell, Cell)
     return this.fallback.compare((Cell)l, (Cell)r);
@@ -81,7 +81,8 @@ public class BBKVComparator implements Comparator {
 
   // TODO: Come back here. We get a few percentage points extra of throughput if this is a
   // private method.
-  static final int compare(ByteBufferKeyValue left, ByteBufferKeyValue right) {
+  static final int compare(ByteBufferKeyValue left, ByteBufferKeyValue right,
+      boolean ignoreSequenceid) {
     // NOTE: Same method is in CellComparatorImpl, also private, not shared, intentionally. Not
     // sharing gets us a few percent more throughput in compares. If changes here or there, make
     // sure done in both places.
@@ -168,6 +169,6 @@ public class BBKVComparator implements Comparator {
     }
 
     // Negate following comparisons so later edits show up first mvccVersion: later sorts first
-    return Longs.compare(right.getSequenceId(), left.getSequenceId());
+    return ignoreSequenceid ? diff : Longs.compare(right.getSequenceId(), left.getSequenceId());
   }
 }
