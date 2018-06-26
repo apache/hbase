@@ -501,6 +501,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>reidchan</id>
+      <name>Reid Chan</name>
+      <email>reidchan@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>sershe</id>
       <name>Sergey Shelukhin</name>
       <email>sershe@apache.org</email>
