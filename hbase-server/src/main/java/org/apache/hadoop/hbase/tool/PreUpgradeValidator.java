@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
  * <ul>
  * <li>validate-cp: Validates Co-processors compatibility</li>
  * <li>validate-dbe: Check Data Block Encoding for column families</li>
+ * <li>validate-hfile: Check for corrupted HFiles</li>
  * </ul>
  * </p>
  */
@@ -49,6 +50,7 @@ public class PreUpgradeValidator implements Tool {
   public static final String TOOL_NAME = "pre-upgrade";
   public static final String VALIDATE_CP_NAME = "validate-cp";
   public static final String VALIDATE_DBE_NAME = "validate-dbe";
+  public static final String VALIDATE_HFILE = "validate-hfile";
 
   private Configuration configuration;
 
@@ -69,6 +71,8 @@ public class PreUpgradeValidator implements Tool {
         VALIDATE_CP_NAME);
     System.out.printf(" %-15s Validate DataBlockEncodings are compatible with HBase%n",
         VALIDATE_DBE_NAME);
+    System.out.printf(" %-15s Validate HFile contents are readable%n",
+        VALIDATE_HFILE);
     System.out.println("For further information, please use command -h");
   }
 
@@ -87,6 +91,9 @@ public class PreUpgradeValidator implements Tool {
         break;
       case VALIDATE_DBE_NAME:
         tool = new DataBlockEncodingValidator();
+        break;
+      case VALIDATE_HFILE:
+        tool = new HFileContentValidator();
         break;
       case "-h":
         printUsage();

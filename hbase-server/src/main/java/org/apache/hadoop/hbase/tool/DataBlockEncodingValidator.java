@@ -76,9 +76,8 @@ public class DataBlockEncodingValidator extends AbstractHBaseTool {
 
     if (incompatibilities > 0) {
       LOG.warn("There are {} column families with incompatible Data Block Encodings. Do not "
-          + "upgrade until these encodings are converted to a supported one.", incompatibilities);
-      LOG.warn("Check http://hbase.apache.org/book.html#upgrade2.0.prefix-tree.removed "
-          + "for instructions.");
+          + "upgrade until these encodings are converted to a supported one. "
+          + "Check https://s.apache.org/prefixtree for instructions.", incompatibilities);
     } else {
       LOG.info("The used Data Block Encodings are compatible with HBase 2.0.");
     }
