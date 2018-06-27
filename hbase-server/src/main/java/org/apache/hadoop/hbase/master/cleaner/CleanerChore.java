@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -118,7 +119,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           break;
         }
       }
-      pool.shutdownNow();
+      shutDownNow();
       LOG.info("Update chore's pool size from " + pool.getParallelism() + " to " + size);
       pool = new ForkJoinPool(size);
     }
@@ -136,6 +137,13 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     synchronized void submit(ForkJoinTask task) {
       pool.submit(task);
     }
+
+    synchronized void shutDownNow() {
+      if (pool == null || pool.isShutdown()) {
+        return;
+      }
+      pool.shutdownNow();
+    }
   }
   // It may be waste resources for each cleaner chore own its pool,
   // so let's make pool for all cleaner chores.
@@ -148,15 +156,22 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   protected Map<String, Object> params;
   private AtomicBoolean enabled = new AtomicBoolean(true);
 
-  public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-                      FileSystem fs, Path oldFileDir, String confKey) {
-    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, null);
-  }
-
   public static void initChorePool(Configuration conf) {
     if (POOL == null) {
       POOL = new DirScanPool(conf);
     }
+  }
+
+  public static void shutDownChorePool() {
+    if (POOL != null) {
+      POOL.shutDownNow();
+      POOL = null;
+    }
+  }
+
+  public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
+                      FileSystem fs, Path oldFileDir, String confKey) {
+    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, null);
   }
 
   /**
@@ -432,6 +447,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     protected Boolean compute() {
       LOG.trace("Cleaning under " + dir);
       List<FileStatus> subDirs;
+      List<FileStatus> tmpFiles;
       final List<FileStatus> files;
       try {
         // if dir doesn't exist, we'll get null back for both of these
@@ -442,48 +458,48 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
             return f.isDirectory();
           }
         });
-        files = FSUtils.listStatusWithStatusFilter(fs, dir, new FileStatusFilter() {
+        if (subDirs == null) {
+          subDirs = Collections.emptyList();
+        }
+        tmpFiles = FSUtils.listStatusWithStatusFilter(fs, dir, new FileStatusFilter() {
           @Override
           public boolean accept(FileStatus f) {
             return f.isFile();
           }
         });
+        files = tmpFiles == null ? Collections.<FileStatus>emptyList() : tmpFiles;
       } catch (IOException ioe) {
         LOG.warn("failed to get FileStatus for contents of '" + dir + "'", ioe);
         return false;
       }
 
-      boolean nullSubDirs = subDirs == null;
-      if (nullSubDirs) {
-        LOG.trace("There is no subdir under " + dir);
-      }
-      if (files == null) {
-        LOG.trace("There is no file under " + dir);
+      boolean allFilesDeleted = true;
+      if (!files.isEmpty()) {
+        allFilesDeleted = deleteAction(new Action<Boolean>() {
+          @Override
+          public Boolean act() throws IOException {
+            return checkAndDeleteFiles(files);
+          }
+        }, "files");
       }
 
-      int capacity = nullSubDirs ? 0 : subDirs.size();
-      final List<CleanerTask> tasks = Lists.newArrayListWithCapacity(capacity);
-      if (!nullSubDirs) {
+      boolean allSubdirsDeleted = true;
+      if (!subDirs.isEmpty()) {
+        final List<CleanerTask> tasks = Lists.newArrayListWithCapacity(subDirs.size());
         for (FileStatus subdir : subDirs) {
           CleanerTask task = new CleanerTask(subdir, false);
           tasks.add(task);
           task.fork();
         }
+        allSubdirsDeleted = deleteAction(new Action<Boolean>() {
+          @Override
+          public Boolean act() throws IOException {
+            return getCleanResult(tasks);
+          }
+        }, "subdirs");
       }
 
-      boolean result = true;
-      result &= deleteAction(new Action<Boolean>() {
-        @Override
-        public Boolean act() throws IOException {
-          return checkAndDeleteFiles(files);
-        }
-      }, "files");
-      result &= deleteAction(new Action<Boolean>() {
-        @Override
-        public Boolean act() throws IOException {
-          return getCleanResult(tasks);
-        }
-      }, "subdirs");
+      boolean result = allFilesDeleted && allSubdirsDeleted;
       // if and only if files and subdirs under current dir are deleted successfully, and
       // it is not the root dir, then task will try to delete it.
       if (result && !root) {

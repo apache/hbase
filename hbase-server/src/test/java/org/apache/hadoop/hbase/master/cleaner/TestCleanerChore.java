@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -52,16 +52,17 @@ public class TestCleanerChore {
   private static final Log LOG = LogFactory.getLog(TestCleanerChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeClass
+  public static void setup() {
     CleanerChore.initChorePool(UTIL.getConfiguration());
   }
 
-  @After
-  public void cleanup() throws Exception {
+  @AfterClass
+  public static void cleanup() throws Exception {
     // delete and recreate the test directory, ensuring a clean test dir between tests
     UTIL.cleanupTestDir();
-}
+    CleanerChore.shutDownChorePool();
+  }
 
 
   @Test
@@ -296,6 +297,7 @@ public class TestCleanerChore {
    */
   @Test
   public void testNoExceptionFromDirectoryWithRacyChildren() throws Exception {
+    UTIL.cleanupTestDir();
     Stoppable stop = new StoppableImplementation();
     // need to use a localutil to not break the rest of the test that runs on the local FS, which
     // gets hosed when we start to use a minicluster.
