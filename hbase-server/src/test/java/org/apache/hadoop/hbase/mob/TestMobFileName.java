@@ -24,8 +24,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Date;
 import java.util.Random;
-import java.util.UUID;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -41,6 +41,8 @@ public class TestMobFileName {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobFileName.class);
 
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
   private String uuid;
   private Date date;
   private String dateStr;
@@ -49,7 +51,7 @@ public class TestMobFileName {
   @Before
   public void setUp() {
     Random random = new Random();
-    uuid = UUID.randomUUID().toString().replaceAll("-", "");
+    uuid = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
     date = new Date();
     dateStr = MobUtils.formatDate(date);
     startKey = Bytes.toBytes(random.nextInt());

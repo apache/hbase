@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.UUID;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -46,7 +47,7 @@ public class TestRegionSplitCalculator {
       HBaseClassTestRule.forClass(TestRegionSplitCalculator.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplitCalculator.class);
-
+  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   /**
    * This is range uses a user specified start and end keys. It also has an
    * extra tiebreaker so that different ranges with the same start/end key pair
@@ -59,7 +60,7 @@ public class TestRegionSplitCalculator {
     SimpleRange(byte[] start, byte[] end) {
       this.start = start;
       this.end = end;
-      this.tiebreaker = UUID.randomUUID();
+      this.tiebreaker = TEST_UTIL.getRandomUUID();
     }
 
     @Override

@@ -36,7 +36,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -124,7 +123,7 @@ public class TestSplitLogManager {
     conf = TEST_UTIL.getConfiguration();
     // Use a different ZK wrapper instance for each tests.
     zkw =
-        new ZKWatcher(conf, "split-log-manager-tests" + UUID.randomUUID().toString(), null);
+        new ZKWatcher(conf, "split-log-manager-tests" + TEST_UTIL.getRandomUUID().toString(), null);
     master = new DummyMasterServices(zkw, conf);
 
     ZKUtil.deleteChildrenRecursively(zkw, zkw.getZNodePaths().baseZNode);
@@ -523,7 +522,7 @@ public class TestSplitLogManager {
     Path logDirPath = new Path(new Path(dir, HConstants.HREGION_LOGDIR_NAME), serverName);
     fs.mkdirs(logDirPath);
     // create an empty log file
-    String logFile = new Path(logDirPath, UUID.randomUUID().toString()).toString();
+    String logFile = new Path(logDirPath, TEST_UTIL.getRandomUUID().toString()).toString();
     fs.create(new Path(logDirPath, logFile)).close();
 
     // spin up a thread mocking split done.
