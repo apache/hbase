@@ -326,6 +326,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
+  private Path regionDir;
+  private FileSystem walFS;
+
   // The internal wait duration to acquire a lock before read/update
   // from the region. It is not per row. The purpose of this wait time
   // is to avoid waiting a long time while the region is busy, so that
@@ -927,7 +930,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         stores.forEach(HStore::startReplayingFromWAL);
         // Recover any edits if available.
         maxSeqId = Math.max(maxSeqId,
-          replayRecoveredEditsIfAny(this.fs.getRegionDir(), maxSeqIdInStores, reporter, status));
+          replayRecoveredEditsIfAny(maxSeqIdInStores, reporter, status));
         // Make sure mvcc is up to max.
         this.mvcc.advanceTo(maxSeqId);
       } finally {
@@ -970,14 +973,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
     long maxSeqIdFromFile =
-      WALSplitter.getMaxRegionSequenceId(fs.getFileSystem(), fs.getRegionDir());
+      WALSplitter.getMaxRegionSequenceId(getWalFileSystem(), getWALRegionDir());
     long nextSeqId = Math.max(maxSeqId, maxSeqIdFromFile) + 1;
     // The openSeqNum will always be increase even for read only region, as we rely on it to
     // determine whether a region has been successfully reopend, so here we always need to update
     // the max sequence id file.
     if (RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
       LOG.debug("writing seq id for {}", this.getRegionInfo().getEncodedName());
-      WALSplitter.writeRegionSequenceIdFile(fs.getFileSystem(), fs.getRegionDir(), nextSeqId);
+      WALSplitter.writeRegionSequenceIdFile(fs.getFileSystem(), getWALRegionDir(), nextSeqId);
+      //WALSplitter.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(), nextSeqId - 1);
     }
 
     LOG.info("Opened {}; next sequenceid={}", this.getRegionInfo().getShortNameToLog(), nextSeqId);
@@ -1123,11 +1127,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALUtil.writeRegionEventMarker(wal, getReplicationScope(), getRegionInfo(), regionEventDesc,
         mvcc);
 
-    // Store SeqId in HDFS when a region closes
+    // Store SeqId in WAL FileSystem when a region closes
     // checking region folder exists is due to many tests which delete the table folder while a
     // table is still online
-    if (this.fs.getFileSystem().exists(this.fs.getRegionDir())) {
-      WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(), this.fs.getRegionDir(),
+    if (getWalFileSystem().exists(getWALRegionDir())) {
+      WALSplitter.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(),
         mvcc.getReadPoint());
     }
   }
@@ -1844,6 +1848,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** @return the {@link HRegionFileSystem} used by this region */
   public HRegionFileSystem getRegionFileSystem() {
     return this.fs;
+  }
+
+  /** @return the WAL {@link HRegionFileSystem} used by this region */
+  HRegionFileSystem getRegionWALFileSystem() throws IOException {
+    return new HRegionFileSystem(conf, getWalFileSystem(),
+        FSUtils.getWALTableDir(conf, htableDescriptor.getTableName()), fs.getRegionInfo());
+  }
+
+  /** @return the WAL {@link FileSystem} being used by this region */
+  FileSystem getWalFileSystem() throws IOException {
+    if (walFS == null) {
+      walFS = FSUtils.getWALFileSystem(conf);
+    }
+    return walFS;
+  }
+
+  /**
+   * @return the Region directory under WALRootDirectory
+   * @throws IOException if there is an error getting WALRootDir
+   */
+  @VisibleForTesting
+  public Path getWALRegionDir() throws IOException {
+    if (regionDir == null) {
+      regionDir = FSUtils.getWALRegionDir(conf, getRegionInfo().getTable(),
+          getRegionInfo().getEncodedName());
+    }
+    return regionDir;
   }
 
   @Override
@@ -4381,8 +4412,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
    * @throws IOException
    */
-  protected long replayRecoveredEditsIfAny(final Path regiondir,
-      Map<byte[], Long> maxSeqIdInStores,
+  protected long replayRecoveredEditsIfAny(Map<byte[], Long> maxSeqIdInStores,
       final CancelableProgressable reporter, final MonitoredTask status)
       throws IOException {
     long minSeqIdForTheRegion = -1;
@@ -4393,14 +4423,75 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     long seqid = minSeqIdForTheRegion;
 
-    FileSystem fs = this.fs.getFileSystem();
-    NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(fs, regiondir);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Found " + (files == null ? 0 : files.size())
-        + " recovered edits file(s) under " + regiondir);
+    FileSystem walFS = getWalFileSystem();
+    FileSystem rootFS = getFilesystem();
+    Path regionDir = getWALRegionDir();
+    Path defaultRegionDir = getRegionDir(FSUtils.getRootDir(conf), getRegionInfo());
+
+    // This is to ensure backwards compatability with HBASE-20723 where recovered edits can appear
+    // under the root dir even if walDir is set.
+    NavigableSet<Path> filesUnderRootDir = null;
+    if (!regionDir.equals(defaultRegionDir)) {
+      filesUnderRootDir =
+          WALSplitter.getSplitEditFilesSorted(rootFS, defaultRegionDir);
+      seqid = Math.max(seqid,
+          replayRecoveredEditsForPaths(minSeqIdForTheRegion, rootFS, filesUnderRootDir, reporter,
+              defaultRegionDir));
     }
 
-    if (files == null || files.isEmpty()) return seqid;
+    NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(walFS, regionDir);
+    seqid = Math.max(seqid, replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS,
+        files, reporter, regionDir));
+
+    if (seqid > minSeqIdForTheRegion) {
+      // Then we added some edits to memory. Flush and cleanup split edit files.
+      internalFlushcache(null, seqid, stores.values(), status, false, FlushLifeCycleTracker.DUMMY);
+    }
+    // Now delete the content of recovered edits.  We're done w/ them.
+    if (files.size() > 0 && this.conf.getBoolean("hbase.region.archive.recovered.edits", false)) {
+      // For debugging data loss issues!
+      // If this flag is set, make use of the hfile archiving by making recovered.edits a fake
+      // column family. Have to fake out file type too by casting our recovered.edits as storefiles
+      String fakeFamilyName = WALSplitter.getRegionDirRecoveredEditsDir(regionDir).getName();
+      Set<HStoreFile> fakeStoreFiles = new HashSet<>(files.size());
+      for (Path file: files) {
+        fakeStoreFiles.add(
+          new HStoreFile(walFS, file, this.conf, null, null, true));
+      }
+      getRegionWALFileSystem().removeStoreFiles(fakeFamilyName, fakeStoreFiles);
+    } else {
+      if (filesUnderRootDir != null) {
+        for (Path file : filesUnderRootDir) {
+          if (!rootFS.delete(file, false)) {
+            LOG.error("Failed delete of {} from under the root directory.", file);
+          } else {
+            LOG.debug("Deleted recovered.edits under root directory. file=" + file);
+          }
+        }
+      }
+      for (Path file: files) {
+        if (!walFS.delete(file, false)) {
+          LOG.error("Failed delete of " + file);
+        } else {
+          LOG.debug("Deleted recovered.edits file=" + file);
+        }
+      }
+    }
+    return seqid;
+  }
+
+  private long replayRecoveredEditsForPaths(long minSeqIdForTheRegion, FileSystem fs,
+      final NavigableSet<Path> files, final CancelableProgressable reporter, final Path regionDir)
+      throws IOException {
+    long seqid = minSeqIdForTheRegion;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Found " + (files == null ? 0 : files.size())
+          + " recovered edits file(s) under " + regionDir);
+    }
+
+    if (files == null || files.isEmpty()) {
+      return minSeqIdForTheRegion;
+    }
 
     for (Path edits: files) {
       if (edits == null || !fs.exists(edits)) {
@@ -4415,8 +4506,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (maxSeqId <= minSeqIdForTheRegion) {
         if (LOG.isDebugEnabled()) {
           String msg = "Maximum sequenceid for this wal is " + maxSeqId
-            + " and minimum sequenceid for the region is " + minSeqIdForTheRegion
-            + ", skipped the whole file, path=" + edits;
+              + " and minimum sequenceid for the region is " + minSeqIdForTheRegion
+              + ", skipped the whole file, path=" + edits;
           LOG.debug(msg);
         }
         continue;
@@ -4425,7 +4516,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         // replay the edits. Replay can return -1 if everything is skipped, only update
         // if seqId is greater
-        seqid = Math.max(seqid, replayRecoveredEdits(edits, maxSeqIdInStores, reporter));
+        seqid = Math.max(seqid, replayRecoveredEdits(edits, maxSeqIdInStores, reporter, fs));
       } catch (IOException e) {
         boolean skipErrors = conf.getBoolean(
             HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
@@ -4435,40 +4526,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (conf.get("hbase.skip.errors") != null) {
           LOG.warn(
               "The property 'hbase.skip.errors' has been deprecated. Please use " +
-              HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
+                  HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
         }
         if (skipErrors) {
-          Path p = WALSplitter.moveAsideBadEditsFile(fs, edits);
+          Path p = WALSplitter.moveAsideBadEditsFile(walFS, edits);
           LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS
               + "=true so continuing. Renamed " + edits +
               " as " + p, e);
         } else {
           throw e;
-        }
-      }
-    }
-    if (seqid > minSeqIdForTheRegion) {
-      // Then we added some edits to memory. Flush and cleanup split edit files.
-      internalFlushcache(null, seqid, stores.values(), status, false, FlushLifeCycleTracker.DUMMY);
-    }
-    // Now delete the content of recovered edits.  We're done w/ them.
-    if (files.size() > 0 && this.conf.getBoolean("hbase.region.archive.recovered.edits", false)) {
-      // For debugging data loss issues!
-      // If this flag is set, make use of the hfile archiving by making recovered.edits a fake
-      // column family. Have to fake out file type too by casting our recovered.edits as storefiles
-      String fakeFamilyName = WALSplitter.getRegionDirRecoveredEditsDir(regiondir).getName();
-      Set<HStoreFile> fakeStoreFiles = new HashSet<>(files.size());
-      for (Path file: files) {
-        fakeStoreFiles.add(
-          new HStoreFile(getRegionFileSystem().getFileSystem(), file, this.conf, null, null, true));
-      }
-      getRegionFileSystem().removeStoreFiles(fakeFamilyName, fakeStoreFiles);
-    } else {
-      for (Path file: files) {
-        if (!fs.delete(file, false)) {
-          LOG.error("Failed delete of " + file);
-        } else {
-          LOG.debug("Deleted recovered.edits file=" + file);
         }
       }
     }
@@ -4485,12 +4551,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   private long replayRecoveredEdits(final Path edits,
-      Map<byte[], Long> maxSeqIdInStores, final CancelableProgressable reporter)
+      Map<byte[], Long> maxSeqIdInStores, final CancelableProgressable reporter, FileSystem fs)
     throws IOException {
     String msg = "Replaying edits from " + edits;
     LOG.info(msg);
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
-    FileSystem fs = this.fs.getFileSystem();
 
     status.setStatus("Opening recovered edits");
     WAL.Reader reader = null;
@@ -4644,7 +4709,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           coprocessorHost.postReplayWALs(this.getRegionInfo(), edits);
         }
       } catch (EOFException eof) {
-        Path p = WALSplitter.moveAsideBadEditsFile(fs, edits);
+        Path p = WALSplitter.moveAsideBadEditsFile(walFS, edits);
         msg = "EnLongAddered EOF. Most likely due to Master failure during " +
             "wal splitting, so we have this data in another edit.  " +
             "Continuing, but renaming " + edits + " as " + p;
@@ -4654,7 +4719,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // If the IOE resulted from bad file format,
         // then this problem is idempotent and retrying won't help
         if (ioe.getCause() instanceof ParseException) {
-          Path p = WALSplitter.moveAsideBadEditsFile(fs, edits);
+          Path p = WALSplitter.moveAsideBadEditsFile(walFS, edits);
           msg = "File corruption enLongAddered!  " +
               "Continuing, but renaming " + edits + " as " + p;
           LOG.warn(msg, ioe);
@@ -7938,7 +8003,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      50 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
+      53 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       3 * Bytes.SIZEOF_BOOLEAN);
 

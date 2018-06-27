@@ -179,7 +179,7 @@ public class TestWALFactory {
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
     final int howmany = 3;
     RegionInfo[] infos = new RegionInfo[3];
-    Path tabledir = FSUtils.getTableDir(hbaseWALDir, tableName);
+    Path tabledir = FSUtils.getWALTableDir(conf, tableName);
     fs.mkdirs(tabledir);
     for (int i = 0; i < howmany; i++) {
       infos[i] = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("" + i))

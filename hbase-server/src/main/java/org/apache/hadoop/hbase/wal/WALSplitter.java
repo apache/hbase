@@ -115,8 +115,8 @@ public class WALSplitter {
   public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
 
   // Parameters for split process
-  protected final Path rootDir;
-  protected final FileSystem fs;
+  protected final Path walDir;
+  protected final FileSystem walFS;
   protected final Configuration conf;
 
   // Major subcomponents of the split process.
@@ -148,15 +148,15 @@ public class WALSplitter {
 
 
   @VisibleForTesting
-  WALSplitter(final WALFactory factory, Configuration conf, Path rootDir,
-      FileSystem fs, LastSequenceId idChecker,
+  WALSplitter(final WALFactory factory, Configuration conf, Path walDir,
+      FileSystem walFS, LastSequenceId idChecker,
       SplitLogWorkerCoordination splitLogWorkerCoordination) {
     this.conf = HBaseConfiguration.create(conf);
     String codecClassName = conf
         .get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
     this.conf.set(HConstants.RPC_CODEC_CONF_KEY, codecClassName);
-    this.rootDir = rootDir;
-    this.fs = fs;
+    this.walDir = walDir;
+    this.walFS = walFS;
     this.sequenceIdChecker = idChecker;
     this.splitLogWorkerCoordination = splitLogWorkerCoordination;
 
@@ -186,11 +186,11 @@ public class WALSplitter {
    * <p>
    * @return false if it is interrupted by the progress-able.
    */
-  public static boolean splitLogFile(Path rootDir, FileStatus logfile, FileSystem fs,
+  public static boolean splitLogFile(Path walDir, FileStatus logfile, FileSystem walFS,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
       SplitLogWorkerCoordination splitLogWorkerCoordination, final WALFactory factory)
       throws IOException {
-    WALSplitter s = new WALSplitter(factory, conf, rootDir, fs, idChecker,
+    WALSplitter s = new WALSplitter(factory, conf, walDir, walFS, idChecker,
         splitLogWorkerCoordination);
     return s.splitLogFile(logfile, reporter);
   }
@@ -201,13 +201,13 @@ public class WALSplitter {
   // which uses this method to do log splitting.
   @VisibleForTesting
   public static List<Path> split(Path rootDir, Path logDir, Path oldLogDir,
-      FileSystem fs, Configuration conf, final WALFactory factory) throws IOException {
+      FileSystem walFS, Configuration conf, final WALFactory factory) throws IOException {
     final FileStatus[] logfiles = SplitLogManager.getFileList(conf,
         Collections.singletonList(logDir), null);
     List<Path> splits = new ArrayList<>();
     if (ArrayUtils.isNotEmpty(logfiles)) {
       for (FileStatus logfile: logfiles) {
-        WALSplitter s = new WALSplitter(factory, conf, rootDir, fs, null, null);
+        WALSplitter s = new WALSplitter(factory, conf, rootDir, walFS, null, null);
         if (s.splitLogFile(logfile, null)) {
           finishSplitLogFile(rootDir, oldLogDir, logfile.getPath(), conf);
           if (s.outputSink.splits != null) {
@@ -216,7 +216,7 @@ public class WALSplitter {
         }
       }
     }
-    if (!fs.delete(logDir, true)) {
+    if (!walFS.delete(logDir, true)) {
       throw new IOException("Unable to delete src dir: " + logDir);
     }
     return splits;
@@ -322,10 +322,10 @@ public class WALSplitter {
       LOG.warn("Could not parse, corrupted WAL={}", logPath, e);
       if (splitLogWorkerCoordination != null) {
         // Some tests pass in a csm of null.
-        splitLogWorkerCoordination.markCorrupted(rootDir, logfile.getPath().getName(), fs);
+        splitLogWorkerCoordination.markCorrupted(walDir, logfile.getPath().getName(), walFS);
       } else {
         // for tests only
-        ZKSplitLog.markCorrupted(rootDir, logfile.getPath().getName(), fs);
+        ZKSplitLog.markCorrupted(walDir, logfile.getPath().getName(), walFS);
       }
       isCorrupted = true;
     } catch (IOException e) {
@@ -373,31 +373,30 @@ public class WALSplitter {
    */
   public static void finishSplitLogFile(String logfile,
       Configuration conf)  throws IOException {
-    Path rootdir = FSUtils.getWALRootDir(conf);
-    Path oldLogDir = new Path(rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path walDir = FSUtils.getWALRootDir(conf);
+    Path oldLogDir = new Path(walDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path logPath;
-    if (FSUtils.isStartingWithPath(rootdir, logfile)) {
+    if (FSUtils.isStartingWithPath(walDir, logfile)) {
       logPath = new Path(logfile);
     } else {
-      logPath = new Path(rootdir, logfile);
+      logPath = new Path(walDir, logfile);
     }
-    finishSplitLogFile(rootdir, oldLogDir, logPath, conf);
+    finishSplitLogFile(walDir, oldLogDir, logPath, conf);
   }
 
-  private static void finishSplitLogFile(Path rootdir, Path oldLogDir,
+  private static void finishSplitLogFile(Path walDir, Path oldLogDir,
       Path logPath, Configuration conf) throws IOException {
     List<Path> processedLogs = new ArrayList<>();
     List<Path> corruptedLogs = new ArrayList<>();
-    FileSystem fs;
-    fs = rootdir.getFileSystem(conf);
-    if (ZKSplitLog.isCorrupted(rootdir, logPath.getName(), fs)) {
+    FileSystem walFS = walDir.getFileSystem(conf);
+    if (ZKSplitLog.isCorrupted(walDir, logPath.getName(), walFS)) {
       corruptedLogs.add(logPath);
     } else {
       processedLogs.add(logPath);
     }
-    archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
-    Path stagingDir = ZKSplitLog.getSplitLogDir(rootdir, logPath.getName());
-    fs.delete(stagingDir, true);
+    archiveLogs(corruptedLogs, processedLogs, oldLogDir, walFS, conf);
+    Path stagingDir = ZKSplitLog.getSplitLogDir(walDir, logPath.getName());
+    walFS.delete(stagingDir, true);
   }
 
   /**
@@ -408,30 +407,30 @@ public class WALSplitter {
    * @param corruptedLogs
    * @param processedLogs
    * @param oldLogDir
-   * @param fs
+   * @param walFS WAL FileSystem to archive files on.
    * @param conf
    * @throws IOException
    */
   private static void archiveLogs(
       final List<Path> corruptedLogs,
       final List<Path> processedLogs, final Path oldLogDir,
-      final FileSystem fs, final Configuration conf) throws IOException {
+      final FileSystem walFS, final Configuration conf) throws IOException {
     final Path corruptDir = new Path(FSUtils.getWALRootDir(conf), HConstants.CORRUPT_DIR_NAME);
     if (conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir") != null) {
       LOG.warn("hbase.regionserver.hlog.splitlog.corrupt.dir is deprecated. Default to {}",
           corruptDir);
     }
-    if (!fs.mkdirs(corruptDir)) {
+    if (!walFS.mkdirs(corruptDir)) {
       LOG.info("Unable to mkdir {}", corruptDir);
     }
-    fs.mkdirs(oldLogDir);
+    walFS.mkdirs(oldLogDir);
 
     // this method can get restarted or called multiple times for archiving
     // the same log files.
     for (Path corrupted : corruptedLogs) {
       Path p = new Path(corruptDir, corrupted.getName());
-      if (fs.exists(corrupted)) {
-        if (!fs.rename(corrupted, p)) {
+      if (walFS.exists(corrupted)) {
+        if (!walFS.rename(corrupted, p)) {
           LOG.warn("Unable to move corrupted log {} to {}", corrupted, p);
         } else {
           LOG.warn("Moved corrupted log {} to {}", corrupted, p);
@@ -441,8 +440,8 @@ public class WALSplitter {
 
     for (Path p : processedLogs) {
       Path newPath = AbstractFSWAL.getWALArchivePath(oldLogDir, p);
-      if (fs.exists(p)) {
-        if (!FSUtils.renameAndSetModifyTime(fs, p, newPath)) {
+      if (walFS.exists(p)) {
+        if (!FSUtils.renameAndSetModifyTime(walFS, p, newPath)) {
           LOG.warn("Unable to move {} to {}", p, newPath);
         } else {
           LOG.info("Archived processed log {} to {}", p, newPath);
@@ -466,36 +465,31 @@ public class WALSplitter {
    */
   @SuppressWarnings("deprecation")
   @VisibleForTesting
-  static Path getRegionSplitEditsPath(final FileSystem fs,
-      final Entry logEntry, final Path rootDir, String fileNameBeingSplit)
-  throws IOException {
-    Path tableDir = FSUtils.getTableDir(rootDir, logEntry.getKey().getTableName());
+  static Path getRegionSplitEditsPath(final Entry logEntry, String fileNameBeingSplit,
+      Configuration conf) throws IOException {
+    FileSystem walFS = FSUtils.getWALFileSystem(conf);
+    Path tableDir = FSUtils.getWALTableDir(conf, logEntry.getKey().getTableName());
     String encodedRegionName = Bytes.toString(logEntry.getKey().getEncodedRegionName());
-    Path regiondir = HRegion.getRegionDir(tableDir, encodedRegionName);
-    Path dir = getRegionDirRecoveredEditsDir(regiondir);
+    Path regionDir = HRegion.getRegionDir(tableDir, encodedRegionName);
+    Path dir = getRegionDirRecoveredEditsDir(regionDir);
 
-    if (!fs.exists(regiondir)) {
-      LOG.info("This region's directory does not exist: {}."
-          + "It is very likely that it was already split so it is "
-          + "safe to discard those edits.", regiondir);
-      return null;
-    }
-    if (fs.exists(dir) && fs.isFile(dir)) {
+
+    if (walFS.exists(dir) && walFS.isFile(dir)) {
       Path tmp = new Path("/tmp");
-      if (!fs.exists(tmp)) {
-        fs.mkdirs(tmp);
+      if (!walFS.exists(tmp)) {
+        walFS.mkdirs(tmp);
       }
       tmp = new Path(tmp,
         HConstants.RECOVERED_EDITS_DIR + "_" + encodedRegionName);
       LOG.warn("Found existing old file: {}. It could be some "
         + "leftover of an old installation. It should be a folder instead. "
         + "So moving it to {}", dir, tmp);
-      if (!fs.rename(dir, tmp)) {
+      if (!walFS.rename(dir, tmp)) {
         LOG.warn("Failed to sideline old file {}", dir);
       }
     }
 
-    if (!fs.exists(dir) && !fs.mkdirs(dir)) {
+    if (!walFS.exists(dir) && !walFS.mkdirs(dir)) {
       LOG.warn("mkdir failed on {}", dir);
     }
     // Append fileBeingSplit to prevent name conflict since we may have duplicate wal entries now.
@@ -533,34 +527,34 @@ public class WALSplitter {
   private static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
 
   /**
-   * @param regiondir
+   * @param regionDir
    *          This regions directory in the filesystem.
    * @return The directory that holds recovered edits files for the region
-   *         <code>regiondir</code>
+   *         <code>regionDir</code>
    */
-  public static Path getRegionDirRecoveredEditsDir(final Path regiondir) {
-    return new Path(regiondir, HConstants.RECOVERED_EDITS_DIR);
+  public static Path getRegionDirRecoveredEditsDir(final Path regionDir) {
+    return new Path(regionDir, HConstants.RECOVERED_EDITS_DIR);
   }
 
   /**
    * Check whether there is recovered.edits in the region dir
-   * @param fs FileSystem
+   * @param walFS FileSystem
    * @param conf conf
    * @param regionInfo the region to check
    * @throws IOException IOException
    * @return true if recovered.edits exist in the region dir
    */
-  public static boolean hasRecoveredEdits(final FileSystem fs,
+  public static boolean hasRecoveredEdits(final FileSystem walFS,
       final Configuration conf, final RegionInfo regionInfo) throws IOException {
     // No recovered.edits for non default replica regions
     if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
       return false;
     }
-    Path rootDir = FSUtils.getRootDir(conf);
     //Only default replica region can reach here, so we can use regioninfo
     //directly without converting it to default replica's regioninfo.
-    Path regionDir = HRegion.getRegionDir(rootDir, regionInfo);
-    NavigableSet<Path> files = getSplitEditFilesSorted(fs, regionDir);
+    Path regionDir = FSUtils.getWALRegionDir(conf, regionInfo.getTable(),
+        regionInfo.getEncodedName());
+    NavigableSet<Path> files = getSplitEditFilesSorted(walFS, regionDir);
     return files != null && !files.isEmpty();
   }
 
@@ -569,19 +563,19 @@ public class WALSplitter {
    * Returns sorted set of edit files made by splitter, excluding files
    * with '.temp' suffix.
    *
-   * @param fs
-   * @param regiondir
-   * @return Files in passed <code>regiondir</code> as a sorted set.
+   * @param walFS WAL FileSystem used to retrieving split edits files.
+   * @param regionDir WAL region dir to look for recovered edits files under.
+   * @return Files in passed <code>regionDir</code> as a sorted set.
    * @throws IOException
    */
-  public static NavigableSet<Path> getSplitEditFilesSorted(final FileSystem fs,
-      final Path regiondir) throws IOException {
+  public static NavigableSet<Path> getSplitEditFilesSorted(final FileSystem walFS,
+      final Path regionDir) throws IOException {
     NavigableSet<Path> filesSorted = new TreeSet<>();
-    Path editsdir = getRegionDirRecoveredEditsDir(regiondir);
-    if (!fs.exists(editsdir)) {
+    Path editsdir = getRegionDirRecoveredEditsDir(regionDir);
+    if (!walFS.exists(editsdir)) {
       return filesSorted;
     }
-    FileStatus[] files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
+    FileStatus[] files = FSUtils.listStatus(walFS, editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
         boolean result = false;
@@ -591,7 +585,7 @@ public class WALSplitter {
           // In particular, on error, we'll move aside the bad edit file giving
           // it a timestamp suffix. See moveAsideBadEditsFile.
           Matcher m = EDITFILES_NAME_PATTERN.matcher(p.getName());
-          result = fs.isFile(p) && m.matches();
+          result = walFS.isFile(p) && m.matches();
           // Skip the file whose name ends with RECOVERED_LOG_TMPFILE_SUFFIX,
           // because it means splitwal thread is writting this file.
           if (p.getName().endsWith(RECOVERED_LOG_TMPFILE_SUFFIX)) {
@@ -616,17 +610,17 @@ public class WALSplitter {
   /**
    * Move aside a bad edits file.
    *
-   * @param fs
+   * @param walFS WAL FileSystem used to rename bad edits file.
    * @param edits
    *          Edits file to move aside.
    * @return The name of the moved aside file.
    * @throws IOException
    */
-  public static Path moveAsideBadEditsFile(final FileSystem fs, final Path edits)
+  public static Path moveAsideBadEditsFile(final FileSystem walFS, final Path edits)
       throws IOException {
     Path moveAsideName = new Path(edits.getParent(), edits.getName() + "."
         + System.currentTimeMillis());
-    if (!fs.rename(edits, moveAsideName)) {
+    if (!walFS.rename(edits, moveAsideName)) {
       LOG.warn("Rename failed from {} to {}", edits, moveAsideName);
     }
     return moveAsideName;
@@ -645,12 +639,13 @@ public class WALSplitter {
         || file.getName().endsWith(OLD_SEQUENCE_ID_FILE_SUFFIX);
   }
 
-  private static FileStatus[] getSequenceIdFiles(FileSystem fs, Path regionDir) throws IOException {
+  private static FileStatus[] getSequenceIdFiles(FileSystem walFS, Path regionDir)
+      throws IOException {
     // TODO: Why are we using a method in here as part of our normal region open where
     // there is no splitting involved? Fix. St.Ack 01/20/2017.
     Path editsDir = WALSplitter.getRegionDirRecoveredEditsDir(regionDir);
     try {
-      FileStatus[] files = fs.listStatus(editsDir, WALSplitter::isSequenceIdFile);
+      FileStatus[] files = walFS.listStatus(editsDir, WALSplitter::isSequenceIdFile);
       return files != null ? files : new FileStatus[0];
     } catch (FileNotFoundException e) {
       return new FileStatus[0];
@@ -674,16 +669,16 @@ public class WALSplitter {
   /**
    * Get the max sequence id which is stored in the region directory. -1 if none.
    */
-  public static long getMaxRegionSequenceId(FileSystem fs, Path regionDir) throws IOException {
-    return getMaxSequenceId(getSequenceIdFiles(fs, regionDir));
+  public static long getMaxRegionSequenceId(FileSystem walFS, Path regionDir) throws IOException {
+    return getMaxSequenceId(getSequenceIdFiles(walFS, regionDir));
   }
 
   /**
    * Create a file with name as region's max sequence id
    */
-  public static void writeRegionSequenceIdFile(FileSystem fs, Path regionDir, long newMaxSeqId)
+  public static void writeRegionSequenceIdFile(FileSystem walFS, Path regionDir, long newMaxSeqId)
       throws IOException {
-    FileStatus[] files = getSequenceIdFiles(fs, regionDir);
+    FileStatus[] files = getSequenceIdFiles(walFS, regionDir);
     long maxSeqId = getMaxSequenceId(files);
     if (maxSeqId > newMaxSeqId) {
       throw new IOException("The new max sequence id " + newMaxSeqId +
@@ -694,7 +689,7 @@ public class WALSplitter {
       newMaxSeqId + SEQUENCE_ID_FILE_SUFFIX);
     if (newMaxSeqId != maxSeqId) {
       try {
-        if (!fs.createNewFile(newSeqIdFile) && !fs.exists(newSeqIdFile)) {
+        if (!walFS.createNewFile(newSeqIdFile) && !walFS.exists(newSeqIdFile)) {
           throw new IOException("Failed to create SeqId file:" + newSeqIdFile);
         }
         LOG.debug("Wrote file={}, newMaxSeqId={}, maxSeqId={}", newSeqIdFile, newMaxSeqId,
@@ -706,7 +701,7 @@ public class WALSplitter {
     // remove old ones
     for (FileStatus status : files) {
       if (!newSeqIdFile.equals(status.getPath())) {
-        fs.delete(status.getPath(), false);
+        walFS.delete(status.getPath(), false);
       }
     }
   }
@@ -733,7 +728,7 @@ public class WALSplitter {
     }
 
     try {
-      FSUtils.getInstance(fs, conf).recoverFileLease(fs, path, conf, reporter);
+      FSUtils.getInstance(walFS, conf).recoverFileLease(walFS, path, conf, reporter);
       try {
         in = getReader(path, reporter);
       } catch (EOFException e) {
@@ -800,7 +795,7 @@ public class WALSplitter {
    */
   protected Writer createWriter(Path logfile)
       throws IOException {
-    return walFactory.createRecoveredEditsWriter(fs, logfile);
+    return walFactory.createRecoveredEditsWriter(walFS, logfile);
   }
 
   /**
@@ -808,7 +803,7 @@ public class WALSplitter {
    * @return new Reader instance, caller should close
    */
   protected Reader getReader(Path curLogFile, CancelableProgressable reporter) throws IOException {
-    return walFactory.createReader(fs, curLogFile, reporter);
+    return walFactory.createReader(walFS, curLogFile, reporter);
   }
 
   /**
@@ -1283,9 +1278,10 @@ public class WALSplitter {
     }
 
     // delete the one with fewer wal entries
-    private void deleteOneWithFewerEntries(WriterAndPath wap, Path dst) throws IOException {
+    private void deleteOneWithFewerEntries(WriterAndPath wap, Path dst)
+        throws IOException {
       long dstMinLogSeqNum = -1L;
-      try (WAL.Reader reader = walFactory.createReader(fs, dst)) {
+      try (WAL.Reader reader = walFactory.createReader(walFS, dst)) {
         WAL.Entry entry = reader.next();
         if (entry != null) {
           dstMinLogSeqNum = entry.getKey().getSequenceId();
@@ -1297,15 +1293,15 @@ public class WALSplitter {
       if (wap.minLogSeqNum < dstMinLogSeqNum) {
         LOG.warn("Found existing old edits file. It could be the result of a previous failed"
             + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
-            + fs.getFileStatus(dst).getLen());
-        if (!fs.delete(dst, false)) {
+            + walFS.getFileStatus(dst).getLen());
+        if (!walFS.delete(dst, false)) {
           LOG.warn("Failed deleting of old {}", dst);
           throw new IOException("Failed deleting of old " + dst);
         }
       } else {
         LOG.warn("Found existing old edits file and we have less entries. Deleting " + wap.p
-            + ", length=" + fs.getFileStatus(wap.p).getLen());
-        if (!fs.delete(wap.p, false)) {
+            + ", length=" + walFS.getFileStatus(wap.p).getLen());
+        if (!walFS.delete(wap.p, false)) {
           LOG.warn("Failed deleting of {}", wap.p);
           throw new IOException("Failed deleting of " + wap.p);
         }
@@ -1389,9 +1385,7 @@ public class WALSplitter {
 
     Path closeWriter(String encodedRegionName, WriterAndPath wap,
         List<IOException> thrown) throws IOException{
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Closing " + wap.p);
-      }
+      LOG.trace("Closing " + wap.p);
       try {
         wap.w.close();
       } catch (IOException ioe) {
@@ -1406,7 +1400,7 @@ public class WALSplitter {
       }
       if (wap.editsWritten == 0) {
         // just remove the empty recovered.edits file
-        if (fs.exists(wap.p) && !fs.delete(wap.p, false)) {
+        if (walFS.exists(wap.p) && !walFS.delete(wap.p, false)) {
           LOG.warn("Failed deleting empty " + wap.p);
           throw new IOException("Failed deleting empty  " + wap.p);
         }
@@ -1416,14 +1410,14 @@ public class WALSplitter {
       Path dst = getCompletedRecoveredEditsFilePath(wap.p,
           regionMaximumEditLogSeqNum.get(encodedRegionName));
       try {
-        if (!dst.equals(wap.p) && fs.exists(dst)) {
+        if (!dst.equals(wap.p) && walFS.exists(dst)) {
           deleteOneWithFewerEntries(wap, dst);
         }
         // Skip the unit tests which create a splitter that reads and
         // writes the data without touching disk.
         // TestHLogSplit#testThreading is an example.
-        if (fs.exists(wap.p)) {
-          if (!fs.rename(wap.p, dst)) {
+        if (walFS.exists(wap.p)) {
+          if (!walFS.rename(wap.p, dst)) {
             throw new IOException("Failed renaming " + wap.p + " to " + dst);
           }
           LOG.info("Rename " + wap.p + " to " + dst);
@@ -1495,7 +1489,7 @@ public class WALSplitter {
       if (blacklistedRegions.contains(region)) {
         return null;
       }
-      ret = createWAP(region, entry, rootDir);
+      ret = createWAP(region, entry);
       if (ret == null) {
         blacklistedRegions.add(region);
         return null;
@@ -1509,16 +1503,18 @@ public class WALSplitter {
     /**
      * @return a path with a write for that path. caller should close.
      */
-    WriterAndPath createWAP(byte[] region, Entry entry, Path rootdir) throws IOException {
-      Path regionedits = getRegionSplitEditsPath(fs, entry, rootdir, fileBeingSplit.getPath().getName());
+    WriterAndPath createWAP(byte[] region, Entry entry) throws IOException {
+      Path regionedits = getRegionSplitEditsPath(entry,
+          fileBeingSplit.getPath().getName(), conf);
       if (regionedits == null) {
         return null;
       }
-      if (fs.exists(regionedits)) {
+      FileSystem walFs = FSUtils.getWALFileSystem(conf);
+      if (walFs.exists(regionedits)) {
         LOG.warn("Found old edits file. It could be the "
             + "result of a previous failed split attempt. Deleting " + regionedits + ", length="
-            + fs.getFileStatus(regionedits).getLen());
-        if (!fs.delete(regionedits, false)) {
+            + walFs.getFileStatus(regionedits).getLen());
+        if (!walFs.delete(regionedits, false)) {
           LOG.warn("Failed delete of old {}", regionedits);
         }
       }

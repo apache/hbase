@@ -139,6 +139,12 @@ public abstract class AbstractStateMachineTableProcedure<TState>
     return new Path(tableDir, ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
   }
 
+  protected final Path getWALRegionDir(MasterProcedureEnv env, RegionInfo region)
+      throws IOException {
+    return FSUtils.getWALRegionDir(env.getMasterConfiguration(),
+        region.getTable(), region.getEncodedName());
+  }
+
   /**
    * Check that cluster is up and master is running. Check table is modifiable.
    * If <code>enabled</code>, check table is enabled else check it is disabled.
