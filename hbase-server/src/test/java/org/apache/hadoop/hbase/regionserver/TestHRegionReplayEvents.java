@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -1643,7 +1642,7 @@ public class TestHRegionReplayEvents {
       byte[] valueBytes) throws IOException {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(TEST_UTIL.getConfiguration());
     // TODO We need a way to do this without creating files
-    Path testFile = new Path(testPath, UUID.randomUUID().toString());
+    Path testFile = new Path(testPath, TEST_UTIL.getRandomUUID().toString());
     FSDataOutputStream out = TEST_UTIL.getTestFileSystem().create(testFile);
     try {
       hFileFactory.withOutputStream(out);

@@ -38,7 +38,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -357,9 +356,9 @@ public class TestFromClientSide {
     Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
     String value = "this is the value";
     String value2 = "this is some other value";
-    String keyPrefix1 = UUID.randomUUID().toString();
-    String keyPrefix2 = UUID.randomUUID().toString();
-    String keyPrefix3 = UUID.randomUUID().toString();
+    String keyPrefix1 = TEST_UTIL.getRandomUUID().toString();
+    String keyPrefix2 = TEST_UTIL.getRandomUUID().toString();
+    String keyPrefix3 = TEST_UTIL.getRandomUUID().toString();
     putRows(ht, 3, value, keyPrefix1);
     putRows(ht, 3, value, keyPrefix2);
     putRows(ht, 3, value, keyPrefix3);
@@ -449,7 +448,7 @@ public class TestFromClientSide {
   private void putRows(Table ht, int numRows, String value, String key)
       throws IOException {
     for (int i = 0; i < numRows; i++) {
-      String row = key + "_" + UUID.randomUUID().toString();
+      String row = key + "_" + TEST_UTIL.getRandomUUID().toString();
       System.out.println(String.format("Saving row: %s, with value %s", row,
           value));
       Put put = new Put(Bytes.toBytes(row));

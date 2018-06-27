@@ -299,7 +299,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
     @Override
     public UUID getPeerUUID() {
-      return UUID.randomUUID();
+      return utility1.getRandomUUID();
     }
 
     @Override

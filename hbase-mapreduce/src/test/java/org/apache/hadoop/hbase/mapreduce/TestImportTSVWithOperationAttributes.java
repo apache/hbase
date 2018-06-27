@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -123,7 +122,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -139,7 +138,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @Test
   public void testMROnTableWithInvalidOperationAttr() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {

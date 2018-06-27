@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -136,8 +135,8 @@ public class TestPartitionedMobCompactor {
     Path testDir = FSUtils.getRootDir(conf);
     Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
     basePath = new Path(new Path(mobTestDir, tableName), family);
-    mobSuffix = UUID.randomUUID().toString().replaceAll("-", "");
-    delSuffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
+    mobSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
+    delSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "") + "_del";
     allFiles.clear();
     mobFiles.clear();
     delFiles.clear();
@@ -832,8 +831,8 @@ public class TestPartitionedMobCompactor {
       if (sameStartKey) {
         // When creating multiple files under one partition, suffix needs to be different.
         startRow = Bytes.toBytes(startKey);
-        mobSuffix = UUID.randomUUID().toString().replaceAll("-", "");
-        delSuffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
+        mobSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
+        delSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "") + "_del";
       } else {
         startRow = Bytes.toBytes(startKey + i);
       }

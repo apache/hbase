@@ -28,7 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -249,7 +248,7 @@ public class TestFSUtils {
     assertEquals(new FsPermission("700"), filePerm);
 
     // then that the correct file is created
-    Path p = new Path("target" + File.separator + UUID.randomUUID().toString());
+    Path p = new Path("target" + File.separator + htu.getRandomUUID().toString());
     try {
       FSDataOutputStream out = FSUtils.create(conf, fs, p, filePerm, null);
       out.close();
@@ -268,7 +267,7 @@ public class TestFSUtils {
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
-    String file = UUID.randomUUID().toString();
+    String file = htu.getRandomUUID().toString();
     Path p = new Path(htu.getDataTestDir(), "temptarget" + File.separator + file);
     Path p1 = new Path(htu.getDataTestDir(), "temppath" + File.separator + file);
     try {
@@ -309,7 +308,7 @@ public class TestFSUtils {
     FileSystem fs = FileSystem.get(conf);
     Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
 
-    String file = UUID.randomUUID().toString();
+    String file = htu.getRandomUUID().toString();
     Path p = new Path(testDir, file);
 
     FSDataOutputStream out = fs.create(p);
@@ -323,7 +322,7 @@ public class TestFSUtils {
     mockEnv.setValue(expect);
     EnvironmentEdgeManager.injectEdge(mockEnv);
     try {
-      String dstFile = UUID.randomUUID().toString();
+      String dstFile = htu.getRandomUUID().toString();
       Path dst = new Path(testDir , dstFile);
 
       assertTrue(FSUtils.renameAndSetModifyTime(fs, p, dst));
@@ -369,7 +368,7 @@ public class TestFSUtils {
       FSUtils.setStoragePolicy(fs, conf, testDir, HConstants.WAL_STORAGE_POLICY,
           HConstants.DEFAULT_WAL_STORAGE_POLICY);
 
-      String file = UUID.randomUUID().toString();
+      String file =htu.getRandomUUID().toString();
       Path p = new Path(testDir, file);
       WriteDataToHDFS(fs, p, 4096);
       // will assert existance before deleting.

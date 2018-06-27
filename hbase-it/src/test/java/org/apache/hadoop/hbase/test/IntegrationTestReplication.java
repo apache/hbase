@@ -264,7 +264,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      */
     protected void runGenerator() throws Exception {
       Path outputPath = new Path(outputDir);
-      UUID uuid = UUID.randomUUID(); //create a random UUID.
+      UUID uuid = util.getRandomUUID(); //create a random UUID.
       Path generatorOutput = new Path(outputPath, uuid.toString());
 
       Generator generator = new Generator();
@@ -288,7 +288,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      */
     protected void runVerify(long expectedNumNodes) throws Exception {
       Path outputPath = new Path(outputDir);
-      UUID uuid = UUID.randomUUID(); //create a random UUID.
+      UUID uuid = util.getRandomUUID(); //create a random UUID.
       Path iterationOutput = new Path(outputPath, uuid.toString());
 
       Verify verify = new Verify();

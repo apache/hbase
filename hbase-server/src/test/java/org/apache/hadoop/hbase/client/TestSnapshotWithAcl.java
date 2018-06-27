@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -52,7 +51,7 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSnapshotWithAcl.class);
 
-  public TableName TEST_TABLE = TableName.valueOf(UUID.randomUUID().toString());
+  public TableName TEST_TABLE = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
 
   private static final int ROW_COUNT = 30000;
 
@@ -197,11 +196,11 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
     loadData();
     verifyRows(TEST_TABLE);
 
-    String snapshotName1 = UUID.randomUUID().toString();
+    String snapshotName1 = TEST_UTIL.getRandomUUID().toString();
     admin.snapshot(snapshotName1, TEST_TABLE);
 
     // clone snapshot with restoreAcl true.
-    TableName tableName1 = TableName.valueOf(UUID.randomUUID().toString());
+    TableName tableName1 = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
     admin.cloneSnapshot(snapshotName1, tableName1, true);
     verifyRows(tableName1);
     verifyAllowed(new AccessReadAction(tableName1), USER_OWNER, USER_RO, USER_RW);
@@ -210,7 +209,7 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
     verifyDenied(new AccessWriteAction(tableName1), USER_RO, USER_NONE);
 
     // clone snapshot with restoreAcl false.
-    TableName tableName2 = TableName.valueOf(UUID.randomUUID().toString());
+    TableName tableName2 = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
     admin.cloneSnapshot(snapshotName1, tableName2, false);
     verifyRows(tableName2);
     verifyAllowed(new AccessReadAction(tableName2), USER_OWNER);

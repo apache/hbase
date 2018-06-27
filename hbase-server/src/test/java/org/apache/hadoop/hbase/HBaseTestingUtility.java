@@ -49,7 +49,6 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -551,7 +550,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     //the working directory, and create a unique sub dir there
     FileSystem fs = getTestFileSystem();
     Path newDataTestDir;
-    String randomStr = UUID.randomUUID().toString();
+    String randomStr = getRandomUUID().toString();
     if (fs.getUri().getScheme().equals(FileSystem.getLocal(conf).getUri().getScheme())) {
       newDataTestDir = new Path(getDataTestDir(), randomStr);
       File dataTestDir = new File(newDataTestDir.toString());

@@ -28,7 +28,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.List;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -221,7 +220,8 @@ public class TestHFileEncryption {
           .build();
         // write a new test HFile
         LOG.info("Writing with " + fileContext);
-        Path path = new Path(TEST_UTIL.getDataTestDir(), UUID.randomUUID().toString() + ".hfile");
+        Path path = new Path(TEST_UTIL.getDataTestDir(),
+                        TEST_UTIL.getRandomUUID().toString() + ".hfile");
         FSDataOutputStream out = fs.create(path);
         HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
           .withOutputStream(out)
