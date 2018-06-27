@@ -420,6 +420,19 @@ public abstract class CommonFSUtils {
     return true;
   }
 
+  public static Path constructWALRegionDirFromRegionInfo(final Configuration conf,
+      final TableName tableName, final String encodedRegionName)
+      throws IOException {
+    return new Path(getWALTableDir(conf, tableName),
+        encodedRegionName);
+  }
+
+  public static Path getWALTableDir(final Configuration conf, final TableName tableName)
+      throws IOException {
+    return new Path(new Path(getWALRootDir(conf), tableName.getNamespaceAsString()),
+        tableName.getQualifierAsString());
+  }
+
   /**
    * Returns the {@link org.apache.hadoop.fs.Path} object representing the table directory under
    * path rootdir
