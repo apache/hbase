@@ -1281,6 +1281,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     super.stopServiceThreads();
     stopChores();
+    CleanerChore.shutDownChorePool();
 
     LOG.debug("Stopping service threads");
 
