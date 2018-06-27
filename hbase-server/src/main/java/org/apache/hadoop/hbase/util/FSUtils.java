@@ -1164,6 +1164,20 @@ public abstract class FSUtils {
   }
 
   /**
+   * Returns the WAL region directory based on the region info
+   * @param conf configuration to determine WALRootDir
+   * @param regionInfo used to get region and table
+   * @return the region directory used to store WALs under the WALRootDir
+   * @throws IOException if there is an exception determining the WALRootDir
+   */
+  public static Path getWALRegionDir(final Configuration conf,
+      final HRegionInfo regionInfo)
+      throws IOException {
+    return new Path(getWALTableDir(conf, regionInfo.getTable()),
+        regionInfo.getEncodedName());
+  }
+
+  /**
    * Checks if meta region exists
    *
    * @param fs file system
@@ -1310,6 +1324,19 @@ public abstract class FSUtils {
    */
   public static Path getTableDir(Path rootdir, final TableName tableName) {
     return new Path(getNamespaceDir(rootdir, tableName.getNamespaceAsString()),
+        tableName.getQualifierAsString());
+  }
+
+  /**
+   * Returns the Table directory under the WALRootDir for the specified table name
+   * @param conf configuration used to get the WALRootDir
+   * @param tableName Table to get the directory for
+   * @return a path to the WAL table directory for the specified table
+   * @throws IOException if there is an exception determining the WALRootDir
+   */
+  public static Path getWALTableDir(final Configuration conf, final TableName tableName)
+      throws IOException {
+    return new Path(new Path(getWALRootDir(conf), tableName.getNamespaceAsString()),
         tableName.getQualifierAsString());
   }
 
