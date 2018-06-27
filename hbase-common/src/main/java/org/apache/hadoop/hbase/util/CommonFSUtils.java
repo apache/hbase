@@ -421,6 +421,34 @@ public abstract class CommonFSUtils {
   }
 
   /**
+   * Returns the WAL region directory based on the given table name and region name
+   * @param conf configuration to determine WALRootDir
+   * @param tableName Table that the region is under
+   * @param encodedRegionName Region name used for creating the final region directory
+   * @return the region directory used to store WALs under the WALRootDir
+   * @throws IOException if there is an exception determining the WALRootDir
+   */
+  public static Path getWALRegionDir(final Configuration conf,
+      final TableName tableName, final String encodedRegionName)
+      throws IOException {
+    return new Path(getWALTableDir(conf, tableName),
+        encodedRegionName);
+  }
+
+  /**
+   * Returns the Table directory under the WALRootDir for the specified table name
+   * @param conf configuration used to get the WALRootDir
+   * @param tableName Table to get the directory for
+   * @return a path to the WAL table directory for the specified table
+   * @throws IOException if there is an exception determining the WALRootDir
+   */
+  public static Path getWALTableDir(final Configuration conf, final TableName tableName)
+      throws IOException {
+    return new Path(new Path(getWALRootDir(conf), tableName.getNamespaceAsString()),
+        tableName.getQualifierAsString());
+  }
+
+  /**
    * Returns the {@link org.apache.hadoop.fs.Path} object representing the table directory under
    * path rootdir
    *

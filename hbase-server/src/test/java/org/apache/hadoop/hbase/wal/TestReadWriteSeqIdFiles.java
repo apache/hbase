@@ -49,13 +49,13 @@ public class TestReadWriteSeqIdFiles {
 
   private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
-  private static FileSystem FS;
+  private static FileSystem walFS;
 
   private static Path REGION_DIR;
 
   @BeforeClass
   public static void setUp() throws IOException {
-    FS = FileSystem.getLocal(UTIL.getConfiguration());
+    walFS = FileSystem.getLocal(UTIL.getConfiguration());
     REGION_DIR = UTIL.getDataTestDir();
   }
 
@@ -66,20 +66,20 @@ public class TestReadWriteSeqIdFiles {
 
   @Test
   public void test() throws IOException {
-    WALSplitter.writeRegionSequenceIdFile(FS, REGION_DIR, 1000L);
-    assertEquals(1000L, WALSplitter.getMaxRegionSequenceId(FS, REGION_DIR));
-    WALSplitter.writeRegionSequenceIdFile(FS, REGION_DIR, 2000L);
-    assertEquals(2000L, WALSplitter.getMaxRegionSequenceId(FS, REGION_DIR));
+    WALSplitter.writeRegionSequenceIdFile(walFS, REGION_DIR, 1000L);
+    assertEquals(1000L, WALSplitter.getMaxRegionSequenceId(walFS, REGION_DIR));
+    WALSplitter.writeRegionSequenceIdFile(walFS, REGION_DIR, 2000L);
+    assertEquals(2000L, WALSplitter.getMaxRegionSequenceId(walFS, REGION_DIR));
     // can not write a sequence id which is smaller
     try {
-      WALSplitter.writeRegionSequenceIdFile(FS, REGION_DIR, 1500L);
+      WALSplitter.writeRegionSequenceIdFile(walFS, REGION_DIR, 1500L);
     } catch (IOException e) {
       // expected
       LOG.info("Expected error", e);
     }
 
     Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(REGION_DIR);
-    FileStatus[] files = FSUtils.listStatus(FS, editsdir, new PathFilter() {
+    FileStatus[] files = FSUtils.listStatus(walFS, editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
         return WALSplitter.isSequenceIdFile(p);
@@ -89,7 +89,7 @@ public class TestReadWriteSeqIdFiles {
     assertEquals(1, files.length);
 
     // verify all seqId files aren't treated as recovered.edits files
-    NavigableSet<Path> recoveredEdits = WALSplitter.getSplitEditFilesSorted(FS, REGION_DIR);
+    NavigableSet<Path> recoveredEdits = WALSplitter.getSplitEditFilesSorted(walFS, REGION_DIR);
     assertEquals(0, recoveredEdits.size());
   }
 }

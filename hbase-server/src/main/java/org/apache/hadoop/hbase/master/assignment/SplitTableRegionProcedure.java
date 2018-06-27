@@ -828,12 +828,14 @@ public class SplitTableRegionProcedure
   }
 
   private void writeMaxSequenceIdFile(MasterProcedureEnv env) throws IOException {
-    FileSystem fs = env.getMasterServices().getMasterFileSystem().getFileSystem();
+    FileSystem walFS = env.getMasterServices().getMasterWalManager().getFileSystem();
     long maxSequenceId =
-      WALSplitter.getMaxRegionSequenceId(fs, getRegionDir(env, getParentRegion()));
+      WALSplitter.getMaxRegionSequenceId(walFS, getWALRegionDir(env, getParentRegion()));
     if (maxSequenceId > 0) {
-      WALSplitter.writeRegionSequenceIdFile(fs, getRegionDir(env, daughter_1_RI), maxSequenceId);
-      WALSplitter.writeRegionSequenceIdFile(fs, getRegionDir(env, daughter_2_RI), maxSequenceId);
+      WALSplitter.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, daughter_1_RI),
+          maxSequenceId);
+      WALSplitter.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, daughter_2_RI),
+          maxSequenceId);
     }
   }
 

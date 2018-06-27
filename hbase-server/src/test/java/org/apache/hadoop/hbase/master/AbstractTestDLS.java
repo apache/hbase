@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -224,10 +223,11 @@ public abstract class AbstractTestDLS {
 
       int count = 0;
       for (RegionInfo hri : regions) {
-        Path tdir = FSUtils.getTableDir(rootdir, table);
+        Path tdir = FSUtils.getWALTableDir(conf, table);
         @SuppressWarnings("deprecation")
         Path editsdir = WALSplitter
-            .getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
+            .getRegionDirRecoveredEditsDir(FSUtils.getWALRegionDir(conf,
+                tableName, hri.getEncodedName()));
         LOG.debug("checking edits dir " + editsdir);
         FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
           @Override
