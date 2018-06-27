@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -130,8 +131,10 @@ public abstract class AbstractStateMachineTableProcedure<TState>
     }
   }
 
-  protected final Path getRegionDir(MasterProcedureEnv env, RegionInfo region) throws IOException {
-    return env.getMasterServices().getMasterFileSystem().getRegionDir(region);
+  protected final Path getWALRegionDir(MasterProcedureEnv env, RegionInfo region)
+      throws IOException {
+    return FSUtils.getWALRegionDir(env.getMasterConfiguration(),
+        region.getTable(), region.getEncodedName());
   }
 
   /**
