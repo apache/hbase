@@ -29,7 +29,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -118,7 +117,7 @@ public class TestImportTsv implements Configurable {
 
   @Before
   public void setup() throws Exception {
-    tn = TableName.valueOf("test-" + UUID.randomUUID());
+    tn = TableName.valueOf("test-" + util.getRandomUUID());
     args = new HashMap<>();
     // Prepare the arguments required for the test.
     args.put(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,FAM:A,FAM:B");

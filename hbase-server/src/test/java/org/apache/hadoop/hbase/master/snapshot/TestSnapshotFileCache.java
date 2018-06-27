@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -179,7 +178,7 @@ public class TestSnapshotFileCache {
 
 
     // add a random file to make sure we refresh
-    FileStatus randomFile = mockStoreFile(UUID.randomUUID().toString());
+    FileStatus randomFile = mockStoreFile(UTIL.getRandomUUID().toString());
     allStoreFiles.add(randomFile);
     deletableFiles = cache.getUnreferencedFiles(allStoreFiles, null);
     assertEquals(randomFile, Iterables.getOnlyElement(deletableFiles));

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -103,7 +102,7 @@ public class TestClusterId {
     FSDataOutputStream s = null;
     try {
       s = fs.create(filePath);
-      s.writeUTF(UUID.randomUUID().toString());
+      s.writeUTF(TEST_UTIL.getRandomUUID().toString());
     } finally {
       if (s != null) {
         s.close();

@@ -401,7 +401,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   }
 
   public static class ReplicationEndpointForTest extends BaseReplicationEndpoint {
-    static UUID uuid = UUID.randomUUID();
+    static UUID uuid = utility1.getRandomUUID();
     static AtomicInteger contructedCount = new AtomicInteger();
     static AtomicInteger startedCount = new AtomicInteger();
     static AtomicInteger stoppedCount = new AtomicInteger();

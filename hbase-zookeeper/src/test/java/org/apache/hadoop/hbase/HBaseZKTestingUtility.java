@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -76,7 +75,7 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
 
     // Using randomUUID ensures that multiple clusters can be launched by
     // a same test, if it stops & starts them
-    Path testDir = getDataTestDir("cluster_" + UUID.randomUUID().toString());
+    Path testDir = getDataTestDir("cluster_" + getRandomUUID().toString());
     clusterTestDir = new File(testDir.toString()).getAbsoluteFile();
     // Have it cleaned up on exit
     boolean b = deleteOnExit();

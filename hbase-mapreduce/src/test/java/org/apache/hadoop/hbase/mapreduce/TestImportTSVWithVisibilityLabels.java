@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -161,7 +160,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -177,7 +176,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTableWithDeletes() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -229,7 +228,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTableWithBulkload() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -245,7 +244,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
-    final TableName table = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName table = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     String FAMILY = "FAM";
     Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table.getNameAsString()),"hfiles");
     // Prepare the arguments required for the test.
@@ -266,7 +265,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMRWithOutputFormat() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -283,7 +282,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithInvalidLabels() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args =
@@ -301,7 +300,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithTsvImporterTextMapperWithInvalidLabels() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args =

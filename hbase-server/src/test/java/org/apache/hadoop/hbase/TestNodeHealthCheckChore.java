@@ -25,7 +25,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -144,7 +143,7 @@ public class TestNodeHealthCheckChore {
         throw new IOException("Failed mkdirs " + tempDir);
       }
     }
-    String scriptName = "HealthScript" + UUID.randomUUID().toString()
+    String scriptName = "HealthScript" + UTIL.getRandomUUID().toString()
         + (Shell.WINDOWS ? ".cmd" : ".sh");
     healthScriptFile = new File(tempDir.getAbsolutePath(), scriptName);
     conf.set(HConstants.HEALTH_SCRIPT_LOC, healthScriptFile.getAbsolutePath());

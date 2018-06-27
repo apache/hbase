@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.UUID;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Put;
@@ -68,7 +67,7 @@ public class TestHBaseOnOtherDfsCluster {
     targetFs = FileSystem.get(util2.getConfiguration());
     assertFsSameUri(fs, targetFs);
 
-    Path randomFile = new Path("/"+UUID.randomUUID());
+    Path randomFile = new Path("/"+util1.getRandomUUID());
     assertTrue(targetFs.createNewFile(randomFile));
     assertTrue(fs.exists(randomFile));
 
