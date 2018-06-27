@@ -344,6 +344,7 @@ public class ReplicationPeerConfig {
       return this;
     }
 
+    @Override
     public ReplicationPeerConfigBuilder setRemoteWALDir(String dir) {
       this.remoteWALDir = dir;
       return this;

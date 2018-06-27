@@ -1594,30 +1594,28 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<ReplicationPeerConfig> getReplicationPeerConfig(String peerId) {
-    return this
-        .<ReplicationPeerConfig> newMasterCaller()
-        .action(
-          (controller, stub) -> this
-              .<GetReplicationPeerConfigRequest, GetReplicationPeerConfigResponse, ReplicationPeerConfig> call(
-                controller, stub, RequestConverter.buildGetReplicationPeerConfigRequest(peerId), (
-                    s, c, req, done) -> s.getReplicationPeerConfig(c, req, done),
-                (resp) -> ReplicationPeerConfigUtil.convert(resp.getPeerConfig()))).call();
+    return this.<ReplicationPeerConfig> newMasterCaller().action((controller, stub) -> this
+      .<GetReplicationPeerConfigRequest, GetReplicationPeerConfigResponse, ReplicationPeerConfig> call(
+        controller, stub, RequestConverter.buildGetReplicationPeerConfigRequest(peerId),
+        (s, c, req, done) -> s.getReplicationPeerConfig(c, req, done),
+        (resp) -> ReplicationPeerConfigUtil.convert(resp.getPeerConfig())))
+      .call();
   }
 
   @Override
   public CompletableFuture<Void> updateReplicationPeerConfig(String peerId,
       ReplicationPeerConfig peerConfig) {
     return this
-        .<UpdateReplicationPeerConfigRequest, UpdateReplicationPeerConfigResponse> procedureCall(
-          RequestConverter.buildUpdateReplicationPeerConfigRequest(peerId, peerConfig),
-          (s, c, req, done) -> s.updateReplicationPeerConfig(c, req, done),
-          (resp) -> resp.getProcId(),
-          new ReplicationProcedureBiConsumer(peerId, () -> "UPDATE_REPLICATION_PEER_CONFIG"));
+      .<UpdateReplicationPeerConfigRequest, UpdateReplicationPeerConfigResponse> procedureCall(
+        RequestConverter.buildUpdateReplicationPeerConfigRequest(peerId, peerConfig),
+        (s, c, req, done) -> s.updateReplicationPeerConfig(c, req, done),
+        (resp) -> resp.getProcId(),
+        new ReplicationProcedureBiConsumer(peerId, () -> "UPDATE_REPLICATION_PEER_CONFIG"));
   }
 
   @Override
   public CompletableFuture<Void> transitReplicationPeerSyncReplicationState(String peerId,
-    SyncReplicationState clusterState) {
+      SyncReplicationState clusterState) {
     return this
       .<TransitReplicationPeerSyncReplicationStateRequest, TransitReplicationPeerSyncReplicationStateResponse> procedureCall(
         RequestConverter.buildTransitReplicationPeerSyncReplicationStateRequest(peerId,

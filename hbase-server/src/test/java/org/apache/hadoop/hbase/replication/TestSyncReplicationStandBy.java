@@ -21,10 +21,10 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -62,6 +62,7 @@ public class TestSyncReplicationStandBy extends SyncReplicationTestBase {
   private void assertDisallow(Table table, TableAction action) throws IOException {
     try {
       action.call(table);
+      fail("Should not allow the action");
     } catch (DoNotRetryIOException | RetriesExhaustedException e) {
       // expected
       assertThat(e.getMessage(), containsString("STANDBY"));
