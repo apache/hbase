@@ -556,8 +556,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
     // initialize the thread pool for opening store files in parallel..
     ThreadPoolExecutor storeFileOpenerThreadPool =
-      this.region.getStoreFileOpenAndCloseThreadPool("StoreFileOpenerThread-" +
-          this.getColumnFamilyName());
+      this.region.getStoreFileOpenAndCloseThreadPool("StoreFileOpenerThread-"
+        + this.region.getRegionInfo().getEncodedName() + "-" + this.getColumnFamilyName());
     CompletionService<HStoreFile> completionService = new ExecutorCompletionService<>(storeFileOpenerThreadPool);
 
     int totalValidStoreFile = 0;
@@ -932,7 +932,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         // initialize the thread pool for closing store files in parallel.
         ThreadPoolExecutor storeFileCloserThreadPool = this.region
             .getStoreFileOpenAndCloseThreadPool("StoreFileCloserThread-"
-                + this.getColumnFamilyName());
+              + this.region.getRegionInfo().getEncodedName() + "-" + this.getColumnFamilyName());
 
         // close each store file in parallel
         CompletionService<Void> completionService =
