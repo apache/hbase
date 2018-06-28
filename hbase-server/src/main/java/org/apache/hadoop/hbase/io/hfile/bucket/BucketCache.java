@@ -418,42 +418,35 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param inMemory if block is in-memory
    * @param wait if true, blocking wait when queue is full
    */
-  public void cacheBlockWithWait(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
+  private void cacheBlockWithWait(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
       boolean wait) {
-    if (LOG.isTraceEnabled()) LOG.trace("Caching key=" + cacheKey + ", item=" + cachedItem);
+    if (cacheEnabled) {
+      if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey)) {
+        if (BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey, cachedItem)) {
+          cacheBlockWithWaitInternal(cacheKey, cachedItem, inMemory, wait);
+        }
+      } else {
+        cacheBlockWithWaitInternal(cacheKey, cachedItem, inMemory, wait);
+      }
+    }
+  }
+
+  private void cacheBlockWithWaitInternal(BlockCacheKey cacheKey, Cacheable cachedItem,
+      boolean inMemory, boolean wait) {
     if (!cacheEnabled) {
       return;
     }
-
-    if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey)) {
-      Cacheable existingBlock = getBlock(cacheKey, false, false, false);
-
-      try {
-        int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, cachedItem, cacheKey);
-        if (comparison != 0) {
-          if (comparison < 0) {
-            LOG.warn("Cached block contents differ by nextBlockOnDiskSize. Keeping cached block.");
-            return;
-          } else {
-            LOG.warn("Cached block contents differ by nextBlockOnDiskSize. Caching new block.");
-          }
-        } else {
-          String msg = "Caching an already cached block: " + cacheKey;
-          msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
-          LOG.warn(msg);
-          return;
-        }
-      } finally {
-        // return the block since we need to decrement the count
-        returnBlock(cacheKey, existingBlock);
-      }
-    }
-
-    /*
-     * Stuff the entry into the RAM cache so it can get drained to the persistent store
-     */
+    LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
+    // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re =
         new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(), inMemory);
+    /**
+     * Don't use ramCache.put(cacheKey, re) here. because there may be a existing entry with same
+     * key in ramCache, the heap size of bucket cache need to update if replacing entry from
+     * ramCache. But WriterThread will also remove entry from ramCache and update heap size, if
+     * using ramCache.put(), It's possible that the removed entry in WriterThread is not the correct
+     * one, then the heap size will mess up (HBASE-20789)
+     */
     if (ramCache.putIfAbsent(cacheKey, re) != null) {
       return;
     }
@@ -937,6 +930,31 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     /**
+     * Put the new bucket entry into backingMap. Notice that we are allowed to replace the existing
+     * cache with a new block for the same cache key. there's a corner case: one thread cache a
+     * block in ramCache, copy to io-engine and add a bucket entry to backingMap. Caching another
+     * new block with the same cache key do the same thing for the same cache key, so if not evict
+     * the previous bucket entry, then memory leak happen because the previous bucketEntry is gone
+     * but the bucketAllocator do not free its memory.
+     * @see BlockCacheUtil#shouldReplaceExistingCacheBlock(BlockCache blockCache,BlockCacheKey
+     *      cacheKey, Cacheable newBlock)
+     * @param key Block cache key
+     * @param bucketEntry Bucket entry to put into backingMap.
+     */
+    private void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
+      BucketEntry previousEntry = backingMap.put(key, bucketEntry);
+      if (previousEntry != null && previousEntry != bucketEntry) {
+        ReentrantReadWriteLock lock = offsetLock.getLock(previousEntry.offset());
+        lock.writeLock().lock();
+        try {
+          blockEvicted(key, previousEntry, false);
+        } finally {
+          lock.writeLock().unlock();
+        }
+      }
+    }
+
+    /**
      * Flush the entries in ramCache to IOEngine and add bucket entry to backingMap.
      * Process all that are passed in even if failure being sure to remove from ramCache else we'll
      * never undo the references and we'll OOME.
@@ -1017,7 +1035,7 @@ public class BucketCache implements BlockCache, HeapSize {
         BlockCacheKey key = entries.get(i).getKey();
         // Only add if non-null entry.
         if (bucketEntries[i] != null) {
-          backingMap.put(key, bucketEntries[i]);
+          putIntoBackingMap(key, bucketEntries[i]);
         }
         // Always remove from ramCache even if we failed adding it to the block cache above.
         RAMQueueEntry ramCacheEntry = ramCache.remove(key);

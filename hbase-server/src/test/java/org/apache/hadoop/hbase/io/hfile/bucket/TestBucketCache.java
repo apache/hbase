@@ -197,14 +197,19 @@ public class TestBucketCache {
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }
 
+  private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
+      throws InterruptedException {
+    while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
+      Thread.sleep(100);
+    }
+  }
+
   // BucketCache.cacheBlock is async, it first adds block to ramCache and writeQueue, then writer
   // threads will flush it to the bucket and put reference entry in backingMap.
   private void cacheAndWaitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey,
       Cacheable block) throws InterruptedException {
     cache.cacheBlock(cacheKey, block);
-    while (!cache.backingMap.containsKey(cacheKey)) {
-      Thread.sleep(100);
-    }
+    waitUntilFlushedToBucket(cache, cacheKey);
   }
 
   @Test
@@ -409,7 +414,7 @@ public class TestBucketCache {
   }
 
   @Test
-  public void testCacheBlockNextBlockMetadataMissing() {
+  public void testCacheBlockNextBlockMetadataMissing() throws Exception {
     int size = 100;
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
     byte[] byteArr = new byte[length];
@@ -427,22 +432,26 @@ public class TestBucketCache {
     blockWithNextBlockMetadata.serialize(block1Buffer, true);
     blockWithoutNextBlockMetadata.serialize(block2Buffer, true);
 
-    //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata back.
+    // Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata back.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
-        block1Buffer);
+      block1Buffer);
 
-    //Add blockWithoutNextBlockMetada, expect blockWithNextBlockMetadata back.
+    waitUntilFlushedToBucket(cache, key);
+
+    // Add blockWithoutNextBlockMetada, expect blockWithNextBlockMetadata back.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
-        block1Buffer);
+      block1Buffer);
 
-    //Clear and add blockWithoutNextBlockMetadata
+    // Clear and add blockWithoutNextBlockMetadata
     cache.evictBlock(key);
     assertNull(cache.getBlock(key, false, false, false));
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
-        block2Buffer);
+      block2Buffer);
 
-    //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
+    waitUntilFlushedToBucket(cache, key);
+
+    // Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
-        block1Buffer);
+      block1Buffer);
   }
 }
