@@ -24,8 +24,6 @@ import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-import com.google.common.base.Preconditions;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -190,29 +188,58 @@ public class BlockCacheUtil {
 
   /**
    * Validate that the existing and newBlock are the same without including the nextBlockMetadata,
-   * if not, throw an exception. If they are the same without the nextBlockMetadata,
-   * return the comparison.
-   *
+   * if not, throw an exception. If they are the same without the nextBlockMetadata, return the
+   * comparison.
    * @param existing block that is existing in the cache.
    * @param newBlock block that is trying to be cached.
    * @param cacheKey the cache key of the blocks.
    * @return comparison of the existing block to the newBlock.
    */
   public static int validateBlockAddition(Cacheable existing, Cacheable newBlock,
-                                          BlockCacheKey cacheKey) {
-    int comparison = compareCacheBlock(existing, newBlock, true);
+      BlockCacheKey cacheKey) {
+    int comparison = compareCacheBlock(existing, newBlock, false);
     if (comparison != 0) {
-      LOG.debug("Cached block contents differ, trying to just compare the block contents " +
-          "without the next block. CacheKey: " + cacheKey);
-
-      // compare the contents, if they are not equal, we are in big trouble
-      int comparisonWithoutNextBlockMetadata = compareCacheBlock(existing, newBlock, false);
-
-      Preconditions.checkArgument(comparisonWithoutNextBlockMetadata == 0,
-          "Cached block contents differ, which should not have happened. cacheKey:"
-              + cacheKey);
+      throw new RuntimeException(
+          "Cached block contents differ, which should not have happened." + "cacheKey:" + cacheKey);
+    }
+    if ((existing instanceof HFileBlock) && (newBlock instanceof HFileBlock)) {
+      comparison = ((HFileBlock) existing).getNextBlockOnDiskSize()
+          - ((HFileBlock) newBlock).getNextBlockOnDiskSize();
     }
     return comparison;
+  }
+
+  /**
+   * Because of the region splitting, it's possible that the split key locate in the middle of a
+   * block. So it's possible that both the daughter regions load the same block from their parent
+   * HFile. When pread, we don't force the read to read all of the next block header. So when two
+   * threads try to cache the same block, it's possible that one thread read all of the next block
+   * header but the other one didn't. if the already cached block hasn't next block header but the
+   * new block to cache has, then we can replace the existing block with the new block for better
+   * performance.(HBASE-20447)
+   * @param blockCache BlockCache to check
+   * @param cacheKey the block cache key
+   * @param newBlock the new block which try to put into the block cache.
+   * @return true means need to replace existing block with new block for the same block cache key.
+   *         false means just keep the existing block.
+   */
+  public static boolean shouldReplaceExistingCacheBlock(BlockCache blockCache,
+      BlockCacheKey cacheKey, Cacheable newBlock) {
+    Cacheable existingBlock = blockCache.getBlock(cacheKey, false, false, false);
+    int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, newBlock, cacheKey);
+    if (comparison < 0) {
+      LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the new block has "
+          + "nextBlockOnDiskSize set. Caching new block.");
+      return true;
+    } else if (comparison > 0) {
+      LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the existing block has "
+          + "nextBlockOnDiskSize set, Keeping cached block.");
+      return false;
+    } else {
+      LOG.warn("Caching an already cached block: " + cacheKey
+          + ". This is harmless and can happen in rare " + "cases (see HBASE-8547)");
+      return false;
+    }
   }
 
   /**
