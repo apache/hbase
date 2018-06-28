@@ -3361,7 +3361,7 @@ public class HBaseAdmin implements Admin {
     private V result = null;
 
     private final HBaseAdmin admin;
-    private final Long procId;
+    protected final Long procId;
 
     public ProcedureFuture(final HBaseAdmin admin, final Long procId) {
       this.admin = admin;
@@ -3643,22 +3643,20 @@ public class HBaseAdmin implements Admin {
      * @return a description of the operation
      */
     protected String getDescription() {
-      return "Operation: " + getOperationType() + ", "
-          + "Table Name: " + tableName.getNameWithNamespaceInclAsString();
-
+      return "Operation: " + getOperationType() + ", " + "Table Name: " +
+        tableName.getNameWithNamespaceInclAsString() + ", procId: " + procId;
     }
 
     protected abstract class TableWaitForStateCallable implements WaitForStateCallable {
       @Override
       public void throwInterruptedException() throws InterruptedIOException {
-        throw new InterruptedIOException("Interrupted while waiting for operation: "
-            + getOperationType() + " on table: " + tableName.getNameWithNamespaceInclAsString());
+        throw new InterruptedIOException("Interrupted while waiting for " + getDescription());
       }
 
       @Override
       public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-        throw new TimeoutException("The operation: " + getOperationType() + " on table: " +
-            tableName.getNameAsString() + " has not completed after " + elapsedTime + "ms");
+        throw new TimeoutException(
+          getDescription() + " has not completed after " + elapsedTime + "ms");
       }
     }
 
