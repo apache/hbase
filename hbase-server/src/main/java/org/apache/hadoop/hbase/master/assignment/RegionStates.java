@@ -106,6 +106,9 @@ public class RegionStates {
 
     private volatile RegionTransitionProcedure procedure = null;
     private volatile ServerName regionLocation = null;
+    // notice that, the lastHost will only be updated when a region is successfully CLOSED through
+    // UnassignProcedure, so do not use it for critical condition as the data maybe stale and unsync
+    // with the data in meta.
     private volatile ServerName lastHost = null;
     /**
      * A Region-in-Transition (RIT) moves through states.
