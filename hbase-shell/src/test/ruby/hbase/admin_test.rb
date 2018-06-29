@@ -222,7 +222,27 @@ module Hbase
       assert_match(/org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy/,
         admin.describe(@create_test_name))
     end
-        
+
+    define_test 'create should be able to set compaction in table options' do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a', 'b',
+                   'MAX_FILESIZE' => 12_345_678,
+                   OWNER => '987654321',
+                   FLUSH_POLICY => 'org.apache.hadoop.hbase.regionserver' \
+                                   '.FlushAllLargeStoresPolicy',
+                   SPLIT_POLICY => 'org.apache.hadoop.hbase.regionserver' \
+                                   '.IncreasingToUpperBoundRegionSplitPolicy',
+                   COMPACTION_ENABLED => 'TRUE')
+      assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
+      assert_match(/12345678/, admin.describe(@create_test_name))
+      assert_match(/987654321/, admin.describe(@create_test_name))
+      assert_match(/org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy/, \
+                   admin.describe(@create_test_name))
+      assert_match(/org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy/, \
+                   admin.describe(@create_test_name))
+      assert_match(/COMPACTION_ENABLED/, admin.describe(@create_test_name))
+    end
+
     define_test "create should ignore table_att" do
       drop_test_table(@create_test_name)
       admin.create(@create_test_name, 'a', 'b', METHOD => 'table_att', OWNER => '987654321')
