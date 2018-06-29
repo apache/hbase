@@ -371,8 +371,19 @@ public class TableSnapshotInputFormatImpl {
             int len = Math.min(3, hosts.size());
             hosts = hosts.subList(0, len);
             Scan boundedScan = new Scan(scan);
-            boundedScan.setStartRow(sp[i]);
-            boundedScan.setStopRow(sp[i + 1]);
+            if (scan.getStartRow().length == 0) {
+              boundedScan.setStartRow(sp[i]);
+            } else {
+              boundedScan.setStartRow(
+                Bytes.compareTo(scan.getStartRow(), sp[i]) > 0 ? scan.getStartRow() : sp[i]);
+            }
+
+            if (scan.getStopRow().length == 0) {
+              boundedScan.setStopRow(sp[i + 1]);
+            } else {
+              boundedScan.setStopRow(
+                Bytes.compareTo(scan.getStopRow(), sp[i + 1]) < 0 ? scan.getStopRow() : sp[i + 1]);
+            }
             splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir));
           }
         }

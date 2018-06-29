@@ -68,6 +68,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   private static final byte[] bbb = Bytes.toBytes("bbb");
   private static final byte[] yyy = Bytes.toBytes("yyy");
+  private static final byte[] bbc = Bytes.toBytes("bbc");
+  private static final byte[] yya = Bytes.toBytes("yya");
 
   @Override
   protected byte[] getStartRow() {
@@ -239,6 +241,60 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Test
+  public void testWithMockedMapReduceWithSplitsPerRegion() throws Exception {
+    setupCluster();
+    String snapshotName = "testWithMockedMapReduceWithSplitsPerRegion";
+    final TableName tableName = TableName.valueOf(snapshotName);
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 10);
+
+      Configuration conf = UTIL.getConfiguration();
+      Job job = new Job(conf);
+      Path tmpTableDir = UTIL.getRandomDir();
+      // test scan with startRow and stopRow
+      Scan scan = new Scan(bbc, yya);
+
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
+        TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job, false,
+        tmpTableDir, new RegionSplitter.UniformSplit(), 5);
+
+      verifyWithMockedMapReduce(job, 10, 40, bbc, yya);
+    } finally {
+      UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
+  }
+
+  @Test
+  public void testWithMockedMapReduceWithNoStartRowStopRow() throws Exception {
+    setupCluster();
+    String snapshotName = "testWithMockedMapReduceWithNoStartRowStopRow";
+    final TableName tableName = TableName.valueOf(snapshotName);
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 10);
+
+      Configuration conf = UTIL.getConfiguration();
+      Job job = new Job(conf);
+      Path tmpTableDir = UTIL.getRandomDir();
+      // test scan without startRow and stopRow
+      Scan scan2 = new Scan();
+
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan2,
+        TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job, false,
+        tmpTableDir, new RegionSplitter.UniformSplit(), 5);
+
+      verifyWithMockedMapReduce(job, 10, 50, HConstants.EMPTY_START_ROW,
+        HConstants.EMPTY_START_ROW);
+
+    } finally {
+      UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
+  }
+
+  @Test
   public void testNoDuplicateResultsWhenSplitting() throws Exception {
     setupCluster();
     TableName tableName = TableName.valueOf("testNoDuplicateResultsWhenSplitting");
@@ -298,13 +354,28 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
     Assert.assertEquals(expectedNumSplits, splits.size());
 
-    HBaseTestingUtility.SeenRowTracker rowTracker =
-        new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
+    HBaseTestingUtility.SeenRowTracker rowTracker = new HBaseTestingUtility.SeenRowTracker(startRow,
+        stopRow.length > 0 ? stopRow : Bytes.toBytes("\uffff"));
 
     for (int i = 0; i < splits.size(); i++) {
       // validate input split
       InputSplit split = splits.get(i);
       Assert.assertTrue(split instanceof TableSnapshotRegionSplit);
+      TableSnapshotRegionSplit snapshotRegionSplit = (TableSnapshotRegionSplit) split;
+      Scan scan =
+          TableMapReduceUtil.convertStringToScan(snapshotRegionSplit.getDelegate().getScan());
+      if (startRow.length > 0) {
+        Assert.assertTrue(
+          Bytes.toStringBinary(startRow) + " should <= " + Bytes.toStringBinary(scan.getStartRow()),
+          Bytes.compareTo(startRow, scan.getStartRow()) <= 0);
+      }
+      if (stopRow.length > 0) {
+        Assert.assertTrue(
+          Bytes.toStringBinary(stopRow) + " should >= " + Bytes.toStringBinary(scan.getStopRow()),
+          Bytes.compareTo(stopRow, scan.getStopRow()) >= 0);
+      }
+      Assert.assertTrue("startRow should < stopRow",
+        Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) < 0);
 
       // validate record reader
       TaskAttemptContext taskAttemptContext = mock(TaskAttemptContext.class);
