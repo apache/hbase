@@ -2441,7 +2441,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     responseInfo.put("class", server == null? "": server.getClass().getSimpleName());
     responseInfo.put("method", methodName);
     responseInfo.put("call", call);
-    responseInfo.put("param", ProtobufUtil.getShortTextFormat(param));
+    // The params could be really big, make sure they don't kill us at WARN
+    String stringifiedParam = ProtobufUtil.getShortTextFormat(param);
+    if (stringifiedParam.length() > 150) {
+      // Truncate to 1000 chars if TRACE is on, else to 150 chars
+      stringifiedParam = stringifiedParam.subSequence(
+          0, LOG.isTraceEnabled() ? 1000 : 150) + " <TRUNCATED>";
+    }
+    responseInfo.put("param", stringifiedParam);
     if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
       ClientProtos.ScanRequest request = ((ClientProtos.ScanRequest) param);
       if (request.hasScannerId()) {
