@@ -125,6 +125,10 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     public void readFields(DataInput in) throws IOException {
       delegate.readFields(in);
     }
+
+    TableSnapshotInputFormatImpl.InputSplit getDelegate() {
+      return this.delegate;
+    }
   }
 
   @VisibleForTesting
