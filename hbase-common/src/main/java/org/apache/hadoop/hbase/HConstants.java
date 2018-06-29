@@ -1323,7 +1323,8 @@ public final class HConstants {
   public static final String TEMPORARY_FS_DIRECTORY_KEY = "hbase.fs.tmp.dir";
   public static final String DEFAULT_TEMPORARY_HDFS_DIRECTORY = "/user/"
       + System.getProperty("user.name") + "/hbase-staging";
-
+  public static final String DEFAULT_LOSSY_COUNTING_ERROR_RATE =
+      "hbase.util.default.lossycounting.errorrate";
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
