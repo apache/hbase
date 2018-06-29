@@ -330,7 +330,7 @@ module Hbase
         htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER]
         htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
         htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
-        htd.setCompactionEnabled(JBoolean.valueOf(arg.delete[COMPACTION_ENABLED])) if arg[COMPACTION_ENABLED]
+        htd.setCompactionEnabled(JBoolean.valueOf(arg.delete(COMPACTION_ENABLED))) if arg[COMPACTION_ENABLED]
         htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
         # DEFERRED_LOG_FLUSH is deprecated and was replaced by DURABILITY.  To keep backward compatible, it still exists.
         # However, it has to be set before DURABILITY so that DURABILITY could overwrite if both args are set
@@ -602,7 +602,7 @@ module Hbase
         htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER]
         htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
         htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
-        htd.setCompactionEnabled(JBoolean.valueOf(arg.delete[COMPACTION_ENABLED])) if arg[COMPACTION_ENABLED]
+        htd.setCompactionEnabled(JBoolean.valueOf(arg.delete(COMPACTION_ENABLED))) if arg[COMPACTION_ENABLED]
         parse_htd_args(htd, arg)
         htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
         # DEFERRED_LOG_FLUSH is deprecated and was replaced by DURABILITY.  To keep backward compatible, it still exists.
