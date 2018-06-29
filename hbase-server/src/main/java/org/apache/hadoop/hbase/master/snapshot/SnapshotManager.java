@@ -697,7 +697,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     TableDescriptor htd = TableDescriptorBuilder.copy(tableName, snapshotTableDesc);
     org.apache.hadoop.hbase.client.SnapshotDescription snapshotPOJO = null;
     if (cpHost != null) {
-      snapshotPOJO = ProtobufUtil.createSnapshotDesc(reqSnapshot);
+      snapshotPOJO = ProtobufUtil.createSnapshotDesc(snapshot);
       cpHost.preCloneSnapshot(snapshotPOJO, htd);
     }
     long procId;
@@ -827,7 +827,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // call Coprocessor pre hook
     org.apache.hadoop.hbase.client.SnapshotDescription snapshotPOJO = null;
     if (cpHost != null) {
-      snapshotPOJO = ProtobufUtil.createSnapshotDesc(reqSnapshot);
+      snapshotPOJO = ProtobufUtil.createSnapshotDesc(snapshot);
       cpHost.preRestoreSnapshot(snapshotPOJO, snapshotTableDesc);
     }
 
