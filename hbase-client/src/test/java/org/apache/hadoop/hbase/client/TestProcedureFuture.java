@@ -51,6 +51,10 @@ public class TestProcedureFuture {
       super(admin, procId);
     }
 
+    public TestFuture(final HBaseAdmin admin, final Long procId, final boolean waitForOpResult) {
+      super(admin, procId, waitForOpResult);
+    }
+
     public boolean wasPostOperationResultCalled() {
       return postOperationResultCalled;
     }
@@ -181,5 +185,25 @@ public class TestProcedureFuture {
     assertFalse("unexpected convertResult() called", f.wasConvertResultCalled());
     assertTrue("expected waitOperationResult() to be called", f.wasWaitOperationResultCalled());
     assertTrue("expected postOperationResult() to be called", f.wasPostOperationResultCalled());
+  }
+
+  /**
+   * When master return a result by submitting the request asynchronously. we are skipping the
+   * waitOperationResult() call, since we are getting the procedure result.
+   */
+  @Test(timeout = 60000)
+  public void testWaitOperationResult() throws Exception {
+    HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
+    TestFuture f = new TestFuture(admin, 100L, true) {
+      @Override
+      protected GetProcedureResultResponse
+          getProcedureResult(final GetProcedureResultRequest request) throws IOException {
+        return GetProcedureResultResponse.newBuilder()
+            .setState(GetProcedureResultResponse.State.FINISHED).build();
+      }
+    };
+    f.get(1, TimeUnit.MINUTES);
+
+    assertTrue("expected waitOperationResult() to be called", f.wasWaitOperationResultCalled());
   }
 }
