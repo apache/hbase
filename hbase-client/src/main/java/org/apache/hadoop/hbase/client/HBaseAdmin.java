@@ -774,7 +774,7 @@ public class HBaseAdmin implements Admin {
 
     public CreateTableFuture(final HBaseAdmin admin, final HTableDescriptor desc,
         final byte[][] splitKeys, final CreateTableResponse response) {
-      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null);
+      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null, true);
       this.splitKeys = splitKeys;
       this.desc = desc;
     }
@@ -1199,7 +1199,7 @@ public class HBaseAdmin implements Admin {
 
     public EnableTableFuture(final HBaseAdmin admin, final TableName tableName,
         final EnableTableResponse response) {
-      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null);
+      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null, true);
       this.tableName = tableName;
     }
 
@@ -4616,6 +4616,7 @@ public class HBaseAdmin implements Admin {
     private boolean procResultFound = false;
     private boolean done = false;
     private boolean cancelled = false;
+    private boolean waitForOpResult = false;
     private V result = null;
 
     private final HBaseAdmin admin;
@@ -4624,6 +4625,13 @@ public class HBaseAdmin implements Admin {
     public ProcedureFuture(final HBaseAdmin admin, final Long procId) {
       this.admin = admin;
       this.procId = procId;
+    }
+
+    public ProcedureFuture(final HBaseAdmin admin, final Long procId,
+        final boolean waitForOpResult) {
+      this.admin = admin;
+      this.procId = procId;
+      this.waitForOpResult = waitForOpResult;
     }
 
     @Override
@@ -4683,7 +4691,7 @@ public class HBaseAdmin implements Admin {
               result = waitProcedureResult(procId, deadlineTs);
             }
             // if we don't have a proc result, try the compatibility wait
-            if (!procResultFound) {
+            if (!procResultFound || waitForOpResult) {
               result = waitOperationResult(deadlineTs);
             }
             result = postOperationResult(result, deadlineTs);
@@ -4740,6 +4748,7 @@ public class HBaseAdmin implements Admin {
             // and that is always a valid solution.
             LOG.warn("Proc-v2 is unsupported on this master: " + serviceEx.getMessage(), serviceEx);
             procResultFound = false;
+            waitForOpResult = false;
             return null;
           }
         }
