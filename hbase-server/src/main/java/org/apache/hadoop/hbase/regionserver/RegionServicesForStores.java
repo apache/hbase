@@ -57,14 +57,6 @@ public class RegionServicesForStores {
     this.region = region;
   }
 
-  public void blockUpdates() {
-    region.blockUpdates();
-  }
-
-  public void unblockUpdates() {
-    region.unblockUpdates();
-  }
-
   public void addMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
     region.incMemStoreSize(dataSizeDelta, heapSizeDelta, offHeapSizeDelta);
   }

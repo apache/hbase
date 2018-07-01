@@ -59,6 +59,14 @@ class NonThreadSafeMemStoreSizing implements MemStoreSizing {
     return this.dataSize;
   }
 
+  @Override public boolean compareAndSetDataSize(long expected, long updated) {
+    if(dataSize == expected) {
+      dataSize = updated;
+      return true;
+    }
+    return false;
+  }
+
   @Override
   public long getDataSize() {
     return dataSize;

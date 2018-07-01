@@ -81,6 +81,10 @@ public interface MemStoreSizing {
         long offHeapSizeDelta) {
       throw new RuntimeException("I'm a DUD, you can't use me!");
     }
+
+    @Override public boolean compareAndSetDataSize(long expected, long updated) {
+      throw new RuntimeException("I'm a DUD, you can't use me!");
+    }
   };
 
   /**
@@ -103,6 +107,8 @@ public interface MemStoreSizing {
   default long decMemStoreSize(MemStoreSize delta) {
     return incMemStoreSize(-delta.getDataSize(), -delta.getHeapSize(), -delta.getOffHeapSize());
   }
+
+  boolean compareAndSetDataSize(long expected, long updated);
 
   long getDataSize();
   long getHeapSize();
