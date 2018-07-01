@@ -759,7 +759,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     // set memstore to flat into CellChunkMap
     MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.BASIC;
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-            String.valueOf(compactionType));
+        String.valueOf(compactionType));
     ((MyCompactingMemStore) memstore).initiateType(compactionType, memstore.getConfiguration());
     ((CompactingMemStore) memstore).setIndexType(CompactingMemStore.IndexType.CHUNK_MAP);
 
@@ -798,11 +798,13 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     // One cell is duplicated, but it shouldn't be compacted because we are in BASIC mode.
     // totalCellsLen should remain the same
     long oneCellOnCCMHeapSize =
-            ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
+        (long) ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
     totalHeapSize = MutableSegment.DEEP_OVERHEAD + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
             + numOfCells * oneCellOnCCMHeapSize;
 
-    assertEquals(totalCellsLen, regionServicesForStores.getMemStoreSize());
+    assertEquals(totalCellsLen+ChunkCreator.SIZEOF_CHUNK_HEADER, regionServicesForStores
+        .getMemStoreSize());
+
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
 
     MemStoreSize mss = memstore.getFlushableSize();
@@ -826,8 +828,9 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     // but smaller than the size of two cells.
     // Therefore, the two created cells are flattened together.
     totalHeapSize = MutableSegment.DEEP_OVERHEAD
-            + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
-            + 2 * oneCellOnCCMHeapSize;
+        + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
+        + 1 * oneCellOnCSLMHeapSize
+        + 1 * oneCellOnCCMHeapSize;
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
   }
 
@@ -850,6 +853,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.BASIC;
     memstore.getConfiguration().setInt(MemStoreCompactionStrategy
         .COMPACTING_MEMSTORE_THRESHOLD_KEY, 4);
+    memstore.getConfiguration()
+        .setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.014);
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(compactionType));
     ((MyCompactingMemStore) memstore).initiateType(compactionType, memstore.getConfiguration());
@@ -862,39 +867,42 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     String bigVal = new String(chars);
     byte[] val = Bytes.toBytes(bigVal);
 
-    // We need to add two cells, five times, in order to guarantee a merge
+    // We need to add two cells, three times, in order to guarantee a merge
     List<String[]> keysList = new ArrayList<>();
     keysList.add(new String[]{"A", "B"});
     keysList.add(new String[]{"C", "D"});
     keysList.add(new String[]{"E", "F"});
     keysList.add(new String[]{"G", "H"});
-    keysList.add(new String[]{"I", "J"});
 
     // Measuring the size of a single kv
     KeyValue kv = new KeyValue(Bytes.toBytes("A"), Bytes.toBytes("testfamily"),
             Bytes.toBytes("testqualifier"), System.currentTimeMillis(), val);
     long oneCellOnCCMHeapSize =
-            ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
-
+        (long) ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
+    long oneCellOnCSLMHeapSize =
+        ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + kv.heapSize());
     long totalHeapSize = MutableSegment.DEEP_OVERHEAD;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < keysList.size(); i++) {
       addRowsByKeys(memstore, keysList.get(i), val);
       while (((CompactingMemStore) memstore).isMemStoreFlushingInMemory()) {
         Threads.sleep(10);
       }
 
-      // The in-memory flush size is bigger than the size of a single cell,
-      // but smaller than the size of two cells.
-      // Therefore, the two created cells are flattened together.
-      totalHeapSize += CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
-              + 2 * oneCellOnCCMHeapSize;
-      if (i == 4) {
-        // Four out of the five are merged into one,
-        // and the segment becomes immutable
-        totalHeapSize -= (3 * CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
-                + MutableSegment.DEEP_OVERHEAD);
+      if(i==0) {
+        totalHeapSize += CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
+            + oneCellOnCCMHeapSize + oneCellOnCSLMHeapSize;
+      } else {
+        // The in-memory flush size is bigger than the size of a single cell,
+        // but smaller than the size of two cells.
+        // Therefore, the two created cells are flattened in a seperate segment.
+        totalHeapSize += 2 * (CellChunkImmutableSegment.DEEP_OVERHEAD_CCM + oneCellOnCCMHeapSize);
       }
-      assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
+      if (i == 2) {
+        // Four out of the five segments are merged into one
+        totalHeapSize -= (4 * CellChunkImmutableSegment.DEEP_OVERHEAD_CCM);
+        totalHeapSize = ClassSize.align(totalHeapSize);
+      }
+      assertEquals("i="+i, totalHeapSize, ((CompactingMemStore) memstore).heapSize());
     }
   }
 

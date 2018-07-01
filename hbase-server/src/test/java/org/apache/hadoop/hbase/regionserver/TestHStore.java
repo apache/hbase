@@ -1714,15 +1714,12 @@ public class TestHStore {
     }
 
     @Override
-    protected boolean shouldFlushInMemory() {
-      boolean rval = super.shouldFlushInMemory();
-      if (rval) {
-        RUNNER_COUNT.incrementAndGet();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("runner count: " + RUNNER_COUNT.get());
-        }
+    void inMemoryCompaction() {
+      RUNNER_COUNT.incrementAndGet();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("runner count: " + RUNNER_COUNT.get());
       }
-      return rval;
+      super.inMemoryCompaction();
     }
   }
 

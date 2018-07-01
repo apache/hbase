@@ -58,6 +58,10 @@ class ThreadSafeMemStoreSizing implements MemStoreSizing {
     return this.dataSize.addAndGet(dataSizeDelta);
   }
 
+  @Override public boolean compareAndSetDataSize(long expected, long updated) {
+    return dataSize.compareAndSet(expected,updated);
+  }
+
   @Override
   public long getDataSize() {
     return dataSize.get();

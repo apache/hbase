@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Iterator;
 import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -38,9 +39,13 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Private
 public class MutableSegment extends Segment {
 
-  public final static long DEEP_OVERHEAD = Segment.DEEP_OVERHEAD
-        + ClassSize.CONCURRENT_SKIPLISTMAP
-        + ClassSize.SYNC_TIMERANGE_TRACKER;
+  private final AtomicBoolean flushed = new AtomicBoolean(false);
+
+  public final static long DEEP_OVERHEAD = ClassSize.align(Segment.DEEP_OVERHEAD
+      + ClassSize.CONCURRENT_SKIPLISTMAP
+      + ClassSize.SYNC_TIMERANGE_TRACKER
+      + ClassSize.REFERENCE
+      + ClassSize.ATOMIC_BOOLEAN);
 
   protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
     super(cellSet, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.SYNC));
@@ -52,12 +57,14 @@ public class MutableSegment extends Segment {
    * @param cell the cell to add
    * @param mslabUsed whether using MSLAB
    */
-  public void add(Cell cell, boolean mslabUsed, MemStoreSizing memStoreSizing) {
-    internalAdd(cell, mslabUsed, memStoreSizing);
+  public void add(Cell cell, boolean mslabUsed, MemStoreSizing memStoreSizing,
+      boolean sizeAddedPreOperation) {
+    internalAdd(cell, mslabUsed, memStoreSizing, sizeAddedPreOperation);
   }
 
-  public void upsert(Cell cell, long readpoint, MemStoreSizing memStoreSizing) {
-    internalAdd(cell, false, memStoreSizing);
+  public void upsert(Cell cell, long readpoint, MemStoreSizing memStoreSizing,
+      boolean sizeAddedPreOperation) {
+    internalAdd(cell, false, memStoreSizing, sizeAddedPreOperation);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
@@ -103,6 +110,10 @@ public class MutableSegment extends Segment {
         break;
       }
     }
+  }
+
+  public boolean setInMemoryFlushed() {
+    return flushed.compareAndSet(false, true);
   }
 
   /**

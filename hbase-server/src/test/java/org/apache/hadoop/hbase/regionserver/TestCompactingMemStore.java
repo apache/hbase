@@ -838,7 +838,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       byte[] row = Bytes.toBytes(keys[i]);
       byte[] val = Bytes.toBytes(keys[i] + i);
       KeyValue kv = new KeyValue(row, fam, qf, timestamp, val);
-      totalLen += kv.getLength();
+      totalLen += Segment.getCellLength(kv);
       hmc.add(kv, null);
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
     }
@@ -859,7 +859,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       KeyValue kv = new KeyValue(row, fam, qf, timestamp, val);
-      totalLen += kv.getLength();
+      totalLen += Segment.getCellLength(kv);
       hmc.add(kv, null);
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
     }

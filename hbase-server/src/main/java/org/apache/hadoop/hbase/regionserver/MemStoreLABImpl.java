@@ -120,8 +120,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   @Override
   public Cell forceCopyOfBigCellInto(Cell cell) {
-    int size = cell instanceof ExtendedCell? ((ExtendedCell)cell).getSerializedSize():
-        KeyValueUtil.length(cell);
+    int size = Segment.getCellLength(cell);
     size += ChunkCreator.SIZEOF_CHUNK_HEADER;
     Preconditions.checkArgument(size >= 0, "negative size");
     if (size <= dataChunkSize) {
@@ -135,8 +134,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   }
 
   private Cell copyCellInto(Cell cell, int maxAlloc) {
-    int size = cell instanceof ExtendedCell? ((ExtendedCell)cell).getSerializedSize():
-        KeyValueUtil.length(cell);
+    int size = Segment.getCellLength(cell);
     Preconditions.checkArgument(size >= 0, "negative size");
     // Callers should satisfy large allocations directly from JVM since they
     // don't cause fragmentation as badly.
