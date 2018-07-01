@@ -2436,14 +2436,17 @@ public class HRegionServer extends HasThread implements
    */
   protected void stopServiceThreads() {
     // clean up the scheduled chores
-    if (this.choreService != null) choreService.shutdown();
-    if (this.nonceManagerChore != null) nonceManagerChore.cancel(true);
-    if (this.compactionChecker != null) compactionChecker.cancel(true);
-    if (this.periodicFlusher != null) periodicFlusher.cancel(true);
-    if (this.healthCheckChore != null) healthCheckChore.cancel(true);
-    if (this.storefileRefresher != null) storefileRefresher.cancel(true);
-    if (this.movedRegionsCleaner != null) movedRegionsCleaner.cancel(true);
-    if (this.fsUtilizationChore != null) fsUtilizationChore.cancel(true);
+    if (this.choreService != null) {
+      choreService.cancelChore(nonceManagerChore);
+      choreService.cancelChore(compactionChecker);
+      choreService.cancelChore(periodicFlusher);
+      choreService.cancelChore(healthCheckChore);
+      choreService.cancelChore(storefileRefresher);
+      choreService.cancelChore(movedRegionsCleaner);
+      choreService.cancelChore(fsUtilizationChore);
+      // clean up the remaining scheduled chores (in case we missed out any)
+      choreService.shutdown();
+    }
 
     if (this.cacheFlusher != null) {
       this.cacheFlusher.join();
