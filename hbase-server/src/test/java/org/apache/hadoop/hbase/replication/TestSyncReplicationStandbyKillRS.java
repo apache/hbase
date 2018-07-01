@@ -88,9 +88,9 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
     // Transit standby to DA to replay logs
     try {
       UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
-          SyncReplicationState.DOWNGRADE_ACTIVE);
+        SyncReplicationState.DOWNGRADE_ACTIVE);
     } catch (Exception e) {
-      LOG.error("Failed to transit standby cluster to " + SyncReplicationState.DOWNGRADE_ACTIVE);
+      LOG.error("Failed to transit standby cluster to " + SyncReplicationState.DOWNGRADE_ACTIVE, e);
     }
 
     while (UTIL2.getAdmin().getReplicationPeerSyncReplicationState(PEER_ID)
