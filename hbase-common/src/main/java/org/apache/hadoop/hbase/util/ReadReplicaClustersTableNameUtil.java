@@ -19,8 +19,13 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.yetus.audience.InterfaceAudience;
 
-public class ReadReplicaClustersTableNameUtil {
+@InterfaceAudience.Private
+public final class ReadReplicaClustersTableNameUtil {
+
+  private ReadReplicaClustersTableNameUtil() {
+  }
 
   /**
    * Utility method to determine if TableName is a meta TableName without taking hbase.meta.table.suffix into account.
