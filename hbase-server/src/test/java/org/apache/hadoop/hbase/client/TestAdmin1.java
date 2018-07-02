@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -69,6 +68,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 
@@ -501,9 +501,30 @@ public class TestAdmin1 {
    }
 
   /**
+   * Verify schema change for read only table
+   */
+  @Test
+  public void testReadOnlyTableModify() throws IOException, InterruptedException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
+
+    // Make table read only
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(this.admin.getDescriptor(tableName))
+      .setReadOnly(true).build();
+    admin.modifyTable(htd);
+
+    // try to modify the read only table now
+    htd = TableDescriptorBuilder.newBuilder(this.admin.getDescriptor(tableName))
+      .setCompactionEnabled(false).build();
+    admin.modifyTable(htd);
+    // Delete the table
+    this.admin.disableTable(tableName);
+    this.admin.deleteTable(tableName);
+    assertFalse(this.admin.tableExists(tableName));
+  }
+
+  /**
    * Verify schema modification takes.
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
