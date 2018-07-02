@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.tool.coprocessor;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 
 @InterfaceAudience.Private
 public class CoprocessorViolation {
@@ -29,21 +29,25 @@ public class CoprocessorViolation {
     WARNING, ERROR
   }
 
+  private final String className;
   private final Severity severity;
   private final String message;
+  private final Throwable throwable;
 
-  public CoprocessorViolation(Severity severity, String message) {
-    this(severity, message, null);
+  public CoprocessorViolation(String className, Severity severity, String message) {
+    this(className, severity, message, null);
   }
 
-  public CoprocessorViolation(Severity severity, String message, Throwable t) {
+  public CoprocessorViolation(String className, Severity severity, String message,
+      Throwable t) {
+    this.className = className;
     this.severity = severity;
+    this.message = message;
+    this.throwable = t;
+  }
 
-    if (t == null) {
-      this.message = message;
-    } else {
-      this.message = message + "\n" + Throwables.getStackTraceAsString(t);
-    }
+  public String getClassName() {
+    return className;
   }
 
   public Severity getSeverity() {
@@ -52,5 +56,19 @@ public class CoprocessorViolation {
 
   public String getMessage() {
     return message;
+  }
+
+  public Throwable getThrowable() {
+    return throwable;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("className", className)
+        .add("severity", severity)
+        .add("message", message)
+        .add("throwable", throwable)
+        .toString();
   }
 }

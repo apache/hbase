@@ -858,14 +858,19 @@ whether the old co-processors are still compatible with the actual HBase version
 
 [source, bash]
 ----
-$ bin/hbase pre-upgrade validate-cp <jar> -scan|<classes>
+$ bin/hbase pre-upgrade validate-cp [-jar ...] [-class ... | -table ... | -config]
 Options:
- -e      Treat warnings as errors.
- -scan   Scan jar for observers.
+ -e            Treat warnings as errors.
+ -jar <arg>    Jar file/directory of the coprocessor.
+ -table <arg>  Table coprocessor(s) to check.
+ -class <arg>  Coprocessor class(es) to check.
+ -config         Scan jar for observers.
 ----
 
-The first parameter of the tool is the `jar` file which holds the co-processor implementation. Further parameters can be `-scan` when the tool will
-search the jar file for `Coprocessor` implementations or the `classes` can be explicitly given.
+The co-processor classes can be explicitly declared by `-class` option, or they can be obtained from HBase configuration by `-config` option.
+Table level co-processors can be also checked by `-table` option. The tool searches for co-processors on its classpath, but it can be extended
+by the `-jar` option. It is possible to test multiple classes with multiple `-class`, multiple tables with multiple `-table` options as well as
+adding multiple jars to the classpath with multiple `-jar` options.
 
 The tool can report errors and warnings. Errors mean that HBase won't be able to load the coprocessor, because it is incompatible with the current version
 of HBase. Warnings mean that the co-processors can be loaded, but they won't work as expected. If `-e` option is given, then the tool will also fail
@@ -877,8 +882,17 @@ For example:
 
 [source, bash]
 ----
-$ bin/hbase pre-upgrade validate-cp my-coprocessor.jar MyMasterObserver MyRegionObserver
+$ bin/hbase pre-upgrade validate-cp -jar my-coprocessor.jar -class MyMasterObserver -class MyRegionObserver
 ----
+
+It validates `MyMasterObserver` and `MyRegionObserver` classes which are located in `my-coprocessor.jar`.
+
+[source, bash]
+----
+$ bin/hbase pre-upgrade validate-cp -table .*
+----
+
+It validates every table level co-processors where the table name matches to `.*` regular expression.
 
 ==== DataBlockEncoding validation
 HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families.
