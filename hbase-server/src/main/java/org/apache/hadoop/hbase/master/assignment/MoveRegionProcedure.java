@@ -66,8 +66,10 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
       throws HBaseIOException {
     super(env, plan.getRegionInfo());
     this.plan = plan;
-    preflightChecks(env, true);
-    checkOnline(env, plan.getRegionInfo());
+    if (check) {
+      preflightChecks(env, true);
+      checkOnline(env, plan.getRegionInfo());
+    }
   }
 
   @Override
@@ -135,7 +137,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
 
   @Override
   protected MoveRegionState getState(final int stateId) {
-    return MoveRegionState.valueOf(stateId);
+    return MoveRegionState.forNumber(stateId);
   }
 
   @Override

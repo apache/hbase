@@ -967,7 +967,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long maxSeqIdFromFile =
       WALSplitter.getMaxRegionSequenceId(fs.getFileSystem(), fs.getRegionDir());
     long nextSeqId = Math.max(maxSeqId, maxSeqIdFromFile) + 1;
-    if (writestate.writesEnabled) {
+    // The openSeqNum will always be increase even for read only region, as we rely on it to
+    // determine whether a region has been successfully reopend, so here we always need to update
+    // the max sequence id file.
+    if (RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
+      LOG.debug("writing seq id for {}", this.getRegionInfo().getEncodedName());
       WALSplitter.writeRegionSequenceIdFile(fs.getFileSystem(), fs.getRegionDir(), nextSeqId - 1);
     }
 
@@ -1643,7 +1647,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       status.setStatus("Writing region close event to WAL");
-      if (!abort && wal != null && getRegionServerServices() != null && !writestate.readOnly) {
+      // Always write close marker to wal even for read only table. This is not a big problem as we
+      // do not write any data into the region.
+      if (!abort && wal != null && getRegionServerServices() != null &&
+        RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
         writeRegionCloseMarker(wal);
       }
 
@@ -7010,7 +7017,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * HRegion#getMinSequenceId() to ensure the wal id is properly kept
    * up.  HRegionStore does this every time it opens a new region.
    * @return new HRegion
-   * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
       final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal)
@@ -7032,7 +7038,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param rsServices An interface we can request flushes against.
    * @param reporter An interface we can report progress against.
    * @return new HRegion
-   * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
       final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
@@ -7056,7 +7061,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param rsServices An interface we can request flushes against.
    * @param reporter An interface we can report progress against.
    * @return new HRegion
-   * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
       final Path rootDir, final Path tableDir, final RegionInfo info, final TableDescriptor htd,
@@ -7081,7 +7085,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param other original object
    * @param reporter An interface we can report progress against.
    * @return new HRegion
-   * @throws IOException
    */
   public static HRegion openHRegion(final HRegion other, final CancelableProgressable reporter)
       throws IOException {
@@ -7112,8 +7115,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkClassLoading();
     this.openSeqNum = initialize(reporter);
     this.mvcc.advanceTo(openSeqNum);
-    if (wal != null && getRegionServerServices() != null && !writestate.readOnly) {
-      // Only write the region open event marker to WAL if we are not read-only.
+    // The openSeqNum must be increased every time when a region is assigned, as we rely on it to
+    // determine whether a region has been successfully reopened. So here we always write open
+    // marker, even if the table is read only.
+    if (wal != null && getRegionServerServices() != null &&
+      RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
       writeRegionOpenMarker(wal, openSeqNum);
     }
     return this;
@@ -7126,7 +7132,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param info Info for region to be opened.
    * @param htd the table descriptor
    * @return new HRegion
-   * @throws IOException e
    */
   public static HRegion openReadOnlyFileSystemHRegion(final Configuration conf, final FileSystem fs,
       final Path tableDir, RegionInfo info, final TableDescriptor htd) throws IOException {
