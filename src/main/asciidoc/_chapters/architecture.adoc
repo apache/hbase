@@ -2537,6 +2537,8 @@ See the above HDFS Architecture link for more information.
 [[arch.timelineconsistent.reads]]
 == Timeline-consistent High Available Reads
 
+NOTE: The current <<amv2, Assignment Manager V2>> does not work well with region replica, so this feature maybe broken. Use it with caution.
+
 [[casestudies.timelineconsistent.intro]]
 === Introduction
 
