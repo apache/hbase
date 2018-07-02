@@ -23,18 +23,29 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.tool.PreUpgradeValidator;
 import org.apache.hadoop.hbase.tool.coprocessor.CoprocessorViolation.Severity;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
@@ -44,7 +55,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class CoprocessorValidator extends AbstractHBaseTool {
@@ -54,13 +64,20 @@ public class CoprocessorValidator extends AbstractHBaseTool {
   private CoprocessorMethods branch1;
   private CoprocessorMethods current;
 
+  private final List<String> jars;
+  private final List<Pattern> tablePatterns;
+  private final List<String> classes;
+  private boolean config;
+
   private boolean dieOnWarnings;
-  private boolean scan;
-  private List<String> args;
 
   public CoprocessorValidator() {
     branch1 = new Branch1CoprocessorMethods();
     current = new CurrentCoprocessorMethods();
+
+    jars = new ArrayList<>();
+    tablePatterns = new ArrayList<>();
+    classes = new ArrayList<>();
   }
 
   /**
@@ -71,8 +88,8 @@ public class CoprocessorValidator extends AbstractHBaseTool {
    * according to JLS</a>.
    */
   private static final class ResolverUrlClassLoader extends URLClassLoader {
-    private ResolverUrlClassLoader(URL[] urls) {
-      super(urls, ResolverUrlClassLoader.class.getClassLoader());
+    private ResolverUrlClassLoader(URL[] urls, ClassLoader parent) {
+      super(urls, parent);
     }
 
     @Override
@@ -82,12 +99,31 @@ public class CoprocessorValidator extends AbstractHBaseTool {
   }
 
   private ResolverUrlClassLoader createClassLoader(URL[] urls) {
+    return createClassLoader(urls, getClass().getClassLoader());
+  }
+
+  private ResolverUrlClassLoader createClassLoader(URL[] urls, ClassLoader parent) {
     return AccessController.doPrivileged(new PrivilegedAction<ResolverUrlClassLoader>() {
       @Override
       public ResolverUrlClassLoader run() {
-        return new ResolverUrlClassLoader(urls);
+        return new ResolverUrlClassLoader(urls, parent);
       }
     });
+  }
+
+  private ResolverUrlClassLoader createClassLoader(ClassLoader parent,
+      org.apache.hadoop.fs.Path path) throws IOException {
+    Path tempPath = Files.createTempFile("hbase-coprocessor-", ".jar");
+    org.apache.hadoop.fs.Path destination = new org.apache.hadoop.fs.Path(tempPath.toString());
+
+    LOG.debug("Copying coprocessor jar '{}' to '{}'.", path, tempPath);
+
+    FileSystem fileSystem = FileSystem.get(getConf());
+    fileSystem.copyToLocalFile(path, destination);
+
+    URL url = tempPath.toUri().toURL();
+
+    return createClassLoader(new URL[] { url }, parent);
   }
 
   private void validate(ClassLoader classLoader, String className,
@@ -101,133 +137,189 @@ public class CoprocessorValidator extends AbstractHBaseTool {
         LOG.trace("Validating method '{}'.", method);
 
         if (branch1.hasMethod(method) && !current.hasMethod(method)) {
-          CoprocessorViolation violation = new CoprocessorViolation(Severity.WARNING,
-              "Method '" + method + "' was removed from new coprocessor API, "
-                  + "so it won't be called by HBase.");
+          CoprocessorViolation violation = new CoprocessorViolation(
+              className, Severity.WARNING, "method '" + method +
+              "' was removed from new coprocessor API, so it won't be called by HBase");
           violations.add(violation);
         }
       }
     } catch (ClassNotFoundException e) {
-      CoprocessorViolation violation = new CoprocessorViolation(Severity.ERROR,
-          "No such class '" + className + "'.", e);
+      CoprocessorViolation violation = new CoprocessorViolation(
+          className, Severity.ERROR, "no such class", e);
       violations.add(violation);
     } catch (RuntimeException | Error e) {
-      CoprocessorViolation violation = new CoprocessorViolation(Severity.ERROR,
-          "Could not validate class '" + className + "'.", e);
+      CoprocessorViolation violation = new CoprocessorViolation(
+          className, Severity.ERROR, "could not validate class", e);
       violations.add(violation);
     }
   }
 
-  public List<CoprocessorViolation> validate(ClassLoader classLoader, List<String> classNames) {
-    List<CoprocessorViolation> violations = new ArrayList<>();
-
+  public void validateClasses(ClassLoader classLoader, List<String> classNames,
+      List<CoprocessorViolation> violations) {
     for (String className : classNames) {
       validate(classLoader, className, violations);
     }
-
-    return violations;
   }
 
-  public List<CoprocessorViolation> validate(List<URL> urls, List<String> classNames)
-      throws IOException {
-    URL[] urlArray = new URL[urls.size()];
-    urls.toArray(urlArray);
-
-    try (ResolverUrlClassLoader classLoader = createClassLoader(urlArray)) {
-      return validate(classLoader, classNames);
-    }
+  public void validateClasses(ClassLoader classLoader, String[] classNames,
+      List<CoprocessorViolation> violations) {
+    validateClasses(classLoader, Arrays.asList(classNames), violations);
   }
 
   @VisibleForTesting
-  protected List<String> getJarClasses(Path path) throws IOException {
-    try (JarFile jarFile = new JarFile(path.toFile())) {
-      return jarFile.stream()
-          .map(JarEntry::getName)
-          .filter((name) -> name.endsWith(".class"))
-          .map((name) -> name.substring(0, name.length() - 6).replace('/', '.'))
-          .collect(Collectors.toList());
-    }
-  }
+  protected void validateTables(ClassLoader classLoader, Admin admin,
+      Pattern pattern, List<CoprocessorViolation> violations) throws IOException {
+    List<TableDescriptor> tableDescriptors = admin.listTableDescriptors(pattern);
 
-  @VisibleForTesting
-  protected List<String> filterObservers(ClassLoader classLoader,
-      Iterable<String> classNames) throws ClassNotFoundException {
-    List<String> filteredClassNames = new ArrayList<>();
+    for (TableDescriptor tableDescriptor : tableDescriptors) {
+      LOG.debug("Validating table {}", tableDescriptor.getTableName());
 
-    for (String className : classNames) {
-      LOG.debug("Scanning class '{}'.", className);
+      Collection<CoprocessorDescriptor> coprocessorDescriptors =
+          tableDescriptor.getCoprocessorDescriptors();
 
-      Class<?> clazz = classLoader.loadClass(className);
+      for (CoprocessorDescriptor coprocessorDescriptor : coprocessorDescriptors) {
+        String className = coprocessorDescriptor.getClassName();
+        Optional<String> jarPath = coprocessorDescriptor.getJarPath();
 
-      if (Coprocessor.class.isAssignableFrom(clazz)) {
-        LOG.debug("Found coprocessor class '{}'.", className);
-        filteredClassNames.add(className);
+        if (jarPath.isPresent()) {
+          org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(jarPath.get());
+          try (ResolverUrlClassLoader cpClassLoader = createClassLoader(classLoader, path)) {
+            validate(cpClassLoader, className, violations);
+          } catch (IOException e) {
+            CoprocessorViolation violation = new CoprocessorViolation(
+                className, Severity.ERROR,
+                "could not validate jar file '" + path + "'", e);
+            violations.add(violation);
+          }
+        } else {
+          validate(classLoader, className, violations);
+        }
       }
     }
+  }
 
-    return filteredClassNames;
+  private void validateTables(ClassLoader classLoader, Pattern pattern,
+      List<CoprocessorViolation> violations) throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(getConf());
+        Admin admin = connection.getAdmin()) {
+      validateTables(classLoader, admin, pattern, violations);
+    }
   }
 
   @Override
   protected void printUsage() {
     String header = "hbase " + PreUpgradeValidator.TOOL_NAME + " " +
-        PreUpgradeValidator.VALIDATE_CP_NAME + " <jar> -scan|<classes>";
+        PreUpgradeValidator.VALIDATE_CP_NAME +
+        " [-jar ...] [-class ... | -table ... | -config]";
     printUsage(header, "Options:", "");
   }
 
   @Override
   protected void addOptions() {
     addOptNoArg("e", "Treat warnings as errors.");
-    addOptNoArg("scan", "Scan jar for observers.");
+    addOptWithArg("jar", "Jar file/directory of the coprocessor.");
+    addOptWithArg("table", "Table coprocessor(s) to check.");
+    addOptWithArg("class", "Coprocessor class(es) to check.");
+    addOptNoArg("config", "Obtain coprocessor class(es) from configuration.");
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
-    scan = cmd.hasOption("scan");
+    String[] jars = cmd.getOptionValues("jar");
+    if (jars != null) {
+      Collections.addAll(this.jars, jars);
+    }
+
+    String[] tables = cmd.getOptionValues("table");
+    if (tables != null) {
+      Arrays.stream(tables).map(Pattern::compile).forEach(tablePatterns::add);
+    }
+
+    String[] classes = cmd.getOptionValues("class");
+    if (classes != null) {
+      Collections.addAll(this.classes, classes);
+    }
+
+    config = cmd.hasOption("config");
     dieOnWarnings = cmd.hasOption("e");
-    args = cmd.getArgList();
+  }
+
+  private List<URL> buildClasspath(List<String> jars) throws IOException {
+    List<URL> urls = new ArrayList<>();
+
+    for (String jar : jars) {
+      Path jarPath = Paths.get(jar);
+      if (Files.isDirectory(jarPath)) {
+        try (Stream<Path> stream = Files.list(jarPath)) {
+          List<Path> files = stream
+              .filter((path) -> Files.isRegularFile(path))
+              .collect(Collectors.toList());
+
+          for (Path file : files) {
+            URL url = file.toUri().toURL();
+            urls.add(url);
+          }
+        }
+      } else {
+        URL url = jarPath.toUri().toURL();
+        urls.add(url);
+      }
+    }
+
+    return urls;
   }
 
   @Override
   protected int doWork() throws Exception {
-    if (args.size() < 1) {
-      System.err.println("Missing jar file.");
+    if (tablePatterns.isEmpty() && classes.isEmpty() && !config) {
+      LOG.error("Please give at least one -table, -class or -config parameter.");
       printUsage();
       return EXIT_FAILURE;
     }
 
-    String jar = args.get(0);
+    List<URL> urlList = buildClasspath(jars);
+    URL[] urls = urlList.toArray(new URL[urlList.size()]);
 
-    if (args.size() == 1 && !scan) {
-      throw new ParseException("Missing classes or -scan option.");
-    } else if (args.size() > 1 && scan) {
-      throw new ParseException("Can't use classes with -scan option.");
-    }
+    LOG.debug("Classpath: {}", urlList);
 
-    Path jarPath = Paths.get(jar);
-    URL[] urls = new URL[] { jarPath.toUri().toURL() };
-
-    List<CoprocessorViolation> violations;
+    List<CoprocessorViolation> violations = new ArrayList<>();
 
     try (ResolverUrlClassLoader classLoader = createClassLoader(urls)) {
-      List<String> classNames;
-
-      if (scan) {
-        List<String> jarClassNames = getJarClasses(jarPath);
-        classNames = filterObservers(classLoader, jarClassNames);
-      } else {
-        classNames = args.subList(1, args.size());
+      for (Pattern tablePattern : tablePatterns) {
+        validateTables(classLoader, tablePattern, violations);
       }
 
-      violations = validate(classLoader, classNames);
+      validateClasses(classLoader, classes, violations);
+
+      if (config) {
+        String[] masterCoprocessors =
+            getConf().getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+        if (masterCoprocessors != null) {
+          validateClasses(classLoader, masterCoprocessors, violations);
+        }
+
+        String[] regionCoprocessors =
+            getConf().getStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+        if (regionCoprocessors != null) {
+          validateClasses(classLoader, regionCoprocessors, violations);
+        }
+      }
     }
 
     boolean error = false;
 
     for (CoprocessorViolation violation : violations) {
+      String className = violation.getClassName();
+      String message = violation.getMessage();
+      Throwable throwable = violation.getThrowable();
+
       switch (violation.getSeverity()) {
         case WARNING:
-          System.err.println("[WARNING] " + violation.getMessage());
+          if (throwable == null) {
+            LOG.warn("Warning in class '{}': {}.", className, message);
+          } else {
+            LOG.warn("Warning in class '{}': {}.", className, message, throwable);
+          }
 
           if (dieOnWarnings) {
             error = true;
@@ -235,7 +327,12 @@ public class CoprocessorValidator extends AbstractHBaseTool {
 
           break;
         case ERROR:
-          System.err.println("[ERROR] " + violation.getMessage());
+          if (throwable == null) {
+            LOG.error("Error in class '{}': {}.", className, message);
+          } else {
+            LOG.error("Error in class '{}': {}.", className, message, throwable);
+          }
+
           error = true;
 
           break;
