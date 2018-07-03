@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getArchivedLogPath;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -25,6 +28,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -306,6 +310,50 @@ public class ReplicationSource implements ReplicationSourceInterface {
       worker.setWALReader(walReader);
       worker.startup(this::uncaughtException);
     }
+  }
+
+  @Override
+  public Map<String, ReplicationStatus> getWalGroupStatus() {
+    Map<String, ReplicationStatus> sourceReplicationStatus = new TreeMap<>();
+    long lastTimeStamp, ageOfLastShippedOp, replicationDelay, fileSize;
+    for (Map.Entry<String, ReplicationSourceShipper> walGroupShipper : workerThreads.entrySet()) {
+      String walGroupId = walGroupShipper.getKey();
+      ReplicationSourceShipper shipper = walGroupShipper.getValue();
+      lastTimeStamp = metrics.getLastTimeStampOfWalGroup(walGroupId);
+      ageOfLastShippedOp = metrics.getAgeofLastShippedOp(walGroupId);
+      int queueSize = queues.get(walGroupId).size();
+      replicationDelay =
+          ReplicationLoad.calculateReplicationDelay(ageOfLastShippedOp, lastTimeStamp, queueSize);
+      Path currentPath = shipper.getCurrentPath();
+      try {
+        fileSize = getFileSize(currentPath);
+      } catch (IOException e) {
+        LOG.warn("Ignore the exception as the file size of HLog only affects the web ui", e);
+        fileSize = -1;
+      }
+      ReplicationStatus.ReplicationStatusBuilder statusBuilder = ReplicationStatus.newBuilder();
+      statusBuilder.withPeerId(this.getPeerId())
+          .withQueueSize(queueSize)
+          .withWalGroup(walGroupId)
+          .withCurrentPath(currentPath)
+          .withCurrentPosition(shipper.getCurrentPosition())
+          .withFileSize(fileSize)
+          .withAgeOfLastShippedOp(ageOfLastShippedOp)
+          .withReplicationDelay(replicationDelay);
+      sourceReplicationStatus.put(this.getPeerId() + "=>" + walGroupId, statusBuilder.build());
+    }
+    return sourceReplicationStatus;
+  }
+
+  private long getFileSize(Path currentPath) throws IOException {
+    long fileSize;
+    try {
+      fileSize = fs.getContentSummary(currentPath).getLength();
+    } catch (FileNotFoundException e) {
+      currentPath = getArchivedLogPath(currentPath, conf);
+      fileSize = fs.getContentSummary(currentPath).getLength();
+    }
+    return fileSize;
   }
 
   protected ReplicationSourceShipper createNewShipper(String walGroupId,

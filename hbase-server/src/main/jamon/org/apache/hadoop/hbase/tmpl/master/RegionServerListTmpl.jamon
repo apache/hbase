@@ -383,7 +383,7 @@ if  (totalCompactingCells > 0) {
                         <td><& serverNameLink; serverName=pair.getFirst(); &></td>
                         <td><% StringUtils.humanTimeDiff(pair.getSecond().getAgeOfLastShippedOp()) %></td>
                         <td><% pair.getSecond().getSizeOfLogQueue() %></td>
-                        <td><% StringUtils.humanTimeDiff(pair.getSecond().getReplicationLag()) %></td>
+                        <td><% pair.getSecond().getReplicationLag() == Long.MAX_VALUE ? "UNKNOWN" : StringUtils.humanTimeDiff(pair.getSecond().getReplicationLag()) %></td>
                     </tr>
                     </%for>
         </table>
@@ -393,6 +393,7 @@ if  (totalCompactingCells > 0) {
                 }
         </%java>
     </div>
+    <p>If the replication delay is UNKNOWN, that means this walGroup doesn't start replicate yet and it may get disabled.</p>
 </div>
 <%else>
     <p>No Peers Metrics</p>

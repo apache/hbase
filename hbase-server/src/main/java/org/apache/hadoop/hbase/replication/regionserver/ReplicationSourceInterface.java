@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
@@ -166,6 +168,14 @@ public interface ReplicationSourceInterface {
    * @return the server name which all WALs belong to
    */
   ServerName getServerWALsBelongTo();
+
+  /**
+   * get the stat of replication for each wal group.
+   * @return stat of replication
+   */
+  default Map<String, ReplicationStatus> getWalGroupStatus() {
+    return new HashMap<>();
+  }
 
   /**
    * @return whether this is a replication source for recovery.

@@ -54,5 +54,5 @@ public interface ReplicationService {
   /**
    * Refresh and Get ReplicationLoad
    */
-  public ReplicationLoad refreshAndGetReplicationLoad();
+  ReplicationLoad refreshAndGetReplicationLoad();
 }
