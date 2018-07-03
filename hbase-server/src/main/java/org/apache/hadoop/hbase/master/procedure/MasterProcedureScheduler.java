@@ -144,17 +144,24 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private <T extends Comparable<T>> void doAdd(final FairQueue<T> fairq,
       final Queue<T> queue, final Procedure<?> proc, final boolean addFront) {
-    queue.add(proc, addFront);
-    if (!queue.getLockStatus().hasExclusiveLock() || queue.getLockStatus().isLockOwner(proc.getProcId())) {
+    if (!queue.getLockStatus().hasExclusiveLock() ||
+      queue.getLockStatus().isLockOwner(proc.getProcId())) {
       // if the queue was not remove for an xlock execution
       // or the proc is the lock owner, put the queue back into execution
+      queue.add(proc, addFront);
       addToRunQueue(fairq, queue);
     } else if (queue.getLockStatus().hasParentLock(proc)) {
-      assert addFront : "expected to add a child in the front";
+      // always add it to front as its parent has the xlock
+      // usually the addFront is true if we arrive here as we will call addFront for adding sub
+      // proc, but sometimes we may retry on the proc which means we will arrive here through yield,
+      // so it is possible the addFront here is false.
+      queue.add(proc, true);
       // our (proc) parent has the xlock,
       // so the queue is not in the fairq (run-queue)
       // add it back to let the child run (inherit the lock)
       addToRunQueue(fairq, queue);
+    } else {
+      queue.add(proc, addFront);
     }
   }
 
