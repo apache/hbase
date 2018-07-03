@@ -123,7 +123,19 @@ public class WALFactory {
   @VisibleForTesting
   public Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
     try {
-      return Providers.valueOf(conf.get(key, defaultValue)).clazz;
+      Providers provider = Providers.valueOf(conf.get(key, defaultValue));
+      if (provider != Providers.defaultProvider) {
+        // User gives a wal provider explicitly, just use that one
+        return provider.clazz;
+      }
+      // AsyncFSWAL has better performance in most cases, and also uses less resources, we will try
+      // to use it if possible. But it deeply hacks into the internal of DFSClient so will be easily
+      // broken when upgrading hadoop. If it is broken, then we fall back to use FSHLog.
+      if (AsyncFSWALProvider.load()) {
+        return AsyncFSWALProvider.class;
+      } else {
+        return FSHLogProvider.class;
+      }
     } catch (IllegalArgumentException exception) {
       // Fall back to them specifying a class name
       // Note that the passed default class shouldn't actually be used, since the above only fails
