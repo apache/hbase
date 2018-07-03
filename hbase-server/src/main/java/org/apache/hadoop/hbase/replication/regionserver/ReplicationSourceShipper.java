@@ -70,6 +70,8 @@ public class ReplicationSourceShipper extends Thread {
   protected final long sleepForRetries;
   // Maximum number of retries before taking bold actions
   protected final int maxRetriesMultiplier;
+  private final int DEFAULT_TIMEOUT = 20000;
+  private final int getEntriesTimeout;
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId,
       PriorityBlockingQueue<Path> queue, ReplicationSourceInterface source) {
@@ -81,6 +83,8 @@ public class ReplicationSourceShipper extends Thread {
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
     this.maxRetriesMultiplier =
         this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
+    this.getEntriesTimeout =
+        this.conf.getInt("replication.source.getEntries.timeout", DEFAULT_TIMEOUT); // 20 seconds
   }
 
   @Override
@@ -96,8 +100,14 @@ public class ReplicationSourceShipper extends Thread {
         continue;
       }
       try {
-        WALEntryBatch entryBatch = entryReader.take();
-        // the NO_MORE_DATA instance has no path so do not all shipEdits
+        WALEntryBatch entryBatch = entryReader.poll(getEntriesTimeout);
+        if (entryBatch == null) {
+          // since there is no logs need to replicate, we refresh the ageOfLastShippedOp
+          source.getSourceMetrics().setAgeOfLastShippedOp(EnvironmentEdgeManager.currentTime(),
+            walGroupId);
+          continue;
+        }
+        // the NO_MORE_DATA instance has no path so do not call shipEdits
         if (entryBatch == WALEntryBatch.NO_MORE_DATA) {
           noMoreData();
         } else {

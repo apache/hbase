@@ -79,19 +79,8 @@ public class ReplicationLoad {
       long ageOfLastShippedOp = sm.getAgeOfLastShippedOp();
       int sizeOfLogQueue = sm.getSizeOfLogQueue();
       long timeStampOfLastShippedOp = sm.getTimestampOfLastShippedOp();
-      long replicationLag;
-      long timePassedAfterLastShippedOp =
-          EnvironmentEdgeManager.currentTime() - timeStampOfLastShippedOp;
-      if (sizeOfLogQueue != 0) {
-        // err on the large side
-        replicationLag = Math.max(ageOfLastShippedOp, timePassedAfterLastShippedOp);
-      } else if (timePassedAfterLastShippedOp < 2 * ageOfLastShippedOp) {
-        replicationLag = ageOfLastShippedOp; // last shipped happen recently
-      } else {
-        // last shipped may happen last night,
-        // so NO real lag although ageOfLastShippedOp is non-zero
-        replicationLag = 0;
-      }
+      long replicationLag =
+          calculateReplicationDelay(ageOfLastShippedOp, timeStampOfLastShippedOp, sizeOfLogQueue);
 
       ClusterStatusProtos.ReplicationLoadSource rLoadSource = replicationLoadSourceMap.get(peerId);
       if (rLoadSource != null) {
@@ -112,6 +101,29 @@ public class ReplicationLoad {
       replicationLoadSourceMap.put(peerId, rLoadSourceBuild.build());
     }
     this.replicationLoadSourceList = new ArrayList<>(replicationLoadSourceMap.values());
+  }
+
+  static long calculateReplicationDelay(long ageOfLastShippedOp,
+      long timeStampOfLastShippedOp, int sizeOfLogQueue) {
+    long replicationLag;
+    long timePassedAfterLastShippedOp;
+    if (timeStampOfLastShippedOp == 0) { //replication not start yet, set to Long.MAX_VALUE
+      return Long.MAX_VALUE;
+    } else {
+      timePassedAfterLastShippedOp =
+          EnvironmentEdgeManager.currentTime() - timeStampOfLastShippedOp;
+    }
+    if (sizeOfLogQueue > 1) {
+      // err on the large side
+      replicationLag = Math.max(ageOfLastShippedOp, timePassedAfterLastShippedOp);
+    } else if (timePassedAfterLastShippedOp < 2 * ageOfLastShippedOp) {
+      replicationLag = ageOfLastShippedOp; // last shipped happen recently
+    } else {
+      // last shipped may happen last night,
+      // so NO real lag although ageOfLastShippedOp is non-zero
+      replicationLag = 0;
+    }
+    return replicationLag;
   }
 
   /**

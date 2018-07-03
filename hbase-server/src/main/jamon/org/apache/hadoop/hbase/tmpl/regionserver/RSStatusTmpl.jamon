@@ -121,6 +121,10 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     <& RegionListTmpl; regionServer = regionServer; onlineRegions = onlineRegions; &>
     </section>
 
+    <section>
+    <h2>Replication Status</h1>
+    <& ReplicationStatusTmpl; regionServer = regionServer; &>
+    </section>
 
     <section>
     <h2>Software Attributes</h2>
