@@ -22,6 +22,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutput;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
@@ -121,6 +124,20 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
       }
       Throwables.propagateIfPossible(e, IOException.class);
       throw new IOException("cannot get log writer", e);
+    }
+  }
+
+  /**
+   * Test whether we can load the helper classes for async dfs output.
+   */
+  public static boolean load() {
+    try {
+      Class.forName(FanOutOneBlockAsyncDFSOutput.class.getName());
+      Class.forName(FanOutOneBlockAsyncDFSOutputHelper.class.getName());
+      Class.forName(FanOutOneBlockAsyncDFSOutputSaslHelper.class.getName());
+      return true;
+    } catch (Throwable e) {
+      return false;
     }
   }
 }
