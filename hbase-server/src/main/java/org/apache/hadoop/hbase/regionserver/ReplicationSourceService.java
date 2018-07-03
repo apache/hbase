@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.regionserver.PeerProcedureHandler;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -43,4 +44,9 @@ public interface ReplicationSourceService extends ReplicationService {
    * Return the replication peers.
    */
   ReplicationPeers getReplicationPeers();
+
+  /**
+   * Returns the replication manager
+   */
+  ReplicationSourceManager getReplicationManager();
 }

@@ -42,6 +42,7 @@ public class MetricsSource implements BaseSource {
 
   // tracks last shipped timestamp for each wal group
   private Map<String, Long> lastTimestamps = new HashMap<>();
+  private Map<String, Long> ageOfLastShippedOp = new HashMap<>();
   private long lastHFileRefsQueueSize = 0;
   private String id;
 
@@ -87,6 +88,7 @@ public class MetricsSource implements BaseSource {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
     singleSourceSource.setLastShippedAge(age);
     globalSourceSource.setLastShippedAge(age);
+    this.ageOfLastShippedOp.put(walGroup, age);
     this.lastTimestamps.put(walGroup, timestamp);
   }
 
@@ -101,6 +103,24 @@ public class MetricsSource implements BaseSource {
         tableName, t -> CompatibilitySingletonFactory
             .getInstance(MetricsReplicationSourceFactory.class).getSource(t))
             .setLastShippedAge(age);
+  }
+
+  /**
+   * get the last timestamp of given wal group. If the walGroup is null, return 0.
+   * @param walGroup which group we are getting
+   * @return timeStamp
+   */
+  public long getLastTimeStampOfWalGroup(String walGroup) {
+    return this.lastTimestamps.get(walGroup) == null ? 0 : lastTimestamps.get(walGroup);
+  }
+
+  /**
+   * get age of last shipped op of given wal group. If the walGroup is null, return 0
+   * @param walGroup which group we are getting
+   * @return age
+   */
+  public long getAgeofLastShippedOp(String walGroup) {
+    return this.ageOfLastShippedOp.get(walGroup) == null ? 0 : ageOfLastShippedOp.get(walGroup);
   }
 
   /**
