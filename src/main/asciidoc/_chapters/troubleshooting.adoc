@@ -102,9 +102,9 @@ To disable, set the logging level back to `INFO` level.
 === JVM Garbage Collection Logs
 
 [NOTE]
-----
+====
 All example Garbage Collection logs in this section are based on Java 8 output. The introduction of Unified Logging in Java 9 and newer will result in very different looking logs.
-----
+====
 
 HBase is memory intensive, and using the default GC you can see long pauses in all threads including the _Juliet Pause_ aka "GC of Death". To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.
 
@@ -806,10 +806,12 @@ The HDFS directory structure of HBase tables in the cluster is...
 ----
 
 /hbase
-    /<Table>                    (Tables in the cluster)
-        /<Region>               (Regions for the table)
-            /<ColumnFamily>     (ColumnFamilies for the Region for the table)
-                /<StoreFile>    (StoreFiles for the ColumnFamily for the Regions for the table)
+    /data
+        /<Namespace>                    (Namespaces in the cluster)
+            /<Table>                    (Tables in the cluster)
+                /<Region>               (Regions for the table)
+                    /<ColumnFamily>     (ColumnFamilies for the Region for the table)
+                        /<StoreFile>    (StoreFiles for the ColumnFamily for the Regions for the table)
 ----
 
 The HDFS directory structure of HBase WAL is..
@@ -817,7 +819,7 @@ The HDFS directory structure of HBase WAL is..
 ----
 
 /hbase
-    /.logs
+    /WALs
         /<RegionServer>    (RegionServers)
             /<WAL>         (WAL files for the RegionServer)
 ----
@@ -827,7 +829,7 @@ See the link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hd
 [[trouble.namenode.0size.hlogs]]
 ==== Zero size WALs with data in them
 
-Problem: when getting a listing of all the files in a RegionServer's _.logs_ directory, one file has a size of 0 but it contains data.
+Problem: when getting a listing of all the files in a RegionServer's _WALs_ directory, one file has a size of 0 but it contains data.
 
 Answer: It's an HDFS quirk.
 A file that's currently being written to will appear to have a size of 0 but once it's closed it will show its true size
@@ -940,6 +942,96 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
 
 \... then there is a path issue with the compression libraries.
 See the Configuration section on link:[LZO compression configuration].
+
+[[trouble.rs.startup.hsync]]
+==== RegionServer aborts due to lack of hsync for filesystem
+
+In order to provide data durability for writes to the cluster HBase relies on the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
+
+For RegionServer roles, the failure will show up in logs like this:
+
+----
+2018-04-05 11:36:22,785 ERROR [regionserver/192.168.1.123:16020] wal.AsyncFSWALProvider: The RegionServer async write ahead log provider relies on the ability to call hflush and hsync for proper operation during component failures, but the current FileSystem does not support doing so. Please check the config value of 'hbase.wal.dir' and ensure it points to a FileSystem mount that has suitable capabilities for output streams.
+2018-04-05 11:36:22,799 ERROR [regionserver/192.168.1.123:16020] regionserver.HRegionServer: ***** ABORTING region server 192.168.1.123,16020,1522946074234: Unhandled: cannot get log writer *****
+java.io.IOException: cannot get log writer
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createAsyncWriter(AsyncFSWALProvider.java:112)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.createWriterInstance(AsyncFSWAL.java:612)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.createWriterInstance(AsyncFSWAL.java:124)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.rollWriter(AbstractFSWAL.java:759)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.rollWriter(AbstractFSWAL.java:489)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.<init>(AsyncFSWAL.java:251)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createWAL(AsyncFSWALProvider.java:69)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createWAL(AsyncFSWALProvider.java:44)
+        at org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWAL(AbstractFSWALProvider.java:138)
+        at org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWAL(AbstractFSWALProvider.java:57)
+        at org.apache.hadoop.hbase.wal.WALFactory.getWAL(WALFactory.java:252)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.getWAL(HRegionServer.java:2105)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.buildServerLoad(HRegionServer.java:1326)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.tryRegionServerReport(HRegionServer.java:1191)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.run(HRegionServer.java:1007)
+        at java.lang.Thread.run(Thread.java:745)
+Caused by: org.apache.hadoop.hbase.util.CommonFSUtils$StreamLacksCapabilityException: hflush and hsync
+        at org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper.createOutput(AsyncFSOutputHelper.java:69)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter.initOutput(AsyncProtobufLogWriter.java:168)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufLogWriter.init(AbstractProtobufLogWriter.java:167)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createAsyncWriter(AsyncFSWALProvider.java:99)
+        ... 15 more
+
+----
+
+If you are attempting to run in standalone mode and see this error, please walk back through the section <<quickstart>> and ensure you have included *all* the given configuration settings.
+
+[[trouble.rs.startup.asyncfs]]
+==== RegionServer aborts due to can not initialize access to HDFS
+
+We will try to use _AsyncFSWAL_ for HBase-2.x as it has better performance while consuming less resources. But the problem for _AsyncFSWAL_ is that it hacks into the internal of the DFSClient implementation, so it will easily be broken when upgrading hadoop, even for a simple patch release.
+
+If you do not specify the wal provider, we will try to fall back to the old _FSHLog_ if we fail to initialize _AsyncFSWAL_, but it may not always work. The failure will show up in logs like this:
+
+----
+18/07/02 18:51:06 WARN concurrent.DefaultPromise: An exception was
+thrown by org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper$13.operationComplete()
+java.lang.Error: Couldn't properly initialize access to HDFS
+internals. Please update your WAL Provider to not make use of the
+'asyncfs' provider. See HBASE-16110 for more information.
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.<clinit>(FanOutOneBlockAsyncDFSOutputSaslHelper.java:268)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.initialize(FanOutOneBlockAsyncDFSOutputHelper.java:661)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.access$300(FanOutOneBlockAsyncDFSOutputHelper.java:118)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper$13.operationComplete(FanOutOneBlockAsyncDFSOutputHelper.java:720)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper$13.operationComplete(FanOutOneBlockAsyncDFSOutputHelper.java:715)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.notifyListener0(DefaultPromise.java:507)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.notifyListeners0(DefaultPromise.java:500)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.notifyListenersNow(DefaultPromise.java:479)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.notifyListeners(DefaultPromise.java:420)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.trySuccess(DefaultPromise.java:104)
+     at org.apache.hbase.thirdparty.io.netty.channel.DefaultChannelPromise.trySuccess(DefaultChannelPromise.java:82)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.fulfillConnectPromise(AbstractEpollChannel.java:638)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.finishConnect(AbstractEpollChannel.java:676)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.epollOutReady(AbstractEpollChannel.java:552)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollEventLoop.processReady(EpollEventLoop.java:394)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollEventLoop.run(EpollEventLoop.java:304)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:858)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:138)
+     at java.lang.Thread.run(Thread.java:748)
+ Caused by: java.lang.NoSuchMethodException:
+org.apache.hadoop.hdfs.DFSClient.decryptEncryptedDataEncryptionKey(org.apache.hadoop.fs.FileEncryptionInfo)
+     at java.lang.Class.getDeclaredMethod(Class.java:2130)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createTransparentCryptoHelper(FanOutOneBlockAsyncDFSOutputSaslHelper.java:232)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.<clinit>(FanOutOneBlockAsyncDFSOutputSaslHelper.java:262)
+     ... 18 more
+----
+
+If you hit this error, please specify _FSHLog_, i.e, _filesystem_, explicitly in your config file.
+
+[source,xml]
+----
+<property>
+  <name>hbase.wal.provider</name>
+  <value>filesystem</value>
+</property>
+----
+
+And do not forget to send an email to the user@hbase.apache.org or dev@hbase.apache.org to report the failure and also your hadoop version, we will try to fix the problem ASAP in the next release.
 
 [[trouble.rs.runtime]]
 === Runtime Errors
@@ -1126,6 +1218,29 @@ Sure fire solution is to just use Hadoop dfs to delete the HBase root and let HB
 ==== Packet len6080218 is out of range!
 
 If you have many regions on your cluster and you see an error like that reported above in this sections title in your logs, see link:https://issues.apache.org/jira/browse/HBASE-4246[HBASE-4246 Cluster with too many regions cannot withstand some master failover scenarios].
+
+[[trouble.master.startup.hsync]]
+==== Master fails to become active due to lack of hsync for filesystem
+
+HBase's internal framework for cluster operations requires the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
+
+For Master roles, the failure will show up in logs like this:
+
+----
+2018-04-05 11:18:44,653 ERROR [Thread-21] master.HMaster: Failed to become active master
+java.lang.IllegalStateException: The procedure WAL relies on the ability to hsync for proper operation during component failures, but the underlying filesystem does not support doing so. Please check the config value of 'hbase.procedure.store.wal.use.hsync' to set the desired level of robustness and ensure the config value of 'hbase.wal.dir' points to a FileSystem mount that can provide it.
+        at org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore.rollWriter(WALProcedureStore.java:1034)
+        at org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore.recoverLease(WALProcedureStore.java:374)
+        at org.apache.hadoop.hbase.procedure2.ProcedureExecutor.start(ProcedureExecutor.java:530)
+        at org.apache.hadoop.hbase.master.HMaster.startProcedureExecutor(HMaster.java:1267)
+        at org.apache.hadoop.hbase.master.HMaster.startServiceThreads(HMaster.java:1173)
+        at org.apache.hadoop.hbase.master.HMaster.finishActiveMasterInitialization(HMaster.java:881)
+        at org.apache.hadoop.hbase.master.HMaster.startActiveMasterManager(HMaster.java:2048)
+        at org.apache.hadoop.hbase.master.HMaster.lambda$run$0(HMaster.java:568)
+        at java.lang.Thread.run(Thread.java:745)
+----
+
+If you are attempting to run in standalone mode and see this error, please walk back through the section <<quickstart>> and ensure you have included *all* the given configuration settings.
 
 [[trouble.master.shutdown]]
 === Shutdown Errors

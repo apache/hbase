@@ -856,7 +856,7 @@
               <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
               <exclude>**/patchprocess/**</exclude>
-              <exclude>src/main/site/resources/repo/**</exclude>
+              <exclude>src/site/resources/repo/**</exclude>
               <exclude>**/dependency-reduced-pom.xml</exclude>
               <exclude>**/rat.txt</exclude>
               <!-- exclude the shaded protobuf files -->
@@ -1136,8 +1136,8 @@
           </dependency>
         </dependencies>
         <configuration>
-          <siteDirectory>${basedir}/src/main/site</siteDirectory>
-          <customBundle>${basedir}/src/main/site/custom/project-info-report.properties</customBundle>
+          <siteDirectory>${basedir}/src/site</siteDirectory>
+          <customBundle>${basedir}/src/site/custom/project-info-report.properties</customBundle>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
@@ -1217,7 +1217,7 @@
               <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${basedir}/src/main/site/resources/</directory>
+                  <directory>${basedir}/src/site/resources/</directory>
                   <includes>
                     <include>.htaccess</include>
                   </includes>
@@ -1236,7 +1236,7 @@
               <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${basedir}/src/main/site/resources/</directory>
+                  <directory>${basedir}/src/site/resources/</directory>
                   <includes>
                     <include>book/**</include>
                   </includes>
@@ -3442,7 +3442,7 @@
             </reports>
           </reportSet>
         </reportSets>
-        <!-- see src/main/site/site.xml for selected reports -->
+        <!-- see src/site/site.xml for selected reports -->
         <configuration>
           <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
         </configuration>
@@ -3677,7 +3677,7 @@
     <repository>
         <id>project.local</id>
         <name>project</name>
-        <url>file:${project.basedir}/src/main/site/resources/repo</url>
+        <url>file:${project.basedir}/src/site/resources/repo</url>
     </repository>
 </repositories>
 </project>

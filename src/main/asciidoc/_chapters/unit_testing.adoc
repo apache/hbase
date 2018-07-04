@@ -327,7 +327,5 @@ A record is inserted, a Get is performed from the same table, and the insertion 
 
 NOTE: Starting the mini-cluster takes about 20-30 seconds, but that should be appropriate for integration testing.
 
-To use an HBase mini-cluster on Microsoft Windows, you need to use a Cygwin environment.
-
 See the paper at link:http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/[HBase Case-Study: Using HBaseTestingUtility for Local Testing and
                 Development] (2010) for more information about HBaseTestingUtility.

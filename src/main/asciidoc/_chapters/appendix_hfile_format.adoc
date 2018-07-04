@@ -94,7 +94,7 @@ The version of HBase introducing the above features reads both version 1 and 2 H
 A version 2 HFile is structured as follows:
 
 .HFile Version 2 Structure
-image:hfilev2.png[HFile Version 2]
+image::hfilev2.png[HFile Version 2]
 
 ==== Unified version 2 block format
 

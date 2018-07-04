@@ -188,11 +188,9 @@ It is useful for tuning the IO impact of prefetching versus the time before all 
 To enable prefetching on a given column family, you can use HBase Shell or use the API.
 
 .Enable Prefetch Using HBase Shell
-====
 ----
 hbase> create 'MyTable', { NAME => 'myCF', PREFETCH_BLOCKS_ON_OPEN => 'true' }
 ----
-====
 
 .Enable Prefetch Using the API
 ====

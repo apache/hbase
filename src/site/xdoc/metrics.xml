@@ -21,7 +21,7 @@ under the License.
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title> 
+    <title>
       Apache HBase (TM) Metrics
     </title>
   </properties>
@@ -63,16 +63,16 @@ under the License.
 
     <section name="Using with JMX">
       <p>
-      In addition to the standard output contexts supported by the Hadoop 
-      metrics package, you can also export HBase metrics via Java Management 
-      Extensions (JMX).  This will allow viewing HBase stats in JConsole or 
+      In addition to the standard output contexts supported by the Hadoop
+      metrics package, you can also export HBase metrics via Java Management
+      Extensions (JMX).  This will allow viewing HBase stats in JConsole or
       any other JMX client.
       </p>
       <section name="Enable HBase stats collection">
       <p>
-      To enable JMX support in HBase, first edit 
-      <code>$HBASE_HOME/conf/hadoop-metrics.properties</code> to support 
-      metrics refreshing. (If you've running 0.94.1 and above, or have already configured 
+      To enable JMX support in HBase, first edit
+      <code>$HBASE_HOME/conf/hadoop-metrics.properties</code> to support
+      metrics refreshing. (If you've running 0.94.1 and above, or have already configured
       <code>hadoop-metrics.properties</code> for another output context,
       you can skip this step).
       </p>
@@ -92,11 +92,11 @@ rpc.period=60
       </section>
       <section name="Setup JMX remote access">
       <p>
-      For remote access, you will need to configure JMX remote passwords 
+      For remote access, you will need to configure JMX remote passwords
       and access profiles.  Create the files:
       </p>
       <dl>
-        <dt><code>$HBASE_HOME/conf/jmxremote.passwd</code> (set permissions 
+        <dt><code>$HBASE_HOME/conf/jmxremote.passwd</code> (set permissions
         to 600)</dt>
         <dd>
         <source>
@@ -104,7 +104,7 @@ monitorRole monitorpass
 controlRole controlpass
         </source>
         </dd>
-        
+
         <dt><code>$HBASE_HOME/conf/jmxremote.access</code></dt>
         <dd>
         <source>
@@ -117,7 +117,7 @@ controlRole readwrite
       <section name="Configure JMX in HBase startup">
       <p>
       Finally, edit the <code>$HBASE_HOME/conf/hbase-env.sh</code>
-      script to add JMX support: 
+      script to add JMX support:
       </p>
       <dl>
         <dt><code>$HBASE_HOME/conf/hbase-env.sh</code></dt>
@@ -134,15 +134,15 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.p
         </dd>
       </dl>
       <p>
-      After restarting the processes you want to monitor, you should now be 
-      able to run JConsole (included with the JDK since JDK 5.0) to view 
-      the statistics via JMX.  HBase MBeans are exported under the 
+      After restarting the processes you want to monitor, you should now be
+      able to run JConsole (included with the JDK since JDK 5.0) to view
+      the statistics via JMX.  HBase MBeans are exported under the
       <strong><code>hadoop</code></strong> domain in JMX.
       </p>
       </section>
       <section name="Understanding HBase Metrics">
       <p>
-      For more information on understanding HBase metrics, see the <a href="book.html#hbase_metrics">metrics section</a> in the Apache HBase Reference Guide. 
+      For more information on understanding HBase metrics, see the <a href="book.html#hbase_metrics">metrics section</a> in the Apache HBase Reference Guide.
       </p>
       </section>
     </section>

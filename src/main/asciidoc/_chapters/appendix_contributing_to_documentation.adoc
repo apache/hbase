@@ -119,7 +119,7 @@ JIRA and add a version number to the name of the new patch.
 
 === Editing the HBase Website
 
-The source for the HBase website is in the HBase source, in the _src/main/site/_ directory.
+The source for the HBase website is in the HBase source, in the _src/site/_ directory.
 Within this directory, source for the individual pages is in the _xdocs/_ directory,
 and images referenced in those pages are in the _resources/images/_ directory.
 This directory also stores images used in the HBase Reference Guide.
@@ -216,7 +216,7 @@ link:http://www.google.com[Google]
 ----
 image::sunset.jpg[Alt Text]
 ----
-(put the image in the src/main/site/resources/images directory)
+(put the image in the src/site/resources/images directory)
 | An inline image | The image with alt text, as part of the text flow |
 ----
 image:sunset.jpg [Alt Text]
@@ -389,7 +389,7 @@ Inline images cannot have titles. They are generally small images like GUI butto
 image:sunset.jpg[Alt Text]
 ----
 
-When doing a local build, save the image to the _src/main/site/resources/images/_ directory.
+When doing a local build, save the image to the _src/site/resources/images/_ directory.
 When you link to the image, do not include the directory portion of the path.
 The image will be copied to the appropriate target location during the build of the output.
 
