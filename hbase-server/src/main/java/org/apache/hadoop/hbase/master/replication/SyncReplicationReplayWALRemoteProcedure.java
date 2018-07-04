@@ -161,9 +161,10 @@ public class SyncReplicationReplayWALRemoteProcedure extends Procedure<MasterPro
     } catch (FailedRemoteDispatchException e) {
       LOG.warn(
           "Can not add remote operation for replay wals {} on {} for peer id={}, "
-              + "this usually because the server is already dead, retry",
+              + "this usually because the server is already dead",
           wals, targetServer, peerId);
-      throw new ProcedureYieldException();
+      // Return directly and the parent procedure will assign a new worker to replay wals
+      return null;
     }
     dispatched = true;
     event = new ProcedureEvent<>(this);
