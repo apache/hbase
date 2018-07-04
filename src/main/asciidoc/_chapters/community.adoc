@@ -94,6 +94,9 @@ NOTE: End-of-life releases are not included in this list.
 | 2.0
 | Michael Stack
 
+| 2.1
+| Duo Zhang
+
 |===
 
 [[hbase.commit.msg.format]]
