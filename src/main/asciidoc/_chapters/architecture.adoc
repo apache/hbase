@@ -1055,6 +1055,9 @@ Look for the lines like the below in the RegionServer log to see which provider 
 2018-04-02 13:22:37,983 INFO  [regionserver/ve0528:16020] wal.WALFactory: Instantiating WALProvider of type class org.apache.hadoop.hbase.wal.AsyncFSWALProvider
 ----
 
+NOTE: As the _AsyncFSWAL_ hacks into the internal of DFSClient implementation, it will be easily broken by upgrading the hadoop dependencies, even for a simple patch release. So if you do not specify the wal provider explicitly, we will first try to use the _asyncfs_, if failed, we will fall back to use _filesystem_. And notice that this may not always work, so if you still have problem starting HBase due to the problem of starting _AsyncFSWAL_, please specify _filesystem_ explicitly in the config file.
+
+NOTE: EC support has been added to hadoop-3.x, and it is incompatible with WAL as the EC output stream does not support hflush/hsync. In order to create a non-EC file in an EC directory, we need to use the new builder-based create API for _FileSystem_, but it is only introduced in hadoop-2.9+ and for HBase we still need to support hadoop-2.7.x. So please do not enable EC for the WAL directory until we find a way to deal with it.
 
 ==== MultiWAL
 With a single WAL per RegionServer, the RegionServer must write to the WAL serially, because HDFS files must be sequential. This causes the WAL to be a performance bottleneck.
