@@ -115,4 +115,4 @@ All of the above guarantees must be possible within Apache HBase. For users who 
 
 == More Information
 
-For more information, see the link:book.html#client[client architecture] and  link:book.html#datamodel[data model] sections in the Apache HBase Reference Guide. 
+For more information, see the link:book.html#client[client architecture] and  link:book.html#datamodel[data model] sections in the Apache HBase Reference Guide.

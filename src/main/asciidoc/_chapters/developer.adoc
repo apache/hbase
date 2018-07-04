@@ -773,15 +773,15 @@ To do this, log in to Apache's Nexus at link:https://repository.apache.org[repos
 Find your artifacts in the staging repository. Click on 'Staging Repositories' and look for a new one ending in "hbase" with a status of 'Open', select it.
 Use the tree view to expand the list of repository contents and inspect if the artifacts you expect are present. Check the POMs.
 As long as the staging repo is open you can re-upload if something is missing or built incorrectly.
-
++
 If something is seriously wrong and you would like to back out the upload, you can use the 'Drop' button to drop and delete the staging repository.
 Sometimes the upload fails in the middle. This is another reason you might have to 'Drop' the upload from the staging repository.
-
++
 If it checks out, close the repo using the 'Close' button. The repository must be closed before a public URL to it becomes available. It may take a few minutes for the repository to close. Once complete you'll see a public URL to the repository in the Nexus UI. You may also receive an email with the URL. Provide the URL to the temporary staging repository in the email that announces the release candidate.
 (Folks will need to add this repo URL to their local poms or to their local _settings.xml_ file to pull the published release candidate artifacts.)
-
++
 When the release vote concludes successfully, return here and click the 'Release' button to release the artifacts to central. The release process will automatically drop and delete the staging repository.
-
++
 .hbase-downstreamer
 [NOTE]
 ====
@@ -792,15 +792,18 @@ Make sure you are pulling from the repository when tests run and that you are no
 ====
 
 See link:https://www.apache.org/dev/publishing-maven-artifacts.html[Publishing Maven Artifacts] for some pointers on this maven staging process.
-
++
 If the HBase version ends in `-SNAPSHOT`, the artifacts go elsewhere.
 They are put into the Apache snapshots repository directly and are immediately available.
 Making a SNAPSHOT release, this is what you want to happen.
-
-At this stage, you have two tarballs in your 'build output directory' and a set of artifacts in a staging area of the maven repository, in the 'closed' state.
-
++
+At this stage, you have two tarballs in your 'build output directory' and a set of artifacts
+in a staging area of the maven repository, in the 'closed' state.
 Next sign, fingerprint and then 'stage' your release candiate build output directory via svnpubsub by committing
-your directory to link:https://dist.apache.org/repos/dist/dev/hbase/[The 'dev' distribution directory] (See comments on link:https://issues.apache.org/jira/browse/HBASE-10554[HBASE-10554 Please delete old releases from mirroring system] but in essence it is an svn checkout of https://dist.apache.org/repos/dist/dev/hbase -- releases are at https://dist.apache.org/repos/dist/release/hbase). In the _version directory_ run the following commands:
+your directory to link:https://dist.apache.org/repos/dist/dev/hbase/[The dev distribution directory]
+(See comments on link:https://issues.apache.org/jira/browse/HBASE-10554[HBASE-10554 Please delete old releases from mirroring system]
+but in essence it is an svn checkout of link:https://dist.apache.org/repos/dist/dev/hbase[dev/hbase] -- releases are at
+link:https://dist.apache.org/repos/dist/release/hbase[release/hbase]). In the _version directory_ run the following commands:
 
 [source,bourne]
 ----
@@ -867,6 +870,50 @@ See link:http://search-hadoop.com/m/DHED4dhFaU[HBase, mail # dev - On
                 recent discussion clarifying ASF release policy].
 for how we arrived at this process.
 
+[[hbase.release.announcement]]
+== Announcing Releases
+
+Once an RC has passed successfully and the needed artifacts have been staged for disribution, you'll need to let everyone know about our shiny new release. It's not a requirement, but to make things easier for release managers we have a template you can start with. Be sure you replace \_version_ and other markers with the relevant version numbers. You should manually verify all links before sending.
+
+[source,email]
+----
+The HBase team is happy to announce the immediate availability of HBase _version_.
+
+Apache HBase™ is an open-source, distributed, versioned, non-relational database.
+Apache HBase gives you low latency random access to billions of rows with
+millions of columns atop non-specialized hardware. To learn more about HBase,
+see https://hbase.apache.org/.
+
+HBase _version_ is the _nth_ minor release in the HBase _major_.x line, which aims to
+improve the stability and reliability of HBase. This release includes roughly
+XXX resolved issues not covered by previous _major_.x releases.
+
+Notable new features include:
+- List text descriptions of features that fit on one line
+- Including if JDK or Hadoop support versions changes
+- If the "stable" pointer changes, call that out
+- For those with obvious JIRA IDs, include them (HBASE-YYYYY)
+
+The full list of issues can be found in the included CHANGES.md and RELEASENOTES.md,
+or via our issue tracker:
+
+    https://s.apache.org/hbase-_version_-jira
+
+To download please follow the links and instructions on our website:
+
+    https://hbase.apache.org/downloads.html
+
+
+Question, comments, and problems are always welcome at: dev@hbase.apache.org.
+
+Thanks to all who contributed and made this release possible.
+
+Cheers,
+The HBase Dev Team
+----
+
+You should sent this message to the following lists: dev@hbase.apache.org, user@hbase.apache.org, announce@apache.org. If you'd like a spot check before sending, feel free to ask via jira or the dev list.
+
 [[documentation]]
 == Generating the HBase Reference Guide
 
@@ -909,13 +956,21 @@ For any other module, for example `hbase-common`, the tests must be strict unit 
 ==== Testing the HBase Shell
 
 The HBase shell and its tests are predominantly written in jruby.
-In order to make these tests run as a part of the standard build, there is a single JUnit test, `TestShell`, that takes care of loading the jruby implemented tests and running them.
+
+In order to make these tests run as a part of the standard build, there are a few JUnit test classes that take care of loading the jruby implemented tests and running them.
+The tests were split into separate classes to accomodate class level timeouts (see <<hbase.unittests>> for specifics).
 You can run all of these tests from the top level with:
 
 [source,bourne]
 ----
+      mvn clean test -Dtest=Test*Shell
+----
 
-      mvn clean test -Dtest=TestShell
+If you have previously done a `mvn install`, then you can instruct maven to run only the tests in the hbase-shell module with:
+
+[source,bourne]
+----
+      mvn clean test -pl hbase-shell
 ----
 
 Alternatively, you may limit the shell tests that run using the system variable `shell.test`.
@@ -924,8 +979,7 @@ For example, the tests that cover the shell commands for altering tables are con
 
 [source,bourne]
 ----
-
-      mvn clean test -Dtest=TestShell -Dshell.test=/AdminAlterTableTest/
+      mvn clean test -pl hbase-shell -Dshell.test=/AdminAlterTableTest/
 ----
 
 You may also use a link:http://docs.ruby-doc.com/docs/ProgrammingRuby/html/language.html#UJ[Ruby Regular Expression
@@ -935,14 +989,13 @@ You can run all of the HBase admin related tests, including both the normal admi
 [source,bourne]
 ----
 
-      mvn clean test -Dtest=TestShell -Dshell.test=/.*Admin.*Test/
+      mvn clean test -pl hbase-shell -Dshell.test=/.*Admin.*Test/
 ----
 
 In the event of a test failure, you can see details by examining the XML version of the surefire report results
 
 [source,bourne]
 ----
-
       vim hbase-shell/target/surefire-reports/TEST-org.apache.hadoop.hbase.client.TestShell.xml
 ----
 
@@ -1462,9 +1515,8 @@ HBase ships with several ChaosMonkey policies, available in the
 [[chaos.monkey.properties]]
 ==== Configuring Individual ChaosMonkey Actions
 
-Since HBase version 1.0.0 (link:https://issues.apache.org/jira/browse/HBASE-11348[HBASE-11348]),
 ChaosMonkey integration tests can be configured per test run.
-Create a Java properties file in the HBase classpath and pass it to ChaosMonkey using
+Create a Java properties file in the HBase CLASSPATH and pass it to ChaosMonkey using
 the `-monkeyProps` configuration flag. Configurable properties, along with their default
 values if applicable, are listed in the `org.apache.hadoop.hbase.chaos.factories.MonkeyConstants`
 class. For properties that have defaults, you can override them by including them
@@ -1477,7 +1529,9 @@ The following example uses a properties file called <<monkey.properties,monkey.p
 $ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties
 ----
 
-The above command will start the integration tests and chaos monkey passing the properties file _monkey.properties_.
+The above command will start the integration tests and chaos monkey. It will look for the
+properties file _monkey.properties_ on the HBase CLASSPATH; e.g. inside the HBASE _conf_ dir.
+
 Here is an example chaos monkey file:
 
 [[monkey.properties]]
@@ -1491,6 +1545,8 @@ move.regions.max.time=1000000
 move.regions.sleep.time=80000
 batch.restart.rs.ratio=0.4f
 ----
+
+Periods/time are expressed in milliseconds.
 
 HBase 1.0.2 and newer adds the ability to restart HBase's underlying ZooKeeper quorum or
 HDFS nodes. To use these actions, you need to configure some new properties, which
@@ -1529,35 +1585,6 @@ properties file, which may be `hbase-site.xml` or a different properties file.
 We use Git for source code management and latest development happens on `master` branch. There are
 branches for past major/minor/maintenance releases and important features and bug fixes are often
  back-ported to them.
-
-=== Release Managers
-
-Each maintained release branch has a release manager, who volunteers to coordinate new features and bug fixes are backported to that release.
-The release managers are link:https://hbase.apache.org/team-list.html[committers].
-If you would like your feature or bug fix to be included in a given release, communicate with that release manager.
-If this list goes out of date or you can't reach the listed person, reach out to someone else on the list.
-
-NOTE: End-of-life releases are not included in this list.
-
-.Release Managers
-[cols="1,1", options="header"]
-|===
-| Release
-| Release Manager
-
-| 1.2
-| Sean Busbey
-
-| 1.3
-| Mikhail Antonov
-
-| 1.4
-| Andrew Purtell
-
-| 2.0
-| Michael Stack
-
-|===
 
 [[code.standards]]
 === Code Standards
@@ -2185,6 +2212,12 @@ When the amending author is different from the original committer, add notice of
                                 <committer&apache>` See discussion at link:http://search-hadoop.com/m/DHED4wHGYS[HBase, mail # dev
                                 - [DISCUSSION] Best practice when amending commits cherry picked
                                 from master to branch].
+
+====== Close related GitHub PRs
+
+As a project we work to ensure there's a JIRA associated with each change, but we don't mandate any particular tool be used for reviews. Due to implementation details of the ASF's integration between hosted git repositories and GitHub, the PMC has no ability to directly close PRs on our GitHub repo. In the event that a contributor makes a Pull Request on GitHub, either because the contributor finds that easier than attaching a patch to JIRA or because a reviewer prefers that UI for examining changes, it's important to make note of the PR in the commit that goes to the master branch so that PRs are kept up to date.
+
+To read more about the details of what kinds of commit messages will work with the GitHub "close via keyword in commit" mechanism see link:https://help.github.com/articles/closing-issues-using-keywords/[the GitHub documentation for "Closing issues using keywords"]. In summary, you should include a line with the phrase "closes #XXX", where the XXX is the pull request id. The pull request id is usually given in the GitHub UI in grey at the end of the subject heading.
 
 [[committer.tests]]
 ====== Committers are responsible for making sure commits do not break the build or tests

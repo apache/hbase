@@ -160,6 +160,7 @@ In case the table goes out of date, the unit tests which check for accuracy of p
 |                  | getUserPermissions(global level) | global(A)
 |                  | getUserPermissions(namespace level) | global(A)\|NS(A)
 |                  | getUserPermissions(table level) | global(A)\|NS(A)\|TableOwner\|table(A)\|CF(A)\|CQ(A)
+|                  | hasPermission(table level) | global(A)\|SelfUserCheck
 | RegionServer | stopRegionServer | superuser\|global(A)
 |              | mergeRegions | superuser\|global(A)
 |              | rollWALWriterRequest | superuser\|global(A)

@@ -23,7 +23,7 @@ First off, thanks to link:http://www.apache.org/foundation/thanks.html[all who s
 
 The below companies have been gracious enough to provide their commerical tool offerings free of charge to the Apache HBase(TM) project.
 
-* The crew at link:http://www.ej-technologies.com/[ej-technologies] have been letting us use link:http://www.ej-technologies.com/products/jprofiler/overview.html[JProfiler] for years now. 
+* The crew at link:http://www.ej-technologies.com/[ej-technologies] have been letting us use link:http://www.ej-technologies.com/products/jprofiler/overview.html[JProfiler] for years now.
 
 * The lads at link:http://headwaysoftware.com/[headway software] have given us a license for link:http://headwaysoftware.com/products/?code=Restructure101[Restructure101] so we can untangle our interdependency mess.
 
@@ -33,4 +33,3 @@ The below companies have been gracious enough to provide their commerical tool o
 
 == Sponsoring the Apache Software Foundation">
 To contribute to the Apache Software Foundation, a good idea in our opinion, see the link:http://www.apache.org/foundation/sponsorship.html[ASF Sponsorship] page.
-

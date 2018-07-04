@@ -25,7 +25,7 @@ under the License.
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title> 
+    <title>
       Apache HBase (TM) ACID Properties
     </title>
   </properties>
@@ -210,10 +210,10 @@ under the License.
     </section>
     <section name="More Information">
       <p>
-      For more information, see the <a href="book.html#client">client architecture</a> or <a href="book.html#datamodel">data model</a> sections in the Apache HBase Reference Guide. 
+      For more information, see the <a href="book.html#client">client architecture</a> or <a href="book.html#datamodel">data model</a> sections in the Apache HBase Reference Guide.
       </p>
     </section>
-    
+
     <section name="Footnotes">
       <p>[1] A consistent view is not guaranteed intra-row scanning -- i.e. fetching a portion of
           a row in one RPC then going back to fetch another portion of the row in a subsequent RPC.
@@ -228,7 +228,7 @@ under the License.
       <p>[3] Puts will either wholly succeed or wholly fail, provided that they are actually sent
       to the RegionServer.  If the writebuffer is used, Puts will not be sent until the writebuffer is filled
       or it is explicitly flushed.</p>
-      
+
     </section>
 
   </body>

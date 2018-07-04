@@ -30,10 +30,10 @@ This document explains the *intricacies* of running Apache HBase on Windows usin
 
 == Installation
 
-For running Apache HBase on Windows, 3 technologies are required: 
+For running Apache HBase on Windows, 3 technologies are required:
 * Java
 * Cygwin
-* SSH 
+* SSH
 
 The following paragraphs detail the installation of each of the aforementioned technologies.
 
@@ -104,7 +104,7 @@ LN -s /cygdrive/c/Program\ Files/Java/*_jre name_*/usr/local/*_jre name_*
 ----
 . Test your java installation by changing directories to your Java folder `CD /usr/local/_jre name_` and issueing the command `./bin/java -version`. This should output your version of the chosen JRE.
 
-=== SSH 
+=== SSH
 
 Configuring *SSH *is quite elaborate, but primarily a question of launching it by default as a* Windows service*.
 
@@ -194,4 +194,3 @@ put 'test', 'row3', 'data:3', 'value3'
 == Conclusion
 
 Now your *HBase *server is running, *start coding* and build that next killer app on this particular, but scalable datastore!
-
