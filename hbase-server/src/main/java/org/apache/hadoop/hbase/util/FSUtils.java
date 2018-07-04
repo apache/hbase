@@ -122,28 +122,6 @@ public abstract class FSUtils {
     super();
   }
 
-  /**
-   * Sets storage policy for given path according to config setting.
-   * If the passed path is a directory, we'll set the storage policy for all files
-   * created in the future in said directory. Note that this change in storage
-   * policy takes place at the HDFS level; it will persist beyond this RS's lifecycle.
-   * If we're running on a version of HDFS that doesn't support the given storage policy
-   * (or storage policies at all), then we'll issue a log message and continue.
-   *
-   * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html
-   *
-   * @param fs We only do anything if an instance of DistributedFileSystem
-   * @param conf used to look up storage policy with given key; not modified.
-   * @param path the Path whose storage policy is to be set
-   * @param policyKey e.g. HConstants.WAL_STORAGE_POLICY
-   * @param defaultPolicy usually should be the policy NONE to delegate to HDFS
-   */
-  public static void setStoragePolicy(final FileSystem fs, final Configuration conf,
-      final Path path, final String policyKey, final String defaultPolicy) {
-    String storagePolicy = conf.get(policyKey, defaultPolicy).toUpperCase(Locale.ROOT);
-    setStoragePolicy(fs, path, storagePolicy);
-  }
-
   private static final Map<FileSystem, Boolean> warningMap =
       new ConcurrentHashMap<FileSystem, Boolean>();
 
@@ -164,16 +142,35 @@ public abstract class FSUtils {
    */
   public static void setStoragePolicy(final FileSystem fs, final Path path,
       final String storagePolicy) {
+    try {
+      setStoragePolicy(fs, path, storagePolicy, false);
+    } catch (IOException e) {
+      // should never arrive here
+      LOG.warn("We have chosen not to throw exception but some unexpectedly thrown out", e);
+    }
+  }
+
+  static void setStoragePolicy(final FileSystem fs, final Path path, final String storagePolicy,
+      boolean throwException) throws IOException {
     if (storagePolicy == null) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("We were passed a null storagePolicy, exiting early.");
       }
       return;
     }
-    final String trimmedStoragePolicy = storagePolicy.trim();
+    String trimmedStoragePolicy = storagePolicy.trim();
     if (trimmedStoragePolicy.isEmpty()) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("We were passed an empty storagePolicy, exiting early.");
+      }
+      return;
+    } else {
+      trimmedStoragePolicy = trimmedStoragePolicy.toUpperCase(Locale.ROOT);
+    }
+    if (trimmedStoragePolicy.equals(HConstants.DEFER_TO_HDFS_STORAGE_POLICY)) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(
+          "We were passed the defer-to-hdfs policy " + trimmedStoragePolicy + ", exiting early.");
       }
       return;
     }
@@ -194,7 +191,16 @@ public abstract class FSUtils {
       return;
     }
     if (distributed) {
-      invokeSetStoragePolicy(fs, path, trimmedStoragePolicy);
+      try {
+        invokeSetStoragePolicy(fs, path, trimmedStoragePolicy);
+      } catch (IOException e) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Failed to invoke set storage policy API on FS", e);
+        }
+        if (throwException) {
+          throw e;
+        }
+      }
     }
   }
 
@@ -202,13 +208,15 @@ public abstract class FSUtils {
    * All args have been checked and are good. Run the setStoragePolicy invocation.
    */
   private static void invokeSetStoragePolicy(final FileSystem fs, final Path path,
-      final String storagePolicy) {
+      final String storagePolicy) throws IOException {
     Method m = null;
+    Exception toThrow = null;
     try {
       m = fs.getClass().getDeclaredMethod("setStoragePolicy",
         new Class<?>[] { Path.class, String.class });
       m.setAccessible(true);
     } catch (NoSuchMethodException e) {
+      toThrow = e;
       final String msg = "FileSystem doesn't support setStoragePolicy; HDFS-6584 not available";
       if (!warningMap.containsKey(fs)) {
         warningMap.put(fs, true);
@@ -218,6 +226,7 @@ public abstract class FSUtils {
       }
       m = null;
     } catch (SecurityException e) {
+      toThrow = e;
       final String msg = "No access to setStoragePolicy on FileSystem; HDFS-6584 not available";
       if (!warningMap.containsKey(fs)) {
         warningMap.put(fs, true);
@@ -234,6 +243,7 @@ public abstract class FSUtils {
           LOG.debug("Set storagePolicy=" + storagePolicy + " for path=" + path);
         }
       } catch (Exception e) {
+        toThrow = e;
         // This swallows FNFE, should we be throwing it? seems more likely to indicate dev
         // misuse than a runtime problem with HDFS.
         if (!warningMap.containsKey(fs)) {
@@ -257,6 +267,9 @@ public abstract class FSUtils {
           }
         }
       }
+    }
+    if (toThrow != null) {
+      throw new IOException(toThrow);
     }
   }
 

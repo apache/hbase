@@ -1324,8 +1324,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     // Now that it exists, set the log policy
-    FSUtils.setStoragePolicy(walFs, conf, walDir, HConstants.WAL_STORAGE_POLICY,
-      HConstants.DEFAULT_WAL_STORAGE_POLICY);
+    String storagePolicy =
+        conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
+    FSUtils.setStoragePolicy(walFs, walDir, storagePolicy);
 
     procedureStore = new WALProcedureStore(conf, walFs, walDir,
         new MasterProcedureEnv.WALStoreLeaseRecovery(this));
