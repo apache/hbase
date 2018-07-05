@@ -101,11 +101,17 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   @Override
   public void setConf(Configuration conf) {
     this.config = conf;
+    if (internalBalancer != null) {
+      internalBalancer.setConf(conf);
+    }
   }
 
   @Override
   public void setClusterStatus(ClusterStatus st) {
     this.clusterStatus = st;
+    if (internalBalancer != null) {
+      internalBalancer.setClusterStatus(st);
+    }
   }
 
   @Override
@@ -365,7 +371,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   }
 
   private Map<ServerName, List<HRegionInfo>> correctAssignments(
-       Map<ServerName, List<HRegionInfo>> existingAssignments){
+      Map<ServerName, List<HRegionInfo>> existingAssignments) {
     Map<ServerName, List<HRegionInfo>> correctAssignments =
         new TreeMap<ServerName, List<HRegionInfo>>();
     correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<HRegionInfo>());
@@ -424,7 +430,9 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
         HBASE_GROUP_LOADBALANCER_CLASS,
         StochasticLoadBalancer.class, LoadBalancer.class);
     internalBalancer = ReflectionUtils.newInstance(balancerKlass, config);
-    internalBalancer.setClusterStatus(clusterStatus);
+    if (clusterStatus != null) {
+      internalBalancer.setClusterStatus(clusterStatus);
+    }
     internalBalancer.setMasterServices(masterServices);
     internalBalancer.setConf(config);
     internalBalancer.initialize();
