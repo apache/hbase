@@ -65,7 +65,8 @@ struct TColumnIncrement {
  */
 struct TResult {
   1: optional binary row,
-  2: required list<TColumnValue> columnValues
+  2: required list<TColumnValue> columnValues,
+  3: optional bool stale = false
 }
 
 /**
@@ -101,6 +102,17 @@ struct TAuthorization {
 struct TCellVisibility {
  1: optional string expression
 }
+
+/**
+ * Specify Consistency:
+ *  - STRONG means reads only from primary region
+ *  - TIMELINE means reads might return values from secondary region replicas
+ */
+enum TConsistency {
+  STRONG = 1,
+  TIMELINE = 2
+}
+
 /**
  * Used to perform Get operations on a single row.
  *
@@ -125,6 +137,8 @@ struct TGet {
   6: optional binary filterString,
   7: optional map<binary, binary> attributes
   8: optional TAuthorization authorizations
+  9: optional TConsistency consistency
+  10: optional i32 targetReplicaId
 }
 
 /**
@@ -236,6 +250,8 @@ struct TScan {
   13: optional map<binary,TTimeRange> colFamTimeRangeMap
   14: optional TReadType readType
   15: optional i32 limit
+  16: optional TConsistency consistency
+  17: optional i32 targetReplicaId
 }
 
 /**
