@@ -51,6 +51,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -1284,8 +1285,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         LOG.error("Failed to stop master jetty server", e);
       }
     }
-    super.stopServiceThreads();
     stopChores();
+    super.stopServiceThreads();
     CleanerChore.shutDownChorePool();
 
     // Wait for all the remaining region servers to report in IFF we were
@@ -1298,10 +1299,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       LOG.debug("Stopping service threads");
     }
     // Clean up and close up shop
-    if (this.logCleaner != null) this.logCleaner.cancel(true);
-    if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
-    if (this.replicationZKLockCleanerChore != null) this.replicationZKLockCleanerChore.cancel(true);
-    if (this.replicationZKNodeCleanerChore != null) this.replicationZKNodeCleanerChore.cancel(true);
     if (this.quotaManager != null) this.quotaManager.stop();
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
     if (this.serverManager != null) this.serverManager.stop();
@@ -1355,23 +1352,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   private void stopChores() {
-    if (this.balancerChore != null) {
-      this.balancerChore.cancel(true);
-    }
-    if (this.normalizerChore != null) {
-      this.normalizerChore.cancel(true);
-    }
-    if (this.clusterStatusChore != null) {
-      this.clusterStatusChore.cancel(true);
-    }
-    if (this.catalogJanitorChore != null) {
-      this.catalogJanitorChore.cancel(true);
-    }
-    if (this.clusterStatusPublisherChore != null){
-      clusterStatusPublisherChore.cancel(true);
-    }
-    if (this.periodicDoMetricsChore != null) {
-      periodicDoMetricsChore.cancel();
+    ChoreService choreService = getChoreService();
+    if (choreService != null) {
+      choreService.cancelChore(this.balancerChore);
+      choreService.cancelChore(this.normalizerChore);
+      choreService.cancelChore(this.clusterStatusChore);
+      choreService.cancelChore(this.catalogJanitorChore);
+      choreService.cancelChore(this.clusterStatusPublisherChore);
+      choreService.cancelChore(this.periodicDoMetricsChore);
+      choreService.cancelChore(this.logCleaner);
+      choreService.cancelChore(this.hfileCleaner);
+      choreService.cancelChore(this.replicationZKLockCleanerChore);
+      choreService.cancelChore(this.replicationZKNodeCleanerChore);
     }
   }
 
