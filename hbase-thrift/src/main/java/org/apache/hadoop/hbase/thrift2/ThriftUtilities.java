@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TConsistency;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
@@ -119,6 +121,14 @@ public class ThriftUtilities {
       out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
     }
 
+    if (in.isSetConsistency()) {
+      out.setConsistency(consistencyFromThrift(in.getConsistency()));
+    }
+
+    if (in.isSetTargetReplicaId()) {
+      out.setReplicaId(in.getTargetReplicaId());
+    }
+
     if (!in.isSetColumns()) {
       return out;
     }
@@ -179,6 +189,8 @@ public class ThriftUtilities {
       columnValues.add(col);
     }
     out.setColumnValues(columnValues);
+
+    out.setStale(in.isStale());
     return out;
   }
 
@@ -486,6 +498,14 @@ public class ThriftUtilities {
       out.setLimit(in.getLimit());
     }
 
+    if (in.isSetConsistency()) {
+      out.setConsistency(consistencyFromThrift(in.getConsistency()));
+    }
+
+    if (in.isSetTargetReplicaId()) {
+      out.setReplicaId(in.getTargetReplicaId());
+    }
+
     return out;
   }
 
@@ -608,6 +628,14 @@ public class ThriftUtilities {
       case 2: return ReadType.STREAM;
       case 3: return ReadType.PREAD;
       default: return null;
+    }
+  }
+
+  private static Consistency consistencyFromThrift(TConsistency tConsistency) {
+    switch (tConsistency.getValue()) {
+      case 1: return Consistency.STRONG;
+      case 2: return Consistency.TIMELINE;
+      default: return Consistency.STRONG;
     }
   }
 }

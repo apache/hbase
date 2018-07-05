@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TConsistency;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
@@ -1553,6 +1555,37 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(2, result.getColumnValuesSize());
     assertTColumnValueEqual(columnValueA, result.getColumnValues().get(0));
     assertTColumnValueEqual(columnValueB, result.getColumnValues().get(1));
+  }
+
+  @Test
+  public void testConsistency() throws Exception {
+    byte[] rowName = Bytes.toBytes("testConsistency");
+    TGet tGet = new TGet(wrap(rowName));
+    tGet.setConsistency(TConsistency.STRONG);
+    Get get = getFromThrift(tGet);
+    assertEquals(Consistency.STRONG, get.getConsistency());
+
+    tGet.setConsistency(TConsistency.TIMELINE);
+    tGet.setTargetReplicaId(1);
+    get = getFromThrift(tGet);
+    assertEquals(Consistency.TIMELINE, get.getConsistency());
+    assertEquals(1, get.getReplicaId());
+
+    TScan tScan = new TScan();
+    tScan.setConsistency(TConsistency.STRONG);
+    Scan scan = scanFromThrift(tScan);
+    assertEquals(Consistency.STRONG, scan.getConsistency());
+
+    tScan.setConsistency(TConsistency.TIMELINE);
+    tScan.setTargetReplicaId(1);
+    scan = scanFromThrift(tScan);
+    assertEquals(Consistency.TIMELINE, scan.getConsistency());
+    assertEquals(1, scan.getReplicaId());
+
+    TResult tResult = new TResult();
+    assertFalse(tResult.isSetStale());
+    tResult.setStale(true);
+    assertTrue(tResult.isSetStale());
   }
 
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {
