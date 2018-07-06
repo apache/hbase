@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE suppressions PUBLIC
-    "-//Puppy Crawl//DTD Suppressions 1.0//EN"
-    "http://www.puppycrawl.com/dtds/suppressions_1_0.dtd">
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <!--
   TODO Update to use the message suppression filter once we can update
   to checkstyle 8.6+
@@ -46,8 +46,6 @@
   <suppress checks="EmptyBlockCheck" files="TBoundedThreadPoolServer.java"/>
   <suppress checks="EqualsHashCode" files="StartcodeAgnosticServerName.java"/>
   <suppress checks="MethodLength" files="Branch1CoprocessorMethods.java"/>
-<!--
-  TODO use message filter once we can upgrade to checkstyle 8.6+
   <suppress checks="IllegalImport" message="org\.apache\.htrace\.core"/>
--->
+  <suppress checks="ImportOrder" message="Extra separation in import group before"/>
 </suppressions>
