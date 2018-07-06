@@ -127,10 +127,9 @@ public class RegionServerTracker extends ZKListener {
         ServerName serverName = pair.getFirst();
         RegionServerInfo info = pair.getSecond();
         regionServers.add(serverName);
-        ServerMetrics serverMetrics = info != null
-          ? ServerMetricsBuilder.of(serverName,
-            VersionInfoUtil.getVersionNumber(info.getVersionInfo()))
-          : ServerMetricsBuilder.of(serverName);
+        ServerMetrics serverMetrics = info != null ? ServerMetricsBuilder.of(serverName,
+          VersionInfoUtil.getVersionNumber(info.getVersionInfo()),
+          info.getVersionInfo().getVersion()) : ServerMetricsBuilder.of(serverName);
         serverManager.checkAndRecordNewServer(serverName, serverMetrics);
       }
       serverManager.findOutDeadServersAndProcess(deadServersFromPE, liveServersFromWALDir);
