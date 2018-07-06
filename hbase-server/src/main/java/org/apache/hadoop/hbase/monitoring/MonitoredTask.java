@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.monitoring;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,6 +31,12 @@ public interface MonitoredTask extends Cloneable {
     WAITING,
     COMPLETE,
     ABORTED
+  }
+
+  public interface StatusJournalEntry {
+    String getStatus();
+
+    long getTimeStamp();
   }
 
   long getStartTime();
@@ -50,6 +57,19 @@ public interface MonitoredTask extends Cloneable {
   void setStatus(String status);
   void setDescription(String description);
   void setWarnTime(final long t);
+
+  List<StatusJournalEntry> getStatusJournal();
+
+  /**
+   * Enable journal that will store all statuses that have been set along with the time stamps when
+   * they were set.
+   * @param includeCurrentStatus whether to include the current set status in the journal
+   */
+  void enableStatusJournal(boolean includeCurrentStatus);
+
+  void disableStatusJournal();
+
+  String prettyPrintJournal();
 
   /**
    * Explicitly mark this status as able to be cleaned up,
