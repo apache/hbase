@@ -688,6 +688,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
             int size = entries.size();
             for (int i = 0; i < size; i++) {
               cleanUpHFileRefs(entries.get(i).getEdit());
+
+              TableName tableName = entries.get(i).getKey().getTablename();
+              source.getSourceMetrics().setAgeOfLastShippedOpByTable(
+                entries.get(i).getKey().getWriteTime(),
+                tableName.getNameAsString());
             }
             //Log and clean up WAL logs
             updateLogPosition(lastReadPosition);

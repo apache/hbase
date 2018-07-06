@@ -46,7 +46,7 @@ public class MetricsSource implements BaseSource {
 
   private final MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
-
+  private Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable;
 
   /**
    * Constructor used to register the metrics
@@ -58,7 +58,9 @@ public class MetricsSource implements BaseSource {
     singleSourceSource =
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
-    globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    globalSourceSource = CompatibilitySingletonFactory
+        .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    singleSourceSourceByTable = new HashMap<>();
   }
 
   /**
@@ -68,10 +70,12 @@ public class MetricsSource implements BaseSource {
    * @param globalSourceSource Class to monitor global-scoped metrics
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
-                       MetricsReplicationSourceSource globalSourceSource) {
+                       MetricsReplicationSourceSource globalSourceSource,
+                       Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
     this.globalSourceSource = globalSourceSource;
+    this.singleSourceSourceByTable = singleSourceSourceByTable;
   }
 
   /**
@@ -86,6 +90,20 @@ public class MetricsSource implements BaseSource {
     this.lastTimeStamps.put(walGroup, timestamp);
   }
 
+  /**
+   * Set the age of the last edit that was shipped group by table
+   * @param timestamp write time of the edit
+   * @param tableName String as group and tableName
+   */
+  public void setAgeOfLastShippedOpByTable(long timestamp, String tableName) {
+    long age = EnvironmentEdgeManager.currentTime() - timestamp;
+    if (!this.getSingleSourceSourceByTable().containsKey(tableName)) {
+      this.getSingleSourceSourceByTable().put(tableName,
+          CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+          .getSource(tableName));
+    }
+    this.singleSourceSourceByTable.get(tableName).setLastShippedAge(age);
+  }
   /**
    * Convenience method to use the last given timestamp to refresh the age of the last edit. Used
    * when replication fails and need to keep that metric accurate.
@@ -343,6 +361,10 @@ public class MetricsSource implements BaseSource {
   @Override
   public String getMetricsName() {
     return globalSourceSource.getMetricsName();
+  }
+
+  public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
+    return singleSourceSourceByTable;
   }
 
   @Override

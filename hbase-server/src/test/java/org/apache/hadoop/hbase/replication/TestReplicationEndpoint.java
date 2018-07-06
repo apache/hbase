@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -309,7 +311,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     MetricsReplicationSourceSource globalSourceSource = new MetricsReplicationGlobalSourceSource(globalRms);
     MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
     doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
-    MetricsSource source = new MetricsSource(id, singleSourceSource, spyglobalSourceSource);
+    Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable = new HashMap<>();
+    MetricsSource source = new MetricsSource(id, singleSourceSource, spyglobalSourceSource,
+        singleSourceSourceByTable);
     String gaugeName = "gauge";
     String singleGaugeName = "source.id." + gaugeName;
     long delta = 1;
@@ -346,6 +350,22 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     verify(singleRms).updateHistogram(singleCounterName, count);
     verify(globalRms).updateHistogram(counterName, count);
     verify(spyglobalSourceSource).incrFailedRecoveryQueue();
+
+    // check singleSourceSourceByTable metrics.
+    // singleSourceSourceByTable map entry will be created only
+    // after calling #setAgeOfLastShippedOpByTable
+    boolean containsRandomNewTable = source.getSingleSourceSourceByTable()
+        .containsKey("RandomNewTable");
+    Assert.assertEquals(false, containsRandomNewTable);
+    source.setAgeOfLastShippedOpByTable(123L, "RandomNewTable");
+    containsRandomNewTable = source.getSingleSourceSourceByTable()
+      .containsKey("RandomNewTable");
+    Assert.assertEquals(true, containsRandomNewTable);
+    MetricsReplicationSourceSource msr = source.getSingleSourceSourceByTable()
+        .get("RandomNewTable");
+    // cannot put more concreate value here to verify because the age is arbitrary.
+    // as long as it's greater than 0, we see it as correct answer.
+    Assert.assertTrue(msr.getLastShippedAge() > 0);
   }
 
   private void doPut(byte[] row) throws IOException {
