@@ -58,7 +58,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -73,6 +72,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -1255,6 +1255,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
+  private void cancelChore(ScheduledChore chore) {
+    if (chore != null) {
+      chore.cancel();
+    }
+  }
+
   @Override
   protected void stopServiceThreads() {
     if (masterJettyServer != null) {
@@ -1265,11 +1271,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         LOG.error("Failed to stop master jetty server", e);
       }
     }
-    stopChores();
-    if (this.mobCompactThread != null) {
-      this.mobCompactThread.close();
-    }
     super.stopServiceThreads();
+    stopChores();
     CleanerChore.shutDownChorePool();
 
     LOG.debug("Stopping service threads");
@@ -1347,20 +1350,21 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void stopChores() {
-    ChoreService choreService = getChoreService();
-    if (choreService != null) {
-      choreService.cancelChore(this.expiredMobFileCleanerChore);
-      choreService.cancelChore(this.mobCompactChore);
-      choreService.cancelChore(this.balancerChore);
-      choreService.cancelChore(this.normalizerChore);
-      choreService.cancelChore(this.clusterStatusChore);
-      choreService.cancelChore(this.catalogJanitorChore);
-      choreService.cancelChore(this.clusterStatusPublisherChore);
-      choreService.cancelChore(this.snapshotQuotaChore);
-      choreService.cancelChore(this.logCleaner);
-      choreService.cancelChore(this.hfileCleaner);
-      choreService.cancelChore(this.replicationBarrierCleaner);
+    cancelChore(this.expiredMobFileCleanerChore);
+    cancelChore(this.mobCompactChore);
+    cancelChore(this.balancerChore);
+    cancelChore(this.normalizerChore);
+    cancelChore(this.clusterStatusChore);
+    cancelChore(this.catalogJanitorChore);
+    cancelChore(this.clusterStatusPublisherChore);
+    if (this.mobCompactThread != null) {
+      this.mobCompactThread.close();
     }
+    cancelChore(this.clusterStatusPublisherChore);
+    cancelChore(this.snapshotQuotaChore);
+    cancelChore(this.logCleaner);
+    cancelChore(this.hfileCleaner);
+    cancelChore(this.replicationBarrierCleaner);
   }
 
   /**
