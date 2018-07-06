@@ -2044,6 +2044,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       status = TaskMonitor.get().createStatus("Compacting " + store + " in " + this);
+      status.enableStatusJournal(false);
       if (this.closed.get()) {
         String msg = "Skipping compaction on " + this + " because closed";
         LOG.debug(msg);
@@ -2092,7 +2093,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return true;
     } finally {
       if (requestNeedsCancellation) store.cancelRequestedCompaction(compaction);
-      if (status != null) status.cleanup();
+      if (status != null) {
+        LOG.debug("Compaction status journal:\n\t" + status.prettyPrintJournal());
+        status.cleanup();
+      }
     }
   }
 
@@ -2132,6 +2136,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return new FlushResultImpl(FlushResult.Result.CANNOT_FLUSH, msg, false);
     }
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
+    status.enableStatusJournal(false);
     status.setStatus("Acquiring readlock on region");
     // block waiting for the lock for flushing cache
     lock.readLock().lock();
@@ -2195,6 +2200,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     } finally {
       lock.readLock().unlock();
+      LOG.debug("Flush status journal:\n\t" + status.prettyPrintJournal());
       status.cleanup();
     }
   }
