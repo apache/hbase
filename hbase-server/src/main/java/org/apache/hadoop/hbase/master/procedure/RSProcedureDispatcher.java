@@ -108,7 +108,7 @@ public class RSProcedureDispatcher
   @Override
   protected void remoteDispatch(final ServerName serverName,
       final Set<RemoteProcedure> remoteProcedures) {
-    final int rsVersion = master.getServerManager().getServerVersion(serverName);
+    final int rsVersion = master.getServerManager().getVersionNumber(serverName);
     if (rsVersion >= RS_VERSION_WITH_EXEC_PROCS) {
       LOG.trace("Using procedure batch rpc execution for serverName={} version={}", serverName,
         rsVersion);

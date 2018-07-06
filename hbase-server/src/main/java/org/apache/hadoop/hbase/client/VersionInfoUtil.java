@@ -70,16 +70,8 @@ public final class VersionInfoUtil {
   /**
    * @return the versionInfo extracted from the current RpcCallContext
    */
-  private static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
+  public static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
     return RpcServer.getCurrentCall().map(RpcCallContext::getClientVersionInfo).orElse(null);
-  }
-
-  /**
-   * @return the version number extracted from the current RpcCallContext as int.
-   *         (e.g. 0x0103004 is 1.3.4)
-   */
-  public static int getCurrentClientVersionNumber() {
-    return getVersionNumber(getCurrentClientVersionInfo());
   }
 
 
