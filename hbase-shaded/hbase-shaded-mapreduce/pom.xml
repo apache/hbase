@@ -130,10 +130,6 @@
                 <artifactId>jetty-util-ajax</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-jsp</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>org.glassfish</groupId>
                 <artifactId>javax.el</artifactId>
               </exclusion>

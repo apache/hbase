@@ -258,11 +258,6 @@
       <artifactId>jetty-servlet</artifactId>
     </dependency>
     <dependency>
-      <!--Ant task needs this-->
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-jsp</artifactId>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
