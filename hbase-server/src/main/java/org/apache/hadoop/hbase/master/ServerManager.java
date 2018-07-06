@@ -214,30 +214,30 @@ public class ServerManager {
   /**
    * Let the server manager know a new regionserver has come online
    * @param request the startup request
-   * @param versionNumber the version of the new regionserver
+   * @param versionNumber the version number of the new regionserver
+   * @param version the version of the new regionserver, could contain strings like "SNAPSHOT"
    * @param ia the InetAddress from which request is received
    * @return The ServerName we know this server as.
    * @throws IOException
    */
   ServerName regionServerStartup(RegionServerStartupRequest request, int versionNumber,
-      InetAddress ia) throws IOException {
+      String version, InetAddress ia) throws IOException {
     // Test for case where we get a region startup message from a regionserver
     // that has been quickly restarted but whose znode expiration handler has
     // not yet run, or from a server whose fail we are currently processing.
-    // Test its host+port combo is present in serverAddressToServerInfo.  If it
+    // Test its host+port combo is present in serverAddressToServerInfo. If it
     // is, reject the server and trigger its expiration. The next time it comes
     // in, it should have been removed from serverAddressToServerInfo and queued
     // for processing by ProcessServerShutdown.
 
-    final String hostname = request.hasUseThisHostnameInstead() ?
-        request.getUseThisHostnameInstead() :ia.getHostName();
-    ServerName sn = ServerName.valueOf(hostname, request.getPort(),
-      request.getServerStartCode());
+    final String hostname =
+      request.hasUseThisHostnameInstead() ? request.getUseThisHostnameInstead() : ia.getHostName();
+    ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
-    if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber))) {
-      LOG.warn("THIS SHOULD NOT HAPPEN, RegionServerStartup"
-        + " could not record the server: " + sn);
+    if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber, version))) {
+      LOG.warn(
+        "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
     }
     return sn;
   }
@@ -1021,9 +1021,17 @@ public class ServerManager {
   /**
    * May return 0 when server is not online.
    */
-  public int getServerVersion(final ServerName serverName) {
+  public int getVersionNumber(ServerName serverName) {
     ServerMetrics serverMetrics = onlineServers.get(serverName);
     return serverMetrics != null ? serverMetrics.getVersionNumber() : 0;
+  }
+
+  /**
+   * May return "0.0.0" when server is not online
+   */
+  public String getVersion(ServerName serverName) {
+    ServerMetrics serverMetrics = onlineServers.get(serverName);
+    return serverMetrics != null ? serverMetrics.getVersion() : "0.0.0";
   }
 
   public int getInfoPort(ServerName serverName) {

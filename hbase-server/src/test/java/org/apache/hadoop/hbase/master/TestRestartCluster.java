@@ -234,7 +234,7 @@ public class TestRestartCluster {
     while (t.isAlive()) {
       List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
       for (ServerName serverName : serverNames) {
-        assertNotEquals(0, master.getServerManager().getServerVersion(serverName));
+        assertNotEquals(0, master.getServerManager().getVersionNumber(serverName));
       }
       Thread.sleep(100);
     }

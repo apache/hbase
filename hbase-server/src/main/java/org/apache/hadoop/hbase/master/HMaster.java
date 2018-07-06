@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
@@ -2707,11 +2706,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public String getRegionServerVersion(final ServerName sn) {
-    // Will return 0 if the server is not online to prevent move system region to unknown version
-    // RS.
-    int versionNumber = this.serverManager.getServerVersion(sn);
-    return VersionInfoUtil.versionNumberToString(versionNumber);
+  public String getRegionServerVersion(ServerName sn) {
+    // Will return "0.0.0" if the server is not online to prevent move system region to unknown
+    // version RS.
+    return this.serverManager.getVersion(sn);
   }
 
   @Override

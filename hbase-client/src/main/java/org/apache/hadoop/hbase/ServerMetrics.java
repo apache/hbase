@@ -41,6 +41,13 @@ public interface ServerMetrics {
   }
 
   /**
+   * @return the string type version of a regionserver.
+   */
+  default String getVersion() {
+    return "0.0.0";
+  }
+
+  /**
    * @return the number of requests per second.
    */
   long getRequestCountPerSecond();

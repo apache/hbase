@@ -898,7 +898,7 @@ public class AssignmentManager implements ServerListener {
     master.getMasterProcedureExecutor().submitProcedure(createSplitProcedure(parent, splitKey));
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the split
-    if (master.getServerManager().getServerVersion(serverName) < 0x0200000) {
+    if (master.getServerManager().getVersionNumber(serverName) < 0x0200000) {
       throw new UnsupportedOperationException(String.format(
         "Split handled by the master: parent=%s hriA=%s hriB=%s", parent.getShortNameToLog(), hriA, hriB));
     }
@@ -921,7 +921,7 @@ public class AssignmentManager implements ServerListener {
     master.getMasterProcedureExecutor().submitProcedure(createMergeProcedure(hriA, hriB));
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the merge
-    if (master.getServerManager().getServerVersion(serverName) < 0x0200000) {
+    if (master.getServerManager().getVersionNumber(serverName) < 0x0200000) {
       throw new UnsupportedOperationException(String.format(
         "Merge not handled yet: regionState=%s merged=%s hriA=%s hriB=%s", state, merged, hriA,
           hriB));
