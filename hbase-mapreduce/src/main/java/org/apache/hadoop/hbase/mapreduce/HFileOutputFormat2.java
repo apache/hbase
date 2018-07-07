@@ -820,7 +820,7 @@ public class HFileOutputFormat2
     FileSystem fs = FileSystem.get(conf);
     String hbaseTmpFsDir =
         conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
-          HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
+            fs.getHomeDirectory() + "/hbase-staging");
     Path partitionsPath = new Path(hbaseTmpFsDir, "partitions_" + UUID.randomUUID());
     fs.makeQualified(partitionsPath);
     writePartitions(conf, partitionsPath, splitPoints, writeMultipleTables);

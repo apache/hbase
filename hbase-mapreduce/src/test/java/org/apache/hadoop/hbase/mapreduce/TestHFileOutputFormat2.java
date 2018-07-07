@@ -24,12 +24,15 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -100,6 +103,9 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -1493,6 +1499,54 @@ public class TestHFileOutputFormat2  {
     }
 
     return null;
+  }
+
+  @Test
+  public void TestConfigurePartitioner() throws IOException {
+    Configuration conf = util.getConfiguration();
+    // Create a user who is not the current user
+    String fooUserName = "foo1234";
+    String fooGroupName = "group1";
+    UserGroupInformation
+        ugi = UserGroupInformation.createUserForTesting(fooUserName, new String[]{fooGroupName});
+    // Get user's home directory
+    Path fooHomeDirectory = ugi.doAs(new PrivilegedAction<Path>() {
+      @Override public Path run() {
+        try (FileSystem fs = FileSystem.get(conf)) {
+          return fs.makeQualified(fs.getHomeDirectory());
+        } catch (IOException ioe) {
+          LOG.error("Failed to get foo's home directory", ioe);
+        }
+        return null;
+      }
+    });
+
+    Job job = Mockito.mock(Job.class);
+    Mockito.doReturn(conf).when(job).getConfiguration();
+    ImmutableBytesWritable writable = new ImmutableBytesWritable();
+    List<ImmutableBytesWritable> splitPoints = new LinkedList<ImmutableBytesWritable>();
+    splitPoints.add(writable);
+
+    ugi.doAs(new PrivilegedAction<Void>() {
+      @Override public Void run() {
+        try {
+          HFileOutputFormat2.configurePartitioner(job, splitPoints, false);
+        } catch (IOException ioe) {
+          LOG.error("Failed to configure partitioner", ioe);
+        }
+        return null;
+      }
+    });
+    FileSystem fs = FileSystem.get(conf);
+    // verify that the job uses TotalOrderPartitioner
+    verify(job).setPartitionerClass(TotalOrderPartitioner.class);
+    // verify that TotalOrderPartitioner.setPartitionFile() is called.
+    String partitionPathString = conf.get("mapreduce.totalorderpartitioner.path");
+    Assert.assertNotNull(partitionPathString);
+    // Make sure the partion file is in foo1234's home directory, and that
+    // the file exists.
+    Assert.assertTrue(partitionPathString.startsWith(fooHomeDirectory.toString()));
+    Assert.assertTrue(fs.exists(new Path(partitionPathString)));
   }
 }
 

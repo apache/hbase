@@ -695,7 +695,7 @@ public final class BackupUtils {
       throws IOException {
     FileSystem fs = FileSystem.get(conf);
     String tmp = conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
-            HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
+            fs.getHomeDirectory() + "/hbase-staging");
     Path path =
         new Path(tmp + Path.SEPARATOR + "bulk_output-" + tableName + "-"
             + EnvironmentEdgeManager.currentTime());
