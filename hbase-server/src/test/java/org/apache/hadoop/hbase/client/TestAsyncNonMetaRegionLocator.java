@@ -36,7 +36,6 @@ import java.util.stream.IntStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
@@ -76,7 +75,7 @@ public class TestAsyncNonMetaRegionLocator {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
     AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
         registry.getClusterId().get(), User.getCurrent());
@@ -136,7 +135,7 @@ public class TestAsyncNonMetaRegionLocator {
 
   private void assertLocEquals(byte[] startKey, byte[] endKey, ServerName serverName,
       HRegionLocation loc) {
-    HRegionInfo info = loc.getRegionInfo();
+    RegionInfo info = loc.getRegion();
     assertEquals(TABLE_NAME, info.getTable());
     assertArrayEquals(startKey, info.getStartKey());
     assertArrayEquals(endKey, info.getEndKey());
@@ -240,7 +239,7 @@ public class TestAsyncNonMetaRegionLocator {
         .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName))
         .findAny().get();
 
-    TEST_UTIL.getAdmin().move(Bytes.toBytes(loc.getRegionInfo().getEncodedName()),
+    TEST_UTIL.getAdmin().move(Bytes.toBytes(loc.getRegion().getEncodedName()),
       Bytes.toBytes(newServerName.getServerName()));
     while (!TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName()
         .equals(newServerName)) {
@@ -316,7 +315,7 @@ public class TestAsyncNonMetaRegionLocator {
         .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName))
         .findAny().get();
     Admin admin = TEST_UTIL.getAdmin();
-    HRegionInfo region = admin.getTableRegions(TABLE_NAME).stream().findAny().get();
+    RegionInfo region = admin.getRegions(TABLE_NAME).stream().findAny().get();
     admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(newServerName.getServerName()));
     TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
 
@@ -345,5 +344,17 @@ public class TestAsyncNonMetaRegionLocator {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName,
         LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
     }
+  }
+
+  // Testcase for HBASE-20822
+  @Test
+  public void testLocateBeforeLastRegion()
+      throws IOException, InterruptedException, ExecutionException {
+    createMultiRegionTable();
+    LOCATOR.getRegionLocation(TABLE_NAME, SPLIT_KEYS[0], RegionLocateType.CURRENT, false).join();
+    HRegionLocation loc =
+      LOCATOR.getRegionLocation(TABLE_NAME, EMPTY_END_ROW, RegionLocateType.BEFORE, false).get();
+    // should locate to the last region
+    assertArrayEquals(loc.getRegion().getEndKey(), EMPTY_END_ROW);
   }
 }
