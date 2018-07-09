@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.StealJobQueue;
 
 /**
  * This Chore, every time it runs, will clear the HFiles in the hfile archive
@@ -56,23 +56,23 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
       "hbase.regionserver.thread.hfilecleaner.throttle";
   public final static int DEFAULT_HFILE_DELETE_THROTTLE_THRESHOLD = 64 * 1024 * 1024;// 64M
 
-  // Configuration key for large queue size
-  public final static String LARGE_HFILE_DELETE_QUEUE_SIZE =
+  // Configuration key for large queue initial size
+  public final static String LARGE_HFILE_QUEUE_INIT_SIZE =
       "hbase.regionserver.hfilecleaner.large.queue.size";
-  public final static int DEFAULT_LARGE_HFILE_DELETE_QUEUE_SIZE = 1048576;
+  public final static int DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE = 10240;
 
-  // Configuration key for small queue size
-  public final static String SMALL_HFILE_DELETE_QUEUE_SIZE =
+  // Configuration key for small queue initial size
+  public final static String SMALL_HFILE_QUEUE_INIT_SIZE =
       "hbase.regionserver.hfilecleaner.small.queue.size";
-  public final static int DEFAULT_SMALL_HFILE_DELETE_QUEUE_SIZE = 1048576;
+  public final static int DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE = 10240;
 
   private static final Log LOG = LogFactory.getLog(HFileCleaner.class);
 
-  BlockingQueue<HFileDeleteTask> largeFileQueue;
+  StealJobQueue<HFileDeleteTask> largeFileQueue;
   BlockingQueue<HFileDeleteTask> smallFileQueue;
   private int throttlePoint;
-  private int largeQueueSize;
-  private int smallQueueSize;
+  private int largeQueueInitSize;
+  private int smallQueueInitSize;
   private List<Thread> threads = new ArrayList<Thread>();
   private boolean running;
 
@@ -93,12 +93,12 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
       directory, MASTER_HFILE_CLEANER_PLUGINS, params);
     throttlePoint =
         conf.getInt(HFILE_DELETE_THROTTLE_THRESHOLD, DEFAULT_HFILE_DELETE_THROTTLE_THRESHOLD);
-    largeQueueSize =
-        conf.getInt(LARGE_HFILE_DELETE_QUEUE_SIZE, DEFAULT_LARGE_HFILE_DELETE_QUEUE_SIZE);
-    smallQueueSize =
-        conf.getInt(SMALL_HFILE_DELETE_QUEUE_SIZE, DEFAULT_SMALL_HFILE_DELETE_QUEUE_SIZE);
-    largeFileQueue = new LinkedBlockingQueue<HFileCleaner.HFileDeleteTask>(largeQueueSize);
-    smallFileQueue = new LinkedBlockingQueue<HFileCleaner.HFileDeleteTask>(smallQueueSize);
+    largeQueueInitSize =
+        conf.getInt(LARGE_HFILE_QUEUE_INIT_SIZE, DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE);
+    smallQueueInitSize =
+        conf.getInt(SMALL_HFILE_QUEUE_INIT_SIZE, DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE);
+    largeFileQueue = new StealJobQueue<>(largeQueueInitSize, smallQueueInitSize);
+    smallFileQueue = largeFileQueue.getStealFromQueue();
     startHFileDeleteThreads();
   }
 
@@ -151,6 +151,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
   private boolean dispatch(HFileDeleteTask task) {
     if (task.fileLength >= this.throttlePoint) {
       if (!this.largeFileQueue.offer(task)) {
+        // should never arrive here as long as we use PriorityQueue
         if (LOG.isTraceEnabled()) {
           LOG.trace("Large file deletion queue is full");
         }
@@ -158,6 +159,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
       }
     } else {
       if (!this.smallFileQueue.offer(task)) {
+        // should never arrive here as long as we use PriorityQueue
         if (LOG.isTraceEnabled()) {
           LOG.trace("Small file deletion queue is full");
         }
@@ -231,7 +233,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
           }
           task.setResult(succeed);
           if (succeed) {
-            countDeletedFiles(queue == largeFileQueue);
+            countDeletedFiles(task.fileLength >= throttlePoint, queue == largeFileQueue);
           }
         }
       }
@@ -243,8 +245,8 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
   }
 
   // Currently only for testing purpose
-  private void countDeletedFiles(boolean isLarge) {
-    if (isLarge) {
+  private void countDeletedFiles(boolean isLargeFile, boolean fromLargeQueue) {
+    if (isLargeFile) {
       if (deletedLargeFiles == Long.MAX_VALUE) {
         LOG.info("Deleted more than Long.MAX_VALUE large files, reset counter to 0");
         deletedLargeFiles = 0L;
@@ -254,6 +256,9 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
       if (deletedSmallFiles == Long.MAX_VALUE) {
         LOG.info("Deleted more than Long.MAX_VALUE small files, reset counter to 0");
         deletedSmallFiles = 0L;
+      }
+      if (fromLargeQueue && LOG.isTraceEnabled()) {
+        LOG.trace("Stolen a small file deletion task in large file thread");
       }
       deletedSmallFiles++;
     }
@@ -272,7 +277,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
     }
   }
 
-  static class HFileDeleteTask {
+  static class HFileDeleteTask implements Comparable<HFileDeleteTask> {
     private static final long MAX_WAIT = 60 * 1000L;
     private static final long WAIT_UNIT = 1000L;
 
@@ -314,6 +319,31 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
       }
       return this.result;
     }
+
+    @Override
+    public int compareTo(HFileDeleteTask o) {
+      long sub = this.fileLength - o.fileLength;
+      // smaller value with higher priority in PriorityQueue, and we intent to delete the larger
+      // file first.
+      return (sub > 0) ? -1 : (sub < 0 ? 1 : 0);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || !(o instanceof HFileDeleteTask)) {
+        return false;
+      }
+      HFileDeleteTask otherTask = (HFileDeleteTask) o;
+      return this.filePath.equals(otherTask.filePath) && (this.fileLength == otherTask.fileLength);
+    }
+
+    @Override
+    public int hashCode() {
+      return filePath.hashCode();
+    }
   }
 
   @VisibleForTesting
@@ -332,13 +362,13 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
   }
 
   @VisibleForTesting
-  public long getLargeQueueSize() {
-    return largeQueueSize;
+  public long getLargeQueueInitSize() {
+    return largeQueueInitSize;
   }
 
   @VisibleForTesting
-  public long getSmallQueueSize() {
-    return smallQueueSize;
+  public long getSmallQueueInitSize() {
+    return smallQueueInitSize;
   }
 
   @VisibleForTesting
@@ -350,15 +380,15 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
   public void onConfigurationChange(Configuration conf) {
     StringBuilder builder = new StringBuilder();
     builder.append("Updating configuration for HFileCleaner, previous throttle point: ")
-        .append(throttlePoint).append(", largeQueueSize: ").append(largeQueueSize)
-        .append(", smallQueueSize: ").append(smallQueueSize);
+        .append(throttlePoint).append(", largeQueueInitSize: ").append(largeQueueInitSize)
+        .append(", smallQueueInitSize: ").append(smallQueueInitSize);
     stopHFileDeleteThreads();
     this.throttlePoint =
         conf.getInt(HFILE_DELETE_THROTTLE_THRESHOLD, DEFAULT_HFILE_DELETE_THROTTLE_THRESHOLD);
-    this.largeQueueSize =
-        conf.getInt(LARGE_HFILE_DELETE_QUEUE_SIZE, DEFAULT_LARGE_HFILE_DELETE_QUEUE_SIZE);
-    this.smallQueueSize =
-        conf.getInt(SMALL_HFILE_DELETE_QUEUE_SIZE, DEFAULT_SMALL_HFILE_DELETE_QUEUE_SIZE);
+    this.largeQueueInitSize =
+        conf.getInt(LARGE_HFILE_QUEUE_INIT_SIZE, DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE);
+    this.smallQueueInitSize =
+        conf.getInt(SMALL_HFILE_QUEUE_INIT_SIZE, DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE);
     // record the left over tasks
     List<HFileDeleteTask> leftOverTasks = new ArrayList<>();
     for (HFileDeleteTask task : largeFileQueue) {
@@ -367,11 +397,11 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
     for (HFileDeleteTask task : smallFileQueue) {
       leftOverTasks.add(task);
     }
-    largeFileQueue = new LinkedBlockingQueue<HFileCleaner.HFileDeleteTask>(largeQueueSize);
-    smallFileQueue = new LinkedBlockingQueue<HFileCleaner.HFileDeleteTask>(smallQueueSize);
+    largeFileQueue = new StealJobQueue<>(largeQueueInitSize, smallQueueInitSize);
+    smallFileQueue = largeFileQueue.getStealFromQueue();
     threads.clear();
-    builder.append("; new throttle point: ").append(throttlePoint).append(", largeQueueSize: ")
-        .append(largeQueueSize).append(", smallQueueSize: ").append(smallQueueSize);
+    builder.append("; new throttle point: ").append(throttlePoint).append(", largeQueueInitSize: ")
+        .append(largeQueueInitSize).append(", smallQueueInitSize: ").append(smallQueueInitSize);
     LOG.debug(builder.toString());
     startHFileDeleteThreads();
     // re-dispatch the left over tasks

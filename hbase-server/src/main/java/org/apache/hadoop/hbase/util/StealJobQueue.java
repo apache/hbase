@@ -18,14 +18,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * This queue allows a ThreadPoolExecutor to steal jobs from another ThreadPoolExecutor.
@@ -48,6 +48,7 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
 
   public StealJobQueue() {
     this.stealFromQueue = new PriorityBlockingQueue<T>() {
+
       @Override
       public boolean offer(T t) {
         lock.lock();
@@ -61,6 +62,27 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
     };
   }
 
+  public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity) {
+    super(initCapacity);
+    this.stealFromQueue = new PriorityBlockingQueue<T>(stealFromQueueInitCapacity) {
+
+      @Override
+      public boolean offer(T t) {
+        lock.lock();
+        try {
+          notEmpty.signal();
+          return super.offer(t);
+        } finally {
+          lock.unlock();
+        }
+      }
+    };
+  }
+
+  /**
+   * Get a queue whose job might be stolen by the consumer of this original queue
+   * @return the queue whose job could be stolen
+   */
   public BlockingQueue<T> getStealFromQueue() {
     return stealFromQueue;
   }
@@ -108,8 +130,9 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
           retVal = stealFromQueue.poll();
         }
         if (retVal == null) {
-          if (nanos <= 0)
+          if (nanos <= 0) {
             return null;
+          }
           nanos = notEmpty.awaitNanos(nanos);
         } else {
           return retVal;
