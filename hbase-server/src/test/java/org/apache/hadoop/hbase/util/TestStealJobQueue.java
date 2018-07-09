@@ -18,10 +18,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -29,14 +28,17 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
 public class TestStealJobQueue {
 
   StealJobQueue<Integer> stealJobQueue;
-  BlockingQueue stealFromQueue;
+  BlockingQueue<Integer> stealFromQueue;
 
   @Before
   public void setup() {
