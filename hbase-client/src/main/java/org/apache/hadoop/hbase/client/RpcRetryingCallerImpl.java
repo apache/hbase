@@ -122,7 +122,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         if (tries > startLogErrorsCnt) {
           if (LOG.isInfoEnabled()) {
             StringBuilder builder = new StringBuilder("Call exception, tries=").append(tries)
-              .append(", retries=").append(tries).append(", started=")
+              .append(", retries=").append(maxAttempts).append(", started=")
               .append((EnvironmentEdgeManager.currentTime() - tracker.getStartTime()))
               .append(" ms ago, ").append("cancelled=").append(cancelled.get())
               .append(", msg=").append(t.getMessage())
