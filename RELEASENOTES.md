@@ -310,6 +310,13 @@ After HBASE-19389 we introduced a RegionServer self-protection mechanism to prev
 
 ---
 
+* [HBASE-20148](https://issues.apache.org/jira/browse/HBASE-20148) | *Major* | **Make serial replication as a option for a peer instead of a table**
+
+A new method setSerial has been added to the interface ReplicationPeerConfigBuilder which is marked as IA.Public. This interface is not supposed to be implemented by client code, but if you do, this will be an incompatible change as you need to add this method to your implementation too.
+
+
+---
+
 * [HBASE-19397](https://issues.apache.org/jira/browse/HBASE-19397) | *Major* | **Design  procedures for ReplicationManager to notify peer change event from master**
 
 Introduce 5 procedures to do peer modifications:
