@@ -17,13 +17,23 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.TableName;
-import org.junit.Test;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+@Category({MiscTests.class, SmallTests.class})
 public class TestReadReplicaClustersTableNameUtil {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReadReplicaClustersTableNameUtil.class);
 
   @Test
   public void testIsMetaTableNameWithoutSuffix() {
