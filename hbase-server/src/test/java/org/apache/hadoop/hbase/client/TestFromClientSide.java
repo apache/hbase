@@ -6417,6 +6417,13 @@ public class TestFromClientSide {
     int number = ((ConnectionImplementation)admin.getConnection())
       .getNumberOfCachedRegionLocations(htd.getTableName());
     assertEquals(results.size(), number);
+    ConnectionImplementation conn = ((ConnectionImplementation)admin.getConnection());
+    assertNotNull("Can't get cached location for row aaa",
+        conn.getCachedLocation(htd.getTableName(),Bytes.toBytes("aaa")));
+    for(byte[] startKey:HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE){
+      assertNotNull("Can't get cached location for row "+
+        Bytes.toString(startKey),(conn.getCachedLocation(htd.getTableName(),startKey)));
+    }
   }
 
   @Test
