@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -85,15 +84,12 @@ public class HRegionLocator implements RegionLocator {
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
     TableName tableName = getName();
-    List<Pair<RegionInfo, ServerName>> locations =
-        MetaTableAccessor.getTableRegionsAndLocations(this.connection, tableName);
-    ArrayList<HRegionLocation> regions = new ArrayList<>(locations.size());
-    for (Pair<RegionInfo, ServerName> entry : locations) {
-      regions.add(new HRegionLocation(entry.getFirst(), entry.getSecond()));
-
-    }
-    if (regions.size() > 0) {
-      connection.cacheLocation(tableName, new RegionLocations(regions));
+    ArrayList<HRegionLocation> regions = new ArrayList<>();
+    for (RegionLocations locations : listRegionLocations()) {
+      for (HRegionLocation location : locations.getRegionLocations()) {
+        regions.add(location);
+      }
+      connection.cacheLocation(tableName, locations);
     }
     return regions;
   }
