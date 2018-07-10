@@ -56,9 +56,6 @@ public class RegionLocations {
     int index = 0;
     for (HRegionLocation loc : locations) {
       if (loc != null) {
-        if (loc.getServerName() != null) {
-          numNonNullElements++;
-        }
         if (loc.getRegionInfo().getReplicaId() >= maxReplicaId) {
           maxReplicaId = loc.getRegionInfo().getReplicaId();
           maxReplicaIdIndex = index;
@@ -66,8 +63,6 @@ public class RegionLocations {
       }
       index++;
     }
-    this.numNonNullElements = numNonNullElements;
-
     // account for the null elements in the array after maxReplicaIdIndex
     maxReplicaId = maxReplicaId + (locations.length - (maxReplicaIdIndex + 1) );
 
@@ -81,6 +76,12 @@ public class RegionLocations {
         }
       }
     }
+    for (HRegionLocation loc : this.locations) {
+      if (loc != null && loc.getServerName() != null){
+        numNonNullElements++;
+      }
+    }
+    this.numNonNullElements = numNonNullElements;
   }
 
   public RegionLocations(Collection<HRegionLocation> locations) {
