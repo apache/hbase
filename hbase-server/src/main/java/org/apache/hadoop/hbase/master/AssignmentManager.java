@@ -1632,6 +1632,11 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionInfo
    */
   public void regionOffline(final HRegionInfo regionInfo) {
+    if (regionStates.isRegionInState(regionInfo, State.MERGED, State.SPLIT)) {
+      LOG.info("Try to offline region " + regionInfo.getEncodedName() +
+          ", which is at state " + regionStates.getRegionState(regionInfo).getState() + ", skip");
+      return;
+    }
     regionOffline(regionInfo, null);
   }
 
