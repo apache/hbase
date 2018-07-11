@@ -147,20 +147,19 @@ public class MemStoreCompactor {
   private void doCompaction() {
     ImmutableSegment result = null;
     boolean resultSwapped = false;
-    if (isInterrupted.get()) {      // if the entire process is interrupted cancel flattening
-      return;           // the compaction also doesn't start when interrupted
-    }
-
     MemStoreCompactionStrategy.Action nextStep = strategy.getAction(versionedList);
-    boolean merge =
-        (nextStep == MemStoreCompactionStrategy.Action.MERGE ||
-            nextStep == MemStoreCompactionStrategy.Action.MERGE_COUNT_UNIQUE_KEYS);
+    boolean merge = (nextStep == MemStoreCompactionStrategy.Action.MERGE ||
+        nextStep == MemStoreCompactionStrategy.Action.MERGE_COUNT_UNIQUE_KEYS);
     try {
+      if (isInterrupted.get()) {      // if the entire process is interrupted cancel flattening
+        return;           // the compaction also doesn't start when interrupted
+      }
+
       if (nextStep == MemStoreCompactionStrategy.Action.NOOP) {
         return;
       }
-      if (nextStep == MemStoreCompactionStrategy.Action.FLATTEN ||
-          nextStep == MemStoreCompactionStrategy.Action.FLATTEN_COUNT_UNIQUE_KEYS) {
+      if (nextStep == MemStoreCompactionStrategy.Action.FLATTEN
+          || nextStep == MemStoreCompactionStrategy.Action.FLATTEN_COUNT_UNIQUE_KEYS) {
         // some Segment in the pipeline is with SkipList index, make it flat
         compactingMemStore.flattenOneSegment(versionedList.getVersion(), nextStep);
         return;
@@ -195,6 +194,7 @@ public class MemStoreCompactor {
         result.close();
       }
       releaseResources();
+      compactingMemStore.setInMemoryCompactionCompleted();
     }
 
   }
