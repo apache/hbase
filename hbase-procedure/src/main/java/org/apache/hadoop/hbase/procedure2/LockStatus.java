@@ -33,9 +33,9 @@ public interface LockStatus {
 
   boolean isLockOwner(long procId);
 
-  boolean hasParentLock(final Procedure proc);
+  boolean hasParentLock(Procedure<?> proc);
 
-  boolean hasLockAccess(final Procedure proc);
+  boolean hasLockAccess(Procedure<?> proc);
 
   Procedure<?> getExclusiveLockOwnerProcedure();
 
