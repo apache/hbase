@@ -115,13 +115,8 @@ class SchemaLocking {
 
     List<Procedure<?>> waitingProcedures = new ArrayList<>();
 
-    for (Procedure<?> procedure : queue) {
-      if (!(procedure instanceof LockProcedure)) {
-        continue;
-      }
-
-      waitingProcedures.add(procedure);
-    }
+    queue.filterWaitingQueue(p -> p instanceof LockProcedure)
+      .forEachOrdered(waitingProcedures::add);
 
     return new LockedResource(resourceType, resourceName, lockType, exclusiveLockOwnerProcedure,
       sharedLockCount, waitingProcedures);

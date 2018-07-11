@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -31,7 +32,10 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
+import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOperationType;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.LockedResourceType;
@@ -839,29 +843,29 @@ public class TestMasterProcedureScheduler {
   }
 
   public static class TestRegionProcedure extends TestTableProcedure {
-    private final HRegionInfo[] regionInfo;
+    private final RegionInfo[] regionInfo;
 
     public TestRegionProcedure() {
       throw new UnsupportedOperationException("recovery should not be triggered here");
     }
 
     public TestRegionProcedure(long procId, TableName tableName, TableOperationType opType,
-        HRegionInfo... regionInfo) {
+        RegionInfo... regionInfo) {
       this(-1, procId, tableName, opType, regionInfo);
     }
 
     public TestRegionProcedure(long parentProcId, long procId, TableName tableName,
-        TableOperationType opType, HRegionInfo... regionInfo) {
+        TableOperationType opType, RegionInfo... regionInfo) {
       this(-1, parentProcId, procId, tableName, opType, regionInfo);
     }
 
     public TestRegionProcedure(long rootProcId, long parentProcId, long procId, TableName tableName,
-        TableOperationType opType, HRegionInfo... regionInfo) {
+        TableOperationType opType, RegionInfo... regionInfo) {
       super(rootProcId, parentProcId, procId, tableName, opType);
       this.regionInfo = regionInfo;
     }
 
-    public HRegionInfo[] getRegionInfo() {
+    public RegionInfo[] getRegionInfo() {
       return regionInfo;
     }
 
@@ -1062,6 +1066,31 @@ public class TestMasterProcedureScheduler {
     LockProcedure waitingProcedure3 = (LockProcedure) waitingProcedures.get(1);
     assertEquals(LockType.EXCLUSIVE, waitingProcedure3.getType());
     assertEquals(procedure3, waitingProcedure3);
+  }
+
+  @Test
+  public void testAcquireSharedLockWhileParentHoldingExclusiveLock() {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
+
+    TestTableProcedure parentProc = new TestTableProcedure(1, tableName, TableOperationType.EDIT);
+    TestRegionProcedure proc =
+      new TestRegionProcedure(1, 2, tableName, TableOperationType.REGION_EDIT, regionInfo);
+    queue.addBack(parentProc);
+
+    assertSame(parentProc, queue.poll());
+    assertFalse(queue.waitTableExclusiveLock(parentProc, tableName));
+
+    // The queue for this table should be added back to run queue as the parent has the xlock, so we
+    // can poll it out.
+    queue.addBack(proc);
+    assertSame(proc, queue.poll());
+    // the parent has xlock on the table, and it is OK for us to acquire shared lock on the table,
+    // this is what this test wants to confirm
+    assertFalse(queue.waitRegion(proc, regionInfo));
+
+    queue.wakeRegion(proc, regionInfo);
+    queue.wakeTableExclusiveLock(parentProc, tableName);
   }
 }
 

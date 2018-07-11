@@ -253,22 +253,16 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
    * Wakes up given waiting procedures by pushing them back into scheduler queues.
    * @return size of given {@code waitQueue}.
    */
-  protected int wakeWaitingProcedures(final ProcedureDeque waitQueue) {
-    int count = waitQueue.size();
-    // wakeProcedure adds to the front of queue, so we start from last in the
-    // waitQueue' queue, so that the procedure which was added first goes in the front for
-    // the scheduler queue.
-    addFront(waitQueue.descendingIterator());
-    waitQueue.clear();
-    return count;
+  protected int wakeWaitingProcedures(LockAndQueue lockAndQueue) {
+    return lockAndQueue.wakeWaitingProcedures(this);
   }
 
-  protected void waitProcedure(final ProcedureDeque waitQueue, final Procedure proc) {
-    waitQueue.addLast(proc);
+  protected void waitProcedure(LockAndQueue lockAndQueue, final Procedure proc) {
+    lockAndQueue.addLast(proc);
   }
 
   protected void wakeProcedure(final Procedure procedure) {
-    if (LOG.isTraceEnabled()) LOG.trace("Wake " + procedure);
+    LOG.trace("Wake {}", procedure);
     push(procedure, /* addFront= */ true, /* notify= */false);
   }
 
@@ -285,7 +279,9 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   protected void wakePollIfNeeded(final int waitingCount) {
-    if (waitingCount <= 0) return;
+    if (waitingCount <= 0) {
+      return;
+    }
     if (waitingCount == 1) {
       schedWaitCond.signal();
     } else {
