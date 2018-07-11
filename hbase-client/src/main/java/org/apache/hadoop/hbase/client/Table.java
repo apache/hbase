@@ -20,21 +20,24 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-
+import org.apache.hadoop.hbase.util.Bytes;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
@@ -73,7 +76,15 @@ public interface Table extends Closeable {
    *             use {@link #getDescriptor()}
    */
   @Deprecated
-  HTableDescriptor getTableDescriptor() throws IOException;
+  default HTableDescriptor getTableDescriptor() throws IOException {
+    TableDescriptor descriptor = getDescriptor();
+
+    if (descriptor instanceof HTableDescriptor) {
+      return (HTableDescriptor)descriptor;
+    } else {
+      return new HTableDescriptor(descriptor);
+    }
+  }
 
   /**
    * Gets the {@link org.apache.hadoop.hbase.client.TableDescriptor table descriptor} for this table.
@@ -96,7 +107,7 @@ public interface Table extends Closeable {
    * @throws IOException e
    */
   default boolean exists(Get get) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    return exists(Collections.singletonList(get))[0];
   }
 
   /**
@@ -176,7 +187,7 @@ public interface Table extends Closeable {
    * @since 0.20.0
    */
   default Result get(Get get) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    return get(Collections.singletonList(get))[0];
   }
 
   /**
@@ -240,7 +251,6 @@ public interface Table extends Closeable {
     throw new NotImplementedException("Add an implementation!");
   }
 
-
   /**
    * Puts some data in the table.
    *
@@ -249,7 +259,7 @@ public interface Table extends Closeable {
    * @since 0.20.0
    */
   default void put(Put put) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    put(Collections.singletonList(put));
   }
 
   /**
@@ -289,7 +299,7 @@ public interface Table extends Closeable {
   @Deprecated
   default boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, byte[] value, Put put)
       throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    return checkAndPut(row, family, qualifier, CompareOperator.EQUAL, value, put);
   }
 
   /**
@@ -315,7 +325,10 @@ public interface Table extends Closeable {
   @Deprecated
   default boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       CompareFilter.CompareOp compareOp, byte[] value, Put put) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    RowMutations mutations = new RowMutations(put.getRow(), 1);
+    mutations.add(put);
+
+    return checkAndMutate(row, family, qualifier, compareOp, value, mutations);
   }
 
   /**
@@ -341,7 +354,10 @@ public interface Table extends Closeable {
   @Deprecated
   default boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
       byte[] value, Put put) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    RowMutations mutations = new RowMutations(put.getRow(), 1);
+    mutations.add(put);
+
+    return checkAndMutate(row, family, qualifier, op, value, mutations);
   }
 
   /**
@@ -360,7 +376,7 @@ public interface Table extends Closeable {
    * <p>
    * If a specified row does not exist, {@link Delete} will report as though sucessful
    * delete; no exception will be thrown. If there are any failures even after retries,
-   * a * {@link RetriesExhaustedWithDetailsException} will be thrown.
+   * a {@link RetriesExhaustedWithDetailsException} will be thrown.
    * RetriesExhaustedWithDetailsException contains lists of failed {@link Delete}s and
    * corresponding remote exceptions.
    *
@@ -399,7 +415,7 @@ public interface Table extends Closeable {
   @Deprecated
   default boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
     byte[] value, Delete delete) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    return checkAndDelete(row, family, qualifier, CompareOperator.EQUAL, value, delete);
   }
 
   /**
@@ -425,7 +441,10 @@ public interface Table extends Closeable {
   @Deprecated
   default boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
     CompareFilter.CompareOp compareOp, byte[] value, Delete delete) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    RowMutations mutations = new RowMutations(delete.getRow(), 1);
+    mutations.add(delete);
+
+    return checkAndMutate(row, family, qualifier, compareOp, value, mutations);
   }
 
   /**
@@ -451,7 +470,10 @@ public interface Table extends Closeable {
   @Deprecated
   default boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
                          CompareOperator op, byte[] value, Delete delete) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    RowMutations mutations = new RowMutations(delete.getRow(), 1);
+    mutations.add(delete);
+
+    return checkAndMutate(row, family, qualifier, op, value, mutations);
   }
 
   /**
@@ -580,7 +602,9 @@ public interface Table extends Closeable {
    */
   default long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier, long amount)
       throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    Increment increment = new Increment(row).addColumn(family, qualifier, amount);
+    Cell cell = increment(increment).getColumnLatestCell(family, qualifier);
+    return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
 
   /**
@@ -602,7 +626,11 @@ public interface Table extends Closeable {
    */
   default long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
     long amount, Durability durability) throws IOException {
-    throw new NotImplementedException("Add an implementation!");
+    Increment increment = new Increment(row)
+        .addColumn(family, qualifier, amount)
+        .setDurability(durability);
+    Cell cell = increment(increment).getColumnLatestCell(family, qualifier);
+    return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
 
   /**
@@ -833,7 +861,7 @@ public interface Table extends Closeable {
    */
   @Deprecated
   default int getRpcTimeout() {
-    throw new NotImplementedException("Add an implementation!");
+    return (int)getRpcTimeout(TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -850,7 +878,8 @@ public interface Table extends Closeable {
    */
   @Deprecated
   default void setRpcTimeout(int rpcTimeout) {
-    throw new NotImplementedException("Add an implementation!");
+    setReadRpcTimeout(rpcTimeout);
+    setWriteRpcTimeout(rpcTimeout);
   }
 
   /**
@@ -869,7 +898,7 @@ public interface Table extends Closeable {
    */
   @Deprecated
   default int getReadRpcTimeout() {
-    throw new NotImplementedException("Add an implementation!");
+    return (int)getReadRpcTimeout(TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -902,7 +931,7 @@ public interface Table extends Closeable {
    */
   @Deprecated
   default int getWriteRpcTimeout() {
-    throw new NotImplementedException("Add an implementation!");
+    return (int)getWriteRpcTimeout(TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -935,7 +964,7 @@ public interface Table extends Closeable {
    */
   @Deprecated
   default int getOperationTimeout() {
-    throw new NotImplementedException("Add an implementation!");
+    return (int)getOperationTimeout(TimeUnit.MILLISECONDS);
   }
 
   /**
