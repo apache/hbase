@@ -1083,7 +1083,7 @@ public class TestMasterProcedureScheduler {
 
     // The queue for this table should be added back to run queue as the parent has the xlock, so we
     // can poll it out.
-    queue.addBack(proc);
+    queue.addFront(proc);
     assertSame(proc, queue.poll());
     // the parent has xlock on the table, and it is OK for us to acquire shared lock on the table,
     // this is what this test wants to confirm
