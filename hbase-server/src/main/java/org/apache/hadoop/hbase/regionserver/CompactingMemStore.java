@@ -240,6 +240,15 @@ public class CompactingMemStore extends AbstractMemStore {
     return mss.getDataSize() > 0? mss: getActive().getMemStoreSize();
   }
 
+
+  public void setInMemoryCompactionCompleted() {
+    inMemoryCompactionInProgress.set(false);
+  }
+
+  protected boolean setInMemoryCompactionFlag() {
+    return inMemoryCompactionInProgress.compareAndSet(false, true);
+  }
+
   @Override
   protected long keySize() {
     // Need to consider dataSize/keySize of all segments in pipeline and active
@@ -419,7 +428,7 @@ public class CompactingMemStore extends AbstractMemStore {
     if (shouldFlushInMemory(currActive, cellToAdd, memstoreSizing)) {
       if (currActive.setInMemoryFlushed()) {
         flushInMemory(currActive);
-        if (inMemoryCompactionInProgress.compareAndSet(false, true)) {
+        if (setInMemoryCompactionFlag()) {
           // The thread is dispatched to do in-memory compaction in the background
           InMemoryCompactionRunnable runnable = new InMemoryCompactionRunnable();
           if (LOG.isTraceEnabled()) {
@@ -455,21 +464,19 @@ public class CompactingMemStore extends AbstractMemStore {
     // setting the inMemoryCompactionInProgress flag again for the case this method is invoked
     // directly (only in tests) in the common path setting from true to true is idempotent
     inMemoryCompactionInProgress.set(true);
+    // Used by tests
+    if (!allowCompaction.get()) {
+      return;
+    }
     try {
-      // Used by tests
-      if (!allowCompaction.get()) {
-        return;
+      // Speculative compaction execution, may be interrupted if flush is forced while
+      // compaction is in progress
+      if(!compactor.start()) {
+        setInMemoryCompactionCompleted();
       }
-      try {
-        // Speculative compaction execution, may be interrupted if flush is forced while
-        // compaction is in progress
-        compactor.start();
-      } catch (IOException e) {
-        LOG.warn("Unable to run in-memory compaction on {}/{}; exception={}",
-            getRegionServices().getRegionInfo().getEncodedName(), getFamilyName(), e);
-      }
-    } finally {
-      inMemoryCompactionInProgress.set(false);
+    } catch (IOException e) {
+      LOG.warn("Unable to run in-memory compaction on {}/{}; exception={}",
+          getRegionServices().getRegionInfo().getEncodedName(), getFamilyName(), e);
     }
   }
 
