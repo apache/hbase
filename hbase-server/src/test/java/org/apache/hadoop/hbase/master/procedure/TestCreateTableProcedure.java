@@ -19,21 +19,30 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -42,6 +51,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
@@ -84,7 +96,8 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     // create table with 0 families will fail
-    final TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName));
+    final TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName));
 
     // disable sanity check
     builder.setValue("hbase.table.sanity.checks", Boolean.FALSE.toString());
@@ -147,7 +160,8 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    testRollbackAndDoubleExecution(TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName, F1, F2)));
+    testRollbackAndDoubleExecution(TableDescriptorBuilder
+      .newBuilder(MasterProcedureTestingUtility.createHTD(tableName, F1, F2)));
   }
 
   @Test
@@ -155,9 +169,10 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1, F2);
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd)
-            .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(htd.getColumnFamily(Bytes.toBytes(F1)))
-                    .setMobEnabled(true)
-                    .build());
+            .modifyColumnFamily(ColumnFamilyDescriptorBuilder
+              .newBuilder(htd.getColumnFamily(Bytes.toBytes(F1)))
+              .setMobEnabled(true)
+              .build());
     testRollbackAndDoubleExecution(builder);
   }
 
@@ -199,5 +214,63 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     UTIL.getAdmin().createTableAsync(htd, splitKeys)
       .get(10, java.util.concurrent.TimeUnit.HOURS);
     LOG.info("TABLE CREATED");
+  }
+
+  public static class CreateTableProcedureOnHDFSFailure extends CreateTableProcedure {
+    private boolean failOnce = false;
+
+    public CreateTableProcedureOnHDFSFailure() {
+      // Required by the Procedure framework to create the procedure on replay
+      super();
+    }
+
+    public CreateTableProcedureOnHDFSFailure(final MasterProcedureEnv env,
+      final TableDescriptor tableDescriptor, final RegionInfo[] newRegions)
+      throws HBaseIOException {
+      super(env, tableDescriptor, newRegions);
+    }
+
+    @Override
+    protected Flow executeFromState(MasterProcedureEnv env,
+      MasterProcedureProtos.CreateTableState state) throws InterruptedException {
+
+      if (!failOnce &&
+        state == MasterProcedureProtos.CreateTableState.CREATE_TABLE_WRITE_FS_LAYOUT) {
+        try {
+          // To emulate an HDFS failure, create only the first region directory
+          RegionInfo regionInfo = getFirstRegionInfo();
+          Configuration conf = env.getMasterConfiguration();
+          MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+          Path tempdir = mfs.getTempDir();
+          Path tableDir = FSUtils.getTableDir(tempdir, regionInfo.getTable());
+          Path regionDir = FSUtils.getRegionDir(tableDir, regionInfo);
+          FileSystem fs = FileSystem.get(conf);
+          fs.mkdirs(regionDir);
+
+          failOnce = true;
+          return Flow.HAS_MORE_STATE;
+        } catch (IOException e) {
+          fail("failed to create a region directory: " + e);
+        }
+      }
+
+      return super.executeFromState(env, state);
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testOnHDFSFailure() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+
+    // create the table
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    final byte[][] splitKeys = new byte[][] {
+      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
+    };
+    TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
+    RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateTableProcedureOnHDFSFailure(procExec.getEnvironment(), htd, regions));
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
   }
 }
