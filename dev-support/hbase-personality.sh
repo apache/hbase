@@ -180,6 +180,18 @@ function personality_modules
     if [ -n "${BUILD_ID}" ]; then
       extra="${extra} -Dbuild.id=${BUILD_ID}"
     fi
+
+    # If the set of changed files includes CommonFSUtils then add the hbase-server
+    # module to the set of modules (if not already included) to be tested
+    for f in "${CHANGED_FILES[@]}"
+    do
+      if [[ "${f}" =~ CommonFSUtils ]]; then
+        if [[ ! "${MODULES[*]}" =~ hbase-server ]] && [[ ! "${MODULES[*]}" =~ \. ]]; then
+          MODULES+=("hbase-server")
+        fi
+        break
+      fi
+    done
   fi
 
   for module in "${MODULES[@]}"; do
