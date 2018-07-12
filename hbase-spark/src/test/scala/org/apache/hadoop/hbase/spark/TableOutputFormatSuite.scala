@@ -124,6 +124,7 @@ class TableOutputFormatSuite extends FunSuite with
         else
           assert(false)
       }
+     case _ => None
     }
   }
 
