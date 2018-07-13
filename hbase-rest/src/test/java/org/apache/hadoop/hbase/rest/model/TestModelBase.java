@@ -25,12 +25,12 @@ import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.Base64;
 import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.provider.JAXBContextResolver;
-import org.apache.hadoop.hbase.util.Base64;
 import org.junit.Test;
 
 public abstract class TestModelBase<T> {
@@ -91,7 +91,7 @@ public abstract class TestModelBase<T> {
       Exception {
     return (T)clazz.getMethod("getObjectFromMessage", byte[].class).invoke(
         clazz.getDeclaredConstructor().newInstance(),
-        Base64.decode(AS_PB));
+        Base64.getDecoder().decode(AS_PB));
   }
 
   protected abstract  void checkModel(T model);

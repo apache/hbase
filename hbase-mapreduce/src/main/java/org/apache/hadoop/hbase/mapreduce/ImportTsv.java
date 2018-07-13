@@ -23,6 +23,7 @@ import static java.lang.String.format;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -47,7 +48,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -471,7 +471,7 @@ public class ImportTsv extends Configured implements Tool {
         String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
         if (actualSeparator != null) {
           conf.set(SEPARATOR_CONF_KEY,
-              Base64.encodeBytes(actualSeparator.getBytes()));
+              Bytes.toString(Base64.getEncoder().encode(actualSeparator.getBytes())));
         }
 
         // See if a non-default Mapper was set
