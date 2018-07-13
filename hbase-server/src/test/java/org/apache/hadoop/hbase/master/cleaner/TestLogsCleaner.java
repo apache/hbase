@@ -279,14 +279,23 @@ public class TestLogsCleaner {
   @Test
   public void testOnConfigurationChange() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(LogCleaner.OLD_WALS_CLEANER_SIZE, LogCleaner.OLD_WALS_CLEANER_DEFAULT_SIZE);
+    conf.setInt(LogCleaner.OLD_WALS_CLEANER_THREAD_SIZE,
+        LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
+    conf.setLong(LogCleaner.OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
+        LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
+    conf.setLong(LogCleaner.OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC,
+        LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC);
     // Prepare environments
     Server server = new DummyServer();
     Path oldWALsDir = new Path(TEST_UTIL.getDefaultRootDirPath(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
     LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, oldWALsDir);
-    assertEquals(LogCleaner.OLD_WALS_CLEANER_DEFAULT_SIZE, cleaner.getSizeOfCleaners());
+    assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE, cleaner.getSizeOfCleaners());
+    assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
+        cleaner.getCleanerThreadTimeoutMsec());
+    assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC,
+        cleaner.getCleanerThreadCheckIntervalMsec());
     // Create dir and files for test
     fs.delete(oldWALsDir, true);
     fs.mkdirs(oldWALsDir);
@@ -300,9 +309,16 @@ public class TestLogsCleaner {
     thread.start();
     // change size of cleaners dynamically
     int sizeToChange = 4;
-    conf.setInt(LogCleaner.OLD_WALS_CLEANER_SIZE, sizeToChange);
+    long threadTimeoutToChange = 30 * 1000L;
+    long threadCheckIntervalToChange = 250L;
+    conf.setInt(LogCleaner.OLD_WALS_CLEANER_THREAD_SIZE, sizeToChange);
+    conf.setLong(LogCleaner.OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC, threadTimeoutToChange);
+    conf.setLong(LogCleaner.OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC,
+        threadCheckIntervalToChange);
     cleaner.onConfigurationChange(conf);
     assertEquals(sizeToChange, cleaner.getSizeOfCleaners());
+    assertEquals(threadTimeoutToChange, cleaner.getCleanerThreadTimeoutMsec());
+    assertEquals(threadCheckIntervalToChange, cleaner.getCleanerThreadCheckIntervalMsec());
     // Stop chore
     thread.join();
     status = fs.listStatus(oldWALsDir);
