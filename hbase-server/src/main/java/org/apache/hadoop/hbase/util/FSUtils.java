@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
@@ -1026,6 +1027,10 @@ public abstract class FSUtils extends CommonFSUtils {
       regionDirs.add(rdPath);
     }
     return regionDirs;
+  }
+
+  public static Path getRegionDir(Path tableDir, RegionInfo region) {
+    return new Path(tableDir, ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
   }
 
   /**
