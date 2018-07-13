@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -53,7 +54,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.TokenUtil;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -597,7 +597,7 @@ public class TableMapReduceUtil {
    */
   public static String convertScanToString(Scan scan) throws IOException {
     ClientProtos.Scan proto = ProtobufUtil.toScan(scan);
-    return Base64.encodeBytes(proto.toByteArray());
+    return Bytes.toString(Base64.getEncoder().encode(proto.toByteArray()));
   }
 
   /**
@@ -608,7 +608,7 @@ public class TableMapReduceUtil {
    * @throws IOException When reading the scan instance fails.
    */
   public static Scan convertStringToScan(String base64) throws IOException {
-    byte [] decoded = Base64.decode(base64);
+    byte [] decoded = Base64.getDecoder().decode(base64);
     return ProtobufUtil.toScan(ClientProtos.Scan.parseFrom(decoded));
   }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
@@ -121,7 +121,7 @@ public class TextSortReducer extends
     if (separator == null) {
       separator = ImportTsv.DEFAULT_SEPARATOR;
     } else {
-      separator = new String(Base64.decode(separator));
+      separator = Bytes.toString(Base64.getDecoder().decode(separator));
     }
 
     // Should never get 0 as we are setting this to a valid value in job configuration.
