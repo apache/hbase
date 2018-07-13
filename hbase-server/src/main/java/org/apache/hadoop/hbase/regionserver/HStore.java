@@ -343,7 +343,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     if (inMemoryCompaction == null) {
       inMemoryCompaction =
           MemoryCompactionPolicy.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-              CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
+              CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT).toUpperCase());
     }
     switch (inMemoryCompaction) {
       case NONE:
