@@ -25,20 +25,15 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -117,7 +112,7 @@ import java.util.zip.GZIPOutputStream;
  * <br>
  * version: 2.2.1
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class Base64 {
 
@@ -385,43 +380,6 @@ public class Base64 {
   /** Defeats instantiation. */
   private Base64() {}
 
-  /**
-   * Main program. Used for testing.
-   *
-   * Encodes or decodes two files from the command line
-   *
-   * @param args command arguments
-   */
-  public static void main(String[] args) {
-    if (args.length < 3) {
-      usage("Not enough arguments.");
-
-    } else {
-      String flag = args[0];
-      String infile = args[1];
-      String outfile = args[2];
-      if (flag.equals("-e")) {                          // encode
-        encodeFileToFile(infile, outfile);
-
-      } else if (flag.equals("-d")) {                   // decode
-        decodeFileToFile(infile, outfile);
-
-      } else {
-        usage("Unknown flag: " + flag);
-      }
-    }
-  } // end main
-
-  /**
-   * Prints command line usage.
-   *
-   * @param msg A message to include with usage info.
-   */
-  private static void usage(String msg) {
-    System.err.println(msg);
-    System.err.println("Usage: java Base64 -e|-d inputfile outputfile");
-  } // end usage
-
   /* ******** E N C O D I N G   M E T H O D S ******** */
 
   /**
@@ -515,92 +473,6 @@ public class Base64 {
   } // end encode3to4
 
   /**
-   * Serializes an object and returns the Base64-encoded version of that
-   * serialized object. If the object cannot be serialized or there is another
-   * error, the method will return <tt>null</tt>. The object is not
-   * GZip-compressed before being encoded.
-   *
-   * @param serializableObject The object to encode
-   * @return The Base64-encoded object
-   * @since 1.4
-   */
-  public static String encodeObject(Serializable serializableObject) {
-    return encodeObject(serializableObject, NO_OPTIONS);
-  } // end encodeObject
-
-  /**
-   * Serializes an object and returns the Base64-encoded version of that
-   * serialized object. If the object cannot be serialized or there is another
-   * error, the method will return <tt>null</tt>.
-   * <p>
-   * Valid options:
-   * <ul>
-   *   <li>GZIP: gzip-compresses object before encoding it.</li>
-   *   <li>DONT_BREAK_LINES: don't break lines at 76 characters. <i>Note:
-   *     Technically, this makes your encoding non-compliant.</i></li>
-   * </ul>
-   * <p>
-   * Example: <code>encodeObject( myObj, Base64.GZIP )</code> or
-   * <p>
-   * Example:
-   * <code>encodeObject( myObj, Base64.GZIP | Base64.DONT_BREAK_LINES )</code>
-   *
-   * @param serializableObject The object to encode
-   * @param options Specified options
-   * @see Base64#GZIP
-   * @see Base64#DONT_BREAK_LINES
-   * @return The Base64-encoded object
-   * @since 2.0
-   */
-  @SuppressWarnings({"ConstantConditions"})
-  public static String encodeObject(Serializable serializableObject,
-      int options) {
-
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    OutputStream b64os = null;
-    ObjectOutputStream oos = null;
-    try {
-      // ObjectOutputStream -> (GZIP) -> Base64 -> ByteArrayOutputStream
-      b64os = new Base64OutputStream(baos, ENCODE | options);
-
-      oos = ((options & GZIP) == GZIP) ?
-          new ObjectOutputStream(new GZIPOutputStream(b64os)) :
-            new ObjectOutputStream(b64os);
-
-      oos.writeObject(serializableObject);
-      return new String(baos.toByteArray(), PREFERRED_ENCODING);
-
-    } catch (UnsupportedEncodingException uue) {
-      return new String(baos.toByteArray());
-
-    } catch (IOException e) {
-      LOG.error("error encoding object", e);
-      return null;
-
-    } finally {
-      if (oos != null) {
-        try {
-          oos.close();
-        } catch (Exception e) {
-          LOG.error("error closing ObjectOutputStream", e);
-        }
-      }
-      if (b64os != null) {
-        try {
-          b64os.close();
-        } catch (Exception e) {
-          LOG.error("error closing Base64OutputStream", e);
-        }
-      }
-      try {
-        baos.close();
-      } catch (Exception e) {
-        LOG.error("error closing ByteArrayOutputStream", e);
-      }
-    } // end finally
-  } // end encode
-
-  /**
    * Encodes a byte array into Base64 notation. Does not GZip-compress data.
    *
    * @param source The data to convert
@@ -638,19 +510,6 @@ public class Base64 {
    */
   public static String encodeBytes(byte[] source, int options) {
     return encodeBytes(source, 0, source.length, options);
-  } // end encodeBytes
-
-  /**
-   * Encodes a byte array into Base64 notation. Does not GZip-compress data.
-   *
-   * @param source The data to convert
-   * @param off Offset in array where conversion should begin
-   * @param len Length of data to convert
-   * @return encoded byte array
-   * @since 1.4
-   */
-  public static String encodeBytes(byte[] source, int off, int len) {
-    return encodeBytes(source, off, len, NO_OPTIONS);
   } // end encodeBytes
 
   /**
@@ -978,111 +837,6 @@ public class Base64 {
   } // end decode
 
   /**
-   * Attempts to decode Base64 data and deserialize a Java Object within.
-   * Returns <tt>null</tt> if there was an error.
-   *
-   * @param encodedObject The Base64 data to decode
-   * @return The decoded and deserialized object
-   * @since 1.5
-   */
-  public static Object decodeToObject(String encodedObject) {
-    // Decode and gunzip if necessary
-    byte[] objBytes = decode(encodedObject);
-
-    Object obj = null;
-    ObjectInputStream ois = null;
-    try {
-      ois = new ObjectInputStream(new ByteArrayInputStream(objBytes));
-      obj = ois.readObject();
-
-    } catch (IOException e) {
-      LOG.error("error decoding object", e);
-
-    } catch (ClassNotFoundException e) {
-      LOG.error("error decoding object", e);
-
-    } finally {
-      if (ois != null) {
-        try {
-          ois.close();
-        } catch (Exception e) {
-          LOG.error("error closing ObjectInputStream", e);
-        }
-      }
-    } // end finally
-
-    return obj;
-  } // end decodeObject
-
-  /**
-   * Convenience method for encoding data to a file.
-   *
-   * @param dataToEncode byte array of data to encode in base64 form
-   * @param filename Filename for saving encoded data
-   * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
-   *
-   * @since 2.1
-   */
-  public static boolean encodeToFile(byte[] dataToEncode, String filename) {
-    boolean success = false;
-    Base64OutputStream bos = null;
-    try {
-      bos = new Base64OutputStream(new FileOutputStream(filename), ENCODE);
-      bos.write(dataToEncode);
-      success = true;
-
-    } catch (IOException e) {
-      LOG.error("error encoding file: " + filename, e);
-      success = false;
-
-    } finally {
-      if (bos != null) {
-        try {
-          bos.close();
-        } catch (Exception e) {
-          LOG.error("error closing Base64OutputStream", e);
-        }
-      }
-    } // end finally
-
-    return success;
-  } // end encodeToFile
-
-  /**
-   * Convenience method for decoding data to a file.
-   *
-   * @param dataToDecode Base64-encoded data as a string
-   * @param filename Filename for saving decoded data
-   * @return <tt>true</tt> if successful, <tt>false</tt> otherwise
-   *
-   * @since 2.1
-   */
-  public static boolean decodeToFile(String dataToDecode, String filename) {
-    boolean success = false;
-    Base64OutputStream bos = null;
-    try {
-      bos = new Base64OutputStream(new FileOutputStream(filename), DECODE);
-      bos.write(dataToDecode.getBytes(PREFERRED_ENCODING));
-      success = true;
-
-    } catch (IOException e) {
-      LOG.error("error decoding to file: " + filename, e);
-      success = false;
-
-    } finally {
-      if (bos != null) {
-        try {
-          bos.close();
-        } catch (Exception e) {
-          LOG.error("error closing Base64OutputStream", e);
-        }
-      }
-    } // end finally
-
-    return success;
-  } // end decodeToFile
-
-  /**
    * Convenience method for reading a base64-encoded file and decoding it.
    *
    * @param filename Filename for reading encoded data
@@ -1223,62 +977,6 @@ public class Base64 {
     return encodedData;
   } // end encodeFromFile
 
-  /**
-   * Reads <tt>infile</tt> and encodes it to <tt>outfile</tt>.
-   *
-   * @param infile Input file
-   * @param outfile Output file
-   * @since 2.2
-   */
-  public static void encodeFileToFile(String infile, String outfile) {
-    String encoded = encodeFromFile(infile);
-    OutputStream out = null;
-    try {
-      out = new BufferedOutputStream(new FileOutputStream(outfile));
-      out.write(encoded.getBytes("US-ASCII")); // Strict, 7-bit output.
-
-    } catch (IOException e) {
-      LOG.error("error encoding from file " + infile + " to " + outfile, e);
-
-    } finally {
-      if (out != null) {
-        try {
-          out.close();
-        } catch (Exception e) {
-          LOG.error("error closing " + outfile, e);
-        }
-      }
-    } // end finally
-  } // end encodeFileToFile
-
-  /**
-   * Reads <tt>infile</tt> and decodes it to <tt>outfile</tt>.
-   *
-   * @param infile Input file
-   * @param outfile Output file
-   * @since 2.2
-   */
-  public static void decodeFileToFile(String infile, String outfile) {
-    byte[] decoded = decodeFromFile(infile);
-    OutputStream out = null;
-    try {
-      out = new BufferedOutputStream(new FileOutputStream(outfile));
-      out.write(decoded);
-
-    } catch (IOException e) {
-      LOG.error("error decoding from file " + infile + " to " + outfile, e);
-
-    } finally {
-      if (out != null) {
-        try {
-          out.close();
-        } catch (Exception e) {
-          LOG.error("error closing " + outfile, e);
-        }
-      }
-    } // end finally
-  } // end decodeFileToFile
-
   /* ******** I N N E R   C L A S S   I N P U T S T R E A M ******** */
 
   /**
@@ -1289,7 +987,7 @@ public class Base64 {
    * @see Base64
    * @since 1.3
    */
-  @InterfaceAudience.Public
+  @InterfaceAudience.Private
   @InterfaceStability.Stable
   public static class Base64InputStream extends FilterInputStream {
     private boolean encode;                     // Encoding or decoding
@@ -1301,16 +999,6 @@ public class Base64 {
     private boolean breakLines;                 // Break lines at < 80 characters
     private int options;                        // Record options
     private byte[] decodabet;                   // Local copy avoids method calls
-
-    /**
-     * Constructs a {@link Base64InputStream} in DECODE mode.
-     *
-     * @param in the <tt>InputStream</tt> from which to read data.
-     * @since 1.3
-     */
-    public Base64InputStream(InputStream in) {
-      this(in, DECODE);
-    } // end constructor
 
     /**
      * Constructs a {@link Base64.Base64InputStream} in either ENCODE or DECODE mode.
@@ -1491,7 +1179,7 @@ public class Base64 {
    * @see Base64
    * @since 1.3
    */
-  @InterfaceAudience.Public
+  @InterfaceAudience.Private
   @InterfaceStability.Stable
   public static class Base64OutputStream extends FilterOutputStream {
     private boolean encode;
@@ -1504,16 +1192,6 @@ public class Base64 {
     private boolean suspendEncoding;
     private int options;                        // Record for later
     private byte[] decodabet;                   // Local copy avoids method calls
-
-    /**
-     * Constructs a {@link Base64OutputStream} in ENCODE mode.
-     *
-     * @param out the <tt>OutputStream</tt> to which data will be written.
-     * @since 1.3
-     */
-    public Base64OutputStream(OutputStream out) {
-      this(out, ENCODE);
-    } // end constructor
 
     /**
      * Constructs a {@link Base64OutputStream} in either ENCODE or DECODE mode.
@@ -1537,7 +1215,7 @@ public class Base64 {
      * @see Base64#DONT_BREAK_LINES
      * @since 1.3
      */
-    @InterfaceAudience.Public
+    @InterfaceAudience.Private
     @InterfaceStability.Stable
     public Base64OutputStream(OutputStream out, int options) {
       super(out);
@@ -1659,28 +1337,6 @@ public class Base64 {
       buffer = null;
       out = null;
     } // end close
-
-    /**
-     * Suspends encoding of the stream. May be helpful if you need to embed a
-     * piece of base640-encoded data in a stream.
-     *
-     * @throws IOException e
-     * @since 1.5.1
-     */
-    public void suspendEncoding() throws IOException {
-      flushBase64();
-      this.suspendEncoding = true;
-    } // end suspendEncoding
-
-    /**
-     * Resumes encoding of the stream. May be helpful if you need to embed a
-     * piece of base640-encoded data in a stream.
-     *
-     * @since 1.5.1
-     */
-    public void resumeEncoding() {
-      this.suspendEncoding = false;
-    } // end resumeEncoding
 
   } // end inner class OutputStream
 
