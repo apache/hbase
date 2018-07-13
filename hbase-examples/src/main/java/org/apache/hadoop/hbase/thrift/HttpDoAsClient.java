@@ -25,6 +25,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,7 @@ import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
-import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
@@ -218,7 +219,7 @@ public class HttpDoAsClient {
     final byte[] outToken = context.initSecContext(new byte[0], 0, 0);
     StringBuffer outputBuffer = new StringBuffer();
     outputBuffer.append("Negotiate ");
-    outputBuffer.append(Base64.encodeBytes(outToken).replace("\n", ""));
+    outputBuffer.append(Bytes.toString(Base64.getEncoder().encode(outToken)));
     System.out.print("Ticket is: " + outputBuffer);
     return outputBuffer.toString();
   }

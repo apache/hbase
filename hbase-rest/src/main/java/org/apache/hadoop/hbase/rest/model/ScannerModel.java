@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.rest.model;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -72,7 +73,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -154,10 +154,10 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         switch (type) {
           case BinaryComparator:
           case BinaryPrefixComparator:
-            this.value = Base64.encodeBytes(comparator.getValue());
+            this.value = Bytes.toString(Base64.getEncoder().encode(comparator.getValue()));
             break;
           case BitComparator:
-            this.value = Base64.encodeBytes(comparator.getValue());
+            this.value = Bytes.toString(Base64.getEncoder().encode(comparator.getValue()));
             this.op = ((BitComparator)comparator).getOperator().toString();
             break;
           case NullComparator:
@@ -175,13 +175,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         ByteArrayComparable comparator;
         switch (ComparatorType.valueOf(type)) {
           case BinaryComparator:
-            comparator = new BinaryComparator(Base64.decode(value));
+            comparator = new BinaryComparator(Base64.getDecoder().decode(value));
             break;
           case BinaryPrefixComparator:
-            comparator = new BinaryPrefixComparator(Base64.decode(value));
+            comparator = new BinaryPrefixComparator(Base64.getDecoder().decode(value));
             break;
           case BitComparator:
-            comparator = new BitComparator(Base64.decode(value),
+            comparator = new BitComparator(Base64.getDecoder().decode(value),
                 BitComparator.BitwiseOp.valueOf(op));
             break;
           case NullComparator:
@@ -265,20 +265,22 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           this.offset = ((ColumnPaginationFilter)filter).getOffset();
           break;
         case ColumnPrefixFilter:
-          this.value = Base64.encodeBytes(((ColumnPrefixFilter)filter).getPrefix());
+          byte[] src = ((ColumnPrefixFilter)filter).getPrefix();
+          this.value = Bytes.toString(Base64.getEncoder().encode(src));
           break;
         case ColumnRangeFilter:
-          this.minColumn = Base64.encodeBytes(((ColumnRangeFilter)filter).getMinColumn());
-          this.minColumnInclusive = ((ColumnRangeFilter)filter).getMinColumnInclusive();
-          this.maxColumn = Base64.encodeBytes(((ColumnRangeFilter)filter).getMaxColumn());
-          this.maxColumnInclusive = ((ColumnRangeFilter)filter).getMaxColumnInclusive();
+          ColumnRangeFilter crf = (ColumnRangeFilter)filter;
+          this.minColumn = Bytes.toString(Base64.getEncoder().encode(crf.getMinColumn()));
+          this.minColumnInclusive = crf.getMinColumnInclusive();
+          this.maxColumn = Bytes.toString(Base64.getEncoder().encode(crf.getMaxColumn()));
+          this.maxColumnInclusive = crf.getMaxColumnInclusive();
           break;
         case DependentColumnFilter: {
           DependentColumnFilter dcf = (DependentColumnFilter)filter;
-          this.family = Base64.encodeBytes(dcf.getFamily());
+          this.family = Bytes.toString(Base64.getEncoder().encode(dcf.getFamily()));
           byte[] qualifier = dcf.getQualifier();
           if (qualifier != null) {
-            this.qualifier = Base64.encodeBytes(qualifier);
+            this.qualifier = Bytes.toString(Base64.getEncoder().encode(qualifier));
           }
           this.op = dcf.getOperator().toString();
           this.comparator = new ByteArrayComparableModel(dcf.getComparator());
@@ -295,13 +297,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         case KeyOnlyFilter:
           break;
         case InclusiveStopFilter:
-          this.value =
-            Base64.encodeBytes(((InclusiveStopFilter)filter).getStopRowKey());
+          this.value = Bytes.toString(Base64.getEncoder().encode(
+              ((InclusiveStopFilter)filter).getStopRowKey()));
           break;
         case MultipleColumnPrefixFilter:
           this.prefixes = new ArrayList<>();
           for (byte[] prefix: ((MultipleColumnPrefixFilter)filter).getPrefix()) {
-            this.prefixes.add(Base64.encodeBytes(prefix));
+            this.prefixes.add(Bytes.toString(Base64.getEncoder().encode(prefix)));
           }
           break;
         case MultiRowRangeFilter:
@@ -315,7 +317,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           this.value = Long.toString(((PageFilter)filter).getPageSize());
           break;
         case PrefixFilter:
-          this.value = Base64.encodeBytes(((PrefixFilter)filter).getPrefix());
+          this.value = Bytes.toString(Base64.getEncoder().encode(
+              ((PrefixFilter)filter).getPrefix()));
           break;
         case FamilyFilter:
         case QualifierFilter:
@@ -332,10 +335,10 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         case SingleColumnValueExcludeFilter:
         case SingleColumnValueFilter: {
           SingleColumnValueFilter scvf = (SingleColumnValueFilter) filter;
-          this.family = Base64.encodeBytes(scvf.getFamily());
+          this.family = Bytes.toString(Base64.getEncoder().encode(scvf.getFamily()));
           byte[] qualifier = scvf.getQualifier();
           if (qualifier != null) {
-            this.qualifier = Base64.encodeBytes(qualifier);
+            this.qualifier = Bytes.toString(Base64.getEncoder().encode(qualifier));
           }
           this.op = scvf.getOperator().toString();
           this.comparator =
@@ -374,16 +377,16 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new ColumnPaginationFilter(limit, offset);
         break;
       case ColumnPrefixFilter:
-        filter = new ColumnPrefixFilter(Base64.decode(value));
+        filter = new ColumnPrefixFilter(Base64.getDecoder().decode(value));
         break;
       case ColumnRangeFilter:
-        filter = new ColumnRangeFilter(Base64.decode(minColumn),
-            minColumnInclusive, Base64.decode(maxColumn),
+        filter = new ColumnRangeFilter(Base64.getDecoder().decode(minColumn),
+            minColumnInclusive, Base64.getDecoder().decode(maxColumn),
             maxColumnInclusive);
         break;
       case DependentColumnFilter:
-        filter = new DependentColumnFilter(Base64.decode(family),
-            qualifier != null ? Base64.decode(qualifier) : null,
+        filter = new DependentColumnFilter(Base64.getDecoder().decode(family),
+            qualifier != null ? Base64.getDecoder().decode(qualifier) : null,
             dropDependentColumn, CompareOperator.valueOf(op), comparator.build());
         break;
       case FamilyFilter:
@@ -400,7 +403,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new FirstKeyOnlyFilter();
         break;
       case InclusiveStopFilter:
-        filter = new InclusiveStopFilter(Base64.decode(value));
+        filter = new InclusiveStopFilter(Base64.getDecoder().decode(value));
         break;
       case KeyOnlyFilter:
         filter = new KeyOnlyFilter();
@@ -408,7 +411,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       case MultipleColumnPrefixFilter: {
         byte[][] values = new byte[prefixes.size()][];
         for (int i = 0; i < prefixes.size(); i++) {
-          values[i] = Base64.decode(prefixes.get(i));
+          values[i] = Base64.getDecoder().decode(prefixes.get(i));
         }
         filter = new MultipleColumnPrefixFilter(values);
       } break;
@@ -419,7 +422,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new PageFilter(Long.parseLong(value));
         break;
       case PrefixFilter:
-        filter = new PrefixFilter(Base64.decode(value));
+        filter = new PrefixFilter(Base64.getDecoder().decode(value));
         break;
       case QualifierFilter:
         filter = new QualifierFilter(CompareOperator.valueOf(op), comparator.build());
@@ -431,8 +434,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new RowFilter(CompareOperator.valueOf(op), comparator.build());
         break;
       case SingleColumnValueFilter:
-        filter = new SingleColumnValueFilter(Base64.decode(family),
-          qualifier != null ? Base64.decode(qualifier) : null,
+        filter = new SingleColumnValueFilter(Base64.getDecoder().decode(family),
+          qualifier != null ? Base64.getDecoder().decode(qualifier) : null,
         CompareOperator.valueOf(op), comparator.build());
         if (ifMissing != null) {
           ((SingleColumnValueFilter)filter).setFilterIfMissing(ifMissing);
@@ -442,8 +445,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         }
         break;
       case SingleColumnValueExcludeFilter:
-        filter = new SingleColumnValueExcludeFilter(Base64.decode(family),
-          qualifier != null ? Base64.decode(qualifier) : null,
+        filter = new SingleColumnValueExcludeFilter(Base64.getDecoder().decode(family),
+          qualifier != null ? Base64.getDecoder().decode(qualifier) : null,
         CompareOperator.valueOf(op), comparator.build());
         if (ifMissing != null) {
           ((SingleColumnValueExcludeFilter)filter).setFilterIfMissing(ifMissing);

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.util.Base64;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -40,7 +41,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
@@ -171,10 +171,10 @@ public class ScannerInstanceResource extends ResourceBase {
       }
       ResponseBuilder response = Response.ok(CellUtil.cloneValue(value));
       response.cacheControl(cacheControl);
-      response.header("X-Row", Base64.encodeBytes(CellUtil.cloneRow(value)));
-      response.header("X-Column",
-        Base64.encodeBytes(
-          CellUtil.makeColumn(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value))));
+      response.header("X-Row", Bytes.toString(Base64.getEncoder().encode(
+          CellUtil.cloneRow(value))));
+      response.header("X-Column", Bytes.toString(Base64.getEncoder().encode(
+          CellUtil.makeColumn(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value)))));
       response.header("X-Timestamp", value.getTimestamp());
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
