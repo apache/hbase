@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.thrift;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Base64;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -27,7 +28,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SecurityUtil;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -186,10 +186,10 @@ public class ThriftHttpServlet extends TServlet {
         gssContext = manager.createContext(serverCreds);
         // Get service ticket from the authorization header
         String serviceTicketBase64 = getAuthHeader(request);
-        byte[] inToken = Base64.decode(serviceTicketBase64);
+        byte[] inToken = Base64.getDecoder().decode(serviceTicketBase64);
         byte[] res = gssContext.acceptSecContext(inToken, 0, inToken.length);
         if(res != null) {
-          outToken = Base64.encodeBytes(res).replace("\n", "");
+          outToken = Base64.getEncoder().encodeToString(res).replace("\n", "");
         }
         // Authenticate or deny based on its context completion
         if (!gssContext.isEstablished()) {

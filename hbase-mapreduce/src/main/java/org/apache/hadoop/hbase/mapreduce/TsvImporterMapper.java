@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,7 +34,6 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -127,7 +127,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     if (separator == null) {
       separator = ImportTsv.DEFAULT_SEPARATOR;
     } else {
-      separator = new String(Base64.decode(separator));
+      separator = new String(Base64.getDecoder().decode(separator));
     }
     // Should never get 0 as we are setting this to a valid value in job
     // configuration.

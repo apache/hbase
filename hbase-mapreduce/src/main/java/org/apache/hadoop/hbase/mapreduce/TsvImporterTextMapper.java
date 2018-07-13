@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.IOException;
+import java.util.Base64;
+
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-
-import java.io.IOException;
 
 /**
  * Write table content out to map output files.
@@ -61,7 +61,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Text>
 
   /**
    * Handles initializing this class with objects specific to it (i.e., the parser).
-   * Common initialization that might be leveraged by a subsclass is done in
+   * Common initialization that might be leveraged by a subclass is done in
    * <code>doSetup</code>. Hence a subclass may choose to override this method
    * and call <code>doSetup</code> as well before handling it's own custom params.
    *
@@ -92,7 +92,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Text>
     if (separator == null) {
       separator = ImportTsv.DEFAULT_SEPARATOR;
     } else {
-      separator = new String(Base64.decode(separator));
+      separator = new String(Base64.getDecoder().decode(separator));
     }
 
     skipBadLines = context.getConfiguration().getBoolean(ImportTsv.SKIP_LINES_CONF_KEY, true);
