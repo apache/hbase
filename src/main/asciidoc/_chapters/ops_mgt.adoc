@@ -503,9 +503,12 @@ $ bin/hbase org.apache.hadoop.hbase.mapreduce.Export <tablename> <outputdir> [<v
 ----
 
 *endpoint-based Export*
+
+NOTE: Make sure the Export coprocessor is enabled by adding `org.apache.hadoop.hbase.coprocessor.Export` to `hbase.coprocessor.region.classes`.
 ----
 $ bin/hbase org.apache.hadoop.hbase.coprocessor.Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
 ----
+The outputdir is a HDFS directory that does not exist prior to the export. When done, the exported files will be owned by the user invoking the export command.
 
 *The Comparison of Endpoint-based Export And Mapreduce-based Export*
 |===
