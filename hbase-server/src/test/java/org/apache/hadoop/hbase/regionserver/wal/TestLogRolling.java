@@ -90,7 +90,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
     conf.setInt("hbase.regionserver.hlog.tolerable.lowreplication", 2);
     conf.setInt("hbase.regionserver.hlog.lowreplication.rolllimit", 3);
     conf.set(WALFactory.WAL_PROVIDER, "filesystem");
-    conf.set(WALFactory.META_WAL_PROVIDER, "filesystem");
     AbstractTestLogRolling.setUpBeforeClass();
   }
 
