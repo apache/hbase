@@ -251,10 +251,14 @@ public class HFileBlock implements Cacheable {
    * + Metadata!  + <= See note on BLOCK_METADATA_SPACE above.
    * ++++++++++++++
    * </code>
-   * @see #serialize(ByteBuffer)
+   * @see #serialize(ByteBuffer, boolean)
    */
-  static final CacheableDeserializer<Cacheable> BLOCK_DESERIALIZER =
-      new CacheableDeserializer<Cacheable>() {
+  public static final CacheableDeserializer<Cacheable> BLOCK_DESERIALIZER = new BlockDeserializer();
+
+  public static final class BlockDeserializer implements CacheableDeserializer<Cacheable> {
+    private BlockDeserializer() {
+    }
+
     @Override
     public HFileBlock deserialize(ByteBuff buf, boolean reuse, MemoryType memType)
         throws IOException {
@@ -291,7 +295,7 @@ public class HFileBlock implements Cacheable {
       // Used only in tests
       return deserialize(b, false, MemoryType.EXCLUSIVE);
     }
-  };
+  }
 
   private static final int DESERIALIZER_IDENTIFIER;
   static {

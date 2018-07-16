@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -246,11 +248,13 @@ public class TestBucketCache {
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
 
-    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, testDir
-            + "/bucket.persistence");
+    String ioEngineName = "file:" + testDir + "/bucket.cache";
+    String persistencePath = testDir + "/bucket.persistence";
+
+    BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath);
     long usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize == 0);
+    assertEquals(0, usedSize);
 
     HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
     // Add blocks
@@ -261,24 +265,26 @@ public class TestBucketCache {
       cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize != 0);
+    assertNotEquals(0, usedSize);
     // persist cache to file
     bucketCache.shutdown();
+    assertTrue(new File(persistencePath).exists());
 
     // restore cache from file
-    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, testDir
-            + "/bucket.persistence");
+    bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+    assertFalse(new File(persistencePath).exists());
     assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
     // persist cache to file
     bucketCache.shutdown();
+    assertTrue(new File(persistencePath).exists());
 
     // reconfig buckets sizes, the biggest bucket is small than constructedBlockSize (8k or 16k)
     // so it can't restore cache from file
     int[] smallBucketSizes = new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024 };
-    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, smallBucketSizes, writeThreads,
-        writerQLen, testDir + "/bucket.persistence");
+    bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        smallBucketSizes, writeThreads, writerQLen, persistencePath);
+    assertFalse(new File(persistencePath).exists());
     assertEquals(0, bucketCache.getAllocator().getUsedSize());
     assertEquals(0, bucketCache.backingMap.size());
 

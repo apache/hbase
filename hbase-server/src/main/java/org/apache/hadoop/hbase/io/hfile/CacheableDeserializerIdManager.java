@@ -25,8 +25,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class is used to manage the identifiers for
- * {@link CacheableDeserializer}
+ * This class is used to manage the identifiers for {@link CacheableDeserializer}.
+ * All deserializers are registered with this Manager via the
+ * {@link #registerDeserializer(CacheableDeserializer)}}. On registration, we return an
+ * int *identifier* for this deserializer. The int identifier is passed to
+ * {@link #getDeserializer(int)}} to obtain the registered deserializer instance.
  */
 @InterfaceAudience.Private
 public class CacheableDeserializerIdManager {
@@ -34,10 +37,11 @@ public class CacheableDeserializerIdManager {
   private static final AtomicInteger identifier = new AtomicInteger(0);
 
   /**
-   * Register the given cacheable deserializer and generate an unique identifier
-   * id for it
-   * @param cd
+   * Register the given {@link Cacheable} -- usually an hfileblock instance, these implement
+   * the Cacheable Interface -- deserializer and generate an unique identifier id for it and return
+   * this as our result.
    * @return the identifier of given cacheable deserializer
+   * @see #getDeserializer(int)
    */
   public static int registerDeserializer(CacheableDeserializer<Cacheable> cd) {
     int idx = identifier.incrementAndGet();
@@ -48,11 +52,25 @@ public class CacheableDeserializerIdManager {
   }
 
   /**
-   * Get the cacheable deserializer as the given identifier Id
-   * @param id
-   * @return CacheableDeserializer
+   * Get the cacheable deserializer registered at the given identifier Id.
+   * @see #registerDeserializer(CacheableDeserializer)
    */
   public static CacheableDeserializer<Cacheable> getDeserializer(int id) {
     return registeredDeserializers.get(id);
+  }
+
+  /**
+   * Snapshot a map of the current identifiers to class names for reconstruction on reading out
+   * of a file.
+   */
+  public static Map<Integer,String> save() {
+    Map<Integer, String> snapshot = new HashMap<>();
+    synchronized (registeredDeserializers) {
+      for (Map.Entry<Integer, CacheableDeserializer<Cacheable>> entry :
+          registeredDeserializers.entrySet()) {
+        snapshot.put(entry.getKey(), entry.getValue().getClass().getName());
+      }
+    }
+    return snapshot;
   }
 }
