@@ -48,7 +48,6 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     Configuration conf = TestAsyncLogRolling.TEST_UTIL.getConfiguration();
     conf.setInt(FanOutOneBlockAsyncDFSOutputHelper.ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES, 100);
     conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
-    conf.set(WALFactory.META_WAL_PROVIDER, "asyncfs");
     AbstractTestLogRolling.setUpBeforeClass();
   }
 

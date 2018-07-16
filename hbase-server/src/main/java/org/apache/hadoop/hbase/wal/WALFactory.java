@@ -82,7 +82,6 @@ public class WALFactory {
   static final String DEFAULT_WAL_PROVIDER = Providers.defaultProvider.name();
 
   public static final String META_WAL_PROVIDER = "hbase.wal.meta_provider";
-  static final String DEFAULT_META_WAL_PROVIDER = Providers.defaultProvider.name();
 
   final String factoryId;
   private final WALProvider provider;
@@ -244,13 +243,15 @@ public class WALFactory {
     return provider.getWALs();
   }
 
-  private WALProvider getMetaProvider() throws IOException {
+  @VisibleForTesting
+  WALProvider getMetaProvider() throws IOException {
     for (;;) {
       WALProvider provider = this.metaProvider.get();
       if (provider != null) {
         return provider;
       }
-      provider = createProvider(getProviderClass(META_WAL_PROVIDER, DEFAULT_META_WAL_PROVIDER));
+      provider = createProvider(getProviderClass(META_WAL_PROVIDER,
+          conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER)));
       provider.init(this, conf, AbstractFSWALProvider.META_WAL_PROVIDER_ID);
       provider.addWALActionsListener(new MetricsWAL());
       if (metaProvider.compareAndSet(null, provider)) {
