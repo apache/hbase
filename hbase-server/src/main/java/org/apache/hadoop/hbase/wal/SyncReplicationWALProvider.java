@@ -343,4 +343,10 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
       return Optional.empty();
     }
   }
+
+  @VisibleForTesting
+  WALProvider getWrappedProvider() {
+    return provider;
+  }
+
 }
