@@ -1527,7 +1527,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testTakedown() throws IOException {
       if (this.testScanner != null) {
-        updateScanMetrics(scan.getScanMetrics());
         this.testScanner.close();
       }
       super.testTakedown();
@@ -1537,7 +1536,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       if (this.testScanner == null) {
-        Scan scan = new Scan(format(opts.startRow));
+        scan = new Scan(format(opts.startRow));
         for (int family = 0; family < opts.families; family++) {
           byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
           if (opts.addColumns) {
@@ -1556,8 +1555,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         scan.setScanMetricsEnabled(true);
         this.testScanner = table.getScanner(scan);
       }
-      Result r = testScanner.next();
-      updateValueSize(r);
+      try {
+        Result r = testScanner.next();
+        updateValueSize(r);
+      } finally {
+        updateScanMetrics(scan.getScanMetrics());
+      }
     }
   }
 
