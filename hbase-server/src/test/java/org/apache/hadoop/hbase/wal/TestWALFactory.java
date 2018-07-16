@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.hadoop.hbase.wal.WALFactory.META_WAL_PROVIDER;
+import static org.apache.hadoop.hbase.wal.WALFactory.WAL_PROVIDER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -673,4 +675,33 @@ public class TestWALFactory {
       increments++;
     }
   }
+
+  @Test
+  public void testWALProviders() throws IOException {
+    Configuration conf = new Configuration();
+    WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
+    assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
+  }
+
+  @Test
+  public void testOnlySetWALProvider() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(WAL_PROVIDER, WALFactory.Providers.multiwal.name());
+    WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
+
+    assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getWALProvider().getClass());
+    assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getMetaProvider().getClass());
+  }
+
+  @Test
+  public void testOnlySetMetaWALProvider() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(META_WAL_PROVIDER, WALFactory.Providers.asyncfs.name());
+    WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
+
+    assertEquals(WALFactory.Providers.defaultProvider.clazz,
+        walFactory.getWALProvider().getClass());
+    assertEquals(WALFactory.Providers.asyncfs.clazz, walFactory.getMetaProvider().getClass());
+  }
+
 }

@@ -1043,7 +1043,8 @@ In HBase, there are a number of WAL imlementations (or 'Providers'). Each is kno
 by a short name label (that unfortunately is not always descriptive). You set the provider in
 _hbase-site.xml_ passing the WAL provder short-name as the value on the
 _hbase.wal.provider_ property (Set the provider for _hbase:meta_ using the
-_hbase.wal.meta_provider_ property).
+_hbase.wal.meta_provider_ property, otherwise it uses the same provider configured
+by _hbase.wal.provider_).
 
  * _asyncfs_: The *default*. New since hbase-2.0.0 (HBASE-15536, HBASE-14790). This _AsyncFSWAL_ provider, as it identifies itself in RegionServer logs, is built on a new non-blocking dfsclient implementation. It is currently resident in the hbase codebase but intent is to move it back up into HDFS itself. WALs edits are written concurrently ("fan-out") style to each of the WAL-block replicas on each DataNode rather than in a chained pipeline as the default client does. Latencies should be better. See link:https://www.slideshare.net/HBaseCon/apache-hbase-improvements-and-practices-at-xiaomi[Apache HBase Improements and Practices at Xiaomi] at slide 14 onward for more detail on implementation.
  * _filesystem_: This was the default in hbase-1.x releases. It is built on the blocking _DFSClient_ and writes to replicas in classic _DFSCLient_ pipeline mode. In logs it identifies as _FSHLog_ or _FSHLogProvider_.

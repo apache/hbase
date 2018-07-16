@@ -116,7 +116,6 @@ public class TestShutdownWhileWALBroken {
     UTIL.getConfiguration().setClass(HConstants.REGION_SERVER_IMPL, MyRegionServer.class,
       HRegionServer.class);
     UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walType);
-    UTIL.getConfiguration().set(WALFactory.META_WAL_PROVIDER, walType);
     UTIL.startMiniCluster(2);
   }
 
