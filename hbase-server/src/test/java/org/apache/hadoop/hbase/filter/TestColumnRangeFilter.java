@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -226,38 +228,68 @@ public class TestColumnRangeFilter {
     Scan scan = new Scan();
     scan.setMaxVersions();
     for (StringRange s : rangeMap.keySet()) {
-      filter = new ColumnRangeFilter(s.getStart() == null ? null
-          : Bytes.toBytes(s.getStart()), s.isStartInclusive(),
-          s.getEnd() == null ? null : Bytes.toBytes(s.getEnd()),
+      filter = new ColumnRangeFilter(s.getStart() == null ? null : Bytes.toBytes(s.getStart()),
+          s.isStartInclusive(), s.getEnd() == null ? null : Bytes.toBytes(s.getEnd()),
           s.isEndInclusive());
-      scan.setFilter(filter);
-      ResultScanner scanner = ht.getScanner(scan);
-      List<Cell> results = new ArrayList<>();
-      LOG.info("scan column range: " + s.toString());
-      long timeBeforeScan = System.currentTimeMillis();
-
-      Result result;
-      while ((result = scanner.next()) != null) {
-        for (Cell kv : result.listCells()) {
-          results.add(kv);
-        }
-      }
-      long scanTime = System.currentTimeMillis() - timeBeforeScan;
-      scanner.close();
-      LOG.info("scan time = " + scanTime + "ms");
-      LOG.info("found " + results.size() + " results");
-      LOG.info("Expecting " + rangeMap.get(s).size() + " results");
-
-      /*
-      for (KeyValue kv : results) {
-        LOG.info("found row " + Bytes.toString(kv.getRow()) + ", column "
-            + Bytes.toString(kv.getQualifier()));
-      }
-      */
-
-      assertEquals(rangeMap.get(s).size(), results.size());
+      assertEquals(rangeMap.get(s).size(), cellsCount(ht, filter));
     }
     ht.close();
+  }
+
+  @Test
+  public void TestColumnRangeFilterWithColumnPaginationFilter() throws Exception {
+    String family = "Family";
+    String table = "TestColumnRangeFilterWithColumnPaginationFilter";
+    try (Table ht =
+        TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(family), Integer.MAX_VALUE)) {
+      // one row.
+      String row = "row";
+      // One version
+      long timestamp = 100;
+      // 10 columns
+      int[] columns = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+      String valueString = "ValueString";
+
+      Put p = new Put(Bytes.toBytes(row));
+      p.setDurability(Durability.SKIP_WAL);
+      for (int column : columns) {
+        KeyValue kv =
+            KeyValueTestUtil.create(row, family, Integer.toString(column), timestamp, valueString);
+        p.add(kv);
+      }
+      ht.put(p);
+
+      TEST_UTIL.flush();
+
+      // Column range from 1 to 9.
+      StringRange stringRange = new StringRange("1", true, "9", false);
+      ColumnRangeFilter filter1 = new ColumnRangeFilter(Bytes.toBytes(stringRange.getStart()),
+          stringRange.isStartInclusive(), Bytes.toBytes(stringRange.getEnd()),
+          stringRange.isEndInclusive());
+
+      ColumnPaginationFilter filter2 = new ColumnPaginationFilter(5, 0);
+      ColumnPaginationFilter filter3 = new ColumnPaginationFilter(5, 1);
+      ColumnPaginationFilter filter4 = new ColumnPaginationFilter(5, 2);
+      ColumnPaginationFilter filter5 = new ColumnPaginationFilter(5, 6);
+      ColumnPaginationFilter filter6 = new ColumnPaginationFilter(5, 9);
+      assertEquals(5, cellsCount(ht, new FilterList(Operator.MUST_PASS_ALL, filter1, filter2)));
+      assertEquals(5, cellsCount(ht, new FilterList(Operator.MUST_PASS_ALL, filter1, filter3)));
+      assertEquals(5, cellsCount(ht, new FilterList(Operator.MUST_PASS_ALL, filter1, filter4)));
+      assertEquals(2, cellsCount(ht, new FilterList(Operator.MUST_PASS_ALL, filter1, filter5)));
+      assertEquals(0, cellsCount(ht, new FilterList(Operator.MUST_PASS_ALL, filter1, filter6)));
+    }
+  }
+
+  private int cellsCount(Table table, Filter filter) throws IOException {
+    Scan scan = new Scan().setFilter(filter).readAllVersions();
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      List<Cell> results = new ArrayList<>();
+      Result result;
+      while ((result = scanner.next()) != null) {
+        result.listCells().forEach(results::add);
+      }
+      return results.size();
+    }
   }
 
   List<String> generateRandomWords(int numberOfWords, int maxLengthOfWords) {

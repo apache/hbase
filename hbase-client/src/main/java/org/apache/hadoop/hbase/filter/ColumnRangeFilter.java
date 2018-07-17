@@ -208,20 +208,23 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   /**
-   * @param other
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @param o filter to serialize.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-   if (o == this) return true;
-   if (!(o instanceof ColumnRangeFilter)) return false;
-
-   ColumnRangeFilter other = (ColumnRangeFilter)o;
-   return Bytes.equals(this.getMinColumn(),other.getMinColumn())
-     && this.getMinColumnInclusive() == other.getMinColumnInclusive()
-     && Bytes.equals(this.getMaxColumn(), other.getMaxColumn())
-     && this.getMaxColumnInclusive() == other.getMaxColumnInclusive();
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof ColumnRangeFilter)) {
+      return false;
+    }
+    ColumnRangeFilter other = (ColumnRangeFilter) o;
+    return Bytes.equals(this.getMinColumn(), other.getMinColumn())
+        && this.getMinColumnInclusive() == other.getMinColumnInclusive()
+        && Bytes.equals(this.getMaxColumn(), other.getMaxColumn())
+        && this.getMaxColumnInclusive() == other.getMaxColumnInclusive();
   }
 
   @Override
