@@ -525,7 +525,7 @@ public class TestFilterList {
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
     filterList.filterCell(null);
-    assertEquals(0, comparator.compare(filterList.getNextCellHint(null), maxKeyValue));
+    assertEquals(0, comparator.compare(filterList.getNextCellHint(null), minKeyValue));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMaxHint, filterMinHint } ));
@@ -536,7 +536,7 @@ public class TestFilterList {
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter[] { filterNoHint, filterMinHint, filterMaxHint }));
     filterList.filterCell(null);
-    assertEquals(0, comparator.compare(filterList.getNextCellHint(null), maxKeyValue));
+    assertEquals(0, comparator.compare(filterList.getNextCellHint(null), minKeyValue));
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter[] { filterNoHint, filterMaxHint }));
     filterList.filterCell(null);
@@ -744,10 +744,10 @@ public class TestFilterList {
     assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter4, filter5, filter6);
-    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter4, filter6);
-    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter3, filter1);
     assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv1));
