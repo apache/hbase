@@ -1353,9 +1353,11 @@ public final class HConstants {
   /** Config key for hbase temporary directory in hdfs */
   public static final String TEMPORARY_FS_DIRECTORY_KEY = "hbase.fs.tmp.dir";
 
-  /** Don't use it! This'll get you the wrong path in a secure cluster.
+  /**
+   * Don't use it! This'll get you the wrong path in a secure cluster.
    * Use FileSystem.getHomeDirectory() or
-   * "/user/" + UserGroupInformation.getCurrentUser().getShortUserName()  */
+   * "/user/" + UserGroupInformation.getCurrentUser().getShortUserName()
+   */
   public static final String DEFAULT_TEMPORARY_HDFS_DIRECTORY = "/user/"
       + System.getProperty("user.name") + "/hbase-staging";
 
