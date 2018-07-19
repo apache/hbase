@@ -1270,7 +1270,7 @@ public class HRegionServer extends HasThread implements
   /**
    * Builds a {@link RegionSpaceUseReportRequest} protobuf message from the region size map.
    *
-   * @param regionSizeStore The size in bytes of regions
+   * @param regionSizes The size in bytes of regions
    * @return The corresponding protocol buffer message.
    */
   RegionSpaceUseReportRequest buildRegionSpaceUseReportRequest(RegionSizeStore regionSizes) {
