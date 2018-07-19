@@ -530,8 +530,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       sm.getRegionMetrics().forEach((byte[] regionName, RegionMetrics rm) -> {
         Deque<BalancerRegionLoad> rLoads = oldLoads.get(Bytes.toString(regionName));
         if (rLoads == null) {
-          // There was nothing there
-          rLoads = new ArrayDeque<>();
+          rLoads = new ArrayDeque<>(numRegionLoadsToRemember + 1);
         } else if (rLoads.size() >= numRegionLoadsToRemember) {
           rLoads.remove();
         }

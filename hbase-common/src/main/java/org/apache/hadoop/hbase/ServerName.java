@@ -27,9 +27,11 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.collect.Interner;
+import org.apache.hbase.thirdparty.com.google.common.collect.Interners;
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 
 
 /**
@@ -98,6 +100,13 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    */
   private byte [] bytes;
   public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<>(0);
+
+  /**
+   * Intern ServerNames. The Set of ServerNames is mostly-fixed changing slowly as Servers
+   * restart. Rather than create a new instance everytime, try and return existing instance
+   * if there is one.
+   */
+  private static final Interner<ServerName> INTERN_POOL = Interners.newWeakInterner();
 
   protected ServerName(final String hostname, final int port, final long startcode) {
     this(Address.fromParts(hostname, port), startcode);
@@ -176,7 +185,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String hostname, final int port, final long startcode) {
-    return new ServerName(hostname, port, startcode);
+    return INTERN_POOL.intern(new ServerName(hostname, port, startcode));
   }
 
   /**
@@ -185,7 +194,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String serverName) {
-    return new ServerName(serverName);
+    return INTERN_POOL.intern(new ServerName(serverName));
   }
 
   /**
@@ -194,7 +203,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String hostAndPort, final long startCode) {
-    return new ServerName(hostAndPort, startCode);
+    return INTERN_POOL.intern(new ServerName(hostAndPort, startCode));
   }
 
   @Override
