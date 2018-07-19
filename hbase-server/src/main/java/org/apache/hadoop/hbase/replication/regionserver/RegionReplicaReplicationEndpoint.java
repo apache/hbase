@@ -31,7 +31,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
@@ -70,8 +69,10 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 
@@ -276,7 +277,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         EntryBuffers entryBuffers, ClusterConnection connection, ExecutorService pool,
         int numWriters, int operationTimeout) {
       super(controller, entryBuffers, numWriters);
-      this.sinkWriter = new RegionReplicaSinkWriter(this, connection, pool, operationTimeout);
+      this.sinkWriter =
+          new RegionReplicaSinkWriter(this, connection, pool, operationTimeout, tableDescriptors);
       this.tableDescriptors = tableDescriptors;
 
       // A cache for the table "memstore replication enabled" flag.
@@ -390,9 +392,10 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     int operationTimeout;
     ExecutorService pool;
     Cache<TableName, Boolean> disabledAndDroppedTables;
+    TableDescriptors tableDescriptors;
 
     public RegionReplicaSinkWriter(RegionReplicaOutputSink sink, ClusterConnection connection,
-        ExecutorService pool, int operationTimeout) {
+        ExecutorService pool, int operationTimeout, TableDescriptors tableDescriptors) {
       this.sink = sink;
       this.connection = connection;
       this.operationTimeout = operationTimeout;
@@ -400,6 +403,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         = RpcRetryingCallerFactory.instantiate(connection.getConfiguration());
       this.rpcControllerFactory = RpcControllerFactory.instantiate(connection.getConfiguration());
       this.pool = pool;
+      this.tableDescriptors = tableDescriptors;
 
       int nonExistentTableCacheExpiryMs = connection.getConfiguration()
         .getInt("hbase.region.replica.replication.cache.disabledAndDroppedTables.expiryMs", 5000);
@@ -506,13 +510,14 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       }
 
       boolean tasksCancelled = false;
-      for (Future<ReplicateWALEntryResponse> task : tasks) {
+      for (int replicaId = 0; replicaId < tasks.size(); replicaId++) {
         try {
-          task.get();
+          tasks.get(replicaId).get();
         } catch (InterruptedException e) {
           throw new InterruptedIOException(e.getMessage());
         } catch (ExecutionException e) {
           Throwable cause = e.getCause();
+          boolean canBeSkipped = false;
           if (cause instanceof IOException) {
             // The table can be disabled or dropped at this time. For disabled tables, we have no
             // cheap mechanism to detect this case because meta does not contain this information.
@@ -520,21 +525,34 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
             // RPC. So instead we start the replay RPC with retries and check whether the table is
             // dropped or disabled which might cause SocketTimeoutException, or
             // RetriesExhaustedException or similar if we get IOE.
-            if (cause instanceof TableNotFoundException || connection.isTableDisabled(tableName)) {
+            if (cause instanceof TableNotFoundException
+                || connection.isTableDisabled(tableName)) {
+              disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache for later.
+              canBeSkipped = true;
+            } else if (tableDescriptors != null) {
+              TableDescriptor tableDescriptor = tableDescriptors.get(tableName);
+              if (tableDescriptor != null
+                  //(replicaId + 1) as no task is added for primary replica for replication
+                  && tableDescriptor.getRegionReplication() <= (replicaId + 1)) {
+                canBeSkipped = true;
+              }
+            }
+            if (canBeSkipped) {
               if (LOG.isTraceEnabled()) {
                 LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-                  + " because received exception for dropped or disabled table", cause);
+                    + " because received exception for dropped or disabled table",
+                  cause);
                 for (Entry entry : entries) {
                   LOG.trace("Skipping : " + entry);
                 }
               }
-              disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache for later.
               if (!tasksCancelled) {
                 sink.getSkippedEditsCounter().addAndGet(entries.size());
                 tasksCancelled = true; // so that we do not add to skipped counter again
               }
               continue;
             }
+
             // otherwise rethrow
             throw (IOException)cause;
           }
