@@ -451,9 +451,16 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     SecureWriter(final Configuration conf, final UserProvider userProvider,
         final Token userToken, final List<SequenceFile.Writer.Option> opts)
         throws IOException {
-      privilegedWriter = new PrivilegedWriter(getActiveUser(userProvider, userToken),
-        SequenceFile.createWriter(conf,
-            opts.toArray(new SequenceFile.Writer.Option[opts.size()])));
+      User user = getActiveUser(userProvider, userToken);
+      try {
+        SequenceFile.Writer sequenceFileWriter =
+            user.runAs((PrivilegedExceptionAction<SequenceFile.Writer>) () ->
+                SequenceFile.createWriter(conf,
+                    opts.toArray(new SequenceFile.Writer.Option[opts.size()])));
+        privilegedWriter = new PrivilegedWriter(user, sequenceFileWriter);
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      }
     }
 
     void append(final Object key, final Object value) throws IOException {
