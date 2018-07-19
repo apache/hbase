@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -336,6 +337,21 @@ public class TestSecureExport {
         LOG.error(ex.toString(), ex);
         throw new Exception(ex);
       } finally {
+        if (fs.exists(new Path(openDir, "output"))) {
+          // if export completes successfully, every file under the output directory should be
+          // owned by the current user, not the hbase service user.
+          FileStatus outputDirFileStatus = fs.getFileStatus(new Path(openDir, "output"));
+          String currentUserName = User.getCurrent().getShortName();
+          assertEquals("Unexpected file owner", currentUserName, outputDirFileStatus.getOwner());
+
+          FileStatus[] outputFileStatus = fs.listStatus(new Path(openDir, "output"));
+          for (FileStatus fileStatus: outputFileStatus) {
+            assertEquals("Unexpected file owner", currentUserName, fileStatus.getOwner());
+          }
+        } else {
+          LOG.info("output directory doesn't exist. Skip check");
+        }
+
         clearOutput(output);
       }
     };
