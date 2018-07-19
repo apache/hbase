@@ -135,7 +135,7 @@ public class RegionStateStore {
       long openSeqNum = regionStateNode.getState() == State.OPEN ?
           regionStateNode.getOpenSeqNum() : HConstants.NO_SEQNUM;
       updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
-          regionStateNode.getRegionLocation(), regionStateNode.getLastHost(), openSeqNum,
+          regionStateNode.getRegionLocation(), openSeqNum,
           // The regionStateNode may have no procedure in a test scenario; allow for this.
           regionStateNode.getProcedure() != null?
               regionStateNode.getProcedure().getProcId(): Procedure.NO_PROC_ID);
@@ -153,7 +153,7 @@ public class RegionStateStore {
   }
 
   private void updateUserRegionLocation(final RegionInfo regionInfo, final State state,
-      final ServerName regionLocation, final ServerName lastHost, final long openSeqNum,
+      final ServerName regionLocation, final long openSeqNum,
       final long pid)
       throws IOException {
     long time = EnvironmentEdgeManager.currentTime();
@@ -169,7 +169,7 @@ public class RegionStateStore {
       MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
       info.append(", openSeqNum=").append(openSeqNum);
       info.append(", regionLocation=").append(regionLocation);
-    } else if (regionLocation != null && !regionLocation.equals(lastHost)) {
+    } else if (regionLocation != null) {
       // Ideally, if no regionLocation, write null to the hbase:meta but this will confuse clients
       // currently; they want a server to hit. TODO: Make clients wait if no location.
       put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
