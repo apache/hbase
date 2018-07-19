@@ -446,6 +446,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
           "Aborting to prevent Replication from deadlocking. See HBASE-16081.";
       abortable.abort(errMsg, new IOException(errMsg));
     }
+    close();
     notifyStopped();
   }
 

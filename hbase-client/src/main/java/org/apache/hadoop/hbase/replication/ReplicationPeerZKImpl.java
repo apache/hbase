@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.replication;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -172,8 +174,19 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase implements Rep
   @Override
   public void trackPeerConfigChanges(ReplicationPeerConfigListener listener) {
     if (this.peerConfigTracker != null){
-      this.peerConfigTracker.setListener(listener);
+      this.peerConfigTracker.addListener(listener);
     }
+  }
+
+  @Override
+  public void removeListenerOfPeerConfig(ReplicationPeerConfigListener listener) {
+    if (this.peerConfigTracker != null){
+      this.peerConfigTracker.removeListener(listener);
+    }
+  }
+
+  PeerConfigTracker getPeerConfigTracker() {
+    return this.peerConfigTracker;
   }
 
   @Override
@@ -275,15 +288,24 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase implements Rep
    */
   public class PeerConfigTracker extends ZooKeeperNodeTracker {
 
-    private ReplicationPeerConfigListener listener;
+    private Set<ReplicationPeerConfigListener> listeners;
 
     public PeerConfigTracker(String peerConfigNode, ZooKeeperWatcher watcher,
                              Abortable abortable) {
       super(watcher, peerConfigNode, abortable);
+      listeners = new HashSet<>();
     }
 
-    public synchronized void setListener(ReplicationPeerConfigListener listener){
-      this.listener = listener;
+    public synchronized void addListener(ReplicationPeerConfigListener listener){
+      listeners.add(listener);
+    }
+
+    Set<ReplicationPeerConfigListener> getListeners(){
+      return this.listeners;
+    }
+
+    public synchronized void removeListener(ReplicationPeerConfigListener listenerToRemove) {
+      listeners.remove(listenerToRemove);
     }
 
     @Override
@@ -291,7 +313,7 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase implements Rep
       if (path.equals(node)) {
         super.nodeCreated(path);
         ReplicationPeerConfig config = readPeerConfig();
-        if (listener != null){
+        for (ReplicationPeerConfigListener listener : listeners) {
           listener.peerConfigUpdated(config);
         }
       }
