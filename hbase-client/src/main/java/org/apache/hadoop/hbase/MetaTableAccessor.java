@@ -847,6 +847,30 @@ public class MetaTableAccessor {
   }
 
   /**
+   * Returns the column qualifier for serialized region state
+   * @param replicaId the replicaId of the region
+   * @return a byte[] for state qualifier
+   */
+  @VisibleForTesting
+  public static byte[] getRegionStateColumn(int replicaId) {
+    return replicaId == 0 ? HConstants.STATE_QUALIFIER
+        : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+  }
+
+  /**
+   * Returns the column qualifier for serialized region state
+   * @param replicaId the replicaId of the region
+   * @return a byte[] for sn column qualifier
+   */
+  @VisibleForTesting
+  public static byte[] getServerNameColumn(int replicaId) {
+    return replicaId == 0 ? HConstants.SERVERNAME_QUALIFIER
+        : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+  }
+
+  /**
    * Returns the column qualifier for server column for replicaId
    * @param replicaId the replicaId of the region
    * @return a byte[] for server column qualifier
@@ -1406,7 +1430,10 @@ public class MetaTableAccessor {
           getSeqNumColumn(i), now);
         deleteReplicaLocations.addColumns(getCatalogFamily(),
           getStartCodeColumn(i), now);
+        deleteReplicaLocations.addColumns(getCatalogFamily(), getServerNameColumn(i), now);
+        deleteReplicaLocations.addColumns(getCatalogFamily(), getRegionStateColumn(i), now);
       }
+
       deleteFromMetaTable(connection, deleteReplicaLocations);
     }
   }
