@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CleanerType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -1169,7 +1170,7 @@ public interface AsyncAdmin {
    * @return true if cleaner chore ran, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> runCleanerChore();
+  CompletableFuture<Boolean> runCleanerChore(CleanerType cleanerType);
 
   /**
    * Turn the catalog janitor on/off.

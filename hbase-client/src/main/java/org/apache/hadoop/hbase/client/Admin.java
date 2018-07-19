@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CleanerType;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -1266,10 +1267,12 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Ask for cleaner chore to run.
    *
+   * @param cleanerType HFILES, OLDWALS, or DEFAULT that first execute HFILES cleaner then OLDWALS
+   *                    cleaner chore
    * @return <code>true</code> if cleaner chore ran, <code>false</code> otherwise
    * @throws IOException
    */
-  boolean runCleanerChore() throws IOException;
+  boolean runCleanerChore(final CleanerType cleanerType) throws IOException;
 
   /**
    * Query on the cleaner chore state (Enabled/Disabled?).

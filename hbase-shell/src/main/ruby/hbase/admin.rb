@@ -272,8 +272,9 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Request cleaner chore to run (for garbage collection of HFiles and WAL files)
-    def cleaner_chore_run
-      @admin.runCleanerChore
+    def cleaner_chore_run(type = "default")
+      raise(ArgumentError, "Cleaner type name must be of type String") unless type.kind_of?(String)
+      @admin.runCleanerChore(type)
     end
 
     #----------------------------------------------------------------------------------------------

@@ -122,6 +122,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CleanerType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
@@ -3174,13 +3175,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> runCleanerChore() {
+  public CompletableFuture<Boolean> runCleanerChore(CleanerType cleanerType) {
     return this
         .<Boolean> newMasterCaller()
         .action(
           (controller, stub) -> this
               .<RunCleanerChoreRequest, RunCleanerChoreResponse, Boolean> call(controller, stub,
-                RequestConverter.buildRunCleanerChoreRequest(),
+                RequestConverter.buildRunCleanerChoreRequest(cleanerType),
                 (s, c, req, done) -> s.runCleanerChore(c, req, done),
                 (resp) -> resp.getCleanerChoreRan())).call();
   }

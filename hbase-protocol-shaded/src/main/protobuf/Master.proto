@@ -373,6 +373,7 @@ message IsCatalogJanitorEnabledResponse {
 }
 
 message RunCleanerChoreRequest {
+  required CleanerType type = 1;
 }
 
 message RunCleanerChoreResponse {

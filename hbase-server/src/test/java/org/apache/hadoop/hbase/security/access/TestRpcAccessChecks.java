@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CleanerType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -223,7 +224,7 @@ public class TestRpcAccessChecks {
 
   @Test
   public void testRunCleanerChore() throws Exception {
-    verifyAdminCheckForAction((admin) -> admin.runCleanerChore());
+    verifyAdminCheckForAction((admin) -> admin.runCleanerChore(CleanerType.DEFAULT));
   }
 
   @Test
