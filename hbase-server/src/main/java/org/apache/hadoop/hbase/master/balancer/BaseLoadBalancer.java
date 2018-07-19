@@ -566,7 +566,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
      * and rack have the highest locality for region
      */
     private void computeCachedLocalities() {
-      rackLocalities = new float[numRegions][numServers];
+      rackLocalities = new float[numRegions][numRacks];
       regionsToMostLocalEntities = new int[LocalityType.values().length][numRegions];
 
       // Compute localities and find most local server per region

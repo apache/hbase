@@ -20,16 +20,19 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
+
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -54,7 +57,7 @@ public class TestServerName {
   @Test
   public void testGetHostNameMinusDomain() {
     assertEquals("2607:f0d0:1002:51::4",
-      ServerName.getHostNameMinusDomain("2607:f0d0:1002:51::4"));
+        ServerName.getHostNameMinusDomain("2607:f0d0:1002:51::4"));
     assertEquals("2607:f0d0:1002:0051:0000:0000:0000:0004",
         ServerName.getHostNameMinusDomain("2607:f0d0:1002:0051:0000:0000:0000:0004"));
     assertEquals("1.1.1.1", ServerName.getHostNameMinusDomain("1.1.1.1"));
@@ -86,10 +89,11 @@ public class TestServerName {
     ServerName.parseServerName("192.168.1.199:58102");
   }
 
-  @Test public void testParseOfBytes() {
+  @Test
+  public void testParseOfBytes() {
     final String snStr = "www.EXAMPLE.org,1234,5678";
     ServerName sn = ServerName.valueOf(snStr);
-    byte [] versionedBytes = sn.getVersionedBytes();
+    byte[] versionedBytes = sn.getVersionedBytes();
     ServerName parsedSn = ServerName.parseVersionedServerName(versionedBytes);
     assertEquals(sn.toString(), parsedSn.toString());
     assertEquals(sn.getHostnameLowerCase(), parsedSn.getHostnameLowerCase());
@@ -97,7 +101,7 @@ public class TestServerName {
     assertEquals(sn.getStartcode(), parsedSn.getStartcode());
 
     final String hostnamePortStr = sn.getAddress().toString();
-    byte [] bytes = Bytes.toBytes(hostnamePortStr);
+    byte[] bytes = Bytes.toBytes(hostnamePortStr);
     parsedSn = ServerName.parseVersionedServerName(bytes);
     assertEquals(sn.getHostnameLowerCase(), parsedSn.getHostnameLowerCase());
     assertEquals(sn.getPort(), parsedSn.getPort());
@@ -114,9 +118,9 @@ public class TestServerName {
     assertEquals(sn.hashCode(), sn2.hashCode());
     assertNotSame(sn.hashCode(), sn3.hashCode());
     assertEquals(sn.toString(),
-      ServerName.valueOf("www.example.org", 1234, 5678).toString());
+        ServerName.valueOf("www.example.org", 1234, 5678).toString());
     assertEquals(sn.toString(),
-      ServerName.valueOf("www.example.org:1234", 5678).toString());
+        ServerName.valueOf("www.example.org:1234", 5678).toString());
     assertEquals("www.example.org" + ServerName.SERVERNAME_SEPARATOR + "1234"
         + ServerName.SERVERNAME_SEPARATOR + "5678", sn.toString());
   }
@@ -131,6 +135,20 @@ public class TestServerName {
     assertTrue(lower.equals(upper));
     assertTrue(upper.equals(lower));
     assertTrue(ServerName.isSameAddress(lower, upper));
+  }
+
+  @Test
+  public void testInterning() {
+    ServerName sn1 = ServerName.valueOf("www.example.org", 1234, 5671);
+    assertSame(sn1, ServerName.valueOf("www.example.org", 1234, 5671));
+  }
+
+  @Ignore // Enable and let fun for hours to make sure weak references working fine.
+  @Test
+  public void testInterningDoesWeakReferences() {
+    for (int i = 0; i < Integer.MAX_VALUE; i++) {
+      ServerName.valueOf("www.example.org", 1234, i++);
+    }
   }
 }
 
