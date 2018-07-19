@@ -22,7 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.anyObject;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -68,6 +68,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Test {@link org.apache.hadoop.hbase.MetaTableAccessor}.
@@ -436,6 +437,44 @@ public class TestMetaTableAccessor {
     assertNotNull(startCodeCell);
     assertEquals(0, serverCell.getValueLength());
     assertEquals(0, startCodeCell.getValueLength());
+  }
+
+  @Test
+  public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
+    long regionId = System.currentTimeMillis();
+    RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
+
+    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    try {
+      List<RegionInfo> regionInfos = Lists.newArrayList(primary);
+      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
+      MetaTableAccessor.removeRegionReplicasFromMeta(Sets.newHashSet(primary.getRegionName()), 1, 2,
+        connection);
+      Get get = new Get(primary.getRegionName());
+      Result result = meta.get(get);
+      for (int replicaId = 0; replicaId < 3; replicaId++) {
+        Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getServerColumn(replicaId));
+        Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getStartCodeColumn(replicaId));
+        Cell stateCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getRegionStateColumn(replicaId));
+        Cell snCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getServerNameColumn(replicaId));
+        if (replicaId == 0) {
+          assertNotNull(stateCell);
+        } else {
+          assertNull(serverCell);
+          assertNull(startCodeCell);
+          assertNull(stateCell);
+          assertNull(snCell);
+        }
+      }
+    } finally {
+      meta.close();
+    }
   }
 
   @Test
