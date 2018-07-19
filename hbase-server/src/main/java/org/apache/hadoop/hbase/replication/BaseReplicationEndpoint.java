@@ -111,4 +111,10 @@ public abstract class BaseReplicationEndpoint extends AbstractService
     return false;
   }
 
+  public void close(){
+    if(this.ctx != null) {
+      ReplicationPeer peer = this.ctx.getReplicationPeer();
+      peer.removeListenerOfPeerConfig(this);
+    }
+  }
 }

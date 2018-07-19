@@ -576,6 +576,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           }
           if (allOtherTaskDone) {
             manager.closeRecoveredQueue(this.source);
+            // stop replication endpoint
+            if (source instanceof ReplicationSource) {
+              ((ReplicationSource) source).replicationEndpoint.stop();
+            }
             LOG.info("Finished recovering queue " + peerClusterZnode
                 + " with the following stats: " + getStats());
           }

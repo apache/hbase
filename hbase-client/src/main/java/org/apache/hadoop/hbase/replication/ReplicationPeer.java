@@ -81,4 +81,10 @@ public interface ReplicationPeer {
    * @param listener Listener for config changes, usually a replication endpoint
    */
   void trackPeerConfigChanges(ReplicationPeerConfigListener listener);
+
+  /**
+   * Remove a listener when it is closed or terminated
+   * @param listener Listener for config changes, usually a replication endpoint
+   */
+  void removeListenerOfPeerConfig(ReplicationPeerConfigListener listener);
 }

@@ -89,6 +89,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   @Override
   protected void doStop() {
     disconnect();
+    close();
     notifyStopped();
   }
 
