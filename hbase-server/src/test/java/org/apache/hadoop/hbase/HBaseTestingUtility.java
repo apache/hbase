@@ -333,8 +333,12 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
 
     // Save this for when setting default file:// breaks things
-    this.conf.set("original.defaultFS", this.conf.get("fs.defaultFS"));
-
+    if (this.conf.get("fs.defaultFS") != null) {
+      this.conf.set("original.defaultFS", this.conf.get("fs.defaultFS"));
+    }
+    if (this.conf.get(HConstants.HBASE_DIR) != null) {
+      this.conf.set("original.hbase.dir", this.conf.get(HConstants.HBASE_DIR));
+    }
     // Every cluster is a local cluster until we start DFS
     // Note that conf could be null, but this.conf will not be
     String dataTestDir = getDataTestDir().toString();
