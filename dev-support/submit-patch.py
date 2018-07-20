@@ -249,7 +249,7 @@ logger.info(" Patch name: %s", patch_filename)
 patch_filepath = os.path.join(patch_dir, patch_filename)
 
 diff = git.format_patch(base_branch, stdout = True)
-with open(patch_filepath, "w") as f:
+with open(patch_filepath, "wb") as f:
     f.write(diff.encode('utf8'))
 
 if args.jira_id is not None:
