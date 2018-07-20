@@ -132,7 +132,20 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
   }
 
   public void createDistributedHBaseCluster() throws IOException {
+    //if it is a distributed HBase cluster, use the conf provided by classpath
+    //to set hbase dir and fs.defaultFS.
+    //Since when the super class HBaseTestingUtility initializing, it will
+    //change hbase.rootdir to a local test dir.
+    //we use "original.defaultFS" and "original.hbase.dir" to restore them.
     Configuration conf = getConfiguration();
+    if (conf.get("original.defaultFS") != null) {
+      conf.set("fs.defaultFS", conf.get("original.defaultFS"));
+    }
+    if (conf.get("original.hbase.dir") != null) {
+      conf.set(HConstants.HBASE_DIR, conf.get("original.hbase.dir"));
+    }
+    LOG.debug("Setting " + HConstants.HBASE_DIR + " to "  + conf.get(HConstants.HBASE_DIR) +
+      " since it is a distributed cluster");
     Class<? extends ClusterManager> clusterManagerClass = conf.getClass(HBASE_CLUSTER_MANAGER_CLASS,
       DEFAULT_HBASE_CLUSTER_MANAGER_CLASS, ClusterManager.class);
     ClusterManager clusterManager = ReflectionUtils.newInstance(
