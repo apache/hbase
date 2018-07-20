@@ -1220,7 +1220,9 @@ public class HStore implements Store {
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
     // Then the memstore scanners
-    scanners.addAll(memStoreScanners);
+    if (memStoreScanners != null) {
+      scanners.addAll(memStoreScanners);
+    }
     return scanners;
   }
 

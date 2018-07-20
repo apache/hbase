@@ -177,7 +177,7 @@ public class TestLoadIncrementalHFiles {
    * Test case that creates some regions and loads HFiles that cross the boundaries
    * and have different region boundaries than the table pre-split.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 80000)
   public void testRegionCrossingHFileSplit() throws Exception {
     testRegionCrossingHFileSplit(BloomType.NONE);
   }
