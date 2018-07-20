@@ -680,7 +680,13 @@ public class DefaultMemStore implements MemStore {
    */
   @Override
   public List<KeyValueScanner> getScanners(long readPt) {
-    return Collections.<KeyValueScanner> singletonList(new MemStoreScanner(readPt));
+    MemStoreScanner scanner = new MemStoreScanner(readPt);
+    scanner.seek(CellUtil.createCell(HConstants.EMPTY_START_ROW));
+    if (scanner.peek() == null) {
+      scanner.close();
+      return null;
+    }
+    return Collections.<KeyValueScanner> singletonList(scanner);
   }
 
   /**
