@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -89,7 +88,6 @@ public class TestRpcHandlerException {
    * This is a unit test to make sure to abort region server when the number of Rpc handler thread
    * caught errors exceeds the threshold. Client will hang when RS aborts.
    */
-  @Ignore
   @Test
   public void testRpcScheduler() throws IOException, InterruptedException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
