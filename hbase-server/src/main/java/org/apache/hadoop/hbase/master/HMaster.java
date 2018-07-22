@@ -874,7 +874,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     InitMetaProcedure initMetaProc = null;
     if (assignmentManager.getRegionStates().getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO)
       .isOffline()) {
-      Optional<Procedure<?>> optProc = procedureExecutor.getProcedures().stream()
+      Optional<Procedure<MasterProcedureEnv>> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).findAny();
       if (optProc.isPresent()) {
         initMetaProc = (InitMetaProcedure) optProc.get();
@@ -3162,7 +3162,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.preGetProcedures();
     }
 
-    final List<Procedure<?>> procList = this.procedureExecutor.getProcedures();
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    List<Procedure<?>> procList = (List) this.procedureExecutor.getProcedures();
 
     if (cpHost != null) {
       cpHost.postGetProcedures(procList);

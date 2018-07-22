@@ -124,7 +124,7 @@ public class TestGetProcedureResult {
 
   @Test
   public void testRace() throws Exception {
-    ProcedureExecutor<?> executor =
+    ProcedureExecutor<MasterProcedureEnv> executor =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     DummyProcedure p = new DummyProcedure();
     long procId = executor.submitProcedure(p);

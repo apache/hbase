@@ -106,7 +106,7 @@ public final class ProcedureSyncWait {
     }
 
   public static Future<byte[]> submitProcedure(final ProcedureExecutor<MasterProcedureEnv> procExec,
-      final Procedure<?> proc) {
+      final Procedure<MasterProcedureEnv> proc) {
     if (proc.isInitializing()) {
       procExec.submitProcedure(proc);
     }
@@ -114,7 +114,7 @@ public final class ProcedureSyncWait {
   }
 
   public static byte[] submitAndWaitProcedure(ProcedureExecutor<MasterProcedureEnv> procExec,
-      final Procedure<?> proc) throws IOException {
+      final Procedure<MasterProcedureEnv> proc) throws IOException {
     if (proc.isInitializing()) {
       procExec.submitProcedure(proc);
     }

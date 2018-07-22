@@ -576,7 +576,7 @@ public class TestAccessController extends SecureTestUtil {
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
     proc.setOwner(USER_OWNER);
     procExec.submitProcedure(proc);
-    final List<Procedure<?>> procList = procExec.getProcedures();
+    final List<Procedure<MasterProcedureEnv>> procList = procExec.getProcedures();
 
     AccessTestAction getProceduresAction = new AccessTestAction() {
       @Override
