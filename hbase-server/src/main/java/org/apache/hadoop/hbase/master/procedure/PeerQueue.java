@@ -30,20 +30,6 @@ class PeerQueue extends Queue<String> {
   }
 
   @Override
-  public boolean isAvailable() {
-    if (isEmpty()) {
-      return false;
-    }
-    if (getLockStatus().hasExclusiveLock()) {
-      // if we have an exclusive lock already taken
-      // only child of the lock owner can be executed
-      Procedure<?> nextProc = peek();
-      return nextProc != null && getLockStatus().hasLockAccess(nextProc);
-    }
-    return true;
-  }
-
-  @Override
   public boolean requireExclusiveLock(Procedure<?> proc) {
     return requirePeerExclusiveLock((PeerProcedureInterface) proc);
   }

@@ -99,7 +99,7 @@ public final class MasterProcedureUtil {
     protected abstract void run() throws IOException;
     protected abstract String getDescription();
 
-    protected long submitProcedure(final Procedure<?> proc) {
+    protected long submitProcedure(final Procedure<MasterProcedureEnv> proc) {
       assert procId == null : "submitProcedure() was already called, running procId=" + procId;
       procId = getProcedureExecutor().submitProcedure(proc, nonceKey);
       return procId;

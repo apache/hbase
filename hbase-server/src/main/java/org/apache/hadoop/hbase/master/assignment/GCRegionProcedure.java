@@ -148,9 +148,4 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
         serializer.deserialize(MasterProcedureProtos.GCRegionStateData.class);
     setRegion(ProtobufUtil.toRegionInfo(msg.getRegionInfo()));
   }
-
-  @Override
-  protected org.apache.hadoop.hbase.procedure2.Procedure.LockState acquireLock(MasterProcedureEnv env) {
-    return super.acquireLock(env);
-  }
 }

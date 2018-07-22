@@ -131,7 +131,7 @@ public class CreateNamespaceProcedure
 
   @Override
   protected CreateNamespaceState getState(final int stateId) {
-    return CreateNamespaceState.valueOf(stateId);
+    return CreateNamespaceState.forNumber(stateId);
   }
 
   @Override
@@ -171,15 +171,18 @@ public class CreateNamespaceProcedure
   }
 
   @Override
-  protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (!env.getMasterServices().isInitialized()) {
-      // Namespace manager might not be ready if master is not fully initialized,
-      // return false to reject user namespace creation; return true for default
-      // and system namespace creation (this is part of master initialization).
-      if (!isBootstrapNamespace() && env.waitInitialized(this)) {
-        return LockState.LOCK_EVENT_WAIT;
-      }
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+    // Namespace manager might not be ready if master is not fully initialized,
+    // return false to reject user namespace creation; return true for default
+    // and system namespace creation (this is part of master initialization).
+    if (isBootstrapNamespace()) {
+      return false;
     }
+    return env.waitInitialized(this);
+  }
+
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     if (env.getProcedureScheduler().waitNamespaceExclusiveLock(this, getNamespaceName())) {
       return LockState.LOCK_EVENT_WAIT;
     }
@@ -260,20 +263,6 @@ public class CreateNamespaceProcedure
       final NamespaceDescriptor nsDescriptor) throws IOException {
     if (env.getMasterServices().isInitialized()) {
       env.getMasterServices().getMasterQuotaManager().setNamespaceQuota(nsDescriptor);
-    }
-  }
-
-  /**
-   * remove quota for the namespace if exists
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   **/
-  private void rollbackSetNamespaceQuota(final MasterProcedureEnv env) throws IOException {
-    try {
-      DeleteNamespaceProcedure.removeNamespaceQuota(env, nsDescriptor.getName());
-    } catch (Exception e) {
-      // Ignore exception
-      LOG.debug("Rollback of setNamespaceQuota throws exception: " + e);
     }
   }
 

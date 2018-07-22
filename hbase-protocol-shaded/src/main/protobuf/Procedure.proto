@@ -63,6 +63,9 @@ message Procedure {
   // Nonce to prevent same procedure submit by multiple times
   optional uint64 nonce_group = 13 [default = 0];
   optional uint64 nonce = 14 [default = 0];
+
+  // whether the procedure has held the lock
+  optional bool locked = 16 [default = false];
 }
 
 /**

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -42,7 +43,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Int64Value;
 
-@Category({MasterTests.class, LargeTests.class})
+/**
+ * For now we do not guarantee this, we will restore the locks when restarting ProcedureExecutor so
+ * we should use lock to obtain the correct order. Ignored.
+ */
+@Ignore
+@Category({ MasterTests.class, LargeTests.class })
 public class TestProcedureReplayOrder {
 
   @ClassRule

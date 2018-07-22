@@ -76,8 +76,6 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   private String description;
   // True when recovery of master lock from WALs
   private boolean recoveredMasterLock;
-  // this is for internal working
-  private boolean hasLock;
 
   private final ProcedureEvent<LockProcedure> event = new ProcedureEvent<>(this);
   // True if this proc acquired relevant locks. This value is for client checks.
@@ -306,7 +304,6 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   protected LockState acquireLock(final MasterProcedureEnv env) {
     boolean ret = lock.acquireLock(env);
     locked.set(ret);
-    hasLock = ret;
     if (ret) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("LOCKED " + toString());
@@ -321,7 +318,6 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     lock.releaseLock(env);
-    hasLock = false;
   }
 
   /**
@@ -421,11 +417,6 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   @Override
   public boolean holdLock(final MasterProcedureEnv env) {
     return true;
-  }
-
-  @Override
-  public boolean hasLock(final MasterProcedureEnv env) {
-    return hasLock;
   }
 
   ///////////////////////

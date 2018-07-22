@@ -81,8 +81,8 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
     return this.tableNamespaceManager;
   }
 
-  private long submitProcedure(final Procedure<?> procedure, final NonceKey nonceKey)
-      throws ServiceNotRunningException {
+  private long submitProcedure(final Procedure<MasterProcedureEnv> procedure,
+      final NonceKey nonceKey) throws ServiceNotRunningException {
     checkIsRunning();
     ProcedureExecutor<MasterProcedureEnv> pe = this.masterServices.getMasterProcedureExecutor();
     return pe.submitProcedure(procedure, nonceKey);
