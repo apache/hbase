@@ -63,8 +63,13 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
   }
 
   @Override
-  protected LockState acquireLock(MasterProcedureEnv env) {
+  protected boolean waitInitialized(MasterProcedureEnv env) {
     // we do not need to wait for master initialized, we are part of the initialization.
+    return false;
+  }
+
+  @Override
+  protected LockState acquireLock(MasterProcedureEnv env) {
     if (env.getProcedureScheduler().waitTableExclusiveLock(this, getTableName())) {
       return LockState.LOCK_EVENT_WAIT;
     }

@@ -34,13 +34,15 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * Base class for the Assign and Unassign Procedure.
@@ -113,8 +115,6 @@ public abstract class RegionTransitionProcedure
    * data member. It is used doing backoff when Procedure gets stuck.
    */
   private int attempt;
-
-  private volatile boolean lock = false;
 
   // Required by the Procedure framework to create the procedure on replay
   public RegionTransitionProcedure() {}
@@ -419,15 +419,17 @@ public abstract class RegionTransitionProcedure
   }
 
   @Override
-  protected LockState acquireLock(final MasterProcedureEnv env) {
+  protected boolean waitInitialized(MasterProcedureEnv env) {
     // Unless we are assigning meta, wait for meta to be available and loaded.
-    if (!isMeta()) {
-      AssignmentManager am = env.getAssignmentManager();
-      if (am.waitMetaLoaded(this) || am.waitMetaAssigned(this, regionInfo)) {
-        return LockState.LOCK_EVENT_WAIT;
-      }
+    if (isMeta()) {
+      return false;
     }
+    AssignmentManager am = env.getAssignmentManager();
+    return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, regionInfo);
+  }
 
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     // TODO: Revisit this and move it to the executor
     if (env.getProcedureScheduler().waitRegion(this, getRegionInfo())) {
       try {
@@ -438,24 +440,17 @@ public abstract class RegionTransitionProcedure
       }
       return LockState.LOCK_EVENT_WAIT;
     }
-    this.lock = true;
     return LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     env.getProcedureScheduler().wakeRegion(this, getRegionInfo());
-    lock = false;
   }
 
   @Override
   protected boolean holdLock(final MasterProcedureEnv env) {
     return true;
-  }
-
-  @Override
-  protected boolean hasLock(final MasterProcedureEnv env) {
-    return lock;
   }
 
   @Override

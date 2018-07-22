@@ -36,8 +36,6 @@ public abstract class AbstractPeerProcedure<TState>
 
   protected String peerId;
 
-  private volatile boolean locked;
-
   // used to keep compatible with old client where we can only returns after updateStorage.
   protected ProcedurePrepareLatch latch;
 
@@ -59,28 +57,26 @@ public abstract class AbstractPeerProcedure<TState>
   }
 
   @Override
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+    return env.waitInitialized(this);
+  }
+
+  @Override
   protected LockState acquireLock(MasterProcedureEnv env) {
     if (env.getProcedureScheduler().waitPeerExclusiveLock(this, peerId)) {
       return LockState.LOCK_EVENT_WAIT;
     }
-    locked = true;
     return LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(MasterProcedureEnv env) {
-    locked = false;
     env.getProcedureScheduler().wakePeerExclusiveLock(this, peerId);
   }
 
   @Override
   protected boolean holdLock(MasterProcedureEnv env) {
     return true;
-  }
-
-  @Override
-  protected boolean hasLock(MasterProcedureEnv env) {
-    return locked;
   }
 
   @Override
