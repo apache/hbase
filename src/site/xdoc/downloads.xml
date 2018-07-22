@@ -40,7 +40,6 @@ under the License.
       <th>Compatiblity Report</th>
       <th>Changes</th>
       <th>Release Notes</th>
-      <th>Commit</th>
       <th>Download</th>
     </tr>
     <tr>
@@ -58,9 +57,6 @@ under the License.
       </td>
       <td style="test-align: left">
         <a href="https://apache.org/dist/hbase/2.1.0/RELEASENOTES.md">Release Notes</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=commit;h=e1673bb0bbfea21d6e5dba73e013b09b8b49b89b">e1673bb0bbfea21d6e5dba73e013b09b8b49b89b</a>
       </td>
       <td style="test-align: left">
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.0/hbase-2.1.0-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.1.0/hbase-2.1.0-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.0/hbase-2.1.0-src.tar.gz.asc">asc</a>) <br />
@@ -85,9 +81,6 @@ under the License.
         <a href="https://apache.org/dist/hbase/2.0.1/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=commit;h=987f7b6d37c2fcacc942cc66e5c5122aba8fdfbe">987f7b6d37c2fcacc942cc66e5c5122aba8fdfbe</a>
-      </td>
-      <td style="test-align: left">
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.1/hbase-2.0.1-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.0.1/hbase-2.0.1-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.1/hbase-2.0.1-src.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.1/hbase-2.0.1-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.0.1/hbase-2.0.1-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.1/hbase-2.0.1-bin.tar.gz.asc">asc</a>)
       </td>
@@ -107,9 +100,6 @@ under the License.
       </td>
       <td style="test-align: left">
         <a href="https://apache.org/dist/hbase/2.0.0/RELEASENOTES.md">Release Notes</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=commit;h=7483b111e4da77adbfc8062b3b22cbe7c2cb91c1">7483b111e4da77adbfc8062b3b22cbe7c2cb91c1</a>
       </td>
       <td style="test-align: left">
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.0/hbase-2.0.0-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.0.0/hbase-2.0.0-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.0/hbase-2.0.0-src.tar.gz.asc">asc</a>) <br />
