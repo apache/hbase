@@ -2995,7 +2995,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         } else {
           // older clients do not know about SRE. Just throw USE, which they will handle
           throw new UnknownScannerException("Throwing UnknownScannerException to reset the client"
-              + " scanner state for clients older than 1.3.", e);
+              + " scanner state for clients older than 1.4.", e);
         }
       } catch (IOException ioe) {
         throw new ServiceException(ioe);
