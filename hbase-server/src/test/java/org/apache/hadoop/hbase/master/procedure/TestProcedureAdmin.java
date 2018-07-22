@@ -207,7 +207,7 @@ public class TestProcedureAdmin {
     // Wait for one step to complete
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
-    List<Procedure<?>> procedures = procExec.getProcedures();
+    List<Procedure<MasterProcedureEnv>> procedures = procExec.getProcedures();
     assertTrue(procedures.size() >= 1);
     boolean found = false;
     for (Procedure<?> proc: procedures) {

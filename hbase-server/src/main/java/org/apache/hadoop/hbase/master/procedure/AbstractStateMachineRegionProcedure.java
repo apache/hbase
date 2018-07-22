@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 public abstract class AbstractStateMachineRegionProcedure<TState>
     extends AbstractStateMachineTableProcedure<TState> {
   private RegionInfo hri;
-  private volatile boolean lock = false;
 
   public AbstractStateMachineRegionProcedure(final MasterProcedureEnv env,
       final RegionInfo hri) {
@@ -100,23 +99,15 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
 
   @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return LockState.LOCK_EVENT_WAIT;
     if (env.getProcedureScheduler().waitRegions(this, getTableName(), getRegion())) {
       return LockState.LOCK_EVENT_WAIT;
     }
-    this.lock = true;
     return LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    this.lock = false;
     env.getProcedureScheduler().wakeRegions(this, getTableName(), getRegion());
-  }
-
-  @Override
-  protected boolean hasLock(final MasterProcedureEnv env) {
-    return this.lock;
   }
 
   protected void setFailure(Throwable cause) {

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -88,7 +89,7 @@ public class TestFailedProcCleanup {
       LOG.debug("Ignoring exception: ", e);
       Thread.sleep(evictionDelay * 3);
     }
-    List<Procedure<?>> procedureInfos =
+    List<Procedure<MasterProcedureEnv>> procedureInfos =
         TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getProcedures();
     for (Procedure procedureInfo : procedureInfos) {
       if (procedureInfo.getProcName().equals("CreateTableProcedure")
@@ -109,7 +110,7 @@ public class TestFailedProcCleanup {
       LOG.debug("Ignoring exception: ", e);
       Thread.sleep(evictionDelay * 3);
     }
-    List<Procedure<?>> procedureInfos =
+    List<Procedure<MasterProcedureEnv>> procedureInfos =
         TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getProcedures();
     for (Procedure procedureInfo : procedureInfos) {
       if (procedureInfo.getProcName().equals("CreateTableProcedure")

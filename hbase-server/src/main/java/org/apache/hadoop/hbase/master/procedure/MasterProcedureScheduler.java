@@ -144,21 +144,13 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private <T extends Comparable<T>> void doAdd(final FairQueue<T> fairq,
       final Queue<T> queue, final Procedure<?> proc, final boolean addFront) {
-    if (!queue.getLockStatus().hasExclusiveLock() ||
-      queue.getLockStatus().isLockOwner(proc.getProcId())) {
-      // if the queue was not remove for an xlock execution
-      // or the proc is the lock owner, put the queue back into execution
+    if (!queue.getLockStatus().hasExclusiveLock()) {
+      // if the queue was not remove for an xlock execution,put the queue back into execution
       queue.add(proc, addFront);
       addToRunQueue(fairq, queue);
-    } else if (queue.getLockStatus().hasParentLock(proc)) {
-      // always add it to front as its parent has the xlock
-      // usually the addFront is true if we arrive here as we will call addFront for adding sub
-      // proc, but sometimes we may retry on the proc which means we will arrive here through yield,
-      // so it is possible the addFront here is false.
+    } else if (queue.getLockStatus().hasLockAccess(proc)) {
+      // always add it to front as the have the lock access.
       queue.add(proc, true);
-      // our (proc) parent has the xlock,
-      // so the queue is not in the fairq (run-queue)
-      // add it back to let the child run (inherit the lock)
       addToRunQueue(fairq, queue);
     } else {
       queue.add(proc, addFront);
@@ -386,9 +378,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     if (proc != null) {
       priority = MasterProcedureUtil.getServerPriority(proc);
     } else {
-      LOG.warn("Usually this should not happen as proc can only be null when calling from " +
-        "wait/wake lock, which means at least we should have one procedure in the queue which " +
-        "wants to acquire the lock or just released the lock.");
       priority = 1;
     }
     node = new ServerQueue(serverName, priority, locking.getServerLock(serverName));
@@ -848,9 +837,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getServerLock(serverName);
       if (lock.tryExclusiveLock(procedure)) {
-        // We do not need to create a new queue so just pass null, as in tests we may pass
-        // procedures other than ServerProcedureInterface
-        removeFromRunQueue(serverRunQueue, getServerQueue(serverName, null));
+        // In tests we may pass procedures other than ServerProcedureInterface, just pass null if
+        // so.
+        removeFromRunQueue(serverRunQueue,
+          getServerQueue(serverName,
+            procedure instanceof ServerProcedureInterface ? (ServerProcedureInterface) procedure
+              : null));
         return false;
       }
       waitProcedure(lock, procedure);
@@ -873,9 +865,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final LockAndQueue lock = locking.getServerLock(serverName);
       // Only SCP will acquire/release server lock so do not need to check the return value here.
       lock.releaseExclusiveLock(procedure);
-      // We do not need to create a new queue so just pass null, as in tests we may pass procedures
-      // other than ServerProcedureInterface
-      addToRunQueue(serverRunQueue, getServerQueue(serverName, null));
+      // In tests we may pass procedures other than ServerProcedureInterface, just pass null if
+      // so.
+      addToRunQueue(serverRunQueue,
+        getServerQueue(serverName,
+          procedure instanceof ServerProcedureInterface ? (ServerProcedureInterface) procedure
+            : null));
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {

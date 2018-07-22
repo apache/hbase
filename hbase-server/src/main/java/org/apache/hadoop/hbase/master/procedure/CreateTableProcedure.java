@@ -220,10 +220,16 @@ public class CreateTableProcedure
   }
 
   @Override
-  protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (!getTableName().isSystemTable() && env.waitInitialized(this)) {
-      return LockState.LOCK_EVENT_WAIT;
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+    if (getTableName().isSystemTable()) {
+      // Creating system table is part of the initialization, so do not wait here.
+      return false;
     }
+    return super.waitInitialized(env);
+  }
+
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     if (env.getProcedureScheduler().waitTableExclusiveLock(this, getTableName())) {
       return LockState.LOCK_EVENT_WAIT;
     }

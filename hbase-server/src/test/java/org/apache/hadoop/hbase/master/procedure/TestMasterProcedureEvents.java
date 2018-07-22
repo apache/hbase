@@ -111,7 +111,7 @@ public class TestMasterProcedureEvents {
   }
 
   private void testProcedureEventWaitWake(final HMaster master, final ProcedureEvent<?> event,
-      final Procedure<?> proc) throws Exception {
+      final Procedure<MasterProcedureEnv> proc) throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     final MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureScheduler();
 

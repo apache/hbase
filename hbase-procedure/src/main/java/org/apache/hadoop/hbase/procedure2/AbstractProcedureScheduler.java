@@ -163,8 +163,8 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
           return null;
         }
       }
-
       final Procedure pollResult = dequeue();
+
       pollCalls++;
       nullPollCalls += (pollResult == null) ? 1 : 0;
       return pollResult;
