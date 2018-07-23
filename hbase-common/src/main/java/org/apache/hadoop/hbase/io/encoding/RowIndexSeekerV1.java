@@ -126,10 +126,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   private int binarySearch(Cell seekCell, boolean seekBefore) {
     int low = 0;
     int high = rowNumber - 1;
-    int mid = (low + high) >>> 1;
+    int mid = low + (high - low) >> 1;
     int comp = 0;
     while (low <= high) {
-      mid = (low + high) >>> 1;
+      mid = mid = low + (high - low) >> 1;
       ByteBuffer row = getRow(mid);
       comp = compareRows(row, seekCell);
       if (comp < 0) {
