@@ -129,7 +129,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     int mid = low + (high - low) >> 1;
     int comp = 0;
     while (low <= high) {
-      mid = mid = low + (high - low) >> 1;
+      mid = low + (high - low) >> 1;
       ByteBuffer row = getRow(mid);
       comp = compareRows(row, seekCell);
       if (comp < 0) {
