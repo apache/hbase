@@ -309,9 +309,8 @@ public class MetaTableMetrics implements RegionCoprocessor {
   public void start(CoprocessorEnvironment env) throws IOException {
     if (env instanceof RegionCoprocessorEnvironment
         && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable() != null
-        && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable().getName() != null
-        && new String(((RegionCoprocessorEnvironment) env).getRegionInfo().getTable().getName(),
-          StandardCharsets.UTF_8).equals(TableName.META_TABLE_NAME.toString())) {
+        && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable()
+          .equals(TableName.META_TABLE_NAME)) {
       regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
       observer = new ExampleRegionObserverMeta();
       requestsMap = new ConcurrentHashMap<>();
@@ -324,11 +323,13 @@ public class MetaTableMetrics implements RegionCoprocessor {
   }
 
   @Override
-  public void stop(CoprocessorEnvironment e) throws IOException {
+  public void stop(CoprocessorEnvironment env) throws IOException {
     // since meta region can move around, clear stale metrics when stop.
-    for (String meterName : requestsMap.keySet()) {
-      MetricRegistry registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
-      registry.remove(meterName);
+    if (requestsMap != null) {
+      for (String meterName : requestsMap.keySet()) {
+        MetricRegistry registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
+        registry.remove(meterName);
+      }
     }
   }
 
