@@ -139,6 +139,21 @@ public class SplitTableRegionProcedure
   }
 
   /**
+   * Check whether there is recovered.edits in the closed region
+   * If any, that means this region is not closed property, we need
+   * to abort region merge to prevent data loss
+   * @param env master env
+   * @throws IOException IOException
+   */
+  private void checkClosedRegion(final MasterProcedureEnv env) throws IOException {
+    if (WALSplitter.hasRecoveredEdits(env.getMasterServices().getFileSystem(),
+        env.getMasterConfiguration(), getRegion())) {
+      throw new IOException("Recovered.edits are found in Region: " + getRegion()
+          + ", abort split to prevent data loss");
+    }
+  }
+
+  /**
    * Check whether the region is splittable
    * @param env MasterProcedureEnv
    * @param regionToSplit parent Region to be split
@@ -238,6 +253,10 @@ public class SplitTableRegionProcedure
           break;
         case SPLIT_TABLE_REGION_CLOSE_PARENT_REGION:
           addChildProcedure(createUnassignProcedures(env, getRegionReplication(env)));
+          setNextState(SplitTableRegionState.SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS);
+          break;
+        case SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
+          checkClosedRegion(env);
           setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS);
           break;
         case SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS:
@@ -311,6 +330,10 @@ public class SplitTableRegionProcedure
         case SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS:
         case SPLIT_TABLE_REGION_WRITE_MAX_SEQUENCE_ID_FILE:
           // Doing nothing, as re-open parent region would clean up daughter region directories.
+          break;
+        case SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
+          // Doing nothing, in SPLIT_TABLE_REGION_CLOSE_PARENT_REGION,
+          // we will bring parent region online
           break;
         case SPLIT_TABLE_REGION_CLOSE_PARENT_REGION:
           openParentRegion(env);
