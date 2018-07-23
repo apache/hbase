@@ -190,21 +190,10 @@ public class RegionServerQuotaManager {
           + e.getMessage());
       // Depending on whether we are supposed to throw a retryable IO exeption or not, choose
       // the correct exception type to (re)throw
-      if (e instanceof ThrottlingException) {
-        if (useRetryableThrottlingException) {
-          throw new RpcThrottlingException(e.getMessage());
-        } else {
-          throw e;
-        }
-      } else if (e instanceof RpcThrottlingException) {
-        if (useRetryableThrottlingException) {
-          throw e;
-        } else {
-          throw new ThrottlingException(e.getMessage());
-        }
-      } else {
-        LOG.warn("Unexpected exception from quota check", e);
+      if (useRetryableThrottlingException) {
         throw e;
+      } else {
+        throw new ThrottlingException(e.getMessage());
       }
     }
     return quota;
