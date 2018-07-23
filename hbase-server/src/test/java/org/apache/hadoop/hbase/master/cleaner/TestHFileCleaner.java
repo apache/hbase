@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -321,6 +322,8 @@ public class TestHFileCleaner {
     final int UPDATE_QUEUE_INIT_SIZE = 1024;
     final int LARGE_FILE_NUM = 5;
     final int SMALL_FILE_NUM = 20;
+    final int LARGE_THREAD_NUM = 2;
+    final int SMALL_THREAD_NUM = 4;
 
     Configuration conf = UTIL.getConfiguration();
     // no cleaner policies = delete all files
@@ -363,6 +366,8 @@ public class TestHFileCleaner {
     newConf.setInt(HFileCleaner.HFILE_DELETE_THROTTLE_THRESHOLD, UPDATE_THROTTLE_POINT);
     newConf.setInt(HFileCleaner.LARGE_HFILE_QUEUE_INIT_SIZE, UPDATE_QUEUE_INIT_SIZE);
     newConf.setInt(HFileCleaner.SMALL_HFILE_QUEUE_INIT_SIZE, UPDATE_QUEUE_INIT_SIZE);
+    newConf.setInt(HFileCleaner.LARGE_HFILE_DELETE_THREAD_NUMBER, LARGE_THREAD_NUM);
+    newConf.setInt(HFileCleaner.SMALL_HFILE_DELETE_THREAD_NUMBER, SMALL_THREAD_NUM);
     LOG.debug("File deleted from large queue: " + cleaner.getNumOfDeletedLargeFiles()
         + "; from small queue: " + cleaner.getNumOfDeletedSmallFiles());
     cleaner.onConfigurationChange(newConf);
@@ -371,7 +376,13 @@ public class TestHFileCleaner {
     Assert.assertEquals(UPDATE_THROTTLE_POINT, cleaner.getThrottlePoint());
     Assert.assertEquals(UPDATE_QUEUE_INIT_SIZE, cleaner.getLargeQueueInitSize());
     Assert.assertEquals(UPDATE_QUEUE_INIT_SIZE, cleaner.getSmallQueueInitSize());
-    Assert.assertEquals(2, cleaner.getCleanerThreads().size());
+    Assert.assertEquals(LARGE_THREAD_NUM + SMALL_THREAD_NUM, cleaner.getCleanerThreads().size());
+
+    // make sure no cost when onConfigurationChange called with no change
+    List<Thread> oldThreads = cleaner.getCleanerThreads();
+    cleaner.onConfigurationChange(newConf);
+    List<Thread> newThreads = cleaner.getCleanerThreads();
+    Assert.assertArrayEquals(oldThreads.toArray(), newThreads.toArray());
 
     // wait until clean done and check
     t.join();
