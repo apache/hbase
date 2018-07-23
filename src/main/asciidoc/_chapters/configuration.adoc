@@ -1071,6 +1071,8 @@ Here are those configurations:
 | hbase.regionserver.hfilecleaner.small.queue.size
 | hbase.regionserver.hfilecleaner.large.thread.count
 | hbase.regionserver.hfilecleaner.small.thread.count
+| hbase.regionserver.hfilecleaner.thread.timeout.msec
+| hbase.regionserver.hfilecleaner.thread.check.interval.msec
 | hbase.regionserver.flush.throughput.controller
 | hbase.hstore.compaction.max.size
 | hbase.hstore.compaction.max.size.offpeak
@@ -1091,6 +1093,8 @@ Here are those configurations:
 | hbase.offpeak.start.hour
 | hbase.offpeak.end.hour
 | hbase.oldwals.cleaner.thread.size
+| hbase.oldwals.cleaner.thread.timeout.msec
+| hbase.oldwals.cleaner.thread.check.interval.msec
 | hbase.procedure.worker.keep.alive.time.msec
 | hbase.procedure.worker.add.stuck.percentage
 | hbase.procedure.worker.monitor.interval.msec

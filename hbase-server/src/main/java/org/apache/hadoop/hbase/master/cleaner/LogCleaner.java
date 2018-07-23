@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -46,11 +47,24 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
   private static final Logger LOG = LoggerFactory.getLogger(LogCleaner.class.getName());
 
-  public static final String OLD_WALS_CLEANER_SIZE = "hbase.oldwals.cleaner.thread.size";
-  public static final int OLD_WALS_CLEANER_DEFAULT_SIZE = 2;
+  public static final String OLD_WALS_CLEANER_THREAD_SIZE = "hbase.oldwals.cleaner.thread.size";
+  public static final int DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE = 2;
+
+  public static final String OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC =
+      "hbase.oldwals.cleaner.thread.timeout.msec";
+  @VisibleForTesting
+  static final long DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC = 60 * 1000L;
+
+  public static final String OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC =
+      "hbase.oldwals.cleaner.thread.check.interval.msec";
+  @VisibleForTesting
+  static final long DEFAULT_OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC = 500L;
+
 
   private final LinkedBlockingQueue<CleanerContext> pendingDelete;
   private List<Thread> oldWALsCleaner;
+  private long cleanerThreadTimeoutMsec;
+  private long cleanerThreadCheckIntervalMsec;
 
   /**
    * @param period the period of time to sleep between each run
@@ -63,8 +77,12 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
       Path oldLogDir) {
     super("LogsCleaner", period, stopper, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS);
     this.pendingDelete = new LinkedBlockingQueue<>();
-    int size = conf.getInt(OLD_WALS_CLEANER_SIZE, OLD_WALS_CLEANER_DEFAULT_SIZE);
+    int size = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     this.oldWALsCleaner = createOldWalsCleaner(size);
+    this.cleanerThreadTimeoutMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
+        DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
+    this.cleanerThreadCheckIntervalMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC,
+        DEFAULT_OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC);
   }
 
   @Override
@@ -77,7 +95,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
   public void onConfigurationChange(Configuration conf) {
     super.onConfigurationChange(conf);
 
-    int newSize = conf.getInt(OLD_WALS_CLEANER_SIZE, OLD_WALS_CLEANER_DEFAULT_SIZE);
+    int newSize = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     if (newSize == oldWALsCleaner.size()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Size from configuration is the same as previous which is " +
@@ -87,13 +105,18 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
     }
     interruptOldWALsCleaner();
     oldWALsCleaner = createOldWalsCleaner(newSize);
+    cleanerThreadTimeoutMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
+        DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
+    cleanerThreadCheckIntervalMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC,
+        DEFAULT_OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC);
   }
 
   @Override
   protected int deleteFiles(Iterable<FileStatus> filesToDelete) {
     List<CleanerContext> results = new LinkedList<>();
     for (FileStatus toDelete : filesToDelete) {
-      CleanerContext context = CleanerContext.createCleanerContext(toDelete);
+      CleanerContext context = CleanerContext.createCleanerContext(toDelete,
+          cleanerThreadTimeoutMsec);
       if (context != null) {
         pendingDelete.add(context);
         results.add(context);
@@ -102,7 +125,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
 
     int deletedFiles = 0;
     for (CleanerContext res : results) {
-      deletedFiles += res.getResult(500) ? 1 : 0;
+      deletedFiles += res.getResult(cleanerThreadCheckIntervalMsec) ? 1 : 0;
     }
     return deletedFiles;
   }
@@ -116,6 +139,16 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
   @VisibleForTesting
   int getSizeOfCleaners() {
     return oldWALsCleaner.size();
+  }
+
+  @VisibleForTesting
+  long getCleanerThreadTimeoutMsec() {
+    return cleanerThreadTimeoutMsec;
+  }
+
+  @VisibleForTesting
+  long getCleanerThreadCheckIntervalMsec() {
+    return cleanerThreadCheckIntervalMsec;
   }
 
   private List<Thread> createOldWalsCleaner(int size) {
@@ -186,20 +219,20 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
   }
 
   private static final class CleanerContext {
-    // At most waits 60 seconds
-    static final long MAX_WAIT = 60 * 1000;
 
     final FileStatus target;
     volatile boolean result;
     volatile boolean setFromCleaner = false;
+    long timeoutMsec;
 
-    static CleanerContext createCleanerContext(FileStatus status) {
-      return status != null ? new CleanerContext(status) : null;
+    static CleanerContext createCleanerContext(FileStatus status, long timeoutMsec) {
+      return status != null ? new CleanerContext(status, timeoutMsec) : null;
     }
 
-    private CleanerContext(FileStatus status) {
+    private CleanerContext(FileStatus status, long timeoutMsec) {
       this.target = status;
       this.result = false;
+      this.timeoutMsec = timeoutMsec;
     }
 
     synchronized void setResult(boolean res) {
@@ -209,13 +242,15 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
     }
 
     synchronized boolean getResult(long waitIfNotFinished) {
-      long totalTime = 0;
+      long totalTimeMsec = 0;
       try {
         while (!setFromCleaner) {
+          long startTimeNanos = System.nanoTime();
           wait(waitIfNotFinished);
-          totalTime += waitIfNotFinished;
-          if (totalTime >= MAX_WAIT) {
-            LOG.warn("Spend too much time to delete oldwals " + target);
+          totalTimeMsec += TimeUnit.MILLISECONDS.convert(System.nanoTime() - startTimeNanos,
+              TimeUnit.NANOSECONDS);
+          if (totalTimeMsec >= timeoutMsec) {
+            LOG.warn("Spend too much time " + totalTimeMsec + " ms to delete oldwals " + target);
             return result;
           }
         }
