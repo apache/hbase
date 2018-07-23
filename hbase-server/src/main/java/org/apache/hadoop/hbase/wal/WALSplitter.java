@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -541,6 +542,29 @@ public class WALSplitter {
   public static Path getRegionDirRecoveredEditsDir(final Path regiondir) {
     return new Path(regiondir, HConstants.RECOVERED_EDITS_DIR);
   }
+
+  /**
+   * Check whether there is recovered.edits in the region dir
+   * @param fs FileSystem
+   * @param conf conf
+   * @param regionInfo the region to check
+   * @throws IOException IOException
+   * @return true if recovered.edits exist in the region dir
+   */
+  public static boolean hasRecoveredEdits(final FileSystem fs,
+      final Configuration conf, final RegionInfo regionInfo) throws IOException {
+    // No recovered.edits for non default replica regions
+    if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+      return false;
+    }
+    Path rootDir = FSUtils.getRootDir(conf);
+    //Only default replica region can reach here, so we can use regioninfo
+    //directly without converting it to default replica's regioninfo.
+    Path regionDir = HRegion.getRegionDir(rootDir, regionInfo);
+    NavigableSet<Path> files = getSplitEditFilesSorted(fs, regionDir);
+    return files != null && !files.isEmpty();
+  }
+
 
   /**
    * Returns sorted set of edit files made by splitter, excluding files
