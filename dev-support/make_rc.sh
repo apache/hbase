@@ -76,9 +76,9 @@ function build_src {
 # Build bin tgz
 function build_bin {
   MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests -Papache-release -Prelease \
-    -Dmaven.repo.local=${output_dir}/repository
+    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${output_dir}/repository
   MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests site assembly:single -Papache-release -Prelease \
-    -Dmaven.repo.local=${output_dir}/repository
+    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${output_dir}/repository
   mv ./hbase-assembly/target/hbase-*.tar.gz "${output_dir}"
 }
 
@@ -102,7 +102,7 @@ build_bin
 # upload from repository.apache.org by 'drop'ping it from the staging
 # repository before restart.
 MAVEN_OPTS="${mvnopts}" ${mvn} deploy -DskipTests -Papache-release -Prelease \
-    -Dmaven.repo.local=${output_dir}/repository
+    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${output_dir}/repository
 
 # Do sha512 and md5
 cd ${output_dir}
