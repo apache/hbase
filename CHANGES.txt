@@ -1,5 +1,48 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.5 6/20/2018
+
+** Sub-task
+    * [HBASE-20316] - Backport HBASE-20229 "ConnectionImplementation.locateRegions() returns duplicated entries when region replication is on" to branch-1
+    * [HBASE-20647] - Backport HBASE-20616 "TruncateTableProcedure is stuck in retry loop in TRUNCATE_TABLE_CREATE_FS_LAYOUT state" to branch-1
+
+** Bug
+    * [HBASE-18842] - The hbase shell clone_snaphost command returns bad error message
+    * [HBASE-19924] - hbase rpc throttling does not work for multi() with request count rater.
+    * [HBASE-20004] - Client is not able to execute REST queries in a secure cluster
+    * [HBASE-20204] - Add locking to RefreshFileConnections in BucketCache
+    * [HBASE-20447] - Only fail cacheBlock if block collisions aren't related to next block metadata
+    * [HBASE-20500] - [rsgroup] should keep at least one server in default group
+    * [HBASE-20517] - Fix PerformanceEvaluation 'column' parameter
+    * [HBASE-20554] - "WALs outstanding" message from CleanerChore is noisy
+    * [HBASE-20571] - JMXJsonServlet generates invalid JSON if it has NaN in metrics
+    * [HBASE-20590] - REST Java client is not able to negotiate with the server in the secure mode
+    * [HBASE-20591] - nightly job doesn't respect maven options
+    * [HBASE-20597] - Use a lock to serialize access to a shared reference to ZooKeeperWatcher in HBaseReplicationEndpoint
+    * [HBASE-20627] - Relocate RS Group pre/post hooks from RSGroupAdminServer to RSGroupAdminEndpoint
+    * [HBASE-20638] - nightly source artifact testing should fail the stage if it's going to report an error on jira
+    * [HBASE-20664] - Variable shared across multiple threads
+    * [HBASE-20669] - [findbugs] autoboxing to parse primitive
+    * [HBASE-20670] - NPE in HMaster#isInMaintenanceMode
+
+** Improvement
+    * [HBASE-20523] - PE tool should support configuring client side buffering sizes
+    * [HBASE-20545] - Improve performance of BaseLoadBalancer.retainAssignment
+    * [HBASE-20548] - Master fails to startup on large clusters, refreshing block distribution
+    * [HBASE-20605] - Exclude new Azure Storage FileSystem from SecureBulkLoadEndpoint permission check
+
+** Test
+    * [HBASE-20505] - PE should support multi column family read and write cases
+    * [HBASE-20513] - Collect and emit ScanMetrics in PerformanceEvaluation
+    * [HBASE-20619] - TestWeakObjectPool occasionally times out
+    * [HBASE-20646] - TestWALProcedureStoreOnHDFS failing on branch-1
+
+** Task
+    * [HBASE-19475] - Extend backporting strategy in documentation
+    * [HBASE-20595] - Remove the concept of 'special tables' from rsgroups
+    * [HBASE-20608] - Remove build option of error prone profile for branch-1 after HBASE-12350
+
+
 Release Notes - HBase - Version 1.4.4 4/30/2018
 
 ** Sub-task
