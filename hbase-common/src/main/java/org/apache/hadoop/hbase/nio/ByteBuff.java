@@ -527,7 +527,7 @@ public abstract class ByteBuff {
     int high = toIndex - 1;
 
     while (low <= high) {
-      int mid = (low + high) >>> 1;
+      int mid = low + ((high - low) >> 1);
       int midVal = a.get(mid) & 0xff;
 
       if (midVal < unsignedKey) {
