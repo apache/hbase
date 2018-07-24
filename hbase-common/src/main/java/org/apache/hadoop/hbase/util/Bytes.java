@@ -2068,7 +2068,7 @@ public class Bytes implements Comparable<Bytes> {
     int high = arr.length - 1;
     KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
     while (low <= high) {
-      int mid = (low+high) >>> 1;
+      int mid = low + ((high - low) >> 1);
       // we have to compare in this order, because the comparator order
       // has special logic when the 'left side' is a special key.
       r.setKey(arr[mid], 0, arr[mid].length);
