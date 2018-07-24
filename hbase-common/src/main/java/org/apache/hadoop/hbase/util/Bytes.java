@@ -2029,7 +2029,7 @@ public class Bytes implements Comparable<Bytes> {
     int high = arr.length - 1;
 
     while (low <= high) {
-      int mid = low + (high - low) >> 1;
+      int mid = low + ((high - low) >> 1);
       // we have to compare in this order, because the comparator order
       // has special logic when the 'left side' is a special key.
       int cmp = Bytes.BYTES_RAWCOMPARATOR
@@ -2278,7 +2278,7 @@ public class Bytes implements Comparable<Bytes> {
     int high = toIndex - 1;
 
     while (low <= high) {
-      int mid = low + (high - low) >> 1;
+      int mid = low + ((high - low) >> 1);
       int midVal = a[mid] & 0xff;
 
       if (midVal < unsignedKey) {
