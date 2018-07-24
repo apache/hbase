@@ -1,5 +1,52 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.6 7/30/2018
+
+** Sub-task
+    * [HBASE-19722] - Meta query statistics metrics source
+    * [HBASE-20556] - Backport HBASE-16490 to branch-1
+    * [HBASE-20557] - Backport HBASE-17215 to branch-1
+    * [HBASE-20558] - Backport HBASE-17854 to branch-1
+    * [HBASE-20559] - Backport HBASE-18083 to branch-1
+
+** Bug
+    * [HBASE-17885] - Backport HBASE-15871 to branch-1
+    * [HBASE-19377] - Compatibility checker complaining about hash collisions 
+    * [HBASE-20230] - Incorrrect log message in RSRpcService
+    * [HBASE-20565] - ColumnRangeFilter combined with ColumnPaginationFilter can produce incorrect result since 1.4
+    * [HBASE-20689] - Docker fails to install rubocop for precommit
+    * [HBASE-20697] - Can't cache All region locations of the specify table by calling table.getRegionLocator().getAllRegionLocations()
+    * [HBASE-20723] - Custom hbase.wal.dir results in data loss because we write recovered edits into a different place than where the recovering region server looks for them
+    * [HBASE-20732] - Shutdown scan pool when master is stopped.
+    * [HBASE-20769] - getSplits() has a out of bounds problem in TableSnapshotInputFormatImpl
+    * [HBASE-20770] - WAL cleaner logs way too much; gets clogged when lots of work to do
+    * [HBASE-20771] - PUT operation fail with "No server address listed in hbase:meta for region xxxxx"
+    * [HBASE-20785] - NPE getting metrics in PE testing scans
+    * [HBASE-20789] - TestBucketCache#testCacheBlockNextBlockMetadataMissing is flaky
+    * [HBASE-20808] - Wrong shutdown order between Chores and ChoreService
+    * [HBASE-20840] - Backport HBASE-20791 'RSGroupBasedLoadBalancer#setClusterMetrics should pass ClusterMetrics to its internalBalancer' to branch-1
+    * [HBASE-20855] - PeerConfigTracker only supporting one listener will cause problem when there is a recovered replication queue
+    * [HBASE-20889] - PE scan is failing with NullPointerException
+    * [HBASE-20908] - Infinite loop on regionserver if region replica are reduced 
+    * [HBASE-20917] - MetaTableMetrics#stop references uninitialized requestsMap for non-meta region
+
+** Improvement
+    * [HBASE-20401] - Make `MAX_WAIT` and `waitIfNotFinished` in CleanerContext configurable
+    * [HBASE-20651] - Master, prevents hbck or shell command to reassign the split parent region
+    * [HBASE-20701] - too much logging when balancer runs from BaseLoadBalancer
+    * [HBASE-20733] - QABot should run checkstyle tests if the checkstyle configs change
+    * [HBASE-20806] - Split style journal for flushes and compactions
+    * [HBASE-20826] - Truncate responseInfo attributes on RpcServer WARN messages
+
+** Task
+    * [HBASE-20884] - Replace usage of our Base64 implementation with java.util.Base64
+    * [HBASE-20905] - branch-1 docker build fails
+    * [HBASE-20931] - [branch-1] Add -Dhttps.protocols=TLSv1.2 to Maven command line in make_rc.sh
+
+** Umbrella
+    * [HBASE-20555] - Backport HBASE-18083 and related changes in branch-1
+
+
 Release Notes - HBase - Version 1.4.5 6/20/2018
 
 ** Sub-task
