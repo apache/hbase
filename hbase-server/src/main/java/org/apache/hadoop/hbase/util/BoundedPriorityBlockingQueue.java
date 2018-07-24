@@ -119,7 +119,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
 
     private int upperBound(int start, int end, E key) {
       while (start < end) {
-        int mid = (start + end) >>> 1;
+        int mid = start + ((end - start) >> 1);
         E mitem = objects[mid];
         int cmp = comparator.compare(mitem, key);
         if (cmp > 0) {

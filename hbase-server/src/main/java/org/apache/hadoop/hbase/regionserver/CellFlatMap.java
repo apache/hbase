@@ -83,7 +83,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
     int end = maxCellIdx - 1;
 
     while (begin <= end) {
-      int mid = (begin + end) >>> 1;
+      int mid = begin + ((end - begin) >> 1);
       Cell midCell = getCell(mid);
       int compareRes = comparator.compare(midCell, needle);
 

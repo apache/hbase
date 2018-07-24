@@ -745,7 +745,7 @@ public class HFileBlockIndex {
       ByteBufferKeyOnlyKeyValue nonRootIndexkeyOnlyKV = new ByteBufferKeyOnlyKeyValue();
       ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<>();
       while (low <= high) {
-        mid = (low + high) >>> 1;
+        mid = low + ((high - low) >> 1);
 
         // Midkey's offset relative to the end of secondary index
         int midKeyRelOffset = nonRootIndex.getIntAfterPosition(Bytes.SIZEOF_INT * (mid + 1));
