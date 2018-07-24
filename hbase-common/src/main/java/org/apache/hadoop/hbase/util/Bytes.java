@@ -2104,7 +2104,7 @@ public class Bytes implements Comparable<Bytes> {
     int low = 0;
     int high = arr.length - 1;
     while (low <= high) {
-      int mid = (low+high) >>> 1;
+      int mid = low + ((high - low) >> 1);
       // we have to compare in this order, because the comparator order
       // has special logic when the 'left side' is a special key.
       int cmp = comparator.compare(key, arr[mid]);
