@@ -53,12 +53,12 @@ function tgz_mover {
 
 function deploy {
   MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests -Prelease \
-    -Dmaven.repo.local=${archivedir}/repository
+    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${archivedir}/repository
   MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests post-site assembly:single -Prelease \
-    -Dmaven.repo.local=${archivedir}/repository
+    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${archivedir}/repository
   tgz_mover
   MAVEN_OPTS="${mvnopts}" ${mvn} deploy -DskipTests -Papache-release -Prelease \
-    -Dmaven.repo.local=${archivedir}/repository
+    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${archivedir}/repository
 }
 
 # Build src tarball
@@ -66,7 +66,7 @@ function deploy {
 MAVEN_OPTS="${mvnopts}" ${mvn} clean
 MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests assembly:single \
   -Dassembly.file="$(pwd)/hbase-assembly/src/main/assembly/src.xml" \
-  -Prelease -Dmaven.repo.local=${archivedir}/repository
+  -Prelease -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${archivedir}/repository
 
 tgz_mover
 
