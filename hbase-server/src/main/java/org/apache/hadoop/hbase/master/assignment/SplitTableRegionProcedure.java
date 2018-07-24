@@ -141,7 +141,7 @@ public class SplitTableRegionProcedure
   /**
    * Check whether there is recovered.edits in the closed region
    * If any, that means this region is not closed property, we need
-   * to abort region merge to prevent data loss
+   * to abort region split to prevent data loss
    * @param env master env
    * @throws IOException IOException
    */
