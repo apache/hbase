@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -176,6 +177,10 @@ class IPCUtil {
     } else if (exception instanceof DoNotRetryIOException) {
       return (IOException) new DoNotRetryIOException(
           "Call to " + addr + " failed on local exception: " + exception).initCause(exception);
+    } else if (exception instanceof ConnectionClosedException) {
+      return (ConnectionClosedException) exception;
+    } else if (exception instanceof StoppedRpcClientException) {
+      return (StoppedRpcClientException) exception;
     } else {
       return (IOException) new IOException(
           "Call to " + addr + " failed on local exception: " + exception).initCause(exception);

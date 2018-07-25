@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
@@ -150,7 +151,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     saslRpcClient.dispose();
-    saslPromise.tryFailure(new IOException("Connection closed"));
+    saslPromise.tryFailure(new ConnectionClosedException("Connection closed"));
     ctx.fireChannelInactive();
   }
 

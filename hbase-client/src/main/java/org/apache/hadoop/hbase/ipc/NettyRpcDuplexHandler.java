@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
@@ -207,7 +208,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     if (!id2Call.isEmpty()) {
-      cleanupCalls(ctx, new IOException("Connection closed"));
+      cleanupCalls(ctx, new ConnectionClosedException("Connection closed"));
     }
     conn.shutdown();
     ctx.fireChannelInactive();

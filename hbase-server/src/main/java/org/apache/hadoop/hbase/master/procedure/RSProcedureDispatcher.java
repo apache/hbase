@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -26,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
@@ -192,11 +192,11 @@ public class RSProcedureDispatcher
         return false;
       }
 
-      // In case socket is timed out and the region server is still online,
+      // In case it is a connection exception and the region server is still online,
       // the openRegion RPC could have been accepted by the server and
-      // just the response didn't go through.  So we will retry to
+      // just the response didn't go through. So we will retry to
       // open the region on the same server.
-      final boolean retry = !hold && (e instanceof SocketTimeoutException
+      final boolean retry = !hold && (ClientExceptionsUtil.isConnectionException(e)
           && master.getServerManager().isServerOnline(serverName));
       if (retry) {
         // we want to retry as many times as needed as long as the RS is not dead.
@@ -204,10 +204,9 @@ public class RSProcedureDispatcher
           LOG.debug(String.format("Retrying to same RegionServer %s because: %s",
               serverName, e.getMessage()), e);
         }
-        submitTask(this);
+        submitTask(this, 100, TimeUnit.MILLISECONDS);
         return true;
       }
-
       // trying to send the request elsewhere instead
       LOG.warn(String.format("Failed dispatch to server=%s try=%d",
                   serverName, numberOfAttemptsSoFar), e);
