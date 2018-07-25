@@ -100,9 +100,9 @@ public class MemStoreSize {
 
   @Override
   public int hashCode() {
-    long h = 31 * this.dataSize;
-    h = h + 31 * this.heapSize;
-    h = h + 31 * this.offHeapSize;
+    long h = this.dataSize;
+    h = h * 31 + this.heapSize;
+    h = h * 31 + this.offHeapSize;
     return (int) h;
   }
 
