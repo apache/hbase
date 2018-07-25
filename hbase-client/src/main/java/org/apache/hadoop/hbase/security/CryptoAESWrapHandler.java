@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
@@ -29,7 +30,6 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.PromiseCombiner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 
-import java.io.IOException;
 
 /**
  * wrap messages with Crypto AES.
@@ -91,7 +91,7 @@ public class CryptoAESWrapHandler extends ChannelOutboundHandlerAdapter {
   @Override
   public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
     if (!queue.isEmpty()) {
-      queue.releaseAndFailAll(new IOException("Connection closed"));
+      queue.releaseAndFailAll(new ConnectionClosedException("Connection closed"));
     }
     ctx.close(promise);
   }
