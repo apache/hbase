@@ -149,7 +149,7 @@ public final class ClientExceptionsUtil {
       || e instanceof ClosedChannelException || e instanceof SyncFailedException
       || e instanceof EOFException || e instanceof TimeoutException
       || e instanceof CallTimeoutException || e instanceof ConnectionClosingException
-      || e instanceof FailedServerException);
+      || e instanceof FailedServerException || e instanceof ConnectionClosedException);
   }
 
   /**

@@ -1016,7 +1016,7 @@ public class AssignmentManager implements ServerListener {
           if (regionNode.isInState(State.OPENING, State.OPEN)) {
             if (!regionNode.getRegionLocation().equals(serverName)) {
               throw new UnexpectedStateException(regionNode.toString() +
-                "reported OPEN on server=" + serverName +
+                " reported OPEN on server=" + serverName +
                 " but state has otherwise.");
             } else if (regionNode.isInState(State.OPENING)) {
               try {
