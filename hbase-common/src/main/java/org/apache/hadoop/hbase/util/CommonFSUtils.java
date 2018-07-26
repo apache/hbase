@@ -821,6 +821,133 @@ public abstract class CommonFSUtils {
     conf.setIfUnset(dfsKey, Integer.toString(hbaseSize));
   }
 
+  private static class DfsBuilderUtility {
+    static Class<?> dfsClass = null;
+    static Method createMethod;
+    static Method overwriteMethod;
+    static Method bufferSizeMethod;
+    static Method blockSizeMethod;
+    static Method recursiveMethod;
+    static Method replicateMethod;
+    static Method replicationMethod;
+    static Method buildMethod;
+    static boolean allMethodsPresent = false;
+
+    static {
+      String dfsName = "org.apache.hadoop.hdfs.DistributedFileSystem";
+      String builderName = dfsName + "$HdfsDataOutputStreamBuilder";
+      Class<?> builderClass = null;
+
+      try {
+        dfsClass = Class.forName(dfsName);
+      } catch (ClassNotFoundException e) {
+        LOG.debug("{} not available, will not use builder API for file creation.", dfsName);
+      }
+      try {
+        builderClass = Class.forName(builderName);
+      } catch (ClassNotFoundException e) {
+        LOG.debug("{} not available, will not use builder API for file creation.", builderName);
+      }
+
+      if (dfsClass != null && builderClass != null) {
+        try {
+          createMethod = dfsClass.getMethod("createFile", Path.class);
+          overwriteMethod = builderClass.getMethod("overwrite", boolean.class);
+          bufferSizeMethod = builderClass.getMethod("bufferSize", int.class);
+          blockSizeMethod = builderClass.getMethod("blockSize", long.class);
+          recursiveMethod = builderClass.getMethod("recursive");
+          replicateMethod = builderClass.getMethod("replicate");
+          replicationMethod = builderClass.getMethod("replication", short.class);
+          buildMethod = builderClass.getMethod("build");
+
+          allMethodsPresent = true;
+          LOG.debug("Using builder API via reflection for DFS file creation.");
+        } catch (NoSuchMethodException e) {
+          LOG.debug("Could not find method on builder; will use old DFS API for file creation {}",
+              e.getMessage());
+        }
+      }
+    }
+
+    /**
+     * Attempt to use builder API via reflection to create a file with the given parameters and
+     * replication enabled.
+     */
+    static FSDataOutputStream createHelper(FileSystem fs, Path path, boolean overwritable,
+        int bufferSize, short replication, long blockSize, boolean isRecursive) throws IOException {
+      if (allMethodsPresent && dfsClass.isInstance(fs)) {
+        try {
+          Object builder;
+
+          builder = createMethod.invoke(fs, path);
+          builder = overwriteMethod.invoke(builder, overwritable);
+          builder = bufferSizeMethod.invoke(builder, bufferSize);
+          builder = blockSizeMethod.invoke(builder, blockSize);
+          if (isRecursive) {
+            builder = recursiveMethod.invoke(builder);
+          }
+          builder = replicateMethod.invoke(builder);
+          builder = replicationMethod.invoke(builder, replication);
+          return (FSDataOutputStream) buildMethod.invoke(builder);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          // Should have caught this failure during initialization, so log full trace here
+          LOG.warn("Couldn't use reflection with builder API", e);
+        }
+      }
+
+      if (isRecursive) {
+        return fs.create(path, overwritable, bufferSize, replication, blockSize, null);
+      }
+      return fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize, null);
+    }
+
+    /**
+     * Attempt to use builder API via reflection to create a file with the given parameters and
+     * replication enabled.
+     */
+    static FSDataOutputStream createHelper(FileSystem fs, Path path, boolean overwritable)
+        throws IOException {
+      if (allMethodsPresent && dfsClass.isInstance(fs)) {
+        try {
+          Object builder;
+
+          builder = createMethod.invoke(fs, path);
+          builder = overwriteMethod.invoke(builder, overwritable);
+          builder = replicateMethod.invoke(builder);
+          return (FSDataOutputStream) buildMethod.invoke(builder);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          // Should have caught this failure during initialization, so log full trace here
+          LOG.warn("Couldn't use reflection with builder API", e);
+        }
+      }
+
+      return fs.create(path, overwritable);
+    }
+  }
+
+  /**
+   * Attempt to use builder API via reflection to create a file with the given parameters and
+   * replication enabled.
+   * <p>
+   * Will not attempt to enable replication when passed an HFileSystem.
+   */
+  public static FSDataOutputStream createForWal(FileSystem fs, Path path, boolean overwritable)
+      throws IOException {
+    return DfsBuilderUtility.createHelper(fs, path, overwritable);
+  }
+
+  /**
+   * Attempt to use builder API via reflection to create a file with the given parameters and
+   * replication enabled.
+   * <p>
+   * Will not attempt to enable replication when passed an HFileSystem.
+   */
+  public static FSDataOutputStream createForWal(FileSystem fs, Path path, boolean overwritable,
+      int bufferSize, short replication, long blockSize, boolean isRecursive) throws IOException {
+    return DfsBuilderUtility.createHelper(fs, path, overwritable, bufferSize, replication,
+        blockSize, isRecursive);
+  }
+
   // Holder singleton idiom. JVM spec ensures this will be run at most once per Classloader, and
   // not until we attempt to reference it.
   private static class StreamCapabilities {
