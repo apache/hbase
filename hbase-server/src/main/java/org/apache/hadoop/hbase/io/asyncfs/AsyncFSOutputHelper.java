@@ -54,6 +54,7 @@ public final class AsyncFSOutputHelper {
     final FSDataOutputStream out;
     int bufferSize = fs.getConf().getInt(CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
       CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
+    // This is not a Distributed File System, so it won't be erasure coded; no builder API needed
     if (createParent) {
       out = fs.create(f, overwrite, bufferSize, replication, blockSize, null);
     } else {

@@ -60,7 +60,9 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
   public void close() throws IOException {
     if (this.output != null) {
       try {
-        if (!trailerWritten) writeWALTrailer();
+        if (!trailerWritten) {
+          writeWALTrailer();
+        }
         this.output.close();
       } catch (NullPointerException npe) {
         // Can get a NPE coming up from down in DFSClient$DFSOutputStream#close
@@ -73,7 +75,9 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
   @Override
   public void sync(boolean forceSync) throws IOException {
     FSDataOutputStream fsdos = this.output;
-    if (fsdos == null) return; // Presume closed
+    if (fsdos == null) {
+      return; // Presume closed
+    }
     fsdos.flush();
     if (forceSync) {
       fsdos.hsync();
@@ -90,8 +94,8 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
       short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
-    this.output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize,
-      null);
+    this.output = CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication,
+        blockSize, false);
     if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {
       if (!CommonFSUtils.hasCapability(output, "hflush")) {
         throw new StreamLacksCapabilityException("hflush");
