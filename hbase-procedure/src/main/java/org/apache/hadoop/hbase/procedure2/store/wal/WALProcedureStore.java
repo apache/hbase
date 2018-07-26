@@ -1028,7 +1028,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     long startPos = -1;
     newLogFile = getLogFilePath(logId);
     try {
-      newStream = fs.create(newLogFile, false);
+      newStream = CommonFSUtils.createForWal(fs, newLogFile, false);
     } catch (FileAlreadyExistsException e) {
       LOG.error("Log file with id=" + logId + " already exists", e);
       return false;
