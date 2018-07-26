@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.procedure2;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Locking for mutual exclusion between procedures. Used only by procedure framework internally.
@@ -48,6 +50,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class LockAndQueue implements LockStatus {
+  private static final Logger LOG = LoggerFactory.getLogger(LockAndQueue.class);
   private final ProcedureDeque queue = new ProcedureDeque();
   private Procedure<?> exclusiveLockOwnerProcedure = null;
   private int sharedLock = 0;
@@ -111,11 +114,13 @@ public class LockAndQueue implements LockStatus {
    */
   public boolean trySharedLock(Procedure<?> proc) {
     if (hasExclusiveLock() && !hasLockAccess(proc)) {
+      LOG.debug("{} acquire shared lock {} failed", proc, this, new Exception());
       return false;
     }
     // If no one holds the xlock, then we are free to hold the sharedLock
     // If the parent proc or we have already held the xlock, then we return true here as
     // xlock is more powerful then shared lock.
+    LOG.debug("{} acquire shared lock {} succeeded", proc, this, new Exception());
     sharedLock++;
     return true;
   }
@@ -123,7 +128,8 @@ public class LockAndQueue implements LockStatus {
   /**
    * @return whether we should wake the procedures waiting on the lock here.
    */
-  public boolean releaseSharedLock() {
+  public boolean releaseSharedLock(Procedure<?> proc) {
+    LOG.debug("{} release shared lock {}", proc, this, new Exception());
     // hasExclusiveLock could be true, it usually means we acquire shared lock while we or our
     // parent have held the xlock. And since there is still an exclusive lock, we do not need to
     // wake any procedures.
@@ -186,7 +192,8 @@ public class LockAndQueue implements LockStatus {
 
   @Override
   public String toString() {
-    return "exclusiveLockOwner=" + (hasExclusiveLock() ? getExclusiveLockProcIdOwner() : "NONE") +
-      ", sharedLockCount=" + getSharedLockCount() + ", waitingProcCount=" + queue.size();
+    return String.format("%08x", hashCode()) + ": exclusiveLockOwner=" +
+      (hasExclusiveLock() ? getExclusiveLockProcIdOwner() : "NONE") + ", sharedLockCount=" +
+      getSharedLockCount() + ", waitingProcCount=" + queue.size();
   }
 }
