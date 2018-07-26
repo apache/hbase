@@ -539,7 +539,9 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         filter(server -> !notClearedServers.contains(server)).
         map(ServerName::getAddress).
         collect(Collectors.toSet());
-    groupAdminServer.removeServers(clearedServer);
+    if(!clearedServer.isEmpty()) {
+      groupAdminServer.removeServers(clearedServer);
+    }
   }
 
   public void checkPermission(String request) throws IOException {
