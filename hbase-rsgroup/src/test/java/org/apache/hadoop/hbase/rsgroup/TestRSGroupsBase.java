@@ -1087,4 +1087,32 @@ public abstract class TestRSGroupsBase {
       }
     });
   }
+  @Test
+  public void testClearNotProcessedDeadServer() throws Exception {
+    LOG.info("testClearNotProcessedDeadServer");
+    NUM_DEAD_SERVERS = cluster.getClusterMetrics().getDeadServerNames().size();
+    RSGroupInfo appInfo = addGroup("deadServerGroup", 1);
+    ServerName targetServer =
+        ServerName.parseServerName(appInfo.getServers().iterator().next().toString());
+    AdminProtos.AdminService.BlockingInterface targetRS =
+        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
+    try {
+      targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
+          AdminProtos.GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
+      //stopping may cause an exception
+      //due to the connection loss
+      targetRS.stopServer(null,
+          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
+      NUM_DEAD_SERVERS ++;
+    } catch(Exception e) {
+    }
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS;
+      }
+    });
+    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(targetServer));
+    assertEquals(1, notClearedServers.size());
+  }
 }
