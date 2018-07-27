@@ -238,8 +238,21 @@ public class MergeTableRegionsProcedure
           setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS);
           break;
         case MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
-          checkClosedRegions(env);
-          setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CREATE_MERGED_REGION);
+          List<RegionInfo> ris = hasRecoveredEdits(env);
+          if (ris.isEmpty()) {
+            setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CREATE_MERGED_REGION);
+          } else {
+            // Need to reopen parent regions to pickup missed recovered.edits. Do it by creating
+            // child assigns and then stepping back to MERGE_TABLE_REGIONS_CLOSE_REGIONS.
+            // Just assign the primary regions recovering the missed recovered.edits -- no replicas.
+            // May need to cycle here a few times if heavy writes.
+            // TODO: Add an assign read-only.
+            for (RegionInfo ri: ris) {
+              LOG.info("Found recovered.edits under {}, reopen to pickup missed edits!", ri);
+              addChildProcedure(env.getAssignmentManager().createAssignProcedure(ri));
+            }
+            setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CLOSE_REGIONS);
+          }
           break;
         case MERGE_TABLE_REGIONS_CREATE_MERGED_REGION:
           createMergedRegion(env);
@@ -458,30 +471,19 @@ public class MergeTableRegionsProcedure
   }
 
   /**
-   * check the closed regions
+   * Return list of regions that have recovered.edits... usually its an empty list.
    * @param env the master env
    * @throws IOException IOException
    */
-  private void checkClosedRegions(final MasterProcedureEnv env) throws IOException {
-    checkClosedRegion(env, regionsToMerge[0]);
-    checkClosedRegion(env, regionsToMerge[1]);
-  }
-
-  /**
-   * Check whether there is recovered.edits in the closed region
-   * If any, that means this region is not closed property, we need
-   * to abort region merge to prevent data loss
-   * @param env master env
-   * @param regionInfo regioninfo
-   * @throws IOException IOException
-   */
-  private void checkClosedRegion(final MasterProcedureEnv env,
-      RegionInfo regionInfo) throws IOException {
-    if (WALSplitter.hasRecoveredEdits(env.getMasterServices().getFileSystem(),
-        env.getMasterConfiguration(), regionInfo)) {
-      throw new IOException("Recovered.edits are found in Region: " + regionInfo
-          + ", abort merge to prevent data loss");
+  private List<RegionInfo> hasRecoveredEdits(final MasterProcedureEnv env) throws IOException {
+    List<RegionInfo> ris =  new ArrayList<RegionInfo>(regionsToMerge.length);
+    for (int i = 0; i < regionsToMerge.length; i++) {
+      RegionInfo ri = regionsToMerge[i];
+      if (SplitTableRegionProcedure.hasRecoveredEdits(env, ri)) {
+        ris.add(ri);
+      }
     }
+    return ris;
   }
 
   /**
