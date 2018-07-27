@@ -179,7 +179,25 @@ Add the following to the `hbase-site.xml` file on every client:
 </property>
 ----
 
-The client environment must be logged in to Kerberos from KDC or keytab via the `kinit` command before communication with the HBase cluster will be possible.
+Before 2.2.0 version, the client environment must be logged in to Kerberos from KDC or keytab via the `kinit` command before communication with the HBase cluster will be possible.
+
+Since 2.2.0, client can specify the following configurations in `hbase-site.xml`:
+[source,xml]
+----
+<property>
+  <name>hbase.client.keytab.file</name>
+  <value>/local/path/to/client/keytab</value>
+</property>
+
+<property>
+  <name>hbase.client.keytab.principal</name>
+  <value>foo@EXAMPLE.COM</value>
+</property>
+----
+Then application can automatically do the login and credential renewal jobs without client interference.
+
+It's optional feature, client, who upgrades to 2.2.0, can still keep their login and credential renewal logic already did in older version, as long as keeping `hbase.client.keytab.file`
+and `hbase.client.keytab.principal` are unset.
 
 Be advised that if the `hbase.security.authentication` in the client- and server-side site files do not match, the client will not be able to communicate with the cluster.
 

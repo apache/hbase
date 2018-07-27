@@ -21,6 +21,9 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 
+import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
@@ -99,10 +102,15 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final AtomicReference<CompletableFuture<MasterService.Interface>> masterStubMakeFuture =
     new AtomicReference<>();
 
+  private ChoreService authService;
+
   public AsyncConnectionImpl(Configuration conf, AsyncRegistry registry, String clusterId,
       User user) {
     this.conf = conf;
     this.user = user;
+    if (user.isLoginFromKeytab()) {
+      spawnRenewalChore(user.getUGI());
+    }
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     this.rpcClient = RpcClientFactory.createClient(conf, clusterId);
@@ -119,6 +127,11 @@ class AsyncConnectionImpl implements AsyncConnection {
     }
   }
 
+  private void spawnRenewalChore(final UserGroupInformation user) {
+    authService = new ChoreService("Relogin service");
+    authService.scheduleChore(AuthUtil.getAuthRenewalChore(user));
+  }
+
   @Override
   public Configuration getConfiguration() {
     return conf;
@@ -128,6 +141,9 @@ class AsyncConnectionImpl implements AsyncConnection {
   public void close() {
     IOUtils.closeQuietly(rpcClient);
     IOUtils.closeQuietly(registry);
+    if (authService != null) {
+      authService.shutdown();
+    }
   }
 
   @Override

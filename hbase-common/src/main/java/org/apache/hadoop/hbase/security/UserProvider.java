@@ -161,6 +161,15 @@ public class UserProvider extends BaseConfigurable {
   }
 
   /**
+   * In secure environment, if a user specified his keytab and principal,
+   * a hbase client will try to login with them. Otherwise, hbase client will try to obtain
+   * ticket(through kinit) from system.
+   */
+  public boolean shouldLoginFromKeytab() {
+    return User.shouldLoginFromKeytab(this.getConf());
+  }
+
+  /**
    * @return the current user within the current execution context
    * @throws IOException if the user cannot be loaded
    */
@@ -182,7 +191,8 @@ public class UserProvider extends BaseConfigurable {
 
   /**
    * Log in the current process using the given configuration keys for the credential file and login
-   * principal.
+   * principal. It is for SPN(Service Principal Name) login. SPN should be this format,
+   * servicename/fully.qualified.domain.name@REALM.
    * <p>
    * <strong>This is only applicable when running on secure Hadoop</strong> -- see
    * org.apache.hadoop.security.SecurityUtil#login(Configuration,String,String,String). On regular
@@ -196,5 +206,16 @@ public class UserProvider extends BaseConfigurable {
   public void login(String fileConfKey, String principalConfKey, String localhost)
       throws IOException {
     User.login(getConf(), fileConfKey, principalConfKey, localhost);
+  }
+
+  /**
+   * Login with given keytab and principal. This can be used for both SPN(Service Principal Name)
+   * and UPN(User Principal Name) which format should be clientname@REALM.
+   * @param fileConfKey config name for client keytab
+   * @param principalConfKey config name for client principal
+   * @throws IOException underlying exception from UserGroupInformation.loginUserFromKeytab
+   */
+  public void login(String fileConfKey, String principalConfKey) throws IOException {
+    User.login(getConf().get(fileConfKey), getConf().get(principalConfKey));
   }
 }
