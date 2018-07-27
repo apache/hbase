@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,7 +46,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.mapreduce.ExportUtils;
 import org.apache.hadoop.hbase.mapreduce.Import;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos;
@@ -68,12 +66,9 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -128,11 +123,7 @@ public class TestSecureExport {
   @Rule
   public final TestName name = new TestName();
   private static void setUpKdcServer() throws Exception {
-    Properties conf = MiniKdc.createConf();
-    conf.put(MiniKdc.DEBUG, true);
-    File kdcFile = new File(UTIL.getDataTestDir("kdc").toUri().getPath());
-    KDC = new MiniKdc(conf, kdcFile);
-    KDC.start();
+    KDC = UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     SERVER_PRINCIPAL = USERNAME + "/" + LOCALHOST;
     HTTP_PRINCIPAL = "HTTP/" + LOCALHOST;
@@ -157,42 +148,10 @@ public class TestSecureExport {
   }
 
   private static void setUpClusterKdc() throws Exception {
-    HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
-    HBaseKerberosUtils.setPrincipalForTesting(SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    HBaseKerberosUtils.setSecuredConfiguration(UTIL.getConfiguration());
-    // if we drop support for hadoop-2.4.0 and hadoop-2.4.1,
-    // the following key should be changed.
-    // 1) DFS_NAMENODE_USER_NAME_KEY -> DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY
-    // 2) DFS_DATANODE_USER_NAME_KEY -> DFS_DATANODE_KERBEROS_PRINCIPAL_KEY
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
-        SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY,
-        SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-        KEYTAB_FILE.getAbsolutePath());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY,
-        KEYTAB_FILE.getAbsolutePath());
-    // set yarn principal
-    UTIL.getConfiguration().set(YarnConfiguration.RM_PRINCIPAL,
-        SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().set(YarnConfiguration.NM_PRINCIPAL,
-        SERVER_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-        HTTP_PRINCIPAL + "@" + KDC.getRealm());
-    UTIL.getConfiguration().setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_HTTP_POLICY_KEY,
-        HttpConfig.Policy.HTTPS_ONLY.name());
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, LOCALHOST + ":0");
-    UTIL.getConfiguration().set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, LOCALHOST + ":0");
+    HBaseKerberosUtils.setSecuredConfiguration(UTIL.getConfiguration(),
+        SERVER_PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
+    HBaseKerberosUtils.setSSLConfiguration(UTIL, TestSecureExport.class);
 
-    File keystoresDir = new File(UTIL.getDataTestDir("keystore").toUri().getPath());
-    keystoresDir.mkdirs();
-    String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestSecureExport.class);
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir.getAbsolutePath(), sslConfDir,
-        UTIL.getConfiguration(), false);
-
-    UTIL.getConfiguration().setBoolean("ignore.secure.ports.for.testing", true);
-    UserGroupInformation.setConfiguration(UTIL.getConfiguration());
     UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         UTIL.getConfiguration().get(
             CoprocessorHost.REGION_COPROCESSOR_CONF_KEY) + "," + Export.class.getName());
