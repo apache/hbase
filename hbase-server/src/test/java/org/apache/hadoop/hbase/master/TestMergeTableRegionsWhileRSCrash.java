@@ -119,12 +119,5 @@ public class TestMergeTableRegionsWhileRSCrash {
       count++;
     }
     Assert.assertEquals("There should be 10 rows!", 10, count);
-
-
-
-
   }
-
-
-
 }
