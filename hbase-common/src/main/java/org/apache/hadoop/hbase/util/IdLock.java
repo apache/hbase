@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +42,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class IdLock {
 
   /** An entry returned to the client as a lock object */
-  public static class Entry {
+  public static final class Entry {
     private final long id;
     private int numWaiters;
     private boolean locked = true;
