@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -312,6 +313,14 @@ public class ProcedureExecutor<TEnvironment> {
   private final ProcedureStore store;
 
   private final boolean checkOwnerSet;
+
+  // To prevent concurrent execution of the same procedure.
+  // For some rare cases, especially if the procedure uses ProcedureEvent, it is possible that the
+  // procedure is woken up before we finish the suspend which causes the same procedures to be
+  // executed in parallel. This does lead to some problems, see HBASE-20939&HBASE-20949, and is also
+  // a bit confusing to the developers. So here we introduce this lock to prevent the concurrent
+  // execution of the same procedure.
+  private final IdLock procExecutionLock = new IdLock();
 
   public ProcedureExecutor(final Configuration conf, final TEnvironment environment,
       final ProcedureStore store) {
@@ -1496,14 +1505,7 @@ public class ProcedureExecutor<TEnvironment> {
     // Procedures can suspend themselves. They skip out by throwing a ProcedureSuspendedException.
     // The exception is caught below and then we hurry to the exit without disturbing state. The
     // idea is that the processing of this procedure will be unsuspended later by an external event
-    // such the report of a region open. TODO: Currently, its possible for two worker threads
-    // to be working on the same procedure concurrently (locking in procedures is NOT about
-    // concurrency but about tying an entity to a procedure; i.e. a region to a particular
-    // procedure instance). This can make for issues if both threads are changing state.
-    // See env.getProcedureScheduler().wakeEvent(regionNode.getProcedureEvent());
-    // in RegionTransitionProcedure#reportTransition for example of Procedure putting
-    // itself back on the scheduler making it possible for two threads running against
-    // the one Procedure. Might be ok if they are both doing different, idempotent sections.
+    // such the report of a region open.
     boolean suspended = false;
 
     // Whether to 're-' -execute; run through the loop again.
@@ -1798,12 +1800,14 @@ public class ProcedureExecutor<TEnvironment> {
           LOG.trace("Execute pid={} runningCount={}, activeCount={}", proc.getProcId(),
             runningCount, activeCount);
           executionStartTime.set(EnvironmentEdgeManager.currentTime());
+          IdLock.Entry lockEntry = procExecutionLock.getLockEntry(proc.getProcId());
           try {
             executeProcedure(proc);
           } catch (AssertionError e) {
             LOG.info("ASSERT pid=" + proc.getProcId(), e);
             throw e;
           } finally {
+            procExecutionLock.releaseLockEntry(lockEntry);
             activeCount = activeExecutorCount.decrementAndGet();
             runningCount = store.setRunningProcedureCount(activeCount);
             LOG.trace("Halt pid={} runningCount={}, activeCount={}", proc.getProcId(),
