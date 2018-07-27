@@ -17,18 +17,24 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.security.UserGroupInformation;
-
-import java.io.IOException;
-import java.net.InetAddress;
 
 @InterfaceAudience.Private
 public class HBaseKerberosUtils {
@@ -99,6 +105,19 @@ public class HBaseKerberosUtils {
     return conf;
   }
 
+  /**
+   * Set up configuration for a secure HDFS+HBase cluster.
+   * @param conf configuration object.
+   * @param servicePrincipal service principal used by NN, HM and RS.
+   * @param spnegoPrincipal SPNEGO principal used by NN web UI.
+   */
+  public static void setSecuredConfiguration(Configuration conf,
+      String servicePrincipal, String spnegoPrincipal) {
+    setPrincipalForTesting(servicePrincipal);
+    setSecuredConfiguration(conf);
+    setSecuredHadoopConfiguration(conf, spnegoPrincipal);
+  }
+
   public static void setSecuredConfiguration(Configuration conf) {
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     conf.set(User.HBASE_SECURITY_CONF_KEY, "kerberos");
@@ -106,6 +125,53 @@ public class HBaseKerberosUtils {
     conf.set(KRB_KEYTAB_FILE, System.getProperty(KRB_KEYTAB_FILE));
     conf.set(KRB_PRINCIPAL, System.getProperty(KRB_PRINCIPAL));
     conf.set(MASTER_KRB_PRINCIPAL, System.getProperty(KRB_PRINCIPAL));
+  }
+
+  private static void setSecuredHadoopConfiguration(Configuration conf,
+      String spnegoServerPrincipal) {
+    // if we drop support for hadoop-2.4.0 and hadoop-2.4.1,
+    // the following key should be changed.
+    // 1) DFS_NAMENODE_USER_NAME_KEY -> DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY
+    // 2) DFS_DATANODE_USER_NAME_KEY -> DFS_DATANODE_KERBEROS_PRINCIPAL_KEY
+    String serverPrincipal = System.getProperty(KRB_PRINCIPAL);
+    String keytabFilePath = System.getProperty(KRB_KEYTAB_FILE);
+    // HDFS
+    conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, serverPrincipal);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, keytabFilePath);
+    conf.set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, serverPrincipal);
+    conf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, keytabFilePath);
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    // YARN
+    conf.set(YarnConfiguration.RM_PRINCIPAL, KRB_PRINCIPAL);
+    conf.set(YarnConfiguration.NM_PRINCIPAL, KRB_PRINCIPAL);
+
+    if (spnegoServerPrincipal != null) {
+      conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+          spnegoServerPrincipal);
+    }
+
+    conf.setBoolean("ignore.secure.ports.for.testing", true);
+
+    UserGroupInformation.setConfiguration(conf);
+  }
+
+  /**
+   * Set up SSL configuration for HDFS NameNode and DataNode.
+   * @param utility a HBaseTestingUtility object.
+   * @param clazz the caller test class.
+   * @throws Exception if unable to set up SSL configuration
+   */
+  public static void setSSLConfiguration(HBaseTestingUtility utility, Class clazz)
+      throws Exception {
+    Configuration conf = utility.getConfiguration();
+    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
+
+    File keystoresDir = new File(utility.getDataTestDir("keystore").toUri().getPath());
+    keystoresDir.mkdirs();
+    String sslConfDir = KeyStoreTestUtil.getClasspathDir(clazz);
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir.getAbsolutePath(), sslConfDir, conf, false);
   }
 
   public static UserGroupInformation loginAndReturnUGI(Configuration conf, String username)

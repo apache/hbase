@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.http.HttpHeaders;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -131,25 +130,7 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     KerberosName.setRules("DEFAULT");
 
     HBaseKerberosUtils.setKeytabFileForTesting(serverKeytab.getAbsolutePath());
-    HBaseKerberosUtils.setPrincipalForTesting(serverPrincipal);
-    HBaseKerberosUtils.setSecuredConfiguration(conf);
-
-    // if we drop support for hadoop-2.4.0 and hadoop-2.4.1,
-    // the following key should be changed.
-    // 1) DFS_NAMENODE_USER_NAME_KEY -> DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY
-    // 2) DFS_DATANODE_USER_NAME_KEY -> DFS_DATANODE_KERBEROS_PRINCIPAL_KEY
-    conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, serverPrincipal);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, serverKeytab.getAbsolutePath());
-    conf.set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, serverPrincipal);
-    conf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, serverKeytab.getAbsolutePath());
-
-    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-
-    conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, spnegoServerPrincipal);
-    conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
-        spnegoServerKeytab.getAbsolutePath());
-
-    conf.setBoolean("ignore.secure.ports.for.testing", true);
+    HBaseKerberosUtils.setSecuredConfiguration(conf, serverPrincipal, spnegoServerPrincipal);
 
     conf.setBoolean(THRIFT_SUPPORT_PROXYUSER_KEY, true);
     conf.setBoolean(USE_HTTP_CONF_KEY, true);
