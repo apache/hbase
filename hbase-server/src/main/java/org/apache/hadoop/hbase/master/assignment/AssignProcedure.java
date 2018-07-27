@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * failure. Should we ignore rollback calls to Assign/Unassign then? Or just
  * remove rollback here?
  */
+// TODO: Add being able to assign a region to open read-only.
 @InterfaceAudience.Private
 public class AssignProcedure extends RegionTransitionProcedure {
   private static final Logger LOG = LoggerFactory.getLogger(AssignProcedure.class);
