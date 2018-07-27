@@ -124,7 +124,7 @@ public class ReopenTableRegionsProcedure
   @Override
   protected void rollbackState(MasterProcedureEnv env, ReopenTableRegionsState state)
       throws IOException, InterruptedException {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("unhandled state=" + state);
   }
 
   @Override

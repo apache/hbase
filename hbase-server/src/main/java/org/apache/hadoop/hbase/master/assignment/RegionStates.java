@@ -643,6 +643,12 @@ public class RegionStates {
    */
   public HRegionLocation checkReopened(HRegionLocation oldLoc) {
     RegionStateNode node = getRegionStateNode(oldLoc.getRegion());
+    // HBASE-20921
+    // if the oldLoc's state node does not exist, that means the region is
+    // merged or split, no need to check it
+    if (node == null) {
+      return null;
+    }
     synchronized (node) {
       if (oldLoc.getSeqNum() >= 0) {
         // in OPEN state before
