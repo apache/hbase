@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -36,6 +37,8 @@ public class HBaseKerberosUtils {
   public static final String KRB_PRINCIPAL = "hbase.regionserver.kerberos.principal";
   public static final String MASTER_KRB_PRINCIPAL = "hbase.master.kerberos.principal";
   public static final String KRB_KEYTAB_FILE = "hbase.regionserver.keytab.file";
+  public static final String CLIENT_PRINCIPAL = AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL;
+  public static final String CLIENT_KEYTAB = AuthUtil.HBASE_CLIENT_KEYTAB_FILE;
 
   public static boolean isKerberosPropertySetted() {
     String krbPrincipal = System.getProperty(KRB_PRINCIPAL);
@@ -54,6 +57,14 @@ public class HBaseKerberosUtils {
     setSystemProperty(KRB_KEYTAB_FILE, keytabFile);
   }
 
+  public static void setClientPrincipalForTesting(String clientPrincipal) {
+    setSystemProperty(CLIENT_PRINCIPAL, clientPrincipal);
+  }
+
+  public static void setClientKeytabForTesting(String clientKeytab) {
+    setSystemProperty(CLIENT_KEYTAB, clientKeytab);
+  }
+
   public static void setSystemProperty(String propertyName, String propertyValue) {
     System.setProperty(propertyName, propertyValue);
   }
@@ -64,6 +75,14 @@ public class HBaseKerberosUtils {
 
   public static String getPrincipalForTesting() {
     return System.getProperty(KRB_PRINCIPAL);
+  }
+
+  public static String getClientPrincipalForTesting() {
+    return System.getProperty(CLIENT_PRINCIPAL);
+  }
+
+  public static String getClientKeytabForTesting() {
+    return System.getProperty(CLIENT_KEYTAB);
   }
 
   public static Configuration getConfigurationWoPrincipal() {

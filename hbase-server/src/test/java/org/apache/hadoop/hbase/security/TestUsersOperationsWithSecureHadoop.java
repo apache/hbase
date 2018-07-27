@@ -17,17 +17,21 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getConfigurationWoPrincipal;
+import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getClientKeytabForTesting;
+import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getClientPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -57,12 +61,18 @@ public class TestUsersOperationsWithSecureHadoop {
 
   private static String PRINCIPAL;
 
+  private static String CLIENT_NAME;
+
   @BeforeClass
   public static void setUp() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
-    KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
+    CLIENT_NAME = "foo";
+    KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, CLIENT_NAME);
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
+    HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
+    HBaseKerberosUtils.setClientPrincipalForTesting(CLIENT_NAME + "@" + KDC.getRealm());
+    HBaseKerberosUtils.setClientKeytabForTesting(KEYTAB_FILE.getAbsolutePath());
   }
 
   @AfterClass
@@ -84,13 +94,8 @@ public class TestUsersOperationsWithSecureHadoop {
    */
   @Test
   public void testUserLoginInSecureHadoop() throws Exception {
-    UserGroupInformation defaultLogin = UserGroupInformation.getLoginUser();
-    Configuration conf = getConfigurationWoPrincipal();
-    User.login(conf, HBaseKerberosUtils.KRB_KEYTAB_FILE, HBaseKerberosUtils.KRB_PRINCIPAL,
-      "localhost");
-
-    UserGroupInformation failLogin = UserGroupInformation.getLoginUser();
-    assertTrue("ugi should be the same in case fail login", defaultLogin.equals(failLogin));
+    // Default login is system user.
+    UserGroupInformation defaultLogin = UserGroupInformation.getCurrentUser();
 
     String nnKeyTab = getKeytabFileForTesting();
     String dnPrincipal = getPrincipalForTesting();
@@ -98,7 +103,7 @@ public class TestUsersOperationsWithSecureHadoop {
     assertNotNull("KerberosKeytab was not specified", nnKeyTab);
     assertNotNull("KerberosPrincipal was not specified", dnPrincipal);
 
-    conf = getSecuredConfiguration();
+    Configuration conf = getSecuredConfiguration();
     UserGroupInformation.setConfiguration(conf);
 
     User.login(conf, HBaseKerberosUtils.KRB_KEYTAB_FILE, HBaseKerberosUtils.KRB_PRINCIPAL,
@@ -106,5 +111,41 @@ public class TestUsersOperationsWithSecureHadoop {
     UserGroupInformation successLogin = UserGroupInformation.getLoginUser();
     assertFalse("ugi should be different in in case success login",
       defaultLogin.equals(successLogin));
+  }
+
+  @Test
+  public void testLoginWithUserKeytabAndPrincipal() throws Exception {
+    String clientKeytab = getClientKeytabForTesting();
+    String clientPrincipal = getClientPrincipalForTesting();
+    assertNotNull("Path for client keytab is not specified.", clientKeytab);
+    assertNotNull("Client principal is not specified.", clientPrincipal);
+
+    Configuration conf = getSecuredConfiguration();
+    conf.set(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, clientKeytab);
+    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
+    UserGroupInformation.setConfiguration(conf);
+
+    UserProvider provider = UserProvider.instantiate(conf);
+    assertTrue("Client principal or keytab is empty", provider.shouldLoginFromKeytab());
+
+    provider.login(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL);
+    User loginUser = provider.getCurrent();
+    assertEquals(CLIENT_NAME, loginUser.getShortName());
+    assertEquals(getClientPrincipalForTesting(), loginUser.getName());
+  }
+
+  @Test
+  public void testAuthUtilLogin() throws Exception {
+    String clientKeytab = getClientKeytabForTesting();
+    String clientPrincipal = getClientPrincipalForTesting();
+    Configuration conf = getSecuredConfiguration();
+    conf.set(AuthUtil.HBASE_CLIENT_KEYTAB_FILE, clientKeytab);
+    conf.set(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL, clientPrincipal);
+    UserGroupInformation.setConfiguration(conf);
+
+    User user = AuthUtil.loginClient(conf);
+    assertTrue(user.isLoginFromKeytab());
+    assertEquals(CLIENT_NAME, user.getShortName());
+    assertEquals(getClientPrincipalForTesting(), user.getName());
   }
 }

@@ -46,7 +46,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -76,6 +78,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -215,6 +218,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   /** lock guards against multiple threads trying to query the meta region at the same time */
   private final ReentrantLock userRegionLock = new ReentrantLock();
 
+  private ChoreService authService;
+
   /**
    * constructor
    * @param conf Configuration object
@@ -223,6 +228,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
                            ExecutorService pool, User user) throws IOException {
     this.conf = conf;
     this.user = user;
+    if (user != null && user.isLoginFromKeytab()) {
+      spawnRenewalChore(user.getUGI());
+    }
     this.batchPool = pool;
     this.connectionConfig = new ConnectionConfiguration(conf);
     this.closed = false;
@@ -310,6 +318,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       close();
       throw e;
     }
+  }
+
+  private void spawnRenewalChore(final UserGroupInformation user) {
+    authService = new ChoreService("Relogin service");
+    authService.scheduleChore(AuthUtil.getAuthRenewalChore(user));
   }
 
   /**
@@ -1924,6 +1937,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
     if (rpcClient != null) {
       rpcClient.close();
+    }
+    if (authService != null) {
+      authService.shutdown();
     }
   }
 

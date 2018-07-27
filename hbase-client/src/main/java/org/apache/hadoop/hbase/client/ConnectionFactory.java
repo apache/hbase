@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
@@ -47,6 +49,16 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  * }
  * </pre>
  *
+ * Since 2.2.0, Connection created by ConnectionFactory can contain user-specified kerberos
+ * credentials if caller has following two configurations set:
+ * <ul>
+ *   <li>hbase.client.keytab.file, points to a valid keytab on the local filesystem
+ *   <li>hbase.client.kerberos.principal, gives the Kerberos principal to use
+ * </ul>
+ * By this way, caller can directly connect to kerberized cluster without caring login and
+ * credentials renewal logic in application.
+ * <pre>
+ * </pre>
  * Similarly, {@link Connection} also returns {@link Admin} and {@link RegionLocator}
  * implementations.
  * @see Connection
@@ -84,7 +96,8 @@ public class ConnectionFactory {
    * @return Connection object for <code>conf</code>
    */
   public static Connection createConnection() throws IOException {
-    return createConnection(HBaseConfiguration.create(), null, null);
+    Configuration conf = HBaseConfiguration.create();
+    return createConnection(conf, null, AuthUtil.loginClient(conf));
   }
 
   /**
@@ -111,7 +124,7 @@ public class ConnectionFactory {
    * @return Connection object for <code>conf</code>
    */
   public static Connection createConnection(Configuration conf) throws IOException {
-    return createConnection(conf, null, null);
+    return createConnection(conf, null, AuthUtil.loginClient(conf));
   }
 
   /**
@@ -140,7 +153,7 @@ public class ConnectionFactory {
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool)
       throws IOException {
-    return createConnection(conf, pool, null);
+    return createConnection(conf, pool, AuthUtil.loginClient(conf));
   }
 
   /**
@@ -196,13 +209,8 @@ public class ConnectionFactory {
    * @param pool the thread pool to use for batch operations
    * @return Connection object for <code>conf</code>
    */
-  public static Connection createConnection(Configuration conf, ExecutorService pool, User user)
-      throws IOException {
-    if (user == null) {
-      UserProvider provider = UserProvider.instantiate(conf);
-      user = provider.getCurrent();
-    }
-
+  public static Connection createConnection(Configuration conf, ExecutorService pool,
+    final User user) throws IOException {
     String className = conf.get(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
       ConnectionImplementation.class.getName());
     Class<?> clazz;
@@ -216,7 +224,9 @@ public class ConnectionFactory {
       Constructor<?> constructor = clazz.getDeclaredConstructor(Configuration.class,
         ExecutorService.class, User.class);
       constructor.setAccessible(true);
-      return (Connection) constructor.newInstance(conf, pool, user);
+      return user.runAs(
+        (PrivilegedExceptionAction<Connection>)() ->
+          (Connection) constructor.newInstance(conf, pool, user));
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -243,7 +253,7 @@ public class ConnectionFactory {
   public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf) {
     User user;
     try {
-      user = UserProvider.instantiate(conf).getCurrent();
+      user = AuthUtil.loginClient(conf);
     } catch (IOException e) {
       CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
       future.completeExceptionally(e);
@@ -269,7 +279,7 @@ public class ConnectionFactory {
    * @throws IOException
    */
   public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf,
-      User user) {
+      final User user) {
     CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
     AsyncRegistry registry = AsyncRegistryFactory.getRegistry(conf);
     registry.getClusterId().whenComplete((clusterId, error) -> {
@@ -284,7 +294,10 @@ public class ConnectionFactory {
       Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
         AsyncConnectionImpl.class, AsyncConnection.class);
       try {
-        future.complete(ReflectionUtils.newInstance(clazz, conf, registry, clusterId, user));
+        future.complete(
+          user.runAs((PrivilegedExceptionAction<? extends AsyncConnection>)() ->
+            ReflectionUtils.newInstance(clazz, conf, registry, clusterId, user))
+        );
       } catch (Exception e) {
         future.completeExceptionally(e);
       }

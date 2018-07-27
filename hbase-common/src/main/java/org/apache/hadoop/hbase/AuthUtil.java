@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.Strings;
@@ -65,45 +66,165 @@ import org.slf4j.LoggerFactory;
  *
  * See the "Running Canary in a Kerberos-enabled Cluster" section of the HBase Reference Guide for
  * an example of configuring a user of this Auth Chore to run on a secure cluster.
+ * <pre>
+ * </pre>
+ * This class will be internal use only from 2.2.0 version, and will transparently work
+ * for kerberized applications. For more, please refer
+ * <a href="http://hbase.apache.org/book.html#hbase.secure.configuration">Client-side Configuration for Secure Operation</a>
+ *
+ * @deprecated since 2.2.0, to be removed in hbase-3.0.0.
  */
+@Deprecated
 @InterfaceAudience.Public
-public class AuthUtil {
+public final class AuthUtil {
+  // TODO: Mark this class InterfaceAudience.Private from 3.0.0
   private static final Logger LOG = LoggerFactory.getLogger(AuthUtil.class);
 
   /** Prefix character to denote group names */
   private static final String GROUP_PREFIX = "@";
+
+  /** Client keytab file */
+  public static final String HBASE_CLIENT_KEYTAB_FILE = "hbase.client.keytab.file";
+
+  /** Client principal */
+  public static final String HBASE_CLIENT_KERBEROS_PRINCIPAL = "hbase.client.keytab.principal";
 
   private AuthUtil() {
     super();
   }
 
   /**
+   * For kerberized cluster, return login user (from kinit or from keytab if specified).
+   * For non-kerberized cluster, return system user.
+   * @param conf configuartion file
+   * @return user
+   * @throws IOException login exception
+   */
+  @InterfaceAudience.Private
+  public static User loginClient(Configuration conf) throws IOException {
+    UserProvider provider = UserProvider.instantiate(conf);
+    User user = provider.getCurrent();
+    boolean securityOn = provider.isHBaseSecurityEnabled() && provider.isHadoopSecurityEnabled();
+
+    if (securityOn) {
+      boolean fromKeytab = provider.shouldLoginFromKeytab();
+      if (user.getUGI().hasKerberosCredentials()) {
+        // There's already a login user.
+        // But we should avoid misuse credentials which is a dangerous security issue,
+        // so here check whether user specified a keytab and a principal:
+        // 1. Yes, check if user principal match.
+        //    a. match, just return.
+        //    b. mismatch, login using keytab.
+        // 2. No, user may login through kinit, this is the old way, also just return.
+        if (fromKeytab) {
+          return checkPrincipalMatch(conf, user.getUGI().getUserName()) ? user :
+            loginFromKeytabAndReturnUser(provider);
+        }
+        return user;
+      } else if (fromKeytab) {
+        // Kerberos is on and client specify a keytab and principal, but client doesn't login yet.
+        return loginFromKeytabAndReturnUser(provider);
+      }
+    }
+    return user;
+  }
+
+  private static boolean checkPrincipalMatch(Configuration conf, String loginUserName) {
+    String configuredUserName = conf.get(HBASE_CLIENT_KERBEROS_PRINCIPAL);
+    boolean match = configuredUserName.equals(loginUserName);
+    if (!match) {
+      LOG.warn("Trying to login with a different user: {}, existed user is {}.",
+        configuredUserName, loginUserName);
+    }
+    return match;
+  }
+
+  private static User loginFromKeytabAndReturnUser(UserProvider provider) throws IOException {
+    try {
+      provider.login(HBASE_CLIENT_KEYTAB_FILE, HBASE_CLIENT_KERBEROS_PRINCIPAL);
+    } catch (IOException ioe) {
+      LOG.error("Error while trying to login as user {} through {}, with message: {}.",
+        HBASE_CLIENT_KERBEROS_PRINCIPAL, HBASE_CLIENT_KEYTAB_FILE,
+        ioe.getMessage());
+      throw ioe;
+    }
+    return provider.getCurrent();
+  }
+
+  /**
+   * For kerberized cluster, return login user (from kinit or from keytab).
+   * Principal should be the following format: name/fully.qualified.domain.name@REALM.
+   * For non-kerberized cluster, return system user.
+   * <p>
+   * NOT recommend to use to method unless you're sure what you're doing, it is for canary only.
+   * Please use User#loginClient.
+   * @param conf configuration file
+   * @return user
+   * @throws IOException login exception
+   */
+  private static User loginClientAsService(Configuration conf) throws IOException {
+    UserProvider provider = UserProvider.instantiate(conf);
+    if (provider.isHBaseSecurityEnabled() && provider.isHadoopSecurityEnabled()) {
+      try {
+        if (provider.shouldLoginFromKeytab()) {
+          String host = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+            conf.get("hbase.client.dns.interface", "default"),
+            conf.get("hbase.client.dns.nameserver", "default")));
+          provider.login(HBASE_CLIENT_KEYTAB_FILE, HBASE_CLIENT_KERBEROS_PRINCIPAL, host);
+        }
+      } catch (UnknownHostException e) {
+        LOG.error("Error resolving host name: " + e.getMessage(), e);
+        throw e;
+      } catch (IOException e) {
+        LOG.error("Error while trying to perform the initial login: " + e.getMessage(), e);
+        throw e;
+      }
+    }
+    return provider.getCurrent();
+  }
+
+  /**
+   * Checks if security is enabled and if so, launches chore for refreshing kerberos ticket.
+   * @return a ScheduledChore for renewals.
+   */
+  @InterfaceAudience.Private
+  public static ScheduledChore getAuthRenewalChore(final UserGroupInformation user) {
+    if (!user.hasKerberosCredentials()) {
+      return null;
+    }
+
+    Stoppable stoppable = createDummyStoppable();
+    // if you're in debug mode this is useful to avoid getting spammed by the getTGT()
+    // you can increase this, keeping in mind that the default refresh window is 0.8
+    // e.g. 5min tgt * 0.8 = 4min refresh so interval is better be way less than 1min
+    final int CHECK_TGT_INTERVAL = 30 * 1000; // 30sec
+    return new ScheduledChore("RefreshCredentials", stoppable, CHECK_TGT_INTERVAL) {
+      @Override
+      protected void chore() {
+        try {
+          user.checkTGTAndReloginFromKeytab();
+        } catch (IOException e) {
+          LOG.error("Got exception while trying to refresh credentials: " + e.getMessage(), e);
+        }
+      }
+    };
+  }
+
+  /**
    * Checks if security is enabled and if so, launches chore for refreshing kerberos ticket.
    * @param conf the hbase service configuration
    * @return a ScheduledChore for renewals, if needed, and null otherwise.
+   * @deprecated Deprecated since 2.2.0, this method will be internal use only after 3.0.0.
    */
+  @Deprecated
   public static ScheduledChore getAuthChore(Configuration conf) throws IOException {
-    UserProvider userProvider = UserProvider.instantiate(conf);
-    // login the principal (if using secure Hadoop)
-    boolean securityEnabled =
-        userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled();
-    if (!securityEnabled) return null;
-    String host = null;
-    try {
-      host = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-          conf.get("hbase.client.dns.interface", "default"),
-          conf.get("hbase.client.dns.nameserver", "default")));
-      userProvider.login("hbase.client.keytab.file", "hbase.client.kerberos.principal", host);
-    } catch (UnknownHostException e) {
-      LOG.error("Error resolving host name: " + e.getMessage(), e);
-      throw e;
-    } catch (IOException e) {
-      LOG.error("Error while trying to perform the initial login: " + e.getMessage(), e);
-      throw e;
-    }
+    // TODO: Mark this method InterfaceAudience.Private from 3.0.0
+    User user = loginClientAsService(conf);
+    return getAuthRenewalChore(user.getUGI());
+  }
 
-    final UserGroupInformation ugi = userProvider.getCurrent().getUGI();
-    Stoppable stoppable = new Stoppable() {
+  private static Stoppable createDummyStoppable() {
+    return new Stoppable() {
       private volatile boolean isStopped = false;
 
       @Override
@@ -116,25 +237,6 @@ public class AuthUtil {
         return isStopped;
       }
     };
-
-    // if you're in debug mode this is useful to avoid getting spammed by the getTGT()
-    // you can increase this, keeping in mind that the default refresh window is 0.8
-    // e.g. 5min tgt * 0.8 = 4min refresh so interval is better be way less than 1min
-    final int CHECK_TGT_INTERVAL = 30 * 1000; // 30sec
-
-    ScheduledChore refreshCredentials =
-        new ScheduledChore("RefreshCredentials", stoppable, CHECK_TGT_INTERVAL) {
-      @Override
-      protected void chore() {
-        try {
-          ugi.checkTGTAndReloginFromKeytab();
-        } catch (IOException e) {
-          LOG.error("Got exception while trying to refresh credentials: " + e.getMessage(), e);
-        }
-      }
-    };
-
-    return refreshCredentials;
   }
 
   /**
