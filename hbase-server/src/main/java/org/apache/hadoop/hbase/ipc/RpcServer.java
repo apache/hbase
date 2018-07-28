@@ -1557,7 +1557,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
      * @throws IOException
      * @throws InterruptedException
      */
-    public int readAndProcess() throws IOException, InterruptedException {
+    public synchronized int readAndProcess() throws IOException, InterruptedException {
       // If we have not read the connection setup preamble, look to see if that is on the wire.
       if (!connectionPreambleRead) {
         int count = readPreamble();
