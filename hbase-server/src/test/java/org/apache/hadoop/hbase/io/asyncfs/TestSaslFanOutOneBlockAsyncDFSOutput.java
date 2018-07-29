@@ -63,6 +63,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
@@ -78,6 +79,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
 @RunWith(Parameterized.class)
 @Category({ MiscTests.class, LargeTests.class })
+@Ignore
 public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   @ClassRule
