@@ -599,7 +599,7 @@ $ jps
 ----
 ====
 +
-.`node-a` `jps` Output
+.`node-c` `jps` Output
 ====
 ----
 $ jps
