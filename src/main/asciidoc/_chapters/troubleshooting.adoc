@@ -850,9 +850,9 @@ Snapshots::
   When you create a snapshot, HBase retains everything it needs to recreate the table's
   state at that time of the snapshot. This includes deleted cells or expired versions.
   For this reason, your snapshot usage pattern should be well-planned, and you should
-  prune snapshots that you no longer need. Snapshots are stored in `/hbase/.snapshots`,
+  prune snapshots that you no longer need. Snapshots are stored in `/hbase/.hbase-snapshot`,
   and archives needed to restore snapshots are stored in
-  `/hbase/.archive/<_tablename_>/<_region_>/<_column_family_>/`.
+  `/hbase/archive/<_tablename_>/<_region_>/<_column_family_>/`.
 
   *Do not* manage snapshots or archives manually via HDFS. HBase provides APIs and
   HBase Shell commands for managing them. For more information, see <<ops.snapshots>>.
