@@ -147,7 +147,7 @@ public class MetaScanner {
     // managed connections getting tables.  Leaving this as it is for now. Will
     // revisit when inclined to change all tests.  User code probaby makes use of
     // managed connections too so don't change it till post hbase 1.0.
-    try (Table metaTable = new HTable(TableName.META_TABLE_NAME, connection, null)) {
+    try (Table metaTable = new HTable(metaTableName, connection, null)) {
       if (row != null) {
         // Scan starting at a particular row in a particular table
         Result startRowResult = getClosestRowOrBefore(metaTable, tableName, row,
