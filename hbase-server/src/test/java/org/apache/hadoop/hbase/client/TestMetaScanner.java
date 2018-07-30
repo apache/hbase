@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
@@ -106,6 +107,15 @@ public class TestMetaScanner {
     doReturn(true).when(visitor).processRow((Result) anyObject());
     MetaScanner.metaScan(connection, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1);
     verify(visitor, times(1)).processRow((Result) anyObject());
+
+    // Verifying whether passed meta is honored by call or not
+    try {
+      MetaScanner.metaScan(connection, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1,
+        TableName.valueOf("invalidMeta"));
+      Assert.fail("Passed invalid meta table name but it is not honored");
+    } catch (TableNotFoundException e) {
+    }
+
     table.close();
   }
 
