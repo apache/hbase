@@ -76,7 +76,10 @@ def get_bad_tests(build_url, is_yetus):
     Returns None if can't get maven output from the build or if there is any other error.
     """
     logger.info("Analyzing %s", build_url)
-    response = requests.get(build_url + "/api/json").json()
+    needed_fields="_class,building"
+    if is_yetus:
+        needed_fields+=",artifacts[fileName,relativePath]"
+    response = requests.get(build_url + "/api/json?tree=" + needed_fields).json()
     if response["building"]:
         logger.info("Skipping this build since it is in progress.")
         return {}
@@ -125,7 +128,11 @@ def expand_multi_config_projects(cli_args):
         excluded_builds = []
         if excluded_builds_arg is not None and excluded_builds_arg[i] != "None":
             excluded_builds = [int(x) for x in excluded_builds_arg[i].split(",")]
-        response = requests.get(job_url + "/api/json").json()
+        request = requests.get(job_url + "/api/json?tree=_class,activeConfigurations%5Burl%5D")
+        if request.status_code != 200:
+            raise Exception("Failed to get job information from jenkins for url '" + job_url +
+                            "'. Jenkins returned HTTP status " + str(request.status_code))
+        response = request.json()
         if response.has_key("activeConfigurations"):
             for config in response["activeConfigurations"]:
                 final_expanded_urls.append({'url':config["url"], 'max_builds': max_builds,
@@ -152,7 +159,7 @@ expanded_urls = expand_multi_config_projects(args)
 for url_max_build in expanded_urls:
     url = url_max_build["url"]
     excludes = url_max_build["excludes"]
-    json_response = requests.get(url + "/api/json").json()
+    json_response = requests.get(url + "/api/json?tree=id,builds%5Bnumber,url%5D").json()
     if json_response.has_key("builds"):
         builds = json_response["builds"]
         logger.info("Analyzing job: %s", url)
