@@ -224,8 +224,8 @@ Use the following legend to interpret this table:
 |Hadoop-2.5.x | S | S | X | X | X
 |Hadoop-2.6.0 | X | X | X | X | X
 |Hadoop-2.6.1+ | S | S | X | S | X
-|Hadoop-2.7.0 | X | X | X | X | X
-|Hadoop-2.7.1+ | S | S | S | S | S
+|Hadoop-2.7.[0-6] | X | X | X | X | X
+|Hadoop-2.7.7+ | S | S | S | S | S
 |Hadoop-2.8.[0-1] | X | X | X | X | X
 |Hadoop-2.8.2 | NT | NT | NT | NT | NT
 |Hadoop-2.8.3+ | NT | NT | NT | S | S
@@ -256,7 +256,13 @@ data loss. This patch is present in Apache Hadoop releases 2.6.1+.
 .Hadoop 2.y.0 Releases
 [TIP]
 ====
-Starting around the time of Hadoop version 2.7.0, the Hadoop PMC got into the habit of calling out new minor releases on their major version 2 release line as not stable / production ready. As such, HBase expressly advises downstream users to avoid running on top of these releases. Note that additionally the 2.8.1 release was given the same caveat by the Hadoop PMC. For reference, see the release announcements for link:https://s.apache.org/hadoop-2.7.0-announcement[Apache Hadoop 2.7.0], link:https://s.apache.org/hadoop-2.8.0-announcement[Apache Hadoop 2.8.0], link:https://s.apache.org/hadoop-2.8.1-announcement[Apache Hadoop 2.8.1], and link:https://s.apache.org/hadoop-2.9.0-announcement[Apache Hadoop 2.9.0].
+Starting around the time of Hadoop version;2.7.0, the Hadoop PMC got into the habit of calling out new minor releases on their major version 2
+release line as not stable / production ready. As such, HBase expressly advises downstream users to avoid running on top of these releases.
+We used to support 2.7.1-2.7.6 but 2.7.7 was released to address a security vulnerability, `CVE-2018-8009`
+(See link:https://lists.apache.org/thread.html/c95221be6cab420f909d7a531240540576f8eee83f7c7607b7b2d3a7@%3Cgeneral.hadoop.apache.org%3E[Announcing; Apache Hadoop 2.7.7]),
+and it includes a fix for a JDK8 issue link:https://issues.apache.org/jira/browse/HADOOP-15473[HADOOP-15473 Configure serialFilter in KeyProvider to avoid UnrecoverableKeyException caused by JDK-8189997]
+so we recommend you upgrade.
+Note that additionally the 2.8.1 release was given the same caveat by the Hadoop PMC. For reference, see the release announcements for link:https://s.apache.org/hadoop-2.7.0-announcement[Apache Hadoop 2.7.0], link:https://s.apache.org/hadoop-2.8.0-announcement[Apache Hadoop 2.8.0], link:https://s.apache.org/hadoop-2.8.1-announcement[Apache Hadoop 2.8.1], and link:https://s.apache.org/hadoop-2.9.0-announcement[Apache Hadoop 2.9.0].
 ====
 
 .Hadoop 3.0.x Releases
