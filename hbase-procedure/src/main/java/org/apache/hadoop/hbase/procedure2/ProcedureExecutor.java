@@ -1500,7 +1500,7 @@ public class ProcedureExecutor<TEnvironment> {
   private void execProcedure(RootProcedureState<TEnvironment> procStack,
       Procedure<TEnvironment> procedure) {
     Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE,
-      procedure.toString());
+        "NOT RUNNABLE! " + procedure.toString());
 
     // Procedures can suspend themselves. They skip out by throwing a ProcedureSuspendedException.
     // The exception is caught below and then we hurry to the exit without disturbing state. The
