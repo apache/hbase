@@ -142,7 +142,7 @@ public class DisableTableProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-disable-table", e);
       } else {
-        LOG.warn("Retriable error trying to disable table={} (in state={})", tableName, state, e);
+        LOG.warn("Retryable error in {}", this, e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -256,7 +256,7 @@ public class DisableTableProcedure
       TableStateManager tsm = env.getMasterServices().getTableStateManager();
       TableState ts = tsm.getTableState(tableName);
       if (!ts.isEnabled()) {
-        LOG.info("Not ENABLED tableState=" + ts + "; skipping disable");
+        LOG.info("Not ENABLED skipping {}", this);
         setFailure("master-disable-table", new TableNotEnabledException(ts.toString()));
         canTableBeDisabled = false;
       }
@@ -292,6 +292,7 @@ public class DisableTableProcedure
     env.getMasterServices().getTableStateManager().setTableState(
       tableName,
       TableState.State.DISABLING);
+    LOG.info("Set {} to state={}", tableName, TableState.State.DISABLING);
   }
 
   /**
@@ -306,7 +307,7 @@ public class DisableTableProcedure
     env.getMasterServices().getTableStateManager().setTableState(
       tableName,
       TableState.State.DISABLED);
-    LOG.info("Disabled table, " + tableName + ", is completed.");
+    LOG.info("Set {} to state={}", tableName, TableState.State.DISABLED);
   }
 
   /**
