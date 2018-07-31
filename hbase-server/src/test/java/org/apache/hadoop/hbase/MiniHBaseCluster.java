@@ -315,6 +315,31 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public void startNameNode(ServerName serverName) throws IOException {
+    LOG.warn("Starting namenodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void killNameNode(ServerName serverName) throws IOException {
+    LOG.warn("Aborting namenodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void stopNameNode(ServerName serverName) throws IOException {
+    LOG.warn("Stopping namenodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForNameNodeToStart(ServerName serverName, long timeout) throws IOException {
+    LOG.warn("Waiting for namenodes to start on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForNameNodeToStop(ServerName serverName, long timeout) throws IOException {
+    LOG.warn("Waiting for namenodes to stop on mini cluster is not supported");
+  }
+
+  @Override
   public void startMaster(String hostname, int port) throws IOException {
     this.startMaster();
   }

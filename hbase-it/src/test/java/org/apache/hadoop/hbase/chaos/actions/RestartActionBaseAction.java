@@ -82,4 +82,15 @@ public class RestartActionBaseAction extends Action {
     sleep(sleepTime);
     startDataNode(server);
   }
+
+  void restartNameNode(ServerName server, long sleepTime) throws IOException {
+    sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the kill if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+    killNameNode(server);
+    sleep(sleepTime);
+    startNameNode(server);
+  }
 }

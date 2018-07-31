@@ -57,6 +57,10 @@ public class Action {
     "hbase.chaosmonkey.action.killdatanodetimeout";
   public static final String START_DATANODE_TIMEOUT_KEY =
     "hbase.chaosmonkey.action.startdatanodetimeout";
+  public static final String KILL_NAMENODE_TIMEOUT_KEY =
+      "hbase.chaosmonkey.action.killnamenodetimeout";
+  public static final String START_NAMENODE_TIMEOUT_KEY =
+      "hbase.chaosmonkey.action.startnamenodetimeout";
 
   protected static final Log LOG = LogFactory.getLog(Action.class);
 
@@ -68,6 +72,8 @@ public class Action {
   protected static final long START_ZK_NODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long KILL_DATANODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long START_DATANODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long KILL_NAMENODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long START_NAMENODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
 
   protected ActionContext context;
   protected HBaseCluster cluster;
@@ -82,6 +88,8 @@ public class Action {
   protected long startZkNodeTimeout;
   protected long killDataNodeTimeout;
   protected long startDataNodeTimeout;
+  protected long killNameNodeTimeout;
+  protected long startNameNodeTimeout;
 
   public void init(ActionContext context) throws IOException {
     this.context = context;
@@ -104,6 +112,10 @@ public class Action {
       KILL_DATANODE_TIMEOUT_DEFAULT);
     startDataNodeTimeout = cluster.getConf().getLong(START_DATANODE_TIMEOUT_KEY,
       START_DATANODE_TIMEOUT_DEFAULT);
+    killNameNodeTimeout =
+        cluster.getConf().getLong(KILL_NAMENODE_TIMEOUT_KEY, KILL_NAMENODE_TIMEOUT_DEFAULT);
+    startNameNodeTimeout =
+        cluster.getConf().getLong(START_NAMENODE_TIMEOUT_KEY, START_NAMENODE_TIMEOUT_DEFAULT);
   }
 
   public void perform() throws Exception { }
@@ -187,6 +199,21 @@ public class Action {
     cluster.startDataNode(server);
     cluster.waitForDataNodeToStart(server, startDataNodeTimeout);
     LOG.info("Started datanode:" + server);
+  }
+
+  protected void killNameNode(ServerName server) throws IOException {
+    LOG.info("Killing namenode :-" + server.getHostname());
+    cluster.killNameNode(server);
+    cluster.waitForNameNodeToStop(server, killNameNodeTimeout);
+    LOG.info("Killed namenode:" + server + ". Reported num of rs:"
+        + cluster.getClusterStatus().getServersSize());
+  }
+
+  protected void startNameNode(ServerName server) throws IOException {
+    LOG.info("Starting Namenode :-" + server.getHostname());
+    cluster.startNameNode(server);
+    cluster.waitForNameNodeToStart(server, startNameNodeTimeout);
+    LOG.info("Started namenode:" + server);
   }
 
   protected void unbalanceRegions(ClusterStatus clusterStatus,

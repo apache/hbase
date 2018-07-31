@@ -190,6 +190,37 @@ public class DistributedHBaseCluster extends HBaseCluster {
     waitForServiceToStop(ServiceType.HADOOP_DATANODE, serverName, timeout);
   }
 
+  @Override
+  public void startNameNode(ServerName serverName) throws IOException {
+    LOG.info("Starting name node on: " + serverName.getServerName());
+    clusterManager.start(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void killNameNode(ServerName serverName) throws IOException {
+    LOG.info("Aborting name node on: " + serverName.getServerName());
+    clusterManager.kill(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void stopNameNode(ServerName serverName) throws IOException {
+    LOG.info("Stopping name node on: " + serverName.getServerName());
+    clusterManager.stop(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void waitForNameNodeToStart(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStart(ServiceType.HADOOP_NAMENODE, serverName, timeout);
+  }
+
+  @Override
+  public void waitForNameNodeToStop(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStop(ServiceType.HADOOP_NAMENODE, serverName, timeout);
+  }
+
   private void waitForServiceToStop(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
     LOG.info("Waiting for service: " + service + " to stop: " + serverName.getServerName());

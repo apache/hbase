@@ -101,6 +101,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     Configuration conf = getConf();
     switch (service) {
       case HADOOP_DATANODE:
+      case HADOOP_NAMENODE:
         return conf.get("hbase.it.clustermanager.hadoop.hdfs.user", "hdfs");
       case ZOOKEEPER_SERVER:
         return conf.get("hbase.it.clustermanager.zookeeper.user", "zookeeper");
@@ -282,6 +283,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   protected CommandProvider getCommandProvider(ServiceType service) throws IOException {
     switch (service) {
       case HADOOP_DATANODE:
+      case HADOOP_NAMENODE:
         return new HadoopShellCommandProvider(getConf());
       case ZOOKEEPER_SERVER:
         return new ZookeeperShellCommandProvider(getConf());
