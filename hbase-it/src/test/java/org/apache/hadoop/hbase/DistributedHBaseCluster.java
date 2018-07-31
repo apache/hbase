@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterManager.ServiceType;
 import org.apache.hadoop.hbase.client.Admin;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
@@ -202,6 +202,37 @@ public class DistributedHBaseCluster extends HBaseCluster {
   @Override
   public void waitForDataNodeToStop(ServerName serverName, long timeout) throws IOException {
     waitForServiceToStop(ServiceType.HADOOP_DATANODE, serverName, timeout);
+  }
+
+  @Override
+  public void startNameNode(ServerName serverName) throws IOException {
+    LOG.info("Starting name node on: " + serverName.getServerName());
+    clusterManager.start(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void killNameNode(ServerName serverName) throws IOException {
+    LOG.info("Aborting name node on: " + serverName.getServerName());
+    clusterManager.kill(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void stopNameNode(ServerName serverName) throws IOException {
+    LOG.info("Stopping name node on: " + serverName.getServerName());
+    clusterManager.stop(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void waitForNameNodeToStart(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStart(ServiceType.HADOOP_NAMENODE, serverName, timeout);
+  }
+
+  @Override
+  public void waitForNameNodeToStop(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStop(ServiceType.HADOOP_NAMENODE, serverName, timeout);
   }
 
   private void waitForServiceToStop(ServiceType service, ServerName serverName, long timeout)

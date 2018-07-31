@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.Closeable;
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Threads;
@@ -246,6 +247,42 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    */
   public abstract void waitForDataNodeToStop(ServerName serverName, long timeout)
     throws IOException;
+
+  /**
+   * Starts a new namenode on the given hostname or if this is a mini/local cluster, silently logs
+   * warning message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void startNameNode(ServerName serverName) throws IOException;
+
+  /**
+   * Kills the namenode process if this is a distributed cluster, otherwise, this causes master to
+   * exit doing basic clean up only.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void killNameNode(ServerName serverName) throws IOException;
+
+  /**
+   * Stops the namenode if this is a distributed cluster, otherwise silently logs warning message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void stopNameNode(ServerName serverName) throws IOException;
+
+  /**
+   * Wait for the specified namenode to join the cluster
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForNameNodeToStart(ServerName serverName, long timeout)
+      throws IOException;
+
+  /**
+   * Wait for the specified namenode to stop
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForNameNodeToStop(ServerName serverName, long timeout)
+      throws IOException;
 
   /**
    * Starts a new master on the given hostname or if this is a mini/local cluster,
