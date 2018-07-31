@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -346,6 +347,31 @@ public class MiniHBaseCluster extends HBaseCluster {
   @Override
   public void waitForDataNodeToStop(ServerName serverName, long timeout) throws IOException {
     LOG.warn("Waiting for datanodes to stop on mini cluster is not supported");
+  }
+
+  @Override
+  public void startNameNode(ServerName serverName) throws IOException {
+    LOG.warn("Starting namenodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void killNameNode(ServerName serverName) throws IOException {
+    LOG.warn("Aborting namenodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void stopNameNode(ServerName serverName) throws IOException {
+    LOG.warn("Stopping namenodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForNameNodeToStart(ServerName serverName, long timeout) throws IOException {
+    LOG.warn("Waiting for namenodes to start on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForNameNodeToStop(ServerName serverName, long timeout) throws IOException {
+    LOG.warn("Waiting for namenodes to stop on mini cluster is not supported");
   }
 
   @Override
