@@ -94,7 +94,7 @@ public class DeleteTableProcedure
           }
 
           // TODO: Move out... in the acquireLock()
-          LOG.debug("Waiting for '" + getTableName() + "' regions in transition");
+          LOG.debug("Waiting for RIT for {}", this);
           regions = env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName());
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
           ProcedureSyncWait.waitRegionInTransition(env, regions);
@@ -105,29 +105,29 @@ public class DeleteTableProcedure
           setNextState(DeleteTableState.DELETE_TABLE_REMOVE_FROM_META);
           break;
         case DELETE_TABLE_REMOVE_FROM_META:
-          LOG.debug("delete '" + getTableName() + "' regions from META");
+          LOG.debug("Deleting regions from META for {}", this);
           DeleteTableProcedure.deleteFromMeta(env, getTableName(), regions);
           setNextState(DeleteTableState.DELETE_TABLE_CLEAR_FS_LAYOUT);
           break;
         case DELETE_TABLE_CLEAR_FS_LAYOUT:
-          LOG.debug("delete '" + getTableName() + "' from filesystem");
+          LOG.debug("Deleting regions from filesystem for {}", this);
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
           setNextState(DeleteTableState.DELETE_TABLE_UPDATE_DESC_CACHE);
           regions = null;
           break;
         case DELETE_TABLE_UPDATE_DESC_CACHE:
-          LOG.debug("delete '" + getTableName() + "' descriptor");
+          LOG.debug("Deleting descriptor for {}", this);
           DeleteTableProcedure.deleteTableDescriptorCache(env, getTableName());
           setNextState(DeleteTableState.DELETE_TABLE_UNASSIGN_REGIONS);
           break;
         case DELETE_TABLE_UNASSIGN_REGIONS:
-          LOG.debug("delete '" + getTableName() + "' assignment state");
+          LOG.debug("Deleting assignment state for {}", this);
           DeleteTableProcedure.deleteAssignmentState(env, getTableName());
           setNextState(DeleteTableState.DELETE_TABLE_POST_OPERATION);
           break;
         case DELETE_TABLE_POST_OPERATION:
           postDelete(env);
-          LOG.debug("delete '" + getTableName() + "' completed");
+          LOG.debug("Finished {}", this);
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);

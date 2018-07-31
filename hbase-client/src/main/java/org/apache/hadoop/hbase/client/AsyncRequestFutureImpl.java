@@ -952,13 +952,13 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
                            Throwable error, long backOffTime, boolean willRetry, String startTime,
                            int failed, int stopped) {
     StringBuilder sb = new StringBuilder();
-    sb.append("id=").append(asyncProcess.id).append(", table=").append(tableName).append(", ")
-        .append("attempt=").append(numAttempt)
-        .append("/").append(asyncProcess.numTries).append(", ");
+    sb.append("id=").append(asyncProcess.id).append(", table=").append(tableName).
+        append(", attempt=").append(numAttempt).append("/").append(asyncProcess.numTries).
+        append(", ");
 
     if (failureCount > 0 || error != null){
-      sb.append("failed=").append(failureCount).append("ops").append(", last exception=").
-          append(error == null ? "null" : error);
+      sb.append("failureCount=").append(failureCount).append("ops").append(", last exception=").
+          append(error);
     } else {
       sb.append("succeeded");
     }
@@ -967,15 +967,15 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
     if (willRetry) {
       sb.append(", retrying after=").append(backOffTime).append("ms").
-          append(", replay=").append(replaySize).append("ops");
+          append(", operationsToReplay=").append(replaySize);
     } else if (failureCount > 0) {
       if (stopped > 0) {
-        sb.append("; not retrying ").append(stopped).append(" due to success from other replica");
+        sb.append("; NOT retrying, stopped=").append(stopped).
+            append(" because successful operation on other replica");
       }
       if (failed > 0) {
-        sb.append("; not retrying ").append(failed).append(" - final failure");
+        sb.append("; NOT retrying, failed=").append(failed).append(" -- final attempt!");
       }
-
     }
 
     return sb.toString();
