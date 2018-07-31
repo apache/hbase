@@ -2527,6 +2527,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
             r.close(true);
             // Just close and return
             filesToRemove.add(file);
+          } else {
+            LOG.info("Can't archive compacted file " + file.getPath()
+                + " because of either isCompactedAway = " + file.isCompactedAway()
+                + " or file has reference, isReferencedInReads = " + file.isReferencedInReads()
+                + ", skipping for now.");
           }
         } catch (Exception e) {
           LOG.error("Exception while trying to close the compacted store file {}",
