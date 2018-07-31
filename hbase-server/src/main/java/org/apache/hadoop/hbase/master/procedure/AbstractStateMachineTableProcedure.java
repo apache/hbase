@@ -190,7 +190,7 @@ public abstract class AbstractStateMachineTableProcedure<TState>
       throw new UnknownRegionException("No RegionState found for " + ri.getEncodedName());
     }
     if (!rs.isOpened()) {
-      throw new DoNotRetryRegionException(ri.getEncodedName() + " is not OPEN");
+      throw new DoNotRetryRegionException(ri.getEncodedName() + " is not OPEN; regionState=" + rs);
     }
     if (ri.isSplitParent()) {
       throw new DoNotRetryRegionException(ri.getEncodedName() +
