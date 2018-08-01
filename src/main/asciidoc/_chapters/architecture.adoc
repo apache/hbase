@@ -594,6 +594,80 @@ See <<regions.arch.assignment>> for more information on region assignment.
 Periodically checks and cleans up the `hbase:meta` table.
 See <<arch.catalog.meta>> for more information on the meta table.
 
+[[master.wal]]
+=== MasterProcWAL
+
+HMaster records administrative operations and their running states, such as the handling of a crashed server,
+table creation, and other DDLs, into its own WAL file. The WALs are stored under the MasterProcWALs
+directory. The Master WALs are not like RegionServer WALs. Keeping up the Master WAL allows
+us run a state machine that is resilient across Master failures. For example, if a HMaster was in the
+middle of creating a table encounters an issue and fails, the next active HMaster can take up where
+the previous left off and carry the operation to completion. Since hbase-2.0.0, a
+new AssignmentManager (A.K.A AMv2) was introduced and the HMaster handles region assignment
+operations, server crash processing, balancing, etc., all via AMv2 persisting all state and
+transitions into MasterProcWALs rather than up into ZooKeeper, as we do in hbase-1.x.
+
+See <<amv2>> (and <<pv2>> for its basis) if you would like to learn more about the new
+AssignmentManager.
+
+[[master.wal.conf]]
+==== Configurations for MasterProcWAL
+Here are the list of configurations that effect MasterProcWAL operation.
+You should not have to change your defaults.
+
+[[hbase.procedure.store.wal.periodic.roll.msec]]
+*`hbase.procedure.store.wal.periodic.roll.msec`*::
++
+.Description
+Frequency of generating a new WAL
++
+.Default
+`1h (3600000 in msec)`
+
+[[hbase.procedure.store.wal.roll.threshold]]
+*`hbase.procedure.store.wal.roll.threshold`*::
++
+.Description
+Threshold in size before the WAL rolls. Every time the WAL reaches this size or the above period, 1 hour, passes since last log roll, the HMaster will generate a new WAL.
++
+.Default
+`32MB (33554432 in byte)`
+
+[[hbase.procedure.store.wal.warn.threshold]]
+*`hbase.procedure.store.wal.warn.threshold`*::
++
+.Description
+If the number of WALs goes beyond this threshold, the following message should appear in the HMaster log with WARN level when rolling.
+
+ procedure WALs count=xx above the warning threshold 64. check running procedures to see if something is stuck.
+
++
+.Default
+`64`
+
+[[hbase.procedure.store.wal.max.retries.before.roll]]
+*`hbase.procedure.store.wal.max.retries.before.roll`*::
++
+.Description
+Max number of retry when syncing slots (records) to its underlying storage, such as HDFS. Every attempt, the following message should appear in the HMaster log.
+
+ unable to sync slots, retry=xx
+
++
+.Default
+`3`
+
+[[hbase.procedure.store.wal.sync.failure.roll.max]]
+*`hbase.procedure.store.wal.sync.failure.roll.max`*::
++
+.Description
+After the above 3 retrials, the log is rolled and the retry count is reset to 0, thereon a new set of retrial starts. This configuration controls the max number of attempts of log rolling upon sync failure. That is, HMaster is allowed to fail to sync 9 times in total. Once it exceeds, the following log should appear in the HMaster log.
+
+ Sync slots after log roll failed, abort.
++
+.Default
+`3`
+
 [[regionserver.arch]]
 == RegionServer
 
