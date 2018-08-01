@@ -143,15 +143,17 @@ public class TestYieldProcedures {
       assertEquals(i, info.getStep().ordinal());
     }
 
-    // test rollback (we execute steps twice, one has the IE the other completes)
+    // test rollback (we execute steps twice, rollback counts both IE and completed)
     for (int i = NUM_STATES - 1; i >= 0; --i) {
       TestStateMachineProcedure.ExecutionInfo info = proc.getExecutionInfo().get(count++);
       assertEquals(true, info.isRollback());
       assertEquals(i, info.getStep().ordinal());
+    }
 
-      info = proc.getExecutionInfo().get(count++);
+    for (int i = NUM_STATES - 1; i >= 0; --i) {
+      TestStateMachineProcedure.ExecutionInfo info = proc.getExecutionInfo().get(count++);
       assertEquals(true, info.isRollback());
-      assertEquals(i, info.getStep().ordinal());
+      assertEquals(0, info.getStep().ordinal());
     }
 
     // check runnable queue stats
