@@ -97,7 +97,6 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
         LOG.warn("Backup system table is not available: {}", tnfe.getMessage());
         return files;
       }
-
       List<FileStatus> list = new ArrayList<>();
       Map<FileStatus, Boolean> walFilesDeletableMap = table.areWALFilesDeletable(files);
       for (Map.Entry<FileStatus, Boolean> entry: walFilesDeletableMap.entrySet()) {

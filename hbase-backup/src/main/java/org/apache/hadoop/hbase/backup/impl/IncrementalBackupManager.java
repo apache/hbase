@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -101,7 +102,7 @@ public class IncrementalBackupManager extends BackupManager {
     List<WALItem> logFromSystemTable =
         getLogFilesFromBackupSystem(previousTimestampMins, newTimestamps, getBackupInfo()
             .getBackupRootDir());
-    logList = excludeAlreadyBackedUpWALs(logList, logFromSystemTable);
+    logList = excludeAlreadyBackedUpAndProcV2WALs(logList, logFromSystemTable);
     backupInfo.setIncrBackupFileList(logList);
 
     return newTimestamps;
@@ -144,14 +145,13 @@ public class IncrementalBackupManager extends BackupManager {
         getLogFilesFromBackupSystem(previousTimestampMins, newTimestamps, getBackupInfo()
             .getBackupRootDir());
 
-    logList = excludeAlreadyBackedUpWALs(logList, logFromSystemTable);
+    logList = excludeAlreadyBackedUpAndProcV2WALs(logList, logFromSystemTable);
     backupInfo.setIncrBackupFileList(logList);
 
     return logList;
   }
 
-
-  private List<String> excludeAlreadyBackedUpWALs(List<String> logList,
+  private List<String> excludeAlreadyBackedUpAndProcV2WALs(List<String> logList,
       List<WALItem> logFromSystemTable) {
     Set<String> walFileNameSet = convertToSet(logFromSystemTable);
 
@@ -160,7 +160,7 @@ public class IncrementalBackupManager extends BackupManager {
       Path p = new Path(logList.get(i));
       String name  = p.getName();
 
-      if (walFileNameSet.contains(name)) {
+      if (walFileNameSet.contains(name) || name.startsWith(WALProcedureStore.LOG_PREFIX)) {
         continue;
       }
 
