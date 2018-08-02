@@ -115,70 +115,41 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     validateQuotaTarget(other);
 
     // Propagate the Throttle
-    QuotaProtos.Throttle.Builder throttleBuilder = (throttleProto == null
-        ? null : throttleProto.toBuilder());
+    QuotaProtos.Throttle.Builder throttleBuilder =
+        throttleProto == null ? null : throttleProto.toBuilder();
+
     if (other instanceof ThrottleSettings) {
-      if (throttleBuilder == null) {
-        throttleBuilder = QuotaProtos.Throttle.newBuilder();
-      }
       ThrottleSettings otherThrottle = (ThrottleSettings) other;
-
-      if (otherThrottle.proto.hasType()) {
-        QuotaProtos.ThrottleRequest otherProto = otherThrottle.proto;
-        if (otherProto.hasTimedQuota()) {
-          if (otherProto.hasTimedQuota()) {
-            validateTimedQuota(otherProto.getTimedQuota());
-          }
-
-          switch (otherProto.getType()) {
-            case REQUEST_NUMBER:
-              if (otherProto.hasTimedQuota()) {
-                throttleBuilder.setReqNum(otherProto.getTimedQuota());
-              } else {
-                throttleBuilder.clearReqNum();
-              }
-              break;
-            case REQUEST_SIZE:
-              if (otherProto.hasTimedQuota()) {
-                throttleBuilder.setReqSize(otherProto.getTimedQuota());
-              } else {
-                throttleBuilder.clearReqSize();
-              }
-              break;
-            case WRITE_NUMBER:
-              if (otherProto.hasTimedQuota()) {
-                throttleBuilder.setWriteNum(otherProto.getTimedQuota());
-              } else {
-                throttleBuilder.clearWriteNum();
-              }
-              break;
-            case WRITE_SIZE:
-              if (otherProto.hasTimedQuota()) {
-                throttleBuilder.setWriteSize(otherProto.getTimedQuota());
-              } else {
-                throttleBuilder.clearWriteSize();
-              }
-              break;
-            case READ_NUMBER:
-              if (otherProto.hasTimedQuota()) {
-                throttleBuilder.setReadNum(otherProto.getTimedQuota());
-              } else {
-                throttleBuilder.clearReqNum();
-              }
-              break;
-            case READ_SIZE:
-              if (otherProto.hasTimedQuota()) {
-                throttleBuilder.setReadSize(otherProto.getTimedQuota());
-              } else {
-                throttleBuilder.clearReadSize();
-              }
-              break;
-          }
-        } else {
-          clearThrottleBuilder(throttleBuilder);
-        }
+      if (!otherThrottle.proto.hasType() || !otherThrottle.proto.hasTimedQuota()) {
+        // To prevent the "empty" row in QuotaTableUtil.QUOTA_TABLE_NAME
+        throttleBuilder = null;
       } else {
-        clearThrottleBuilder(throttleBuilder);
+        QuotaProtos.ThrottleRequest otherProto = otherThrottle.proto;
+        validateTimedQuota(otherProto.getTimedQuota());
+        if (throttleBuilder == null) {
+          throttleBuilder = QuotaProtos.Throttle.newBuilder();
+        }
+
+        switch (otherProto.getType()) {
+          case REQUEST_NUMBER:
+            throttleBuilder.setReqNum(otherProto.getTimedQuota());
+            break;
+          case REQUEST_SIZE:
+            throttleBuilder.setReqSize(otherProto.getTimedQuota());
+            break;
+          case WRITE_NUMBER:
+            throttleBuilder.setWriteNum(otherProto.getTimedQuota());
+            break;
+          case WRITE_SIZE:
+            throttleBuilder.setWriteSize(otherProto.getTimedQuota());
+            break;
+          case READ_NUMBER:
+            throttleBuilder.setReadNum(otherProto.getTimedQuota());
+            break;
+          case READ_SIZE:
+            throttleBuilder.setReadSize(otherProto.getTimedQuota());
+            break;
+        }
       }
     }
 

@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -46,6 +47,14 @@ class ThrottleSettings extends QuotaSettings {
 
   public long getSoftLimit() {
     return proto.hasTimedQuota() ? proto.getTimedQuota().getSoftLimit() : -1;
+  }
+
+  /**
+   * Returns a copy of the internal state of <code>this</code>
+   */
+  @VisibleForTesting
+  QuotaProtos.ThrottleRequest getProto() {
+    return proto.toBuilder().build();
   }
 
   public TimeUnit getTimeUnit() {
