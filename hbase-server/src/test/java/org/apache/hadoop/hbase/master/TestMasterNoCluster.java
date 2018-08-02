@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -201,10 +199,10 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      void initClusterSchemaService() throws IOException, InterruptedException {}
+      protected void initClusterSchemaService() throws IOException, InterruptedException {}
 
       @Override
-      ServerManager createServerManager(MasterServices master) throws IOException {
+      protected ServerManager createServerManager(MasterServices master) throws IOException {
         ServerManager sm = super.createServerManager(master);
         // Spy on the created servermanager
         ServerManager spy = Mockito.spy(sm);
@@ -269,23 +267,15 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      void initClusterSchemaService() throws IOException, InterruptedException {}
+      protected void initClusterSchemaService() throws IOException, InterruptedException {}
 
       @Override
-      void initializeZKBasedSystemTrackers() throws IOException, InterruptedException,
+      protected void initializeZKBasedSystemTrackers() throws IOException, InterruptedException,
           KeeperException {
         super.initializeZKBasedSystemTrackers();
         // Record a newer server in server manager at first
         getServerManager().recordNewServerWithLock(newServer,
           new ServerLoad(ServerMetricsBuilder.of(newServer)));
-
-        List<ServerName> onlineServers = new ArrayList<>();
-        onlineServers.add(deadServer);
-        onlineServers.add(newServer);
-        // Mock the region server tracker to pull the dead server from zk
-        regionServerTracker = Mockito.spy(regionServerTracker);
-        Mockito.doReturn(onlineServers).when(
-          regionServerTracker).getOnlineServers();
       }
 
       @Override

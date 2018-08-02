@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,155 +19,161 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
 
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.ServerMetrics;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.VersionInfoUtil;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
+
 /**
  * Tracks the online region servers via ZK.
  *
- * <p>Handling of new RSs checking in is done via RPC.  This class
- * is only responsible for watching for expired nodes.  It handles
- * listening for changes in the RS node list and watching each node.
- *
- * <p>If an RS node gets deleted, this automatically handles calling of
+ * Handling of new RSs checking in is done via RPC. This class is only responsible for watching for
+ * expired nodes. It handles listening for changes in the RS node list. The only exception is when
+ * master restart, we will use the list fetched from zk to construct the initial set of live region
+ * servers.
+ * </p>
+ * If an RS node gets deleted, this automatically handles calling of
  * {@link ServerManager#expireServer(ServerName)}
  */
 @InterfaceAudience.Private
 public class RegionServerTracker extends ZKListener {
   private static final Logger LOG = LoggerFactory.getLogger(RegionServerTracker.class);
-  private final NavigableMap<ServerName, RegionServerInfo> regionServers = new TreeMap<>();
-  private ServerManager serverManager;
-  private MasterServices server;
+  private final Set<ServerName> regionServers = new HashSet<>();
+  private final ServerManager serverManager;
+  private final MasterServices server;
+  // As we need to send request to zk when processing the nodeChildrenChanged event, we'd better
+  // move the operation to a single threaded thread pool in order to not block the zk event
+  // processing since all the zk listener across HMaster will be called in one thread sequentially.
+  private final ExecutorService executor;
 
-  public RegionServerTracker(ZKWatcher watcher,
-      MasterServices server, ServerManager serverManager) {
+  public RegionServerTracker(ZKWatcher watcher, MasterServices server,
+      ServerManager serverManager) {
     super(watcher);
     this.server = server;
     this.serverManager = serverManager;
+    executor = Executors.newSingleThreadExecutor(
+    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("RegionServerTracker-%d").build());
+  }
+
+  private Pair<ServerName, RegionServerInfo> getServerInfo(String name)
+      throws KeeperException, IOException {
+    ServerName serverName = ServerName.parseServerName(name);
+    String nodePath = ZNodePaths.joinZNode(watcher.getZNodePaths().rsZNode, name);
+    byte[] data;
+    try {
+      data = ZKUtil.getData(watcher, nodePath);
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    }
+    if (data == null) {
+      // we should receive a children changed event later and then we will expire it, so we still
+      // need to add it to the region server set.
+      LOG.warn("Server node {} does not exist, already dead?", name);
+      return Pair.newPair(serverName, null);
+    }
+    if (data.length == 0 || !ProtobufUtil.isPBMagicPrefix(data)) {
+      // this should not happen actually, unless we have bugs or someone has messed zk up.
+      LOG.warn("Invalid data for region server node {} on zookeeper, data length = {}", name,
+        data.length);
+      return Pair.newPair(serverName, null);
+    }
+    RegionServerInfo.Builder builder = RegionServerInfo.newBuilder();
+    int magicLen = ProtobufUtil.lengthOfPBMagic();
+    ProtobufUtil.mergeFrom(builder, data, magicLen, data.length - magicLen);
+    return Pair.newPair(serverName, builder.build());
   }
 
   /**
    * Starts the tracking of online RegionServers.
    *
-   * <p>All RSs will be tracked after this method is called.
-   *
-   * @throws KeeperException
-   * @throws IOException
+   * All RSs will be tracked after this method is called.
    */
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
-    List<String> servers =
-      ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.rsZNode);
-    refresh(servers);
-  }
-
-  private void refresh(final List<String> servers) throws IOException {
-    synchronized(this.regionServers) {
-      this.regionServers.clear();
-      for (String n: servers) {
-        ServerName sn = ServerName.parseServerName(ZKUtil.getNodeName(n));
-        if (regionServers.get(sn) == null) {
-          RegionServerInfo.Builder rsInfoBuilder = RegionServerInfo.newBuilder();
-          try {
-            String nodePath = ZNodePaths.joinZNode(watcher.znodePaths.rsZNode, n);
-            byte[] data = ZKUtil.getData(watcher, nodePath);
-            if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
-              int magicLen = ProtobufUtil.lengthOfPBMagic();
-              ProtobufUtil.mergeFrom(rsInfoBuilder, data, magicLen, data.length - magicLen);
-            }
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Added tracking of RS " + nodePath);
-            }
-          } catch (KeeperException e) {
-            LOG.warn("Get Rs info port from ephemeral node", e);
-          } catch (IOException e) {
-            LOG.warn("Illegal data from ephemeral node", e);
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException();
-          }
-          this.regionServers.put(sn, rsInfoBuilder.build());
-        }
+    synchronized (this) {
+      List<String> servers =
+        ZKUtil.listChildrenAndWatchForNewChildren(watcher, watcher.getZNodePaths().rsZNode);
+      for (String n : servers) {
+        Pair<ServerName, RegionServerInfo> pair = getServerInfo(n);
+        ServerName serverName = pair.getFirst();
+        RegionServerInfo info = pair.getSecond();
+        regionServers.add(serverName);
+        ServerMetrics serverMetrics = info != null
+          ? ServerMetricsBuilder.of(serverName,
+            VersionInfoUtil.getVersionNumber(info.getVersionInfo()))
+          : ServerMetricsBuilder.of(serverName);
+        serverManager.checkAndRecordNewServer(serverName, serverMetrics);
       }
     }
   }
 
-  private void remove(final ServerName sn) {
-    synchronized(this.regionServers) {
-      this.regionServers.remove(sn);
-    }
+  public void stop() {
+    executor.shutdownNow();
   }
 
-  @Override
-  public void nodeCreated(String path) {
-    if (path.startsWith(watcher.znodePaths.rsZNode)) {
-      String serverName = ZKUtil.getNodeName(path);
-      LOG.info("RegionServer ephemeral node created, adding [" + serverName + "]");
-      if (server.isInitialized()) {
-        // Only call the check to move servers if a RegionServer was added to the cluster; in this
-        // case it could be a server with a new version so it makes sense to run the check.
-        server.checkIfShouldMoveSystemRegionAsync();
+  private synchronized void refresh() {
+    List<String> names;
+    try {
+      names = ZKUtil.listChildrenAndWatchForNewChildren(watcher, watcher.getZNodePaths().rsZNode);
+    } catch (KeeperException e) {
+      // here we need to abort as we failed to set watcher on the rs node which means that we can
+      // not track the node deleted evetnt any more.
+      server.abort("Unexpected zk exception getting RS nodes", e);
+      return;
+    }
+    Set<ServerName> servers =
+      names.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
+    for (Iterator<ServerName> iter = regionServers.iterator(); iter.hasNext();) {
+      ServerName sn = iter.next();
+      if (!servers.contains(sn)) {
+        LOG.info("RegionServer ephemeral node deleted, processing expiration [{}]", sn);
+        serverManager.expireServer(sn);
+        iter.remove();
       }
     }
-  }
-
-  @Override
-  public void nodeDeleted(String path) {
-    if (path.startsWith(watcher.znodePaths.rsZNode)) {
-      String serverName = ZKUtil.getNodeName(path);
-      LOG.info("RegionServer ephemeral node deleted, processing expiration [" +
-        serverName + "]");
-      ServerName sn = ServerName.parseServerName(serverName);
-      if (!serverManager.isServerOnline(sn)) {
-        LOG.warn(serverName.toString() + " is not online or isn't known to the master."+
-         "The latter could be caused by a DNS misconfiguration.");
-        return;
+    // here we do not need to parse the region server info as it is useless now, we only need the
+    // server name.
+    boolean newServerAdded = false;
+    for (ServerName sn : servers) {
+      if (regionServers.add(sn)) {
+        newServerAdded = true;
+        LOG.info("RegionServer ephemeral node created, adding [" + sn + "]");
       }
-      remove(sn);
-      this.serverManager.expireServer(sn);
+    }
+    if (newServerAdded && server.isInitialized()) {
+      // Only call the check to move servers if a RegionServer was added to the cluster; in this
+      // case it could be a server with a new version so it makes sense to run the check.
+      server.checkIfShouldMoveSystemRegionAsync();
     }
   }
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if (path.equals(watcher.znodePaths.rsZNode)
-        && !server.isAborted() && !server.isStopped()) {
-      try {
-        List<String> servers =
-          ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.rsZNode);
-        refresh(servers);
-      } catch (IOException e) {
-        server.abort("Unexpected zk exception getting RS nodes", e);
-      } catch (KeeperException e) {
-        server.abort("Unexpected zk exception getting RS nodes", e);
-      }
-    }
-  }
-
-  public RegionServerInfo getRegionServerInfo(final ServerName sn) {
-    return regionServers.get(sn);
-  }
-
-  /**
-   * Gets the online servers.
-   * @return list of online servers
-   */
-  public List<ServerName> getOnlineServers() {
-    synchronized (this.regionServers) {
-      return new ArrayList<>(this.regionServers.keySet());
+    if (path.equals(watcher.getZNodePaths().rsZNode) && !server.isAborted() &&
+      !server.isStopped()) {
+      executor.execute(this::refresh);
     }
   }
 }

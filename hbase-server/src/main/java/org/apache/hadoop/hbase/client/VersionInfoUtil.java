@@ -102,7 +102,7 @@ public final class VersionInfoUtil {
    * @param versionInfo the VersionInfo object to pack
    * @return the version number as int. (e.g. 0x0103004 is 1.3.4)
    */
-  private static int getVersionNumber(final HBaseProtos.VersionInfo versionInfo) {
+  public static int getVersionNumber(final HBaseProtos.VersionInfo versionInfo) {
     if (versionInfo != null) {
       try {
         final String[] components = getVersionComponents(versionInfo);

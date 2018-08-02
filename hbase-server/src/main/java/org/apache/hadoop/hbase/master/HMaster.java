@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -85,6 +84,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
@@ -200,7 +200,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -285,7 +284,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Manager and zk listener for master election
   private final ActiveMasterManager activeMasterManager;
   // Region server tracker
-  RegionServerTracker regionServerTracker;
+  private RegionServerTracker regionServerTracker;
   // Draining region server tracker
   private DrainingServerTracker drainingServerTracker;
   // Tracker for load balancer state
@@ -710,9 +709,11 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   /**
    * Initialize all ZK based system trackers.
+   * Will be overridden in tests.
    */
-  void initializeZKBasedSystemTrackers() throws IOException,
-      InterruptedException, KeeperException {
+  @VisibleForTesting
+  protected void initializeZKBasedSystemTrackers()
+      throws IOException, InterruptedException, KeeperException {
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.normalizer = RegionNormalizerFactory.getRegionNormalizer(conf);
     this.normalizer.setMasterServices(this);
@@ -1038,9 +1039,15 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
+   * <p>
    * Create a {@link ServerManager} instance.
+   * </p>
+   * <p>
+   * Will be overridden in tests.
+   * </p>
    */
-  ServerManager createServerManager(final MasterServices master) throws IOException {
+  @VisibleForTesting
+  protected ServerManager createServerManager(final MasterServices master) throws IOException {
     // We put this out here in a method so can do a Mockito.spy and stub it out
     // w/ a mocked up ServerManager.
     setupClusterConnection();
@@ -1050,17 +1057,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void waitForRegionServers(final MonitoredTask status)
       throws IOException, InterruptedException {
     this.serverManager.waitForRegionServers(status);
-    // Check zk for region servers that are up but didn't register
-    for (ServerName sn: this.regionServerTracker.getOnlineServers()) {
-      // The isServerOnline check is opportunistic, correctness is handled inside
-      if (!this.serverManager.isServerOnline(sn) &&
-          serverManager.checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn))) {
-        LOG.info("Registered server found up in zk but who has not yet reported in: " + sn);
-      }
-    }
   }
 
-  void initClusterSchemaService() throws IOException, InterruptedException {
+  // Will be overridden in tests
+  @VisibleForTesting
+  protected void initClusterSchemaService() throws IOException, InterruptedException {
     this.clusterSchemaService = new ClusterSchemaServiceImpl(this);
     this.clusterSchemaService.startAsync();
     try {
@@ -1072,14 +1073,14 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  void initQuotaManager() throws IOException {
+  private void initQuotaManager() throws IOException {
     MasterQuotaManager quotaManager = new MasterQuotaManager(this);
     this.assignmentManager.setRegionStateListener(quotaManager);
     quotaManager.start();
     this.quotaManager = quotaManager;
   }
 
-  SpaceQuotaSnapshotNotifier createQuotaSnapshotNotifier() {
+  private SpaceQuotaSnapshotNotifier createQuotaSnapshotNotifier() {
     SpaceQuotaSnapshotNotifier notifier =
         SpaceQuotaSnapshotNotifierFactory.getInstance().create(getConfiguration());
     return notifier;
@@ -1252,6 +1253,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (procedureStore != null) {
       procedureStore.stop(isAborted());
       procedureStore = null;
+    }
+    if (this.regionServerTracker != null) {
+      this.regionServerTracker.stop();
     }
   }
 
@@ -2616,21 +2620,17 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   public int getRegionServerInfoPort(final ServerName sn) {
-    RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
-    if (info == null || info.getInfoPort() == 0) {
-      return conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
-        HConstants.DEFAULT_REGIONSERVER_INFOPORT);
-    }
-    return info.getInfoPort();
+    int port = this.serverManager.getInfoPort(sn);
+    return port == 0 ? conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
+      HConstants.DEFAULT_REGIONSERVER_INFOPORT) : port;
   }
 
   @Override
   public String getRegionServerVersion(final ServerName sn) {
-    RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
-    if (info != null && info.hasVersionInfo()) {
-      return info.getVersionInfo().getVersion();
-    }
-    return "0.0.0"; //Lowest version to prevent move system region to unknown version RS.
+    // Will return 0 if the server is not online to prevent move system region to unknown version
+    // RS.
+    int versionNumber = this.serverManager.getServerVersion(sn);
+    return VersionInfoUtil.versionNumberToString(versionNumber);
   }
 
   @Override

@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
@@ -187,19 +186,13 @@ public class ServerManager {
 
   /**
    * Constructor.
-   * @param master
-   * @throws ZooKeeperConnectionException
    */
   public ServerManager(final MasterServices master) {
-    this(master, true);
-  }
-
-  ServerManager(final MasterServices master, final boolean connect) {
     this.master = master;
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
-    this.connection = connect? master.getClusterConnection(): null;
+    this.connection = master.getClusterConnection();
     this.rpcControllerFactory = this.connection == null? null: connection.getRpcControllerFactory();
   }
 
@@ -228,8 +221,7 @@ public class ServerManager {
    * @throws IOException
    */
   ServerName regionServerStartup(RegionServerStartupRequest request, int versionNumber,
-      InetAddress ia)
-      throws IOException {
+      InetAddress ia) throws IOException {
     // Test for case where we get a region startup message from a regionserver
     // that has been quickly restarted but whose znode expiration handler has
     // not yet run, or from a server whose fail we are currently processing.
@@ -1067,5 +1059,10 @@ public class ServerManager {
   public int getServerVersion(final ServerName serverName) {
     ServerMetrics serverMetrics = onlineServers.get(serverName);
     return serverMetrics != null ? serverMetrics.getVersionNumber() : 0;
+  }
+
+  public int getInfoPort(ServerName serverName) {
+    ServerMetrics serverMetrics = onlineServers.get(serverName);
+    return serverMetrics != null ? serverMetrics.getInfoServerPort() : 0;
   }
 }
