@@ -368,7 +368,7 @@ public class TestQuotaAdmin {
   }
 
   @Test
-  public void testSetModifyRemoveQuota() throws Exception {
+  public void testSetModifyRemoveSpaceQuota() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final TableName tn = TableName.valueOf("sq_table2");
     final long originalSizeLimit = 1024L * 1024L * 1024L * 1024L * 5L; // 5TB
@@ -451,6 +451,154 @@ public class TestQuotaAdmin {
 
   private void assertNumResults(int expected, final QuotaFilter filter) throws Exception {
     assertEquals(expected, countResults(filter));
+  }
+
+  @Test
+  public void testSetGetRemoveRPCQuota() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    final TableName tn = TableName.valueOf("sq_table1");
+    QuotaSettings settings =
+        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    admin.setQuota(settings);
+
+    // Verify the Quota in the table
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+
+    // Verify we can retrieve it via the QuotaRetriever API
+    verifyFetchableViaAPI(admin, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+
+    // Now, remove the quota
+    QuotaSettings removeQuota = QuotaSettingsFactory.unthrottleTable(tn);
+    admin.setQuota(removeQuota);
+
+    // Verify that the record doesn't exist in the table
+    verifyRecordNotPresentInQuotaTable();
+
+    // Verify that we can also not fetch it via the API
+    verifyNotFetchableViaAPI(admin);
+  }
+
+  @Test
+  public void testSetModifyRemoveRPCQuota() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    final TableName tn = TableName.valueOf("sq_table1");
+    QuotaSettings settings =
+        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    admin.setQuota(settings);
+
+    // Verify the Quota in the table
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+
+    // Verify we can retrieve it via the QuotaRetriever API
+    verifyFetchableViaAPI(admin, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+
+    // Setting a limit and time unit should be reflected
+    QuotaSettings newSettings =
+        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 3L, TimeUnit.DAYS);
+    admin.setQuota(newSettings);
+
+    // Verify the new Quota in the table
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_SIZE, 3L, TimeUnit.DAYS);
+
+    // Verify we can retrieve the new quota via the QuotaRetriever API
+    verifyFetchableViaAPI(admin, ThrottleType.REQUEST_SIZE, 3L, TimeUnit.DAYS);
+
+    // Now, remove the quota
+    QuotaSettings removeQuota = QuotaSettingsFactory.unthrottleTable(tn);
+    admin.setQuota(removeQuota);
+
+    // Verify that the record doesn't exist in the table
+    verifyRecordNotPresentInQuotaTable();
+
+    // Verify that we can also not fetch it via the API
+    verifyNotFetchableViaAPI(admin);
+
+  }
+
+  private void verifyRecordPresentInQuotaTable(ThrottleType type, long limit, TimeUnit tu)
+      throws Exception {
+    // Verify the RPC Quotas in the table
+    try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
+        ResultScanner scanner = quotaTable.getScanner(new Scan())) {
+      Result r = Iterables.getOnlyElement(scanner);
+      CellScanner cells = r.cellScanner();
+      assertTrue("Expected to find a cell", cells.advance());
+      assertRPCQuota(type, limit, tu, cells.current());
+    }
+  }
+
+  private void verifyRecordNotPresentInQuotaTable() throws Exception {
+    // Verify that the record doesn't exist in the QuotaTableUtil.QUOTA_TABLE_NAME
+    try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
+        ResultScanner scanner = quotaTable.getScanner(new Scan())) {
+      assertNull("Did not expect to find a quota entry", scanner.next());
+    }
+  }
+
+  private void verifyFetchableViaAPI(Admin admin, ThrottleType type, long limit, TimeUnit tu)
+      throws Exception {
+    // Verify we can retrieve the new quota via the QuotaRetriever API
+    try (QuotaRetriever quotaScanner = QuotaRetriever.open(admin.getConfiguration())) {
+      assertRPCQuota(type, limit, tu, Iterables.getOnlyElement(quotaScanner));
+    }
+  }
+
+  private void verifyNotFetchableViaAPI(Admin admin) throws Exception {
+    // Verify that we can also not fetch it via the API
+    try (QuotaRetriever quotaScanner = QuotaRetriever.open(admin.getConfiguration())) {
+      assertNull("Did not expect to find a quota entry", quotaScanner.next());
+    }
+  }
+
+  private void assertRPCQuota(ThrottleType type, long limit, TimeUnit tu, Cell cell)
+      throws Exception {
+    Quotas q = QuotaTableUtil
+        .quotasFromData(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+    assertTrue("Quota should have rpc quota defined", q.hasThrottle());
+
+    QuotaProtos.Throttle rpcQuota = q.getThrottle();
+    QuotaProtos.TimedQuota t = null;
+
+    switch (type) {
+      case REQUEST_SIZE:
+        assertTrue(rpcQuota.hasReqSize());
+        t = rpcQuota.getReqSize();
+        break;
+      case READ_NUMBER:
+        assertTrue(rpcQuota.hasReadNum());
+        t = rpcQuota.getReadNum();
+        break;
+      case READ_SIZE:
+        assertTrue(rpcQuota.hasReadSize());
+        t = rpcQuota.getReadSize();
+        break;
+      case REQUEST_NUMBER:
+        assertTrue(rpcQuota.hasReqNum());
+        t = rpcQuota.getReqNum();
+        break;
+      case WRITE_NUMBER:
+        assertTrue(rpcQuota.hasWriteNum());
+        t = rpcQuota.getWriteNum();
+        break;
+      case WRITE_SIZE:
+        assertTrue(rpcQuota.hasWriteSize());
+        t = rpcQuota.getWriteSize();
+        break;
+    }
+
+    assertEquals(t.getSoftLimit(), limit);
+    assertEquals(t.getTimeUnit(), ProtobufUtil.toProtoTimeUnit(tu));
+  }
+
+  private void assertRPCQuota(ThrottleType type, long limit, TimeUnit tu,
+      QuotaSettings actualSettings) throws Exception {
+    assertTrue(
+        "The actual QuotaSettings was not an instance of " + ThrottleSettings.class + " but of "
+            + actualSettings.getClass(), actualSettings instanceof ThrottleSettings);
+    QuotaProtos.ThrottleRequest throttleRequest = ((ThrottleSettings) actualSettings).getProto();
+    assertEquals(limit, throttleRequest.getTimedQuota().getSoftLimit());
+    assertEquals(ProtobufUtil.toProtoTimeUnit(tu), throttleRequest.getTimedQuota().getTimeUnit());
+    assertEquals(ProtobufUtil.toProtoThrottleType(type), throttleRequest.getType());
   }
 
   private void assertSpaceQuota(
