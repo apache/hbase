@@ -180,8 +180,21 @@ public class WALUtil {
    */
   public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir)
       throws IOException {
-    return conf.getLong("hbase.regionserver.hlog.blocksize",
-        CommonFSUtils.getDefaultBlockSize(fs, dir) * 2);
+    return getWALBlockSize(conf, fs, dir, false);
+  }
+
+  /**
+   * Public because of FSHLog. Should be package-private
+   * @param isRecoverEdits the created writer is for recovered edits or WAL.
+   *                       For recovered edits, it is true and for WAL it is false.
+   */
+  public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir,
+      boolean isRecoverEdits) throws IOException {
+    long defaultBlockSize = CommonFSUtils.getDefaultBlockSize(fs, dir) * 2;
+    if (isRecoverEdits) {
+      return conf.getLong("hbase.regionserver.recoverededits.blocksize", defaultBlockSize);
+    }
+    return conf.getLong("hbase.regionserver.hlog.blocksize", defaultBlockSize);
   }
 
   public static void filterCells(WALEdit edit, Function<Cell, Cell> mapper) {

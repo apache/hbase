@@ -55,10 +55,13 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
 
   /**
    * Public because of FSHLog. Should be package-private
+   * @param overwritable if the created writer can overwrite. For recovered edits, it is true and
+   *          for WAL it is false. Thus we can distinguish WAL and recovered edits by this.
    */
   public static Writer createWriter(final Configuration conf, final FileSystem fs, final Path path,
       final boolean overwritable) throws IOException {
-    return createWriter(conf, fs, path, overwritable, WALUtil.getWALBlockSize(conf, fs, path));
+    return createWriter(conf, fs, path, overwritable,
+      WALUtil.getWALBlockSize(conf, fs, path, overwritable));
   }
 
   /**
