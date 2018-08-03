@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -288,13 +289,13 @@ public class ConnectionUtils {
     return Bytes.compareTo(info.getStartKey(), scan.getStopRow()) <= 0;
   }
 
-  public static ScanResultCache createScanResultCache(Scan scan) {
+  public static ScanResultCache createScanResultCache(Scan scan, List<Result> cache) {
     if (scan.getAllowPartialResults()) {
-      return new AllowPartialScanResultCache();
+      return new AllowPartialScanResultCache(cache);
     } else if (scan.getBatch() > 0) {
-      return new BatchScanResultCache(scan.getBatch());
+      return new BatchScanResultCache(cache, scan.getBatch());
     } else {
-      return new CompleteScanResultCache();
+      return new CompleteScanResultCache(cache);
     }
   }
 }
