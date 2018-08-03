@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.filterCells;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
@@ -38,7 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * doesn't mean setAllowPartialResult(true).
  */
 @InterfaceAudience.Private
-public class BatchScanResultCache implements ScanResultCache {
+public class BatchScanResultCache extends ScanResultCache {
 
   private final int batch;
 
@@ -52,9 +51,8 @@ public class BatchScanResultCache implements ScanResultCache {
 
   private int numCellsOfPartialResults;
 
-  private int numberOfCompleteRows;
-
-  public BatchScanResultCache(int batch) {
+  public BatchScanResultCache(List<Result> cache, int batch) {
+    super(cache);
     this.batch = batch;
   }
 
@@ -109,11 +107,12 @@ public class BatchScanResultCache implements ScanResultCache {
   }
 
   @Override
-  public Result[] addAndGet(Result[] results, boolean isHeartbeatMessage) throws IOException {
+  public void loadResultsToCache(Result[] results, boolean isHeartbeatMessage) throws IOException {
     if (results.length == 0) {
       if (!isHeartbeatMessage) {
         if (!partialResults.isEmpty()) {
-          return new Result[] { createCompletedResult() };
+          checkUpdateNumberOfCompleteRowsAndCache(createCompletedResult());
+          return;
         }
         if (lastResultPartial) {
           // An empty non heartbeat result indicate that there must be a row change. So if the
@@ -121,9 +120,8 @@ public class BatchScanResultCache implements ScanResultCache {
           numberOfCompleteRows++;
         }
       }
-      return EMPTY_RESULT_ARRAY;
+      return;
     }
-    List<Result> regroupedResults = new ArrayList<>();
     for (Result result : results) {
       result = filterCells(result, lastCell);
       if (result == null) {
@@ -132,7 +130,7 @@ public class BatchScanResultCache implements ScanResultCache {
       if (!partialResults.isEmpty()) {
         if (!Bytes.equals(partialResults.peek().getRow(), result.getRow())) {
           // there is a row change
-          regroupedResults.add(createCompletedResult());
+          checkUpdateNumberOfCompleteRowsAndCache(createCompletedResult());
         }
       } else if (lastResultPartial && !CellUtil.matchingRow(lastCell, result.getRow())) {
         // As for batched scan we may return partial results to user if we reach the batch limit, so
@@ -143,33 +141,34 @@ public class BatchScanResultCache implements ScanResultCache {
       // check if we have a row change
       if (!partialResults.isEmpty() &&
           !Bytes.equals(partialResults.peek().getRow(), result.getRow())) {
-        regroupedResults.add(createCompletedResult());
+        checkUpdateNumberOfCompleteRowsAndCache(createCompletedResult());
       }
       Result regroupedResult = regroupResults(result);
       if (regroupedResult != null) {
         if (!regroupedResult.mayHaveMoreCellsInRow()) {
           numberOfCompleteRows++;
         }
-        regroupedResults.add(regroupedResult);
+        checkUpdateNumberOfCompleteRowsAndCache(regroupedResult);
         // only update last cell when we actually return it to user.
         recordLastResult(regroupedResult);
       }
       if (!result.mayHaveMoreCellsInRow() && !partialResults.isEmpty()) {
         // We are done for this row
-        regroupedResults.add(createCompletedResult());
+        checkUpdateNumberOfCompleteRowsAndCache(createCompletedResult());
       }
     }
-    return regroupedResults.toArray(new Result[0]);
+  }
+
+  @Override
+  protected void checkUpdateNumberOfCompleteRowsAndCache(Result rs) {
+    // Number of Complete rows already updated
+    addResultToCache(rs);
   }
 
   @Override
   public void clear() {
     partialResults.clear();
     numCellsOfPartialResults = 0;
-  }
-
-  @Override
-  public int numberOfCompleteRows() {
-    return numberOfCompleteRows;
+    super.clear();
   }
 }

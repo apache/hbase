@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.TestBatchScanResultCache.createCells;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -39,10 +39,11 @@ public class TestAllowPartialScanResultCache {
   private static byte[] CF = Bytes.toBytes("cf");
 
   private AllowPartialScanResultCache resultCache;
+  private static final LinkedList<Result> cache = new LinkedList<Result>();
 
   @Before
   public void setUp() {
-    resultCache = new AllowPartialScanResultCache();
+    resultCache = new AllowPartialScanResultCache(cache);
   }
 
   @After
@@ -53,16 +54,17 @@ public class TestAllowPartialScanResultCache {
 
   @Test
   public void test() throws IOException {
-    assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
-      resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, false));
-    assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
-      resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, true));
+    resultCache.loadResultsToCache(ScanResultCache.EMPTY_RESULT_ARRAY, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(ScanResultCache.EMPTY_RESULT_ARRAY, true);
+    assertEquals(0, cache.size());
 
     Cell[] cells1 = createCells(CF, 1, 10);
     Cell[] cells2 = createCells(CF, 2, 10);
 
-    Result[] results1 = resultCache.addAndGet(
+    resultCache.loadResultsToCache(
       new Result[] { Result.create(Arrays.copyOf(cells1, 5), null, false, true) }, false);
+    Result[] results1 = cache.toArray(new Result[0]);
     assertEquals(1, results1.length);
     assertEquals(1, Bytes.toInt(results1[0].getRow()));
     assertEquals(5, results1[0].rawCells().length);
@@ -70,8 +72,10 @@ public class TestAllowPartialScanResultCache {
       assertEquals(1, Bytes.toInt(results1[0].getValue(CF, Bytes.toBytes("cq" + i))));
     }
 
-    Result[] results2 = resultCache.addAndGet(
+    cache.clear();
+    resultCache.loadResultsToCache(
       new Result[] { Result.create(Arrays.copyOfRange(cells1, 1, 10), null, false, true) }, false);
+    Result[] results2 = cache.toArray(new Result[0]);
     assertEquals(1, results2.length);
     assertEquals(1, Bytes.toInt(results2[0].getRow()));
     assertEquals(5, results2[0].rawCells().length);
@@ -79,8 +83,10 @@ public class TestAllowPartialScanResultCache {
       assertEquals(1, Bytes.toInt(results2[0].getValue(CF, Bytes.toBytes("cq" + i))));
     }
 
-    Result[] results3 =
-        resultCache.addAndGet(new Result[] { Result.create(cells1), Result.create(cells2) }, false);
+    cache.clear();
+    resultCache.loadResultsToCache(
+      new Result[] { Result.create(cells1), Result.create(cells2) }, false);
+    Result[] results3 = cache.toArray(new Result[0]);
     assertEquals(1, results3.length);
     assertEquals(2, Bytes.toInt(results3[0].getRow()));
     assertEquals(10, results3[0].rawCells().length);

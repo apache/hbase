@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -40,9 +40,11 @@ public class TestBatchScanResultCache {
 
   private BatchScanResultCache resultCache;
 
+  private final LinkedList<Result> cache = new LinkedList<Result>();
+
   @Before
   public void setUp() {
-    resultCache = new BatchScanResultCache(4);
+    resultCache = new BatchScanResultCache(cache, 4);
   }
 
   @After
@@ -73,28 +75,34 @@ public class TestBatchScanResultCache {
 
   @Test
   public void test() throws IOException {
-    assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
-      resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, false));
-    assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
-      resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, true));
+    resultCache.loadResultsToCache(ScanResultCache.EMPTY_RESULT_ARRAY, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(ScanResultCache.EMPTY_RESULT_ARRAY, true);
+    assertEquals(0, cache.size());
 
     Cell[] cells1 = createCells(CF, 1, 10);
     Cell[] cells2 = createCells(CF, 2, 10);
     Cell[] cells3 = createCells(CF, 3, 10);
-    assertEquals(0, resultCache.addAndGet(
-      new Result[] { Result.create(Arrays.copyOf(cells1, 3), null, false, true) }, false).length);
-    Result[] results = resultCache.addAndGet(
+    resultCache.loadResultsToCache(
+      new Result[] { Result.create(Arrays.copyOf(cells1, 3), null, false, true) }, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(
       new Result[] { Result.create(Arrays.copyOfRange(cells1, 3, 7), null, false, true),
           Result.create(Arrays.copyOfRange(cells1, 7, 10), null, false, true) },
       false);
+    Result[] results = cache.toArray(new Result[0]);
     assertEquals(2, results.length);
     assertResultEquals(results[0], 1, 0, 4);
     assertResultEquals(results[1], 1, 4, 8);
-    results = resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, false);
+
+    cache.clear();
+    resultCache.loadResultsToCache(ScanResultCache.EMPTY_RESULT_ARRAY, false);
+    results = cache.toArray(new Result[0]);
     assertEquals(1, results.length);
     assertResultEquals(results[0], 1, 8, 10);
 
-    results = resultCache.addAndGet(
+    cache.clear();
+    resultCache.loadResultsToCache(
       new Result[] { Result.create(Arrays.copyOfRange(cells2, 0, 4), null, false, true),
           Result.create(Arrays.copyOfRange(cells2, 4, 8), null, false, true),
           Result.create(Arrays.copyOfRange(cells2, 8, 10), null, false, true),
@@ -102,6 +110,7 @@ public class TestBatchScanResultCache {
           Result.create(Arrays.copyOfRange(cells3, 4, 8), null, false, true),
           Result.create(Arrays.copyOfRange(cells3, 8, 10), null, false, false) },
       false);
+    results = cache.toArray(new Result[0]);
     assertEquals(6, results.length);
     assertResultEquals(results[0], 2, 0, 4);
     assertResultEquals(results[1], 2, 4, 8);

@@ -18,7 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -33,26 +36,94 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * </ol>
  */
 @InterfaceAudience.Private
-interface ScanResultCache {
+public abstract class ScanResultCache {
 
   static final Result[] EMPTY_RESULT_ARRAY = new Result[0];
+  int numberOfCompleteRows;
+  long resultSize = 0;
+  int count = 0;
+  Result lastResult = null;
+  List<Result> cache;
+
+  ScanResultCache(List<Result> cache) {
+    this.cache = cache;
+  }
 
   /**
-   * Add the given results to cache and get valid results back.
+   * Process the results from the server and load it to cache.
    * @param results the results of a scan next. Must not be null.
    * @param isHeartbeatMessage indicate whether the results is gotten from a heartbeat response.
-   * @return valid results, never null.
    */
-  Result[] addAndGet(Result[] results, boolean isHeartbeatMessage) throws IOException;
+  abstract void loadResultsToCache(Result[] results, boolean isHeartbeatMessage)
+      throws IOException;
 
   /**
    * Clear the cached result if any. Called when scan error and we will start from a start of a row
    * again.
    */
-  void clear();
+  void clear() {
+    resetCount();
+    resetResultSize();
+    lastResult = null;
+  }
 
   /**
    * Return the number of complete rows. Used to implement limited scan.
    */
-  int numberOfCompleteRows();
+  int numberOfCompleteRows() {
+    return numberOfCompleteRows;
+  }
+
+  /**
+   * Add result array received from server to cache
+   * @param resultsToAddToCache The array of Results returned from the server
+   * @param start start index to cache from Results array
+   * @param end last index to cache from Results array
+   */
+  void addResultArrayToCache(Result[] resultsToAddToCache, int start, int end) {
+    if (resultsToAddToCache != null) {
+      for (int r = start; r < end; r++) {
+        checkUpdateNumberOfCompleteRowsAndCache(resultsToAddToCache[r]);
+      }
+    }
+  }
+
+  /**
+   * Check and update number of complete rows and add result to cache
+   * @param rs Result to cache from Results array or constructed from partial results
+   */
+  abstract void checkUpdateNumberOfCompleteRowsAndCache(Result rs);
+
+  /**
+   * Add the result received from server or result constructed from partials to cache
+   * @param rs Result to cache from Results array or constructed from partial results
+   */
+  void addResultToCache(Result rs) {
+    cache.add(rs);
+    for (Cell cell : rs.rawCells()) {
+      resultSize += CellUtil.estimatedHeapSizeOf(cell);
+    }
+    count++;
+    lastResult = rs;
+  }
+
+  long getResultSize() {
+    return resultSize;
+  }
+
+  int getCount() {
+    return count;
+  }
+
+  void resetResultSize() {
+    resultSize = 0;
+  }
+
+  void resetCount() {
+    count = 0;
+  }
+
+  Result getLastResult() {
+    return lastResult;
+  }
 }

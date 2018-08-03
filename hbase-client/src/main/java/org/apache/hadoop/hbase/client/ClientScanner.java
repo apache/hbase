@@ -30,8 +30,6 @@ import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -136,7 +134,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     this.rpcControllerFactory = controllerFactory;
 
     this.conf = conf;
-    this.scanResultCache = createScanResultCache(scan);
+    this.scanResultCache = createScanResultCache(scan, cache);
   }
 
   protected ClusterConnection getConnection() {
@@ -464,19 +462,15 @@ public abstract class ClientScanner extends AbstractClientScanner {
       // Results to the scanner's cache. If partial results are not allowed to be seen by the
       // caller, all book keeping will be performed within this method.
       int numberOfCompleteRowsBefore = scanResultCache.numberOfCompleteRows();
-      Result[] resultsToAddToCache =
-          scanResultCache.addAndGet(values, callable.isHeartbeatMessage());
+      scanResultCache.loadResultsToCache(values, callable.isHeartbeatMessage());
       int numberOfCompleteRows =
           scanResultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
-      if (resultsToAddToCache.length > 0) {
-        for (Result rs : resultsToAddToCache) {
-          cache.add(rs);
-          for (Cell cell : rs.rawCells()) {
-            remainingResultSize -= CellUtil.estimatedHeapSizeOf(cell);
-          }
-          countdown--;
-          this.lastResult = rs;
-        }
+      if (scanResultCache.getCount() > 0) {
+        remainingResultSize -= scanResultCache.getResultSize();
+        scanResultCache.resetResultSize();
+        countdown -= scanResultCache.getCount();
+        scanResultCache.resetCount();
+        this.lastResult = scanResultCache.getLastResult();
       }
 
       if (scan.getLimit() > 0) {

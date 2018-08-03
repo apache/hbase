@@ -22,6 +22,7 @@ import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -46,9 +47,11 @@ public class TestCompleteResultScanResultCache {
 
   private CompleteScanResultCache resultCache;
 
+  private final LinkedList<Result> cache = new LinkedList<Result>();
+
   @Before
   public void setUp() {
-    resultCache = new CompleteScanResultCache();
+    resultCache = new CompleteScanResultCache(cache);
   }
 
   @After
@@ -63,33 +66,50 @@ public class TestCompleteResultScanResultCache {
 
   @Test
   public void testNoPartial() throws IOException {
-    assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
-      resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, false));
-    assertSame(ScanResultCache.EMPTY_RESULT_ARRAY,
-      resultCache.addAndGet(ScanResultCache.EMPTY_RESULT_ARRAY, true));
+    cache.clear();
+
+    resultCache.loadResultsToCache(ScanResultCache.EMPTY_RESULT_ARRAY, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(ScanResultCache.EMPTY_RESULT_ARRAY, true);
+    assertEquals(0, cache.size());
+
     int count = 10;
     Result[] results = new Result[count];
     for (int i = 0; i < count; i++) {
       results[i] = Result.create(Arrays.asList(createCell(i, CQ1)));
     }
-    assertSame(results, resultCache.addAndGet(results, false));
+    resultCache.loadResultsToCache(results, false);
+    results = cache.toArray(new Result[0]);
+    assertEquals(count, results.length);
+    for (int i = 0; i < count; i++) {
+      assertEquals(i, Bytes.toInt(results[i].getRow()));
+      assertEquals(i, Bytes.toInt(results[i].getValue(CF, CQ1)));
+    }
   }
 
   @Test
   public void testCombine1() throws IOException {
+    cache.clear();
+
     Result previousResult = Result.create(Arrays.asList(createCell(0, CQ1)), null, false, true);
     Result result1 = Result.create(Arrays.asList(createCell(1, CQ1)), null, false, true);
     Result result2 = Result.create(Arrays.asList(createCell(1, CQ2)), null, false, true);
     Result result3 = Result.create(Arrays.asList(createCell(1, CQ3)), null, false, true);
-    Result[] results = resultCache.addAndGet(new Result[] { previousResult, result1 }, false);
+    resultCache.loadResultsToCache(new Result[] { previousResult, result1 }, false);
+    Result[] results = cache.toArray(new Result[0]);
     assertEquals(1, results.length);
     assertSame(previousResult, results[0]);
 
-    assertEquals(0, resultCache.addAndGet(new Result[] { result2 }, false).length);
-    assertEquals(0, resultCache.addAndGet(new Result[] { result3 }, false).length);
-    assertEquals(0, resultCache.addAndGet(new Result[0], true).length);
+    cache.clear();
+    resultCache.loadResultsToCache(new Result[] { result2 }, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(new Result[] { result3 }, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(new Result[0], true);
+    assertEquals(0, cache.size());
 
-    results = resultCache.addAndGet(new Result[0], false);
+    resultCache.loadResultsToCache(new Result[0], false);
+    results = cache.toArray(new Result[0]);
     assertEquals(1, results.length);
     assertEquals(1, Bytes.toInt(results[0].getRow()));
     assertEquals(3, results[0].rawCells().length);
@@ -100,17 +120,23 @@ public class TestCompleteResultScanResultCache {
 
   @Test
   public void testCombine2() throws IOException {
+    cache.clear();
+
     Result result1 = Result.create(Arrays.asList(createCell(1, CQ1)), null, false, true);
     Result result2 = Result.create(Arrays.asList(createCell(1, CQ2)), null, false, true);
     Result result3 = Result.create(Arrays.asList(createCell(1, CQ3)), null, false, true);
     Result nextResult1 = Result.create(Arrays.asList(createCell(2, CQ1)), null, false, true);
     Result nextToNextResult1 = Result.create(Arrays.asList(createCell(3, CQ2)), null, false, false);
 
-    assertEquals(0, resultCache.addAndGet(new Result[] { result1 }, false).length);
-    assertEquals(0, resultCache.addAndGet(new Result[] { result2 }, false).length);
-    assertEquals(0, resultCache.addAndGet(new Result[] { result3 }, false).length);
+    resultCache.loadResultsToCache(new Result[] { result1 }, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(new Result[] { result2 }, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(new Result[] { result3 }, false);
+    assertEquals(0, cache.size());
 
-    Result[] results = resultCache.addAndGet(new Result[] { nextResult1 }, false);
+    resultCache.loadResultsToCache(new Result[] { nextResult1 }, false);
+    Result[] results = cache.toArray(new Result[0]);
     assertEquals(1, results.length);
     assertEquals(1, Bytes.toInt(results[0].getRow()));
     assertEquals(3, results[0].rawCells().length);
@@ -118,7 +144,9 @@ public class TestCompleteResultScanResultCache {
     assertEquals(1, Bytes.toInt(results[0].getValue(CF, CQ2)));
     assertEquals(1, Bytes.toInt(results[0].getValue(CF, CQ3)));
 
-    results = resultCache.addAndGet(new Result[] { nextToNextResult1 }, false);
+    cache.clear();
+    resultCache.loadResultsToCache(new Result[] { nextToNextResult1 }, false);
+    results = cache.toArray(new Result[0]);
     assertEquals(2, results.length);
     assertEquals(2, Bytes.toInt(results[0].getRow()));
     assertEquals(1, results[0].rawCells().length);
@@ -130,16 +158,20 @@ public class TestCompleteResultScanResultCache {
 
   @Test
   public void testCombine3() throws IOException {
+    cache.clear();
+
     Result result1 = Result.create(Arrays.asList(createCell(1, CQ1)), null, false, true);
     Result result2 = Result.create(Arrays.asList(createCell(1, CQ2)), null, false, true);
     Result nextResult1 = Result.create(Arrays.asList(createCell(2, CQ1)), null, false, false);
     Result nextToNextResult1 = Result.create(Arrays.asList(createCell(3, CQ1)), null, false, true);
 
-    assertEquals(0, resultCache.addAndGet(new Result[] { result1 }, false).length);
-    assertEquals(0, resultCache.addAndGet(new Result[] { result2 }, false).length);
+    resultCache.loadResultsToCache(new Result[] { result1 }, false);
+    assertEquals(0, cache.size());
+    resultCache.loadResultsToCache(new Result[] { result2 }, false);
+    assertEquals(0, cache.size());
 
-    Result[] results =
-        resultCache.addAndGet(new Result[] { nextResult1, nextToNextResult1 }, false);
+    resultCache.loadResultsToCache(new Result[] { nextResult1, nextToNextResult1 }, false);
+    Result[] results = cache.toArray(new Result[0]);
     assertEquals(2, results.length);
     assertEquals(1, Bytes.toInt(results[0].getRow()));
     assertEquals(2, results[0].rawCells().length);
@@ -149,7 +181,9 @@ public class TestCompleteResultScanResultCache {
     assertEquals(1, results[1].rawCells().length);
     assertEquals(2, Bytes.toInt(results[1].getValue(CF, CQ1)));
 
-    results = resultCache.addAndGet(new Result[0], false);
+    cache.clear();
+    resultCache.loadResultsToCache(new Result[0], false);
+    results = cache.toArray(new Result[0]);
     assertEquals(1, results.length);
     assertEquals(3, Bytes.toInt(results[0].getRow()));
     assertEquals(1, results[0].rawCells().length);
@@ -158,21 +192,27 @@ public class TestCompleteResultScanResultCache {
 
   @Test
   public void testCombine4() throws IOException {
+    cache.clear();
+
     Result result1 = Result.create(Arrays.asList(createCell(1, CQ1)), null, false, true);
     Result result2 = Result.create(Arrays.asList(createCell(1, CQ2)), null, false, false);
     Result nextResult1 = Result.create(Arrays.asList(createCell(2, CQ1)), null, false, true);
     Result nextResult2 = Result.create(Arrays.asList(createCell(2, CQ2)), null, false, false);
 
-    assertEquals(0, resultCache.addAndGet(new Result[] { result1 }, false).length);
+    resultCache.loadResultsToCache(new Result[] { result1 }, false);
+    assertEquals(0, cache.size());
 
-    Result[] results = resultCache.addAndGet(new Result[] { result2, nextResult1 }, false);
+    resultCache.loadResultsToCache(new Result[] { result2, nextResult1 }, false);
+    Result[] results = cache.toArray(new Result[0]);
     assertEquals(1, results.length);
     assertEquals(1, Bytes.toInt(results[0].getRow()));
     assertEquals(2, results[0].rawCells().length);
     assertEquals(1, Bytes.toInt(results[0].getValue(CF, CQ1)));
     assertEquals(1, Bytes.toInt(results[0].getValue(CF, CQ2)));
 
-    results = resultCache.addAndGet(new Result[] { nextResult2 }, false);
+    cache.clear();
+    resultCache.loadResultsToCache(new Result[] { nextResult2 }, false);
+    results = cache.toArray(new Result[0]);
     assertEquals(1, results.length);
     assertEquals(2, Bytes.toInt(results[0].getRow()));
     assertEquals(2, results[0].rawCells().length);

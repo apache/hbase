@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -29,11 +28,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A scan result cache that only returns complete result.
  */
 @InterfaceAudience.Private
-class CompleteScanResultCache implements ScanResultCache {
-
-  private int numberOfCompleteRows;
+class CompleteScanResultCache extends ScanResultCache {
 
   private final List<Result> partialResults = new ArrayList<>();
+
+  public CompleteScanResultCache(List<Result> cache) {
+    super(cache);
+  }
 
   private Result combine() throws IOException {
     Result result = Result.createCompleteResult(partialResults);
@@ -41,33 +42,24 @@ class CompleteScanResultCache implements ScanResultCache {
     return result;
   }
 
-  private Result[] prependCombined(Result[] results, int length) throws IOException {
+  private void prependCombinedAndCache(Result[] results, int length) throws IOException {
     if (length == 0) {
-      return new Result[] { combine() };
+      checkUpdateNumberOfCompleteRowsAndCache(combine());
+      return;
     }
     // the last part of a partial result may not be marked as partial so here we need to check if
     // there is a row change.
-    int start;
+    int start = 0;
     if (Bytes.equals(partialResults.get(0).getRow(), results[0].getRow())) {
       partialResults.add(results[0]);
       start = 1;
-      length--;
-    } else {
-      start = 0;
     }
-    Result[] prependResults = new Result[length + 1];
-    prependResults[0] = combine();
-    System.arraycopy(results, start, prependResults, 1, length);
-    return prependResults;
-  }
-
-  private Result[] updateNumberOfCompleteResultsAndReturn(Result... results) {
-    numberOfCompleteRows += results.length;
-    return results;
+    checkUpdateNumberOfCompleteRowsAndCache(combine());
+    addResultArrayToCache(results, start, length);
   }
 
   @Override
-  public Result[] addAndGet(Result[] results, boolean isHeartbeatMessage) throws IOException {
+  public void loadResultsToCache(Result[] results, boolean isHeartbeatMessage) throws IOException {
     // If no results were returned it indicates that either we have the all the partial results
     // necessary to construct the complete result or the server had to send a heartbeat message
     // to the client to keep the client-server connection alive
@@ -76,9 +68,9 @@ class CompleteScanResultCache implements ScanResultCache {
       // and thus there may be more partials server side that still need to be added to the partial
       // list before we form the complete Result
       if (!partialResults.isEmpty() && !isHeartbeatMessage) {
-        return updateNumberOfCompleteResultsAndReturn(combine());
+        checkUpdateNumberOfCompleteRowsAndCache(combine());
       }
-      return EMPTY_RESULT_ARRAY;
+      return;
     }
     // In every RPC response there should be at most a single partial result. Furthermore, if
     // there is a partial result, it is guaranteed to be in the last position of the array.
@@ -86,37 +78,42 @@ class CompleteScanResultCache implements ScanResultCache {
     if (last.mayHaveMoreCellsInRow()) {
       if (partialResults.isEmpty()) {
         partialResults.add(last);
-        return updateNumberOfCompleteResultsAndReturn(Arrays.copyOf(results, results.length - 1));
+        addResultArrayToCache(results, 0, results.length - 1);
+        return;
       }
       // We have only one result and it is partial
       if (results.length == 1) {
         // check if there is a row change
         if (Bytes.equals(partialResults.get(0).getRow(), last.getRow())) {
           partialResults.add(last);
-          return EMPTY_RESULT_ARRAY;
+          return;
         }
         Result completeResult = combine();
         partialResults.add(last);
-        return updateNumberOfCompleteResultsAndReturn(completeResult);
+        checkUpdateNumberOfCompleteRowsAndCache(completeResult);
+        return;
       }
       // We have some complete results
-      Result[] resultsToReturn = prependCombined(results, results.length - 1);
+      prependCombinedAndCache(results, results.length - 1);
       partialResults.add(last);
-      return updateNumberOfCompleteResultsAndReturn(resultsToReturn);
+      return;
     }
     if (!partialResults.isEmpty()) {
-      return updateNumberOfCompleteResultsAndReturn(prependCombined(results, results.length));
+      prependCombinedAndCache(results, results.length);
+      return;
     }
-    return updateNumberOfCompleteResultsAndReturn(results);
+    addResultArrayToCache(results, 0, results.length);
+  }
+
+  @Override
+  protected void checkUpdateNumberOfCompleteRowsAndCache(Result rs) {
+    numberOfCompleteRows++;
+    addResultToCache(rs);
   }
 
   @Override
   public void clear() {
     partialResults.clear();
-  }
-
-  @Override
-  public int numberOfCompleteRows() {
-    return numberOfCompleteRows;
+    super.clear();
   }
 }
