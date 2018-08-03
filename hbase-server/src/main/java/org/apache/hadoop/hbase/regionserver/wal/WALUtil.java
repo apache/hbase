@@ -23,6 +23,9 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -31,6 +34,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 
@@ -132,5 +136,30 @@ public class WALUtil {
       if (mvcc != null && we != null) mvcc.complete(we);
     }
     return trx;
+  }
+
+  /**
+   * Blocksize returned here is 2x the default HDFS blocksize unless explicitly set in
+   * Configuration. Works in tandem with hbase.regionserver.logroll.multiplier. See comment in
+   * AbstractFSWAL in Constructor where we set blocksize and logrollsize for why.
+   * @return Blocksize to use writing WALs.
+   */
+  public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir)
+      throws IOException {
+    return getWALBlockSize(conf, fs, dir, false);
+  }
+
+  /**
+   * Public because of FSHLog. Should be package-private
+   * @param isRecoverEdits the created writer is for recovered edits or WAL. For recovered edits, it
+   *          is true and for WAL it is false.
+   */
+  public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir,
+      boolean isRecoverEdits) throws IOException {
+    long defaultBlockSize = FSUtils.getDefaultBlockSize(fs, dir) * 2;
+    if (isRecoverEdits) {
+      return conf.getLong("hbase.regionserver.recoverededits.blocksize", defaultBlockSize);
+    }
+    return conf.getLong("hbase.regionserver.hlog.blocksize", defaultBlockSize);
   }
 }

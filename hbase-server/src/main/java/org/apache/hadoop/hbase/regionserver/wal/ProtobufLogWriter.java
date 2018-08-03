@@ -85,8 +85,7 @@ public class ProtobufLogWriter extends WriterBase {
     int bufferSize = FSUtils.getDefaultBufferSize(fs);
     short replication = (short)conf.getInt(
         "hbase.regionserver.hlog.replication", FSUtils.getDefaultReplication(fs, path));
-    long blockSize = conf.getLong("hbase.regionserver.hlog.blocksize",
-        FSUtils.getDefaultBlockSize(fs, path));
+    long blockSize = WALUtil.getWALBlockSize(conf, fs, path);
     output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize, null);
     output.write(ProtobufLogReader.PB_WAL_MAGIC);
     boolean doTagCompress = doCompress
