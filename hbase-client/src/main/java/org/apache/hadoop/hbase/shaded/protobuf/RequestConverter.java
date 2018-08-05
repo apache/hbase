@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CleanerType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -1560,17 +1561,11 @@ public final class RequestConverter {
   }
 
   /**
-   * @see #buildRunCleanerChoreRequest()
-   */
-  private static final RunCleanerChoreRequest CLEANER_CHORE_REQUEST =
-    RunCleanerChoreRequest.newBuilder().build();
-
-  /**
    * Creates a request for running cleaner chore
    * @return A {@link RunCleanerChoreRequest}
    */
-  public static RunCleanerChoreRequest buildRunCleanerChoreRequest() {
-    return CLEANER_CHORE_REQUEST;
+  public static RunCleanerChoreRequest buildRunCleanerChoreRequest(CleanerType cleanerType) {
+    return RunCleanerChoreRequest.newBuilder().setType(cleanerType).build();
   }
 
   /**

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CleanerType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -708,8 +709,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> runCleanerChore() {
-    return wrap(rawAdmin.runCleanerChore());
+  public CompletableFuture<Boolean> runCleanerChore(CleanerType cleanerType) {
+    return wrap(rawAdmin.runCleanerChore(cleanerType));
   }
 
   @Override

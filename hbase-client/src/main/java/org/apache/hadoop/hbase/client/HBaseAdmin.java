@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -127,6 +128,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CleanerType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
@@ -1662,12 +1664,16 @@ public class HBaseAdmin implements Admin {
     });
   }
 
+  public boolean runCleanerChore(final String cleanerType) throws IOException {
+    return runCleanerChore(CleanerType.valueOf(cleanerType.toUpperCase(Locale.ROOT)));
+  }
+
   @Override
-  public boolean runCleanerChore() throws IOException {
+  public boolean runCleanerChore(final CleanerType cleanerType) throws IOException {
     return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
       @Override public Boolean rpcCall() throws Exception {
         return master.runCleanerChore(getRpcController(),
-            RequestConverter.buildRunCleanerChoreRequest()).getCleanerChoreRan();
+            RequestConverter.buildRunCleanerChoreRequest(cleanerType)).getCleanerChoreRan();
       }
     });
   }

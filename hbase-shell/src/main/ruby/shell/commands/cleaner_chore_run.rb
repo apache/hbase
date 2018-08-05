@@ -24,12 +24,18 @@ module Shell
 Cleaner chore command for garbage collection of HFiles and WAL files.
 
   hbase> cleaner_chore_run
-
+  hbase> cleaner_chore_run 'hfiles'
+  hbase> cleaner_chore_run 'oldwals'
 EOF
       end
 
-      def command
-        admin.cleaner_chore_run
+      def command(type = "default")
+        ret = admin.cleaner_chore_run(type)
+        if ret
+          puts 'Ran the cleaner(s) and succeeded.'
+        else
+          puts "Couldn't run the cleaner(s) if cleaner chore is enabled or ran but failed."
+        end
       end
     end
   end

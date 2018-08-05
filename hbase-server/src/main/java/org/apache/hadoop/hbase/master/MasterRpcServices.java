@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CleanerType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -1432,7 +1433,37 @@ public class MasterRpcServices extends RSRpcServices
   public RunCleanerChoreResponse runCleanerChore(RpcController c, RunCleanerChoreRequest req)
     throws ServiceException {
     rpcPreCheck("runCleanerChore");
-    boolean result = master.getHFileCleaner().runCleaner() && master.getLogCleaner().runCleaner();
+    boolean result = false;
+    boolean isCleanerEnabled =
+        master.getHFileCleaner().getEnabled() && master.getLogCleaner().getEnabled();
+
+    if (isCleanerEnabled) {
+      LOG.warn("Cleaner(s) cannot be ran because cleaner chore has been enabled, please consider "
+          + "disable it.");
+    } else {
+      CleanerType cleanerType = req.getType();
+      switch (cleanerType) {
+      case HFILES:
+        LOG.debug("Running HFiles cleaner");
+        result = master.getHFileCleaner().runCleaner();
+        break;
+      case OLDWALS:
+        LOG.debug("Running OldWals cleaner");
+        result = master.getLogCleaner().runCleaner();
+        break;
+      case DEFAULT:
+        LOG.debug("Running HFiles and OldWals cleaners");
+        result = master.getHFileCleaner().runCleaner() && master.getLogCleaner().runCleaner();
+        break;
+      default:
+        LOG.error("Unknown type `" + cleanerType + "` from run cleaner chore request.");
+      }
+    }
+
+    if (!isCleanerEnabled && !result) {
+      LOG.warn("Cleaner(s) ran but failed to be completed");
+    }
+
     return ResponseConverter.buildRunCleanerChoreResponse(result);
   }
 

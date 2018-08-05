@@ -274,3 +274,10 @@ message RegionLocation {
   optional ServerName server_name = 2;
   required int64 seq_num = 3;
 }
+
+/* cleaner chore type */
+enum CleanerType {
+  DEFAULT = 0;
+  HFILES = 1;
+  OLDWALS = 2;
+}
