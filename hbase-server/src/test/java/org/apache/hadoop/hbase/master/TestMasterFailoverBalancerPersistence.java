@@ -18,40 +18,63 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.util.Map;
 
 @Category(LargeTests.class)
 public class TestMasterFailoverBalancerPersistence {
+  // Start the cluster
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static MiniHBaseCluster cluster;
+
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(4, 1);
+    cluster = TEST_UTIL.getHBaseCluster();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
 
   /**
    * Test that if the master fails, the load balancer maintains its
    * state (running or not) when the next master takes over
    *
-   * @throws Exception
+   * @throws Exception on failure
    */
   @Test(timeout = 240000)
   public void testMasterFailoverBalancerPersistence() throws Exception {
-    final int NUM_MASTERS = 3;
-    final int NUM_RS = 1;
-
-    // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
     assertTrue(cluster.waitForActiveAndReadyMaster());
     HMaster active = cluster.getMaster();
@@ -74,9 +97,64 @@ public class TestMasterFailoverBalancerPersistence {
     // ensure the load balancer is not running on the new master
     clusterStatus = active.getClusterStatus();
     assertFalse(clusterStatus.isBalancerOn());
+  }
 
-    // Stop the cluster
-    TEST_UTIL.shutdownMiniCluster();
+  /**
+   * Test that if the master fails, the ReplicaMapping is rebuilt
+   * by the new master.
+   *
+   * @throws Exception on failure
+   */
+  @Test(timeout = 100000)
+  public void testReadReplicaMappingAfterMasterFailover() throws Exception {
+    final byte [] FAMILY = Bytes.toBytes("testFamily");
+
+    assertTrue(cluster.waitForActiveAndReadyMaster());
+    HMaster active = cluster.getMaster();
+
+    final TableName tableName = TableName.valueOf("testReadReplicaMappingAfterMasterFailover");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(tableName.getNameAsString());
+    hdt.setRegionReplication(2);
+    Table ht = null;
+    try {
+      ht = TEST_UTIL.createTable(hdt, new byte[][] { FAMILY }, TEST_UTIL.getConfiguration());
+
+      RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
+      List<HRegionLocation> allRegionLocations = locator.getAllRegionLocations();
+
+      // There are two regions, one for primary, one for the replica.
+      assertTrue(allRegionLocations.size() == 2);
+
+      List<HRegionInfo> parentRegion = new ArrayList<>();
+      parentRegion.add(allRegionLocations.get(0).getRegionInfo());
+      Map<ServerName, List<HRegionInfo>> currentAssign =
+          active.getAssignmentManager().getRegionStates().getRegionAssignments(parentRegion);
+      Collection<List<HRegionInfo>> c = currentAssign.values();
+      int count = 0;
+      for (List<HRegionInfo> l : c) {
+        count += l.size();
+      }
+
+      // Make sure that there are regions in the ReplicaMapping
+      assertEquals(2, count);
+
+      active = killActiveAndWaitForNewActive(cluster);
+
+      Map<ServerName, List<HRegionInfo>> currentAssignNew =
+          active.getAssignmentManager().getRegionStates().getRegionAssignments(parentRegion);
+      Collection<List<HRegionInfo>> cNew = currentAssignNew.values();
+      count = 0;
+      for (List<HRegionInfo> l : cNew) {
+        count += l.size();
+      }
+
+      // Make sure that there are regions in the ReplicaMapping when the new master takes over.
+      assertEquals(2, count);
+    } finally {
+      if (ht != null) {
+        TEST_UTIL.deleteTable(tableName.getName());
+      }
+    }
   }
 
   /**
