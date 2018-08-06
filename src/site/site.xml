@@ -23,9 +23,19 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
   <skin>
-    <groupId>org.apache.maven.skins</groupId>
+    <!-- We tried to get some changes to the fluido-skin committed upstream
+         but with little success. This is a custom artifact that contains
+         some commits over the official maven-fluido-skin 1.4 release. The
+         actual code is available at:
+         https://github.com/joshelser/maven-fluido-skin/tree/1.4-HBase-patched.
+         The hope is that we can get these fixes included upstream and
+         remove the need for this custom fork. This is published to
+         my end-user's GAV for ease of releasing this to maven central
+         until the upstream update happens and is released.
+         See HBASE-14785 and HBASE-21005 for more info. -->
+    <groupId>com.github.joshelser</groupId>
     <artifactId>maven-fluido-skin</artifactId>
-    <version>1.5-HBASE</version>
+    <version>1.4-HBase</version>
   </skin>
   <custom>
     <fluidoSkin>
