@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY;
-import static org.apache.hadoop.hbase.quotas.MasterSpaceQuotaObserver.REMOVE_QUOTA_ON_TABLE_DELETE;
+import static org.apache.hadoop.hbase.quotas.MasterQuotasObserver.REMOVE_QUOTA_ON_TABLE_DELETE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -40,14 +40,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test class for MasterSpaceQuotaObserver that does not require a cluster.
+ * Test class for MasterQuotasObserver that does not require a cluster.
  */
 @Category(SmallTests.class)
-public class TestMasterSpaceQuotaObserverWithMocks {
+public class TestMasterQuotasObserverWithMocks {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterSpaceQuotaObserverWithMocks.class);
+      HBaseClassTestRule.forClass(TestMasterQuotasObserverWithMocks.class);
 
   private HMaster master;
   private Configuration conf;
@@ -56,20 +56,20 @@ public class TestMasterSpaceQuotaObserverWithMocks {
   public void setup() {
     conf = HBaseConfiguration.create();
     master = mock(HMaster.class);
-    doCallRealMethod().when(master).updateConfigurationForSpaceQuotaObserver(
+    doCallRealMethod().when(master).updateConfigurationForQuotasObserver(
         any());
   }
 
   @Test
   public void testAddDefaultObserver() {
-    master.updateConfigurationForSpaceQuotaObserver(conf);
-    assertEquals(MasterSpaceQuotaObserver.class.getName(), conf.get(MASTER_COPROCESSOR_CONF_KEY));
+    master.updateConfigurationForQuotasObserver(conf);
+    assertEquals(MasterQuotasObserver.class.getName(), conf.get(MASTER_COPROCESSOR_CONF_KEY));
   }
 
   @Test
   public void testDoNotAddDefaultObserver() {
     conf.setBoolean(REMOVE_QUOTA_ON_TABLE_DELETE, false);
-    master.updateConfigurationForSpaceQuotaObserver(conf);
+    master.updateConfigurationForQuotasObserver(conf);
     // Configuration#getStrings returns null when unset
     assertNull(conf.getStrings(MASTER_COPROCESSOR_CONF_KEY));
   }
@@ -77,7 +77,7 @@ public class TestMasterSpaceQuotaObserverWithMocks {
   @Test
   public void testAppendsObserver() {
     conf.set(MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
-    master.updateConfigurationForSpaceQuotaObserver(conf);
+    master.updateConfigurationForQuotasObserver(conf);
     Set<String> coprocs = new HashSet<>(conf.getStringCollection(MASTER_COPROCESSOR_CONF_KEY));
     assertEquals(2, coprocs.size());
     assertTrue(
@@ -85,6 +85,6 @@ public class TestMasterSpaceQuotaObserverWithMocks {
         coprocs.contains(AccessController.class.getName()));
     assertTrue(
         "Observed coprocessors were: " + coprocs,
-        coprocs.contains(MasterSpaceQuotaObserver.class.getName()));
+        coprocs.contains(MasterQuotasObserver.class.getName()));
   }
 }

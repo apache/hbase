@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -46,14 +46,14 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test class for {@link MasterSpaceQuotaObserver}.
+ * Test class for {@link MasterQuotasObserver}.
  */
 @Category(MediumTests.class)
-public class TestMasterSpaceQuotaObserver {
+public class TestMasterQuotasObserver {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterSpaceQuotaObserver.class);
+      HBaseClassTestRule.forClass(TestMasterQuotasObserver.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static SpaceQuotaHelperForTests helper;
@@ -90,36 +90,55 @@ public class TestMasterSpaceQuotaObserver {
   }
 
   @Test
-  public void testTableQuotaRemoved() throws Exception {
+  public void testTableSpaceQuotaRemoved() throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
     final TableName tn = TableName.valueOf(testName.getMethodName());
     // Drop the table if it somehow exists
     if (admin.tableExists(tn)) {
-      admin.disableTable(tn);
-      admin.deleteTable(tn);
+      dropTable(admin, tn);
     }
-
-    // Create a table
-    HTableDescriptor tableDesc = new HTableDescriptor(tn);
-    tableDesc.addFamily(new HColumnDescriptor("F1"));
-    admin.createTable(tableDesc);
+    createTable(admin, tn);
     assertEquals(0, getNumSpaceQuotas());
 
-    // Set a quota
+    // Set space quota
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
         tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
     assertEquals(1, getNumSpaceQuotas());
 
-    // Delete the table and observe the quota being automatically deleted as well
-    admin.disableTable(tn);
-    admin.deleteTable(tn);
+    // Drop the table and observe the Space quota being automatically deleted as well
+    dropTable(admin, tn);
     assertEquals(0, getNumSpaceQuotas());
   }
 
   @Test
-  public void testNamespaceQuotaRemoved() throws Exception {
+  public void testTableRPCQuotaRemoved() throws Exception {
+    final Connection conn = TEST_UTIL.getConnection();
+    final Admin admin = conn.getAdmin();
+    final TableName tn = TableName.valueOf(testName.getMethodName());
+    // Drop the table if it somehow exists
+    if (admin.tableExists(tn)) {
+      dropTable(admin, tn);
+    }
+
+    createTable(admin, tn);
+    assertEquals(0, getThrottleQuotas());
+
+    // Set RPC quota
+    QuotaSettings settings =
+        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    admin.setQuota(settings);
+
+    assertEquals(1, getThrottleQuotas());
+
+    // Delete the table and observe the RPC quota being automatically deleted as well
+    dropTable(admin, tn);
+    assertEquals(0, getThrottleQuotas());
+  }
+
+  @Test
+  public void testNamespaceSpaceQuotaRemoved() throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
     final String ns = testName.getMethodName();
@@ -139,9 +158,35 @@ public class TestMasterSpaceQuotaObserver {
     admin.setQuota(settings);
     assertEquals(1, getNumSpaceQuotas());
 
-    // Delete the table and observe the quota being automatically deleted as well
+    // Delete the namespace and observe the quota being automatically deleted as well
     admin.deleteNamespace(ns);
     assertEquals(0, getNumSpaceQuotas());
+  }
+
+  @Test
+  public void testNamespaceRPCQuotaRemoved() throws Exception {
+    final Connection conn = TEST_UTIL.getConnection();
+    final Admin admin = conn.getAdmin();
+    final String ns = testName.getMethodName();
+    // Drop the ns if it somehow exists
+    if (namespaceExists(ns)) {
+      admin.deleteNamespace(ns);
+    }
+
+    // Create the ns
+    NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
+    admin.createNamespace(desc);
+    assertEquals(0, getThrottleQuotas());
+
+    // Set a quota
+    QuotaSettings settings =
+        QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    admin.setQuota(settings);
+    assertEquals(1, getThrottleQuotas());
+
+    // Delete the namespace and observe the quota being automatically deleted as well
+    admin.deleteNamespace(ns);
+    assertEquals(0, getThrottleQuotas());
   }
 
   @Test
@@ -150,8 +195,8 @@ public class TestMasterSpaceQuotaObserver {
     final MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     Set<String> coprocessorNames = cpHost.getCoprocessors();
     assertTrue(
-        "Did not find MasterSpaceQuotaObserver in list of CPs: " + coprocessorNames,
-        coprocessorNames.contains(MasterSpaceQuotaObserver.class.getSimpleName()));
+        "Did not find MasterQuotasObserver in list of CPs: " + coprocessorNames,
+        coprocessorNames.contains(MasterQuotasObserver.class.getSimpleName()));
   }
 
   public boolean namespaceExists(String ns) throws IOException {
@@ -173,5 +218,28 @@ public class TestMasterSpaceQuotaObserver {
       }
     }
     return numSpaceQuotas;
+  }
+
+  public int getThrottleQuotas() throws Exception {
+    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
+    int throttleQuotas = 0;
+    for (QuotaSettings quotaSettings : scanner) {
+      if (quotaSettings.getQuotaType() == QuotaType.THROTTLE) {
+        throttleQuotas++;
+      }
+    }
+    return throttleQuotas;
+  }
+
+  private void createTable(Admin admin, TableName tn) throws Exception {
+    // Create a table
+    HTableDescriptor tableDesc = new HTableDescriptor(tn);
+    tableDesc.addFamily(new HColumnDescriptor("F1"));
+    admin.createTable(tableDesc);
+  }
+
+  private void dropTable(Admin admin, TableName tn) throws  Exception {
+    admin.disableTable(tn);
+    admin.deleteTable(tn);
   }
 }
