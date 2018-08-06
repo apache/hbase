@@ -22,21 +22,21 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 
 /**
- * An observer to automatically delete space quotas when a table/namespace
- * are deleted.
+ * An observer to automatically delete quotas when a table/namespace
+ * is deleted.
  */
 @InterfaceAudience.Private
-public class MasterSpaceQuotaObserver implements MasterCoprocessor, MasterObserver {
+public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
   public static final String REMOVE_QUOTA_ON_TABLE_DELETE = "hbase.quota.remove.on.table.delete";
   public static final boolean REMOVE_QUOTA_ON_TABLE_DELETE_DEFAULT = true;
 
@@ -65,10 +65,18 @@ public class MasterSpaceQuotaObserver implements MasterCoprocessor, MasterObserv
     }
     final Connection conn = ctx.getEnvironment().getConnection();
     Quotas quotas = QuotaUtil.getTableQuota(conn, tableName);
-    if (quotas != null && quotas.hasSpace()) {
-      QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
-      try (Admin admin = conn.getAdmin()) {
-        admin.setQuota(settings);
+    if (quotas != null){
+      if (quotas.hasSpace()){
+        QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
+        try (Admin admin = conn.getAdmin()) {
+          admin.setQuota(settings);
+        }
+      }
+      if (quotas.hasThrottle()){
+        QuotaSettings settings = QuotaSettingsFactory.unthrottleTable(tableName);
+        try (Admin admin = conn.getAdmin()) {
+          admin.setQuota(settings);
+        }
       }
     }
   }
@@ -82,10 +90,18 @@ public class MasterSpaceQuotaObserver implements MasterCoprocessor, MasterObserv
     }
     final Connection conn = ctx.getEnvironment().getConnection();
     Quotas quotas = QuotaUtil.getNamespaceQuota(conn, namespace);
-    if (quotas != null && quotas.hasSpace()) {
-      QuotaSettings settings = QuotaSettingsFactory.removeNamespaceSpaceLimit(namespace);
-      try (Admin admin = conn.getAdmin()) {
-        admin.setQuota(settings);
+    if (quotas != null) {
+      if (quotas.hasSpace()) {
+        QuotaSettings settings = QuotaSettingsFactory.removeNamespaceSpaceLimit(namespace);
+        try (Admin admin = conn.getAdmin()) {
+          admin.setQuota(settings);
+        }
+      }
+      if (quotas.hasThrottle()) {
+        QuotaSettings settings = QuotaSettingsFactory.unthrottleNamespace(namespace);
+        try (Admin admin = conn.getAdmin()) {
+          admin.setQuota(settings);
+        }
       }
     }
   }

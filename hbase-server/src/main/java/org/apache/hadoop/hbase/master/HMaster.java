@@ -158,7 +158,7 @@ import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProced
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
-import org.apache.hadoop.hbase.quotas.MasterSpaceQuotaObserver;
+import org.apache.hadoop.hbase.quotas.MasterQuotasObserver;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.quotas.SnapshotQuotaObserverChore;
@@ -910,10 +910,10 @@ public class HMaster extends HRegionServer implements MasterServices {
         new ReplicationPeerConfigUpgrader(zooKeeper, conf);
     tableCFsUpdater.copyTableCFs();
 
-    // Add the Observer to delete space quotas on table deletion before starting all CPs by
+    // Add the Observer to delete quotas on table deletion before starting all CPs by
     // default with quota support, avoiding if user specifically asks to not load this Observer.
     if (QuotaUtil.isQuotaEnabled(conf)) {
-      updateConfigurationForSpaceQuotaObserver(conf);
+      updateConfigurationForQuotasObserver(conf);
     }
     // initialize master side coprocessors before we start handling requests
     status.setStatus("Initializing master coprocessors");
@@ -1069,15 +1069,15 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * Adds the {@code MasterSpaceQuotaObserver} to the list of configured Master observers to
-   * automatically remove space quotas for a table when that table is deleted.
+   * Adds the {@code MasterQuotasObserver} to the list of configured Master observers to
+   * automatically remove quotas for a table when that table is deleted.
    */
   @VisibleForTesting
-  public void updateConfigurationForSpaceQuotaObserver(Configuration conf) {
+  public void updateConfigurationForQuotasObserver(Configuration conf) {
     // We're configured to not delete quotas on table deletion, so we don't need to add the obs.
     if (!conf.getBoolean(
-          MasterSpaceQuotaObserver.REMOVE_QUOTA_ON_TABLE_DELETE,
-          MasterSpaceQuotaObserver.REMOVE_QUOTA_ON_TABLE_DELETE_DEFAULT)) {
+          MasterQuotasObserver.REMOVE_QUOTA_ON_TABLE_DELETE,
+          MasterQuotasObserver.REMOVE_QUOTA_ON_TABLE_DELETE_DEFAULT)) {
       return;
     }
     String[] masterCoprocs = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
@@ -1086,7 +1086,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (length > 0) {
       System.arraycopy(masterCoprocs, 0, updatedCoprocs, 0, masterCoprocs.length);
     }
-    updatedCoprocs[length] = MasterSpaceQuotaObserver.class.getName();
+    updatedCoprocs[length] = MasterQuotasObserver.class.getName();
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, updatedCoprocs);
   }
 
