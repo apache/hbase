@@ -406,6 +406,7 @@ public class RegionStates {
         regionsInTransition.put(encodedName, regionState);
       }
       if (lastHost != null && newState != State.SPLIT) {
+        addToReplicaMapping(hri);
         addToServerHoldings(lastHost, hri);
         if (newState != State.OPEN) {
           oldAssignments.put(encodedName, lastHost);
