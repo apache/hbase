@@ -108,6 +108,9 @@ public class TableScanResource  extends ResourceBase {
                   kv.getTimestamp(), CellUtil.cloneValue(kv)));
             }
             count--;
+            if (count == 0) {
+              results.close();
+            }
             return rModel;
           }
         };
