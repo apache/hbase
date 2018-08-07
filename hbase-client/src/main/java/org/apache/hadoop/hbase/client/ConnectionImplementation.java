@@ -421,6 +421,28 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
+  public Hbck getHbck() throws IOException {
+    return getHbck(get(registry.getMasterAddress()));
+  }
+
+  @Override
+  public Hbck getHbck(ServerName masterServer) throws IOException {
+    checkClosed();
+    if (isDeadServer(masterServer)) {
+      throw new RegionServerStoppedException(masterServer + " is dead.");
+    }
+    String key = getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(),
+        masterServer, this.hostnamesCanChange);
+
+    return new HBaseHbck(this,
+        (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+          BlockingRpcChannel channel =
+              this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
+          return MasterProtos.HbckService.newBlockingStub(channel);
+        }));
+  }
+
+  @Override
   public MetricsConnection getConnectionMetrics() {
     return this.metrics;
   }
