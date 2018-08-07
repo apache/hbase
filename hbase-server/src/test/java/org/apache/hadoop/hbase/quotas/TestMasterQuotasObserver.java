@@ -138,6 +138,38 @@ public class TestMasterQuotasObserver {
   }
 
   @Test
+  public void testTableSpaceAndRPCQuotaRemoved() throws Exception {
+    final Connection conn = TEST_UTIL.getConnection();
+    final Admin admin = conn.getAdmin();
+    final TableName tn = TableName.valueOf(testName.getMethodName());
+    // Drop the table if it somehow exists
+    if (admin.tableExists(tn)) {
+      dropTable(admin, tn);
+    }
+
+    createTable(admin, tn);
+    assertEquals(0, getNumSpaceQuotas());
+    assertEquals(0, getThrottleQuotas());
+
+    // Set Both quotas
+    QuotaSettings settings =
+        QuotaSettingsFactory.limitTableSpace(tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
+    admin.setQuota(settings);
+
+    settings =
+        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    admin.setQuota(settings);
+
+    assertEquals(1, getNumSpaceQuotas());
+    assertEquals(1, getThrottleQuotas());
+
+    // Delete the table and observe the quotas being automatically deleted as well
+    dropTable(admin, tn);
+    assertEquals(0, getNumSpaceQuotas());
+    assertEquals(0, getThrottleQuotas());
+  }
+
+  @Test
   public void testNamespaceSpaceQuotaRemoved() throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
@@ -186,6 +218,41 @@ public class TestMasterQuotasObserver {
 
     // Delete the namespace and observe the quota being automatically deleted as well
     admin.deleteNamespace(ns);
+    assertEquals(0, getThrottleQuotas());
+  }
+
+  @Test
+  public void testNamespaceSpaceAndRPCQuotaRemoved() throws Exception {
+    final Connection conn = TEST_UTIL.getConnection();
+    final Admin admin = conn.getAdmin();
+    final TableName tn = TableName.valueOf(testName.getMethodName());
+    final String ns = testName.getMethodName();
+    // Drop the ns if it somehow exists
+    if (namespaceExists(ns)) {
+      admin.deleteNamespace(ns);
+    }
+
+    // Create the ns
+    NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
+    admin.createNamespace(desc);
+    assertEquals(0, getNumSpaceQuotas());
+    assertEquals(0, getThrottleQuotas());
+
+    // Set Both quotas
+    QuotaSettings settings =
+        QuotaSettingsFactory.limitNamespaceSpace(ns, 1024L, SpaceViolationPolicy.NO_INSERTS);
+    admin.setQuota(settings);
+
+    settings =
+        QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    admin.setQuota(settings);
+
+    assertEquals(1, getNumSpaceQuotas());
+    assertEquals(1, getThrottleQuotas());
+
+    // Delete the namespace and observe the quotas being automatically deleted as well
+    admin.deleteNamespace(ns);
+    assertEquals(0, getNumSpaceQuotas());
     assertEquals(0, getThrottleQuotas());
   }
 
