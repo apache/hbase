@@ -48,6 +48,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -7735,7 +7736,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean writeToWAL = durability != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<Cell> allKVs = new ArrayList<Cell>(mutate.size());
-    Map<Store, List<Cell>> tempMemstore = new HashMap<Store, List<Cell>>();
+    Map<Store, List<Cell>> tempMemstore = new LinkedHashMap<Store, List<Cell>>();
     Map<Store, List<Cell>> removedCellsForMemStore = new HashMap<>();
     long size = 0;
     long txid = 0;

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -137,6 +138,42 @@ public class TestAtomicOperation {
     Result result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1+v2), result.getValue(fam1, qual1)));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
+  }
+
+  @Test
+  public void testAppendWithMultipleFamilies() throws IOException {
+    final byte[] fam3 = Bytes.toBytes("colfamily31");
+    initHRegion(tableName, name.getMethodName(), fam1, fam2, fam3);
+    String v1 = "Appended";
+    String v2 = "Value";
+
+    Append a = new Append(row);
+    a.setReturnResults(false);
+    a.add(fam1, qual1, Bytes.toBytes(v1));
+    a.add(fam2, qual2, Bytes.toBytes(v2));
+    assertNull(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE));
+
+    a = new Append(row);
+    a.add(fam2, qual2, Bytes.toBytes(v1));
+    a.add(fam1, qual1, Bytes.toBytes(v2));
+    a.add(fam3, qual3, Bytes.toBytes(v2));
+    a.add(fam1, qual2, Bytes.toBytes(v1));
+
+    Result result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
+
+    byte[] actualValue1 = result.getValue(fam1, qual1);
+    byte[] actualValue2 = result.getValue(fam2, qual2);
+    byte[] actualValue3 = result.getValue(fam3, qual3);
+    byte[] actualValue4 = result.getValue(fam1, qual2);
+
+    assertNotNull("Value1 should bot be null", actualValue1);
+    assertNotNull("Value2 should bot be null", actualValue2);
+    assertNotNull("Value3 should bot be null", actualValue3);
+    assertNotNull("Value4 should bot be null", actualValue4);
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1 + v2), actualValue1));
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2 + v1), actualValue2));
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2), actualValue3));
+    assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1), actualValue4));
   }
 
   @Test
