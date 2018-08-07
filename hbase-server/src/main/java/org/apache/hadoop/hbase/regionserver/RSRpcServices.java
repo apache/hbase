@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcCallback;
+import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
@@ -256,6 +257,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   /** RPC scheduler to use for the region server. */
   public static final String REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS =
     "hbase.region.server.rpc.scheduler.factory.class";
+
+  /** RPC scheduler to use for the master. */
+  public static final String MASTER_RPC_SCHEDULER_FACTORY_CLASS =
+    "hbase.master.rpc.scheduler.factory.class";
 
   /**
    * Minimum allowable time limit delta (in milliseconds) that can be enforced during scans. This
@@ -1203,10 +1208,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     rowSizeWarnThreshold = rs.conf.getInt(BATCH_ROWS_THRESHOLD_NAME, BATCH_ROWS_THRESHOLD_DEFAULT);
     RpcSchedulerFactory rpcSchedulerFactory;
     try {
-      Class<?> cls = rs.conf.getClass(
-          REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
-          SimpleRpcSchedulerFactory.class);
-      rpcSchedulerFactory = cls.asSubclass(RpcSchedulerFactory.class)
+      rpcSchedulerFactory = getRpcSchedulerFactoryClass().asSubclass(RpcSchedulerFactory.class)
           .getDeclaredConstructor().newInstance();
     } catch (NoSuchMethodException | InvocationTargetException |
         InstantiationException | IllegalAccessException e) {
@@ -1281,6 +1283,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           + HConstants.REGIONSERVER_PORT + "' configuration property.",
           be.getCause() != null ? be.getCause() : be);
     }
+  }
+
+  protected Class<?> getRpcSchedulerFactoryClass() {
+    return this.regionServer.conf.getClass(REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
+      SimpleRpcSchedulerFactory.class);
   }
 
   @Override
@@ -3699,5 +3706,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @VisibleForTesting
+  public RpcScheduler getRpcScheduler() {
+    return rpcServer.getScheduler();
   }
 }
