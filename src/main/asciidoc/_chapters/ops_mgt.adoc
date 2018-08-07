@@ -1005,6 +1005,30 @@ drop_namespace 'pre_upgrade_cleanup'
 For further information, please refer to
 link:https://issues.apache.org/jira/browse/HBASE-20649?focusedCommentId=16535476#comment-16535476[HBASE-20649].
 
+=== Data Block Encoding Tool
+
+Tests various compression algorithms with different data block encoder for key compression on an existing HFile.
+Useful for testing, debugging and benchmarking.
+
+You must specify `-f` which is the full path of the HFile.
+
+The result shows both the performance (MB/s) of compression/decompression and encoding/decoding, and the data savings on the HFile.
+
+----
+
+$ bin/hbase org.apache.hadoop.hbase.regionserver.DataBlockEncodingTool
+Usages: hbase org.apache.hadoop.hbase.regionserver.DataBlockEncodingTool
+Options:
+        -f HFile to analyse (REQUIRED)
+        -n Maximum number of key/value pairs to process in a single benchmark run.
+        -b Whether to run a benchmark to measure read throughput.
+        -c If this is specified, no correctness testing will be done.
+        -a What kind of compression algorithm use for test. Default value: GZ.
+        -t Number of times to run each benchmark. Default value: 12.
+        -omit Number of first runs of every benchmark to omit from statistics. Default value: 2.
+
+----
+
 [[ops.regionmgt]]
 == Region Management
 

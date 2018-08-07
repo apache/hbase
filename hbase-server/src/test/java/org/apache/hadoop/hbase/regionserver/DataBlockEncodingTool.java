@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
@@ -91,8 +93,8 @@ public class DataBlockEncodingTool {
   /** If this is specified, no correctness testing will be done */
   private static final String OPT_OMIT_CORRECTNESS_TEST = "c";
 
-  /** What encoding algorithm to test */
-  private static final String OPT_ENCODING_ALGORITHM = "a";
+  /** What compression algorithm to test */
+  private static final String OPT_COMPRESSION_ALGORITHM = "a";
 
   /** Number of times to run each benchmark */
   private static final String OPT_BENCHMARK_N_TIMES = "t";
@@ -132,7 +134,10 @@ public class DataBlockEncodingTool {
   private final Compressor compressor;
   private final Decompressor decompressor;
 
-  private static enum Manipulation {
+  // Check if HFile use Tag.
+  private static boolean USE_TAG = false;
+
+  private enum Manipulation {
     ENCODING,
     DECODING,
     COMPRESSION,
@@ -192,8 +197,25 @@ public class DataBlockEncodingTool {
         }
       }
 
-      uncompressedOutputStream.write(currentKV.getBuffer(),
-          currentKV.getOffset(), currentKV.getLength());
+      // Add tagsLen zero to cells don't include tags. Since the process of
+      // scanner converts byte array to KV would abandon tagsLen part if tagsLen
+      // is zero. But we still needs the tagsLen part to check if current cell
+      // include tags. If USE_TAG is true, HFile contains cells with tags,
+      // if the cell tagsLen equals 0, it means other cells may have tags.
+      if (USE_TAG && currentKV.getTagsLength() == 0) {
+        uncompressedOutputStream.write(currentKV.getBuffer(),
+            currentKV.getOffset(), currentKV.getLength());
+        // write tagsLen = 0.
+        uncompressedOutputStream.write(Bytes.toBytes((short) 0));
+      } else {
+        uncompressedOutputStream.write(currentKV.getBuffer(),
+            currentKV.getOffset(), currentKV.getLength());
+      }
+
+      if(includesMemstoreTS) {
+        WritableUtils.writeVLong(
+            new DataOutputStream(uncompressedOutputStream), currentKV.getSequenceId());
+      }
 
       previousKey = currentKey;
 
@@ -209,16 +231,16 @@ public class DataBlockEncodingTool {
     }
 
     rawKVs = uncompressedOutputStream.toByteArray();
-    boolean useTag = (currentKV.getTagsLength() > 0);
     for (DataBlockEncoding encoding : encodings) {
       if (encoding == DataBlockEncoding.NONE) {
         continue;
       }
       DataBlockEncoder d = encoding.getEncoder();
       HFileContext meta = new HFileContextBuilder()
-                          .withCompression(Compression.Algorithm.NONE)
-                          .withIncludesMvcc(includesMemstoreTS)
-                          .withIncludesTags(useTag).build();
+          .withDataBlockEncoding(encoding)
+          .withCompression(Compression.Algorithm.NONE)
+          .withIncludesMvcc(includesMemstoreTS)
+          .withIncludesTags(USE_TAG).build();
       codecs.add(new EncodedDataBlock(d, encoding, rawKVs, meta ));
     }
   }
@@ -396,8 +418,10 @@ public class DataBlockEncodingTool {
     try {
       for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
         final long startTime = System.nanoTime();
-        compressingStream.resetState();
+        // The compressedStream should reset before compressingStream resetState since in GZ
+        // resetStatue will write header in the outputstream.
         compressedStream.reset();
+        compressingStream.resetState();
         compressingStream.write(buffer, offset, length);
         compressingStream.flush();
         compressedStream.toByteArray();
@@ -437,12 +461,6 @@ public class DataBlockEncodingTool {
           destOffset += decompressedStream.read(newBuf, destOffset, nextChunk);
         }
         decompressedStream.close();
-
-        // iterate over KeyValues
-        KeyValue kv;
-        for (int pos = 0; pos < length; pos += kv.getLength()) {
-          kv = new KeyValue(newBuf, pos);
-        }
 
       } catch (IOException e) {
         throw new RuntimeException(String.format(
@@ -596,8 +614,9 @@ public class DataBlockEncodingTool {
     hsf.initReader();
     StoreFileReader reader = hsf.getReader();
     reader.loadFileInfo();
-    KeyValueScanner scanner = reader.getStoreFileScanner(true, true, false, 0, 0, false);
-
+    KeyValueScanner scanner = reader.getStoreFileScanner(true, true,
+        false, hsf.getMaxMemStoreTS(), 0, false);
+    USE_TAG = reader.getHFileReader().getFileContext().isIncludesTags();
     // run the utilities
     DataBlockEncodingTool comp = new DataBlockEncodingTool(compressionName);
     int majorVersion = reader.getHFileVersion();
@@ -654,7 +673,7 @@ public class DataBlockEncodingTool {
         "Measure read throughput");
     options.addOption(OPT_OMIT_CORRECTNESS_TEST, false,
         "Omit corectness tests.");
-    options.addOption(OPT_ENCODING_ALGORITHM, true,
+    options.addOption(OPT_COMPRESSION_ALGORITHM, true,
         "What kind of compression algorithm use for comparison.");
     options.addOption(OPT_BENCHMARK_N_TIMES,
         true, "Number of times to run each benchmark. Default value: " +
@@ -680,6 +699,9 @@ public class DataBlockEncodingTool {
     int kvLimit = Integer.MAX_VALUE;
     if (cmd.hasOption(OPT_KV_LIMIT)) {
       kvLimit = Integer.parseInt(cmd.getOptionValue(OPT_KV_LIMIT));
+      if (kvLimit <= 0) {
+        LOG.error("KV_LIMIT should not less than 1.");
+      }
     }
 
     // basic argument sanity checks
@@ -692,9 +714,9 @@ public class DataBlockEncodingTool {
 
     String pathName = cmd.getOptionValue(OPT_HFILE_NAME);
     String compressionName = DEFAULT_COMPRESSION.getName();
-    if (cmd.hasOption(OPT_ENCODING_ALGORITHM)) {
+    if (cmd.hasOption(OPT_COMPRESSION_ALGORITHM)) {
       compressionName =
-          cmd.getOptionValue(OPT_ENCODING_ALGORITHM).toLowerCase(Locale.ROOT);
+          cmd.getOptionValue(OPT_COMPRESSION_ALGORITHM).toLowerCase(Locale.ROOT);
     }
     boolean doBenchmark = cmd.hasOption(OPT_MEASURE_THROUGHPUT);
     boolean doVerify = !cmd.hasOption(OPT_OMIT_CORRECTNESS_TEST);
