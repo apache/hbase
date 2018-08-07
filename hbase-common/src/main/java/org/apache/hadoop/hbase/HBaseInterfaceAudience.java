@@ -48,4 +48,9 @@ public final class HBaseInterfaceAudience {
    * for class name, and arguments.
    */
   public static final String TOOLS = "Tools";
+
+  /**
+   * Denotes classes used by hbck tool for fixing inconsistent state of HBase.
+   */
+  public static final String HBCK = "HBCK";
 }

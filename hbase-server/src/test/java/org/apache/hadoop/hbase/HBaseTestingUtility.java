@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -73,6 +74,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
 import org.apache.hadoop.hbase.client.ImmutableHTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
@@ -2805,7 +2807,12 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   private HBaseAdmin hbaseAdmin = null;
 
-
+  /**
+   * Returns an {@link Hbck} instance. Needs be closed when done.
+   */
+  public Hbck getHbck() throws IOException {
+    return ((ClusterConnection) getConnection()).getHbck();
+  }
 
   /**
    * Unassign the named region.
