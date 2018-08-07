@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -133,6 +134,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalance
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetCleanerChoreRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetTableStateInMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -1440,6 +1442,16 @@ public final class RequestConverter {
     return GetTableStateRequest.newBuilder()
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
             .build();
+  }
+
+  /**
+   * Creates a protocol buffer SetTableStateInMetaRequest
+   * @param state table state to update in Meta
+   * @return a SetTableStateInMetaRequest
+   */
+  public static SetTableStateInMetaRequest buildSetTableStateInMetaRequest(final TableState state) {
+    return SetTableStateInMetaRequest.newBuilder().setTableState(state.convert())
+        .setTableName(ProtobufUtil.toProtoTableName(state.getTableName())).build();
   }
 
   /**
