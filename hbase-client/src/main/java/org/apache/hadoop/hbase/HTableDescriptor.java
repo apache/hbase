@@ -65,6 +65,10 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final String REGION_REPLICATION = TableDescriptorBuilder.REGION_REPLICATION;
   public static final String REGION_MEMSTORE_REPLICATION = TableDescriptorBuilder.REGION_MEMSTORE_REPLICATION;
   public static final String NORMALIZATION_ENABLED = TableDescriptorBuilder.NORMALIZATION_ENABLED;
+  public static final String NORMALIZER_TARGET_REGION_COUNT =
+      TableDescriptorBuilder.NORMALIZER_TARGET_REGION_COUNT;
+  public static final String NORMALIZER_TARGET_REGION_SIZE =
+      TableDescriptorBuilder.NORMALIZER_TARGET_REGION_SIZE;
   public static final String PRIORITY = TableDescriptorBuilder.PRIORITY;
   public static final boolean DEFAULT_READONLY = TableDescriptorBuilder.DEFAULT_READONLY;
   public static final boolean DEFAULT_COMPACTION_ENABLED = TableDescriptorBuilder.DEFAULT_COMPACTION_ENABLED;
@@ -285,6 +289,26 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    */
   public HTableDescriptor setNormalizationEnabled(final boolean isEnable) {
     getDelegateeForModification().setNormalizationEnabled(isEnable);
+    return this;
+  }
+
+  @Override
+  public int getNormalizerTargetRegionCount() {
+    return getDelegateeForModification().getNormalizerTargetRegionCount();
+  }
+
+  public HTableDescriptor setNormalizerTargetRegionCount(final int regionCount) {
+    getDelegateeForModification().setNormalizerTargetRegionCount(regionCount);
+    return this;
+  }
+
+  @Override
+  public long getNormalizerTargetRegionSize() {
+    return getDelegateeForModification().getNormalizerTargetRegionSize();
+  }
+
+  public HTableDescriptor setNormalizerTargetRegionSize(final long regionSize) {
+    getDelegateeForModification().setNormalizerTargetRegionSize(regionSize);
     return this;
   }
 

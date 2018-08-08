@@ -261,6 +261,22 @@ public interface TableDescriptor {
   boolean isNormalizationEnabled();
 
   /**
+   * Check if there is the target region count. If so, the normalize plan will
+   * be calculated based on the target region count.
+   *
+   * @return target region count after normalize done
+   */
+  int getNormalizerTargetRegionCount();
+
+  /**
+   * Check if there is the target region size. If so, the normalize plan will
+   * be calculated based on the target region size.
+   *
+   * @return target region size after normalize done
+   */
+  long getNormalizerTargetRegionSize();
+
+  /**
    * Check if the readOnly flag of the table is set. If the readOnly flag is set
    * then the contents of the table can only be read from but not modified.
    *
