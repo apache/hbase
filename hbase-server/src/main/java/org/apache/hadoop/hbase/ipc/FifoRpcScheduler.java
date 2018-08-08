@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,17 +40,15 @@ import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 @InterfaceAudience.Private
 public class FifoRpcScheduler extends RpcScheduler {
   private static final Logger LOG = LoggerFactory.getLogger(FifoRpcScheduler.class);
-  private final int handlerCount;
-  private final int maxQueueLength;
-  private final AtomicInteger queueSize = new AtomicInteger(0);
-  private ThreadPoolExecutor executor;
+  protected final int handlerCount;
+  protected final int maxQueueLength;
+  protected final AtomicInteger queueSize = new AtomicInteger(0);
+  protected ThreadPoolExecutor executor;
 
   public FifoRpcScheduler(Configuration conf, int handlerCount) {
     this.handlerCount = handlerCount;
     this.maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
-    LOG.info("Using " + this.getClass().getSimpleName() + " as user call queue; handlerCount=" +
-        handlerCount + "; maxQueueLength=" + maxQueueLength);
   }
 
   @Override
@@ -59,6 +58,8 @@ public class FifoRpcScheduler extends RpcScheduler {
 
   @Override
   public void start() {
+    LOG.info("Using {} as user call queue; handlerCount={}; maxQueueLength={}",
+      this.getClass().getSimpleName(), handlerCount, maxQueueLength);
     this.executor = new ThreadPoolExecutor(
         handlerCount,
         handlerCount,
@@ -94,6 +95,11 @@ public class FifoRpcScheduler extends RpcScheduler {
 
   @Override
   public boolean dispatch(final CallRunner task) throws IOException, InterruptedException {
+    return executeRpcCall(executor, queueSize, task);
+  }
+
+  protected boolean executeRpcCall(final ThreadPoolExecutor executor, final AtomicInteger queueSize,
+      final CallRunner task) {
     // Executors provide no offer, so make our own.
     int queued = queueSize.getAndIncrement();
     if (maxQueueLength > 0 && queued >= maxQueueLength) {
@@ -184,15 +190,19 @@ public class FifoRpcScheduler extends RpcScheduler {
     callQueueInfo.setCallMethodCount(queueName, methodCount);
     callQueueInfo.setCallMethodSize(queueName, methodSize);
 
+    updateMethodCountAndSizeByQueue(executor.getQueue(), methodCount, methodSize);
 
-    for (Runnable r:executor.getQueue()) {
+    return callQueueInfo;
+  }
+
+  protected void updateMethodCountAndSizeByQueue(BlockingQueue<Runnable> queue,
+      HashMap<String, Long> methodCount, HashMap<String, Long> methodSize) {
+    for (Runnable r : queue) {
       FifoCallRunner mcr = (FifoCallRunner) r;
       RpcCall rpcCall = mcr.getCallRunner().getRpcCall();
 
-      String method;
-
-      if (null==rpcCall.getMethod() ||
-            StringUtil.isNullOrEmpty(method = rpcCall.getMethod().getName())) {
+      String method = getCallMethod(mcr.getCallRunner());
+      if (StringUtil.isNullOrEmpty(method)) {
         method = "Unknown";
       }
 
@@ -201,8 +211,14 @@ public class FifoRpcScheduler extends RpcScheduler {
       methodCount.put(method, 1 + methodCount.getOrDefault(method, 0L));
       methodSize.put(method, size + methodSize.getOrDefault(method, 0L));
     }
+  }
 
-    return callQueueInfo;
+  protected String getCallMethod(final CallRunner task) {
+    RpcCall call = task.getRpcCall();
+    if (call != null && call.getMethod() != null) {
+      return call.getMethod().getName();
+    }
+    return null;
   }
 
 }
