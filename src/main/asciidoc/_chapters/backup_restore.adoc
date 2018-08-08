@@ -212,7 +212,7 @@ _type_::
 
 _backup_path_::
   The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
-  are _hdfs:_, _webhdfs:_, _gpfs:_, and _s3fs:_.
+  _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
 
 [[br.create.named.cli.arguments]]
 ==== Named Command-Line Arguments
@@ -270,7 +270,7 @@ hbase restore <backup_path> <backup_id>
 
 _backup_path_::
   The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
-  are _hdfs:_, _webhdfs:_, _gpfs:_, and _s3fs:_.
+  _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
 
 _backup_id_::
   The backup ID that uniquely identifies the backup image to be restored.
@@ -308,7 +308,7 @@ _-o_::
 
 [source]
 ----
-hbase backup restore /tmp/backup_incremental backupId_1467823988425 -t mytable1,mytable2
+hbase restore /tmp/backup_incremental backupId_1467823988425 -t mytable1,mytable2
 ----
 
 This command restores two tables of an incremental backup image. In this example:
@@ -357,7 +357,7 @@ $ hbase backup merge backupId_1467823988425,backupId_1467827588425
 
 Backup sets can ease the administration of HBase data backups and restores by reducing the amount of repetitive input
 of table names. You can group tables into a named backup set with the `hbase backup set add` command. You can then use
-the -set option to invoke the name of a backup set in the `hbase backup create` or `hbase backup restore` rather than list
+the `-set` option to invoke the name of a backup set in the `hbase backup create` or `hbase restore` rather than list
 individually every table in the group. You can have multiple backup sets.
 
 NOTE: Note the differentiation between the `hbase backup set add` command and the _-set_ option. The `hbase backup set add`
