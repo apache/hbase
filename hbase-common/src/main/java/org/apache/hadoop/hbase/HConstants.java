@@ -1022,8 +1022,6 @@ public final class HConstants {
 
   public static final String REGION_SERVER_HANDLER_COUNT = "hbase.regionserver.handler.count";
   public static final int DEFAULT_REGION_SERVER_HANDLER_COUNT = 30;
-  public static final String REGION_SERVER_REPORT_HANDLER_COUNT =
-      "hbase.regionserver.report.handler.count";
 
   /*
    * REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT:
