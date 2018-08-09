@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -206,13 +208,24 @@ public abstract class TimeRangeTracker {
     }
   }
 
-  public static byte[] toByteArray(TimeRangeTracker tracker) {
-    return ProtobufUtil.prependPBMagic(
-        HBaseProtos.TimeRangeTracker.newBuilder()
-          .setFrom(tracker.getMin())
-          .setTo(tracker.getMax())
-          .build()
-          .toByteArray());
+  /**
+   * This method used to serialize TimeRangeTracker (TRT) by protobuf while this breaks the
+   * forward compatibility on HFile.(See HBASE-21008) In previous hbase version ( < 2.0.0 ) we use
+   * DataOutput to serialize TRT, these old versions don't have capability to deserialize TRT
+   * which is serialized by protobuf. So we need to revert the change of serializing
+   * TimeRangeTracker back to DataOutput. For more information, please check HBASE-21012.
+   * @param tracker TimeRangeTracker needed to be serialized.
+   * @return byte array filled with serialized TimeRangeTracker.
+   * @throws IOException if something goes wrong in writeLong.
+   */
+  public static byte[] toByteArray(TimeRangeTracker tracker) throws IOException {
+    try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+      try (DataOutputStream dos = new DataOutputStream(bos)) {
+        dos.writeLong(tracker.getMin());
+        dos.writeLong(tracker.getMax());
+        return bos.toByteArray();
+      }
+    }
   }
 
   /**
