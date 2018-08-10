@@ -203,7 +203,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * Key set of offsets in BucketCache is limited so soft reference is the best choice here.
    */
   @VisibleForTesting
-  final IdReadWriteLock offsetLock = new IdReadWriteLock(ReferenceType.SOFT);
+  final IdReadWriteLock<Long> offsetLock = new IdReadWriteLock<>(ReferenceType.SOFT);
 
   private final NavigableSet<BlockCacheKey> blocksByHFile =
       new ConcurrentSkipListSet<>(new Comparator<BlockCacheKey>() {
