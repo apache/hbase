@@ -17,6 +17,9 @@
 #
 # This Dockerfile is to setup environment for dev-support scripts which require
 # dependencies outside of what Apache Jenkins machines may have.
+#
+# Specifically, it's used for the flaky test reporting job defined in
+# dev-support/flaky-tests/flaky-reporting.Jenkinsfile
 FROM ubuntu:14.04
 
 ADD . /hbase/dev-support
