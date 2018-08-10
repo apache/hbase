@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.client.TableState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -45,8 +46,8 @@ public class MirroringTableStateManager extends TableStateManager {
   private static final Logger LOG = LoggerFactory.getLogger(MirroringTableStateManager.class);
 
   /**
-   * Set this key to true in Configuration to enable mirroring of table state out to zookeeper
-   * so hbase-1.x clients can pick-up table state.
+   * Set this key to true in Configuration to enable mirroring of table state out to zookeeper so
+   * hbase-1.x clients can pick-up table state.
    */
   static final String MIRROR_TABLE_STATE_TO_ZK_KEY = "hbase.mirror.table.state.to.zookeeper";
 
@@ -54,26 +55,14 @@ public class MirroringTableStateManager extends TableStateManager {
     super(master);
   }
 
-  protected void updateMetaState(TableName tableName, TableState.State newState)
-      throws IOException {
-    // Take the lock. Its reentrant. Calls to super will take same lock.
-    lock.writeLock().lock();
-    try {
-      super.updateMetaState(tableName, newState);
-      updateZooKeeper(new TableState(tableName, newState));
-    } finally {
-      lock.writeLock().unlock();
-    }
+  @Override
+  protected void metaStateUpdated(TableName tableName, State newState) throws IOException {
+    updateZooKeeper(new TableState(tableName, newState));
   }
 
-  public void setDeletedTable(TableName tableName) throws IOException {
-    lock.writeLock().lock();
-    try {
-      super.setDeletedTable(tableName);
-      deleteZooKeeper(tableName);
-    } finally {
-      lock.writeLock().unlock();
-    }
+  @Override
+  protected void metaStateDeleted(TableName tableName) throws IOException {
+    deleteZooKeeper(tableName);
   }
 
   private void updateZooKeeper(TableState tableState) throws IOException {
@@ -81,7 +70,7 @@ public class MirroringTableStateManager extends TableStateManager {
       return;
     }
     String znode = ZNodePaths.joinZNode(this.master.getZooKeeper().getZNodePaths().tableZNode,
-        tableState.getTableName().getNameAsString());
+      tableState.getTableName().getNameAsString());
     try {
       // Make sure znode exists.
       if (ZKUtil.checkExists(this.master.getZooKeeper(), znode) == -1) {
@@ -89,10 +78,10 @@ public class MirroringTableStateManager extends TableStateManager {
       }
       // Now set newState
       ZooKeeperProtos.DeprecatedTableState.Builder builder =
-          ZooKeeperProtos.DeprecatedTableState.newBuilder();
-      builder.setState(ZooKeeperProtos.DeprecatedTableState.State.
-          valueOf(tableState.getState().toString()));
-      byte [] data = ProtobufUtil.prependPBMagic(builder.build().toByteArray());
+        ZooKeeperProtos.DeprecatedTableState.newBuilder();
+      builder.setState(
+        ZooKeeperProtos.DeprecatedTableState.State.valueOf(tableState.getState().toString()));
+      byte[] data = ProtobufUtil.prependPBMagic(builder.build().toByteArray());
       ZKUtil.setData(this.master.getZooKeeper(), znode, data);
     } catch (KeeperException e) {
       // Only hbase1 clients suffer if this fails.
