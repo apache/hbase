@@ -225,6 +225,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>brfrn169</id>
+      <name>Toshihiro Suzuki</name>
+      <email>brfrn169@apache.org</email>
+      <timezone>+9</timezone>
+    </developer>
+    <developer>
       <id>busbey</id>
       <name>Sean Busbey</name>
       <email>busbey@apache.org</email>
