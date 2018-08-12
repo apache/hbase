@@ -105,7 +105,7 @@ case class HBaseRelation (
 
   val catalog = HBaseTableCatalog(parameters)
   def tableName = catalog.name
-  val configResources = parameters.getOrElse(HBaseSparkConf.HBASE_CONFIG_LOCATION, "")
+  val configResources = parameters.get(HBaseSparkConf.HBASE_CONFIG_LOCATION)
   val useHBaseContext =  parameters.get(HBaseSparkConf.USE_HBASECONTEXT).map(_.toBoolean).getOrElse(HBaseSparkConf.DEFAULT_USE_HBASECONTEXT)
   val usePushDownColumnFilter = parameters.get(HBaseSparkConf.PUSHDOWN_COLUMN_FILTER)
     .map(_.toBoolean).getOrElse(HBaseSparkConf.DEFAULT_PUSHDOWN_COLUMN_FILTER)
@@ -132,7 +132,7 @@ case class HBaseRelation (
     LatestHBaseContextCache.latest
   } else {
     val config = HBaseConfiguration.create()
-    configResources.split(",").foreach( r => config.addResource(r))
+    configResources.map(resource => resource.split(",").foreach(r => config.addResource(r)))
     new HBaseContext(sqlContext.sparkContext, config)
   }
 
