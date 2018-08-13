@@ -85,6 +85,10 @@ public class StoreFileReader {
   @VisibleForTesting
   final boolean shared;
 
+  private volatile Listener listener;
+
+  private boolean closed = false;
+
   private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, boolean shared) {
     this.reader = reader;
     bloomFilterType = BloomType.NONE;
@@ -209,7 +213,16 @@ public class StoreFileReader {
   }
 
   public void close(boolean evictOnClose) throws IOException {
-    reader.close(evictOnClose);
+    synchronized (this) {
+      if (closed) {
+        return;
+      }
+      reader.close(evictOnClose);
+      closed = true;
+    }
+    if (listener != null) {
+      listener.storeFileReaderClosed(this);
+    }
   }
 
   /**
@@ -643,5 +656,13 @@ public class StoreFileReader {
 
   void setSkipResetSeqId(boolean skipResetSeqId) {
     this.skipResetSeqId = skipResetSeqId;
+  }
+
+  public void setListener(Listener listener) {
+    this.listener = listener;
+  }
+
+  public interface Listener {
+    void storeFileReaderClosed(StoreFileReader reader);
   }
 }
