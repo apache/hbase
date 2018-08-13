@@ -850,8 +850,20 @@ public class AssignmentManager implements ServerListener {
 
     final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
     if (!reportTransition(regionNode, serverNode, state, seqId)) {
-      // Don't log if shutting down cluster; during shutdown.
-      LOG.warn("No matching procedure found for {} transition to {}", regionNode, state);
+      // Don't log WARN if shutting down cluster; during shutdown. Avoid the below messages:
+      // 2018-08-13 10:45:10,551 WARN ...AssignmentManager: No matching procedure found for
+      //   rit=OPEN, location=ve0538.halxg.cloudera.com,16020,1533493000958,
+      //   table=IntegrationTestBigLinkedList, region=65ab289e2fc1530df65f6c3d7cde7aa5 transition
+      //   to CLOSED
+      // These happen because on cluster shutdown, we currently let the RegionServers close
+      // regions. This is the only time that region close is not run by the Master (so cluster
+      // goes down fast). Consider changing it so Master runs all shutdowns.
+      if (this.master.getServerManager().isClusterShutdown() &&
+          state.equals(TransitionCode.CLOSED)) {
+        LOG.info("RegionServer {} {}", state, regionNode.getRegionInfo().getEncodedName());
+      } else {
+        LOG.warn("No matching procedure found for {} transition to {}", regionNode, state);
+      }
     }
   }
 
