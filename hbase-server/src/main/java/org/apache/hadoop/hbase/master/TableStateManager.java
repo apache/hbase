@@ -233,6 +233,7 @@ public class TableStateManager {
     try {
       MetaTableAccessor.updateTableState(master.getConnection(), tableName, newState);
       tableName2State.put(tableName, newState);
+      succ = true;
     } finally {
       if (!succ) {
         tableName2State.remove(tableName);
