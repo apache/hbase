@@ -123,16 +123,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <executions>
-          <!-- purposefully have jsr 305 exclusion only warn in this module -->
-          <execution>
-            <id>banned-jsr305</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <fail>false</fail>
-            </configuration>
-          </execution>
           <!-- hbase-spark is ok in this modules -->
           <execution>
             <id>banned-hbase-spark</id>
