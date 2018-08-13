@@ -1363,28 +1363,20 @@ public class ProcedureExecutor<TEnvironment> {
     assert subprocStack != null : "Called rollback with no steps executed rootProc=" + rootProc;
 
     int stackTail = subprocStack.size();
-    boolean reuseLock = false;
-    while (stackTail --> 0) {
+    while (stackTail-- > 0) {
       Procedure<TEnvironment> proc = subprocStack.get(stackTail);
 
-      LockState lockState;
-      if (!reuseLock && (lockState = acquireLock(proc)) != LockState.LOCK_ACQUIRED) {
+      LockState lockState = acquireLock(proc);
+      if (lockState != LockState.LOCK_ACQUIRED) {
         // can't take a lock on the procedure, add the root-proc back on the
         // queue waiting for the lock availability
         return lockState;
       }
 
       lockState = executeRollback(proc);
+      releaseLock(proc, false);
       boolean abortRollback = lockState != LockState.LOCK_ACQUIRED;
       abortRollback |= !isRunning() || !store.isRunning();
-
-      // If the next procedure is the same to this one
-      // (e.g. StateMachineProcedure reuse the same instance)
-      // we can avoid to lock/unlock each step
-      reuseLock = stackTail > 0 && (subprocStack.get(stackTail - 1) == proc) && !abortRollback;
-      if (!reuseLock && proc.hasLock()) {
-        releaseLock(proc, false);
-      }
 
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
