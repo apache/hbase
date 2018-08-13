@@ -299,11 +299,15 @@ public abstract class Segment implements MemStoreSizing {
     // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
     // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
     // than the counted number)
-    if (succ || mslabUsed) {
+    boolean sizeChanged = succ || mslabUsed;
+    if (sizeChanged) {
       cellSize = getCellLength(cellToAdd);
     }
-    long heapSize = heapSizeChange(cellToAdd, succ);
-    long offHeapSize = offHeapSizeChange(cellToAdd, succ);
+    // same as above, if MSLAB is used, we need to inc the heap/offheap size, otherwise there will
+    // be a memory miscount. Since we are now use heapSize + offHeapSize to decide whether a flush
+    // is needed.
+    long heapSize = heapSizeChange(cellToAdd, sizeChanged);
+    long offHeapSize = offHeapSizeChange(cellToAdd, sizeChanged);
     incMemStoreSize(cellSize, heapSize, offHeapSize);
     if (memstoreSizing != null) {
       memstoreSizing.incMemStoreSize(cellSize, heapSize, offHeapSize);

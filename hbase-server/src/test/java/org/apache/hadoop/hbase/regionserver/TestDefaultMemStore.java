@@ -138,6 +138,21 @@ public class TestDefaultMemStore {
     Segment segment = this.memstore.getActive();
     MemStoreLAB msLab = segment.getMemStoreLAB();
     if (msLab != null) {
+      if (msLab.isOnHeap()) {
+        assertTrue("HeapSize should always bigger or equal than data size",
+            sizeChangeForFirstCell.getHeapSize() >= sizeChangeForFirstCell
+                .getDataSize());
+        assertTrue("HeapSize should always bigger or equal than data size",
+            sizeChangeForSecondCell.getHeapSize() >= sizeChangeForSecondCell
+                .getDataSize());
+      } else {
+        assertTrue("OffHeapSize should always bigger or equal than data size",
+            sizeChangeForFirstCell.getOffHeapSize() >= sizeChangeForFirstCell
+                .getDataSize());
+        assertTrue("OffHeapSize should always bigger or equal than data size",
+            sizeChangeForSecondCell.getOffHeapSize() >= sizeChangeForSecondCell
+                .getDataSize());
+      }
       // make sure memstore size increased even when writing the same cell, if using MSLAB
       assertEquals(Segment.getCellLength(kv),
           sizeChangeForSecondCell.getMemStoreSize().getDataSize());
