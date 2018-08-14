@@ -1008,16 +1008,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   // Exposed for testing
   static interface LogDelegate {
-    void logBatchWarning(int sum, int rowSizeWarnThreshold);
+    void logBatchWarning(String firstRegionName, int sum, int rowSizeWarnThreshold);
   }
 
   private static LogDelegate DEFAULT_LOG_DELEGATE = new LogDelegate() {
     @Override
-    public void logBatchWarning(int sum, int rowSizeWarnThreshold) {
+    public void logBatchWarning(String firstRegionName, int sum, int rowSizeWarnThreshold) {
       if (LOG.isWarnEnabled()) {
         LOG.warn("Large batch operation detected (greater than " + rowSizeWarnThreshold
             + ") (HBASE-18023)." + " Requested Number of Rows: " + sum + " Client: "
-            + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress());
+            + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress()
+            + " first region in multi=" + firstRegionName);
       }
     }
   };
@@ -2241,11 +2242,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   private void checkBatchSizeAndLogLargeSize(MultiRequest request) {
     int sum = 0;
+    String firstRegionName = null;
     for (RegionAction regionAction : request.getRegionActionList()) {
+      if (sum == 0) {
+        firstRegionName = Bytes.toStringBinary(regionAction.getRegion().getValue().toByteArray());
+      }
       sum += regionAction.getActionCount();
     }
     if (sum > rowSizeWarnThreshold) {
-      ld.logBatchWarning(sum, rowSizeWarnThreshold);
+      ld.logBatchWarning(firstRegionName, sum, rowSizeWarnThreshold);
     }
   }
 

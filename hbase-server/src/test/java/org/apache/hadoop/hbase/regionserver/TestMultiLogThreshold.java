@@ -119,25 +119,29 @@ public class TestMultiLogThreshold {
   @Test
   public void testMultiLogThresholdRegionActions() throws ServiceException, IOException {
     sendMultiRequest(THRESHOLD + 1, ActionType.REGION_ACTIONS);
-    verify(LD, Mockito.times(1)).logBatchWarning(Mockito.anyInt(), Mockito.anyInt());
+    verify(LD, Mockito.times(1)).logBatchWarning(Mockito.anyString(), Mockito.anyInt(),
+      Mockito.anyInt());
   }
 
   @Test
   public void testMultiNoLogThresholdRegionActions() throws ServiceException, IOException {
     sendMultiRequest(THRESHOLD, ActionType.REGION_ACTIONS);
-    verify(LD, Mockito.never()).logBatchWarning(Mockito.anyInt(), Mockito.anyInt());
+    verify(LD, Mockito.never()).logBatchWarning(Mockito.anyString(), Mockito.anyInt(),
+      Mockito.anyInt());
   }
 
   @Test
   public void testMultiLogThresholdActions() throws ServiceException, IOException {
     sendMultiRequest(THRESHOLD + 1, ActionType.ACTIONS);
-    verify(LD, Mockito.times(1)).logBatchWarning(Mockito.anyInt(), Mockito.anyInt());
+    verify(LD, Mockito.times(1)).logBatchWarning(Mockito.anyString(), Mockito.anyInt(),
+      Mockito.anyInt());
   }
 
   @Test
   public void testMultiNoLogThresholdAction() throws ServiceException, IOException {
     sendMultiRequest(THRESHOLD, ActionType.ACTIONS);
-    verify(LD, Mockito.never()).logBatchWarning(Mockito.anyInt(), Mockito.anyInt());
+    verify(LD, Mockito.never()).logBatchWarning(Mockito.anyString(), Mockito.anyInt(),
+      Mockito.anyInt());
   }
 
 }
