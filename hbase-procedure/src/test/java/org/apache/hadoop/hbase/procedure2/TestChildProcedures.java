@@ -109,6 +109,29 @@ public class TestChildProcedures {
     ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
   }
 
+
+  /**
+   * Test the state setting that happens after store to WAL; in particular the bit where we
+   * set the parent runnable again after its children have all completed successfully.
+   * See HBASE-20978.
+   */
+  @Test
+  public void testChildLoadWithRestartAfterChildSuccess() throws Exception {
+    procEnv.toggleKillAfterStoreUpdate = true;
+
+    TestRootProcedure proc = new TestRootProcedure();
+    long procId = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
+    int restartCount = 0;
+    while (!procExecutor.isFinished(procId)) {
+      ProcedureTestingUtility.restart(procExecutor);
+      ProcedureTestingUtility.waitProcedure(procExecutor, proc);
+      restartCount++;
+    }
+    assertEquals(4, restartCount);
+    assertTrue("expected completed proc", procExecutor.isFinished(procId));
+    ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
+  }
+
   @Test
   public void testChildRollbackLoad() throws Exception {
     procEnv.toggleKillBeforeStoreUpdate = false;
@@ -154,6 +177,9 @@ public class TestChildProcedures {
       if (env.toggleKillBeforeStoreUpdate) {
         ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
       }
+      if (env.toggleKillAfterStoreUpdate) {
+        ProcedureTestingUtility.toggleKillAfterStoreUpdate(procExecutor);
+      }
       return new Procedure[] { new TestChildProcedure(), new TestChildProcedure() };
     }
 
@@ -193,6 +219,7 @@ public class TestChildProcedures {
 
   private static class TestProcEnv {
     public boolean toggleKillBeforeStoreUpdate = false;
+    public boolean toggleKillAfterStoreUpdate = false;
     public boolean triggerRollbackOnChild = false;
   }
 }

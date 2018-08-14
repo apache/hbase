@@ -83,11 +83,33 @@ public class ProcedureExecutor<TEnvironment> {
       "hbase.procedure.worker.keep.alive.time.msec";
   private static final long DEFAULT_WORKER_KEEP_ALIVE_TIME = TimeUnit.MINUTES.toMillis(1);
 
+  /**
+   * {@link #testing} is non-null when ProcedureExecutor is being tested. Tests will try to
+   * break PE having it fail at various junctures. When non-null, testing is set to an instance of
+   * the below internal {@link Testing} class with flags set for the particular test.
+   */
   Testing testing = null;
+
+  /**
+   * Class with parameters describing how to fail/die when in testing-context.
+   */
   public static class Testing {
     protected boolean killIfSuspended = false;
+
+    /**
+     * Kill the PE BEFORE we store state to the WAL. Good for figuring out if a Procedure is
+     * persisting all the state it needs to recover after a crash.
+     */
     protected boolean killBeforeStoreUpdate = false;
     protected boolean toggleKillBeforeStoreUpdate = false;
+
+    /**
+     * Set when we want to fail AFTER state has been stored into the WAL. Rarely used. HBASE-20978
+     * is about a case where memory-state was being set after store to WAL where a crash could
+     * cause us to get stuck. This flag allows killing at what was a vulnerable time.
+     */
+    protected boolean killAfterStoreUpdate = false;
+    protected boolean toggleKillAfterStoreUpdate = false;
 
     protected boolean shouldKillBeforeStoreUpdate() {
       final boolean kill = this.killBeforeStoreUpdate;
@@ -100,6 +122,19 @@ public class ProcedureExecutor<TEnvironment> {
 
     protected boolean shouldKillBeforeStoreUpdate(final boolean isSuspended) {
       return (isSuspended && !killIfSuspended) ? false : shouldKillBeforeStoreUpdate();
+    }
+
+    protected boolean shouldKillAfterStoreUpdate() {
+      final boolean kill = this.killAfterStoreUpdate;
+      if (this.toggleKillAfterStoreUpdate) {
+        this.killAfterStoreUpdate = !kill;
+        LOG.warn("Toggle KILL after store update to: " + this.killAfterStoreUpdate);
+      }
+      return kill;
+    }
+
+    protected boolean shouldKillAfterStoreUpdate(final boolean isSuspended) {
+      return (isSuspended && !killIfSuspended) ? false : shouldKillAfterStoreUpdate();
     }
   }
 
@@ -503,6 +538,17 @@ public class ProcedureExecutor<TEnvironment> {
           break;
         case WAITING:
           if (!proc.hasChildren()) {
+            // Normally, WAITING procedures should be waken by its children.
+            // But, there is a case that, all the children are successful and before
+            // they can wake up their parent procedure, the master was killed.
+            // So, during recovering the procedures from ProcedureWal, its children
+            // are not loaded because of their SUCCESS state.
+            // So we need to continue to run this WAITING procedure. But before
+            // executing, we need to set its state to RUNNABLE, otherwise, a exception
+            // will throw:
+            // Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE,
+            // "NOT RUNNABLE! " + procedure.toString());
+            proc.setState(ProcedureState.RUNNABLE);
             runnableList.add(proc);
           }
           break;
@@ -1562,10 +1608,7 @@ public class ProcedureExecutor<TEnvironment> {
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
       if (testing != null && testing.shouldKillBeforeStoreUpdate(suspended)) {
-        String msg = "TESTING: Kill before store update: " + procedure;
-        LOG.debug(msg);
-        stop();
-        throw new RuntimeException(msg);
+        kill("TESTING: Kill BEFORE store update: " + procedure);
       }
 
       // TODO: The code here doesn't check if store is running before persisting to the store as
@@ -1591,6 +1634,14 @@ public class ProcedureExecutor<TEnvironment> {
 
       assert (reExecute && subprocs == null) || !reExecute;
     } while (reExecute);
+
+    // Allows to kill the executor after something is stored to the WAL but before the below
+    // state settings are done -- in particular the one on the end where we make parent
+    // RUNNABLE again when its children are done; see countDownChildren.
+    if (testing != null && testing.shouldKillAfterStoreUpdate(suspended)) {
+      kill("TESTING: Kill AFTER store update: " + procedure);
+    }
+
     // Submit the new subprocedures
     if (subprocs != null && !procedure.isFailed()) {
       submitChildrenProcedures(subprocs);
@@ -1606,6 +1657,12 @@ public class ProcedureExecutor<TEnvironment> {
     if (!suspended && procedure.isFinished() && procedure.hasParent()) {
       countDownChildren(procStack, procedure);
     }
+  }
+
+  private void kill(String msg) {
+    LOG.debug(msg);
+    stop();
+    throw new RuntimeException(msg);
   }
 
   private Procedure<TEnvironment>[] initializeChildren(RootProcedureState<TEnvironment> procStack,
