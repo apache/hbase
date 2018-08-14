@@ -167,6 +167,13 @@ public class ProcedureTestingUtility {
     assertSingleExecutorForKillTests(procExecutor);
   }
 
+  public static <TEnv> void toggleKillAfterStoreUpdate(ProcedureExecutor<TEnv> procExecutor) {
+    createExecutorTesting(procExecutor);
+    procExecutor.testing.killAfterStoreUpdate = !procExecutor.testing.killAfterStoreUpdate;
+    LOG.warn("Set Kill after store update to: " + procExecutor.testing.killAfterStoreUpdate);
+    assertSingleExecutorForKillTests(procExecutor);
+  }
+
   public static <TEnv> void setKillAndToggleBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
       boolean value) {
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, value);
