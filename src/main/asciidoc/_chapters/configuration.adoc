@@ -230,7 +230,9 @@ Use the following legend to interpret this table:
 |Hadoop-2.8.2 | NT | NT | NT | NT | NT
 |Hadoop-2.8.3+ | NT | NT | NT | S | S
 |Hadoop-2.9.0 | X | X | X | X | X
-|Hadoop-3.0.0 | NT | NT | NT | NT | NT
+|Hadoop-2.9.1+ | NT | NT | NT | NT | NT
+|Hadoop-3.0.x | X | X | X | X | X
+|Hadoop-3.1.0 | X | X | X | X | X
 |===
 
 .Hadoop Pre-2.6.1 and JDK 1.8 Kerberos
@@ -255,6 +257,18 @@ data loss. This patch is present in Apache Hadoop releases 2.6.1+.
 [TIP]
 ====
 Starting around the time of Hadoop version 2.7.0, the Hadoop PMC got into the habit of calling out new minor releases on their major version 2 release line as not stable / production ready. As such, HBase expressly advises downstream users to avoid running on top of these releases. Note that additionally the 2.8.1 release was given the same caveat by the Hadoop PMC. For reference, see the release announcements for link:https://s.apache.org/hadoop-2.7.0-announcement[Apache Hadoop 2.7.0], link:https://s.apache.org/hadoop-2.8.0-announcement[Apache Hadoop 2.8.0], link:https://s.apache.org/hadoop-2.8.1-announcement[Apache Hadoop 2.8.1], and link:https://s.apache.org/hadoop-2.9.0-announcement[Apache Hadoop 2.9.0].
+====
+
+.Hadoop 3.0.x Releases
+[TIP]
+====
+Hadoop distributions that include the Application Timeline Service feature may cause unexpected versions of HBase classes to be present in the application classpath. Users planning on running MapReduce applications with HBase should make sure that link:https://issues.apache.org/jira/browse/YARN-7190[YARN-7190] is present in their YARN service (currently fixed in 2.9.1+ and 3.1.0+).
+====
+
+.Hadoop 3.1.0 Release
+[TIP]
+====
+The Hadoop PMC called out the 3.1.0 release as not stable / production ready. As such, HBase expressly advises downstream users to avoid running on top of this release. For reference, see the link:https://s.apache.org/hadoop-3.1.0-announcement[release announcement for Hadoop 3.1.0].
 ====
 
 .Replace the Hadoop Bundled With HBase!
