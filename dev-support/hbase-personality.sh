@@ -306,6 +306,7 @@ function refguide_rebuild
   local repostatus=$1
   local logfile="${PATCH_DIR}/${repostatus}-refguide.log"
   declare -i count
+  declare pdf_output
 
   if ! verify_needed_test refguide; then
     return 0
@@ -342,7 +343,13 @@ function refguide_rebuild
     return 1
   fi
 
-  if [[ ! -f "${PATCH_DIR}/${repostatus}-site/apache_hbase_reference_guide.pdf" ]]; then
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    pdf_output="book.pdf"
+  else
+    pdf_output="apache_hbase_reference_guide.pdf"
+  fi
+
+  if [[ ! -f "${PATCH_DIR}/${repostatus}-site/${pdf_output}" ]]; then
     add_vote_table -1 refguide "${repostatus} failed to produce the pdf version of the reference guide."
     add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
     return 1
