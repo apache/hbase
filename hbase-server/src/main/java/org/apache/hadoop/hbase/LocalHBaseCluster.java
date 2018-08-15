@@ -298,7 +298,8 @@ public class LocalHBaseCluster {
         LOG.info("Waiting on " + rst.getRegionServer().toString());
         rst.join();
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOG.error("Interrupted while waiting for {} to finish. Retrying join", rst.getName(), e);
+        Thread.currentThread().interrupt();
       }
     }
     regionThreads.remove(rst);
@@ -370,7 +371,9 @@ public class LocalHBaseCluster {
         LOG.info("Waiting on " + masterThread.getMaster().getServerName().toString());
         masterThread.join();
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOG.error("Interrupted while waiting for {} to finish. Retrying join",
+            masterThread.getName(), e);
+        Thread.currentThread().interrupt();
       }
     }
     masterThreads.remove(masterThread);

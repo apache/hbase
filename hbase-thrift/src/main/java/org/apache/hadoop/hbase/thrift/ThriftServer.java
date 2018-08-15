@@ -206,7 +206,7 @@ public class ThriftServer {
       try {
         this.infoServer.stop();
       } catch (Exception ex) {
-        ex.printStackTrace();
+        LOG.error("Failed to stop infoServer", ex);
       }
     }
     serverRunner.shutdown();

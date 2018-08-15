@@ -53,12 +53,15 @@ import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * See the instructions under hbase-examples/README.txt
  */
 @InterfaceAudience.Private
 public class HttpDoAsClient {
+  private static final Logger LOG = LoggerFactory.getLogger(HttpDoAsClient.class);
 
   static protected int port;
   static protected String host;
@@ -113,7 +116,7 @@ public class HttpDoAsClient {
     try {
       return s.getBytes("UTF-8");
     } catch (UnsupportedEncodingException e) {
-      e.printStackTrace();
+      LOG.error("CharSetName {} not supported", s, e);
       return null;
     }
   }
@@ -188,7 +191,7 @@ public class HttpDoAsClient {
       try {
         httpClient.setCustomHeader("Authorization", generateTicket());
       } catch (GSSException e) {
-        e.printStackTrace();
+        LOG.error("Kerberos authentication failed", e);
       }
     }
     return client;

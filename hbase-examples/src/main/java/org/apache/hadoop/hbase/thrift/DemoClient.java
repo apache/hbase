@@ -48,12 +48,15 @@ import org.apache.thrift.transport.TSaslClientTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * See the instructions under hbase-examples/README.txt
  */
 @InterfaceAudience.Private
 public class DemoClient {
+  private static final Logger LOG = LoggerFactory.getLogger(DemoClient.class);
 
     static protected int port;
     static protected String host;
@@ -110,15 +113,15 @@ public class DemoClient {
         }
     }
 
-    // Helper to translate strings to UTF8 bytes
-    private byte[] bytes(String s) {
-        try {
-            return s.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-            return null;
-        }
+  // Helper to translate strings to UTF8 bytes
+  private byte[] bytes(String s) {
+    try {
+      return s.getBytes("UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      LOG.error("CharSetName {} not supported", s, e);
+      return null;
     }
+  }
 
     private void run() throws Exception {
         TTransport transport = new TSocket(host, port);

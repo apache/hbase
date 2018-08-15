@@ -180,7 +180,7 @@ public class RestoreDriver extends AbstractHBaseTool {
       client.restore(BackupUtils.createRestoreRequest(backupRootDir, backupId, check,
         sTableArray, tTableArray, overwrite));
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Error while running restore backup", e);
       return -5;
     }
     return 0;

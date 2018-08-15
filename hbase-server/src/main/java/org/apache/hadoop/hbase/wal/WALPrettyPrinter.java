@@ -50,6 +50,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * WALPrettyPrinter prints the contents of a given WAL with a variety of
@@ -67,6 +69,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class WALPrettyPrinter {
+  private static final Logger LOG = LoggerFactory.getLogger(WALPrettyPrinter.class);
+
   private boolean outputValues;
   private boolean outputJSON;
   // The following enable filtering by sequence, region, and row, respectively
@@ -400,7 +404,7 @@ public class WALPrettyPrinter {
       if (cmd.hasOption("w"))
         printer.setRowFilter(cmd.getOptionValue("w"));
     } catch (ParseException e) {
-      e.printStackTrace();
+      LOG.error("Failed to parse commandLine arguments", e);
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("HFile filename(s) ", options, true);
       System.exit(-1);

@@ -146,7 +146,6 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
     // Rethrow the exception so the application can handle it.
     while (!exceptionsQueue.isEmpty()) {
       Exception first = exceptionsQueue.peek();
-      first.printStackTrace();
       if (first instanceof IOException) {
         throw (IOException) first;
       }

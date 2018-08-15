@@ -176,7 +176,8 @@ public class CellCounter extends Configured implements Tool {
           context.getCounter(Counters.CELLS).increment(cellCount);
         }
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOG.error("Interrupted while writing cellCount", e);
+        Thread.currentThread().interrupt();
       }
     }
   }

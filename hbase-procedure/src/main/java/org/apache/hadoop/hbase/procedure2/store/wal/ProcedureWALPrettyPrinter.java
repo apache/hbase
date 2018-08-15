@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALEntry;
@@ -51,6 +53,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class ProcedureWALPrettyPrinter extends Configured implements Tool {
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureWALPrettyPrinter.class);
+
   private final PrintStream out;
 
   public ProcedureWALPrettyPrinter() {
@@ -171,7 +175,7 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
         return(-1);
       }
     } catch (ParseException e) {
-      e.printStackTrace();
+      LOG.error("Failed to parse commandLine arguments", e);
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("ProcedureWALPrettyPrinter ", options, true);
       return(-1);

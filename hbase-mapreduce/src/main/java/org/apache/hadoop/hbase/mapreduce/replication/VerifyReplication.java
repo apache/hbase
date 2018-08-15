@@ -644,7 +644,7 @@ public class VerifyReplication extends Configured implements Tool {
       }
 
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Failed to parse commandLine arguments", e);
       printUsage("Can't start because " + e.getMessage());
       return false;
     }

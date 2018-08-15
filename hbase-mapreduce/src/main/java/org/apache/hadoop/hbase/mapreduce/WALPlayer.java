@@ -123,7 +123,8 @@ public class WALPlayer extends Configured implements Tool {
           }
         }
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOG.error("Interrupted while emitting Cell", e);
+        Thread.currentThread().interrupt();
       }
     }
 
@@ -199,7 +200,8 @@ public class WALPlayer extends Configured implements Tool {
           }
         }
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOG.error("Interrupted while writing results", e);
+        Thread.currentThread().interrupt();
       }
     }
 

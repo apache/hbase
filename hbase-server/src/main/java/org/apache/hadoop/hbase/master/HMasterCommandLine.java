@@ -315,7 +315,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         try {
           this.zkcluster.shutdown();
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.error("Failed to shutdown MiniZooKeeperCluster", e);
         }
       }
     }

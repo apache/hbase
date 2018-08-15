@@ -44,6 +44,8 @@ import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * HBase's version of ZooKeeper's QuorumPeer. When HBase is set to manage
@@ -55,6 +57,8 @@ import org.apache.zookeeper.server.quorum.QuorumPeerMain;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public final class HQuorumPeer {
+  private static final Logger LOG = LoggerFactory.getLogger(HQuorumPeer.class);
+
   private HQuorumPeer() {
   }
 
@@ -77,7 +81,7 @@ public final class HQuorumPeer {
 
       runZKServer(zkConfig);
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Failed to start ZKServer", e);
       System.exit(-1);
     }
   }

@@ -40,6 +40,8 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -51,6 +53,7 @@ import java.util.Map;
 @InterfaceAudience.Public
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class TableMapReduceUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(TableMapReduceUtil.class);
 
   /**
    * Use this before submitting a TableMap job. It will
@@ -110,14 +113,14 @@ public class TableMapReduceUtil {
       try {
         addDependencyJars(job);
       } catch (IOException e) {
-        e.printStackTrace();
+        LOG.error("IOException encountered while adding dependency jars", e);
       }
     }
     try {
       initCredentials(job);
     } catch (IOException ioe) {
       // just spit out the stack trace?  really?
-      ioe.printStackTrace();
+      LOG.error("IOException encountered while initializing credentials", ioe);
     }
   }
 
@@ -310,7 +313,7 @@ public class TableMapReduceUtil {
         User user = userProvider.getCurrent();
         TokenUtil.addTokenForJob(conn, job, user);
       } catch (InterruptedException ie) {
-        ie.printStackTrace();
+        LOG.error("Interrupted obtaining user authentication token", ie);
         Thread.currentThread().interrupt();
       } finally {
         conn.close();

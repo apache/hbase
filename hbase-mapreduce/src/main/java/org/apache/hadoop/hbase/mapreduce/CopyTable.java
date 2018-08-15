@@ -339,7 +339,7 @@ public class CopyTable extends Configured implements Tool {
         dstTableName = tableName;
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Failed to parse commandLine arguments", e);
       printUsage("Can't start because " + e.getMessage());
       return false;
     }

@@ -39,14 +39,16 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Write table content out to files in hdfs.
  */
 @InterfaceAudience.Public
 public class TsvImporterMapper
-extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
-{
+    extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put> {
+  private static final Logger LOG = LoggerFactory.getLogger(TsvImporterMapper.class);
 
   /** Timestamp for all inserted rows */
   protected long ts;
@@ -199,7 +201,8 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
       }
       throw new IOException(badLine);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      LOG.error("Interrupted while emitting put", e);
+      Thread.currentThread().interrupt();
     }
   }
 

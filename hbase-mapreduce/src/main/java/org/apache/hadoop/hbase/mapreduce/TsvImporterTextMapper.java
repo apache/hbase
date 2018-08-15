@@ -28,14 +28,16 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Write table content out to map output files.
  */
 @InterfaceAudience.Public
 public class TsvImporterTextMapper
-extends Mapper<LongWritable, Text, ImmutableBytesWritable, Text>
-{
+    extends Mapper<LongWritable, Text, ImmutableBytesWritable, Text> {
+  private static final Logger LOG = LoggerFactory.getLogger(TsvImporterTextMapper.class);
 
   /** Column seperator */
   private String separator;
@@ -121,7 +123,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Text>
       }
       throw new IOException(badLine);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      LOG.error("Interrupted while emitting TSV text", e);
       Thread.currentThread().interrupt();
     }
   }
