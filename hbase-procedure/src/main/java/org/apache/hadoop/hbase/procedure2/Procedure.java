@@ -895,6 +895,11 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       return;
     }
 
+    if (isFinished()) {
+      LOG.debug("{} is already finished, skip acquiring lock.", this);
+      return;
+    }
+
     LOG.debug("{} held the lock before restarting, call acquireLock to restore it.", this);
     LockState state = acquireLock(env);
     assert state == LockState.LOCK_ACQUIRED;
