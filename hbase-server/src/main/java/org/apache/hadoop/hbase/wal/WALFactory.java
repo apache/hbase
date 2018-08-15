@@ -120,21 +120,31 @@ public class WALFactory {
   }
 
   @VisibleForTesting
+  Providers getDefaultProvider() {
+    return Providers.defaultProvider;
+  }
+
+  @VisibleForTesting
   public Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
     try {
       Providers provider = Providers.valueOf(conf.get(key, defaultValue));
-      if (provider != Providers.defaultProvider) {
-        // User gives a wal provider explicitly, just use that one
-        return provider.clazz;
-      }
-      // AsyncFSWAL has better performance in most cases, and also uses less resources, we will try
-      // to use it if possible. But it deeply hacks into the internal of DFSClient so will be easily
-      // broken when upgrading hadoop. If it is broken, then we fall back to use FSHLog.
-      if (AsyncFSWALProvider.load()) {
-        return AsyncFSWALProvider.class;
-      } else {
+
+      // AsyncFSWALProvider is not guaranteed to work on all Hadoop versions, when it's chosen as
+      // the default and we can't use it, we want to fall back to FSHLog which we know works on
+      // all versions.
+      if (provider == getDefaultProvider() && provider.clazz == AsyncFSWALProvider.class
+          && !AsyncFSWALProvider.load()) {
+        // AsyncFSWAL has better performance in most cases, and also uses less resources, we will
+        // try to use it if possible. It deeply hacks into the internal of DFSClient so will be
+        // easily broken when upgrading hadoop.
+        LOG.warn("Failed to load AsyncFSWALProvider, falling back to FSHLogProvider");
         return FSHLogProvider.class;
       }
+
+      // N.b. If the user specifically requested AsyncFSWALProvider but their environment doesn't
+      // support using it (e.g. AsyncFSWALProvider.load() == false), we should let this fail and
+      // not fall back to FSHLogProvider.
+      return provider.clazz;
     } catch (IllegalArgumentException exception) {
       // Fall back to them specifying a class name
       // Note that the passed default class shouldn't actually be used, since the above only fails
