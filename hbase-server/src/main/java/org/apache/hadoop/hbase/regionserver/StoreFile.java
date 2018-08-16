@@ -1209,10 +1209,16 @@ public class StoreFile {
      */
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
         boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
-      // Increment the ref count
-      refCount.incrementAndGet();
       return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction,
           reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
+    }
+
+    /**
+     * Increment the ref count associated with the reader when ever a scanner associated with the
+     * reader is opened
+     */
+    void incrementRefCount() {
+      refCount.incrementAndGet();
     }
 
     /**

@@ -235,6 +235,29 @@ public class TestStoreFile extends HBaseTestCase {
   }
 
   @Test
+  public void testStoreFileReference() throws Exception {
+    Path f = new Path(ROOT_DIR, getName());
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+    // Make a store file and write data to it.
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs).withFilePath(f)
+        .withFileContext(meta).build();
+
+    writeStoreFile(writer);
+    writer.close();
+
+    // Creates a reader for StoreFile
+    StoreFile.Reader reader = new StoreFile.Reader(this.fs, f, cacheConf, conf);
+    StoreFileScanner scanner =
+        new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0, false);
+
+    // Verify after instantiating scanner refCount is increased
+    assertTrue(scanner.getReader().isReferencedInReads());
+    scanner.close();
+    // Verify after closing scanner refCount is decreased
+    assertFalse(scanner.getReader().isReferencedInReads());
+  }
+
+  @Test
   public void testEmptyStoreFileRestrictKeyRanges() throws Exception {
     StoreFile.Reader reader = mock(StoreFile.Reader.class);
     Store store = mock(Store.class);
