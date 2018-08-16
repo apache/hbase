@@ -130,7 +130,7 @@ public class WALFactory {
       Providers provider = Providers.valueOf(conf.get(key, defaultValue));
 
       // AsyncFSWALProvider is not guaranteed to work on all Hadoop versions, when it's chosen as
-      // the default and we can't us it, we want to fall back to FSHLog which we know works on
+      // the default and we can't use it, we want to fall back to FSHLog which we know works on
       // all versions.
       if (provider == getDefaultProvider() && provider.clazz == AsyncFSWALProvider.class
           && !AsyncFSWALProvider.load()) {
