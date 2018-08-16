@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -65,6 +67,9 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -73,10 +78,6 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
-import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Test HStoreFile
@@ -210,6 +211,35 @@ public class TestHStoreFile extends HBaseTestCase {
     }
     assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), finalRow, 0,
       finalRow.length));
+  }
+
+  @Test
+  public void testStoreFileReference() throws Exception {
+    final RegionInfo hri =
+        RegionInfoBuilder.newBuilder(TableName.valueOf("testStoreFileReference")).build();
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
+      new Path(testDir, hri.getTable().getNameAsString()), hri);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+
+    // Make a store file and write data to it.
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+        .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+    writeStoreFile(writer);
+    Path hsfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
+    writer.close();
+
+    HStoreFile file = new HStoreFile(this.fs, hsfPath, conf, cacheConf, BloomType.NONE, true);
+    file.initReader();
+    StoreFileReader r = file.getReader();
+    assertNotNull(r);
+    StoreFileScanner scanner =
+        new StoreFileScanner(r, mock(HFileScanner.class), false, false, 0, 0, false);
+
+    // Verify after instantiating scanner refCount is increased
+    assertTrue("Verify file is being referenced", file.isReferencedInReads());
+    scanner.close();
+    // Verify after closing scanner refCount is decreased
+    assertFalse("Verify file is not being referenced", file.isReferencedInReads());
   }
 
   @Test
