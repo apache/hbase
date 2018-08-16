@@ -148,10 +148,16 @@ public class StoreFileReader {
    */
   public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
       boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
-    // Increment the ref count
-    refCount.incrementAndGet();
     return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction),
         !isCompaction, reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
+  }
+
+  /**
+   * Indicate that the scanner has started reading with this reader. We need to increment the ref
+   * count so reader is not close until some object is holding the lock
+   */
+  void incrementRefCount() {
+    refCount.incrementAndGet();
   }
 
   /**
