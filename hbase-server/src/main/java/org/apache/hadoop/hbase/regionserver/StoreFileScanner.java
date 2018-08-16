@@ -94,6 +94,7 @@ public class StoreFileScanner implements KeyValueScanner {
     this.hasMVCCInfo = hasMVCC;
     this.scannerOrder = scannerOrder;
     this.canOptimizeForNonNullColumn = canOptimizeForNonNullColumn;
+    this.reader.incrementRefCount();
   }
 
   boolean isPrimaryReplica() {
