@@ -80,6 +80,7 @@ public class StoreFileScanner implements KeyValueScanner {
     this.hfs = hfs;
     this.enforceMVCC = useMVCC;
     this.hasMVCCInfo = hasMVCC;
+    this.reader.incrementRefCount();
   }
 
   boolean isPrimaryReplica() {

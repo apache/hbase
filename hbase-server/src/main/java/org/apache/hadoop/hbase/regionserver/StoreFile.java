@@ -1213,14 +1213,18 @@ public class StoreFile {
      * @param isCompaction is scanner being used for compaction?
      * @return a scanner
      */
-    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
-                                               boolean pread,
-                                               boolean isCompaction, long readPt) {
-      // Increment the ref count
+    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
+        boolean isCompaction, long readPt) {
+      return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction),
+        !isCompaction, reader.hasMVCCInfo(), readPt);
+    }
+
+    /**
+     * Increment the ref count associated with the reader when ever a scanner associated with the
+     * reader is opened
+     */
+    void incrementRefCount() {
       refCount.incrementAndGet();
-      return new StoreFileScanner(this,
-                                 getScanner(cacheBlocks, pread, isCompaction),
-                                 !isCompaction, reader.hasMVCCInfo(), readPt);
     }
 
     /**
