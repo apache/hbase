@@ -2609,6 +2609,10 @@ public class TestHRegion {
       LOG.info("" + HBaseTestCase.addContent(region, fam3));
       region.flush(true);
       region.compactStores();
+      region.waitForFlushesAndCompactions();
+      for(Store s:region.getStores()) {
+        s.closeAndArchiveCompactedFiles();
+      }
       byte[] splitRow = region.checkSplit();
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
@@ -2618,6 +2622,10 @@ public class TestHRegion {
         for (int i = 0; i < subregions.length; i++) {
           HRegion.openHRegion(subregions[i], null);
           subregions[i].compactStores();
+          subregions[i].waitForFlushesAndCompactions();
+          for(Store s:subregions[i].getStores()) {
+            s.closeAndArchiveCompactedFiles();
+          }
         }
         Path oldRegionPath = region.getRegionFileSystem().getRegionDir();
         Path oldRegion1 = subregions[0].getRegionFileSystem().getRegionDir();

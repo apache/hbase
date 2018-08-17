@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -33,19 +34,21 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -251,6 +254,20 @@ public class TestAssignmentListener {
       while (mergeable < 2) {
         Thread.sleep(100);
         admin.majorCompact(TABLE_NAME);
+
+        // Waiting for compaction to finish
+        RetryCounter retrier = new RetryCounter(30, 1, TimeUnit.SECONDS);
+        while (CompactionState.NONE != admin.getCompactionState(TABLE_NAME)
+            && retrier.shouldRetry()) {
+          retrier.sleepUntilNextRetry();
+        }
+
+        // Making sure references are getting cleaned after compaction.
+        // This is taken care by discharger
+        for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME)) {
+          region.getStores().get(0).closeAndArchiveCompactedFiles();
+        }
+
         mergeable = 0;
         for (JVMClusterUtil.RegionServerThread regionThread: miniCluster.getRegionServerThreads()) {
           for (Region region: regionThread.getRegionServer().getOnlineRegions(TABLE_NAME)) {

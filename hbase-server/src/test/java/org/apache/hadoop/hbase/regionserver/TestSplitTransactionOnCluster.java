@@ -26,12 +26,13 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,6 +88,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -96,6 +98,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -608,11 +611,20 @@ public class TestSplitTransactionOnCluster {
       // Compact first to ensure we have cleaned up references -- else the split
       // will fail.
       this.admin.compact(daughter.getRegionName());
+      RetryCounter retrier = new RetryCounter(30, 1, TimeUnit.SECONDS);
+      while (CompactionState.NONE != admin.getCompactionStateForRegion(daughter.getRegionName())
+          && retrier.shouldRetry()) {
+        retrier.sleepUntilNextRetry();
+      }
+
       daughters = cluster.getRegions(tableName);
       HRegion daughterRegion = null;
-      for (HRegion r: daughters) {
+      for (HRegion r : daughters) {
         if (r.getRegionInfo().equals(daughter)) {
           daughterRegion = r;
+          // Archiving the compacted references file
+          r.getStores().get(0).closeAndArchiveCompactedFiles();
+
           LOG.info("Found matching HRI: " + daughterRegion);
           break;
         }

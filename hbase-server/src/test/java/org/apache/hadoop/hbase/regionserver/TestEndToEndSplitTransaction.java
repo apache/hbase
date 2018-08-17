@@ -25,10 +25,12 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -36,9 +38,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -59,6 +63,7 @@ import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
@@ -66,14 +71,17 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.protobuf.ServiceException;
 
@@ -92,6 +100,79 @@ public class TestEndToEndSplitTransaction {
   @AfterClass
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /*
+   * This is the test for : HBASE-20940 This test will split the region and try to open an reference
+   * over store file. Once store file has any reference, it makes sure that region can't be split
+   * @throws Exception
+   */
+  @Test
+  public void testCanSplitJustAfterASplit() throws Exception {
+    LOG.info("Starting testCanSplitJustAfterASplit");
+    byte[] fam = Bytes.toBytes("cf_split");
+
+    TableName tableName = TableName.valueOf("CanSplitTable");
+    Table source = TEST_UTIL.getConnection().getTable(tableName);
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Map<String, StoreFile.Reader> scanner = Maps.newHashMap();
+
+    try {
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor(fam));
+
+      admin.createTable(htd);
+      TEST_UTIL.loadTable(source, fam);
+      List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
+      regions.get(0).forceSplit(null);
+      admin.split(tableName);
+
+      while (regions.size() <= 1) {
+        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
+        // Trying to get reference of the file before region split completes
+        // this would try to get handle on storefile or it can not be cleaned
+        for (HRegion region : regions) {
+          for (Store store : region.getStores()) {
+            for (StoreFile file : store.getStorefiles()) {
+              StoreFile.Reader reader = file.getReader();
+              reader.getStoreFileScanner(false, false, false, 0);
+              scanner.put(region.getRegionInfo().getEncodedName(), reader);
+              LOG.info("Got reference to file = " + file.getPath() + ",for region = "
+                  + region.getRegionInfo().getEncodedName());
+            }
+          }
+        }
+      }
+
+      Assert.assertTrue("Regions did not split properly", regions.size() > 1);
+      Assert.assertTrue("Could not get reference any of the store file", scanner.size() > 1);
+
+      RetryCounter retrier = new RetryCounter(30, 1, TimeUnit.SECONDS);
+      while (CompactionState.NONE != admin.getCompactionState(tableName) && retrier.shouldRetry()) {
+        retrier.sleepUntilNextRetry();
+      }
+
+      Assert.assertEquals("Compaction did not complete in 30 secs", CompactionState.NONE,
+        admin.getCompactionState(tableName));
+
+      for (HRegion region : regions) {
+        for (Store store : region.getStores()) {
+          Assert.assertTrue("Contains an open file reference which can be split",
+            !scanner.containsKey(region.getRegionInfo().getEncodedName()) || !store.canSplit());
+        }
+      }
+    } finally {
+      for (StoreFile.Reader s : scanner.values()) {
+        try {
+          s.close(true);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+      scanner.clear();
+      if (source != null) source.close();
+      TEST_UTIL.deleteTableIfAny(tableName);
+    }
   }
 
   @Test
@@ -130,10 +211,10 @@ public class TestEndToEndSplitTransaction {
       if (split.useZKForAssignment) {
         server.postOpenDeployTasks(regions.getSecond());
       } else {
-      server.reportRegionStateTransition(
-        RegionServerStatusProtos.RegionStateTransition.TransitionCode.SPLIT,
-        region.getRegionInfo(), regions.getFirst().getRegionInfo(),
-        regions.getSecond().getRegionInfo());
+        server.reportRegionStateTransition(
+          RegionServerStatusProtos.RegionStateTransition.TransitionCode.SPLIT,
+          region.getRegionInfo(), regions.getFirst().getRegionInfo(),
+          regions.getSecond().getRegionInfo());
       }
 
       // first daughter second
@@ -157,8 +238,8 @@ public class TestEndToEndSplitTransaction {
       if (split.useZKForAssignment) {
         // 4. phase III
         ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getSplitTransactionCoordination().completeSplitTransaction(server, regions.getFirst(),
-            regions.getSecond(), split.std, region);
+            .getSplitTransactionCoordination().completeSplitTransaction(server, regions.getFirst(),
+              regions.getSecond(), split.std, region);
       }
 
       assertTrue(test(conn, tableName, firstRow, server));
@@ -552,6 +633,28 @@ public class TestEndToEndSplitTransaction {
 
         rem = timeout - (System.currentTimeMillis() - start);
         blockUntilRegionIsOpened(conf, rem, daughterB);
+
+        // Compacting the new region to make sure references can be cleaned up
+        compactAndBlockUntilDone(TEST_UTIL.getHBaseAdmin(),
+          TEST_UTIL.getMiniHBaseCluster().getRegionServer(0), daughterA.getRegionName());
+        compactAndBlockUntilDone(TEST_UTIL.getHBaseAdmin(),
+          TEST_UTIL.getMiniHBaseCluster().getRegionServer(0), daughterB.getRegionName());
+
+        removeCompactedfiles(conn, timeout, daughterA);
+        removeCompactedfiles(conn, timeout, daughterB);
+      }
+    }
+  }
+
+  public static void removeCompactedfiles(Connection conn, long timeout, HRegionInfo hri)
+      throws IOException, InterruptedException {
+    log("removeCompactedfiles for : " + hri.getRegionNameAsString());
+    List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(hri.getTable());
+    for (HRegion region : regions) {
+      try {
+        region.getStores().get(0).closeAndArchiveCompactedFiles();
+      } catch (IOException e) {
+        e.printStackTrace();
       }
     }
   }
