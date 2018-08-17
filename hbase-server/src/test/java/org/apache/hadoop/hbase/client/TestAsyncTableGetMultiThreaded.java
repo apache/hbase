@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_OPERATION_TIM
 import static org.apache.hadoop.hbase.master.LoadBalancer.TABLES_ON_MASTER;
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,18 +34,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -124,7 +126,7 @@ public class TestAsyncTableGetMultiThreaded {
   }
 
   @Test
-  public void test() throws IOException, InterruptedException, ExecutionException {
+  public void test() throws Exception {
     int numThreads = 20;
     AtomicBoolean stop = new AtomicBoolean(false);
     ExecutorService executor =
@@ -137,9 +139,31 @@ public class TestAsyncTableGetMultiThreaded {
     Collections.shuffle(Arrays.asList(SPLIT_KEYS), new Random(123));
     Admin admin = TEST_UTIL.getAdmin();
     for (byte[] splitPoint : SPLIT_KEYS) {
+      int oldRegionCount = admin.getRegions(TABLE_NAME).size();
       admin.split(TABLE_NAME, splitPoint);
+      TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE_NAME).size() > oldRegionCount;
+        }
+
+        @Override
+        public String explainFailure() throws Exception {
+          return "Split has not finished yet";
+        }
+      });
+
       for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME)) {
         region.compact(true);
+
+        //Waiting for compaction to complete and references are cleaned up
+        RetryCounter retrier = new RetryCounter(30, 1, TimeUnit.SECONDS);
+        while (CompactionState.NONE != admin
+            .getCompactionStateForRegion(region.getRegionInfo().getRegionName())
+            && retrier.shouldRetry()) {
+          retrier.sleepUntilNextRetry();
+        }
+        region.getStores().get(0).closeAndArchiveCompactedFiles();
       }
       Thread.sleep(5000);
       admin.balance(true);

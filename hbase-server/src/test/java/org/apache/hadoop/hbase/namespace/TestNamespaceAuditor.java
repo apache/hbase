@@ -48,7 +48,9 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
@@ -81,6 +83,7 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -365,6 +368,23 @@ public class TestNamespaceAuditor {
     HRegion regionToSplit = UTIL.getMiniHBaseCluster().getRegions(tableTwo).stream()
       .filter(r -> r.getRegionInfo().containsRow(splitKey)).findFirst().get();
     regionToSplit.compact(true);
+    // Waiting for compaction to finish
+    UTIL.waitFor(30000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return (CompactionState.NONE == ADMIN
+            .getCompactionStateForRegion(regionToSplit.getRegionInfo().getRegionName()));
+      }
+    });
+
+    // Cleaning compacted references for split to proceed
+    regionToSplit.getStores().stream().forEach(s -> {
+      try {
+        s.closeAndArchiveCompactedFiles();
+      } catch (IOException e1) {
+        LOG.error("Error whiling cleaning compacted file");
+      }
+    });
     // the above compact may quit immediately if there is a compaction ongoing, so here we need to
     // wait a while to let the ongoing compaction finish.
     UTIL.waitFor(10000, regionToSplit::isSplittable);
