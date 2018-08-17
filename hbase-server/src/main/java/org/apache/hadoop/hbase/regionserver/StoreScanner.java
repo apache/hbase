@@ -815,8 +815,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // Implementation of ChangedReadersObserver
   @Override
   public void updateReaders(List<StoreFile> sfs, List<KeyValueScanner> memStoreScanners) throws IOException {
-    if (CollectionUtils.isEmpty(sfs)
-      && CollectionUtils.isEmpty(memStoreScanners)) {
+    if (CollectionUtils.isEmpty(sfs) && CollectionUtils.isEmpty(memStoreScanners)) {
       return;
     }
     flushLock.lock();
@@ -824,7 +823,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (this.closing) {
         // Lets close scanners created by caller, since close() won't notice this.
         // memStoreScanners is immutable, so lets create a new list.
-        clearAndClose(new ArrayList<>(memStoreScanners));
+        if (!CollectionUtils.isEmpty(memStoreScanners)) {
+          clearAndClose(new ArrayList<>(memStoreScanners));
+        }
         return;
       }
       flushed = true;
