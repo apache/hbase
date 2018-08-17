@@ -1701,7 +1701,17 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public boolean hasReferences() {
-    return StoreUtils.hasReferences(this.storeEngine.getStoreFileManager().getStorefiles());
+    List<HStoreFile> reloadedStoreFiles = null;
+    try {
+      // Reloading the store files from file system due to HBASE-20940. As split can happen with an
+      // region which has references
+      reloadedStoreFiles = loadStoreFiles();
+      return StoreUtils.hasReferences(reloadedStoreFiles);
+    } catch (IOException ioe) {
+      LOG.error("Error trying to determine if store has references, assuming references exists",
+        ioe);
+      return true;
+    }
   }
 
   /**
