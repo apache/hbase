@@ -7584,8 +7584,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // different. Make them all share same code!
         if (!mutations.isEmpty() && !walSyncSuccessful) {
           LOG.warn("Wal sync failed. Roll back " + mutations.size() +
-              " memstore keyvalues for row(s):" + StringUtils.byteToHexString(
-              processor.getRowsToLock().iterator().next()) + "...");
+              " memstore keyvalues" + (processor.getRowsToLock().isEmpty() ? "" :
+                (" for row(s):" + StringUtils.byteToHexString(
+              processor.getRowsToLock().iterator().next()) + "...")));
           for (Mutation m : mutations) {
             for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
               Cell cell = cellScanner.current();
