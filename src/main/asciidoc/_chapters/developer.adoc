@@ -418,7 +418,11 @@ mvn -DskipTests package assembly:single deploy
 
 [[build.gotchas]]
 ==== Build Gotchas
+===== Failure to find dependencies with "protocol_version" error
 
+Many maven repositories, most notably Maven Central, now require TLSv1.2 for HTTPS connections. On older JDK7 instances you may need to manually add +-Dhttps.protocols=TLSv1.2+ to your Maven command line invocation.
+
+===== Maven Site failure
 If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
 It's not an error.
 It is link:http://jira.codehaus.org/browse/MSITE-286[officially
