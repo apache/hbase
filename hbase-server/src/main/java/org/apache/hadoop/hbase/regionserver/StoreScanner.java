@@ -175,16 +175,16 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.oldestUnexpiredTS = scan.isRaw() ? 0L : now - scanInfo.getTtl();
     this.minVersions = scanInfo.getMinVersions();
 
-     // We look up row-column Bloom filters for multi-column queries as part of
-     // the seek operation. However, we also look the row-column Bloom filter
-     // for multi-row (non-"get") scans because this is not done in
-     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
-     this.useRowColBloom = numColumns > 1 || (!get && numColumns == 1);
-     this.maxRowSize = scanInfo.getTableMaxRowSize();
+    // We look up row-column Bloom filters for multi-column queries as part of
+    // the seek operation. However, we also look the row-column Bloom filter
+    // for multi-row (non-"get") scans because this is not done in
+    // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
+    this.useRowColBloom = numColumns > 1 || (!get && numColumns == 1);
+    this.maxRowSize = scanInfo.getTableMaxRowSize();
     if (get) {
       this.readType = Scan.ReadType.PREAD;
       this.scanUsePread = true;
-    } else if(scanType != ScanType.USER_SCAN) {
+    } else if (scanType != ScanType.USER_SCAN) {
       // For compaction scanners never use Pread as already we have stream based scanners on the
       // store files to be compacted
       this.readType = Scan.ReadType.STREAM;
@@ -556,7 +556,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Or if the preadMaxBytes is reached and we may want to return so we can switch to stream in
       // the shipped method below.
       if (kvsScanned % cellsPerHeartbeatCheck == 0 || (scanUsePread &&
-        scan.getReadType() == Scan.ReadType.DEFAULT && bytesRead > preadMaxBytes)) {
+        readType == Scan.ReadType.DEFAULT && bytesRead > preadMaxBytes)) {
         if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
           return scannerContext.setScannerState(NextState.TIME_LIMIT_REACHED).hasMoreValues();
         }
@@ -568,7 +568,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       checkScanOrder(prevCell, cell, comparator);
       int cellSize = PrivateCellUtil.estimatedSerializedSizeOf(cell);
       bytesRead += cellSize;
-      if (scanUsePread && scan.getReadType() == Scan.ReadType.DEFAULT &&
+      if (scanUsePread && readType == Scan.ReadType.DEFAULT &&
         bytesRead > preadMaxBytes) {
         // return immediately if we want to switch from pread to stream. We need this because we can
         // only switch in the shipped method, if user use a filter to filter out everything and rpc
