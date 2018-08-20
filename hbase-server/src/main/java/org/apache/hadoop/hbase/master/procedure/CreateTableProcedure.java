@@ -140,6 +140,12 @@ public class CreateTableProcedure
       // We can fail if the table does exist or the descriptor is malformed.
       // TODO: coprocessor rollback semantic is still undefined.
       DeleteTableProcedure.deleteTableStates(env, getTableName());
+
+      final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
+      if (cpHost != null) {
+        cpHost.postDeleteTable(getTableName());
+      }
+
       releaseSyncLatch();
       return;
     }
