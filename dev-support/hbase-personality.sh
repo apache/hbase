@@ -115,6 +115,9 @@ function personality_modules
   clear_personality_queue
 
   extra="-DHBasePatchProcess"
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    extra="${extra} -Dhttps.protocols=TLSv1.2"
+  fi
 
   if [[ -n "${HADOOP_PROFILE}" ]]; then
     extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
