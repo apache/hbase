@@ -35,14 +35,11 @@ import javax.xml.bind.JAXBException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -57,7 +54,6 @@ import org.apache.hadoop.hbase.rest.model.TableModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -67,9 +63,10 @@ import org.junit.experimental.categories.Category;
 public class TestTableResource {
   private static final Log LOG = LogFactory.getLog(TestTableResource.class);
 
-  private static TableName TABLE = TableName.valueOf("TestTableResource");
-  private static String COLUMN_FAMILY = "test";
-  private static String COLUMN = COLUMN_FAMILY + ":qualifier";
+  private static final TableName TABLE = TableName.valueOf("TestTableResource");
+  private static final String COLUMN_FAMILY = "test";
+  private static final String COLUMN = COLUMN_FAMILY + ":qualifier";
+  private static final int NUM_REGIONS = 4;
   private static List<HRegionLocation> regionMap;
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -89,13 +86,7 @@ public class TestTableResource {
         TableInfoModel.class,
         TableListModel.class,
         TableRegionModel.class);
-    Admin admin = TEST_UTIL.getHBaseAdmin();
-    if (admin.tableExists(TABLE)) {
-      return;
-    }
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
-    admin.createTable(htd);
+    TEST_UTIL.createMultiRegionTable(TABLE, Bytes.toBytes(COLUMN_FAMILY), NUM_REGIONS);
     byte[] k = new byte[3];
     byte [][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(COLUMN));
     List<Put> puts = new ArrayList<>();
@@ -112,35 +103,20 @@ public class TestTableResource {
         }
       }
     }
+
     Connection connection = TEST_UTIL.getConnection();
     
     Table table =  connection.getTable(TABLE);
     table.put(puts);
     table.close();
-    // get the initial layout (should just be one region)
-    
+
     RegionLocator regionLocator = connection.getRegionLocator(TABLE);
     List<HRegionLocation> m = regionLocator.getAllRegionLocations();
-    assertEquals(m.size(), 1);
-    // tell the master to split the table
-    admin.split(TABLE);
-    // give some time for the split to happen
 
-    long timeout = System.currentTimeMillis() + (15 * 1000);
-    while (System.currentTimeMillis() < timeout && m.size()!=2){
-      try {
-        Thread.sleep(250);
-      } catch (InterruptedException e) {
-        LOG.warn(StringUtils.stringifyException(e));
-      }
-      // check again
-      m = regionLocator.getAllRegionLocations();
-    }
-
-    // should have two regions now
-    assertEquals(m.size(), 2);
+    // should have four regions now
+    assertEquals(NUM_REGIONS, m.size());
     regionMap = m;
-    LOG.info("regions: " + regionMap);
+    LOG.error("regions: " + regionMap);
     regionLocator.close();
   }
 
@@ -171,10 +147,14 @@ public class TestTableResource {
     while (regions.hasNext()) {
       TableRegionModel region = regions.next();
       boolean found = false;
+      LOG.debug("looking for region " + region.getName());
       for (HRegionLocation e: regionMap) {
         HRegionInfo hri = e.getRegionInfo();
-        String hriRegionName = hri.getRegionNameAsString();
+        // getRegionNameAsString uses Bytes.toStringBinary which escapes some non-printable
+        // characters
+        String hriRegionName = Bytes.toString(hri.getRegionName());
         String regionName = region.getName();
+        LOG.debug("comparing to region " + hriRegionName);
         if (hriRegionName.equals(regionName)) {
           found = true;
           byte[] startKey = hri.getStartKey();
@@ -191,7 +171,7 @@ public class TestTableResource {
           break;
         }
       }
-      assertTrue(found);
+      assertTrue("Couldn't find region " + region.getName(), found);
     }
   }
 
