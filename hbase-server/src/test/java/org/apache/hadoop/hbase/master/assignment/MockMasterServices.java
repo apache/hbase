@@ -319,7 +319,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     }
 
     @Override
-    public void updateRegionLocation(RegionStates.RegionStateNode regionNode) throws IOException {
+    public void updateRegionLocation(RegionStateNode regionNode) throws IOException {
     }
   }
 

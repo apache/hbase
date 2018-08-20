@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,28 +15,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.assignment;
 
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Get notification of assignment events. The invocations are inline
- * so make sure your implementation is fast else you'll slow hbase.
+ * Server State.
  */
 @InterfaceAudience.Private
-public interface AssignmentListener {
+enum ServerState {
   /**
-   * The region was opened on the specified server.
-   * @param regionInfo The opened region.
-   * @param serverName The remote servers name.
+   * Initial state. Available.
    */
-  void regionOpened(final RegionInfo regionInfo, final ServerName serverName);
+  ONLINE,
 
   /**
-   * The region was closed on the region server.
-   * @param regionInfo The closed region.
+   * Only server which carries meta can have this state. We will split wal for meta and then
+   * assign meta first before splitting other wals.
    */
-  void regionClosed(final RegionInfo regionInfo);
+  SPLITTING_META,
+
+  /**
+   * Indicate that the meta splitting is done. We need this state so that the UnassignProcedure
+   * for meta can safely quit. See the comments in UnassignProcedure.remoteCallFailed for more
+   * details.
+   */
+  SPLITTING_META_DONE,
+
+  /**
+   * Server expired/crashed. Currently undergoing WAL splitting.
+   */
+  SPLITTING,
+
+  /**
+   * WAL splitting done. This state will be used to tell the UnassignProcedure that it can safely
+   * quit. See the comments in UnassignProcedure.remoteCallFailed for more details.
+   */
+  OFFLINE
 }

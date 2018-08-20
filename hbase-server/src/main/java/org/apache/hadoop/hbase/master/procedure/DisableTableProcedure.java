@@ -51,8 +51,6 @@ public class DisableTableProcedure
   private TableName tableName;
   private boolean skipTableStateCheck;
 
-  private Boolean traceEnabled = null;
-
   public DisableTableProcedure() {
     super();
   }
@@ -64,8 +62,7 @@ public class DisableTableProcedure
    * @param skipTableStateCheck whether to check table state
    */
   public DisableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final boolean skipTableStateCheck)
-  throws HBaseIOException {
+      final boolean skipTableStateCheck) throws HBaseIOException {
     this(env, tableName, skipTableStateCheck, null);
   }
 
@@ -77,7 +74,7 @@ public class DisableTableProcedure
    */
   public DisableTableProcedure(final MasterProcedureEnv env, final TableName tableName,
       final boolean skipTableStateCheck, final ProcedurePrepareLatch syncLatch)
-  throws HBaseIOException {
+      throws HBaseIOException {
     super(env, syncLatch);
     this.tableName = tableName;
     preflightChecks(env, true);
@@ -107,7 +104,8 @@ public class DisableTableProcedure
           setNextState(DisableTableState.DISABLE_TABLE_MARK_REGIONS_OFFLINE);
           break;
         case DISABLE_TABLE_MARK_REGIONS_OFFLINE:
-          addChildProcedure(env.getAssignmentManager().createUnassignProcedures(tableName));
+          addChildProcedure(
+            env.getAssignmentManager().createUnassignProceduresForDisabling(tableName));
           setNextState(DisableTableState.DISABLE_TABLE_ADD_REPLICATION_BARRIER);
           break;
         case DISABLE_TABLE_ADD_REPLICATION_BARRIER:
@@ -180,7 +178,7 @@ public class DisableTableProcedure
 
   @Override
   protected DisableTableState getState(final int stateId) {
-    return DisableTableState.valueOf(stateId);
+    return DisableTableState.forNumber(stateId);
   }
 
   @Override
@@ -219,6 +217,14 @@ public class DisableTableProcedure
     skipTableStateCheck = disableTableMsg.getSkipTableStateCheck();
   }
 
+  // For disabling a table, we does not care whether a region can be online so hold the table xlock
+  // for ever. This will simplify the logic as we will not be conflict with procedures other than
+  // SCP.
+  @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
+    return true;
+  }
+
   @Override
   public TableName getTableName() {
     return tableName;
@@ -233,7 +239,6 @@ public class DisableTableProcedure
    * Action before any real action of disabling table. Set the exception in the procedure instead
    * of throwing it.  This approach is to deal with backward compatible with 1.0.
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private boolean prepareDisable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeDisabled = true;
@@ -272,8 +277,6 @@ public class DisableTableProcedure
    * Action before disabling table.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   protected void preDisable(final MasterProcedureEnv env, final DisableTableState state)
       throws IOException, InterruptedException {
@@ -283,14 +286,11 @@ public class DisableTableProcedure
   /**
    * Mark table state to Disabling
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
-  protected static void setTableStateToDisabling(
-      final MasterProcedureEnv env,
+  private static void setTableStateToDisabling(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
     // Set table disabling flag up in zk.
-    env.getMasterServices().getTableStateManager().setTableState(
-      tableName,
+    env.getMasterServices().getTableStateManager().setTableState(tableName,
       TableState.State.DISABLING);
     LOG.info("Set {} to state={}", tableName, TableState.State.DISABLING);
   }
@@ -298,14 +298,11 @@ public class DisableTableProcedure
   /**
    * Mark table state to Disabled
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
-  protected static void setTableStateToDisabled(
-      final MasterProcedureEnv env,
+  protected static void setTableStateToDisabled(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
     // Flip the table to disabled
-    env.getMasterServices().getTableStateManager().setTableState(
-      tableName,
+    env.getMasterServices().getTableStateManager().setTableState(tableName,
       TableState.State.DISABLED);
     LOG.info("Set {} to state={}", tableName, TableState.State.DISABLED);
   }
@@ -314,8 +311,6 @@ public class DisableTableProcedure
    * Action after disabling table.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   protected void postDisable(final MasterProcedureEnv env, final DisableTableState state)
       throws IOException, InterruptedException {
@@ -323,23 +318,9 @@ public class DisableTableProcedure
   }
 
   /**
-   * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it.
-   * @return traceEnabled
-   */
-  private Boolean isTraceEnabled() {
-    if (traceEnabled == null) {
-      traceEnabled = LOG.isTraceEnabled();
-    }
-    return traceEnabled;
-  }
-
-  /**
    * Coprocessor Action.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void runCoprocessorAction(final MasterProcedureEnv env, final DisableTableState state)
       throws IOException, InterruptedException {

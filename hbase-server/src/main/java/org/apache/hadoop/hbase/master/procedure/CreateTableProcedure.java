@@ -160,7 +160,7 @@ public class CreateTableProcedure
 
   @Override
   protected CreateTableState getState(final int stateId) {
-    return CreateTableState.valueOf(stateId);
+    return CreateTableState.forNumber(stateId);
   }
 
   @Override

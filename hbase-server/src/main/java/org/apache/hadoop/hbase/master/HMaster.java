@@ -100,10 +100,14 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
+import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
+import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.master.assignment.UnassignProcedure;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
@@ -130,6 +134,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerProcedure;
@@ -213,6 +218,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
@@ -797,6 +803,45 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.mpmHost.initialize(this, this.metricsMaster);
   }
 
+  private static final ImmutableSet<Class<?>> UNSUPPORTED_PROCEDURES =
+    ImmutableSet.of(RecoverMetaProcedure.class, AssignProcedure.class, UnassignProcedure.class,
+      MoveRegionProcedure.class);
+
+  /**
+   * In HBASE-20811, we have introduced a new TRSP to assign/unassign/move regions, and it is
+   * incompatible with the old AssignProcedure/UnassignProcedure/MoveRegionProcedure. So we need to
+   * make sure that there are none these procedures when upgrading. If there are, the master will
+   * quit, you need to go back to the old version to finish these procedures first before upgrading.
+   */
+  private void checkUnsupportedProcedure(
+      Map<Class<? extends Procedure>, List<Procedure<MasterProcedureEnv>>> procsByType)
+      throws HBaseIOException {
+    // Confirm that we do not have unfinished assign/unassign related procedures. It is not easy to
+    // support both the old assign/unassign procedures and the new TransitRegionStateProcedure as
+    // there will be conflict in the code for AM. We should finish all these procedures before
+    // upgrading.
+    for (Class<?> clazz : UNSUPPORTED_PROCEDURES) {
+      List<Procedure<MasterProcedureEnv>> procs = procsByType.get(clazz);
+      if (procs != null) {
+        LOG.error(
+          "Unsupported procedure type {} found, please rollback your master to the old" +
+            " version to finish them, and then try to upgrade again. The full procedure list: {}",
+          clazz, procs);
+        throw new HBaseIOException("Unsupported procedure type " + clazz + " found");
+      }
+    }
+    // A special check for SCP, as we do not support RecoverMetaProcedure any more so we need to
+    // make sure that no one will try to schedule it but SCP does have a state which will schedule
+    // it.
+    if (procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
+      .map(p -> (ServerCrashProcedure) p).anyMatch(ServerCrashProcedure::isInRecoverMetaState)) {
+      LOG.error("At least one ServerCrashProcedure is going to schedule a RecoverMetaProcedure," +
+        " which is not supported any more. Please rollback your master to the old version to" +
+        " finish them, and then try to upgrade again.");
+      throw new HBaseIOException("Unsupported procedure state found for ServerCrashProcedure");
+    }
+  }
+
   /**
    * Finish initialization of HMaster after becoming the primary master.
    * <p/>
@@ -870,24 +915,39 @@ public class HMaster extends HRegionServer implements MasterServices {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.clusterId = clusterId.toString();
 
-
-
     status.setStatus("Initialze ServerManager and schedule SCP for crash servers");
     this.serverManager = createServerManager(this);
     createProcedureExecutor();
+    @SuppressWarnings("rawtypes")
+    Map<Class<? extends Procedure>, List<Procedure<MasterProcedureEnv>>> procsByType =
+      procedureExecutor.getActiveProceduresNoCopy().stream()
+        .collect(Collectors.groupingBy(p -> p.getClass()));
+
+    checkUnsupportedProcedure(procsByType);
+
     // Create Assignment Manager
     this.assignmentManager = new AssignmentManager(this);
     this.assignmentManager.start();
+    // TODO: TRSP can perform as the sub procedure for other procedures, so even if it is marked as
+    // completed, it could still be in the procedure list. This is a bit strange but is another
+    // story, need to verify the implementation for ProcedureExecutor and ProcedureStore.
+    List<TransitRegionStateProcedure> ritList =
+      procsByType.getOrDefault(TransitRegionStateProcedure.class, Collections.emptyList()).stream()
+        .filter(p -> !p.isFinished()).map(p -> (TransitRegionStateProcedure) p)
+        .collect(Collectors.toList());
+    this.assignmentManager.setupRIT(ritList);
+
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
     this.regionServerTracker.start(
-      procedureExecutor.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
-        .map(p -> ((ServerCrashProcedure) p).getServerName()).collect(Collectors.toSet()),
+      procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
+        .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
       walManager.getLiveServersFromWALDir());
     // This manager will be started AFTER hbase:meta is confirmed on line.
     // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
     // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
     this.tableStateManager =
-        this.conf.getBoolean(MirroringTableStateManager.MIRROR_TABLE_STATE_TO_ZK_KEY, true)?
+      this.conf.getBoolean(MirroringTableStateManager.MIRROR_TABLE_STATE_TO_ZK_KEY, true)
+        ?
         new MirroringTableStateManager(this):
         new TableStateManager(this);
 
@@ -3577,7 +3637,6 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Mark region server(s) as decommissioned (previously called 'draining') to prevent additional
    * regions from getting assigned to them. Also unload the regions on the servers asynchronously.0
    * @param servers Region servers to decommission.
-   * @throws HBaseIOException
    */
   public void decommissionRegionServers(final List<ServerName> servers, final boolean offload)
       throws HBaseIOException {
@@ -3590,7 +3649,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         ZKUtil.createAndFailSilent(getZooKeeper(), node);
       } catch (KeeperException ke) {
         throw new HBaseIOException(
-            this.zooKeeper.prefix("Unable to decommission '" + server.getServerName() + "'."), ke);
+          this.zooKeeper.prefix("Unable to decommission '" + server.getServerName() + "'."), ke);
       }
       if (this.serverManager.addServerToDrainList(server)) {
         serversAdded.add(server);
@@ -3601,7 +3660,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       final List<ServerName> destServers = this.serverManager.createDestinationServersList();
       for (ServerName server : serversAdded) {
         final List<RegionInfo> regionsOnServer =
-            this.assignmentManager.getRegionStates().getServerRegionInfoSet(server);
+          this.assignmentManager.getRegionStates().getServerRegionInfoSet(server);
         for (RegionInfo hri : regionsOnServer) {
           ServerName dest = balancer.randomAssignment(hri, destServers);
           if (dest == null) {
@@ -3627,10 +3686,9 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Remove decommission marker (previously called 'draining') from a region server to allow regions
    * assignments. Load regions onto the server asynchronously if a list of regions is given
    * @param server Region server to remove decommission marker from.
-   * @throws HBaseIOException
    */
   public void recommissionRegionServer(final ServerName server,
-      final List<byte[]> encodedRegionNames) throws HBaseIOException {
+      final List<byte[]> encodedRegionNames) throws IOException {
     // Remove the server from decommissioned (draining) server list.
     String parentZnode = getZooKeeper().getZNodePaths().drainingZNode;
     String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
@@ -3638,7 +3696,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       ZKUtil.deleteNodeFailSilent(getZooKeeper(), node);
     } catch (KeeperException ke) {
       throw new HBaseIOException(
-          this.zooKeeper.prefix("Unable to recommission '" + server.getServerName() + "'."), ke);
+        this.zooKeeper.prefix("Unable to recommission '" + server.getServerName() + "'."), ke);
     }
     this.serverManager.removeServerFromDrainList(server);
 
@@ -3651,15 +3709,15 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     for (byte[] encodedRegionName : encodedRegionNames) {
       RegionState regionState =
-          assignmentManager.getRegionStates().getRegionState(Bytes.toString(encodedRegionName));
+        assignmentManager.getRegionStates().getRegionState(Bytes.toString(encodedRegionName));
       if (regionState == null) {
         LOG.warn("Unknown region " + Bytes.toStringBinary(encodedRegionName));
         continue;
       }
       RegionInfo hri = regionState.getRegion();
       if (server.equals(regionState.getServerName())) {
-        LOG.info("Skipping move of region " + hri.getRegionNameAsString()
-          + " because region already assigned to the same server " + server + ".");
+        LOG.info("Skipping move of region " + hri.getRegionNameAsString() +
+          " because region already assigned to the same server " + server + ".");
         continue;
       }
       RegionPlan rp = new RegionPlan(hri, regionState.getServerName(), server);

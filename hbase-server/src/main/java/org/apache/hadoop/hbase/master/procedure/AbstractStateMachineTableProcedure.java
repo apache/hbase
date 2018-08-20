@@ -28,12 +28,10 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionOfflineException;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -180,26 +178,13 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   /**
    * Check region is online.
    */
-  protected static void checkOnline(MasterProcedureEnv env, final RegionInfo ri)
+  protected static void checkOnline(MasterProcedureEnv env, RegionInfo ri)
       throws DoNotRetryRegionException {
-    RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    RegionState rs = regionStates.getRegionState(ri);
-    if (rs == null) {
+    RegionStateNode regionNode =
+      env.getAssignmentManager().getRegionStates().getRegionStateNode(ri);
+    if (regionNode == null) {
       throw new UnknownRegionException("No RegionState found for " + ri.getEncodedName());
     }
-    if (!rs.isOpened()) {
-      throw new DoNotRetryRegionException(ri.getEncodedName() + " is not OPEN; regionState=" + rs);
-    }
-    if (ri.isSplitParent()) {
-      throw new DoNotRetryRegionException(ri.getEncodedName() +
-          " is not online (splitParent=true)");
-    }
-    if (ri.isSplit()) {
-      throw new DoNotRetryRegionException(ri.getEncodedName() + " has split=true");
-    }
-    if (ri.isOffline()) {
-      // RegionOfflineException is not instance of DNRIOE so wrap it.
-      throw new DoNotRetryRegionException(new RegionOfflineException(ri.getEncodedName()));
-    }
+    regionNode.checkOnline();
   }
 }

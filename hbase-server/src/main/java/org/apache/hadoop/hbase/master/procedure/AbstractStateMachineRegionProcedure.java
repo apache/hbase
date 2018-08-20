@@ -40,13 +40,12 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
     extends AbstractStateMachineTableProcedure<TState> {
   private RegionInfo hri;
 
-  public AbstractStateMachineRegionProcedure(final MasterProcedureEnv env,
-      final RegionInfo hri) {
+  protected AbstractStateMachineRegionProcedure(MasterProcedureEnv env, RegionInfo hri) {
     super(env);
     this.hri = hri;
   }
 
-  public AbstractStateMachineRegionProcedure() {
+  protected AbstractStateMachineRegionProcedure() {
     // Required by the Procedure framework to create the procedure on replay
     super();
   }
@@ -54,7 +53,7 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
   /**
    * @return The RegionInfo of the region we are operating on.
    */
-  protected RegionInfo getRegion() {
+  public RegionInfo getRegion() {
     return this.hri;
   }
 

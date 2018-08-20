@@ -519,3 +519,31 @@ message ReplaySyncReplicationWALParameter {
   required string peer_id = 1;
   repeated string wal = 2;
 }
+
+enum RegionStateTransitionState {
+  REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE = 1;
+  REGION_STATE_TRANSITION_OPEN = 2;
+  REGION_STATE_TRANSITION_CONFIRM_OPENED = 3;
+  REGION_STATE_TRANSITION_CLOSE = 4;
+  REGION_STATE_TRANSITION_CONFIRM_CLOSED = 5;
+}
+
+message RegionStateTransitionStateData {
+  required RegionStateTransitionState initialState = 1;
+  required RegionStateTransitionState lastState = 2;
+  optional ServerName assign_candidate = 3;
+  required bool force_new_plan = 4;
+}
+
+message RegionRemoteProcedureBaseStateData {
+  required RegionInfo region = 1;
+  required ServerName target_server = 2;
+  required bool dispatched = 3;
+}
+
+message OpenRegionProcedureStateData {
+}
+
+message CloseRegionProcedureStateData {
+  optional ServerName assign_candidate = 1;
+}

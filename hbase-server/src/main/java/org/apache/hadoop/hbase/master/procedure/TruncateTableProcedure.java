@@ -189,7 +189,7 @@ public class TruncateTableProcedure
 
   @Override
   protected TruncateTableState getState(final int stateId) {
-    return TruncateTableState.valueOf(stateId);
+    return TruncateTableState.forNumber(stateId);
   }
 
   @Override
@@ -200,6 +200,11 @@ public class TruncateTableProcedure
   @Override
   protected TruncateTableState getInitialState() {
     return TruncateTableState.TRUNCATE_TABLE_PRE_OPERATION;
+  }
+
+  @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
+    return true;
   }
 
   @Override

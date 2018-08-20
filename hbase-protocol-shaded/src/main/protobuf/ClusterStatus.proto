@@ -52,6 +52,10 @@ message RegionState {
     MERGING_NEW = 14;  // new region to be created when RS merges two
                        // daughter regions but hasn't be created yet, or
                        // master doesn't know it's already created
+    ABNORMALLY_CLOSED = 15;// the region is CLOSED because of a RS crash. Usually it is the same
+                       // with CLOSED, but for some operations such as merge/split, we can not
+                       // apply it to a region in this state, as it may lead to data loss as we
+                       // may have some data in recovered edits.
   }
 }
 

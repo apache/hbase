@@ -21,11 +21,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
@@ -39,8 +38,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 
 /**
  * Used for reopening the regions for a table.
- * <p/>
- * Currently we use {@link MoveRegionProcedure} to reopen regions.
  */
 @InterfaceAudience.Private
 public class ReopenTableRegionsProcedure
@@ -69,16 +66,6 @@ public class ReopenTableRegionsProcedure
     return TableOperationType.REGION_EDIT;
   }
 
-  private MoveRegionProcedure createReopenProcedure(MasterProcedureEnv env, HRegionLocation loc) {
-    try {
-      return new MoveRegionProcedure(env,
-        new RegionPlan(loc.getRegion(), loc.getServerName(), loc.getServerName()), false);
-    } catch (HBaseIOException e) {
-      // we skip the checks so this should not happen
-      throw new AssertionError(e);
-    }
-  }
-
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ReopenTableRegionsState state)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
@@ -93,8 +80,22 @@ public class ReopenTableRegionsProcedure
         setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
         return Flow.HAS_MORE_STATE;
       case REOPEN_TABLE_REGIONS_REOPEN_REGIONS:
-        addChildProcedure(regions.stream().filter(l -> l.getSeqNum() >= 0)
-          .map(l -> createReopenProcedure(env, l)).toArray(MoveRegionProcedure[]::new));
+        for (HRegionLocation loc : regions) {
+          RegionStateNode regionNode = env.getAssignmentManager().getRegionStates()
+            .getOrCreateRegionStateNode(loc.getRegion());
+          TransitRegionStateProcedure proc;
+          regionNode.lock();
+          try {
+            if (regionNode.getProcedure() != null) {
+              continue;
+            }
+            proc = TransitRegionStateProcedure.reopen(env, regionNode.getRegionInfo());
+            regionNode.setProcedure(proc);
+          } finally {
+            regionNode.unlock();
+          }
+          addChildProcedure(proc);
+        }
         setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_CONFIRM_REOPENED);
         return Flow.HAS_MORE_STATE;
       case REOPEN_TABLE_REGIONS_CONFIRM_REOPENED:
