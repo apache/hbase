@@ -482,7 +482,7 @@ mvn -DskipTests package assembly:single deploy
 
 [[build.gotchas]]
 ==== Build Gotchas
-
+===== Maven Site failure
 If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
 It's not an error.
 It is link:https://issues.apache.org/jira/browse/MSITE-286[officially ugly] though.
