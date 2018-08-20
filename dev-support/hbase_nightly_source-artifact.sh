@@ -161,7 +161,8 @@ fi
 
 cd "${unpack_dir}"
 echo "Follow the ref guide section on making a RC: Step 8 Build the binary tarball."
-if mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
+# N.B. Older JDK7 requires the TLSv1.2 in order to talk to maven central
+if mvn -Dhttps.protocols=TLSv1.2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
     assembly:single >"${working_dir}/srctarball_install.log" 2>&1; then
   echo "Building a binary tarball from the source tarball succeeded."
 else
