@@ -247,7 +247,8 @@ public class TestRestoreSnapshotFromClient {
 
   @Test
   public void testCloneSnapshotOfCloned() throws IOException, InterruptedException {
-    TableName clonedTableName = TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
+    TableName clonedTableName = TableName.valueOf(name.getMethodName() + "-" +
+      System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());
@@ -282,7 +283,8 @@ public class TestRestoreSnapshotFromClient {
   @Test
   public void testCorruptedSnapshot() throws IOException, InterruptedException {
     SnapshotTestingUtils.corruptSnapshot(TEST_UTIL, Bytes.toString(snapshotName0));
-    TableName cloneName = TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
+    TableName cloneName = TableName.valueOf(name.getMethodName() + "-" +
+      System.currentTimeMillis());
     try {
       admin.cloneSnapshot(snapshotName0, cloneName);
       fail("Expected CorruptedSnapshotException, got succeeded cloneSnapshot()");
@@ -340,6 +342,23 @@ public class TestRestoreSnapshotFromClient {
     admin.enableTable(tableName);
     verifyRowCount(TEST_UTIL, tableName, numOfRows);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+  }
+
+  @Test(timeout = 30000)
+  public void testGetCompactionStateAfterRestoringSnapshot() throws IOException,
+    InterruptedException {
+    // Take a snapshot
+    admin.snapshot(snapshotName1, tableName);
+
+    // Restore the snapshot
+    admin.disableTable(tableName);
+    admin.restoreSnapshot(snapshotName1);
+
+    // Get the compaction state of the restored table
+    CompactionState compactionState = admin.getCompactionState(tableName);
+
+    // The compactionState should be NONE because the table is disabled
+    assertEquals(CompactionState.NONE, compactionState);
   }
 
   // ==========================================================================

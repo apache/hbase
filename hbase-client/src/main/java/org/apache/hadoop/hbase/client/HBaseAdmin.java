@@ -3310,9 +3310,16 @@ public class HBaseAdmin implements Admin {
   @Override
   public CompactionState getCompactionState(final TableName tableName, CompactType compactType)
       throws IOException {
+    checkTableExists(tableName);
+    if (!isTableEnabled(tableName)) {
+      // If the table is disabled, the compaction state of the table should always be NONE
+      return ProtobufUtil.createCompactionState(
+        AdminProtos.GetRegionInfoResponse.CompactionState.NONE);
+    }
+
     AdminProtos.GetRegionInfoResponse.CompactionState state =
       AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
-    checkTableExists(tableName);
+
     // TODO: There is no timeout on this controller. Set one!
     HBaseRpcController rpcController = rpcControllerFactory.newController();
     switch (compactType) {
