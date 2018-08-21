@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsRegions;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -149,7 +151,26 @@ public class CloneSnapshotProcedure
           break;
         case CLONE_SNAPSHOT_ASSIGN_REGIONS:
           CreateTableProcedure.setEnablingState(env, getTableName());
-          addChildProcedure(env.getAssignmentManager().createRoundRobinAssignProcedures(newRegions));
+
+          // Separate newRegions to split regions and regions to assign
+          List<RegionInfo> splitRegions = new ArrayList<>();
+          List<RegionInfo> regionsToAssign = new ArrayList<>();
+          newRegions.forEach(ri -> {
+            if (ri.isOffline() && (ri.isSplit() || ri.isSplitParent())) {
+              splitRegions.add(ri);
+            } else {
+              regionsToAssign.add(ri);
+            }
+          });
+
+          // For split regions, add them to RegionStates
+          AssignmentManager am = env.getAssignmentManager();
+          splitRegions.forEach(ri ->
+            am.getRegionStates().updateRegionState(ri, RegionState.State.SPLIT)
+          );
+
+          addChildProcedure(env.getAssignmentManager()
+            .createRoundRobinAssignProcedures(regionsToAssign));
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_UPDATE_DESC_CACHE);
           break;
         case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:
