@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -612,7 +613,9 @@ public class TestHFileOutputFormat2  {
     for (int i = 0; i < hostCount; ++i) {
       hostnames[i] = "datanode_" + i;
     }
-    util.startMiniCluster(1, hostCount, hostnames);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(hostCount).dataNodeHosts(hostnames).build();
+    util.startMiniCluster(option);
 
     Map<String, Table> allTables = new HashMap<>(tableStr.size());
     List<HFileOutputFormat2.TableInfo> tableInfo = new ArrayList<>(tableStr.size());

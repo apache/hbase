@@ -61,7 +61,7 @@ public class TestRegionLocationFinder {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    cluster = TEST_UTIL.startMiniCluster(1, ServerNum);
+    cluster = TEST_UTIL.startMiniCluster(ServerNum);
     table = TEST_UTIL.createTable(tableName, FAMILY, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     TEST_UTIL.waitTableAvailable(tableName, 1000);
     TEST_UTIL.loadTable(table, FAMILY);

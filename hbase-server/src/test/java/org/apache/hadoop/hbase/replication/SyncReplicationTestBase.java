@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Admin;
@@ -102,8 +103,10 @@ public class SyncReplicationTestBase {
     ZK_UTIL.startMiniZKCluster();
     initTestingUtility(UTIL1, "/cluster1");
     initTestingUtility(UTIL2, "/cluster2");
-    UTIL1.startMiniCluster(2,3);
-    UTIL2.startMiniCluster(2,3);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    UTIL1.startMiniCluster(option);
+    UTIL2.startMiniCluster(option);
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();

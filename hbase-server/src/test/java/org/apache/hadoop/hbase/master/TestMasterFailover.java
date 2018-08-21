@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
@@ -66,7 +67,9 @@ public class TestMasterFailover {
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     try {
-      TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+      StartMiniClusterOption option = StartMiniClusterOption.builder()
+          .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+      TEST_UTIL.startMiniCluster(option);
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
       // get all the master threads
@@ -166,12 +169,9 @@ public class TestMasterFailover {
    */
   @Test
   public void testMetaInTransitionWhenMasterFailover() throws Exception {
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 1;
-
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    TEST_UTIL.startMiniCluster();
     try {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       LOG.info("Cluster started");

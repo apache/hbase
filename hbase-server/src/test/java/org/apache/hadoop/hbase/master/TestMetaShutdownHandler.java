@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -60,7 +61,9 @@ public class TestMetaShutdownHandler {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(1, 3, null, null, MyRegionServer.class);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(3).rsClass(MyRegionServer.class).numDataNodes(3).build();
+    TEST_UTIL.startMiniCluster(option);
   }
 
   @AfterClass

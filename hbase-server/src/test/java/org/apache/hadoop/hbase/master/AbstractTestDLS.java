@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Put;
@@ -146,7 +147,9 @@ public abstract class AbstractTestDLS {
     conf.setInt("hbase.regionserver.wal.max.splitters", 3);
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.set("hbase.wal.provider", getWalProvider());
-    TEST_UTIL.startMiniHBaseCluster(NUM_MASTERS, numRS);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(NUM_MASTERS).numRegionServers(numRS).build();
+    TEST_UTIL.startMiniHBaseCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();

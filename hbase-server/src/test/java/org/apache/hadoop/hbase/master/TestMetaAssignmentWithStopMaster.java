@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -50,7 +51,9 @@ public class TestMetaAssignmentWithStopMaster {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(2,3);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    UTIL.startMiniCluster(option);
   }
 
   @Test

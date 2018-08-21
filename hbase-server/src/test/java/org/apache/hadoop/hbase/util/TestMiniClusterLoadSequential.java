@@ -109,7 +109,7 @@ public class TestMiniClusterLoadSequential {
   @Before
   public void setUp() throws Exception {
     LOG.debug("Test setup: isMultiPut=" + isMultiPut);
-    TEST_UTIL.startMiniCluster(1, NUM_RS);
+    TEST_UTIL.startMiniCluster(NUM_RS);
   }
 
   @After

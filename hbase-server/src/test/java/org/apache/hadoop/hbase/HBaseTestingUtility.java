@@ -765,197 +765,266 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
   }
 
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper where WAL's walDir is created separately.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param createWALDir Whether to create a new WAL directory.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(boolean createWALDir) throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .createWALDir(createWALDir).build();
+    return startMiniCluster(option);
+  }
 
   /**
    * Start up a minicluster of hbase, dfs, and zookeeper.
-   * @throws Exception
-   * @return Mini hbase cluster instance created.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
+   * @param createRootDir Whether to create a new root or data directory path.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numSlaves, boolean createRootDir)
+  throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(numSlaves).numDataNodes(numSlaves).createRootDir(createRootDir).build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
+   * @param createRootDir Whether to create a new root or data directory path.
+   * @param createWALDir Whether to create a new WAL directory.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numSlaves, boolean createRootDir,
+      boolean createWALDir) throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(numSlaves).numDataNodes(numSlaves).createRootDir(createRootDir)
+        .createWALDir(createWALDir).build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
+   * @param createRootDir Whether to create a new root or data directory path.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves, boolean createRootDir)
+    throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).numRegionServers(numSlaves).createRootDir(createRootDir)
+        .numDataNodes(numSlaves).build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves) throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).numRegionServers(numSlaves).numDataNodes(numSlaves).build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
+   * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
+   *                      HDFS data node number.
+   * @param createRootDir Whether to create a new root or data directory path.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves, String[] dataNodeHosts,
+      boolean createRootDir) throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).numRegionServers(numSlaves).createRootDir(createRootDir)
+        .numDataNodes(numSlaves).dataNodeHosts(dataNodeHosts).build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
+   * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
+   *                      HDFS data node number.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves, String[] dataNodeHosts)
+      throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).numRegionServers(numSlaves)
+        .numDataNodes(numSlaves).dataNodeHosts(dataNodeHosts).build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numRegionServers Number of region servers.
+   * @param numDataNodes Number of datanodes.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numMasters, int numRegionServers, int numDataNodes)
+      throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).numRegionServers(numRegionServers).numDataNodes(numDataNodes)
+        .build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
+   * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
+   *                      HDFS data node number.
+   * @param masterClass The class to use as HMaster, or null for default.
+   * @param rsClass The class to use as HRegionServer, or null for default.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves, String[] dataNodeHosts,
+      Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass)
+      throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).masterClass(masterClass)
+        .numRegionServers(numSlaves).rsClass(rsClass)
+        .numDataNodes(numSlaves).dataNodeHosts(dataNodeHosts)
+        .build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numRegionServers Number of region servers.
+   * @param numDataNodes Number of datanodes.
+   * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
+   *                      HDFS data node number.
+   * @param masterClass The class to use as HMaster, or null for default.
+   * @param rsClass The class to use as HRegionServer, or null for default.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numMasters, int numRegionServers, int numDataNodes,
+      String[] dataNodeHosts, Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass)
+    throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).masterClass(masterClass)
+        .numRegionServers(numRegionServers).rsClass(rsClass)
+        .numDataNodes(numDataNodes).dataNodeHosts(dataNodeHosts)
+        .build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numRegionServers Number of region servers.
+   * @param numDataNodes Number of datanodes.
+   * @param dataNodeHosts The hostnames of DataNodes to run on. If not null, its size will overwrite
+   *                      HDFS data node number.
+   * @param masterClass The class to use as HMaster, or null for default.
+   * @param rsClass The class to use as HRegionServer, or null for default.
+   * @param createRootDir Whether to create a new root or data directory path.
+   * @param createWALDir Whether to create a new WAL directory.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniCluster()
+   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniCluster(int numMasters, int numRegionServers, int numDataNodes,
+      String[] dataNodeHosts, Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass, boolean createRootDir,
+      boolean createWALDir) throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).masterClass(masterClass)
+        .numRegionServers(numRegionServers).rsClass(rsClass)
+        .numDataNodes(numDataNodes).dataNodeHosts(dataNodeHosts)
+        .createRootDir(createRootDir).createWALDir(createWALDir)
+        .build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs and zookeeper clusters with given slave node number.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numSlaves slave node number, for both HBase region server and HDFS data node.
+   * @see #startMiniCluster(StartMiniClusterOption option)
+   * @see #shutdownMiniDFSCluster()
+   */
+  public MiniHBaseCluster startMiniCluster(int numSlaves) throws Exception {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(numSlaves).numDataNodes(numSlaves).build();
+    return startMiniCluster(option);
+  }
+
+  /**
+   * Start up a minicluster of hbase, dfs and zookeeper all using default options.
+   * Option default value can be found in {@link StartMiniClusterOption.Builder}.
+   * @see #startMiniCluster(StartMiniClusterOption option)
    * @see #shutdownMiniDFSCluster()
    */
   public MiniHBaseCluster startMiniCluster() throws Exception {
-    return startMiniCluster(1, 1);
+    return startMiniCluster(StartMiniClusterOption.builder().build());
   }
 
   /**
-   * Start up a minicluster of hbase, dfs, and zookeeper where WAL's walDir is created separately.
-   * @throws Exception
-   * @return Mini hbase cluster instance created.
+   * Start up a mini cluster of hbase, optionally dfs and zookeeper if needed.
+   * It modifies Configuration.  It homes the cluster data directory under a random
+   * subdirectory in a directory under System property test.build.data, to be cleaned up on exit.
    * @see #shutdownMiniDFSCluster()
    */
-  public MiniHBaseCluster startMiniCluster(boolean withWALDir) throws Exception {
-    return startMiniCluster(1, 1, 1, null, null, null, false, withWALDir);
-  }
-
-  /**
-   * Start up a minicluster of hbase, dfs, and zookeeper.
-   * Set the <code>create</code> flag to create root or data directory path or not
-   * (will overwrite if dir already exists)
-   * @throws Exception
-   * @return Mini hbase cluster instance created.
-   * @see #shutdownMiniDFSCluster()
-   */
-  public MiniHBaseCluster startMiniCluster(final int numSlaves, boolean create)
-  throws Exception {
-    return startMiniCluster(1, numSlaves, create);
-  }
-
-  /**
-   * Start up a minicluster of hbase, optionally dfs, and zookeeper.
-   * Modifies Configuration.  Homes the cluster data directory under a random
-   * subdirectory in a directory under System property test.build.data.
-   * Directory is cleaned up on exit.
-   * @param numSlaves Number of slaves to start up.  We'll start this many
-   * datanodes and regionservers.  If numSlaves is > 1, then make sure
-   * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
-   * bind errors.
-   * @throws Exception
-   * @see #shutdownMiniCluster()
-   * @return Mini hbase cluster instance created.
-   */
-  public MiniHBaseCluster startMiniCluster(final int numSlaves)
-  throws Exception {
-    return startMiniCluster(1, numSlaves, false);
-  }
-
-  public MiniHBaseCluster startMiniCluster(final int numSlaves, boolean create, boolean withWALDir)
-          throws Exception {
-    return startMiniCluster(1, numSlaves, numSlaves, null, null, null, create, withWALDir);
-  }
-
-  /**
-   * Start minicluster. Whether to create a new root or data dir path even if such a path
-   * has been created earlier is decided based on flag <code>create</code>
-   * @throws Exception
-   * @see #shutdownMiniCluster()
-   * @return Mini hbase cluster instance created.
-   */
-  public MiniHBaseCluster startMiniCluster(final int numMasters,
-      final int numSlaves, boolean create)
-    throws Exception {
-      return startMiniCluster(numMasters, numSlaves, null, create);
-  }
-
-  /**
-   * start minicluster
-   * @throws Exception
-   * @see #shutdownMiniCluster()
-   * @return Mini hbase cluster instance created.
-   */
-  public MiniHBaseCluster startMiniCluster(final int numMasters,
-    final int numSlaves)
-  throws Exception {
-    return startMiniCluster(numMasters, numSlaves, null, false);
-  }
-
-  public MiniHBaseCluster startMiniCluster(final int numMasters,
-      final int numSlaves, final String[] dataNodeHosts, boolean create)
-      throws Exception {
-    return startMiniCluster(numMasters, numSlaves, numSlaves, dataNodeHosts,
-        null, null, create, false);
-  }
-
-  /**
-   * Start up a minicluster of hbase, optionally dfs, and zookeeper.
-   * Modifies Configuration.  Homes the cluster data directory under a random
-   * subdirectory in a directory under System property test.build.data.
-   * Directory is cleaned up on exit.
-   * @param numMasters Number of masters to start up.  We'll start this many
-   * hbase masters.  If numMasters > 1, you can find the active/primary master
-   * with {@link MiniHBaseCluster#getMaster()}.
-   * @param numSlaves Number of slaves to start up.  We'll start this many
-   * regionservers. If dataNodeHosts == null, this also indicates the number of
-   * datanodes to start. If dataNodeHosts != null, the number of datanodes is
-   * based on dataNodeHosts.length.
-   * If numSlaves is > 1, then make sure
-   * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
-   * bind errors.
-   * @param dataNodeHosts hostnames DNs to run on.
-   * This is useful if you want to run datanode on distinct hosts for things
-   * like HDFS block location verification.
-   * If you start MiniDFSCluster without host names,
-   * all instances of the datanodes will have the same host name.
-   * @throws Exception
-   * @see #shutdownMiniCluster()
-   * @return Mini hbase cluster instance created.
-   */
-  public MiniHBaseCluster startMiniCluster(final int numMasters,
-      final int numSlaves, final String[] dataNodeHosts) throws Exception {
-    return startMiniCluster(numMasters, numSlaves, numSlaves, dataNodeHosts,
-        null, null);
-  }
-
-  /**
-   * Same as {@link #startMiniCluster(int, int)}, but with custom number of datanodes.
-   * @param numDataNodes Number of data nodes.
-   */
-  public MiniHBaseCluster startMiniCluster(final int numMasters,
-      final int numSlaves, final int numDataNodes) throws Exception {
-    return startMiniCluster(numMasters, numSlaves, numDataNodes, null, null, null);
-  }
-
-  /**
-   * Start up a minicluster of hbase, optionally dfs, and zookeeper.
-   * Modifies Configuration.  Homes the cluster data directory under a random
-   * subdirectory in a directory under System property test.build.data.
-   * Directory is cleaned up on exit.
-   * @param numMasters Number of masters to start up.  We'll start this many
-   * hbase masters.  If numMasters > 1, you can find the active/primary master
-   * with {@link MiniHBaseCluster#getMaster()}.
-   * @param numSlaves Number of slaves to start up.  We'll start this many
-   * regionservers. If dataNodeHosts == null, this also indicates the number of
-   * datanodes to start. If dataNodeHosts != null, the number of datanodes is
-   * based on dataNodeHosts.length.
-   * If numSlaves is > 1, then make sure
-   * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
-   * bind errors.
-   * @param dataNodeHosts hostnames DNs to run on.
-   * This is useful if you want to run datanode on distinct hosts for things
-   * like HDFS block location verification.
-   * If you start MiniDFSCluster without host names,
-   * all instances of the datanodes will have the same host name.
-   * @param masterClass The class to use as HMaster, or null for default
-   * @param regionserverClass The class to use as HRegionServer, or null for
-   * default
-   * @throws Exception
-   * @see #shutdownMiniCluster()
-   * @return Mini hbase cluster instance created.
-   */
-  public MiniHBaseCluster startMiniCluster(final int numMasters,
-      final int numSlaves, final String[] dataNodeHosts, Class<? extends HMaster> masterClass,
-      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
-          throws Exception {
-    return startMiniCluster(
-        numMasters, numSlaves, numSlaves, dataNodeHosts, masterClass, regionserverClass);
-  }
-
-  public MiniHBaseCluster startMiniCluster(final int numMasters,
-      final int numSlaves, int numDataNodes, final String[] dataNodeHosts,
-      Class<? extends HMaster> masterClass,
-      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
-    throws Exception {
-    return startMiniCluster(numMasters, numSlaves, numDataNodes, dataNodeHosts,
-        masterClass, regionserverClass, false, false);
-  }
-
-  /**
-   * Same as {@link #startMiniCluster(int, int, String[], Class, Class)}, but with custom
-   * number of datanodes.
-   * @param numDataNodes Number of data nodes.
-   * @param create Set this flag to create a new
-   * root or data directory path or not (will overwrite if exists already).
-   */
-  public MiniHBaseCluster startMiniCluster(final int numMasters,
-    final int numSlaves, int numDataNodes, final String[] dataNodeHosts,
-    Class<? extends HMaster> masterClass,
-    Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
-    boolean create, boolean withWALDir)
-  throws Exception {
-    if (dataNodeHosts != null && dataNodeHosts.length != 0) {
-      numDataNodes = dataNodeHosts.length;
-    }
-
-    LOG.info("Starting up minicluster with " + numMasters + " master(s) and " +
-        numSlaves + " regionserver(s) and " + numDataNodes + " datanode(s)");
+  public MiniHBaseCluster startMiniCluster(StartMiniClusterOption option) throws Exception {
+    LOG.info("Starting up minicluster with option: {}", option);
 
     // If we already put up a cluster, fail.
     if (miniClusterRunning) {
@@ -968,54 +1037,35 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
-    if(this.dfsCluster == null) {
+    if (dfsCluster == null) {
       LOG.info("STARTING DFS");
-      dfsCluster = startMiniDFSCluster(numDataNodes, dataNodeHosts);
-    } else LOG.info("NOT STARTING DFS");
+      dfsCluster = startMiniDFSCluster(option.getNumDataNodes(), option.getDataNodeHosts());
+    } else {
+      LOG.info("NOT STARTING DFS");
+    }
 
     // Start up a zk cluster.
     if (getZkCluster() == null) {
-      startMiniZKCluster();
+      startMiniZKCluster(option.getNumZkServers());
     }
 
     // Start the MiniHBaseCluster
-    return startMiniHBaseCluster(numMasters, numSlaves, null, masterClass,
-      regionserverClass, create, withWALDir);
-  }
-
-  public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves)
-      throws IOException, InterruptedException {
-     return startMiniHBaseCluster(numMasters, numSlaves, null);
-  }
-
-  public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves,
-      List<Integer> rsPorts) throws IOException, InterruptedException {
-    return startMiniHBaseCluster(numMasters, numSlaves, rsPorts, null, null, false, false);
+    return startMiniHBaseCluster(option);
   }
 
   /**
-   * Starts up mini hbase cluster.  Usually used after call to
-   * {@link #startMiniCluster(int, int)} when doing stepped startup of clusters.
+   * Starts up mini hbase cluster.
    * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
-   * @param rsPorts Ports that RegionServer should use; pass ports if you want to test cluster
-   *                restart where for sure the regionservers come up on same address+port (but
-   *                just with different startcode); by default mini hbase clusters choose new
-   *                arbitrary ports on each cluster start.
-   * @param create Whether to create a
-   * root or data directory path or not; will overwrite if exists already.
+   * This is useful when doing stepped startup of clusters.
    * @return Reference to the hbase mini hbase cluster.
-   * @throws IOException
-   * @throws InterruptedException
-   * @see #startMiniCluster()
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see #shutdownMiniHBaseCluster()
    */
-  public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
-        final int numSlaves, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
-        Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
-        boolean create, boolean withWALDir)
-  throws IOException, InterruptedException {
+  public MiniHBaseCluster startMiniHBaseCluster(StartMiniClusterOption option)
+      throws IOException, InterruptedException {
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
-    createRootDir(create);
-    if (withWALDir) {
+    createRootDir(option.isCreateRootDir());
+    if (option.isCreateWALDir()) {
       createWALRootDir();
     }
     // Set the hbase.fs.tmp.dir config to make sure that we have some default value. This is
@@ -1025,16 +1075,17 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // These settings will make the server waits until this exact number of
     // regions servers are connected.
     if (conf.getInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1) == -1) {
-      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, numSlaves);
+      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, option.getNumRegionServers());
     }
     if (conf.getInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1) == -1) {
-      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, numSlaves);
+      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, option.getNumRegionServers());
     }
 
     Configuration c = new Configuration(this.conf);
     TraceUtil.initTracer(c);
     this.hbaseCluster =
-        new MiniHBaseCluster(c, numMasters, numSlaves, rsPorts, masterClass, regionserverClass);
+        new MiniHBaseCluster(c, option.getNumMasters(), option.getNumRegionServers(),
+            option.getRsPorts(), option.getMasterClass(), option.getRsClass());
     // Don't leave here till we've done a successful scan of the hbase:meta
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
@@ -1045,9 +1096,83 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     t.close();
 
     getAdmin(); // create immediately the hbaseAdmin
-    LOG.info("Minicluster is up; activeMaster=" + this.getHBaseCluster().getMaster());
+    LOG.info("Minicluster is up; activeMaster={}", getHBaseCluster().getMaster());
 
-    return (MiniHBaseCluster)this.hbaseCluster;
+    return (MiniHBaseCluster) hbaseCluster;
+  }
+
+  /**
+   * Starts up mini hbase cluster using default options.
+   * Default options can be found in {@link StartMiniClusterOption.Builder}.
+   * @see #startMiniHBaseCluster(StartMiniClusterOption)
+   * @see #shutdownMiniHBaseCluster()
+   */
+  public MiniHBaseCluster startMiniHBaseCluster() throws IOException, InterruptedException {
+    return startMiniHBaseCluster(StartMiniClusterOption.builder().build());
+  }
+
+  /**
+   * Starts up mini hbase cluster.
+   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numRegionServers Number of region servers.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniHBaseCluster()
+   * @deprecated Use {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers)
+      throws IOException, InterruptedException {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).numRegionServers(numRegionServers).build();
+    return startMiniHBaseCluster(option);
+  }
+
+  /**
+   * Starts up mini hbase cluster.
+   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numRegionServers Number of region servers.
+   * @param rsPorts Ports that RegionServer should use.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniHBaseCluster()
+   * @deprecated Use {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers,
+      List<Integer> rsPorts) throws IOException, InterruptedException {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).numRegionServers(numRegionServers).rsPorts(rsPorts).build();
+    return startMiniHBaseCluster(option);
+  }
+
+  /**
+   * Starts up mini hbase cluster.
+   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
+   * All other options will use default values, defined in {@link StartMiniClusterOption.Builder}.
+   * @param numMasters Master node number.
+   * @param numRegionServers Number of region servers.
+   * @param rsPorts Ports that RegionServer should use.
+   * @param masterClass The class to use as HMaster, or null for default.
+   * @param rsClass The class to use as HRegionServer, or null for default.
+   * @param createRootDir Whether to create a new root or data directory path.
+   * @param createWALDir Whether to create a new WAL directory.
+   * @return The mini HBase cluster created.
+   * @see #shutdownMiniHBaseCluster()
+   * @deprecated Use {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   */
+  @Deprecated
+  public MiniHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers,
+      List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
+      boolean createRootDir, boolean createWALDir) throws IOException, InterruptedException {
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(numMasters).masterClass(masterClass)
+        .numRegionServers(numRegionServers).rsClass(rsClass).rsPorts(rsPorts)
+        .createRootDir(createRootDir).createWALDir(createWALDir).build();
+    return startMiniHBaseCluster(option);
   }
 
   /**

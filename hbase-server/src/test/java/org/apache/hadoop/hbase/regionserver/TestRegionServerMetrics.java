@@ -114,7 +114,7 @@ public class TestRegionServerMetrics {
     conf.setInt("hbase.hstore.compaction.max", 100);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
 
-    TEST_UTIL.startMiniCluster(1, 1);
+    TEST_UTIL.startMiniCluster();
     cluster = TEST_UTIL.getHBaseCluster();
     cluster.waitForActiveAndReadyMaster();
     admin = TEST_UTIL.getAdmin();

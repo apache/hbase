@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -117,7 +118,9 @@ public class TestRegionMergeTransactionOnCluster {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     // Start a cluster
-    TEST_UTIL.startMiniCluster(1, NB_SERVERS, null, MyMaster.class, null);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .masterClass(MyMaster.class).numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+    TEST_UTIL.startMiniCluster(option);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     MASTER = cluster.getMaster();
     MASTER.balanceSwitch(false);

@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.Waiter;
@@ -4288,7 +4289,9 @@ public class TestHRegion {
     int regionServersCount = 3;
 
     try {
-      cluster = htu.startMiniCluster(1, regionServersCount, dataNodeHosts);
+      StartMiniClusterOption option = StartMiniClusterOption.builder()
+          .numRegionServers(regionServersCount).dataNodeHosts(dataNodeHosts).build();
+      cluster = htu.startMiniCluster(option);
       byte[][] families = { fam1, fam2 };
       Table ht = htu.createTable(tableName, families);
 

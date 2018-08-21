@@ -73,7 +73,7 @@ public class TestRegionServerOnlineConfigChange {
   @BeforeClass
   public static void setUp() throws Exception {
     conf = hbaseTestingUtility.getConfiguration();
-    hbaseTestingUtility.startMiniCluster(1,1);
+    hbaseTestingUtility.startMiniCluster();
     t1 = hbaseTestingUtility.createTable(TABLE1, COLUMN_FAMILY1);
     try (RegionLocator locator = hbaseTestingUtility.getConnection().getRegionLocator(TABLE1)) {
       HRegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegionInfo();

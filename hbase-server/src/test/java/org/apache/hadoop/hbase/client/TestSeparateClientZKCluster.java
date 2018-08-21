@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.NoSuchProcedureException;
@@ -82,7 +83,9 @@ public class TestSeparateClientZKCluster {
     // reduce zk session timeout to easier trigger session expiration
     TEST_UTIL.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, ZK_SESSION_TIMEOUT);
     // Start a cluster with 2 masters and 3 regionservers.
-    TEST_UTIL.startMiniCluster(2, 3);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    TEST_UTIL.startMiniCluster(option);
   }
 
   @AfterClass

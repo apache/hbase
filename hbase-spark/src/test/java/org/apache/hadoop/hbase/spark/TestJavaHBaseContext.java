@@ -99,7 +99,7 @@ public class TestJavaHBaseContext implements Serializable {
       LOG.info("starting minicluster");
 
       htu.startMiniZKCluster();
-      htu.startMiniHBaseCluster(1, 1);
+      htu.startMiniHBaseCluster();
 
       LOG.info(" - minicluster started");
 

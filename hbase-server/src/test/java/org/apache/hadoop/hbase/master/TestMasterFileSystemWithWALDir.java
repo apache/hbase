@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -46,7 +46,8 @@ public class TestMasterFileSystemWithWALDir {
 
   @BeforeClass
   public static void setupTest() throws Exception {
-    UTIL.startMiniCluster(true);
+    // Set createWALDir to true and use default values for other options.
+    UTIL.startMiniCluster(StartMiniClusterOption.builder().createWALDir(true).build());
   }
 
   @AfterClass

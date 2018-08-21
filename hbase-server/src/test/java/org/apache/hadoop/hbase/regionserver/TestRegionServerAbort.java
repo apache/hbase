@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
@@ -101,7 +102,8 @@ public class TestRegionServerAbort {
 
     testUtil.startMiniZKCluster();
     dfsCluster = testUtil.startMiniDFSCluster(2);
-    cluster = testUtil.startMiniHBaseCluster(1, 2);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
+    cluster = testUtil.startMiniHBaseCluster(option);
   }
 
   @After

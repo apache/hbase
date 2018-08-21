@@ -26,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -76,7 +77,9 @@ public class TestMasterProcedureWalLease {
   @Before
   public void setup() throws Exception {
     setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(2, 3);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    UTIL.startMiniCluster(option);
   }
 
   @After

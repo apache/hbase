@@ -102,8 +102,8 @@ public class TestGlobalReplicationThrottler {
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
 
-    utility1.startMiniCluster(1, 1);
-    utility2.startMiniCluster(1, 1);
+    utility1.startMiniCluster();
+    utility2.startMiniCluster();
 
     admin1.addPeer("peer1", rpc, null);
     admin1.addPeer("peer2", rpc, null);

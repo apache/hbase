@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
@@ -375,7 +376,8 @@ public class TestHRegionServerBulkLoad {
     int millisToRun = 30000;
     int numScanners = 50;
 
-    UTIL.startMiniCluster(1, false, true);
+    // Set createWALDir to true and use default values for other options.
+    UTIL.startMiniCluster(StartMiniClusterOption.builder().createWALDir(true).build());
     try {
       WAL log = UTIL.getHBaseCluster().getRegionServer(0).getWAL(null);
       FindBulkHBaseListener listener = new FindBulkHBaseListener();

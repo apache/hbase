@@ -76,7 +76,7 @@ public class TestShellRSGroups {
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         RSGroupAdminEndpoint.class.getName());
 
-    TEST_UTIL.startMiniCluster(1,4);
+    TEST_UTIL.startMiniCluster(4);
 
     // Configure jruby runtime
     List<String> loadPaths = new ArrayList<>(2);

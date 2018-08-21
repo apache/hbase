@@ -70,10 +70,9 @@ public class TestHRegionOnCluster {
 
   @Test
   public void testDataCorrectnessReplayingRecoveredEdits() throws Exception {
-    final int NUM_MASTERS = 1;
     final int NUM_RS = 3;
     Admin hbaseAdmin = null;
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    TEST_UTIL.startMiniCluster(NUM_RS);
 
     try {
       final TableName tableName = TableName.valueOf(name.getMethodName());

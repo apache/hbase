@@ -198,7 +198,7 @@ public class TestEncryptionKeyRotation {
     conf.set(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY, "hbase");
 
     // Start the cluster back up
-    TEST_UTIL.startMiniHBaseCluster(1, 1);
+    TEST_UTIL.startMiniHBaseCluster();
     // Verify the table can still be loaded
     TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
     // Double check that the store file keys can be unwrapped

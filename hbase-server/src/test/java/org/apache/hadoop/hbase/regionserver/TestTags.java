@@ -92,7 +92,7 @@ public class TestTags {
     conf.setInt("hfile.format.version", 3);
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         TestCoprocessorForTags.class.getName());
-    TEST_UTIL.startMiniCluster(1, 2);
+    TEST_UTIL.startMiniCluster(2);
   }
 
   @AfterClass

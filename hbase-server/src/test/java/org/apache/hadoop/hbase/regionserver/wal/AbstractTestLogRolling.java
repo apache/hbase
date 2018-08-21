@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -119,7 +120,8 @@ public abstract class AbstractTestLogRolling  {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(1, 1, 2);
+    // Use 2 DataNodes and default values for other StartMiniCluster options.
+    TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder().numDataNodes(2).build());
 
     cluster = TEST_UTIL.getHBaseCluster();
     dfsCluster = TEST_UTIL.getDFSCluster();

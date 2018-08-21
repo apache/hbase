@@ -66,7 +66,9 @@ public class TestClientClusterMetrics {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
     UTIL = new HBaseTestingUtility(conf);
-    UTIL.startMiniCluster(MASTERS, SLAVES);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(MASTERS).numRegionServers(SLAVES).numDataNodes(SLAVES).build();
+    UTIL.startMiniCluster(option);
     CLUSTER = UTIL.getHBaseCluster();
     CLUSTER.waitForActiveAndReadyMaster();
     ADMIN = UTIL.getAdmin();

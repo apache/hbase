@@ -101,7 +101,7 @@ public class TestBlockReorderBlockLocation {
   public void testBlockLocation() throws Exception {
     // We need to start HBase to get  HConstants.HBASE_DIR set in conf
     htu.startMiniZKCluster();
-    MiniHBaseCluster hbm = htu.startMiniHBaseCluster(1, 1);
+    MiniHBaseCluster hbm = htu.startMiniHBaseCluster();
     conf = hbm.getConfiguration();
 
 

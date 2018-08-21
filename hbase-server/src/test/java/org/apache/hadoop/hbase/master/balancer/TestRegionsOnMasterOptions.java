@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -157,7 +158,9 @@ public class TestRegionsOnMasterOptions {
   }
 
   private void checkBalance(int masterCount, int rsCount) throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(MASTERS, SLAVES);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(MASTERS).numRegionServers(SLAVES).numDataNodes(SLAVES).build();
+    MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(option);
     TableName tn = TableName.valueOf(this.name.getMethodName());
     try {
       Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY, REGIONS);

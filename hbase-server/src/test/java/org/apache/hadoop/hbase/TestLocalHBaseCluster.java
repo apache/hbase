@@ -47,7 +47,10 @@ public class TestLocalHBaseCluster {
    */
   @Test
   public void testLocalHBaseCluster() throws Exception {
-    TEST_UTIL.startMiniCluster(1, 1, null, MyHMaster.class, MyHRegionServer.class);
+    // Set Master class and RegionServer class, and use default values for other options.
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .masterClass(MyHMaster.class).rsClass(MyHRegionServer.class).build();
+    TEST_UTIL.startMiniCluster(option);
     // Can we cast back to our master class?
     try {
       int val = ((MyHMaster)TEST_UTIL.getHBaseCluster().getMaster(0)).echo(42);

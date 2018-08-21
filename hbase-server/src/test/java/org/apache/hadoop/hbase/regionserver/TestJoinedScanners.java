@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -98,7 +99,9 @@ public class TestJoinedScanners {
 
     String[] dataNodeHosts = new String[] {"host1", "host2", "host3"};
     int regionServersCount = 3;
-    TEST_UTIL.startMiniCluster(1, regionServersCount, dataNodeHosts);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(regionServersCount).dataNodeHosts(dataNodeHosts).build();
+    TEST_UTIL.startMiniCluster(option);
   }
 
   @AfterClass

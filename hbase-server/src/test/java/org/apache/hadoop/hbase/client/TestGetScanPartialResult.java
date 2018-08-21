@@ -52,7 +52,7 @@ public class TestGetScanPartialResult {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(1);
+    TEST_UTIL.startMiniCluster();
     TEST_UTIL.createTable(TABLE, CF);
   }
 
