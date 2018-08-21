@@ -879,6 +879,137 @@ class HBaseContext(@transient val sc: SparkContext,
       if(null != conn) conn.close()
     }
   }
+   
+     /**
+   * Spark Implementation of HBase Bulk load for wide rows or when
+   * values are not already combined at the time of the map process,
+   * and custom versions are used instead of timestamps.
+   *
+   * This will take the content from an existing RDD then sort and shuffle
+   * it with respect to region splits.  The result of that sort and shuffle
+   * will be written to HFiles.
+   *
+   * After this function is executed the user will have to call
+   * LoadIncrementalHFiles.doBulkLoad(...) to move the files into HBase
+   *
+   * Also note this version of bulk load is different from past versions in
+   * that it includes the qualifier as part of the sort process. The
+   * reason for this is to be able to support rows will very large number
+   * of columns.
+   *
+   * @param rdd                            The RDD we are bulk loading from
+   * @param tableName                      The HBase table we are loading into
+   * @param flatMap                        A flapMap function that will make every
+   *                                       row in the RDD
+   *                                       into N cells with custom versions for the bulk load
+   * @param stagingDir                     The location on the FileSystem to bulk load into
+   * @param familyHFileWriteOptionsMap     Options that will define how the HFile for a
+   *                                       column family is written
+   * @param compactionExclude              Compaction excluded for the HFiles
+   * @param maxSize                        Max size for the HFiles before they roll
+   * @tparam T                             The Type of values in the original RDD
+   */
+  def bulkLoadCustomVersions[T](rdd:RDD[T],
+                  tableName: TableName,
+                  flatMap: (T) => Iterator[(KeyFamilyQualifier, Array[Byte], Long)],
+                  stagingDir:String,
+                  familyHFileWriteOptionsMap:
+                  util.Map[Array[Byte], FamilyHFileWriteOptions] =
+                  new util.HashMap[Array[Byte], FamilyHFileWriteOptions],
+                  compactionExclude: Boolean = false,
+                  maxSize:Long = HConstants.DEFAULT_MAX_FILE_SIZE):
+  Unit = {
+    val stagingPath = new Path(stagingDir)
+    val fs = stagingPath.getFileSystem(config)
+    if (fs.exists(stagingPath)) {
+      throw new FileAlreadyExistsException("Path " + stagingDir + " already exists")
+    }
+    val conn = HBaseConnectionCache.getConnection(config)
+    try {
+      val regionLocator = conn.getRegionLocator(tableName)
+      val startKeys = regionLocator.getStartKeys
+      if (startKeys.length == 0) {
+        logInfo("Table " + tableName.toString + " was not found")
+      }
+      val defaultCompressionStr = config.get("hfile.compression",
+        Compression.Algorithm.NONE.getName)
+      val hfileCompression = HFileWriterImpl
+        .compressionByName(defaultCompressionStr)
+      val nowTimeStamp = System.currentTimeMillis()
+      val tableRawName = tableName.getName
+
+      val familyHFileWriteOptionsMapInternal =
+        new util.HashMap[ByteArrayWrapper, FamilyHFileWriteOptions]
+
+      val entrySetIt = familyHFileWriteOptionsMap.entrySet().iterator()
+
+      while (entrySetIt.hasNext) {
+        val entry = entrySetIt.next()
+        familyHFileWriteOptionsMapInternal.put(new ByteArrayWrapper(entry.getKey), entry.getValue)
+      }
+
+      val regionSplitPartitioner =
+        new BulkLoadPartitioner(startKeys)
+
+      //This is where all the magic happens
+      //Here we are going to do the following things
+      // 1. FlapMap every row in the RDD into key column value tuples
+      // 2. Then we are going to repartition sort and shuffle
+      // 3. Finally we are going to write out our HFiles
+      rdd.flatMap( r => flatMap(r)).
+        repartitionAndSortWithinPartitions(regionSplitPartitioner).
+        hbaseForeachPartition(this, (it, conn) => {
+
+          val conf = broadcastedConf.value.value
+          val fs = FileSystem.get(conf)
+          val writerMap = new mutable.HashMap[ByteArrayWrapper, WriterLength]
+          var previousRow:Array[Byte] = HConstants.EMPTY_BYTE_ARRAY
+          var rollOverRequested = false
+          val localTableName = TableName.valueOf(tableRawName)
+
+          //Here is where we finally iterate through the data in this partition of the
+          //RDD that has been sorted and partitioned
+          it.foreach{ case (keyFamilyQualifier, cellValue:Array[Byte], version:Long) =>
+
+            val wl = writeValueToHFile(keyFamilyQualifier.rowKey,
+              keyFamilyQualifier.family,
+              keyFamilyQualifier.qualifier,
+              cellValue,
+              if (version >= 0) version else nowTimeStamp,
+              fs,
+              conn,
+              localTableName,
+              conf,
+              familyHFileWriteOptionsMapInternal,
+              hfileCompression,
+              writerMap,
+              stagingDir)
+
+            rollOverRequested = rollOverRequested || wl.written > maxSize
+
+            //This will only roll if we have at least one column family file that is
+            //bigger then maxSize and we have finished a given row key
+            if (rollOverRequested && Bytes.compareTo(previousRow, keyFamilyQualifier.rowKey) != 0) {
+              rollWriters(fs, writerMap,
+                regionSplitPartitioner,
+                previousRow,
+                compactionExclude)
+              rollOverRequested = false
+            }
+
+            previousRow = keyFamilyQualifier.rowKey
+          }
+          //We have finished all the data so lets close up the writers
+          rollWriters(fs, writerMap,
+            regionSplitPartitioner,
+            previousRow,
+            compactionExclude)
+          rollOverRequested = false
+        })
+    } finally {
+      if(null != conn) conn.close()
+    }
+  }
 
   /**
    *  This will return a new HFile writer when requested
