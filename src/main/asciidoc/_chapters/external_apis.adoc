@@ -347,8 +347,8 @@ parameter with syntax like `-d @filename.txt`.
   "http://example.com:8000/users/fakerow"
 
 curl -vi -X PUT \
-  -H "Accept: text/json" \
-  -H "Content-Type: text/json" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{"Row":[{"key":"cm93NQo=", "Cell": [{"column":"Y2Y6ZQo=", "$":"dmFsdWU1Cg=="}]}]}'' \
   "example.com:8000/users/fakerow"
 
