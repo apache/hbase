@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -49,13 +50,12 @@ public class TestMasterFailoverBalancerPersistence {
    */
   @Test
   public void testMasterFailoverBalancerPersistence() throws Exception {
-    final int NUM_MASTERS = 3;
-    final int NUM_RS = 1;
-
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(3).build();
+    TEST_UTIL.startMiniCluster(option);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
     assertTrue(cluster.waitForActiveAndReadyMaster());

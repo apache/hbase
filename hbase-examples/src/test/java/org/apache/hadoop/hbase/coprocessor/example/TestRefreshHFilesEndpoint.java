@@ -65,7 +65,6 @@ public class TestRefreshHFilesEndpoint {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRefreshHFilesEndpoint.class);
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
-  private static final int NUM_MASTER = 1;
   private static final int NUM_RS = 2;
   private static final TableName TABLE_NAME = TableName.valueOf("testRefreshRegionHFilesEP");
   private static final byte[] FAMILY = Bytes.toBytes("family");
@@ -84,7 +83,7 @@ public class TestRefreshHFilesEndpoint {
       CONF.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
 
       CONF.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, RefreshHFilesEndpoint.class.getName());
-      cluster = HTU.startMiniCluster(NUM_MASTER, NUM_RS);
+      cluster = HTU.startMiniCluster(NUM_RS);
 
       // Create table
       table = HTU.createTable(TABLE_NAME, FAMILY, SPLIT_KEY);

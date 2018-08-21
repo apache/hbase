@@ -150,7 +150,9 @@ public class TestMultiVersions {
     table.close();
     UTIL.shutdownMiniHBaseCluster();
     LOG.debug("HBase cluster shut down -- restarting");
-    UTIL.startMiniHBaseCluster(1, NUM_SLAVES);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(NUM_SLAVES).build();
+    UTIL.startMiniHBaseCluster(option);
     // Make a new connection.
     table = UTIL.getConnection().getTable(desc.getTableName());
     // Overwrite previous value

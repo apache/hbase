@@ -89,7 +89,7 @@ public class TestStatusResource {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.startMiniCluster(1, 1);
+    TEST_UTIL.startMiniCluster();
     TEST_UTIL.createTable(TableName.valueOf("TestStatusResource"), Bytes.toBytes("D"));
     TEST_UTIL.createTable(TableName.valueOf("TestStatusResource2"), Bytes.toBytes("D"));
     REST_TEST_UTIL.startServletContainer(conf);

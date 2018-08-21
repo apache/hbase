@@ -149,7 +149,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     // make sure we have a single region server only, so that all
     // edits for all tables go there
     utility1.shutdownMiniHBaseCluster();
-    utility1.startMiniHBaseCluster(1, 1);
+    utility1.startMiniHBaseCluster();
 
     TableName tablename = TableName.valueOf(tName);
     byte[] familyName = Bytes.toBytes("fam");
@@ -224,7 +224,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     // make sure we have a single region server only, so that all
     // edits for all tables go there
     utility1.shutdownMiniHBaseCluster();
-    utility1.startMiniHBaseCluster(1, 1);
+    utility1.startMiniHBaseCluster();
 
     TableName tablename = TableName.valueOf("testdroppedtimed");
     byte[] familyName = Bytes.toBytes("fam");

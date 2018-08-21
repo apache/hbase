@@ -118,7 +118,7 @@ public class TestNamespaceAuditor {
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     conf.setClass("hbase.coprocessor.regionserver.classes", CPRegionServerObserver.class,
       RegionServerObserver.class);
-    UTIL.startMiniCluster(1, 1);
+    UTIL.startMiniCluster();
     waitForQuotaInitialize(UTIL);
     ADMIN = UTIL.getAdmin();
   }

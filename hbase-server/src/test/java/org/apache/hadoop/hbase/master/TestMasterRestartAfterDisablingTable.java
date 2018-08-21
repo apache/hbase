@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -61,14 +62,15 @@ public class TestMasterRestartAfterDisablingTable {
   public void testForCheckingIfEnableAndDisableWorksFineAfterSwitch()
       throws Exception {
     final int NUM_MASTERS = 2;
-    final int NUM_RS = 1;
     final int NUM_REGIONS_TO_CREATE = 4;
 
     // Start the cluster
     log("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(NUM_MASTERS).build();
+    TEST_UTIL.startMiniCluster(option);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();

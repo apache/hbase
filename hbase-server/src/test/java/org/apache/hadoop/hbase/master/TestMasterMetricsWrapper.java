@@ -50,7 +50,7 @@ public class TestMasterMetricsWrapper {
 
   @BeforeClass
   public static void setup() throws Exception {
-    TEST_UTIL.startMiniCluster(1, NUM_RS);
+    TEST_UTIL.startMiniCluster(NUM_RS);
   }
 
   @AfterClass

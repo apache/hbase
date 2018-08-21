@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Get;
@@ -69,7 +70,8 @@ public class TestRegionMoveAndAbandon {
   public void setup() throws Exception {
     UTIL = new HBaseTestingUtility();
     zkCluster = UTIL.startMiniZKCluster();
-    cluster = UTIL.startMiniHBaseCluster(1, 2);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
+    cluster = UTIL.startMiniHBaseCluster(option);
     rs1 = cluster.getRegionServer(0);
     rs2 = cluster.getRegionServer(1);
     assertEquals(2, cluster.getRegionServerThreads().size());

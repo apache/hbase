@@ -78,7 +78,7 @@ public class TestGlobalMemStoreSize {
     LOG.info("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
     TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniCluster(1, regionServerNum);
+    TEST_UTIL.startMiniCluster(regionServerNum);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();

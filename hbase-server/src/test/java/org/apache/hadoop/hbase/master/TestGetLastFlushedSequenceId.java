@@ -66,7 +66,7 @@ public class TestGetLastFlushedSequenceId {
   @Before
   public void setUp() throws Exception {
     testUtil.getConfiguration().setInt("hbase.regionserver.msginterval", 1000);
-    testUtil.startMiniCluster(1, 1);
+    testUtil.startMiniCluster();
   }
 
   @After

@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Result;
@@ -57,7 +58,10 @@ public abstract class TableSnapshotInputFormatTestBase {
 
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(NUM_REGION_SERVERS, true);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(NUM_REGION_SERVERS).numDataNodes(NUM_REGION_SERVERS)
+        .createRootDir(true).build();
+    UTIL.startMiniCluster(option);
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -196,7 +197,9 @@ public class TestMasterOperationsForRegionReplicas {
         rsports.add(rst.getRegionServer().getRpcServer().getListenerAddress().getPort());
       }
       TEST_UTIL.shutdownMiniHBaseCluster();
-      TEST_UTIL.startMiniHBaseCluster(1, numSlaves, rsports);
+      StartMiniClusterOption option = StartMiniClusterOption.builder()
+          .numRegionServers(numSlaves).rsPorts(rsports).build();
+      TEST_UTIL.startMiniHBaseCluster(option);
       TEST_UTIL.waitTableEnabled(tableName);
       validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
@@ -204,7 +207,7 @@ public class TestMasterOperationsForRegionReplicas {
       // Now shut the whole cluster down, and verify regions are assigned even if there is only
       // one server running
       TEST_UTIL.shutdownMiniHBaseCluster();
-      TEST_UTIL.startMiniHBaseCluster(1, 1);
+      TEST_UTIL.startMiniHBaseCluster();
       TEST_UTIL.waitTableEnabled(tableName);
       validateSingleRegionServerAssignment(ADMIN.getConnection(), numRegions, numReplica);
       for (int i = 1; i < numSlaves; i++) { //restore the cluster

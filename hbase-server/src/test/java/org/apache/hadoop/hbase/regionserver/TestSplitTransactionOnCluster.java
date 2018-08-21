@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -138,7 +139,9 @@ public class TestSplitTransactionOnCluster {
 
   @BeforeClass public static void before() throws Exception {
     TESTING_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_PERIOD, 60000);
-    TESTING_UTIL.startMiniCluster(1, NB_SERVERS, null, MyMaster.class, null);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .masterClass(MyMaster.class).numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+    TESTING_UTIL.startMiniCluster(option);
   }
 
   @AfterClass public static void after() throws Exception {

@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -48,7 +49,9 @@ public class TestUpdateConfiguration {
 
   @BeforeClass
   public static void setup() throws Exception {
-    TEST_UTIL.startMiniCluster(2, 1);
+    // Set master number and use default values for other options.
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(2).build();
+    TEST_UTIL.startMiniCluster(option);
   }
 
   @Test

@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -66,7 +67,10 @@ public class TestGetReplicationLoad {
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     TEST_UTIL = new HBaseTestingUtility();
-    TEST_UTIL.startMiniCluster(1, 1, 1, null, TestMasterMetrics.MyMaster.class, null);
+    // Set master class and use default values for other options.
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .masterClass(TestMasterMetrics.MyMaster.class).build();
+    TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();

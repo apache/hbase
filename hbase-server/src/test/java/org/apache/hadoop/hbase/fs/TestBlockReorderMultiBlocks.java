@@ -116,7 +116,7 @@ public class TestBlockReorderMultiBlocks {
     byte[] sb = Bytes.toBytes("sb");
     htu.startMiniZKCluster();
 
-    MiniHBaseCluster hbm = htu.startMiniHBaseCluster(1, 1);
+    MiniHBaseCluster hbm = htu.startMiniHBaseCluster();
     hbm.waitForActiveAndReadyMaster();
     HRegionServer targetRs = LoadBalancer.isTablesOnMaster(hbm.getConf())? hbm.getMaster():
       hbm.getRegionServer(0);

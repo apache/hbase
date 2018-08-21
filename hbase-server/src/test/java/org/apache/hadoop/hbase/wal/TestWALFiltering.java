@@ -56,7 +56,6 @@ public class TestWALFiltering {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWALFiltering.class);
 
-  private static final int NUM_MASTERS = 1;
   private static final int NUM_RS = 4;
 
   private static final TableName TABLE_NAME =
@@ -69,7 +68,7 @@ public class TestWALFiltering {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    TEST_UTIL.startMiniCluster(NUM_RS);
     fillTable();
   }
 

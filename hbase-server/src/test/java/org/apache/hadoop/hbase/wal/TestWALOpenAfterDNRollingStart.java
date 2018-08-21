@@ -80,7 +80,7 @@ public class TestWALOpenAfterDNRollingStart {
   @Before
   public void setUp() throws IOException, InterruptedException {
     TEST_UTIL.getConfiguration().set("hbase.wal.provider", walProvider);
-    TEST_UTIL.startMiniHBaseCluster(1, 1);
+    TEST_UTIL.startMiniHBaseCluster();
   }
 
   @After

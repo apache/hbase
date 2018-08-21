@@ -68,7 +68,7 @@ public class TestRemoveRegionMetrics {
     conf.setInt("zookeeper.recovery.retry", 0);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
 
-    TEST_UTIL.startMiniCluster(1, 2);
+    TEST_UTIL.startMiniCluster(2);
     cluster = TEST_UTIL.getHBaseCluster();
 
     cluster.waitForActiveAndReadyMaster();

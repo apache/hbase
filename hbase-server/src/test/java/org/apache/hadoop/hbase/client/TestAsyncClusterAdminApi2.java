@@ -63,7 +63,7 @@ public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
   @Before
   @Override
   public void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(1, 3);
+    TEST_UTIL.startMiniCluster(3);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     admin = ASYNC_CONN.getAdmin();
   }

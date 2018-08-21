@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -103,7 +104,9 @@ public class TestRegionServerHostname {
 
         TEST_UTIL.getConfiguration().set(HRegionServer.MASTER_HOSTNAME_KEY, hostName);
         TEST_UTIL.getConfiguration().set(HRegionServer.RS_HOSTNAME_KEY, hostName);
-        TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+        StartMiniClusterOption option = StartMiniClusterOption.builder()
+            .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+        TEST_UTIL.startMiniCluster(option);
         try {
           ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
           List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
@@ -143,7 +146,9 @@ public class TestRegionServerHostname {
         TEST_UTIL.getConfiguration().set(HRegionServer.RS_HOSTNAME_KEY, hostName);
         TEST_UTIL.getConfiguration().setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
         try {
-          TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+          StartMiniClusterOption option = StartMiniClusterOption.builder()
+              .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+          TEST_UTIL.startMiniCluster(option);
         } catch (Exception e) {
           Throwable t1 = e.getCause();
           Throwable t2 = t1.getCause();
@@ -163,7 +168,9 @@ public class TestRegionServerHostname {
   public void testRegionServerHostnameReportedToMaster() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY,
     true);
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+    TEST_UTIL.startMiniCluster(option);
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
     int expectedRS = NUM_RS + (tablesOnMaster? 1: 0);
     try (ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher()) {

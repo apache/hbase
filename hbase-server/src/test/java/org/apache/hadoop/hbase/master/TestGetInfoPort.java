@@ -45,7 +45,7 @@ public class TestGetInfoPort {
   @Before
   public void setUp() throws Exception {
     testUtil.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 0);
-    testUtil.startMiniCluster(1, 1);
+    testUtil.startMiniCluster();
   }
 
   @After

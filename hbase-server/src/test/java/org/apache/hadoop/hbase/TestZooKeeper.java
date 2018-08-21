@@ -88,7 +88,9 @@ public class TestZooKeeper {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.startMiniHBaseCluster(2, 2);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(2).numRegionServers(2).build();
+    TEST_UTIL.startMiniHBaseCluster(option);
   }
 
   @After

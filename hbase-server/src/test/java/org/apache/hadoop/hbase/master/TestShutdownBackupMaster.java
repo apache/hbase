@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -72,7 +73,9 @@ public class TestShutdownBackupMaster {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, MockHMaster.class, HMaster.class);
-    UTIL.startMiniCluster(2, 2);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(2).numRegionServers(2).numDataNodes(2).build();
+    UTIL.startMiniCluster(option);
     UTIL.waitUntilAllSystemRegionsAssigned();
   }
 

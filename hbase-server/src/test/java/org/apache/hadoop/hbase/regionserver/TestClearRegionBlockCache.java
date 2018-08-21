@@ -59,7 +59,6 @@ public class TestClearRegionBlockCache {
   private static final TableName TABLE_NAME = TableName.valueOf("testClearRegionBlockCache");
   private static final byte[] FAMILY = Bytes.toBytes("family");
   private static final byte[][] SPLIT_KEY = new byte[][] { Bytes.toBytes("5") };
-  private static final int NUM_MASTERS = 1;
   private static final int NUM_RS = 2;
 
   private final HBaseTestingUtility HTU = new HBaseTestingUtility();
@@ -83,7 +82,7 @@ public class TestClearRegionBlockCache {
       CONF.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 30);
     }
 
-    cluster = HTU.startMiniCluster(NUM_MASTERS, NUM_RS);
+    cluster = HTU.startMiniCluster(NUM_RS);
     rs1 = cluster.getRegionServer(0);
     rs2 = cluster.getRegionServer(1);
 

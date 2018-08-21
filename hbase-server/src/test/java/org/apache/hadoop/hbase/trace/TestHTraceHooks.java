@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Put;
@@ -63,7 +64,9 @@ public class TestHTraceHooks {
 
   @BeforeClass
   public static void before() throws Exception {
-    TEST_UTIL.startMiniCluster(2, 3);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    TEST_UTIL.startMiniCluster(option);
     rcvr = new POJOSpanReceiver(new HBaseHTraceConfiguration(TEST_UTIL.getConfiguration()));
     TraceUtil.addReceiver(rcvr);
     TraceUtil.addSampler(new Sampler() {
