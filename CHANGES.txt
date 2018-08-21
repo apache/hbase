@@ -1,5 +1,29 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.7 8/31/2018
+
+** Sub-task
+    * [HBASE-20896] - Port HBASE-20866 to branch-1 and branch-1.4 
+    * [HBASE-20974] - Backport HBASE-20583 (SplitLogWorker should handle FileNotFoundException when split a wal) to branch-1
+
+** Bug
+    * [HBASE-20895] - NPE in RpcServer#readAndProcess
+    * [HBASE-20940] - HStore.cansplit should not allow split to happen if it has references
+    * [HBASE-20997] - rebuildUserRegions() does not build ReplicaMapping during master switchover
+    * [HBASE-21007] - Memory leak in HBase rest server
+    * [HBASE-21042] - processor.getRowsToLock() always assumes there is some row being locked in HRegion#processRowsWithLocks
+    * [HBASE-21047] - Object creation of StoreFileScanner thru constructor and close may leave refCount to -1
+    * [HBASE-21058] - Nightly tests for branches 1 fail to build ref guide
+    * [HBASE-21069] - NPE in StoreScanner.updateReaders causes RS to crash 
+    * [HBASE-21074] - JDK7 branches need to pass "-Dhttps.protocols=TLSv1.2" to maven when building
+
+** Improvement
+    * [HBASE-20387] - flaky infrastructure should work for all branches
+    * [HBASE-20469] - Directory used for sidelining old recovered edits files should be made configurable
+    * [HBASE-20930] - MetaScanner.metaScan should use passed variable for meta table name rather than TableName.META_TABLE_NAME
+    * [HBASE-20935] - HStore.removeCompactedFiles should log in case it is unable to delete a file
+
+
 Release Notes - HBase - Version 1.4.6 7/30/2018
 
 ** Sub-task
