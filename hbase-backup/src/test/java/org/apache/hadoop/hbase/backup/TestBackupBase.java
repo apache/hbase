@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
+import org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -288,6 +290,11 @@ public class TestBackupBase {
     BackupManager.decorateMasterConfiguration(conf1);
     BackupManager.decorateRegionServerConfiguration(conf1);
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
+    // Set TTL for old WALs to 1 sec to enforce fast cleaning of an archived
+    // WAL files
+    conf1.setLong(TimeToLiveLogCleaner.TTL_CONF_KEY, 1000);
+    conf1.setLong(LogCleaner.OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC, 1000);
+
     // Set MultiWAL (with 2 default WAL files per RS)
     conf1.set(WALFactory.WAL_PROVIDER, provider);
     TEST_UTIL.startMiniCluster();

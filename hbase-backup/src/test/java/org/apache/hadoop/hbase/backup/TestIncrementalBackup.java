@@ -157,6 +157,8 @@ public class TestIncrementalBackup extends TestBackupBase {
     int NB_ROWS_FAM2 = 7;
     HTable t3 = insertIntoTable(conn, table1, fam2Name, 2, NB_ROWS_FAM2);
     t3.close();
+    // Wait for 5 sec to make sure that old WALs were deleted
+    Thread.sleep(5000);
 
     // #3 - incremental backup for multiple tables
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);

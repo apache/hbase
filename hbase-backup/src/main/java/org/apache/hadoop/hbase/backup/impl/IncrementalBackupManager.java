@@ -178,7 +178,7 @@ public class IncrementalBackupManager extends BackupManager {
     Set<String> set = new HashSet<>();
     for (int i=0; i < logFromSystemTable.size(); i++) {
       WALItem item = logFromSystemTable.get(i);
-      set.add(item.walFile);
+      set.add((new Path(item.walFile)).getName());
     }
     return set;
   }
