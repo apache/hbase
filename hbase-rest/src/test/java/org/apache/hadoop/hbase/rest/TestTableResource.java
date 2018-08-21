@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.rest.model.TableRegionModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -119,7 +117,7 @@ public class TestTableResource {
     RegionLocator regionLocator = connection.getRegionLocator(TABLE);
     List<HRegionLocation> m = regionLocator.getAllRegionLocations();
 
-    // should have three regions now
+    // should have four regions now
     assertEquals(NUM_REGIONS, m.size());
     regionMap = m;
     LOG.error("regions: " + regionMap);
