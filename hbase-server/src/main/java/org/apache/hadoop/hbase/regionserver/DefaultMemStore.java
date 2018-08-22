@@ -63,7 +63,7 @@ public class DefaultMemStore extends AbstractMemStore {
    * Default constructor. Used for tests.
    */
   public DefaultMemStore() {
-    this(HBaseConfiguration.create(), CellComparator.getInstance());
+    this(HBaseConfiguration.create(), CellComparator.getInstance(), null);
   }
 
   /**
@@ -71,7 +71,16 @@ public class DefaultMemStore extends AbstractMemStore {
    * @param c Comparator
    */
   public DefaultMemStore(final Configuration conf, final CellComparator c) {
-    super(conf, c);
+    super(conf, c, null);
+  }
+
+  /**
+   * Constructor.
+   * @param c Comparator
+   */
+  public DefaultMemStore(final Configuration conf, final CellComparator c,
+      final RegionServicesForStores regionServices) {
+    super(conf, c, regionServices);
   }
 
   /**
@@ -88,8 +97,16 @@ public class DefaultMemStore extends AbstractMemStore {
     } else {
       this.snapshotId = EnvironmentEdgeManager.currentTime();
       if (!this.active.isEmpty()) {
+        // Record the ImmutableSegment' heap overhead when initialing
+        MemStoreSizing memstoreAccounting = new NonThreadSafeMemStoreSizing();
         ImmutableSegment immutableSegment = SegmentFactory.instance().
-            createImmutableSegment(this.active);
+            createImmutableSegment(this.active, memstoreAccounting);
+        // regionServices can be null when testing
+        if (regionServices != null) {
+          regionServices.addMemStoreSize(memstoreAccounting.getDataSize(),
+              memstoreAccounting.getHeapSize(),
+              memstoreAccounting.getOffHeapSize());
+        }
         this.snapshot = immutableSegment;
         resetActive();
       }

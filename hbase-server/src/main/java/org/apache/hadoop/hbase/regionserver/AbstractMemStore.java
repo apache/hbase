@@ -54,8 +54,10 @@ public abstract class AbstractMemStore implements MemStore {
   // Used to track when to flush
   private volatile long timeOfOldestEdit;
 
+  protected RegionServicesForStores regionServices;
+
   public final static long FIXED_OVERHEAD = (long) ClassSize.OBJECT
-          + (4 * ClassSize.REFERENCE)
+          + (5 * ClassSize.REFERENCE)
           + (2 * Bytes.SIZEOF_LONG); // snapshotId, timeOfOldestEdit
 
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD;
@@ -74,17 +76,28 @@ public abstract class AbstractMemStore implements MemStore {
     return order - 1;
   }
 
-  protected AbstractMemStore(final Configuration conf, final CellComparator c) {
+  protected AbstractMemStore(final Configuration conf, final CellComparator c,
+      final RegionServicesForStores regionServices) {
     this.conf = conf;
     this.comparator = c;
+    this.regionServices = regionServices;
     resetActive();
     this.snapshot = SegmentFactory.instance().createImmutableSegment(c);
     this.snapshotId = NO_SNAPSHOT_ID;
   }
 
   protected void resetActive() {
+    // Record the MutableSegment' heap overhead when initialing
+    MemStoreSizing memstoreAccounting = new NonThreadSafeMemStoreSizing();
     // Reset heap to not include any keys
-    this.active = SegmentFactory.instance().createMutableSegment(conf, comparator);
+    this.active = SegmentFactory.instance()
+        .createMutableSegment(conf, comparator, memstoreAccounting);
+    // regionServices can be null when testing
+    if (regionServices != null) {
+      regionServices.addMemStoreSize(memstoreAccounting.getDataSize(),
+          memstoreAccounting.getHeapSize(),
+          memstoreAccounting.getOffHeapSize());
+    }
     this.timeOfOldestEdit = Long.MAX_VALUE;
   }
 

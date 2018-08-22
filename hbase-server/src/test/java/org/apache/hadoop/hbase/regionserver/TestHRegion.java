@@ -426,6 +426,36 @@ public class TestHRegion {
   }
 
   /**
+   * A test case of HBASE-21041
+   * @throws Exception Exception
+   */
+  @Test
+  public void testFlushAndMemstoreSizeCounting() throws Exception {
+    byte[] family = Bytes.toBytes("family");
+    this.region = initHRegion(tableName, method, CONF, family);
+    final WALFactory wals = new WALFactory(CONF, method);
+    try {
+      for (byte[] row : HBaseTestingUtility.ROWS) {
+        Put put = new Put(row);
+        put.addColumn(family, family, row);
+        region.put(put);
+      }
+      region.flush(true);
+      // After flush, data size should be zero
+      assertEquals(0, region.getMemStoreDataSize());
+      // After flush, a new active mutable segment is created, so the heap size
+      // should equal to MutableSegment.DEEP_OVERHEAD
+      assertEquals(MutableSegment.DEEP_OVERHEAD, region.getMemStoreHeapSize());
+      // After flush, offheap should be zero
+      assertEquals(0, region.getMemStoreOffHeapSize());
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+      wals.close();
+    }
+  }
+
+  /**
    * Test we do not lose data if we fail a flush and then close.
    * Part of HBase-10466.  Tests the following from the issue description:
    * "Bug 1: Wrong calculation of HRegion.memstoreSize: When a flush fails, data to be flushed is

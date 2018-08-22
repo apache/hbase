@@ -331,7 +331,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     switch (inMemoryCompaction) {
       case NONE:
         ms = ReflectionUtils.newInstance(DefaultMemStore.class,
-            new Object[]{conf, this.comparator});
+            new Object[] { conf, this.comparator,
+                this.getHRegion().getRegionServicesForStores()});
         break;
       default:
         Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
