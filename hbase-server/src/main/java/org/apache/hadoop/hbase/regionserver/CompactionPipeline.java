@@ -72,8 +72,15 @@ public class CompactionPipeline {
   }
 
   public boolean pushHead(MutableSegment segment) {
+    // Record the ImmutableSegment' heap overhead when initialing
+    MemStoreSizing memstoreAccounting = new NonThreadSafeMemStoreSizing();
     ImmutableSegment immutableSegment = SegmentFactory.instance().
-        createImmutableSegment(segment);
+        createImmutableSegment(segment, memstoreAccounting);
+    if (region != null) {
+      region.addMemStoreSize(memstoreAccounting.getDataSize(),
+          memstoreAccounting.getHeapSize(),
+          memstoreAccounting.getOffHeapSize());
+    }
     synchronized (pipeline){
       boolean res = addFirst(immutableSegment);
       readOnlyCopy = new LinkedList<>(pipeline);

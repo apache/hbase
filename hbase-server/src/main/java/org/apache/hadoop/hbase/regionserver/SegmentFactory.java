@@ -60,22 +60,30 @@ public final class SegmentFactory {
             conf,comparator,iterator,memStoreLAB,numOfCells,action,idxType);
   }
 
-  // create empty immutable segment
-  // for initializations
+  /**
+   * create empty immutable segment for initializations
+   * This ImmutableSegment is used as a place holder for snapshot in Memstore.
+   * It won't flush later, So it is not necessary to record the initial size
+   * for it.
+   * @param comparator comparator
+   * @return ImmutableSegment
+   */
   public ImmutableSegment createImmutableSegment(CellComparator comparator) {
-    MutableSegment segment = generateMutableSegment(null, comparator, null);
-    return createImmutableSegment(segment);
+    MutableSegment segment = generateMutableSegment(null, comparator, null, null);
+    return createImmutableSegment(segment, null);
   }
 
   // create not-flat immutable segment from mutable segment
-  public ImmutableSegment createImmutableSegment(MutableSegment segment) {
-    return new CSLMImmutableSegment(segment);
+  public ImmutableSegment createImmutableSegment(MutableSegment segment,
+      MemStoreSizing memstoreSizing) {
+    return new CSLMImmutableSegment(segment, memstoreSizing);
   }
 
   // create mutable segment
-  public MutableSegment createMutableSegment(final Configuration conf, CellComparator comparator) {
+  public MutableSegment createMutableSegment(final Configuration conf,
+      CellComparator comparator, MemStoreSizing memstoreSizing) {
     MemStoreLAB memStoreLAB = MemStoreLAB.newInstance(conf);
-    return generateMutableSegment(conf, comparator, memStoreLAB);
+    return generateMutableSegment(conf, comparator, memStoreLAB, memstoreSizing);
   }
 
   // create new flat immutable segment from merging old immutable segments
@@ -135,10 +143,10 @@ public final class SegmentFactory {
   }
 
   private MutableSegment generateMutableSegment(final Configuration conf, CellComparator comparator,
-      MemStoreLAB memStoreLAB) {
+      MemStoreLAB memStoreLAB, MemStoreSizing memstoreSizing) {
     // TBD use configuration to set type of segment
     CellSet set = new CellSet(comparator);
-    return new MutableSegment(set, comparator, memStoreLAB);
+    return new MutableSegment(set, comparator, memStoreLAB, memstoreSizing);
   }
 
   private MemStoreLAB getMergedMemStoreLAB(Configuration conf, List<ImmutableSegment> segments) {
