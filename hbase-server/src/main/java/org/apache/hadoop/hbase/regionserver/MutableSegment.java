@@ -47,9 +47,13 @@ public class MutableSegment extends Segment {
       + ClassSize.REFERENCE
       + ClassSize.ATOMIC_BOOLEAN);
 
-  protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
+  protected MutableSegment(CellSet cellSet, CellComparator comparator,
+      MemStoreLAB memStoreLAB, MemStoreSizing memstoreSizing) {
     super(cellSet, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.SYNC));
     incMemStoreSize(0, DEEP_OVERHEAD, 0); // update the mutable segment metadata
+    if (memstoreSizing != null) {
+      memstoreSizing.incMemStoreSize(0, DEEP_OVERHEAD, 0);
+    }
   }
 
   /**
