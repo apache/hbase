@@ -35,7 +35,7 @@ bin=`cd "$bin">/dev/null; pwd`
 shift
 deadhost=$@
 
-remote_cmd="cd ${HBASE_HOME}; $bin/hbase-daemon.sh --config ${HBASE_CONF_DIR} restart"
+remote_cmd="cd ${HBASE_HOME}; $bin/hbase-daemon.sh --config ${HBASE_CONF_DIR} restart regionserver"
 
 zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
 if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
@@ -47,6 +47,7 @@ zkrs="$zparent/$zkrs"
 online_regionservers=`$bin/hbase zkcli ls $zkrs 2>&1 | tail -1 | sed "s/\[//" | sed "s/\]//"`
 for rs in $online_regionservers
 do
+    rs=${rs%,}
     rs_parts=(${rs//,/ })
     hostname=${rs_parts[0]}
     echo $deadhost
