@@ -2390,6 +2390,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     @Override
     public void abort() throws IOException {
       if (snapshot != null) {
+        //We need to close the snapshot when aborting, otherwise, the segment scanner
+        //won't be closed. If we are using MSLAB, the chunk referenced by those scanners
+        //can't be released, thus memory leak
+        snapshot.close();
         HStore.this.updateStorefiles(Collections.emptyList(), snapshot.getId());
       }
     }

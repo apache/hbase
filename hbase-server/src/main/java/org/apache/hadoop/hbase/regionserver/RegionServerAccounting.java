@@ -19,14 +19,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.lang.management.MemoryType;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -42,11 +39,6 @@ public class RegionServerAccounting {
   private final LongAdder globalMemStoreHeapSize = new LongAdder();
   // memstore off-heap size.
   private final LongAdder globalMemStoreOffHeapSize = new LongAdder();
-
-  // Store the edits size during replaying WAL. Use this to roll back the
-  // global memstore size once a region opening failed.
-  private final ConcurrentMap<byte[], MemStoreSizing> replayEditsPerRegion =
-    new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
 
   private long globalMemStoreLimit;
   private final float globalMemStoreLimitLowMarkPercent;
@@ -215,49 +207,5 @@ public class RegionServerAccounting {
       return Math.max(getGlobalMemStoreOffHeapSize() * 1.0 / globalMemStoreLimitLowMark,
           getGlobalMemStoreHeapSize() * 1.0 / globalOnHeapMemstoreLimitLowMark);
     }
-  }
-
-  /***
-   * Add memStoreSize to replayEditsPerRegion.
-   *
-   * @param regionName region name.
-   * @param memStoreSize the Memstore size will be added to replayEditsPerRegion.
-   */
-  public void addRegionReplayEditsSize(byte[] regionName, MemStoreSize memStoreSize) {
-    MemStoreSizing replayEdistsSize = replayEditsPerRegion.get(regionName);
-    // All ops on the same MemStoreSize object is going to be done by single thread, sequentially
-    // only. First calls to this method to increment the per region reply edits size and then call
-    // to either rollbackRegionReplayEditsSize or clearRegionReplayEditsSize as per the result of
-    // the region open operation. No need to handle multi thread issues on one region's entry in
-    // this Map.
-    if (replayEdistsSize == null) {
-      replayEdistsSize = new ThreadSafeMemStoreSizing();
-      replayEditsPerRegion.put(regionName, replayEdistsSize);
-    }
-    replayEdistsSize.incMemStoreSize(memStoreSize);
-  }
-
-  /**
-   * Roll back the global MemStore size for a specified region when this region
-   * can't be opened.
-   *
-   * @param regionName the region which could not open.
-   */
-  public void rollbackRegionReplayEditsSize(byte[] regionName) {
-    MemStoreSizing replayEditsSizing = replayEditsPerRegion.get(regionName);
-    if (replayEditsSizing != null) {
-      clearRegionReplayEditsSize(regionName);
-      decGlobalMemStoreSize(replayEditsSizing.getDataSize(), replayEditsSizing.getHeapSize(),
-          replayEditsSizing.getOffHeapSize());
-    }
-  }
-
-  /**
-   * Clear a region from replayEditsPerRegion.
-   *
-   * @param regionName region name.
-   */
-  public void clearRegionReplayEditsSize(byte[] regionName) {
-    replayEditsPerRegion.remove(regionName);
   }
 }
