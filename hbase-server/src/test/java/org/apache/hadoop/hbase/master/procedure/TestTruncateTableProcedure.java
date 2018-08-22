@@ -55,12 +55,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTruncateTableProcedure.class);
+    HBaseClassTestRule.forClass(TestTruncateTableProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTruncateTableProcedure.class);
 
@@ -315,7 +315,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testTruncateWithPreserveAfterSplit() throws Exception {
     String[] families = new String[] { "f1", "f2" };
     byte[][] splitKeys =
@@ -323,10 +323,10 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     TableName tableName = TableName.valueOf(name.getMethodName());
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
       tableName, splitKeys, families);
-    splitAndTruncate(tableName, regions);
+    splitAndTruncate(tableName, regions, 1);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testTruncatePreserveWithReplicaRegionAfterSplit() throws Exception {
     String[] families = new String[] { "f1", "f2" };
     byte[][] splitKeys =
@@ -334,12 +334,10 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     TableName tableName = TableName.valueOf(name.getMethodName());
 
     // create a table with region replications
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-      .setRegionReplication(3)
-      .setColumnFamilies(
-        Arrays.stream(families)
-         .map(fam -> ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(fam)).build())
-         .collect(Collectors.toList()))
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(3)
+      .setColumnFamilies(Arrays.stream(families)
+        .map(fam -> ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(fam)).build())
+        .collect(Collectors.toList()))
       .build();
     RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
     ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -347,20 +345,18 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
 
-    splitAndTruncate(tableName, regions);
+    splitAndTruncate(tableName, regions, 3);
   }
 
-  private void splitAndTruncate(TableName tableName, RegionInfo[] regions) throws IOException,
-    InterruptedException {
-
+  private void splitAndTruncate(TableName tableName, RegionInfo[] regions, int regionReplication)
+      throws IOException, InterruptedException {
     // split a region
-    UTIL.getAdmin().split(tableName, new byte[]{'0'});
+    UTIL.getAdmin().split(tableName, new byte[] { '0' });
     UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // wait until split really happens
-    while (UTIL.getAdmin().getRegions(tableName).size() <= regions.length) {
-      Thread.sleep(50);
-    }
+    UTIL.waitFor(60000,
+      () -> UTIL.getAdmin().getRegions(tableName).size() > regions.length * regionReplication);
 
     // disable the table
     UTIL.getAdmin().disableTable(tableName);
@@ -372,5 +368,8 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     UTIL.waitUntilAllRegionsAssigned(tableName);
+    // confirm that we have the correct number of regions
+    assertEquals((regions.length + 1) * regionReplication,
+      UTIL.getAdmin().getRegions(tableName).size());
   }
 }
