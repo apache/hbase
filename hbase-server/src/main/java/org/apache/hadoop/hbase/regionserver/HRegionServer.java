@@ -3215,7 +3215,6 @@ public class HRegionServer extends HasThread implements
   }
 
    /**
-   * @param regionName
    * @return HRegion for the passed binary <code>regionName</code> or null if
    *         named region is not member of the online regions.
    */
