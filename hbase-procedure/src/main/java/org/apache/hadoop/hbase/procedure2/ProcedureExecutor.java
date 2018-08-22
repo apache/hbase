@@ -1725,7 +1725,8 @@ public class ProcedureExecutor<TEnvironment> {
       // children have completed, move parent to front of the queue.
       store.update(parent);
       scheduler.addFront(parent);
-      LOG.info("Finished subprocedure(s) of " + parent + "; resume parent processing.");
+      LOG.info("Finished subprocedure pid={}, resume processing parent {}",
+          procedure.getProcId(), parent);
       return;
     }
   }
