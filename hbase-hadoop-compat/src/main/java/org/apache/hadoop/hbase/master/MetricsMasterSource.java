@@ -63,6 +63,8 @@ public interface MetricsMasterSource extends BaseSource {
   String IS_ACTIVE_MASTER_NAME = "isActiveMaster";
   String SPLIT_PLAN_COUNT_NAME = "splitPlanCount";
   String MERGE_PLAN_COUNT_NAME = "mergePlanCount";
+  String ONLINE_REGION_COUNT_NAME = "onlineRegionCount";
+  String OFFLINE_REGION_COUNT_NAME = "offlineRegionCount";
 
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
@@ -80,6 +82,8 @@ public interface MetricsMasterSource extends BaseSource {
   String IS_ACTIVE_MASTER_DESC = "Is Active Master";
   String SPLIT_PLAN_COUNT_DESC = "Number of Region Split Plans executed";
   String MERGE_PLAN_COUNT_DESC = "Number of Region Merge Plans executed";
+  String ONLINE_REGION_COUNT_DESC = "Number of Online Regions";
+  String OFFLINE_REGION_COUNT_DESC = "Number of Offline Regions";
 
   String SERVER_CRASH_METRIC_PREFIX = "serverCrash";
 

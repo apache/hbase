@@ -17,18 +17,23 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 /**
@@ -178,5 +183,31 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   Entry<Long,Long> convertSnapshot(SpaceQuotaSnapshot snapshot) {
     return new SimpleImmutableEntry<Long,Long>(snapshot.getUsage(), snapshot.getLimit());
+  }
+
+  @Override
+  public PairOfSameType<Integer> getRegionCounts() {
+    try {
+      if (!master.isInitialized()) {
+        return new PairOfSameType<>(0, 0);
+      }
+      Integer onlineRegionCount = 0;
+      Integer offlineRegionCount = 0;
+
+      List<TableDescriptor> descriptors = master.listTableDescriptors(null, null,
+          null, false);
+
+      for (TableDescriptor htDesc : descriptors) {
+        TableName tableName = htDesc.getTableName();
+        Map<RegionState.State, List<RegionInfo>> tableRegions =
+            master.getAssignmentManager().getRegionStates()
+                .getRegionByStateOfTable(tableName);
+        onlineRegionCount += tableRegions.get(RegionState.State.OPEN).size();
+        offlineRegionCount += tableRegions.get(RegionState.State.OFFLINE).size();
+      }
+      return new PairOfSameType<>(onlineRegionCount, offlineRegionCount);
+    } catch (IOException e) {
+      return new PairOfSameType<>(0, 0);
+    }
   }
 }
