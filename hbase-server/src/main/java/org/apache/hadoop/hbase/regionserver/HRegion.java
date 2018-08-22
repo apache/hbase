@@ -874,7 +874,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return What the next sequence (edit) id should be.
    * @throws IOException e
    */
-  private long initialize(final CancelableProgressable reporter) throws IOException {
+  @VisibleForTesting
+  long initialize(final CancelableProgressable reporter) throws IOException {
 
     //Refuse to open the region if there is no column family in the table
     if (htableDescriptor.getColumnFamilyCount() == 0) {
@@ -887,6 +888,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       nextSeqId = initializeRegionInternals(reporter, status);
       return nextSeqId;
+    } catch (IOException e) {
+      LOG.warn("Failed initialize of region= {}, starting to roll back memstore",
+          getRegionInfo().getRegionNameAsString(), e);
+      // global memstore size will be decreased when dropping memstore
+      try {
+        //drop the memory used by memstore if open region fails
+        dropMemStoreContents();
+      } catch (IOException ioE) {
+        if (conf.getBoolean(MemStoreLAB.USEMSLAB_KEY, MemStoreLAB.USEMSLAB_DEFAULT)) {
+          LOG.warn("Failed drop memstore of region= {}, "
+                  + "some chunks may not released forever since MSLAB is enabled",
+              getRegionInfo().getRegionNameAsString());
+        }
+
+      }
+      throw e;
     } finally {
       // nextSeqid will be -1 if the initialization fails.
       // At least it will be 0 otherwise.
@@ -4510,11 +4527,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
     }
-    // The edits size added into rsAccounting during this replaying will not
-    // be required any more. So just clear it.
-    if (this.rsAccounting != null) {
-      this.rsAccounting.clearRegionReplayEditsSize(getRegionInfo().getRegionName());
-    }
     if (seqid > minSeqIdForTheRegion) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
       internalFlushcache(null, seqid, stores.values(), status, false, FlushLifeCycleTracker.DUMMY);
@@ -4696,9 +4708,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             editsCount++;
           }
           MemStoreSize mss = memStoreSizing.getMemStoreSize();
-          if (this.rsAccounting != null) {
-            rsAccounting.addRegionReplayEditsSize(getRegionInfo().getRegionName(), mss);
-          }
           incMemStoreSize(mss);
           flush = isFlushSize(this.memStoreSizing.getMemStoreSize());
           if (flush) {
@@ -5137,6 +5146,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       // Record latest flush time
       this.lastStoreFlushTimeMap.put(store, startTime);
+    }
+  }
+
+  /**
+   * Be careful, this method will drop all data in the memstore of this region.
+   * Currently, this method is used to drop memstore to prevent memory leak
+   * when replaying recovered.edits while opening region.
+   */
+  public MemStoreSize dropMemStoreContents() throws IOException {
+    MemStoreSizing totalFreedSize = new NonThreadSafeMemStoreSizing();
+    this.updatesLock.writeLock().lock();
+    try {
+      for (HStore s : stores.values()) {
+        MemStoreSize memStoreSize = doDropStoreMemStoreContentsForSeqId(s, HConstants.NO_SEQNUM);
+        LOG.info("Drop memstore for Store " + s.getColumnFamilyName() + " in region "
+                + this.getRegionInfo().getRegionNameAsString()
+                + " , dropped memstoresize: [" + memStoreSize + " }");
+        totalFreedSize.incMemStoreSize(memStoreSize);
+      }
+      return totalFreedSize.getMemStoreSize();
+    } finally {
+      this.updatesLock.writeLock().unlock();
     }
   }
 
