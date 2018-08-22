@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,25 +48,21 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCreateTableProcedure.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableProcedure.class);
+    HBaseClassTestRule.forClass(TestCreateTableProcedure.class);
 
   private static final String F1 = "f1";
   private static final String F2 = "f2";
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testSimpleCreate() throws Exception {
@@ -200,20 +195,6 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     // are we able to create the table after a rollback?
     resetProcExecutorTestingKillFlag();
     testSimpleCreate(tableName, splitKeys);
-  }
-
-  @Test
-  public void testMRegions() throws Exception {
-    final byte[][] splitKeys = new byte[500][];
-    for (int i = 0; i < splitKeys.length; ++i) {
-      splitKeys[i] = Bytes.toBytes(String.format("%08d", i));
-    }
-
-    final TableDescriptor htd = MasterProcedureTestingUtility.createHTD(
-      TableName.valueOf("TestMRegions"), F1, F2);
-    UTIL.getAdmin().createTableAsync(htd, splitKeys)
-      .get(10, java.util.concurrent.TimeUnit.HOURS);
-    LOG.info("TABLE CREATED");
   }
 
   public static class CreateTableProcedureOnHDFSFailure extends CreateTableProcedure {
