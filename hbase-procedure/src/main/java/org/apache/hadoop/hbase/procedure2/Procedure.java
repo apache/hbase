@@ -421,7 +421,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     sb.append(", state="); // pState for Procedure State as opposed to any other kind.
     toStringState(sb);
 
-    sb.append(", hasLock=").append(locked);
+    // Only print out locked if actually locked. Most of the time it is not.
+    if (this.locked) {
+      sb.append(", locked=").append(locked);
+    }
 
     if (hasException()) {
       sb.append(", exception=" + getException());
