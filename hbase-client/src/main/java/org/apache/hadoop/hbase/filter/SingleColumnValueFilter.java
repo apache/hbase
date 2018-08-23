@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
@@ -398,5 +399,16 @@ public class SingleColumnValueFilter extends FilterBase {
         this.getClass().getSimpleName(), Bytes.toStringBinary(this.columnFamily),
         Bytes.toStringBinary(this.columnQualifier), this.compareOp.name(),
         Bytes.toStringBinary(this.comparator.getValue()));
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(Bytes.hashCode(getFamily()), Bytes.hashCode(getQualifier()),
+      this.getOperator(), getComparator(), getFilterIfMissing(), getLatestVersionOnly());
   }
 }

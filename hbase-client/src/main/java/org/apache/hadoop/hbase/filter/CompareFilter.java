@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -30,6 +31,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.ArrayList;
+import java.util.Objects;
+
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator.
@@ -187,5 +190,15 @@ public abstract class CompareFilter extends FilterBase {
         this.getClass().getSimpleName(),
         this.compareOp.name(),
         Bytes.toStringBinary(this.comparator.getValue()));
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.getComparator(), this.getOperator());
   }
 }

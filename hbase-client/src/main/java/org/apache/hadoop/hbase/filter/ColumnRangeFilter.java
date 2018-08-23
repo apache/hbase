@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * This filter is used for selecting only those keys with columns that are
@@ -241,5 +242,16 @@ public class ColumnRangeFilter extends FilterBase {
         + (this.minColumnInclusive ? "[" : "(") + Bytes.toStringBinary(this.minColumn)
         + ", " + Bytes.toStringBinary(this.maxColumn)
         + (this.maxColumnInclusive ? "]" : ")");
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(Bytes.hashCode(getMinColumn()), getMinColumnInclusive(),
+      Bytes.hashCode(getMaxColumn()), getMaxColumnInclusive());
   }
 }

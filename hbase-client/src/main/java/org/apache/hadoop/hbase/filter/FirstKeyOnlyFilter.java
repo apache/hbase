@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -121,5 +122,15 @@ public class FirstKeyOnlyFilter extends FilterBase {
     if (!(o instanceof FirstKeyOnlyFilter)) return false;
 
     return true;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(foundKV);
   }
 }

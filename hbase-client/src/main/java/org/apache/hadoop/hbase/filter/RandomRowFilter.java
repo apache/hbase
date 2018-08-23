@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.util.Objects;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -156,5 +157,15 @@ public class RandomRowFilter extends FilterBase {
 
     RandomRowFilter other = (RandomRowFilter)o;
     return this.getChance() == other.getChance();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.getChance());
   }
 }

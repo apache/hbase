@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -235,5 +236,16 @@ public class ColumnPaginationFilter extends FilterBase
     }
     return String.format("%s (%d, %d)", this.getClass().getSimpleName(),
         this.limit, this.offset);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return columnOffset == null ? Objects.hash(this.limit, this.offset) :
+      Objects.hash(this.limit, Bytes.hashCode(this.columnOffset));
   }
 }

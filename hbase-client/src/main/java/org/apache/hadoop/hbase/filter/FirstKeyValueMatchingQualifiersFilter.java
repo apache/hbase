@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -126,5 +127,15 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
     FirstKeyValueMatchingQualifiersFilter other = (FirstKeyValueMatchingQualifiersFilter)o;
     return this.qualifiers.equals(other.qualifiers);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.qualifiers);
   }
 }
