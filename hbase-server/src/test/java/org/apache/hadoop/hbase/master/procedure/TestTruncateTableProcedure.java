@@ -353,7 +353,6 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
       throws IOException, InterruptedException {
     // split a region
     UTIL.getAdmin().split(tableName, new byte[] { '0' });
-    UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // wait until split really happens
     UTIL.waitFor(60000,
