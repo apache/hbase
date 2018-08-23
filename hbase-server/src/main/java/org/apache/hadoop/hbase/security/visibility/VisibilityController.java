@@ -1038,6 +1038,23 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
               deleteCellVisTagsFormat);
       return matchFound ? ReturnCode.INCLUDE : ReturnCode.SKIP;
     }
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == null || (!(obj.getClass() == this.getClass()))) {
+        return false;
+      }
+      if(this == obj){
+        return true;
+      }
+      DeleteVersionVisibilityExpressionFilter f = (DeleteVersionVisibilityExpressionFilter)obj;
+      return this.deleteCellVisTags.equals(f.deleteCellVisTags) &&
+          this.deleteCellVisTagsFormat.equals(f.deleteCellVisTagsFormat);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(this.deleteCellVisTags, this.deleteCellVisTagsFormat);
+    }
   }
 
   /**

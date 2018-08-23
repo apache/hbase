@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -229,5 +230,19 @@ public class ColumnPaginationFilter extends FilterBase {
     }
     return String.format("%s (%d, %d)", this.getClass().getSimpleName(),
         this.limit, this.offset);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof ColumnPaginationFilter))) {
+      return false;
+    }
+    ColumnPaginationFilter f = (ColumnPaginationFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.limit, this.offset);
   }
 }

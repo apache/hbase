@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -647,6 +649,23 @@ public class TestFilterList {
       this.didCellPassToTheFilter = true;
       return targetRetCode;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      if(obj == null || !(obj instanceof  MockFilter)){
+        return false;
+      }
+      if(obj == this){
+        return true;
+      }
+      MockFilter f = (MockFilter)obj;
+      return this.targetRetCode.equals(f.targetRetCode);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(this.targetRetCode);
+    }
   }
 
   @Test
@@ -819,6 +838,23 @@ public class TestFilterList {
     public Cell getNextCellHint(Cell currentCell) throws IOException {
       return this.returnCell;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      if(obj == null || !(obj instanceof  MockSeekHintFilter)){
+        return false;
+      }
+      if(obj == this){
+        return true;
+      }
+      MockSeekHintFilter f = (MockSeekHintFilter)obj;
+      return this.returnCell.equals(f.returnCell);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(this.returnCell);
+    }
   }
 
   @Test
@@ -987,6 +1023,23 @@ public class TestFilterList {
 
     public boolean getTransformed() {
       return this.transformed;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if(obj == null || !(obj instanceof  TransformFilter)){
+        return false;
+      }
+      if(obj == this){
+        return true;
+      }
+      TransformFilter f = (TransformFilter)obj;
+      return this.targetRetCode.equals(f.targetRetCode);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(this.targetRetCode);
     }
   }
 

@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.util.Bytes.len;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -238,5 +239,20 @@ public class ColumnRangeFilter extends FilterBase {
         + (this.minColumnInclusive ? "[" : "(") + Bytes.toStringBinary(this.minColumn)
         + ", " + Bytes.toStringBinary(this.maxColumn)
         + (this.maxColumnInclusive ? "]" : ")");
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof ColumnRangeFilter))) {
+      return false;
+    }
+    ColumnRangeFilter f = (ColumnRangeFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(Bytes.toStringBinary(this.getMinColumn()), this.getMinColumnInclusive(),
+        Bytes.toStringBinary(this.getMaxColumn()), this.getMaxColumnInclusive());
   }
 }

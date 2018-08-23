@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.PriorityQueue;
 
 import org.apache.hadoop.hbase.Cell;
@@ -645,5 +646,19 @@ public class FuzzyRowFilter extends FilterBase {
       }
     }
     return true;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof FuzzyRowFilter))) {
+      return false;
+    }
+    FuzzyRowFilter f = (FuzzyRowFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.fuzzyKeysData.toArray());
   }
 }

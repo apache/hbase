@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -162,5 +163,19 @@ public class WhileMatchFilter extends FilterBase {
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + this.filter.toString();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj.getClass() == this.getClass()))) {
+      return false;
+    }
+    WhileMatchFilter f = (WhileMatchFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.filter);
   }
 }

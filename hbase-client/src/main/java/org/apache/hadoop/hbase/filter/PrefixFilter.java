@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
@@ -155,5 +156,19 @@ public class PrefixFilter extends FilterBase {
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + Bytes.toStringBinary(this.prefix);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof PrefixFilter))) {
+      return false;
+    }
+    PrefixFilter f = (PrefixFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(Bytes.hashCode(this.getPrefix()));
   }
 }

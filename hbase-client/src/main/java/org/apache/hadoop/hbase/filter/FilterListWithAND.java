@@ -24,8 +24,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * FilterListWithAND represents an ordered list of filters which will be evaluated with an AND
@@ -278,5 +280,22 @@ public class FilterListWithAND extends FilterListBase {
       }
     }
     return maxHint;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof FilterListWithAND))) {
+      return false;
+    }
+    if (this == obj) {
+      return true;
+    }
+    FilterListWithAND f = (FilterListWithAND) obj;
+    return this.filters.equals(f.getFilters()) && this.seekHintFilters.equals(f.seekHintFilters);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.seekHintFilters, Arrays.hashCode(this.filters.toArray()));
   }
 }
