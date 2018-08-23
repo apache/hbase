@@ -26,8 +26,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * FilterListWithOR represents an ordered list of filters which will be evaluated with an OR
@@ -390,5 +392,26 @@ public class FilterListWithOR extends FilterListBase {
       }
     }
     return minKeyHint;
+  }
+
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof FilterListWithOR))) {
+      return false;
+    }
+    if (this == obj) {
+      return true;
+    }
+    FilterListWithOR f = (FilterListWithOR) obj;
+    return this.filters.equals(f.getFilters()) &&
+        this.prevFilterRCList.equals(f.prevFilterRCList) &&
+        this.prevCellList.equals(f.prevCellList);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(Arrays.hashCode(this.prevFilterRCList.toArray()),
+        Arrays.hashCode(this.prevCellList.toArray()), Arrays.hashCode(this.filters.toArray()));
   }
 }

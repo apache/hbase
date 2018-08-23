@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.util.Objects;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.Cell;
@@ -153,5 +154,19 @@ public class RandomRowFilter extends FilterBase {
 
     RandomRowFilter other = (RandomRowFilter)o;
     return this.getChance() == other.getChance();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof RandomRowFilter))) {
+      return false;
+    }
+    RandomRowFilter f = (RandomRowFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.getChance());
   }
 }

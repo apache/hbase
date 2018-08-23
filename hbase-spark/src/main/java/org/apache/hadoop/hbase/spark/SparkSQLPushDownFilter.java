@@ -21,9 +21,11 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -273,5 +275,35 @@ public class SparkSQLPushDownFilter extends FilterBase{
 
 
     return builder.build().toByteArray();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof SparkSQLPushDownFilter))) {
+      return false;
+    }
+    if (this == obj) {
+      return true;
+    }
+    SparkSQLPushDownFilter f = (SparkSQLPushDownFilter) obj;
+    if (this.valueFromQueryArray.length != f.valueFromQueryArray.length) {
+      return false;
+    }
+    int i = 0;
+    for (byte[] val : this.valueFromQueryArray) {
+      if (!Bytes.equals(val, f.valueFromQueryArray[i])) {
+        return false;
+      }
+      i++;
+    }
+    return this.dynamicLogicExpression.equals(f.dynamicLogicExpression) &&
+        this.currentCellToColumnIndexMap.equals(f.currentCellToColumnIndexMap) &&
+        this.encoderClassName.equals(f.encoderClassName);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.dynamicLogicExpression, Arrays.hashCode(this.valueFromQueryArray),
+      this.currentCellToColumnIndexMap, this.encoderClassName);
   }
 }
