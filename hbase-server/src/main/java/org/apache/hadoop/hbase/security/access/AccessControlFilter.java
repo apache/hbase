@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
@@ -172,5 +173,27 @@ class AccessControlFilter extends FilterBase {
     // no implementation, server-side use only
     throw new UnsupportedOperationException(
       "Serialization not supported.  Intended for server-side use only.");
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj.getClass() == this.getClass()))) {
+      return false;
+    }
+    if(this == obj){
+      return true;
+    }
+    AccessControlFilter f=(AccessControlFilter)obj;
+    return this.authManager.equals(f.authManager) &&
+        this.table.equals(f.table) &&
+        this.user.equals(f.user) &&
+        this.strategy.equals(f.strategy) &&
+        this.cfVsMaxVersions.equals(f.cfVsMaxVersions);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.authManager, this.table, this.strategy, this.user,
+        this.cfVsMaxVersions);
   }
 }

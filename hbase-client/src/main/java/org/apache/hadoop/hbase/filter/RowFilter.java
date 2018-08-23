@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -159,5 +160,19 @@ public class RowFilter extends CompareFilter {
     if (!(o instanceof RowFilter)) return false;
 
     return super.areSerializedFieldsEqual(o);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof RowFilter))) {
+      return false;
+    }
+    RowFilter f = (RowFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.getComparator(), this.getCompareOperator());
   }
 }

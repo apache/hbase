@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -132,5 +133,19 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
     FirstKeyValueMatchingQualifiersFilter other = (FirstKeyValueMatchingQualifiersFilter)o;
     return this.qualifiers.equals(other.qualifiers);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof FirstKeyValueMatchingQualifiersFilter))) {
+      return false;
+    }
+    FirstKeyValueMatchingQualifiersFilter f = (FirstKeyValueMatchingQualifiersFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.qualifiers);
   }
 }
