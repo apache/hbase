@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -26,6 +27,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -42,10 +45,10 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
@@ -222,8 +225,43 @@ public class TestMaster {
         TEST_UTIL.getHBaseCluster().getMaster().getServerManager()
             .getFlushedSequenceIdByRegion();
     assertTrue(regionMapBefore.equals(regionMapAfter));
+  }
 
-
+  @Test
+  public void testBlockingHbkc1WithLockFile() throws IOException {
+    // This is how the patch to the lock file is created inside in HBaseFsck. Too hard to use its
+    // actual method without disturbing HBaseFsck... Do the below mimic instead.
+    Path hbckLockPath = new Path(HBaseFsck.getTmpDir(TEST_UTIL.getConfiguration()),
+        HBaseFsck.HBCK_LOCK_FILE);
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    assertTrue(fs.exists(hbckLockPath));
+    TEST_UTIL.getMiniHBaseCluster().
+        killMaster(TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName());
+    assertTrue(fs.exists(hbckLockPath));
+    TEST_UTIL.getMiniHBaseCluster().startMaster();
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster() != null &&
+        TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+    assertTrue(fs.exists(hbckLockPath));
+    // Start a second Master. Should be fine.
+    TEST_UTIL.getMiniHBaseCluster().startMaster();
+    assertTrue(fs.exists(hbckLockPath));
+    fs.delete(hbckLockPath, true);
+    assertFalse(fs.exists(hbckLockPath));
+    // Kill all Masters.
+    TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads().stream().
+        map(sn -> sn.getMaster().getServerName()).forEach(sn -> {
+          try {
+            TEST_UTIL.getMiniHBaseCluster().killMaster(sn);
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        });
+    // Start a new one.
+    TEST_UTIL.getMiniHBaseCluster().startMaster();
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster() != null &&
+        TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+    // Assert lock gets put in place again.
+    assertTrue(fs.exists(hbckLockPath));
   }
 }
 

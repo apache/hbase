@@ -193,6 +193,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EncryptionTest;
+import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -914,6 +915,14 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.setStatus("Publishing Cluster ID " + clusterId + " in ZooKeeper");
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.clusterId = clusterId.toString();
+
+    // Precaution. Put in place the old hbck1 lock file to fence out old hbase1s running their
+    // hbck1s against an hbase2 cluster; it could do damage. To skip this behavior, set
+    // hbase.write.hbck1.lock.file to false.
+    if (this.conf.getBoolean("hbase.write.hbck1.lock.file", true)) {
+      HBaseFsck.checkAndMarkRunningHbck(this.conf,
+          HBaseFsck.createLockRetryCounterFactory(this.conf).create());
+    }
 
     status.setStatus("Initialze ServerManager and schedule SCP for crash servers");
     this.serverManager = createServerManager(this);
