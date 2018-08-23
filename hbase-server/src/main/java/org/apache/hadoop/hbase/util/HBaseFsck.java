@@ -135,6 +135,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -155,7 +156,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminServic
 
 /**
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
- * table integrity problems in a corrupted HBase.
+ * table integrity problems in a corrupted HBase. This tool was written for hbase-1.x. It does not
+ * work with hbase-2.x; it can read state but is not allowed to change state; i.e. effect 'repair'.
+ * See hbck2 (HBASE-19121) for a hbck tool for hbase2.
+ *
  * <p>
  * Region consistency checks verify that hbase:meta, region deployment on region
  * servers and the state of data in HDFS (.regioninfo files) all are in
@@ -208,7 +212,12 @@ public class HBaseFsck extends Configured implements Closeable {
   private static final int DEFAULT_OVERLAPS_TO_SIDELINE = 2;
   private static final int DEFAULT_MAX_MERGE = 5;
   private static final String TO_BE_LOADED = "to_be_loaded";
-  private static final String HBCK_LOCK_FILE = "hbase-hbck.lock";
+  /**
+   * Here is where hbase-1.x used to default the lock for hbck1.
+   * It puts in place a lock when it goes to write/make changes.
+   */
+  @VisibleForTesting
+  public static final String HBCK_LOCK_FILE = "hbase-hbck.lock";
   private static final int DEFAULT_MAX_LOCK_FILE_ATTEMPTS = 5;
   private static final int DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL = 200; // milliseconds
   private static final int DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME = 5000; // milliseconds
@@ -359,40 +368,75 @@ public class HBaseFsck extends Configured implements Closeable {
     super(conf);
     errors = getErrorReporter(getConf());
     this.executor = exec;
-    lockFileRetryCounterFactory = new RetryCounterFactory(
-      getConf().getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS),
-      getConf().getInt(
-        "hbase.hbck.lockfile.attempt.sleep.interval", DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL),
-      getConf().getInt(
-        "hbase.hbck.lockfile.attempt.maxsleeptime", DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
-    createZNodeRetryCounterFactory = new RetryCounterFactory(
-      getConf().getInt("hbase.hbck.createznode.attempts", DEFAULT_MAX_CREATE_ZNODE_ATTEMPTS),
-      getConf().getInt(
-        "hbase.hbck.createznode.attempt.sleep.interval",
-        DEFAULT_CREATE_ZNODE_ATTEMPT_SLEEP_INTERVAL),
-      getConf().getInt(
-        "hbase.hbck.createznode.attempt.maxsleeptime",
-        DEFAULT_CREATE_ZNODE_ATTEMPT_MAX_SLEEP_TIME));
+    lockFileRetryCounterFactory = createLockRetryCounterFactory(getConf());
+    createZNodeRetryCounterFactory = createZnodeRetryCounterFactory(getConf());
     zkw = createZooKeeperWatcher();
   }
 
-  private class FileLockCallable implements Callable<FSDataOutputStream> {
-    RetryCounter retryCounter;
+  /**
+   * @return A retry counter factory configured for retrying lock file creation.
+   */
+  public static RetryCounterFactory createLockRetryCounterFactory(Configuration conf) {
+    return new RetryCounterFactory(
+        conf.getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS),
+        conf.getInt("hbase.hbck.lockfile.attempt.sleep.interval",
+            DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL),
+        conf.getInt("hbase.hbck.lockfile.attempt.maxsleeptime",
+            DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
+  }
 
-    public FileLockCallable(RetryCounter retryCounter) {
+  /**
+   * @return A retry counter factory configured for retrying znode creation.
+   */
+  private static RetryCounterFactory createZnodeRetryCounterFactory(Configuration conf) {
+    return new RetryCounterFactory(
+        conf.getInt("hbase.hbck.createznode.attempts", DEFAULT_MAX_CREATE_ZNODE_ATTEMPTS),
+        conf.getInt("hbase.hbck.createznode.attempt.sleep.interval",
+            DEFAULT_CREATE_ZNODE_ATTEMPT_SLEEP_INTERVAL),
+        conf.getInt("hbase.hbck.createznode.attempt.maxsleeptime",
+            DEFAULT_CREATE_ZNODE_ATTEMPT_MAX_SLEEP_TIME));
+  }
+
+  /**
+   * @return Return the tmp dir this tool writes too.
+   */
+  @VisibleForTesting
+  public static Path getTmpDir(Configuration conf) throws IOException {
+    return new Path(FSUtils.getRootDir(conf), HConstants.HBASE_TEMP_DIRECTORY);
+  }
+
+  private static class FileLockCallable implements Callable<FSDataOutputStream> {
+    RetryCounter retryCounter;
+    private final Configuration conf;
+    private Path hbckLockPath = null;
+
+    public FileLockCallable(Configuration conf, RetryCounter retryCounter) {
       this.retryCounter = retryCounter;
+      this.conf = conf;
     }
+
+    /**
+     * @return Will be <code>null</code> unless you call {@link #call()}
+     */
+    Path getHbckLockPath() {
+      return this.hbckLockPath;
+    }
+
     @Override
     public FSDataOutputStream call() throws IOException {
       try {
-        FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
-        FsPermission defaultPerms = FSUtils.getFilePermissions(fs, getConf(),
+        FileSystem fs = FSUtils.getCurrentFileSystem(this.conf);
+        FsPermission defaultPerms = FSUtils.getFilePermissions(fs, this.conf,
             HConstants.DATA_FILE_UMASK_KEY);
-        Path tmpDir = new Path(FSUtils.getRootDir(getConf()), HConstants.HBASE_TEMP_DIRECTORY);
+        Path tmpDir = getTmpDir(conf);
+        this.hbckLockPath = new Path(tmpDir, HBCK_LOCK_FILE);
         fs.mkdirs(tmpDir);
-        HBCK_LOCK_PATH = new Path(tmpDir, HBCK_LOCK_FILE);
-        final FSDataOutputStream out = createFileWithRetries(fs, HBCK_LOCK_PATH, defaultPerms);
+        final FSDataOutputStream out = createFileWithRetries(fs, this.hbckLockPath, defaultPerms);
         out.writeBytes(InetAddress.getLocalHost().toString());
+        // Add a note into the file we write on why hbase2 is writing out an hbck1 lock file.
+        out.writeBytes(" Written by an hbase-2.x Master to block an " +
+            "attempt by an hbase-1.x HBCK tool making modification to state. " +
+            "See 'HBCK must match HBase server version' in the hbase refguide.");
         out.flush();
         return out;
       } catch(RemoteException e) {
@@ -407,7 +451,6 @@ public class HBaseFsck extends Configured implements Closeable {
     private FSDataOutputStream createFileWithRetries(final FileSystem fs,
         final Path hbckLockFilePath, final FsPermission defaultPerms)
         throws IOException {
-
       IOException exception = null;
       do {
         try {
@@ -439,13 +482,13 @@ public class HBaseFsck extends Configured implements Closeable {
    * @return FSDataOutputStream object corresponding to the newly opened lock file
    * @throws IOException if IO failure occurs
    */
-  private FSDataOutputStream checkAndMarkRunningHbck() throws IOException {
-    RetryCounter retryCounter = lockFileRetryCounterFactory.create();
-    FileLockCallable callable = new FileLockCallable(retryCounter);
+  public static Pair<Path, FSDataOutputStream> checkAndMarkRunningHbck(Configuration conf,
+      RetryCounter retryCounter) throws IOException {
+    FileLockCallable callable = new FileLockCallable(conf, retryCounter);
     ExecutorService executor = Executors.newFixedThreadPool(1);
     FutureTask<FSDataOutputStream> futureTask = new FutureTask<>(callable);
     executor.execute(futureTask);
-    final int timeoutInSeconds = getConf().getInt(
+    final int timeoutInSeconds = conf.getInt(
       "hbase.hbck.lockfile.maxwaittime", DEFAULT_WAIT_FOR_LOCK_TIMEOUT);
     FSDataOutputStream stream = null;
     try {
@@ -462,7 +505,7 @@ public class HBaseFsck extends Configured implements Closeable {
     } finally {
       executor.shutdownNow();
     }
-    return stream;
+    return new Pair<Path, FSDataOutputStream>(callable.getHbckLockPath(), stream);
   }
 
   private void unlockHbck() {
@@ -471,8 +514,7 @@ public class HBaseFsck extends Configured implements Closeable {
       do {
         try {
           IOUtils.closeQuietly(hbckOutFd);
-          FSUtils.delete(FSUtils.getCurrentFileSystem(getConf()),
-              HBCK_LOCK_PATH, true);
+          FSUtils.delete(FSUtils.getCurrentFileSystem(getConf()), HBCK_LOCK_PATH, true);
           LOG.info("Finishing hbck");
           return;
         } catch (IOException ioe) {
@@ -501,7 +543,10 @@ public class HBaseFsck extends Configured implements Closeable {
 
     if (isExclusive()) {
       // Grab the lock
-      hbckOutFd = checkAndMarkRunningHbck();
+      Pair<Path, FSDataOutputStream> pair =
+          checkAndMarkRunningHbck(getConf(), this.lockFileRetryCounterFactory.create());
+      HBCK_LOCK_PATH = pair.getFirst();
+      this.hbckOutFd = pair.getSecond();
       if (hbckOutFd == null) {
         setRetCode(-1);
         LOG.error("Another instance of hbck is fixing HBase, exiting this instance. " +
