@@ -23,6 +23,9 @@ Release Notes - HBase - Version 1.4.7 8/31/2018
     * [HBASE-20930] - MetaScanner.metaScan should use passed variable for meta table name rather than TableName.META_TABLE_NAME
     * [HBASE-20935] - HStore.removeCompactedFiles should log in case it is unable to delete a file
 
+** Test
+    * [HBASE-21076] - refactor TestTableResource to ask for a multi-region table instead of relying on a split operation
+
 
 Release Notes - HBase - Version 1.4.6 7/30/2018
 
