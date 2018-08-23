@@ -114,6 +114,17 @@ public class ServerCrashProcedure
       notifiedDeadServer = true;
     }
 
+    switch (state) {
+      case SERVER_CRASH_START:
+      case SERVER_CRASH_SPLIT_META_LOGS:
+      case SERVER_CRASH_ASSIGN_META:
+        break;
+      default:
+        // If hbase:meta is not assigned, yield.
+        if (env.getAssignmentManager().waitMetaLoaded(this)) {
+          throw new ProcedureSuspendedException();
+        }
+    }
     try {
       switch (state) {
         case SERVER_CRASH_START:
@@ -134,10 +145,6 @@ public class ServerCrashProcedure
           setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
           break;
         case SERVER_CRASH_GET_REGIONS:
-          // If hbase:meta is not assigned, yield.
-          if (env.getAssignmentManager().waitMetaLoaded(this)) {
-            throw new ProcedureSuspendedException();
-          }
           this.regionsOnCrashedServer =
             services.getAssignmentManager().getRegionStates().getServerRegionInfoSet(serverName);
           // Where to go next? Depends on whether we should split logs at all or

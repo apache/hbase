@@ -1414,12 +1414,25 @@ public class AssignmentManager implements ServerListener {
   //  Region Status update
   //  Should only be called in TransitRegionStateProcedure
   // ============================================================================================
+  private void transitStateAndUpdate(RegionStateNode regionNode, RegionState.State newState,
+      RegionState.State... expectedStates) throws IOException {
+    RegionState.State state = regionNode.getState();
+    regionNode.transitionState(newState, expectedStates);
+    boolean succ = false;
+    try {
+      regionStateStore.updateRegionLocation(regionNode);
+      succ = true;
+    } finally {
+      if (!succ) {
+        // revert
+        regionNode.setState(state);
+      }
+    }
+  }
 
   // should be called within the synchronized block of RegionStateNode
   void regionOpening(RegionStateNode regionNode) throws IOException {
-    regionNode.transitionState(State.OPENING, RegionStates.STATES_EXPECTED_ON_OPEN);
-    regionStateStore.updateRegionLocation(regionNode);
-
+    transitStateAndUpdate(regionNode, State.OPENING, RegionStates.STATES_EXPECTED_ON_OPEN);
     regionStates.addRegionToServer(regionNode);
     // update the operation count metrics
     metrics.incrementOperationCounter();
@@ -1429,23 +1442,33 @@ public class AssignmentManager implements ServerListener {
   // The parameter 'giveUp' means whether we will try to open the region again, if it is true, then
   // we will persist the FAILED_OPEN state into hbase:meta.
   void regionFailedOpen(RegionStateNode regionNode, boolean giveUp) throws IOException {
-    if (regionNode.getRegionLocation() != null) {
-      regionStates.removeRegionFromServer(regionNode.getRegionLocation(), regionNode);
-    }
+    RegionState.State state = regionNode.getState();
+    ServerName regionLocation = regionNode.getRegionLocation();
     if (giveUp) {
       regionNode.setState(State.FAILED_OPEN);
       regionNode.setRegionLocation(null);
-      regionStateStore.updateRegionLocation(regionNode);
+      boolean succ = false;
+      try {
+        regionStateStore.updateRegionLocation(regionNode);
+        succ = true;
+      } finally {
+        if (!succ) {
+          // revert
+          regionNode.setState(state);
+          regionNode.setRegionLocation(regionLocation);
+        }
+      }
+    }
+    if (regionLocation != null) {
+      regionStates.removeRegionFromServer(regionLocation, regionNode);
     }
   }
 
   // should be called within the synchronized block of RegionStateNode
   void regionOpened(RegionStateNode regionNode) throws IOException {
-    regionNode.transitionState(State.OPEN, RegionStates.STATES_EXPECTED_ON_OPEN);
     // TODO: OPENING Updates hbase:meta too... we need to do both here and there?
     // That is a lot of hbase:meta writing.
-    regionStateStore.updateRegionLocation(regionNode);
-
+    transitStateAndUpdate(regionNode, State.OPEN, RegionStates.STATES_EXPECTED_ON_OPEN);
     RegionInfo hri = regionNode.getRegionInfo();
     if (isMetaRegion(hri)) {
       // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
@@ -1460,7 +1483,7 @@ public class AssignmentManager implements ServerListener {
 
   // should be called within the synchronized block of RegionStateNode
   void regionClosing(RegionStateNode regionNode) throws IOException {
-    regionNode.transitionState(State.CLOSING, RegionStates.STATES_EXPECTED_ON_CLOSE);
+    transitStateAndUpdate(regionNode, State.CLOSING, RegionStates.STATES_EXPECTED_ON_CLOSE);
     regionStateStore.updateRegionLocation(regionNode);
 
     RegionInfo hri = regionNode.getRegionInfo();
@@ -1477,16 +1500,26 @@ public class AssignmentManager implements ServerListener {
   // The parameter 'normally' means whether we are closed cleanly, if it is true, then it means that
   // we are closed due to a RS crash.
   void regionClosed(RegionStateNode regionNode, boolean normally) throws IOException {
+    RegionState.State state = regionNode.getState();
+    ServerName regionLocation = regionNode.getRegionLocation();
     regionNode.transitionState(normally ? State.CLOSED : State.ABNORMALLY_CLOSED,
       RegionStates.STATES_EXPECTED_ON_CLOSE);
-    ServerName loc = regionNode.getRegionLocation();
-    if (loc != null) {
-      // could be a retry so add a check here to avoid set the lastHost to null.
-      regionNode.setLastHost(loc);
-      regionNode.setRegionLocation(null);
-      regionStates.removeRegionFromServer(loc, regionNode);
+    boolean succ = false;
+    try {
+      regionStateStore.updateRegionLocation(regionNode);
+      succ = true;
+    } finally {
+      if (!succ) {
+        // revert
+        regionNode.setState(state);
+        regionNode.setRegionLocation(regionLocation);
+      }
     }
-    regionStateStore.updateRegionLocation(regionNode);
+    if (regionLocation != null) {
+      regionNode.setLastHost(regionLocation);
+      regionNode.setRegionLocation(null);
+      regionStates.removeRegionFromServer(regionLocation, regionNode);
+    }
   }
 
   public void markRegionAsSplit(final RegionInfo parent, final ServerName serverName,

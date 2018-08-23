@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface;
@@ -149,6 +150,7 @@ public class TestCloseRegionWhileRSCrash {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    UTIL.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     UTIL.startMiniCluster(3);
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.getAdmin().balancerSwitch(false, true);
@@ -174,7 +176,7 @@ public class TestCloseRegionWhileRSCrash {
     HRegionServer dstRs = UTIL.getOtherRegionServer(srcRs);
     ProcedureExecutor<MasterProcedureEnv> procExec =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
-    procExec.submitProcedure(new DummyServerProcedure(srcRs.getServerName()));
+    long dummyProcId = procExec.submitProcedure(new DummyServerProcedure(srcRs.getServerName()));
     ARRIVE.await();
     UTIL.getMiniHBaseCluster().killRegionServer(srcRs.getServerName());
     UTIL.waitFor(30000,
@@ -206,7 +208,14 @@ public class TestCloseRegionWhileRSCrash {
       }
       Thread.sleep(1000);
     }
+    // let's close the connection to make sure that the SCP can not update meta successfully
+    UTIL.getMiniHBaseCluster().getMaster().getConnection().close();
     RESUME.countDown();
+    UTIL.waitFor(30000, () -> procExec.isFinished(dummyProcId));
+    Thread.sleep(2000);
+    // here we restart
+    UTIL.getMiniHBaseCluster().stopMaster(0).join();
+    UTIL.getMiniHBaseCluster().startMaster();
     t.join();
     // Make sure that the region is online, it may not on the original target server, as we will set
     // forceNewPlan to true if there is a server crash
