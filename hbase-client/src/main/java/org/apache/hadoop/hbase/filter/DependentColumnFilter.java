@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -290,5 +291,16 @@ public class DependentColumnFilter extends CompareFilter {
         this.dropDependentColumn,
         this.compareOp.name(),
         this.comparator != null ? Bytes.toStringBinary(this.comparator.getValue()) : "null");
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(Bytes.hashCode(getFamily()), Bytes.hashCode(getQualifier()),
+      dropDependentColumn(), getComparator(), getOperator());
   }
 }

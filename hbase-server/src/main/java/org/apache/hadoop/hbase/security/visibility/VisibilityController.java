@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1116,6 +1117,24 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     @Override
     public Cell transformCell(Cell v) {
       return v;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof DeleteVersionVisibilityExpressionFilter)) {
+        return false;
+      }
+      if (this == obj){
+        return true;
+      }
+      DeleteVersionVisibilityExpressionFilter f = (DeleteVersionVisibilityExpressionFilter)obj;
+      return this.deleteCellVisTags.equals(f.deleteCellVisTags) &&
+          this.deleteCellVisTagsFormat.equals(f.deleteCellVisTagsFormat);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(this.deleteCellVisTags, this.deleteCellVisTagsFormat);
     }
   }
 

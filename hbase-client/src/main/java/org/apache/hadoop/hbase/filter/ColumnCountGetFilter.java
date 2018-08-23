@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -126,5 +127,15 @@ public class ColumnCountGetFilter extends FilterBase {
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + this.limit;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.limit);
   }
 }

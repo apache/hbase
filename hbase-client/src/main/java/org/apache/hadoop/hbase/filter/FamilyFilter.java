@@ -130,4 +130,14 @@ public class FamilyFilter extends CompareFilter {
     FamilyFilter other = (FamilyFilter)o;
     return super.areSerializedFieldsEqual(other);
  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }

@@ -125,4 +125,14 @@ public class QualifierFilter extends CompareFilter {
 
     return super.areSerializedFieldsEqual(o);
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }
