@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -275,5 +276,18 @@ final public class FilterList extends FilterBase {
   @Override
   public String toString() {
     return this.filterListBase.toString();
+  }
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof FilterList))) {
+      return false;
+    }
+    FilterList f = (FilterList) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.getOperator(), Arrays.hashCode(this.getFilters().toArray()));
   }
 }

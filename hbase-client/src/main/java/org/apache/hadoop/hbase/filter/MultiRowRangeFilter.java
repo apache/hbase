@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.filter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -512,5 +513,42 @@ public class MultiRowRangeFilter extends FilterBase {
           || Bytes.compareTo(startRow, stopRow) < 0
           || (Bytes.compareTo(startRow, stopRow) == 0 && stopRowInclusive == true);
     }
+
+    @Override
+    public boolean equals(Object obj){
+      if (obj == null || (!(obj instanceof RowRange))) {
+        return false;
+      }
+      if (this == obj) {
+        return true;
+      }
+      RowRange rr = (RowRange) obj;
+      return Bytes.equals(this.stopRow, rr.getStopRow()) &&
+          Bytes.equals(this.startRow, this.getStartRow()) &&
+          this.startRowInclusive == rr.isStartRowInclusive() &&
+          this.stopRowInclusive == rr.isStopRowInclusive();
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(Bytes.hashCode(this.stopRow),
+          Bytes.hashCode(this.startRow),
+          this.startRowInclusive,
+          this.stopRowInclusive);
+    }
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof MultiRowRangeFilter))) {
+      return false;
+    }
+    MultiRowRangeFilter f = (MultiRowRangeFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.rangeList.toArray());
   }
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -54,5 +55,22 @@ public final class ColumnCountOnRowFilter extends FilterBase {
 
   public static ColumnCountOnRowFilter parseFrom(byte[] bytes) throws DeserializationException {
     return new ColumnCountOnRowFilter(Bytes.toInt(bytes));
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj.getClass() == this.getClass()))) {
+      return false;
+    }
+    if (this == obj) {
+      return true;
+    }
+    ColumnCountOnRowFilter f = (ColumnCountOnRowFilter) obj;
+    return this.limit == f.limit;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.limit);
   }
 }

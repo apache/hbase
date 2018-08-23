@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
@@ -206,5 +208,19 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
     return String.format("%s (%d/%d): [%s]", this.getClass().getSimpleName(),
         count, this.sortedPrefixes.size(), prefixes.toString());
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof MultipleColumnPrefixFilter))) {
+      return false;
+    }
+    MultipleColumnPrefixFilter f = (MultipleColumnPrefixFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(Arrays.hashCode(this.sortedPrefixes.toArray()));
   }
 }

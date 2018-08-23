@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -131,5 +132,19 @@ public class ColumnCountGetFilter extends FilterBase {
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + this.limit;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || (!(obj instanceof ColumnCountGetFilter))) {
+      return false;
+    }
+    ColumnCountGetFilter f = (ColumnCountGetFilter) obj;
+    return this.areSerializedFieldsEqual(f);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.limit);
   }
 }
