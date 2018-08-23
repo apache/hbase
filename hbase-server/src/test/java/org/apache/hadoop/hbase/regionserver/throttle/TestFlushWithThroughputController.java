@@ -66,7 +66,7 @@ public class TestFlushWithThroughputController {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFlushWithThroughputController.class);
-  private static final double EPSILON = 1E-6;
+  private static final double EPSILON = 1.3E-6;
 
   private HBaseTestingUtility hbtu;
   @Rule public TestName testName = new TestName();
