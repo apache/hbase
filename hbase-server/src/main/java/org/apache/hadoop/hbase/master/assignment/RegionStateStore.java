@@ -196,7 +196,7 @@ public class RegionStateStore {
         .setType(Cell.Type.Put)
         .setValue(Bytes.toBytes(state.name()))
         .build());
-    LOG.info(info.toString());
+    LOG.info(info.toString(), new Exception());
     updateRegionLocation(regionInfo, state, put);
   }
 
