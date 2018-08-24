@@ -364,9 +364,12 @@ public abstract class RegionTransitionProcedure
       LOG.warn("Failed transition, suspend {}secs {}; {}; waiting on rectified condition fixed " +
               "by other Procedure or operator intervention", backoff / 1000, this,
           regionNode.toShortString(), e);
-      setTimeout(Math.toIntExact(backoff));
-      setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-      throw new ProcedureSuspendedException();
+      getRegionState(env).getProcedureEvent().suspend();
+      if (getRegionState(env).getProcedureEvent().suspendIfNotReady(this)) {
+        setTimeout(Math.toIntExact(backoff));
+        setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+        throw new ProcedureSuspendedException();
+      }
     }
 
     return new Procedure[] {this};
@@ -384,7 +387,7 @@ public abstract class RegionTransitionProcedure
   @Override
   protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
     setState(ProcedureProtos.ProcedureState.RUNNABLE);
-    env.getProcedureScheduler().addFront(this);
+    getRegionState(env).getProcedureEvent().wake(env.getProcedureScheduler());
     return false; // 'false' means that this procedure handled the timeout
   }
 
