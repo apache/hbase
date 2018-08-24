@@ -24,17 +24,15 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
-import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
-import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
-import org.apache.hbase.thirdparty.com.google.gson.JsonParser;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -45,6 +43,11 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
+import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
+import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
+import org.apache.hbase.thirdparty.com.google.gson.JsonParser;
 
 /**
  * Tests for HBASE-18408 "AM consumes CPU and fills up the logs really fast when there is no RS to
@@ -66,6 +69,8 @@ public class TestUnexpectedStateException {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean("hbase.localcluster.assign.random.ports", false);
+    TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 50655);
     TEST_UTIL.startMiniCluster();
   }
 
@@ -139,6 +144,11 @@ public class TestUnexpectedStateException {
         }
         Thread.sleep(1000);
       }
+      TEST_UTIL.getMiniHBaseCluster().stopMaster(0).join();
+      HMaster master = TEST_UTIL.getMiniHBaseCluster().startMaster().getMaster();
+      TEST_UTIL.waitFor(30000, () -> master.isInitialized());
+      am = master.getAssignmentManager();
+      rsn = am.getRegionStates().getRegionStateNode(region);
       am.markRegionAsOpened(rsn);
       t.join();
     }
