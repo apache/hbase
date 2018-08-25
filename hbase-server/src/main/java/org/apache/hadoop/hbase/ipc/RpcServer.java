@@ -1301,7 +1301,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     private AuthMethod authMethod;
     private boolean saslContextEstablished;
-    private boolean skipInitialSaslHandshake;
     private ByteBuffer unwrappedData;
     // When is this set?  FindBugs wants to know!  Says NP
     private ByteBuffer unwrappedDataLengthBuffer = ByteBuffer.allocate(4);
@@ -1578,6 +1577,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       preambleBuffer.flip();
       for (int i = 0; i < HConstants.RPC_HEADER.length; i++) {
         if (HConstants.RPC_HEADER[i] != preambleBuffer.get(i)) {
+          doRawSaslReply(SaslStatus.ERROR, null, null, null);
           return doBadPreambleHandling("Expected HEADER=" +
               Bytes.toStringBinary(HConstants.RPC_HEADER) + " but received HEADER=" +
               Bytes.toStringBinary(preambleBuffer.array(), 0, HConstants.RPC_HEADER.length) +
@@ -1588,18 +1588,23 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       byte authbyte = preambleBuffer.get(HConstants.RPC_HEADER.length + 1);
       this.authMethod = AuthMethod.valueOf(authbyte);
       if (version != CURRENT_VERSION) {
+        doRawSaslReply(SaslStatus.ERROR, null, null, null);
         String msg = getFatalConnectionString(version, authbyte);
         return doBadPreambleHandling(msg, new WrongVersionException(msg));
       }
       if (authMethod == null) {
+        doRawSaslReply(SaslStatus.ERROR, null, null, null);
         String msg = getFatalConnectionString(version, authbyte);
         return doBadPreambleHandling(msg, new BadAuthException(msg));
       }
       if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
+        // server side uses non-simple auth, client side uses simple auth.
         if (allowFallbackToSimpleAuth) {
+          doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(0), null, null);
           metrics.authenticationFallback();
           authenticatedWithFallback = true;
         } else {
+          doRawSaslReply(SaslStatus.ERROR, null, null, null);
           AccessDeniedException ae = new AccessDeniedException("Authentication is required");
           setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
           responder.doRespond(authFailedCall);
@@ -1607,16 +1612,17 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
       }
       if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
+        // server side uses simple auth, client side uses non-simple auth.
         doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(
             SaslUtil.SWITCH_TO_SIMPLE_AUTH), null, null);
         authMethod = AuthMethod.SIMPLE;
-        // client has already sent the initial Sasl message and we
-        // should ignore it. Both client and server should fall back
-        // to simple auth from now on.
-        skipInitialSaslHandshake = true;
-      }
-      if (authMethod != AuthMethod.SIMPLE) {
+      } else if (authMethod != AuthMethod.SIMPLE) {
+        // both server and client side use non-simple auth.
         useSasl = true;
+        doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(0), null, null);
+      } else if (!isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
+        // both server and client side use simple auth.
+        doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(0), null, null);
       }
 
       preambleBuffer = null; // do not need it anymore
@@ -1768,11 +1774,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     private void process() throws IOException, InterruptedException {
       data.flip();
       try {
-        if (skipInitialSaslHandshake) {
-          skipInitialSaslHandshake = false;
-          return;
-        }
-
         if (useSasl) {
           saslReadAndProcess(data);
         } else {

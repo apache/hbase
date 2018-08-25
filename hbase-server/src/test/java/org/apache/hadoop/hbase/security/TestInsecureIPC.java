@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,11 +38,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
-import javax.security.sasl.SaslException;
-
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
@@ -54,32 +52,25 @@ import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mockito;
 
 @RunWith(Parameterized.class)
-@Category({ SecurityTests.class, SmallTests.class })
-public class TestSecureIPC {
-
+@Category({SecurityTests.class, SmallTests.class})
+public class TestInsecureIPC {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
   private static final File KEYTAB_FILE =
       new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
 
@@ -89,20 +80,21 @@ public class TestSecureIPC {
 
   String krbKeytab;
   String krbPrincipal;
-  UserGroupInformation ugi;
+
   Configuration clientConf;
   Configuration serverConf;
+  UserGroupInformation ugi;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Parameters(name = "{index}: rpcClientImpl={0}")
+  @Parameterized.Parameters(name = "{index}: rpcClientImpl={0}")
   public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[] { BlockingRpcClient.class.getName() },
-      new Object[] { NettyRpcClient.class.getName() });
+    return Arrays.asList(new Object[]{BlockingRpcClient.class.getName()},
+        new Object[]{NettyRpcClient.class.getName()});
   }
 
-  @Parameter
+  @Parameterized.Parameter
   public String rpcClientImpl;
 
   @BeforeClass
@@ -128,108 +120,51 @@ public class TestSecureIPC {
     ugi = loginKerberosPrincipal(krbKeytab, krbPrincipal);
     clientConf = getSecuredConfiguration();
     clientConf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcClientImpl);
-    serverConf = getSecuredConfiguration();
+    serverConf = HBaseConfiguration.create();
   }
 
   @Test
-  public void testRpcCallWithEnabledKerberosSaslAuth() throws Exception {
-    UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
-
-    // check that the login user is okay:
-    assertSame(ugi, ugi2);
-    assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
-    assertEquals(krbPrincipal, ugi.getUserName());
-
-    callRpcService(User.create(ugi2));
-  }
-
-  @Test
-  public void testRpcFallbackToSimpleAuth() throws Exception {
+  public void testRpcInsecureClientAgainstInsecureServer() throws Exception {
     String clientUsername = "testuser";
     UserGroupInformation clientUgi =
-        UserGroupInformation.createUserForTesting(clientUsername, new String[] { clientUsername });
+        UserGroupInformation.createUserForTesting(clientUsername, new String[]{clientUsername});
 
-    // check that the client user is insecure
     assertNotSame(ugi, clientUgi);
-    assertEquals(AuthenticationMethod.SIMPLE, clientUgi.getAuthenticationMethod());
+    assertEquals(UserGroupInformation.AuthenticationMethod.SIMPLE,
+        clientUgi.getAuthenticationMethod());
     assertEquals(clientUsername, clientUgi.getUserName());
 
     clientConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
+    callInsecureRpcService(User.create(clientUgi));
+  }
+
+  @Test
+  public void testRpcFallbackToSimpleFromKerberosClientAgainstInsecureServer() throws Exception {
+    UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
+
+    assertSame(ugi, ugi2);
+    assertEquals(UserGroupInformation.AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
+    assertEquals(krbPrincipal, ugi.getUserName());
+
     serverConf.setBoolean(RpcServer.FALLBACK_TO_INSECURE_CLIENT_AUTH, true);
-    callRpcService(User.create(clientUgi));
+    callInsecureRpcService(User.create(ugi2));
   }
 
-  void setRpcProtection(String clientProtection, String serverProtection) {
-    clientConf.set("hbase.rpc.protection", clientProtection);
-    serverConf.set("hbase.rpc.protection", serverProtection);
-  }
-
-  /**
-   * Test various combinations of Server and Client qops.
-   * @throws Exception
-   */
-  @Test
-  public void testSaslWithCommonQop() throws Exception {
-    setRpcProtection("privacy,authentication", "authentication");
-    callRpcService(User.create(ugi));
-
-    setRpcProtection("authentication", "privacy,authentication");
-    callRpcService(User.create(ugi));
-
-    setRpcProtection("integrity,authentication",
-        "privacy,authentication");
-    callRpcService(User.create(ugi));
-
-    setRpcProtection("integrity,authentication",
-        "integrity,authentication");
-    callRpcService(User.create(ugi));
-
-    setRpcProtection("privacy,authentication",
-        "privacy,authentication");
-    callRpcService(User.create(ugi));
-  }
-
-  @Ignore
-  @Test
-  public void testSaslNoCommonQop() throws Exception {
-    exception.expect(SaslException.class);
-    exception.expectMessage("No common protection layer between client and server");
-    setRpcProtection("integrity", "privacy");
-    callRpcService(User.create(ugi));
-  }
-
-  private UserGroupInformation loginKerberosPrincipal(String krbKeytab, String krbPrincipal)
-      throws Exception {
-    Configuration cnf = new Configuration();
-    cnf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(cnf);
-    UserGroupInformation.loginUserFromKeytab(krbPrincipal, krbKeytab);
-    return UserGroupInformation.getLoginUser();
-  }
-
-  /**
-   * Sets up a RPC Server and a Client. Does a RPC checks the result. If an exception is thrown from
-   * the stub, this function will throw root cause of that exception.
-   */
-  private void callRpcService(User clientUser) throws Exception {
-    SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
-    Mockito.when(securityInfoMock.getServerPrincipal())
-        .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
-    SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
-
+  private void callInsecureRpcService(User clientUser) throws Exception {
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
 
-    RpcServerInterface rpcServer = new RpcServer(null, "AbstractTestSecureIPC",
+    RpcServerInterface rpcServer = new RpcServer(null, "AbstractTestInsecureIPC",
         Lists.newArrayList(
-          new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)),
+            new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE,
+                null)),
         isa, serverConf, new FifoRpcScheduler(serverConf, 1));
     rpcServer.start();
     try (RpcClient rpcClient =
-        RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString())) {
-      BlockingInterface stub =
+             RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString())) {
+      TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub =
           newBlockingStub(rpcClient, rpcServer.getListenerAddress(), clientUser);
-      TestThread th1 = new TestThread(stub);
-      final Throwable exception[] = new Throwable[1];
+      TestInsecureIPC.TestThread th1 = new TestInsecureIPC.TestThread(stub);
+      final Throwable[] exception = new Throwable[1];
       Collections.synchronizedList(new ArrayList<Throwable>());
       Thread.UncaughtExceptionHandler exceptionHandler = new Thread.UncaughtExceptionHandler() {
         public void uncaughtException(Thread th, Throwable ex) {
@@ -251,17 +186,26 @@ public class TestSecureIPC {
     }
   }
 
-  public static class TestThread extends Thread {
-    private final BlockingInterface stub;
+  private UserGroupInformation loginKerberosPrincipal(String krbKeytab, String krbPrincipal)
+      throws Exception {
+    Configuration cnf = new Configuration();
+    cnf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(cnf);
+    UserGroupInformation.loginUserFromKeytab(krbPrincipal, krbKeytab);
+    return UserGroupInformation.getLoginUser();
+  }
 
-    public TestThread(BlockingInterface stub) {
+  public static class TestThread extends Thread {
+    private final TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub;
+
+    public TestThread(TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub) {
       this.stub = stub;
     }
 
     @Override
     public void run() {
       try {
-        int[] messageSize = new int[] { 100, 1000, 10000 };
+        int[] messageSize = new int[]{100, 1000, 10000};
         for (int i = 0; i < messageSize.length; i++) {
           String input = RandomStringUtils.random(messageSize[i]);
           String result =
