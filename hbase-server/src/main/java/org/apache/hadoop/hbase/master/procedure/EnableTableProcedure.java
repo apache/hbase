@@ -84,7 +84,6 @@ public class EnableTableProcedure
     this.skipTableStateCheck = skipTableStateCheck;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final EnableTableState state)
       throws InterruptedException {
@@ -255,7 +254,7 @@ public class EnableTableProcedure
 
   @Override
   protected EnableTableState getState(final int stateId) {
-    return EnableTableState.valueOf(stateId);
+    return EnableTableState.forNumber(stateId);
   }
 
   @Override

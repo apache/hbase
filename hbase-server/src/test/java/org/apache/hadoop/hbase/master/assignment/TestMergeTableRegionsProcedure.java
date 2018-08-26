@@ -24,13 +24,14 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
@@ -61,15 +62,16 @@ public class TestMergeTableRegionsProcedure {
       HBaseClassTestRule.forClass(TestMergeTableRegionsProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMergeTableRegionsProcedure.class);
-  @Rule public final TestName name = new TestName();
+  @Rule
+  public final TestName name = new TestName();
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static long nonceGroup = HConstants.NO_NONCE;
   private static long nonce = HConstants.NO_NONCE;
 
   private static final int initialRegionCount = 4;
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
-  final static Configuration conf = UTIL.getConfiguration();
+  private final static Configuration conf = UTIL.getConfiguration();
   private static Admin admin;
 
   private AssignmentManager am;
@@ -95,16 +97,12 @@ public class TestMergeTableRegionsProcedure {
   public static void setupCluster() throws Exception {
     setupConf(conf);
     UTIL.startMiniCluster(1);
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
   }
 
   @AfterClass
   public static void cleanupTest() throws Exception {
-    try {
-      UTIL.shutdownMiniCluster();
-    } catch (Exception e) {
-      LOG.warn("failure shutting down cluster", e);
-    }
+    UTIL.shutdownMiniCluster();
   }
 
   @Before
@@ -114,7 +112,7 @@ public class TestMergeTableRegionsProcedure {
         MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
     nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    UTIL.getHBaseAdmin().setBalancerRunning(false, true);
+    admin.balancerSwitch(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     resetProcExecutorTestingKillFlag();
@@ -127,7 +125,7 @@ public class TestMergeTableRegionsProcedure {
   @After
   public void tearDown() throws Exception {
     resetProcExecutorTestingKillFlag();
-    for (HTableDescriptor htd: UTIL.getHBaseAdmin().listTables()) {
+    for (TableDescriptor htd: admin.listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
@@ -233,6 +231,7 @@ public class TestMergeTableRegionsProcedure {
     List<RegionInfo> tableRegions = createTable(tableName);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+    ProcedureTestingUtility.setKillIfHasParent(procExec, false);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     RegionInfo[] regionsToMerge = new RegionInfo[2];
@@ -303,10 +302,9 @@ public class TestMergeTableRegionsProcedure {
     assertRegionCount(tableName, initialRegionCount - 1);
   }
 
-  private List<RegionInfo> createTable(final TableName tableName)
-      throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
+  private List<RegionInfo> createTable(final TableName tableName) throws Exception {
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     byte[][] splitRows = new byte[initialRegionCount - 1][];
     for (int i = 0; i < splitRows.length; ++i) {
       splitRows[i] = Bytes.toBytes(String.format("%d", i));

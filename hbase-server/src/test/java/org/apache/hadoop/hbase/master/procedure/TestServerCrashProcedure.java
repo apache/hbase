@@ -139,6 +139,10 @@ public class TestServerCrashProcedure {
       // Enable test flags and then queue the crash procedure.
       ProcedureTestingUtility.waitNoProcedureRunning(procExec);
       if (doubleExecution) {
+        // For SCP, if you enable this then we will enter an infinite loop, as we will crash between
+        // queue and open for TRSP, and then going back to queue, as we will use the crash rs as the
+        // target server since it is recored in hbase:meta.
+        ProcedureTestingUtility.setKillIfHasParent(procExec, false);
         ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
         // kill the RS
         AssignmentTestingUtil.killRs(util, rsToKill);

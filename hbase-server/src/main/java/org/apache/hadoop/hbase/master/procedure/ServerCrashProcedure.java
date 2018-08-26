@@ -20,18 +20,17 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MasterWalManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.RegionTransitionProcedure;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -98,7 +97,10 @@ public class ServerCrashProcedure
    * #deserializeStateData(InputStream). Do not use directly.
    */
   public ServerCrashProcedure() {
-    super();
+  }
+
+  public boolean isInRecoverMetaState() {
+    return getCurrentState() == ServerCrashState.SERVER_CRASH_PROCESS_META;
   }
 
   @Override
@@ -128,15 +130,7 @@ public class ServerCrashProcedure
           setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
           break;
         case SERVER_CRASH_ASSIGN_META:
-          handleRIT(env, Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO));
-          addChildProcedure(env.getAssignmentManager()
-            .createAssignProcedure(RegionInfoBuilder.FIRST_META_REGIONINFO));
-          setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
-          break;
-        case SERVER_CRASH_PROCESS_META:
-          // not used any more but still leave it here to keep compatible as there maybe old SCP
-          // which is stored in ProcedureStore which has this state.
-          processMeta(env);
+          assignRegions(env, Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO));
           setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
           break;
         case SERVER_CRASH_GET_REGIONS:
@@ -144,8 +138,8 @@ public class ServerCrashProcedure
           if (env.getAssignmentManager().waitMetaLoaded(this)) {
             throw new ProcedureSuspendedException();
           }
-          this.regionsOnCrashedServer = services.getAssignmentManager().getRegionStates()
-            .getServerRegionInfoSet(serverName);
+          this.regionsOnCrashedServer =
+            services.getAssignmentManager().getRegionStates().getServerRegionInfoSet(serverName);
           // Where to go next? Depends on whether we should split logs at all or
           // if we should do distributed log splitting.
           if (!this.shouldSplitWal) {
@@ -162,26 +156,15 @@ public class ServerCrashProcedure
           // If no regions to assign, skip assign and skip to the finish.
           // Filter out meta regions. Those are handled elsewhere in this procedure.
           // Filter changes this.regionsOnCrashedServer.
-          if (filterDefaultMetaRegions(regionsOnCrashedServer)) {
+          if (filterDefaultMetaRegions()) {
             if (LOG.isTraceEnabled()) {
-              LOG.trace("Assigning regions " +
-                RegionInfo.getShortNameToLog(regionsOnCrashedServer) + ", " + this +
-                "; cycles=" + getCycles());
+              LOG
+                .trace("Assigning regions " + RegionInfo.getShortNameToLog(regionsOnCrashedServer) +
+                  ", " + this + "; cycles=" + getCycles());
             }
-            // Handle RIT against crashed server. Will cancel any ongoing assigns/unassigns.
-            // Returns list of regions we need to reassign.
-            // NOTE: there is nothing to stop a dispatch happening AFTER this point. Check for the
-            // condition if a dispatch RPC fails inside in AssignProcedure/UnassignProcedure.
-            // AssignProcedure just keeps retrying. UnassignProcedure is more complicated. See where
-            // it does the check by calling am#isLogSplittingDone.
-            List<RegionInfo> toAssign = handleRIT(env, regionsOnCrashedServer);
-            AssignmentManager am = env.getAssignmentManager();
-            // CreateAssignProcedure will try to use the old location for the region deploy.
-            addChildProcedure(am.createAssignProcedures(toAssign));
-            setNextState(ServerCrashState.SERVER_CRASH_HANDLE_RIT2);
-          } else {
-            setNextState(ServerCrashState.SERVER_CRASH_FINISH);
+            assignRegions(env, regionsOnCrashedServer);
           }
+          setNextState(ServerCrashState.SERVER_CRASH_FINISH);
           break;
         case SERVER_CRASH_HANDLE_RIT2:
           // Noop. Left in place because we used to call handleRIT here for a second time
@@ -201,28 +184,16 @@ public class ServerCrashProcedure
     return Flow.HAS_MORE_STATE;
   }
 
-  private void processMeta(final MasterProcedureEnv env) throws IOException {
-    LOG.debug("{}; processing hbase:meta", this);
-
-    // Assign meta if still carrying it. Check again: region may be assigned because of RIT timeout
-    final AssignmentManager am = env.getMasterServices().getAssignmentManager();
-    for (RegionInfo hri: am.getRegionStates().getServerRegionInfoSet(serverName)) {
-      if (!isDefaultMetaRegion(hri)) {
-        continue;
-      }
-      addChildProcedure(new RecoverMetaProcedure(serverName, this.shouldSplitWal));
+  private boolean filterDefaultMetaRegions() {
+    if (regionsOnCrashedServer == null) {
+      return false;
     }
+    regionsOnCrashedServer.removeIf(this::isDefaultMetaRegion);
+    return !regionsOnCrashedServer.isEmpty();
   }
 
-  private boolean filterDefaultMetaRegions(final List<RegionInfo> regions) {
-    if (regions == null) return false;
-    regions.removeIf(this::isDefaultMetaRegion);
-    return !regions.isEmpty();
-  }
-
-  private boolean isDefaultMetaRegion(final RegionInfo hri) {
-    return hri.getTable().equals(TableName.META_TABLE_NAME) &&
-      RegionReplicaUtil.isDefaultReplica(hri);
+  private boolean isDefaultMetaRegion(RegionInfo hri) {
+    return hri.isMetaRegion() && RegionReplicaUtil.isDefaultReplica(hri);
   }
 
   private void splitMetaLogs(MasterProcedureEnv env) throws IOException {
@@ -372,54 +343,37 @@ public class ServerCrashProcedure
   }
 
   /**
-   * Handle any outstanding RIT that are up against this.serverName, the crashed server.
-   * Notify them of crash. Remove assign entries from the passed in <code>regions</code>
-   * otherwise we have two assigns going on and they will fight over who has lock.
-   * Notify Unassigns. If unable to unassign because server went away, unassigns block waiting
-   * on the below callback from a ServerCrashProcedure before proceeding.
-   * @param regions Regions on the Crashed Server.
-   * @return List of regions we should assign to new homes (not same as regions on crashed server).
+   * Assign the regions on the crashed RS to other Rses.
+   * <p/>
+   * In this method we will go through all the RegionStateNodes of the give regions to find out
+   * whether there is already an TRSP for the region, if so we interrupt it and let it retry on
+   * other server, otherwise we will schedule a TRSP to bring the region online.
+   * <p/>
+   * We will also check whether the table for a region is enabled, if not, we will skip assigning
+   * it.
    */
-  private List<RegionInfo> handleRIT(final MasterProcedureEnv env, List<RegionInfo> regions) {
-    if (regions == null || regions.isEmpty()) {
-      return Collections.emptyList();
-    }
+  private void assignRegions(MasterProcedureEnv env, List<RegionInfo> regions) throws IOException {
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
-    List<RegionInfo> toAssign = new ArrayList<RegionInfo>(regions);
-    // Get an iterator so can remove items.
-    final Iterator<RegionInfo> it = toAssign.iterator();
-    ServerCrashException sce = null;
-    while (it.hasNext()) {
-      final RegionInfo hri = it.next();
-      RegionTransitionProcedure rtp = am.getRegionStates().getRegionTransitionProcedure(hri);
-      if (rtp == null) {
-        continue;
+    for (RegionInfo region : regions) {
+      RegionStateNode regionNode = am.getRegionStates().getOrCreateRegionStateNode(region);
+      regionNode.lock();
+      try {
+        if (regionNode.getProcedure() != null) {
+          LOG.info("{} found RIT {}; {}", this, regionNode.getProcedure(), regionNode);
+          regionNode.getProcedure().serverCrashed(env, regionNode, getServerName());
+        } else {
+          if (env.getMasterServices().getTableStateManager().isTableState(regionNode.getTable(),
+            TableState.State.DISABLING, TableState.State.DISABLED)) {
+            continue;
+          }
+          TransitRegionStateProcedure proc = TransitRegionStateProcedure.assign(env, region, null);
+          regionNode.setProcedure(proc);
+          addChildProcedure(proc);
+        }
+      } finally {
+        regionNode.unlock();
       }
-      // Make sure the RIT is against this crashed server. In the case where there are many
-      // processings of a crashed server -- backed up for whatever reason (slow WAL split) --
-      // then a previous SCP may have already failed an assign, etc., and it may have a new
-      // location target; DO NOT fail these else we make for assign flux.
-      ServerName rtpServerName = rtp.getServer(env);
-      if (rtpServerName == null) {
-        LOG.warn("RIT with ServerName null! " + rtp);
-        continue;
-      }
-      if (!rtpServerName.equals(this.serverName)) continue;
-      LOG.info("pid=" + getProcId() + " found RIT " + rtp + "; " +
-        rtp.getRegionState(env).toShortString());
-      // Notify RIT on server crash.
-      if (sce == null) {
-        sce = new ServerCrashException(getProcId(), getServerName());
-      }
-      rtp.remoteCallFailed(env, this.serverName, sce);
-      // If an assign, remove from passed-in list of regions so we subsequently do not create
-      // a new assign; the exisitng assign after the call to remoteCallFailed will recalibrate
-      // and assign to a server other than the crashed one; no need to create new assign.
-      // If an unassign, do not return this region; the above cancel will wake up the unassign and
-      // it will complete. Done.
-      it.remove();
     }
-    return toAssign;
   }
 
   @Override

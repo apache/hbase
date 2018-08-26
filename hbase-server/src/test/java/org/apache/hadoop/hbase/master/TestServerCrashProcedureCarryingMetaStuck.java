@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -83,9 +83,10 @@ public class TestServerCrashProcedureCarryingMetaStuck {
       rs.abort("For testing!");
 
       UTIL.waitFor(30000,
-        () -> executor.getProcedures().stream().filter(p -> p instanceof AssignProcedure)
-          .map(p -> (AssignProcedure) p)
-          .anyMatch(p -> Bytes.equals(hri.getRegionName(), p.getRegionInfo().getRegionName())));
+        () -> executor.getProcedures().stream()
+          .filter(p -> p instanceof TransitRegionStateProcedure)
+          .map(p -> (TransitRegionStateProcedure) p)
+          .anyMatch(p -> Bytes.equals(hri.getRegionName(), p.getRegion().getRegionName())));
       proc.resume();
       UTIL.waitFor(30000, () -> executor.isFinished(procId));
       // see whether the move region procedure can finish properly

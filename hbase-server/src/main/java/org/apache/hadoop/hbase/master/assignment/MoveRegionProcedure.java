@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,109 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionStateData;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Procedure that implements a RegionPlan.
- * It first runs an unassign subprocedure followed
- * by an assign subprocedure. It takes a lock on the region being moved.
- * It holds the lock for the life of the procedure.
- *
- * <p>Throws exception on construction if determines context hostile to move (cluster going
- * down or master is shutting down or table is disabled).</p>
+ * Leave here only for checking if we can successfully start the master.
+ * @deprecated Do not use any more.
+ * @see TransitRegionStateProcedure
  */
+@Deprecated
 @InterfaceAudience.Private
 public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<MoveRegionState> {
-  private static final Logger LOG = LoggerFactory.getLogger(MoveRegionProcedure.class);
   private RegionPlan plan;
 
   public MoveRegionProcedure() {
-    // Required by the Procedure framework to create the procedure on replay
     super();
-  }
-
-  @VisibleForTesting
-  protected RegionPlan getPlan() {
-    return this.plan;
-  }
-
-  /**
-   * @param check whether we should do some checks in the constructor. We will skip the checks if we
-   *          are reopening a region as this may fail the whole procedure and cause stuck. We will
-   *          do the check later when actually executing the procedure so not a big problem.
-   * @throws IOException If the cluster is offline or master is stopping or if table is disabled or
-   *           non-existent.
-   */
-  public MoveRegionProcedure(MasterProcedureEnv env, RegionPlan plan, boolean check)
-      throws HBaseIOException {
-    super(env, plan.getRegionInfo());
-    this.plan = plan;
-    if (check) {
-      preflightChecks(env, true);
-      checkOnline(env, plan.getRegionInfo());
-    }
   }
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final MoveRegionState state)
       throws InterruptedException {
-    LOG.trace("{} execute state={}", this, state);
-    switch (state) {
-      case MOVE_REGION_PREPARE:
-        // Check context again and that region is online; do it here after we have lock on region.
-        try {
-          preflightChecks(env, true);
-          checkOnline(env, this.plan.getRegionInfo());
-          if (!env.getMasterServices().getServerManager().isServerOnline(this.plan.getSource())) {
-            throw new HBaseIOException(this.plan.getSource() + " not online");
-          }
-        } catch (HBaseIOException e) {
-          LOG.warn(this.toString() + " FAILED because " + e.toString());
-          return Flow.NO_MORE_STATE;
-        }
-        break;
-      case MOVE_REGION_UNASSIGN:
-        try {
-          checkOnline(env, this.plan.getRegionInfo());
-        } catch (DoNotRetryRegionException dnrre) {
-          LOG.info("Skipping move, {} is not online; {}", getRegion().getEncodedName(), this,
-              dnrre);
-          return Flow.NO_MORE_STATE;
-        }
-        addChildProcedure(new UnassignProcedure(plan.getRegionInfo(), plan.getSource(),
-            plan.getDestination(), true));
-        setNextState(MoveRegionState.MOVE_REGION_ASSIGN);
-        break;
-      case MOVE_REGION_ASSIGN:
-        AssignProcedure assignProcedure = plan.getDestination() == null ?
-            new AssignProcedure(plan.getRegionInfo()):
-            new AssignProcedure(plan.getRegionInfo(), plan.getDestination());
-        addChildProcedure(assignProcedure);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
-    }
-    return Flow.HAS_MORE_STATE;
+    return Flow.NO_MORE_STATE;
   }
 
   @Override

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -31,7 +30,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
-import org.apache.hadoop.hbase.master.assignment.UnassignProcedure;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -103,8 +102,8 @@ public class TestSplitRegionWhileRSCrash {
     executor.submitProcedure(splitProcedure);
     LOG.info("SplitProcedure submitted");
     UTIL.waitFor(30000, () -> executor.getProcedures().stream()
-        .filter(p -> p instanceof UnassignProcedure)
-        .map(p -> (UnassignProcedure) p)
+        .filter(p -> p instanceof TransitRegionStateProcedure)
+        .map(p -> (TransitRegionStateProcedure) p)
         .anyMatch(p -> TABLE_NAME.equals(p.getTableName())));
     UTIL.getMiniHBaseCluster().killRegionServer(
         UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName());

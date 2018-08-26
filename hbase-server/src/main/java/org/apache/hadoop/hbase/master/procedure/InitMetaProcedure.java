@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
@@ -32,7 +33,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.I
 
 /**
  * This procedure is used to initialize meta table for a new hbase deploy. It will just schedule an
- * {@link AssignProcedure} to assign meta.
+ * {@link TransitRegionStateProcedure} to assign meta.
  */
 @InterfaceAudience.Private
 public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMetaState> {
@@ -55,7 +56,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     switch (state) {
       case INIT_META_ASSIGN_META:
         addChildProcedure(env.getAssignmentManager()
-          .createAssignProcedure(RegionInfoBuilder.FIRST_META_REGIONINFO));
+          .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);

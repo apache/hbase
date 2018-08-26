@@ -177,7 +177,7 @@ public class DeleteTableProcedure
 
   @Override
   protected DeleteTableState getState(final int stateId) {
-    return DeleteTableState.valueOf(stateId);
+    return DeleteTableState.forNumber(stateId);
   }
 
   @Override
@@ -188,6 +188,11 @@ public class DeleteTableProcedure
   @Override
   protected DeleteTableState getInitialState() {
     return DeleteTableState.DELETE_TABLE_PRE_OPERATION;
+  }
+
+  @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
+    return true;
   }
 
   @Override
@@ -297,7 +302,9 @@ public class DeleteTableProcedure
           FileStatus[] files = fs.listStatus(tempdir);
           if (files != null && files.length > 0) {
             for (int i = 0; i < files.length; ++i) {
-              if (!files[i].isDir()) continue;
+              if (!files[i].isDirectory()) {
+                continue;
+              }
               HFileArchiver.archiveRegion(fs, mfs.getRootDir(), tempTableDir, files[i].getPath());
             }
           }
@@ -343,7 +350,6 @@ public class DeleteTableProcedure
    * There may be items for this table still up in hbase:meta in the case where the
    * info:regioninfo column was empty because of some write error. Remove ALL rows from hbase:meta
    * that have to do with this table. See HBASE-12980.
-   * @throws IOException
    */
   private static void cleanAnyRemainingRows(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {

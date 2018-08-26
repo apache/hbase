@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.Callable;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,13 +36,15 @@ import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
-import org.apache.hbase.thirdparty.com.google.protobuf.BytesValue;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.BytesValue;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 public class ProcedureTestingUtility {
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureTestingUtility.class);
@@ -67,7 +68,7 @@ public class ProcedureTestingUtility {
   }
 
   public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor) throws Exception {
-    restart(procExecutor, false, true, null, null);
+    restart(procExecutor, false, true, null, null, null);
   }
 
   public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
@@ -76,9 +77,9 @@ public class ProcedureTestingUtility {
     procExecutor.startWorkers();
   }
 
-  public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor,
-      final boolean avoidTestKillDuringRestart, final boolean failOnCorrupted,
-      final Callable<Void> stopAction, final Callable<Void> startAction)
+  public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor,
+      boolean avoidTestKillDuringRestart, boolean failOnCorrupted, Callable<Void> stopAction,
+      Callable<Void> actionBeforeStartWorker, Callable<Void> startAction)
       throws Exception {
     final ProcedureStore procStore = procExecutor.getStore();
     final int storeThreads = procExecutor.getCorePoolSize();
@@ -104,7 +105,11 @@ public class ProcedureTestingUtility {
     // re-start
     LOG.info("RESTART - Start");
     procStore.start(storeThreads);
-    initAndStartWorkers(procExecutor, execThreads, failOnCorrupted);
+    procExecutor.init(execThreads, failOnCorrupted);
+    if (actionBeforeStartWorker != null) {
+      actionBeforeStartWorker.call();
+    }
+    procExecutor.startWorkers();
     if (startAction != null) {
       startAction.call();
     }
@@ -137,6 +142,12 @@ public class ProcedureTestingUtility {
     if (procExecutor.testing == null) {
       procExecutor.testing = new ProcedureExecutor.Testing();
     }
+  }
+
+  public static <TEnv> void setKillIfHasParent(ProcedureExecutor<TEnv> procExecutor,
+      boolean value) {
+    createExecutorTesting(procExecutor);
+    procExecutor.testing.killIfHasParent = value;
   }
 
   public static <TEnv> void setKillIfSuspended(ProcedureExecutor<TEnv> procExecutor,

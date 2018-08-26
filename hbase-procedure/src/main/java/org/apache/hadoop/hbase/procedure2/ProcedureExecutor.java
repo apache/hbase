@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -94,6 +95,7 @@ public class ProcedureExecutor<TEnvironment> {
    * Class with parameters describing how to fail/die when in testing-context.
    */
   public static class Testing {
+    protected boolean killIfHasParent = true;
     protected boolean killIfSuspended = false;
 
     /**
@@ -120,8 +122,14 @@ public class ProcedureExecutor<TEnvironment> {
       return kill;
     }
 
-    protected boolean shouldKillBeforeStoreUpdate(final boolean isSuspended) {
-      return (isSuspended && !killIfSuspended) ? false : shouldKillBeforeStoreUpdate();
+    protected boolean shouldKillBeforeStoreUpdate(boolean isSuspended, boolean hasParent) {
+      if (isSuspended && !killIfSuspended) {
+        return false;
+      }
+      if (hasParent && !killIfHasParent) {
+        return false;
+      }
+      return shouldKillBeforeStoreUpdate();
     }
 
     protected boolean shouldKillAfterStoreUpdate() {
@@ -457,6 +465,7 @@ public class ProcedureExecutor<TEnvironment> {
     int failedCount = 0;
     while (procIter.hasNext()) {
       boolean finished = procIter.isNextFinished();
+      @SuppressWarnings("unchecked")
       Procedure<TEnvironment> proc = procIter.next();
       NonceKey nonceKey = proc.getNonceKey();
       long procId = proc.getProcId();
@@ -508,6 +517,7 @@ public class ProcedureExecutor<TEnvironment> {
         continue;
       }
 
+      @SuppressWarnings("unchecked")
       Procedure<TEnvironment> proc = procIter.next();
       assert !(proc.isFinished() && !proc.hasParent()) : "unexpected completed proc=" + proc;
 
@@ -1180,6 +1190,17 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   /**
+   * Should only be used when starting up, where the procedure workers have not been started.
+   * <p/>
+   * If the procedure works has been started, the return values maybe changed when you are
+   * processing it so usually this is not safe. Use {@link #getProcedures()} below for most cases as
+   * it will do a copy, and also include the finished procedures.
+   */
+  public Collection<Procedure<TEnvironment>> getActiveProceduresNoCopy() {
+    return procedures.values();
+  }
+
+  /**
    * Get procedures.
    * @return the procedures in a list
    */
@@ -1607,7 +1628,8 @@ public class ProcedureExecutor<TEnvironment> {
 
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
-      if (testing != null && testing.shouldKillBeforeStoreUpdate(suspended)) {
+      if (testing != null &&
+        testing.shouldKillBeforeStoreUpdate(suspended, procedure.hasParent())) {
         kill("TESTING: Kill BEFORE store update: " + procedure);
       }
 
@@ -1840,6 +1862,7 @@ public class ProcedureExecutor<TEnvironment> {
       long lastUpdate = EnvironmentEdgeManager.currentTime();
       try {
         while (isRunning() && keepAlive(lastUpdate)) {
+          @SuppressWarnings("unchecked")
           Procedure<TEnvironment> proc = scheduler.poll(keepAliveTime, TimeUnit.MILLISECONDS);
           if (proc == null) {
             continue;

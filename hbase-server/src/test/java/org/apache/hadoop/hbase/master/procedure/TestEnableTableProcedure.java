@@ -91,7 +91,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Enable the table - expect failure from ProcedurePrepareLatch
     final ProcedurePrepareLatch prepareLatch = new ProcedurePrepareLatch.CompatibilityLatch();
-    long procId3 = procExec.submitProcedure(
+    procExec.submitProcedure(
         new EnableTableProcedure(procExec.getEnvironment(), tableName, false, prepareLatch));
     prepareLatch.await();
     Assert.fail("Enable should throw exception through latch.");
@@ -108,6 +108,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.createTable(procExec, tableName, splitKeys, "f1", "f2");
     UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+    ProcedureTestingUtility.setKillIfHasParent(procExec, false);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Enable procedure && kill the executor

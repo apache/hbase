@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
@@ -120,7 +120,7 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    UTIL.getAdmin().setBalancerRunning(false, true);
+    UTIL.getAdmin().balancerSwitch(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     am = UTIL.getHBaseCluster().getMaster().getAssignmentManager();
@@ -132,7 +132,7 @@ public class TestSplitTableRegionProcedure {
   @After
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
+    for (TableDescriptor htd : UTIL.getAdmin().listTableDescriptors()) {
       UTIL.deleteTable(htd.getTableName());
     }
   }
@@ -374,7 +374,7 @@ public class TestSplitTableRegionProcedure {
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps,
         true);
     // check that we have only 1 region
-    assertEquals(1, UTIL.getHBaseAdmin().getTableRegions(tableName).size());
+    assertEquals(1, UTIL.getAdmin().getRegions(tableName).size());
     List<HRegion> daughters = UTIL.getMiniHBaseCluster().getRegions(tableName);
     assertEquals(1, daughters.size());
     verifyData(daughters.get(0), startRowNum, rowCount,
@@ -398,6 +398,7 @@ public class TestSplitTableRegionProcedure {
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+    ProcedureTestingUtility.setKillIfHasParent(procExec, false);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // collect AM metrics before test

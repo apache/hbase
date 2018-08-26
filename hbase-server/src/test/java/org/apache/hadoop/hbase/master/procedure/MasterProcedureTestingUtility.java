@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -72,13 +74,13 @@ public class MasterProcedureTestingUtility {
   public static void restartMasterProcedureExecutor(ProcedureExecutor<MasterProcedureEnv> procExec)
       throws Exception {
     final MasterProcedureEnv env = procExec.getEnvironment();
-    final HMaster master = (HMaster)env.getMasterServices();
+    final HMaster master = (HMaster) env.getMasterServices();
     ProcedureTestingUtility.restart(procExec, true, true,
       // stop services
       new Callable<Void>() {
         @Override
         public Void call() throws Exception {
-          final AssignmentManager am = env.getAssignmentManager();
+          AssignmentManager am = env.getAssignmentManager();
           // try to simulate a master restart by removing the ServerManager states about seqIDs
           for (RegionState regionState: am.getRegionStates().getRegionStates()) {
             env.getMasterServices().getServerManager().removeRegion(regionState.getRegion());
@@ -88,12 +90,26 @@ public class MasterProcedureTestingUtility {
           return null;
         }
       },
+      // setup RIT before starting workers
+      new Callable<Void>() {
+
+        @Override
+        public Void call() throws Exception {
+          AssignmentManager am = env.getAssignmentManager();
+          am.start();
+          // just follow the same way with HMaster.finishActiveMasterInitialization. See the
+          // comments there
+          am.setupRIT(procExec.getActiveProceduresNoCopy().stream().filter(p -> !p.isSuccess())
+            .filter(p -> p instanceof TransitRegionStateProcedure)
+            .map(p -> (TransitRegionStateProcedure) p).collect(Collectors.toList()));
+          return null;
+        }
+      },
       // restart services
       new Callable<Void>() {
         @Override
         public Void call() throws Exception {
-          final AssignmentManager am = env.getAssignmentManager();
-          am.start();
+          AssignmentManager am = env.getAssignmentManager();
           am.joinCluster();
           master.setInitialized(true);
           return null;
