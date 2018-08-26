@@ -1557,7 +1557,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
      * @throws IOException
      * @throws InterruptedException
      */
-    public synchronized int readAndProcess() throws IOException, InterruptedException {
+    public int readAndProcess() throws IOException, InterruptedException {
       // If we have not read the connection setup preamble, look to see if that is on the wire.
       if (!connectionPreambleRead) {
         int count = readPreamble();
@@ -1585,33 +1585,40 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
       }
 
-      // We have read a length and we have read the preamble.  It is either the connection header
-      // or it is a request.
-      if (data == null) {
-        dataLengthBuffer.flip();
-        int dataLength = dataLengthBuffer.getInt();
-        if (dataLength == RpcClient.PING_CALL_ID) {
-          if (!useWrap) { //covers the !useSasl too
-            dataLengthBuffer.clear();
-            return 0;  //ping message
+      final boolean useWrap = this.useWrap;
+
+      // we're guarding against data being modified concurrently
+      // while trying to keep other instance members out of the block
+      synchronized(this) {
+        // We have read a length and we have read the preamble.  It is either the connection header
+        // or it is a request.
+        if (data == null) {
+          dataLengthBuffer.flip();
+          int dataLength = dataLengthBuffer.getInt();
+          if (dataLength == RpcClient.PING_CALL_ID) {
+            if (!useWrap) { //covers the !useSasl too
+              dataLengthBuffer.clear();
+              return 0;  //ping message
+            }
           }
+
+          if (dataLength < 0) { // A data length of zero is legal.
+            throw new IllegalArgumentException("Unexpected data length "
+                + dataLength + "!! from " + getHostAddress());
+          }
+          data = ByteBuffer.allocate(dataLength);
+
+          // Increment the rpc count. This counter will be decreased when we write
+          //  the response.  If we want the connection to be detected as idle properly, we
+          //  need to keep the inc / dec correct.
+          incRpcCount();
         }
-        if (dataLength < 0) { // A data length of zero is legal.
-          throw new IllegalArgumentException("Unexpected data length "
-              + dataLength + "!! from " + getHostAddress());
+
+        count = channelRead(channel, data);
+
+        if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
+          process();
         }
-        data = ByteBuffer.allocate(dataLength);
-
-        // Increment the rpc count. This counter will be decreased when we write
-        //  the response.  If we want the connection to be detected as idle properly, we
-        //  need to keep the inc / dec correct.
-        incRpcCount();
-      }
-
-      count = channelRead(channel, data);
-
-      if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
-        process();
       }
 
       return count;
