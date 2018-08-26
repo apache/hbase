@@ -494,7 +494,7 @@ public class DefaultMemStore implements MemStore {
     // 'now' and a 0 memstoreTS == immediately visible
     List<Cell> cells = new ArrayList<Cell>(1);
     cells.add(new KeyValue(row, family, qualifier, now, Bytes.toBytes(newValue)));
-    return upsert(cells, 1L);
+    return upsert(cells, 1L, null);
   }
 
   /**
@@ -513,13 +513,14 @@ public class DefaultMemStore implements MemStore {
    *
    * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate KVs
+   * @param removedCells collect the removed cells. It can be null.
    * @return change in memstore size
    */
   @Override
-  public long upsert(Iterable<Cell> cells, long readpoint) {
+  public long upsert(Iterable<Cell> cells, long readpoint, List<Cell> removedCells) {
     long size = 0;
     for (Cell cell : cells) {
-      size += upsert(cell, readpoint);
+      size += upsert(cell, readpoint, removedCells);
     }
     return size;
   }
@@ -537,8 +538,9 @@ public class DefaultMemStore implements MemStore {
    *
    * @param cell
    * @return change in size of MemStore
+   * @param removedCells collect the removed cells
    */
-  private long upsert(Cell cell, long readpoint) {
+  private long upsert(Cell cell, long readpoint, List<Cell> removedCells) {
     // Add the Cell to the MemStore
     // Use the internalAdd method here since we (a) already have a lock
     // and (b) cannot safely use the MSLAB here without potentially
@@ -577,6 +579,9 @@ public class DefaultMemStore implements MemStore {
             long delta = heapSizeChange(cur, true);
             addedSize -= delta;
             activeSection.getHeapSize().addAndGet(-delta);
+            if (removedCells != null) {
+              removedCells.add(cur);
+            }
             it.remove();
             setOldestEditTimeToNow();
           } else {

@@ -137,10 +137,11 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * across all of them.
    * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate KVs
+   * @param removedCells collect the removed cells. It can be null.
    * @return memstore size delta
    * @throws IOException
    */
-  long upsert(Iterable<Cell> cells, long readpoint) throws IOException;
+  long upsert(Iterable<Cell> cells, long readpoint, List<Cell> removedCells) throws IOException;
 
   /**
    * Adds a value to the memstore

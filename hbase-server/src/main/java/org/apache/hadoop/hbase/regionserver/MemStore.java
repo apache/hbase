@@ -127,9 +127,10 @@ public interface MemStore extends HeapSize {
    * only see each KeyValue update as atomic.
    * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate Cells.
+   * @param removedCells collect the removed cells. It can be null.
    * @return change in memstore size
    */
-  long upsert(Iterable<Cell> cells, long readpoint);
+  long upsert(Iterable<Cell> cells, long readpoint, List<Cell> removedCells);
 
   /**
    * @return scanner over the memstore. This might include scanner over the snapshot when one is

@@ -864,7 +864,7 @@ public class TestDefaultMemStore extends TestCase {
     kv1.setSequenceId(1); kv2.setSequenceId(1);kv3.setSequenceId(1);
     l.add(kv1); l.add(kv2); l.add(kv3);
 
-    this.memstore.upsert(l, 2);// readpoint is 2
+    this.memstore.upsert(l, 2, null);// readpoint is 2
     long newSize = this.memstore.activeSection.getHeapSize().get();
     assert(newSize > oldSize);
     //The kv1 should be removed.
@@ -873,7 +873,7 @@ public class TestDefaultMemStore extends TestCase {
     KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
     kv4.setSequenceId(1);
     l.clear(); l.add(kv4);
-    this.memstore.upsert(l, 3);
+    this.memstore.upsert(l, 3, null);
     assertEquals(newSize, this.memstore.activeSection.getHeapSize().get());
     //The kv2 should be removed.
     assert(memstore.activeSection.getCellSkipListSet().size() == 2);
@@ -917,7 +917,7 @@ public class TestDefaultMemStore extends TestCase {
       KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
       kv1.setSequenceId(100);
       l.add(kv1);
-      memstore.upsert(l, 1000);
+      memstore.upsert(l, 1000, null);
       t = memstore.timeOfOldestEdit();
       assertTrue(t == 1234);
     } finally {
