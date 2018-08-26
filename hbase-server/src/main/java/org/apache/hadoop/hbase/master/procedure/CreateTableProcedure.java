@@ -169,6 +169,10 @@ public class CreateTableProcedure
         case CREATE_TABLE_PRE_OPERATION:
           DeleteTableProcedure.deleteTableStates(env, getTableName());
           // TODO-MAYBE: call the deleteTable coprocessor event?
+          final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
+          if (cpHost != null) {
+            cpHost.postDeleteTable(getTableName());
+          }
           ProcedurePrepareLatch.releaseLatch(syncLatch, this);
           break;
         default:

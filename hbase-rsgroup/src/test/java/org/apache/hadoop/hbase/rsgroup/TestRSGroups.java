@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -48,10 +49,12 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -90,7 +93,10 @@ public class TestRSGroups extends TestRSGroupsBase {
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
         NUM_SLAVES_BASE - 1);
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    initialize();
+  }
 
+  private static void initialize() throws Exception {
     admin = TEST_UTIL.getHBaseAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((MiniHBaseCluster)cluster).getMaster();
@@ -448,6 +454,68 @@ public class TestRSGroups extends TestRSGroupsBase {
 
     // clone
     admin.cloneSnapshot(snapshotName, clonedTableName);
+  }
+
+  @Test
+  public void testRSGroupListDoesNotContainFailedTableCreation() throws Exception {
+    toggleQuotaCheckAndRestartMiniCluster(true);
+    String nsp = "np1";
+    NamespaceDescriptor nspDesc =
+        NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "5")
+            .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
+    admin.createNamespace(nspDesc);
+    assertEquals(3, admin.listNamespaceDescriptors().length);
+    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
+    HTableDescriptor tableDescOne =
+        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"));
+    tableDescOne.addFamily(fam1);
+    admin.createTable(tableDescOne);
+
+    HTableDescriptor tableDescTwo =
+        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
+    tableDescTwo.addFamily(fam1);
+    boolean constraintViolated = false;
+
+    try {
+      admin.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"),
+          6);
+      Assert.fail("Creation table should fail because of quota violation.");
+    } catch (Exception exp) {
+      assertTrue(exp instanceof IOException);
+      constraintViolated = true;
+    } finally {
+      assertTrue("Constraint not violated for table " + tableDescTwo.getTableName(),
+          constraintViolated);
+    }
+    List<RSGroupInfo> rsGroupInfoList = rsGroupAdmin.listRSGroups();
+    boolean foundTable2 = false;
+    boolean foundTable1 = false;
+    for (int i = 0; i < rsGroupInfoList.size(); i++){
+      if(rsGroupInfoList.get(i).getTables().contains(tableDescTwo.getTableName())){
+        foundTable2 = true;
+      }
+      if(rsGroupInfoList.get(i).getTables().contains(tableDescOne.getTableName())){
+        foundTable1 = true;
+      }
+    }
+    assertFalse("Found table2 in rsgroup list.", foundTable2);
+    assertTrue("Did not find table1 in rsgroup list", foundTable1);
+
+    TEST_UTIL.deleteTable(tableDescOne.getTableName());
+    admin.deleteNamespace(nspDesc.getName());
+    toggleQuotaCheckAndRestartMiniCluster(false);
+
+  }
+
+  private void toggleQuotaCheckAndRestartMiniCluster(boolean enable) throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, enable);
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
+    TEST_UTIL.getConfiguration().setInt(
+        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+        NUM_SLAVES_BASE - 1);
+    TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    initialize();
   }
 
 }

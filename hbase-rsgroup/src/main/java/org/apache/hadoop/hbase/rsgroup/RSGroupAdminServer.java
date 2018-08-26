@@ -275,15 +275,11 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         continue;
       }
       TableLock lock = master.getTableLockManager().writeLock(table, "Group: table move");
-      try {
-        lock.acquire();
-        for (HRegionInfo region :
-            master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
-          master.getAssignmentManager().unassign(region);
-        }
-      } finally {
-        lock.release();
+      for (HRegionInfo region :
+          master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
+        master.getAssignmentManager().unassign(region);
       }
+
     }
   }
 
