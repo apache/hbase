@@ -69,8 +69,6 @@ public class TestUnexpectedStateException {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean("hbase.localcluster.assign.random.ports", false);
-    TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 50655);
     TEST_UTIL.startMiniCluster();
   }
 
