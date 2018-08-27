@@ -1670,6 +1670,17 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       LOG.error("Error trying to determine if store has references, assuming references exists",
         ioe);
       return true;
+    } finally {
+      if (reloadedStoreFiles != null) {
+        for (HStoreFile storeFile : reloadedStoreFiles) {
+          try {
+            storeFile.closeStoreFile(false);
+          } catch (IOException ioe) {
+            LOG.warn("Encountered exception closing " + storeFile + ": " + ioe.getMessage());
+            // continue with closing the remaining store files
+          }
+        }
+      }
     }
   }
 
