@@ -175,12 +175,13 @@ public class RegionReplicaUtil {
       return regions;
     }
     List<RegionInfo> hRegionInfos = new ArrayList<>((newReplicaCount) * regions.size());
-    for (int i = 0; i < regions.size(); i++) {
-      if (RegionReplicaUtil.isDefaultReplica(regions.get(i))) {
+    for (RegionInfo ri : regions) {
+      if (RegionReplicaUtil.isDefaultReplica(ri) &&
+        (!ri.isOffline() || (!ri.isSplit() && !ri.isSplitParent()))) {
         // region level replica index starts from 0. So if oldReplicaCount was 2 then the max replicaId for
         // the existing regions would be 1
         for (int j = oldReplicaCount; j < newReplicaCount; j++) {
-          hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(i), j));
+          hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(ri, j));
         }
       }
     }
