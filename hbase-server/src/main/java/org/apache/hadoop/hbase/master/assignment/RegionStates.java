@@ -55,22 +55,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class RegionStates {
   private static final Logger LOG = LoggerFactory.getLogger(RegionStates.class);
 
-  // TODO: need to be more specific, i.e, OPENING vs. OPEN, CLOSING vs. CLOSED.
-  static final State[] STATES_EXPECTED_ON_OPEN = new State[] {
-    State.OPEN, // State may already be OPEN if we died after receiving the OPEN from regionserver
-                // but before complete finish of AssignProcedure. HBASE-20100.
-    State.OFFLINE, State.CLOSED, State.ABNORMALLY_CLOSED, // disable/offline
-    State.SPLITTING,     // ServerCrashProcedure
-    State.OPENING, State.FAILED_OPEN, // already in-progress (retrying)
-    State.MERGED, State.SPLITTING_NEW
-  };
-
-  static final State[] STATES_EXPECTED_ON_CLOSE = new State[] {
-    State.SPLITTING, State.MERGING, State.OPENING, // ServerCrashProcedure
-    State.OPEN,                   // enabled/open
-    State.CLOSING                 // already in-progress (retrying)
-  };
-
   // This comparator sorts the RegionStates by time stamp then Region name.
   // Comparing by timestamp alone can lead us to discard different RegionStates that happen
   // to share a timestamp.

@@ -18,33 +18,26 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -54,10 +47,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
-import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestEnableTable {
@@ -83,63 +72,6 @@ public class TestEnableTable {
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Test
-  public void testEnableTableWithNoRegionServers() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    final HMaster m = cluster.getMaster();
-    final Admin admin = TEST_UTIL.getAdmin();
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILYNAME));
-    admin.createTable(desc);
-    admin.disableTable(tableName);
-    TEST_UTIL.waitTableDisabled(tableName.getName());
-
-    admin.enableTable(tableName);
-    TEST_UTIL.waitTableEnabled(tableName);
-    // disable once more
-    admin.disableTable(tableName);
-
-    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-    // now stop region servers
-    JVMClusterUtil.RegionServerThread rs = cluster.getRegionServerThreads().get(0);
-    rs.getRegionServer().stop("stop");
-    cluster.waitForRegionServerToStop(rs.getRegionServer().getServerName(), 10000);
-
-    // We used to enable the table here but AMv2 would hang waiting on a RS to check-in.
-    // Revisit.
-
-    JVMClusterUtil.RegionServerThread rs2 = cluster.startRegionServer();
-    cluster.waitForRegionServerToStart(rs2.getRegionServer().getServerName().getHostname(),
-        rs2.getRegionServer().getServerName().getPort(), 60000);
-
-    LOG.debug("Now enabling table " + tableName);
-    admin.enableTable(tableName);
-    assertTrue(admin.isTableEnabled(tableName));
-
-    List<HRegionInfo> regions = TEST_UTIL.getAdmin().getTableRegions(tableName);
-    assertEquals(1, regions.size());
-    for (HRegionInfo region : regions) {
-      TEST_UTIL.getAdmin().assign(region.getEncodedNameAsBytes());
-    }
-    LOG.debug("Waiting for table assigned " + tableName);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-    List<HRegionInfo> onlineRegions = admin.getOnlineRegions(
-        rs2.getRegionServer().getServerName());
-    ArrayList<HRegionInfo> tableRegions = filterTableRegions(tableName, onlineRegions);
-    assertEquals(1, tableRegions.size());
-  }
-
-  private ArrayList<HRegionInfo> filterTableRegions(final TableName tableName,
-      List<HRegionInfo> onlineRegions) {
-    return Lists.newArrayList(Iterables.filter(onlineRegions, new Predicate<HRegionInfo>() {
-      @Override
-      public boolean apply(HRegionInfo input) {
-        return input.getTable().equals(tableName);
-      }
-    }));
   }
 
   /**

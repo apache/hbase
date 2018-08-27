@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionCloseOperation;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -78,5 +79,10 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
     if (data.hasAssignCandidate()) {
       assignCandidate = ProtobufUtil.toServerName(data.getAssignCandidate());
     }
+  }
+
+  @Override
+  protected boolean shouldDispatch(RegionStateNode regionNode) {
+    return !regionNode.isInState(RegionState.State.CLOSED, RegionState.State.ABNORMALLY_CLOSED);
   }
 }
