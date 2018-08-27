@@ -200,6 +200,13 @@ if ( fqtn != null ) {
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
     <td>-</td>
     <td>-</td>
+<%
+      if (withReplica) {
+%>
+    <td><%= meta.getReplicaId() %></td>
+<%
+      }
+%>
 </tr>
 <%  } %>
 <%} %>
