@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -117,7 +116,9 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     this.destinationServer = destinationServer;
     this.force = force;
     this.removeAfterUnassigning = removeAfterUnassigning;
-    setTransitionState(RegionTransitionState.REGION_TRANSITION_QUEUE);
+
+    // we don't need REGION_TRANSITION_QUEUE, we jump directly to sending the request
+    setTransitionState(RegionTransitionState.REGION_TRANSITION_DISPATCH);
   }
 
   @Override
@@ -178,21 +179,9 @@ public class UnassignProcedure extends RegionTransitionProcedure {
 
   @Override
   protected boolean startTransition(final MasterProcedureEnv env, final RegionStateNode regionNode) {
-    // Check region is actually unassignable now we have lock on it. If not skirt to end.
-    // It could have had its status changed on us post construction... perhaps a split removed
-    // the region we are to unassign (a split and a move happening near-concurrently).
-    // Don't overcheck. A region is set to have a SPLITTING state if it is the parent and it is
-    // being split. Regions that are in this RSN state are unassignable. Regions that are SPLIT
-    // are not.
-    RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    RegionState rs = regionStates.getRegionState(regionNode.getRegionInfo());
-    // Don't try unassigning regions that are closed or split. RSN state could have been set
-    // after our creation but before we got the region lock.
-    if (rs.isClosing() || rs.isClosed() || rs.isSplit() || rs.isMerged()) {
-      LOG.info("NOT unassignable {}, skipping {}", rs, this);
-      return false;
-    }
-    return true;
+    // nothing to do here. we skip the step in the constructor
+    // by jumping to REGION_TRANSITION_DISPATCH
+    throw new UnsupportedOperationException();
   }
 
   @Override
