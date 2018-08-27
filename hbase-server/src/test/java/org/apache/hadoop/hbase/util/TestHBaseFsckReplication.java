@@ -50,6 +50,7 @@ public class TestHBaseFsckReplication {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    UTIL.getConfiguration().setBoolean("hbase.write.hbck1.lock.file", false);
     UTIL.startMiniCluster(1);
   }
 
