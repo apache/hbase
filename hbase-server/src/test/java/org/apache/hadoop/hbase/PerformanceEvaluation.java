@@ -1759,6 +1759,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     FilteredScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
+      if (opts.perClientRunRows == DEFAULT_ROWS_PER_GB) {
+        LOG.warn("Option \"rows\" unspecified. Using default value " + DEFAULT_ROWS_PER_GB
+            + ". This could take a very long time.");
+      }
     }
 
     @Override
