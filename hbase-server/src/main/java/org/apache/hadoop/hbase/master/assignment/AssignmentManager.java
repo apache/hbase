@@ -552,7 +552,7 @@ public class AssignmentManager implements ServerListener {
     TransitRegionStateProcedure proc;
     regionNode.lock();
     try {
-      preTransitCheck(regionNode, RegionStates.STATES_EXPECTED_ON_OPEN);
+      preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
       proc = TransitRegionStateProcedure.assign(getProcedureEnvironment(), regionInfo, sn);
       regionNode.setProcedure(proc);
     } finally {
@@ -573,7 +573,7 @@ public class AssignmentManager implements ServerListener {
     TransitRegionStateProcedure proc;
     regionNode.lock();
     try {
-      preTransitCheck(regionNode, RegionStates.STATES_EXPECTED_ON_CLOSE);
+      preTransitCheck(regionNode, STATES_EXPECTED_ON_UNASSIGN_OR_MOVE);
       proc = TransitRegionStateProcedure.unassign(getProcedureEnvironment(), regionInfo);
       regionNode.setProcedure(proc);
     } finally {
@@ -591,7 +591,7 @@ public class AssignmentManager implements ServerListener {
     TransitRegionStateProcedure proc;
     regionNode.lock();
     try {
-      preTransitCheck(regionNode, RegionStates.STATES_EXPECTED_ON_CLOSE);
+      preTransitCheck(regionNode, STATES_EXPECTED_ON_UNASSIGN_OR_MOVE);
       regionNode.checkOnline();
       proc = TransitRegionStateProcedure.move(getProcedureEnvironment(), regionInfo, targetServer);
       regionNode.setProcedure(proc);
@@ -1411,6 +1411,35 @@ public class AssignmentManager implements ServerListener {
   }
 
   // ============================================================================================
+  //  Expected states on region state transition.
+  //  Notice that there is expected states for transiting to OPENING state, this is because SCP.
+  //  See the comments in regionOpening method for more details.
+  // ============================================================================================
+  private static final State[] STATES_EXPECTED_ON_OPEN = {
+    State.OPENING, // Normal case
+    State.OPEN // Retrying
+  };
+
+  private static final State[] STATES_EXPECTED_ON_CLOSING = {
+    State.OPEN, // Normal case
+    State.CLOSING, // Retrying
+    State.SPLITTING, // Offline the split parent
+    State.MERGING // Offline the merge parents
+  };
+
+  private static final State[] STATES_EXPECTED_ON_CLOSED = {
+    State.CLOSING, // Normal case
+    State.CLOSED // Retrying
+  };
+
+  // This is for manually scheduled region assign, can add other states later if we find out other
+  // usages
+  private static final State[] STATES_EXPECTED_ON_ASSIGN = { State.CLOSED, State.OFFLINE };
+
+  // We only allow unassign or move a region which is in OPEN state.
+  private static final State[] STATES_EXPECTED_ON_UNASSIGN_OR_MOVE = { State.OPEN };
+
+  // ============================================================================================
   //  Region Status update
   //  Should only be called in TransitRegionStateProcedure
   // ============================================================================================
@@ -1432,7 +1461,10 @@ public class AssignmentManager implements ServerListener {
 
   // should be called within the synchronized block of RegionStateNode
   void regionOpening(RegionStateNode regionNode) throws IOException {
-    transitStateAndUpdate(regionNode, State.OPENING, RegionStates.STATES_EXPECTED_ON_OPEN);
+    // As in SCP, for performance reason, there is no TRSP attached with this region, we will not
+    // update the region state, which means that the region could be in any state when we want to
+    // assign it after a RS crash. So here we do not pass the expectedStates parameter.
+    transitStateAndUpdate(regionNode, State.OPENING);
     regionStates.addRegionToServer(regionNode);
     // update the operation count metrics
     metrics.incrementOperationCounter();
@@ -1468,7 +1500,7 @@ public class AssignmentManager implements ServerListener {
   void regionOpened(RegionStateNode regionNode) throws IOException {
     // TODO: OPENING Updates hbase:meta too... we need to do both here and there?
     // That is a lot of hbase:meta writing.
-    transitStateAndUpdate(regionNode, State.OPEN, RegionStates.STATES_EXPECTED_ON_OPEN);
+    transitStateAndUpdate(regionNode, State.OPEN, STATES_EXPECTED_ON_OPEN);
     RegionInfo hri = regionNode.getRegionInfo();
     if (isMetaRegion(hri)) {
       // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
@@ -1483,8 +1515,7 @@ public class AssignmentManager implements ServerListener {
 
   // should be called within the synchronized block of RegionStateNode
   void regionClosing(RegionStateNode regionNode) throws IOException {
-    transitStateAndUpdate(regionNode, State.CLOSING, RegionStates.STATES_EXPECTED_ON_CLOSE);
-    regionStateStore.updateRegionLocation(regionNode);
+    transitStateAndUpdate(regionNode, State.CLOSING, STATES_EXPECTED_ON_CLOSING);
 
     RegionInfo hri = regionNode.getRegionInfo();
     // Set meta has not initialized early. so people trying to create/edit tables will wait
@@ -1502,8 +1533,13 @@ public class AssignmentManager implements ServerListener {
   void regionClosed(RegionStateNode regionNode, boolean normally) throws IOException {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
-    regionNode.transitionState(normally ? State.CLOSED : State.ABNORMALLY_CLOSED,
-      RegionStates.STATES_EXPECTED_ON_CLOSE);
+    if (normally) {
+      regionNode.transitionState(State.CLOSED, STATES_EXPECTED_ON_CLOSED);
+    } else {
+      // For SCP
+      regionNode.transitionState(State.ABNORMALLY_CLOSED);
+    }
+    regionNode.setRegionLocation(null);
     boolean succ = false;
     try {
       regionStateStore.updateRegionLocation(regionNode);
@@ -1517,7 +1553,6 @@ public class AssignmentManager implements ServerListener {
     }
     if (regionLocation != null) {
       regionNode.setLastHost(regionLocation);
-      regionNode.setRegionLocation(null);
       regionStates.removeRegionFromServer(regionLocation, regionNode);
     }
   }

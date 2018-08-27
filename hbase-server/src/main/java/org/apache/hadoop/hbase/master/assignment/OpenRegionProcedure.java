@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionOpenOperation;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -63,5 +64,10 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     serializer.deserialize(OpenRegionProcedureStateData.class);
+  }
+
+  @Override
+  protected boolean shouldDispatch(RegionStateNode regionNode) {
+    return !regionNode.isInState(RegionState.State.OPEN);
   }
 }

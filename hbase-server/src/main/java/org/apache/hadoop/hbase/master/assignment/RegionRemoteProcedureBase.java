@@ -77,16 +77,16 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     throw new UnsupportedOperationException();
   }
 
-  private ProcedureEvent<?> getRegionEvent(MasterProcedureEnv env) {
-    return env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(region)
-      .getProcedureEvent();
+  private RegionStateNode getRegionNode(MasterProcedureEnv env) {
+    return env.getAssignmentManager().getRegionStates().getRegionStateNode(region);
   }
 
   @Override
-  public void remoteCallFailed(MasterProcedureEnv env, ServerName remote,
-      IOException exception) {
-    ProcedureEvent<?> event = getRegionEvent(env);
-    synchronized (event) {
+  public void remoteCallFailed(MasterProcedureEnv env, ServerName remote, IOException exception) {
+    RegionStateNode regionNode = getRegionNode(env);
+    regionNode.lock();
+    try {
+      ProcedureEvent<?> event = regionNode.getProcedureEvent();
       if (event.isReady()) {
         LOG.warn(
           "The procedure event of procedure {} for region {} to server {} is not suspended, " +
@@ -97,6 +97,8 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       LOG.warn("The remote operation {} for region {} to server {} failed", this, region,
         targetServer, exception);
       event.wake(env.getProcedureScheduler());
+    } finally {
+      regionNode.unlock();
     }
   }
 
@@ -115,6 +117,17 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     return false;
   }
 
+  /**
+   * Check whether we still need to make the call to RS.
+   * <p/>
+   * Usually this will not happen if we do not allow assigning a already onlined region. But if we
+   * have something wrong in the RSProcedureDispatcher, where we have already sent the request to
+   * RS, but then we tell the upper layer the remote call is failed due to rpc timeout or connection
+   * closed or anything else, then this issue can still happen. So here we add a check to make it
+   * more robust.
+   */
+  protected abstract boolean shouldDispatch(RegionStateNode regionNode);
+
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
       throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
@@ -122,8 +135,15 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       // we are done, the parent procedure will check whether we are succeeded.
       return null;
     }
-    ProcedureEvent<?> event = getRegionEvent(env);
-    synchronized (event) {
+    RegionStateNode regionNode = getRegionNode(env);
+    regionNode.lock();
+    try {
+      if (!shouldDispatch(regionNode)) {
+        return null;
+      }
+      // The code which wakes us up also needs to lock the RSN so here we do not need to synchronize
+      // on the event.
+      ProcedureEvent<?> event = regionNode.getProcedureEvent();
       try {
         env.getRemoteDispatcher().addOperationToNode(targetServer, this);
       } catch (FailedRemoteDispatchException e) {
@@ -136,6 +156,8 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       event.suspend();
       event.suspendIfNotReady(this);
       throw new ProcedureSuspendedException();
+    } finally {
+      regionNode.unlock();
     }
   }
 
