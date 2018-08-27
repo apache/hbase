@@ -393,6 +393,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>larsfrancke</id>
+      <name>Lars Francke</name>
+      <email>larsfrancke@apache.org</email>
+      <timezone>Europe/Berlin</timezone>
+    </developer>
+    <developer>
       <id>larsgeorge</id>
       <name>Lars George</name>
       <email>larsgeorge@apache.org</email>
