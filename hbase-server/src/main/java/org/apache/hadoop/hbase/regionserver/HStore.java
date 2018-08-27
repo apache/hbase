@@ -1645,6 +1645,17 @@ public class HStore implements Store {
       LOG.error("Error trying to determine if store has referenes, " + "assuming references exists",
         ioe);
       return true;
+    } finally {
+      if (reloadedStoreFiles != null) {
+        for (StoreFile storeFile : reloadedStoreFiles) {
+          try {
+            storeFile.closeReader(false);
+          } catch (IOException ioe) {
+            LOG.warn("Encountered exception closing " + storeFile + ": " + ioe.getMessage());
+            // continue with closing the remaining store files
+          }
+        }
+      }
     }
     return StoreUtils.hasReferences(reloadedStoreFiles);
   }
