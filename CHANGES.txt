@@ -1,12 +1,13 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.4.7 8/31/2018
+Release Notes - HBase - Version 1.4.7 9/3/2018
 
 ** Sub-task
     * [HBASE-20896] - Port HBASE-20866 to branch-1 and branch-1.4 
     * [HBASE-20974] - Backport HBASE-20583 (SplitLogWorker should handle FileNotFoundException when split a wal) to branch-1
 
 ** Bug
+    * [HBASE-20890] - PE filterScan seems to be stuck forever
     * [HBASE-20895] - NPE in RpcServer#readAndProcess
     * [HBASE-20940] - HStore.cansplit should not allow split to happen if it has references
     * [HBASE-20997] - rebuildUserRegions() does not build ReplicaMapping during master switchover
@@ -24,7 +25,10 @@ Release Notes - HBase - Version 1.4.7 8/31/2018
     * [HBASE-20935] - HStore.removeCompactedFiles should log in case it is unable to delete a file
 
 ** Test
-    * [HBASE-21076] - refactor TestTableResource to ask for a multi-region table instead of relying on a split operation
+    * [HBASE-21076] - TestTableResource fails with NPE
+
+** Task
+    * [HBASE-20942] - Improve RpcServer TRACE logging
 
 
 Release Notes - HBase - Version 1.4.6 7/30/2018
