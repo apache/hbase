@@ -117,12 +117,24 @@
       <artifactId>scalatest_${scala.binary.version}</artifactId>
       <version>2.2.4</version>
       <scope>test</scope>
+      <exclusions>
+       <exclusion>
+         <groupId>org.scala-lang</groupId>
+         <artifactId>scala-library</artifactId>
+       </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.scalamock</groupId>
       <artifactId>scalamock-scalatest-support_${scala.binary.version}</artifactId>
       <version>3.1.4</version>
       <scope>test</scope>
+      <exclusions>
+       <exclusion>
+         <groupId>org.scala-lang</groupId>
+         <artifactId>scala-library</artifactId>
+       </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
