@@ -65,16 +65,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
@@ -97,6 +93,10 @@ import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -111,7 +111,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl;
-import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -124,8 +123,8 @@ import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -1914,7 +1913,7 @@ public class TestHBaseFsck {
    */
   @Test (timeout=180000)
   public void testValidLingeringSplitParent() throws Exception {
-    TableName table =
+    final TableName table =
         TableName.valueOf("testLingeringSplitParent");
     Table meta = null;
     try {
@@ -1928,10 +1927,7 @@ public class TestHBaseFsck {
       meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
       HRegionInfo hri = location.getRegionInfo();
 
-      // do a regular split
-      byte[] regionName = location.getRegionInfo().getRegionName();
-      admin.splitRegion(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
-      TestEndToEndSplitTransaction.blockUntilRegionSplit(conf, 60000, regionName, true);
+      splitAndWait(table, location);
 
       // TODO: fixHdfsHoles does not work against splits, since the parent dir lingers on
       // for some time until children references are deleted. HBCK erroneously sees this as
@@ -1957,6 +1953,25 @@ public class TestHBaseFsck {
     }
   }
 
+  private byte[] splitAndWait(final TableName table, HRegionLocation location)
+      throws IOException, Exception {
+
+    // do a regular split
+    final List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(table);
+    byte[] regionName = location.getRegionInfo().getRegionName();
+    admin.splitRegion(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
+    TEST_UTIL.waitFor(60000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        List<HRegion> regions1 = TEST_UTIL.getMiniHBaseCluster().getRegions(table);
+        regions1.removeAll(regions);
+        return regions1.size() == 2;
+      }
+    });
+
+    return regionName;
+  }
+
   /**
    * Split crashed after write to hbase:meta finished for the parent region, but
    * failed to write daughters (pre HBASE-7721 codebase)
@@ -1979,11 +1994,7 @@ public class TestHBaseFsck {
       // after split.
       admin.enableCatalogJanitor(false);
 
-      // do a regular split
-      byte[] regionName = location.getRegionInfo().getRegionName();
-      admin.splitRegion(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
-      TestEndToEndSplitTransaction.blockUntilRegionSplit(conf, 60000, regionName, true);
-
+      byte[] regionName = splitAndWait(table, location);
       PairOfSameType<HRegionInfo> daughters =
           MetaTableAccessor.getDaughterRegions(meta.get(new Get(regionName)));
 
