@@ -137,6 +137,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.apache.htrace.TraceInfo;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.CodedInputStream;
@@ -288,6 +289,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
+
+  protected static final int DEFAULT_TRACE_LOG_MAX_LENGTH = 1000;
+  protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
+  protected static final String KEY_WORD_TRUNCATED = " <TRUNCATED>";
 
   private final int maxRequestSize;
   private final int warnResponseTime;
@@ -2440,8 +2445,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     String stringifiedParam = ProtobufUtil.getShortTextFormat(param);
     if (stringifiedParam.length() > 150) {
       // Truncate to 1000 chars if TRACE is on, else to 150 chars
-      stringifiedParam = stringifiedParam.subSequence(
-          0, LOG.isTraceEnabled() ? 1000 : 150) + " <TRUNCATED>";
+      stringifiedParam = truncateTraceLog(stringifiedParam);
     }
     responseInfo.put("param", stringifiedParam);
     if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
@@ -2497,6 +2501,24 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       return null;
     }
     return listener.getAddress();
+  }
+
+  /**
+   * Truncate to number of chars decided by conf hbase.ipc.trace.log.max.length
+   * if TRACE is on else to 150 chars Refer to Jira HBASE-20826 and HBASE-20942
+   * @param strParam stringifiedParam to be truncated
+   * @return truncated trace log string
+   */
+  @VisibleForTesting
+  String truncateTraceLog(String strParam) {
+    if (LOG.isTraceEnabled()) {
+      int traceLogMaxLength = getConf().getInt(TRACE_LOG_MAX_LENGTH, DEFAULT_TRACE_LOG_MAX_LENGTH);
+      int truncatedLength =
+          strParam.length() < traceLogMaxLength ? strParam.length() : traceLogMaxLength;
+      String truncatedFlag = truncatedLength == strParam.length() ? "" : KEY_WORD_TRUNCATED;
+      return strParam.subSequence(0, truncatedLength) + truncatedFlag;
+    }
+    return strParam.subSequence(0, 150) + KEY_WORD_TRUNCATED;
   }
 
   /**
