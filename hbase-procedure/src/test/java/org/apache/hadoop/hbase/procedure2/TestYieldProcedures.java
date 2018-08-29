@@ -117,9 +117,9 @@ public class TestYieldProcedures {
     // check runnable queue stats
     assertEquals(0, procRunnables.size());
     assertEquals(0, procRunnables.addFrontCalls);
-    assertEquals(18, procRunnables.addBackCalls);
-    assertEquals(15, procRunnables.yieldCalls);
-    assertEquals(19, procRunnables.pollCalls);
+    assertEquals(15, procRunnables.addBackCalls);
+    assertEquals(12, procRunnables.yieldCalls);
+    assertEquals(16, procRunnables.pollCalls);
     assertEquals(3, procRunnables.completionCalls);
   }
 
@@ -157,9 +157,9 @@ public class TestYieldProcedures {
     // check runnable queue stats
     assertEquals(0, procRunnables.size());
     assertEquals(0, procRunnables.addFrontCalls);
-    assertEquals(12, procRunnables.addBackCalls);
-    assertEquals(11, procRunnables.yieldCalls);
-    assertEquals(13, procRunnables.pollCalls);
+    assertEquals(11, procRunnables.addBackCalls);
+    assertEquals(10, procRunnables.yieldCalls);
+    assertEquals(12, procRunnables.pollCalls);
     assertEquals(1, procRunnables.completionCalls);
   }
 
