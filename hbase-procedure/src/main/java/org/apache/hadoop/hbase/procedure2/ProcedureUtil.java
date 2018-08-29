@@ -205,6 +205,10 @@ public final class ProcedureUtil {
     if (proc.hasLock()) {
       builder.setLocked(true);
     }
+
+    if (proc.isBypass()) {
+      builder.setBypass(true);
+    }
     return builder.build();
   }
 
@@ -260,6 +264,10 @@ public final class ProcedureUtil {
 
     if (proto.getLocked()) {
       proc.lockedWhenLoading();
+    }
+
+    if (proto.getBypass()) {
+      proc.bypass();
     }
 
     ProcedureStateSerializer serializer = null;

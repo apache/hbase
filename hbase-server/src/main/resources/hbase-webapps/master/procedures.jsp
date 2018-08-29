@@ -85,7 +85,7 @@
       <tr>
         <td><%= proc.getProcId() %></td>
         <td><%= proc.hasParent() ? proc.getParentProcId() : "" %></td>
-        <td><%= escapeXml(proc.getState().toString()) %></td>
+        <td><%= escapeXml(proc.getState().toString() + (proc.isBypass() ? "(Bypass)" : "")) %></td>
         <td><%= proc.hasOwner() ? escapeXml(proc.getOwner()) : "" %></td>
         <td><%= escapeXml(proc.getProcName()) %></td>
         <td><%= new Date(proc.getSubmittedTime()) %></td>

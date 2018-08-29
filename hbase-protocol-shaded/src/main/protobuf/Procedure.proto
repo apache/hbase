@@ -66,6 +66,9 @@ message Procedure {
 
   // whether the procedure has held the lock
   optional bool locked = 16 [default = false];
+
+  // whether the procedure need to be bypassed
+  optional bool bypass = 17 [default = false];
 }
 
 /**
