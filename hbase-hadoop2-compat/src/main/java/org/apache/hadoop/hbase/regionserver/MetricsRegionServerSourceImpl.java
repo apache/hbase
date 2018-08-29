@@ -54,9 +54,10 @@ public class MetricsRegionServerSourceImpl
   private final MutableFastCounter slowGet;
   private final MutableFastCounter slowIncrement;
   private final MutableFastCounter slowAppend;
+
+  // split related metrics
   private final MutableFastCounter splitRequest;
   private final MutableFastCounter splitSuccess;
-
   private final MetricHistogram splitTimeHisto;
 
   // flush related metrics
