@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -83,7 +85,13 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
     // Region is assigned now. Let's assign it again.
     // Master should not abort, and region should stay assigned.
-    admin.assign(hri.getRegionName()).get();
+    try {
+      admin.assign(hri.getRegionName()).get();
+      fail("Should fail when assigning an already onlined region");
+    } catch (ExecutionException e) {
+      // Expected
+      assertThat(e.getCause(), instanceOf(DoNotRetryRegionException.class));
+    }
     try {
       am.waitForAssignment(hri);
       fail("Expected NoSuchProcedureException");
