@@ -46,6 +46,26 @@ comment to preserve continuity of the CHANGELOG.
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
+---
+
+* [HBASE-20942](https://issues.apache.org/jira/browse/HBASE-20942) | *Major* | **Improve RpcServer TRACE logging**
+
+Allows configuration of the length of RPC messages printed to the log at TRACE level via "hbase.ipc.trace.param.size" in RpcServer.
+
+
+---
+
+* [HBASE-20649](https://issues.apache.org/jira/browse/HBASE-20649) | *Minor* | **Validate HFiles do not have PREFIX\_TREE DataBlockEncoding**
+
+<!-- markdown -->
+Users who have previously made use of prefix tree encoding can now check that their existing HFiles no longer contain data that uses it with an additional preupgrade check command.
+
+```
+hbase pre-upgrade validate-hfile
+```
+
+Please see the "HFile Content validation" section of the ref guide's coverage of the pre-upgrade validator tool for usage details.
+
 
 ---
 
@@ -151,8 +171,6 @@ Log Master WAL Proc at INFO level so can tell where we transition; will help deb
 Users of our integration tests on Hadoop 3 can now add all needed dependencies by pointing at jars included in our binary convenience artifact.
 
 Prior to this fix, downstream users on Hadoop 3 would need to get a copy of the Hamcrest v1.3 jar from elsewhere.
-
-
 
 
 

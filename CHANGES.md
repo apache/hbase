@@ -43,6 +43,7 @@ comment to preserve continuity of the CHANGELOG.
 
 ## Release 2.0.2 - Unreleased (as of 2018-08-27)
 
+
 ### INCOMPATIBLE CHANGES:
 
 | JIRA | Summary | Priority | Component |
@@ -55,6 +56,7 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-20649](https://issues.apache.org/jira/browse/HBASE-20649) | Validate HFiles do not have PREFIX\_TREE DataBlockEncoding |  Minor | Operability, tooling |
 | [HBASE-20833](https://issues.apache.org/jira/browse/HBASE-20833) | Modify pre-upgrade coprocessor validator to support table level coprocessors |  Major | Coprocessors |
 
 
@@ -78,6 +80,8 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-20968](https://issues.apache.org/jira/browse/HBASE-20968) | list\_procedures\_test fails due to no matching regex |  Major | shell, test |
+| [HBASE-21088](https://issues.apache.org/jira/browse/HBASE-21088) | HStoreFile should be closed in HStore#hasReferences |  Major | . |
 | [HBASE-21120](https://issues.apache.org/jira/browse/HBASE-21120) | MoveRegionProcedure makes no progress; goes to STUCK |  Major | amv2 |
 | [HBASE-20772](https://issues.apache.org/jira/browse/HBASE-20772) | Controlled shutdown fills Master log with the disturbing message "No matching procedure found for rit=OPEN, location=ZZZZ, table=YYYYY, region=XXXX transition to CLOSED |  Major | logging |
 | [HBASE-20978](https://issues.apache.org/jira/browse/HBASE-20978) | [amv2] Worker terminating UNNATURALLY during MoveRegionProcedure |  Critical | amv2 |
@@ -144,12 +148,13 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-21054](https://issues.apache.org/jira/browse/HBASE-21054) | Copy down docs, amend to suite branch-2.0, and then commit |  Major | documentation |
+| [HBASE-21083](https://issues.apache.org/jira/browse/HBASE-21083) | Introduce a mechanism to bypass the execution of a stuck procedure |  Major | amv2 |
 | [HBASE-20941](https://issues.apache.org/jira/browse/HBASE-20941) | Create and implement HbckService in master |  Major | . |
 | [HBASE-21072](https://issues.apache.org/jira/browse/HBASE-21072) | Block out HBCK1 in hbase2 |  Major | hbck |
 | [HBASE-21093](https://issues.apache.org/jira/browse/HBASE-21093) | Move TestCreateTableProcedure.testMRegions to a separated file |  Major | test |
 | [HBASE-21094](https://issues.apache.org/jira/browse/HBASE-21094) | Remove the explicit timeout config for TestTruncateTableProcedure |  Major | test |
 | [HBASE-21050](https://issues.apache.org/jira/browse/HBASE-21050) | Exclusive lock may be held by a SUCCESS state procedure forever |  Major | amv2 |
-| [HBASE-21054](https://issues.apache.org/jira/browse/HBASE-21054) | Copy down docs, amend to suite branch-2.0, and then commit |  Major | documentation |
 | [HBASE-21046](https://issues.apache.org/jira/browse/HBASE-21046) | Set version to 2.0.2 on branch-2.0 in prep for first RC |  Major | . |
 | [HBASE-21044](https://issues.apache.org/jira/browse/HBASE-21044) | Disable flakey TestShell list\_procedures |  Major | test |
 | [HBASE-20975](https://issues.apache.org/jira/browse/HBASE-20975) | Lock may not be taken or released while rolling back procedure |  Major | amv2 |
@@ -185,8 +190,10 @@ comment to preserve continuity of the CHANGELOG.
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-20942](https://issues.apache.org/jira/browse/HBASE-20942) | Improve RpcServer TRACE logging |  Major | Operability |
 | [HBASE-20512](https://issues.apache.org/jira/browse/HBASE-20512) | document change to running tests on secure clusters |  Critical | documentation, integration tests, Usability |
 | [HBASE-20989](https://issues.apache.org/jira/browse/HBASE-20989) | Minor, miscellaneous logging fixes |  Trivial | logging |
+
 
 
 ## Release 2.0.1 - Released June 20th, 2018
