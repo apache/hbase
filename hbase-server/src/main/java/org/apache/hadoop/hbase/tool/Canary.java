@@ -599,6 +599,7 @@ public final class Canary implements Tool {
    * True if we are to run in zookeeper 'mode'.
    */
   private boolean zookeeperMode = false;
+  private long permittedFailures = 0;
   private boolean regionServerAllRegions = false;
   private boolean writeSniffing = false;
   private long configuredWriteTableTimeout = DEFAULT_TIMEOUT;
@@ -755,6 +756,19 @@ public final class Canary implements Tool {
             }
             this.configuredReadTableTimeouts.put(nameTimeout[0], timeoutVal);
           }
+        } else if (cmd.equals("-permittedZookeeperFailures")) {
+          i++;
+
+          if (i == args.length) {
+            System.err.println("-permittedZookeeperFailures needs a numeric value argument.");
+            printUsageAndExit();
+          }
+          try {
+            this.permittedFailures = Long.parseLong(args[i]);
+          } catch (NumberFormatException e) {
+            System.err.println("-permittedZookeeperFailures needs a numeric value argument.");
+            printUsageAndExit();
+          }
         } else {
           // no options match
           System.err.println(cmd + " options is invalid.");
@@ -775,6 +789,10 @@ public final class Canary implements Tool {
             + "other modes.");
         printUsageAndExit();
       }
+    }
+    if (this.permittedFailures != 0 && !this.zookeeperMode) {
+      System.err.println("-permittedZookeeperFailures requires -zookeeper mode.");
+      printUsageAndExit();
     }
     if (!this.configuredReadTableTimeouts.isEmpty() && (this.regionServerMode || this.zookeeperMode)) {
       System.err.println("-readTableTimeouts can only be configured in region mode.");
@@ -873,6 +891,8 @@ public final class Canary implements Tool {
         "random one.");
     System.err.println(" -zookeeper      set 'zookeeper mode'; grab zookeeper.znode.parent on " +
         "each ensemble member");
+    System.err.println(" -permittedZookeeperFailures <N>     Ignore first N failures when attempting to " +
+        "connect to individual zookeeper nodes in the ensemble");
     System.err.println(" -daemon         continuous check at defined intervals.");
     System.err.println(" -interval <N>   interval between checks in seconds");
     System.err.println(" -e              consider table/regionserver argument as regular " +
@@ -931,19 +951,19 @@ public final class Canary implements Tool {
           new RegionServerMonitor(connection, monitorTargets, this.useRegExp,
               getSink(connection.getConfiguration(), RegionServerStdOutSink.class),
               this.executor, this.regionServerAllRegions,
-              this.treatFailureAsError);
+              this.treatFailureAsError, this.permittedFailures);
     } else if (this.zookeeperMode) {
       monitor =
           new ZookeeperMonitor(connection, monitorTargets, this.useRegExp,
               getSink(connection.getConfiguration(), ZookeeperStdOutSink.class),
-              this.executor, this.treatFailureAsError);
+              this.executor, this.treatFailureAsError, this.permittedFailures);
     } else {
       monitor =
           new RegionMonitor(connection, monitorTargets, this.useRegExp,
               getSink(connection.getConfiguration(), RegionStdOutSink.class),
               this.executor, this.writeSniffing,
               this.writeTableName, this.treatFailureAsError, this.configuredReadTableTimeouts,
-              this.configuredWriteTableTimeout);
+              this.configuredWriteTableTimeout, this.permittedFailures);
     }
     return monitor;
   }
@@ -965,6 +985,7 @@ public final class Canary implements Tool {
 
     protected boolean done = false;
     protected int errorCode = 0;
+    protected long allowedFailures = 0;
     protected Sink sink;
     protected ExecutorService executor;
 
@@ -981,7 +1002,8 @@ public final class Canary implements Tool {
         return true;
       }
       if (treatFailureAsError &&
-          (sink.getReadFailureCount() > 0 || sink.getWriteFailureCount() > 0)) {
+          (sink.getReadFailureCount() > allowedFailures || sink.getWriteFailureCount() > allowedFailures)) {
+        LOG.error("Too many failures detected, treating failure as error, failing the Canary.");
         errorCode = FAILURE_EXIT_CODE;
         return true;
       }
@@ -994,7 +1016,7 @@ public final class Canary implements Tool {
     }
 
     protected Monitor(Connection connection, String[] monitorTargets, boolean useRegExp, Sink sink,
-        ExecutorService executor, boolean treatFailureAsError) {
+        ExecutorService executor, boolean treatFailureAsError, long allowedFailures) {
       if (null == connection) throw new IllegalArgumentException("connection shall not be null");
 
       this.connection = connection;
@@ -1003,6 +1025,7 @@ public final class Canary implements Tool {
       this.treatFailureAsError = treatFailureAsError;
       this.sink = sink;
       this.executor = executor;
+      this.allowedFailures = allowedFailures;
     }
 
     @Override
@@ -1053,8 +1076,8 @@ public final class Canary implements Tool {
     public RegionMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
         Sink sink, ExecutorService executor, boolean writeSniffing, TableName writeTableName,
         boolean treatFailureAsError, HashMap<String, Long> configuredReadTableTimeouts,
-        long configuredWriteTableTimeout) {
-      super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError);
+        long configuredWriteTableTimeout, long allowedFailures) {
+      super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError, allowedFailures);
       Configuration conf = connection.getConfiguration();
       this.writeSniffing = writeSniffing;
       this.writeTableName = writeTableName;
@@ -1335,9 +1358,9 @@ public final class Canary implements Tool {
     private final int timeout;
 
     protected ZookeeperMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
-        Sink sink, ExecutorService executor, boolean treatFailureAsError)  {
+        Sink sink, ExecutorService executor, boolean treatFailureAsError, long allowedFailures)  {
       super(connection, monitorTargets, useRegExp,
-          sink, executor, treatFailureAsError);
+          sink, executor, treatFailureAsError, allowedFailures);
       Configuration configuration = connection.getConfiguration();
       znode =
           configuration.get(ZOOKEEPER_ZNODE_PARENT,
@@ -1349,6 +1372,11 @@ public final class Canary implements Tool {
       hosts = Lists.newArrayList();
       for (InetSocketAddress server : parser.getServerAddresses()) {
         hosts.add(server.toString());
+      }
+      if (allowedFailures > (hosts.size() - 1) / 2) {
+        LOG.warn("Confirm allowable number of failed ZooKeeper nodes, as quorum will " +
+                        "already be lost. Setting of {} failures is unexpected for {} ensemble size.",
+                allowedFailures, hosts.size());
       }
     }
 
@@ -1399,8 +1427,8 @@ public final class Canary implements Tool {
 
     public RegionServerMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
         Sink sink, ExecutorService executor, boolean allRegions,
-        boolean treatFailureAsError) {
-      super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError);
+        boolean treatFailureAsError, long allowedFailures) {
+      super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError, allowedFailures);
       this.allRegions = allRegions;
     }
 
