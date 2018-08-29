@@ -1610,6 +1610,9 @@ Some use cases for cluster replication include:
 NOTE: Replication is enabled at the granularity of the column family.
 Before enabling replication for a column family, create the table and all column families to be replicated, on the destination cluster.
 
+NOTE: Replication is asynchronous as we send WAL to another cluster in background, which means that when you want to do recovery through replication, you could loss some data. To address this problem, we have introduced a new feature called synchronous replication. As the mechanism is a bit different so we use a separated section to describe it. Please see
+<<Synchronous Replication,Synchronous Replication>>.
+
 === Replication Overview
 
 Cluster replication uses a source-push methodology.
@@ -1637,7 +1640,7 @@ How your application builds on top of the HBase API matters when replication is 
 
 The combination of these two properties (at-least-once delivery and the lack of message ordering) means that some destination clusters may end up in a different state if your application makes use of operations that are not idempotent, e.g. Increments.
 
-To solve the problem, HBase now supports serial replication -- but only versions 2.1.0 and later, not in this version of hbase -- which sends edits to destination cluster as the order of requests from client.
+To solve the problem, HBase now supports serial replication, which sends edits to destination cluster as the order of requests from client. It is available in hbase-2.1.x, not in this version (hbase-2.0.x).
 
 ====
 
