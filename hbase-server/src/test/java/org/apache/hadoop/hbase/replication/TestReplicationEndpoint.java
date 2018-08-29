@@ -54,7 +54,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -307,8 +309,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
     MetricsReplicationSourceSource singleSourceSource = new MetricsReplicationSourceSourceImpl(singleRms, id);
     MetricsReplicationSourceSource globalSourceSource = new MetricsReplicationGlobalSourceSource(globalRms);
+    MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
+    doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
     Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable = new HashMap<>();
-    MetricsSource source = new MetricsSource(id, singleSourceSource, globalSourceSource,
+    MetricsSource source = new MetricsSource(id, singleSourceSource, spyglobalSourceSource,
         singleSourceSourceByTable);
     String gaugeName = "gauge";
     String singleGaugeName = "source.id." + gaugeName;
@@ -327,6 +331,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     source.removeMetric(gaugeName);
     source.setGauge(gaugeName, delta);
     source.updateHistogram(counterName, count);
+    source.incrFailedRecoveryQueue();
 
     verify(singleRms).decGauge(singleGaugeName, delta);
     verify(globalRms).decGauge(gaugeName, delta);
@@ -344,6 +349,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     verify(globalRms).setGauge(gaugeName, delta);
     verify(singleRms).updateHistogram(singleCounterName, count);
     verify(globalRms).updateHistogram(counterName, count);
+    verify(spyglobalSourceSource).incrFailedRecoveryQueue();
 
 
     // check singleSourceSourceByTable metrics.

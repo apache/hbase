@@ -48,6 +48,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -544,6 +545,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     try {
       this.executor.execute(transfer);
     } catch (RejectedExecutionException ex) {
+      CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+        .getGlobalSource().incrFailedRecoveryQueue();
       LOG.info("Cancelling the transfer of " + rsZnode + " because of " + ex.getMessage());
     }
   }

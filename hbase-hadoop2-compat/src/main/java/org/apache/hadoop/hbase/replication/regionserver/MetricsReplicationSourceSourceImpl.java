@@ -254,6 +254,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   }
 
   @Override
+  public void incrFailedRecoveryQueue() {/*no op*/}
+
+  @Override
   public void init() {
     rms.init();
   }
