@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -820,6 +821,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     try {
       this.executor.execute(transfer);
     } catch (RejectedExecutionException ex) {
+      CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+          .getGlobalSource().incrFailedRecoveryQueue();
       LOG.info("Cancelling the transfer of " + deadRS + " because of " + ex.getMessage());
     }
   }
@@ -891,7 +894,12 @@ public class ReplicationSourceManager implements ReplicationListener {
           queueStorage.removeReplicatorIfQueueIsEmpty(deadRS);
         }
       } catch (ReplicationException e) {
-        server.abort("Failed to claim queue from dead regionserver", e);
+        LOG.error(String.format("ReplicationException: cannot claim dead region (%s)'s " +
+            "replication queue. Znode : (%s)" +
+            " Possible solution: check if znode size exceeds jute.maxBuffer value. " +
+            " If so, increase it for both client and server side." + e),  deadRS,
+            queueStorage.getRsNode(deadRS));
+        server.abort("Failed to claim queue from dead regionserver.", e);
         return;
       }
       // Copying over the failed queue is completed.

@@ -52,6 +52,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableFastCounter repeatedFileBytes;
   private final MutableFastCounter completedWAL;
   private final MutableFastCounter completedRecoveryQueue;
+  private final MutableFastCounter failedRecoveryQueue;
 
   public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -89,6 +90,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     completedWAL = rms.getMetricsRegistry().getCounter(SOURCE_COMPLETED_LOGS, 0L);
     completedRecoveryQueue = rms.getMetricsRegistry()
             .getCounter(SOURCE_COMPLETED_RECOVERY_QUEUES, 0L);
+    failedRecoveryQueue = rms.getMetricsRegistry()
+            .getCounter(SOURCE_FAILED_RECOVERY_QUEUES, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -199,7 +202,10 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   public void incrCompletedRecoveryQueue() {
     completedRecoveryQueue.incr(1L);
   }
-
+  @Override
+  public void incrFailedRecoveryQueue() {
+    failedRecoveryQueue.incr(1L);
+  }
   @Override
   public void init() {
     rms.init();
