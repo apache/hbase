@@ -46,15 +46,18 @@ public class MetricsRegionServer {
   private MetricsRegionServerSource serverSource;
   private MetricsRegionServerWrapper regionServerWrapper;
   private RegionServerTableMetrics tableMetrics;
+  private final MetricsTable metricsTable;
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
 
-  public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper, Configuration conf) {
+  public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper, Configuration conf,
+      MetricsTable metricsTable) {
     this(regionServerWrapper,
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
             .createServer(regionServerWrapper),
-        createTableMetrics(conf));
+        createTableMetrics(conf),
+        metricsTable);
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
     // MetricsRegionServerSource
@@ -66,10 +69,12 @@ public class MetricsRegionServer {
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
                       MetricsRegionServerSource serverSource,
-                      RegionServerTableMetrics tableMetrics) {
+                      RegionServerTableMetrics tableMetrics,
+                      MetricsTable metricsTable) {
     this.regionServerWrapper = regionServerWrapper;
     this.serverSource = serverSource;
     this.tableMetrics = tableMetrics;
+    this.metricsTable = metricsTable;
   }
 
   /**
@@ -193,19 +198,34 @@ public class MetricsRegionServer {
     serverSource.incrSplitSuccess();
   }
 
-  public void updateFlush(long t, long memstoreSize, long fileSize) {
+  public void updateFlush(String table, long t, long memstoreSize, long fileSize) {
     serverSource.updateFlushTime(t);
     serverSource.updateFlushMemStoreSize(memstoreSize);
     serverSource.updateFlushOutputSize(fileSize);
+
+    if (table != null) {
+      metricsTable.updateFlushTime(table, memstoreSize);
+      metricsTable.updateFlushMemstoreSize(table, memstoreSize);
+      metricsTable.updateFlushOutputSize(table, fileSize);
+    }
+
   }
 
-  public void updateCompaction(boolean isMajor, long t, int inputFileCount, int outputFileCount,
+  public void updateCompaction(String table, boolean isMajor, long t, int inputFileCount, int outputFileCount,
       long inputBytes, long outputBytes) {
     serverSource.updateCompactionTime(isMajor, t);
     serverSource.updateCompactionInputFileCount(isMajor, inputFileCount);
     serverSource.updateCompactionOutputFileCount(isMajor, outputFileCount);
     serverSource.updateCompactionInputSize(isMajor, inputBytes);
     serverSource.updateCompactionOutputSize(isMajor, outputBytes);
+
+    if (table != null) {
+      metricsTable.updateCompactionTime(table, isMajor, t);
+      metricsTable.updateCompactionInputFileCount(table, isMajor, inputFileCount);
+      metricsTable.updateCompactionOutputFileCount(table, isMajor, outputFileCount);
+      metricsTable.updateCompactionInputSize(table, isMajor, inputBytes);
+      metricsTable.updateCompactionOutputSize(table, isMajor, outputBytes);
+    }
   }
 
   public void updateBulkLoad(long millis) {

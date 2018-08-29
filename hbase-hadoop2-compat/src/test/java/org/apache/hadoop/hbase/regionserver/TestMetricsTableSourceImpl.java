@@ -44,10 +44,13 @@ public class TestMetricsTableSourceImpl {
     MetricsRegionServerSourceFactory metricsFact =
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
 
-    MetricsTableSource one = metricsFact.createTable("ONETABLE", new TableWrapperStub("ONETABLE"));
-    MetricsTableSource oneClone = metricsFact.createTable("ONETABLE",
-            new TableWrapperStub("ONETABLE"));
-    MetricsTableSource two = metricsFact.createTable("TWOTABLE", new TableWrapperStub("TWOTABLE"));
+    MetricsTableSource one = metricsFact.createTable(
+        "ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
+    MetricsTableSource oneClone = metricsFact.createTable(
+        "ONETABLE",
+            new MetricsTableWrapperStub("ONETABLE"));
+    MetricsTableSource two = metricsFact.createTable(
+        "TWOTABLE", new MetricsTableWrapperStub("TWOTABLE"));
 
     assertEquals(0, one.compareTo(oneClone));
     assertEquals(one.hashCode(), oneClone.hashCode());
@@ -70,49 +73,8 @@ public class TestMetricsTableSourceImpl {
   public void testGetTableMetrics() {
     MetricsTableSource oneTbl =
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-        .createTable("ONETABLE", new TableWrapperStub("ONETABLE"));
+        .createTable("ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
     assertEquals("ONETABLE", oneTbl.getTableName());
   }
 
-  static class TableWrapperStub implements MetricsTableWrapperAggregate {
-    private String tableName;
-
-    public TableWrapperStub(String tableName) {
-      this.tableName = tableName;
-    }
-
-    @Override
-    public long getReadRequestsCount(String table) {
-      return 10;
-    }
-
-    @Override
-    public long getWriteRequestsCount(String table) {
-      return 20;
-    }
-
-    @Override
-    public long getTotalRequestsCount(String table) {
-      return 30;
-    }
-
-    @Override
-    public long getMemStoresSize(String table) {
-      return 1000;
-    }
-
-    @Override
-    public long getStoreFilesSize(String table) {
-      return 2000;
-    }
-
-    @Override
-    public long getTableSize(String table) {
-      return 3000;
-    }
-
-    public String getTableName() {
-      return tableName;
-    }
-  }
 }

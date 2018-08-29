@@ -254,14 +254,14 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
           "action at the RPC Server (Sums 'readRequestsCount' and 'writeRequestsCount'); counts" +
           "once per access whether a Put of 1M rows or a Get that returns 1M Results";
   String READ_REQUEST_COUNT = "readRequestCount";
+  String FILTERED_READ_REQUEST_COUNT = "filteredReadRequestCount";
+  String FILTERED_READ_REQUEST_COUNT_DESC =
+      "Number of read requests this region server has answered.";
   String READ_REQUEST_COUNT_DESC =
       "Number of read requests with non-empty Results that this RegionServer has answered.";
   String READ_REQUEST_RATE_PER_SECOND = "readRequestRatePerSecond";
   String READ_REQUEST_RATE_DESC =
       "Rate of answering the read requests by this region server per second.";
-  String FILTERED_READ_REQUEST_COUNT = "filteredReadRequestCount";
-  String FILTERED_READ_REQUEST_COUNT_DESC =
-    "Number of filtered read requests this RegionServer has answered.";
   String WRITE_REQUEST_COUNT = "writeRequestCount";
   String WRITE_REQUEST_COUNT_DESC =
       "Number of mutation requests this RegionServer has answered.";

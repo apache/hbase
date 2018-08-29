@@ -196,5 +196,10 @@ public class TestMetricsRegionSourceImpl {
     public long getMaxFlushQueueSize() {
       return 0;
     }
+
+    @Override
+    public long getTotalRequestCount() {
+      return 0;
+    }
   }
 }
