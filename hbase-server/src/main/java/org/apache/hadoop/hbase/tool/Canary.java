@@ -599,7 +599,6 @@ public final class Canary implements Tool {
    * True if we are to run in zookeeper 'mode'.
    */
   private boolean zookeeperMode = false;
-
   private long permittedFailures = 0;
   private boolean regionServerAllRegions = false;
   private boolean writeSniffing = false;
@@ -892,6 +891,8 @@ public final class Canary implements Tool {
         "random one.");
     System.err.println(" -zookeeper      set 'zookeeper mode'; grab zookeeper.znode.parent on " +
         "each ensemble member");
+    System.err.println(" -permittedZookeeperFailures <N>     Ignore first N failures when attempting to " +
+        "connect to individual zookeeper nodes in the ensemble");
     System.err.println(" -daemon         continuous check at defined intervals.");
     System.err.println(" -interval <N>   interval between checks in seconds");
     System.err.println(" -e              consider table/regionserver argument as regular " +
@@ -957,8 +958,7 @@ public final class Canary implements Tool {
       monitor =
           new ZookeeperMonitor(connection, monitorTargets, this.useRegExp,
               getSink(connection.getConfiguration(), ZookeeperStdOutSink.class),
-              this.executor, this.treatFailureAsError,
-              this.permittedFailures);
+              this.executor, this.treatFailureAsError, this.permittedFailures);
     } else {
       monitor =
           new RegionMonitor(connection, monitorTargets, this.useRegExp,
@@ -1078,10 +1078,9 @@ public final class Canary implements Tool {
     public RegionMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
         Sink sink, ExecutorService executor, boolean writeSniffing, TableName writeTableName,
         boolean treatFailureAsError, HashMap<String, Long> configuredReadTableTimeouts,
-        long configuredWriteTableTimeout,
-        long allowedFailures) {
+        long configuredWriteTableTimeout, long allowedFailures) {
       super(connection, monitorTargets, useRegExp, sink, executor, treatFailureAsError,
-          allowedFailures);
+              allowedFailures);
       Configuration conf = connection.getConfiguration();
       this.writeSniffing = writeSniffing;
       this.writeTableName = writeTableName;
