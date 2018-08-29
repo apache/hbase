@@ -278,6 +278,11 @@ public class MetricsSource implements BaseSource {
     globalSourceSource.incrCompletedRecoveryQueue();
   }
 
+  public void incrFailedRecoveryQueue() {
+    globalSourceSource.incrFailedRecoveryQueue();
+  }
+
+
   @Override
   public void init() {
     singleSourceSource.init();

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,7 +52,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -306,7 +307,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
     MetricsReplicationSourceSource singleSourceSource = new MetricsReplicationSourceSourceImpl(singleRms, id);
     MetricsReplicationSourceSource globalSourceSource = new MetricsReplicationGlobalSourceSource(globalRms);
-    MetricsSource source = new MetricsSource(id, singleSourceSource, globalSourceSource);
+    MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
+    doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
+    MetricsSource source = new MetricsSource(id, singleSourceSource, spyglobalSourceSource);
     String gaugeName = "gauge";
     String singleGaugeName = "source.id." + gaugeName;
     long delta = 1;
@@ -324,6 +327,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     source.removeMetric(gaugeName);
     source.setGauge(gaugeName, delta);
     source.updateHistogram(counterName, count);
+    source.incrFailedRecoveryQueue();
 
     verify(singleRms).decGauge(singleGaugeName, delta);
     verify(globalRms).decGauge(gaugeName, delta);
@@ -341,6 +345,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     verify(globalRms).setGauge(gaugeName, delta);
     verify(singleRms).updateHistogram(singleCounterName, count);
     verify(globalRms).updateHistogram(counterName, count);
+    verify(spyglobalSourceSource).incrFailedRecoveryQueue();
   }
 
   private void doPut(byte[] row) throws IOException {
