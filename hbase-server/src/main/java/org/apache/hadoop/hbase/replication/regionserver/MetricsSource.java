@@ -290,6 +290,10 @@ public class MetricsSource {
     globalSourceSource.incrCompletedRecoveryQueue();
   }
 
+  public void incrFailedRecoveryQueue() {
+    globalSourceSource.incrFailedRecoveryQueue();
+  }
+
   public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
     return singleSourceSourceByTable;
   }

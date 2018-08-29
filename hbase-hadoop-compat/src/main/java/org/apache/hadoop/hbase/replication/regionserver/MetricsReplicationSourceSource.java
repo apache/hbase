@@ -47,6 +47,7 @@ public interface MetricsReplicationSourceSource {
   public static final String SOURCE_REPEATED_LOG_FILE_BYTES = "source.repeatedLogFileBytes";
   public static final String SOURCE_COMPLETED_LOGS = "source.completedLogs";
   public static final String SOURCE_COMPLETED_RECOVERY_QUEUES = "source.completedRecoverQueues";
+  public static final String SOURCE_FAILED_RECOVERY_QUEUES = "source.failedRecoverQueues";
 
   void setLastShippedAge(long age);
   void incrSizeOfLogQueue(int size);
@@ -70,4 +71,6 @@ public interface MetricsReplicationSourceSource {
   void incrRepeatedFileBytes(final long bytes);
   void incrCompletedWAL();
   void incrCompletedRecoveryQueue();
+  void incrFailedRecoveryQueue();
+
 }

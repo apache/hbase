@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -285,6 +287,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     MetricsReplicationSourceSource singleSourceSource = new MetricsReplicationSourceSourceImpl(singleRms, id);
     MetricsReplicationSourceSource globalSourceSource = new MetricsReplicationGlobalSourceSource(globalRms);
     MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
+    doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
     Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable = new HashMap<>();
     MetricsSource source = new MetricsSource(id, singleSourceSource, spyglobalSourceSource,
         singleSourceSourceByTable);
@@ -304,6 +307,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     // cannot put more concreate value here to verify because the age is arbitrary.
     // as long as it's greater than 0, we see it as correct answer.
     Assert.assertTrue(msr.getLastShippedAge() > 0);
+
+    source.incrFailedRecoveryQueue();
+    verify(spyglobalSourceSource).incrFailedRecoveryQueue();
   }
 
   private void doPut(byte[] row) throws IOException {

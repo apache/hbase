@@ -490,7 +490,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       }
       return new Pair<>(newCluster, logQueue);
     } catch (KeeperException e) {
-      LOG.warn("Got exception in copyQueueFromLockedRS: ", e);
+      LOG.warn("Got exception in copyQueueFromLockedRS: "+
+        " Possible problem: check if znode size exceeds jute.maxBuffer value. "
+          + "If so, increase it for both client and server side." ,e);
+
     } catch (InterruptedException e) {
       LOG.warn(e);
       Thread.currentThread().interrupt();

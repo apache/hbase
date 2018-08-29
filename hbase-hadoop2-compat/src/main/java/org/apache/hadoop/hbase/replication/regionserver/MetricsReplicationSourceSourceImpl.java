@@ -256,4 +256,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   public void incrCompletedRecoveryQueue() {
     completedRecoveryQueue.incr(1L);
   }
+
+  @Override
+  public void incrFailedRecoveryQueue() {
+    /*no op*/
+  }
 }
