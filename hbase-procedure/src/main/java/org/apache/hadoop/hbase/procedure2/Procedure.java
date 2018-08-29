@@ -145,6 +145,32 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   private boolean lockedWhenLoading = false;
 
   /**
+   * Used for force complete of the procedure without
+   * actually doing any logic in the procedure.
+   * If bypass is set to true, when executing it will return null when
+   * {@link #doExecute(Object)} to finish the procedure and releasing any locks
+   * it may currently hold.
+   * Bypassing a procedure is not like aborting. Aborting a procedure will trigger
+   * a rollback. And since the {@link #abort(Object)} method is overrideable
+   * Some procedures may have chosen to ignore the aborting.
+   */
+  private volatile boolean bypass = false;
+
+  public boolean isBypass() {
+    return bypass;
+  }
+
+  /**
+   * set the bypass to true
+   * Only called in {@link ProcedureExecutor#bypassProcedure(long, long, boolean)} for now,
+   * DO NOT use this method alone, since we can't just bypass
+   * one single procedure. We need to bypass its ancestor too. So making it package private
+   */
+  void bypass() {
+    this.bypass = true;
+  }
+
+  /**
    * The main code of the procedure. It must be idempotent since execute()
    * may be called multiple times in case of machine failure in the middle
    * of the execution.
@@ -422,6 +448,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     toStringState(sb);
 
     sb.append(", hasLock=").append(locked);
+
+    if (bypass) {
+      sb.append(", bypass=").append(bypass);
+    }
 
     if (hasException()) {
       sb.append(", exception=" + getException());
@@ -870,6 +900,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     try {
       updateTimestamp();
+      if (bypass) {
+        LOG.info("{} bypassed, returning null to finish it", this);
+        return null;
+      }
       return execute(env);
     } finally {
       updateTimestamp();
@@ -883,6 +917,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       throws IOException, InterruptedException {
     try {
       updateTimestamp();
+      if (bypass) {
+        LOG.info("{} bypassed, skipping rollback", this);
+        return;
+      }
       rollback(env);
     } finally {
       updateTimestamp();
@@ -897,6 +935,11 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
 
     if (isFinished()) {
       LOG.debug("{} is already finished, skip acquiring lock.", this);
+      return;
+    }
+
+    if (isBypass()) {
+      LOG.debug("{} is already bypassed, skip acquiring lock.", this);
       return;
     }
 
