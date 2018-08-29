@@ -964,6 +964,119 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   /**
+   * Bypass a procedure. If the procedure is set to bypass, all the logic in
+   * execute/rollback will be ignored and it will return success, whatever.
+   * It is used to recover buggy stuck procedures, releasing the lock resources
+   * and letting other procedures to run. Bypassing one procedure (and its ancestors will
+   * be bypassed automatically) may leave the cluster in a middle state, e.g. region
+   * not assigned, or some hdfs files left behind. After getting rid of those stuck procedures,
+   * the operators may have to do some clean up on hdfs or schedule some assign procedures
+   * to let region online. DO AT YOUR OWN RISK.
+   * <p>
+   * A procedure can be bypassed only if
+   * 1. The procedure is in state of RUNNABLE, WAITING, WAITING_TIMEOUT
+   * or it is a root procedure without any child.
+   * 2. No other worker thread is executing it
+   * 3. No child procedure has been submitted
+   *
+   * <p>
+   * If all the requirements are meet, the procedure and its ancestors will be
+   * bypassed and persisted to WAL.
+   *
+   * <p>
+   * If the procedure is in WAITING state, will set it to RUNNABLE add it to run queue.
+   * TODO: What about WAITING_TIMEOUT?
+   * @param id the procedure id
+   * @param lockWait time to wait lock
+   * @param force if force set to true, we will bypass the procedure even if it is executing.
+   *              This is for procedures which can't break out during executing(due to bug, mostly)
+   *              In this case, bypassing the procedure is not enough, since it is already stuck
+   *              there. We need to restart the master after bypassing, and letting the problematic
+   *              procedure to execute wth bypass=true, so in that condition, the procedure can be
+   *              successfully bypassed.
+   * @return true if bypass success
+   * @throws IOException IOException
+   */
+  public boolean bypassProcedure(long id, long lockWait, boolean force) throws IOException  {
+    Procedure<TEnvironment> procedure = getProcedure(id);
+    if (procedure == null) {
+      LOG.debug("Procedure with id={} does not exist, skipping bypass", id);
+      return false;
+    }
+
+    LOG.debug("Begin bypass {} with lockWait={}, force={}", procedure, lockWait, force);
+
+    IdLock.Entry lockEntry = procExecutionLock.tryLockEntry(procedure.getProcId(), lockWait);
+    if (lockEntry == null && !force) {
+      LOG.debug("Waited {} ms, but {} is still running, skipping bypass with force={}",
+          lockWait, procedure, force);
+      return false;
+    } else if (lockEntry == null) {
+      LOG.debug("Waited {} ms, but {} is still running, begin bypass with force={}",
+          lockWait, procedure, force);
+    }
+    try {
+      // check whether the procedure is already finished
+      if (procedure.isFinished()) {
+        LOG.debug("{} is already finished, skipping bypass", procedure);
+        return false;
+      }
+
+      if (procedure.hasChildren()) {
+        LOG.debug("{} has children, skipping bypass", procedure);
+        return false;
+      }
+
+      // If the procedure has no parent or no child, we are safe to bypass it in whatever state
+      if (procedure.hasParent() && procedure.getState() != ProcedureState.RUNNABLE
+          && procedure.getState() != ProcedureState.WAITING
+          && procedure.getState() != ProcedureState.WAITING_TIMEOUT) {
+        LOG.debug("Bypassing procedures in RUNNABLE, WAITING and WAITING_TIMEOUT states "
+                + "(with no parent), {}",
+            procedure);
+        return false;
+      }
+
+      // Now, the procedure is not finished, and no one can execute it since we take the lock now
+      // And we can be sure that its ancestor is not running too, since their child has not
+      // finished yet
+      Procedure current = procedure;
+      while (current != null) {
+        LOG.debug("Bypassing {}", current);
+        current.bypass();
+        store.update(procedure);
+        long parentID = current.getParentProcId();
+        current = getProcedure(parentID);
+      }
+
+      //wake up waiting procedure, already checked there is no child
+      if (procedure.getState() == ProcedureState.WAITING) {
+        procedure.setState(ProcedureState.RUNNABLE);
+        store.update(procedure);
+      }
+
+      // If we don't have the lock, we can't re-submit the queue,
+      // since it is already executing. To get rid of the stuck situation, we
+      // need to restart the master. With the procedure set to bypass, the procedureExecutor
+      // will bypass it and won't get stuck again.
+      if (lockEntry != null) {
+        // add the procedure to run queue,
+        scheduler.addFront(procedure);
+        LOG.debug("Bypassing {} and its ancestors successfully, adding to queue", procedure);
+      } else {
+        LOG.debug("Bypassing {} and its ancestors successfully, but since it is already running, "
+            + "skipping add to queue", procedure);
+      }
+      return true;
+
+    } finally {
+      if (lockEntry != null) {
+        procExecutionLock.releaseLockEntry(lockEntry);
+      }
+    }
+  }
+
+  /**
    * Add a new root-procedure to the executor.
    * @param proc the new procedure to execute.
    * @param nonceKey the registered unique identifier for this operation from the client or process.
@@ -1280,6 +1393,10 @@ public class ProcedureExecutor<TEnvironment> {
   //  Executions
   // ==========================================================================
   private void executeProcedure(Procedure<TEnvironment> proc) {
+    if (proc.isFinished()) {
+      LOG.debug("{} is already finished, skipping execution", proc);
+      return;
+    }
     final Long rootProcId = getRootProcedureId(proc);
     if (rootProcId == null) {
       // The 'proc' was ready to run but the root procedure was rolledback
@@ -1433,7 +1550,8 @@ public class ProcedureExecutor<TEnvironment> {
       subprocStack.remove(stackTail);
 
       // if the procedure is kind enough to pass the slot to someone else, yield
-      if (proc.isYieldAfterExecutionStep(getEnvironment())) {
+      // if the proc is already finished, do not yield
+      if (!proc.isFinished() && proc.isYieldAfterExecutionStep(getEnvironment())) {
         return LockState.LOCK_YIELD_WAIT;
       }
 

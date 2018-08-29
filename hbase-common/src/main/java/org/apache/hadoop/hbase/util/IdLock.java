@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Allows multiple concurrent clients to lock on a numeric id with a minimal
@@ -86,6 +87,59 @@ public class IdLock {
           }
 
           --existing.numWaiters;  // Remove ourselves from waiters.
+          existing.locked = true;
+          return existing;
+        }
+        // If the entry is not locked, it might already be deleted from the
+        // map, so we cannot return it. We need to get our entry into the map
+        // or get someone else's locked entry.
+      }
+    }
+    return entry;
+  }
+
+  /**
+   * Blocks until the lock corresponding to the given id is acquired.
+   *
+   * @param id an arbitrary number to lock on
+   * @param time time to wait in ms
+   * @return an "entry" to pass to {@link #releaseLockEntry(Entry)} to release
+   *         the lock
+   * @throws IOException if interrupted
+   */
+  public Entry tryLockEntry(long id, long time) throws IOException {
+    Preconditions.checkArgument(time >= 0);
+    Entry entry = new Entry(id);
+    Entry existing;
+    long waitUtilTS = System.currentTimeMillis() + time;
+    long remaining = time;
+    while ((existing = map.putIfAbsent(entry.id, entry)) != null) {
+      synchronized (existing) {
+        if (existing.locked) {
+          ++existing.numWaiters;  // Add ourselves to waiters.
+          try {
+            while (existing.locked) {
+              existing.wait(remaining);
+              if (existing.locked) {
+                long currentTS = System.currentTimeMillis();
+                if (currentTS >= waitUtilTS) {
+                  // time is up
+                  return null;
+                } else {
+                  // our wait is waken, but the lock is still taken, this can happen
+                  // due to JDK Object's wait/notify mechanism.
+                  // Calculate the new remaining time to wait
+                  remaining = waitUtilTS - currentTS;
+                }
+              }
+
+            }
+          } catch (InterruptedException e) {
+            throw new InterruptedIOException(
+                "Interrupted waiting to acquire sparse lock");
+          } finally {
+            --existing.numWaiters;  // Remove ourselves from waiters.
+          }
           existing.locked = true;
           return existing;
         }
