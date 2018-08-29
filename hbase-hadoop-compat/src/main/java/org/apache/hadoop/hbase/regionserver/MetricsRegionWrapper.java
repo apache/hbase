@@ -107,6 +107,8 @@ public interface MetricsRegionWrapper {
    */
   long getWriteRequestCount();
 
+  long getTotalRequestCount();
+
   long getNumFilesCompacted();
 
   long getNumBytesCompacted();

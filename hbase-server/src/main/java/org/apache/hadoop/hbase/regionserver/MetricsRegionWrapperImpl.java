@@ -167,6 +167,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
+  public long getTotalRequestCount() {
+    return getReadRequestCount() + getWriteRequestCount();
+  }
+
+  @Override
   public long getNumCompactionsFailed() {
     return this.region.compactionsFailed.sum();
   }

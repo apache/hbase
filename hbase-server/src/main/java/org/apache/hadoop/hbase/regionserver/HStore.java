@@ -1430,9 +1430,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     long now = EnvironmentEdgeManager.currentTime();
     if (region.getRegionServerServices() != null
         && region.getRegionServerServices().getMetrics() != null) {
-      region.getRegionServerServices().getMetrics().updateCompaction(cr.isMajor(),
-          now - compactionStartTime, cr.getFiles().size(), newFiles.size(), cr.getSize(),
-          outputBytes);
+      region.getRegionServerServices().getMetrics().updateCompaction(
+          region.getTableDescriptor().getTableName().getNameAsString(),
+          cr.isMajor(), now - compactionStartTime, cr.getFiles().size(),
+          newFiles.size(), cr.getSize(), outputBytes);
+
     }
 
     logCompactionEndMessage(cr, sfs, now, compactionStartTime);

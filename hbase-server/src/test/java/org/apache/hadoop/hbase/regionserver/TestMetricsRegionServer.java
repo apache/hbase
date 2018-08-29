@@ -57,7 +57,7 @@ public class TestMetricsRegionServer {
   @Before
   public void setUp() {
     wrapper = new MetricsRegionServerWrapperStub();
-    rsm = new MetricsRegionServer(wrapper, new Configuration(false));
+    rsm = new MetricsRegionServer(wrapper, new Configuration(false), null);
     serverSource = rsm.getMetricsSource();
   }
 
@@ -185,14 +185,14 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testFlush() {
-    rsm.updateFlush(1, 2, 3);
+    rsm.updateFlush(null, 1, 2, 3);
     HELPER.assertCounter("flushTime_num_ops", 1, serverSource);
     HELPER.assertCounter("flushMemstoreSize_num_ops", 1, serverSource);
     HELPER.assertCounter("flushOutputSize_num_ops", 1, serverSource);
     HELPER.assertCounter("flushedMemstoreBytes", 2, serverSource);
     HELPER.assertCounter("flushedOutputBytes", 3, serverSource);
 
-    rsm.updateFlush(10, 20, 30);
+    rsm.updateFlush(null, 10, 20, 30);
     HELPER.assertCounter("flushTimeNumOps", 2, serverSource);
     HELPER.assertCounter("flushMemstoreSize_num_ops", 2, serverSource);
     HELPER.assertCounter("flushOutputSize_num_ops", 2, serverSource);
@@ -202,7 +202,7 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testCompaction() {
-    rsm.updateCompaction(false, 1, 2, 3, 4, 5);
+    rsm.updateCompaction(null, false, 1, 2, 3, 4, 5);
     HELPER.assertCounter("compactionTime_num_ops", 1, serverSource);
     HELPER.assertCounter("compactionInputFileCount_num_ops", 1, serverSource);
     HELPER.assertCounter("compactionInputSize_num_ops", 1, serverSource);
@@ -210,7 +210,7 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("compactedInputBytes", 4, serverSource);
     HELPER.assertCounter("compactedoutputBytes", 5, serverSource);
 
-    rsm.updateCompaction(false, 10, 20, 30, 40, 50);
+    rsm.updateCompaction(null, false, 10, 20, 30, 40, 50);
     HELPER.assertCounter("compactionTime_num_ops", 2, serverSource);
     HELPER.assertCounter("compactionInputFileCount_num_ops", 2, serverSource);
     HELPER.assertCounter("compactionInputSize_num_ops", 2, serverSource);
@@ -219,7 +219,7 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("compactedoutputBytes", 55, serverSource);
 
     // do major compaction
-    rsm.updateCompaction(true, 100, 200, 300, 400, 500);
+    rsm.updateCompaction(null, true, 100, 200, 300, 400, 500);
 
     HELPER.assertCounter("compactionTime_num_ops", 3, serverSource);
     HELPER.assertCounter("compactionInputFileCount_num_ops", 3, serverSource);

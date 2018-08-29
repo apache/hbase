@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -46,22 +47,46 @@ public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
-  @Override
-  public void register(String table, MetricsTableSource source) {
-    tableSources.put(table, source);
+  private void register(MetricsTableSource source) {
+    synchronized (this) {
+      source.registerMetrics();
+    }
   }
 
   @Override
-  public void deregister(String table) {
+  public void deleteTableSource(String table) {
     try {
-      tableSources.remove(table);
+      synchronized (this) {
+        MetricsTableSource source = tableSources.remove(table);
+        if (source != null) {
+          source.close();
+        }
+      }
     } catch (Exception e) {
       // Ignored. If this errors out it means that someone is double
-      // closing the region source and the region is already nulled out.
-      LOG.info(
-        "Error trying to remove " + table + " from " + this.getClass().getSimpleName(),
-        e);
+      // closing the user source and the user metrics is already nulled out.
+      LOG.info("Error trying to remove " + table + " from " + getClass().getSimpleName(), e);
     }
+  }
+
+  @Override
+  public MetricsTableSource getOrCreateTableSource(String table,
+      MetricsTableWrapperAggregate wrapper) {
+    MetricsTableSource source = tableSources.get(table);
+    if (source != null) {
+      return source;
+    }
+    source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
+      .createTable(table, wrapper);
+    MetricsTableSource prev = tableSources.putIfAbsent(table, source);
+
+    if (prev != null) {
+      return prev;
+    } else {
+      // register the new metrics now
+      register(source);
+    }
+    return source;
   }
 
   /**

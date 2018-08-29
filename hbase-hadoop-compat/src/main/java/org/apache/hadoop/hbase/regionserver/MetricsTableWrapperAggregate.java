@@ -30,7 +30,7 @@ public interface MetricsTableWrapperAggregate {
   /**
    * Get the number of read requests that have been issued against this table
    */
-  long getReadRequestsCount(String table);
+  long getReadRequestCount(String table);
 
   /**
    * Get the number of CoprocessorService requests that have been issued against this table
@@ -38,27 +38,75 @@ public interface MetricsTableWrapperAggregate {
   long getCpRequestsCount(String table);
 
   /**
-   * Get the number of write requests that have been issued against this table
+   * Get the total number of filtered read requests that have been issued against this table
    */
-  long getWriteRequestsCount(String table);
+  long getFilteredReadRequestCount(String table);
+  /**
+   * Get the number of write requests that have been issued for this table
+   */
+  long getWriteRequestCount(String table);
 
   /**
-   * Get the total number of requests that have been issued against this table
+   * Get the total number of requests that have been issued for this table
    */
   long getTotalRequestsCount(String table);
 
   /**
    * Get the memory store size against this table
    */
-  long getMemStoresSize(String table);
+  long getMemStoreSize(String table);
 
   /**
    * Get the store file size against this table
    */
-  long getStoreFilesSize(String table);
+  long getStoreFileSize(String table);
 
   /**
    * Get the table region size against this table
    */
   long getTableSize(String table);
+
+
+  /**
+   * Get the average region size for this table
+   */
+  long getAvgRegionSize(String table);
+
+  /**
+   * Get the number of regions hosted on for this table
+   */
+  long getNumRegions(String table);
+
+  /**
+   * Get the number of stores hosted on for this table
+   */
+  long getNumStores(String table);
+
+  /**
+   * Get the number of store files hosted for this table
+   */
+  long getNumStoreFiles(String table);
+
+  /**
+   * @return Max age of store files for this table
+   */
+  long getMaxStoreFileAge(String table);
+
+  /**
+   * @return Min age of store files for this table
+   */
+  long getMinStoreFileAge(String table);
+
+  /**
+   *  @return Average age of store files for this table
+   */
+  long getAvgStoreFileAge(String table);
+
+  /**
+   *  @return Number of reference files for this table
+   */
+  long getNumReferenceFiles(String table);
+
+
+
 }
