@@ -90,20 +90,14 @@ public class TestCanaryTool {
 
   @Test
   public void testBasicZookeeperCanaryWorks() throws Exception {
-    Integer port =
-        Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
-    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM,
-        "localhost:" + port + "/hbase");
-    ExecutorService executor = new ScheduledThreadPoolExecutor(2);
-    Canary.ZookeeperStdOutSink sink = spy(new Canary.ZookeeperStdOutSink());
-    Canary canary = new Canary(executor, sink);
-    String[] args = { "-t", "10000", "-zookeeper" };
-    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
+    final String[] args = { "-t", "10000", "-zookeeper" };
+    testZookeeperCanaryWithArgs(args);
+  }
 
-    String baseZnode = testingUtility.getConfiguration()
-        .get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    verify(sink, atLeastOnce())
-        .publishReadTiming(eq(baseZnode), eq("localhost:" + port), anyLong());
+  @Test
+  public void testZookeeperCanaryPermittedFailuresArgumentWorks() throws Exception {
+    final String[] args = { "-t", "10000", "-zookeeper", "-treatFailureAsError", "-permittedZookeeperFailures", "1" };
+    testZookeeperCanaryWithArgs(args);
   }
 
   @Test
@@ -250,4 +244,19 @@ public class TestCanaryTool {
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
   }
 
+  private void testZookeeperCanaryWithArgs(String[] args) throws Exception {
+    Integer port =
+      Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
+    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM,
+      "localhost:" + port + "/hbase");
+    ExecutorService executor = new ScheduledThreadPoolExecutor(2);
+    Canary.ZookeeperStdOutSink sink = spy(new Canary.ZookeeperStdOutSink());
+    Canary canary = new Canary(executor, sink);
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
+
+    String baseZnode = testingUtility.getConfiguration()
+      .get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    verify(sink, atLeastOnce())
+      .publishReadTiming(eq(baseZnode), eq("localhost:" + port), anyLong());
+  }
 }
