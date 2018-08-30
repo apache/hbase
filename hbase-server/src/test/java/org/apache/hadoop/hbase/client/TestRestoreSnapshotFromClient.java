@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -64,18 +65,18 @@ public class TestRestoreSnapshotFromClient {
       .withLookingForStuckThread(true)
       .build();
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private final byte[] FAMILY = Bytes.toBytes("cf");
+  protected final byte[] FAMILY = Bytes.toBytes("cf");
 
-  private byte[] emptySnapshot;
-  private byte[] snapshotName0;
-  private byte[] snapshotName1;
-  private byte[] snapshotName2;
-  private int snapshot0Rows;
-  private int snapshot1Rows;
-  private TableName tableName;
-  private Admin admin;
+  protected byte[] emptySnapshot;
+  protected byte[] snapshotName0;
+  protected byte[] snapshotName1;
+  protected byte[] snapshotName2;
+  protected int snapshot0Rows;
+  protected int snapshot1Rows;
+  protected TableName tableName;
+  protected Admin admin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -362,5 +363,10 @@ public class TestRestoreSnapshotFromClient {
       }
     }
     return families;
+  }
+
+  protected void splitRegion(final HRegionInfo regionInfo) throws IOException {
+    byte[][] splitPoints = Bytes.split(regionInfo.getStartKey(), regionInfo.getEndKey(), 1);
+    admin.split(regionInfo.getTable(), splitPoints[1]);
   }
 }
