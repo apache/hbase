@@ -92,7 +92,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
           ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null,
             !params.containsKey(NOCACHE_PARAM_NAME));
         Cell value = null;
-        RowModel rowModel = new RowModel(rk);
+        RowModel rowModel = new RowModel(rowSpec.getRow());
         if (generator.hasNext()) {
           while ((value = generator.next()) != null) {
             rowModel.addCell(new CellModel(CellUtil.cloneFamily(value), CellUtil
