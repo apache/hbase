@@ -15,20 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
-
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.metrics.Interns;
-import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import org.apache.hadoop.metrics2.MetricHistogram;
-import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
-import org.apache.hadoop.metrics2.lib.MutableFastCounter;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.COMPACTED_INPUT_BYTES;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.COMPACTED_INPUT_BYTES_DESC;
@@ -73,6 +60,17 @@ import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPL
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_REQUEST_KEY;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_DESC;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_KEY;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.metrics.Interns;
+import org.apache.hadoop.metrics2.MetricHistogram;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsTableSourceImpl implements MetricsTableSource {
@@ -123,7 +121,7 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
 
   public MetricsTableSourceImpl(String tblName,
       MetricsTableAggregateSourceImpl aggregate, MetricsTableWrapperAggregate tblWrapperAgg) {
-    LOG.debug("Creating new MetricsTableSourceImpl for table ");
+    LOG.debug("Creating new MetricsTableSourceImpl for table '{}'", tblName);
     this.tableName = TableName.valueOf(tblName);
     this.agg = aggregate;
 
@@ -240,17 +238,11 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     if (!(source instanceof MetricsTableSourceImpl)) {
       return -1;
     }
-
     MetricsTableSourceImpl impl = (MetricsTableSourceImpl) source;
-    if (impl == null) {
-      return -1;
-    }
-
     return Long.compare(hashCode, impl.hashCode);
   }
 
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
-
     // If there is a close that started be double extra sure
     // that we're not getting any locks and not putting data
     // into the metrics that should be removed. So early out
@@ -263,7 +255,6 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     // This ensures that removes of the metrics
     // can't happen while we are putting them back in.
     synchronized (this) {
-
       // It's possible that a close happened between checking
       // the closed variable and getting the lock.
       if (closed.get()) {

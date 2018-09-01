@@ -17,7 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,15 +36,19 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMetricsTableAggregate {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMetricsTableAggregate.class);
 
-  public static MetricsAssertHelper HELPER =
+  private static final Logger LOG = LoggerFactory.getLogger(TestMetricsTableAggregate.class);
+
+  private static MetricsAssertHelper HELPER =
     CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   private String tableName = "testTableMetrics";
@@ -87,6 +98,7 @@ public class TestMetricsTableAggregate {
     HELPER.assertGauge(pre + "averageRegionSize", 88, agg);
   }
 
+  @Test
   public void testFlush() {
     rsm.updateFlush(tableName, 1, 2, 3);
     HELPER.assertCounter(pre + "flushTime_num_ops", 1, agg);
@@ -139,4 +151,32 @@ public class TestMetricsTableAggregate {
     HELPER.assertCounter(pre + "majorCompactedoutputBytes", 500, agg);
   }
 
+  private void update(AtomicBoolean succ, int round, CyclicBarrier barrier) {
+    try {
+      for (int i = 0; i < round; i++) {
+        String tn = tableName + "-" + i;
+        barrier.await(10, TimeUnit.SECONDS);
+        rsm.updateFlush(tn, 100, 1000, 500);
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to update metrics", e);
+      succ.set(false);
+    }
+  }
+
+  @Test
+  public void testConcurrentUpdate() throws InterruptedException {
+    int threadNumber = 10;
+    int round = 100;
+    AtomicBoolean succ = new AtomicBoolean(true);
+    CyclicBarrier barrier = new CyclicBarrier(threadNumber);
+    Thread[] threads = IntStream.range(0, threadNumber)
+      .mapToObj(i -> new Thread(() -> update(succ, round, barrier), "Update-Worker-" + i))
+      .toArray(Thread[]::new);
+    Stream.of(threads).forEach(Thread::start);
+    for (Thread t : threads) {
+      t.join();
+    }
+    assertTrue(succ.get());
+  }
 }
