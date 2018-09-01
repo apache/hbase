@@ -48,19 +48,15 @@ public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
   }
 
   private void register(MetricsTableSource source) {
-    synchronized (this) {
-      source.registerMetrics();
-    }
+    source.registerMetrics();
   }
 
   @Override
   public void deleteTableSource(String table) {
     try {
-      synchronized (this) {
-        MetricsTableSource source = tableSources.remove(table);
-        if (source != null) {
-          source.close();
-        }
+      MetricsTableSource source = tableSources.remove(table);
+      if (source != null) {
+        source.close();
       }
     } catch (Exception e) {
       // Ignored. If this errors out it means that someone is double
@@ -76,17 +72,13 @@ public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
     if (source != null) {
       return source;
     }
-    source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-      .createTable(table, wrapper);
-    MetricsTableSource prev = tableSources.putIfAbsent(table, source);
-
-    if (prev != null) {
-      return prev;
-    } else {
+    MetricsTableSource newSource = CompatibilitySingletonFactory
+      .getInstance(MetricsRegionServerSourceFactory.class).createTable(table, wrapper);
+    return tableSources.computeIfAbsent(table, k -> {
       // register the new metrics now
-      register(source);
-    }
-    return source;
+      newSource.registerMetrics();
+      return newSource;
+    });
   }
 
   /**
