@@ -177,23 +177,23 @@ class AccessControlFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj.getClass() == this.getClass()))) {
+    if (!(obj instanceof AccessControlFilter)) {
       return false;
     }
-    if(this == obj){
+    if (this == obj){
       return true;
     }
     AccessControlFilter f=(AccessControlFilter)obj;
     return this.authManager.equals(f.authManager) &&
-        this.table.equals(f.table) &&
-        this.user.equals(f.user) &&
-        this.strategy.equals(f.strategy) &&
-        this.cfVsMaxVersions.equals(f.cfVsMaxVersions);
+      this.table.equals(f.table) &&
+      this.user.equals(f.user) &&
+      this.strategy.equals(f.strategy) &&
+      this.cfVsMaxVersions.equals(f.cfVsMaxVersions);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(this.authManager, this.table, this.strategy, this.user,
-        this.cfVsMaxVersions);
+      this.cfVsMaxVersions);
   }
 }

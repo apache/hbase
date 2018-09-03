@@ -24,7 +24,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -284,7 +283,7 @@ public class FilterListWithAND extends FilterListBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof FilterListWithAND))) {
+    if (!(obj instanceof FilterListWithAND)) {
       return false;
     }
     if (this == obj) {
@@ -296,6 +295,6 @@ public class FilterListWithAND extends FilterListBase {
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.seekHintFilters, Arrays.hashCode(this.filters.toArray()));
+    return Objects.hash(this.seekHintFilters, this.filters);
   }
 }

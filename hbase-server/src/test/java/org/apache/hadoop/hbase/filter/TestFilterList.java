@@ -1028,10 +1028,10 @@ public class TestFilterList {
 
     @Override
     public boolean equals(Object obj) {
-      if(obj == null || !(obj instanceof  TransformFilter)){
+      if(!(obj instanceof  TransformFilter)){
         return false;
       }
-      if(obj == this){
+      if (obj == this) {
         return true;
       }
       TransformFilter f = (TransformFilter)obj;

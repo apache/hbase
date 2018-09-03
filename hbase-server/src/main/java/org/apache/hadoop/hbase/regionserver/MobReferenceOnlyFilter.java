@@ -39,4 +39,17 @@ class MobReferenceOnlyFilter extends FilterBase {
     }
     return ReturnCode.SKIP;
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof MobReferenceOnlyFilter)) {
+      return false;
+    }
+    return obj == this;
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }
