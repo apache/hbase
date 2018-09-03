@@ -315,16 +315,12 @@ public class DependentColumnFilter extends CompareFilter {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof DependentColumnFilter))) {
-      return false;
-    }
-    DependentColumnFilter f = (DependentColumnFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(Bytes.hashCode(this.getFamily()), Bytes.hashCode(this.getQualifier()),
-        this.dropDependentColumn());
+    return Objects.hash(Bytes.hashCode(getFamily()), Bytes.hashCode(getQualifier()),
+      dropDependentColumn(), getComparator(), getCompareOperator());
   }
 }

@@ -137,11 +137,7 @@ public class KeyOnlyFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof KeyOnlyFilter))) {
-      return false;
-    }
-    KeyOnlyFilter f = (KeyOnlyFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

@@ -59,7 +59,7 @@ public final class ColumnCountOnRowFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj.getClass() == this.getClass()))) {
+    if (!(obj instanceof ColumnCountOnRowFilter)) {
       return false;
     }
     if (this == obj) {
