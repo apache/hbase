@@ -158,11 +158,7 @@ public class RandomRowFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof RandomRowFilter))) {
-      return false;
-    }
-    RandomRowFilter f = (RandomRowFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

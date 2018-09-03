@@ -242,16 +242,12 @@ public class ColumnValueFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof ColumnValueFilter))) {
-      return false;
-    }
-    ColumnValueFilter f = (ColumnValueFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(Bytes.hashCode(this.getFamily()), Bytes.hashCode(this.getQualifier()),
-        this.getCompareOperator(), this.getComparator());
+    return Objects.hash(Bytes.hashCode(getFamily()), Bytes.hashCode(getQualifier()),
+      getCompareOperator(), getComparator());
   }
 }

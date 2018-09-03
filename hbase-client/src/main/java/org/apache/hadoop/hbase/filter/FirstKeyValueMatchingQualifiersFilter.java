@@ -137,11 +137,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof FirstKeyValueMatchingQualifiersFilter))) {
-      return false;
-    }
-    FirstKeyValueMatchingQualifiersFilter f = (FirstKeyValueMatchingQualifiersFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

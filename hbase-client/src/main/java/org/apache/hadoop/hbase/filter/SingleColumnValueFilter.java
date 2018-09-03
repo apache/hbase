@@ -464,16 +464,12 @@ public class SingleColumnValueFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(SingleColumnValueFilter.class.isInstance(obj)))) {
-      return false;
-    }
-    SingleColumnValueFilter f = (SingleColumnValueFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(Bytes.hashCode(this.getFamily()), Bytes.hashCode(this.getQualifier()),
-      this.op, this.getComparator(), this.getFilterIfMissing(), this.getLatestVersionOnly());
+    return Objects.hash(Bytes.hashCode(getFamily()), Bytes.hashCode(getQualifier()),
+      this.op, getComparator(), getFilterIfMissing(), getLatestVersionOnly());
   }
 }

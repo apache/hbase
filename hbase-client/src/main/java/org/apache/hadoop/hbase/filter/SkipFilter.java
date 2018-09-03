@@ -165,11 +165,7 @@ public class SkipFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj.getClass() == this.getClass()))) {
-      return false;
-    }
-    SkipFilter f = (SkipFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
