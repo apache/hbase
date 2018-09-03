@@ -136,11 +136,7 @@ public class ColumnCountGetFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof ColumnCountGetFilter))) {
-      return false;
-    }
-    ColumnCountGetFilter f = (ColumnCountGetFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

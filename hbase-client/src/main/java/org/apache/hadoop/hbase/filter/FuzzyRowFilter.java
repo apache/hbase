@@ -650,15 +650,11 @@ public class FuzzyRowFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof FuzzyRowFilter))) {
-      return false;
-    }
-    FuzzyRowFilter f = (FuzzyRowFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.fuzzyKeysData.toArray());
+    return Objects.hash(this.fuzzyKeysData);
   }
 }

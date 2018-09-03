@@ -516,7 +516,7 @@ public class MultiRowRangeFilter extends FilterBase {
 
     @Override
     public boolean equals(Object obj){
-      if (obj == null || (!(obj instanceof RowRange))) {
+      if (!(obj instanceof RowRange)) {
         return false;
       }
       if (this == obj) {
@@ -540,15 +540,11 @@ public class MultiRowRangeFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof MultiRowRangeFilter))) {
-      return false;
-    }
-    MultiRowRangeFilter f = (MultiRowRangeFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.rangeList.toArray());
+    return Objects.hash(this.rangeList);
   }
 }

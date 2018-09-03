@@ -277,17 +277,14 @@ final public class FilterList extends FilterBase {
   public String toString() {
     return this.filterListBase.toString();
   }
+
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof FilterList))) {
-      return false;
-    }
-    FilterList f = (FilterList) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.getOperator(), Arrays.hashCode(this.getFilters().toArray()));
+    return Objects.hash(getOperator(), getFilters());
   }
 }

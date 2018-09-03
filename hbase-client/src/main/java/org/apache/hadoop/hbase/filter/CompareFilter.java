@@ -325,11 +325,7 @@ public abstract class CompareFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof CompareFilter))) {
-      return false;
-    }
-    CompareFilter f = (CompareFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

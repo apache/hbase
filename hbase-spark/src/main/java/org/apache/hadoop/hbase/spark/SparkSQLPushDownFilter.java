@@ -29,7 +29,6 @@ import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.spark.datasources.BytesEncoder;
 import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder;
@@ -279,7 +278,7 @@ public class SparkSQLPushDownFilter extends FilterBase{
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof SparkSQLPushDownFilter))) {
+    if (!(obj instanceof SparkSQLPushDownFilter)) {
       return false;
     }
     if (this == obj) {
@@ -297,8 +296,8 @@ public class SparkSQLPushDownFilter extends FilterBase{
       i++;
     }
     return this.dynamicLogicExpression.equals(f.dynamicLogicExpression) &&
-        this.currentCellToColumnIndexMap.equals(f.currentCellToColumnIndexMap) &&
-        this.encoderClassName.equals(f.encoderClassName);
+      this.currentCellToColumnIndexMap.equals(f.currentCellToColumnIndexMap) &&
+      this.encoderClassName.equals(f.encoderClassName);
   }
 
   @Override

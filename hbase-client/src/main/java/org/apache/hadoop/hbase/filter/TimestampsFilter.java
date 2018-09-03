@@ -242,15 +242,11 @@ public class TimestampsFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof TimestampsFilter))) {
-      return false;
-    }
-    TimestampsFilter f = (TimestampsFilter) obj;
-    return this.areSerializedFieldsEqual(f);
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.getTimestamps().toArray());
+    return Objects.hash(getTimestamps());
   }
 }
