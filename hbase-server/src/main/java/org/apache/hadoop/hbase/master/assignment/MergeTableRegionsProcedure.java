@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -663,7 +664,7 @@ public class MergeTableRegionsProcedure
    * Rollback close regions
    **/
   private void rollbackCloseRegionsForMerge(MasterProcedureEnv env) throws IOException {
-    AssignmentManagerUtil.reopenRegionsForRollback(env, Stream.of(regionsToMerge),
+    AssignmentManagerUtil.reopenRegionsForRollback(env, Arrays.asList(regionsToMerge),
       getRegionReplication(env), getServerName(env));
   }
 
@@ -676,7 +677,7 @@ public class MergeTableRegionsProcedure
   private TransitRegionStateProcedure[] createAssignProcedures(MasterProcedureEnv env)
       throws IOException {
     return AssignmentManagerUtil.createAssignProceduresForOpeningNewRegions(env,
-      Stream.of(mergedRegion), getRegionReplication(env), getServerName(env));
+      Collections.singletonList(mergedRegion), getRegionReplication(env), getServerName(env));
   }
 
   private int getRegionReplication(final MasterProcedureEnv env) throws IOException {

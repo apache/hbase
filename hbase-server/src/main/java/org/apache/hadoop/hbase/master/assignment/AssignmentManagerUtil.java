@@ -18,12 +18,15 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -47,6 +50,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
  */
 @InterfaceAudience.Private
 final class AssignmentManagerUtil {
+  private static final int DEFAULT_REGION_REPLICA = 1;
+
   private AssignmentManagerUtil() {
   }
 
@@ -136,38 +141,56 @@ final class AssignmentManagerUtil {
   }
 
   private static TransitRegionStateProcedure[] createAssignProcedures(MasterProcedureEnv env,
-      Stream<RegionInfo> regions, int regionReplication, ServerName targetServer) {
-    return regions
-      .flatMap(hri -> IntStream.range(0, regionReplication)
-        .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(hri, i)))
-      .map(env.getAssignmentManager().getRegionStates()::getOrCreateRegionStateNode)
-      .map(regionNode -> {
-        TransitRegionStateProcedure proc =
-          TransitRegionStateProcedure.assign(env, regionNode.getRegionInfo(), targetServer);
-        regionNode.lock();
-        try {
-          // should never fail, as we have the exclusive region lock, and the region is newly
-          // created, or has been successfully closed so should not be on any servers, so SCP will
-          // not process it either.
-          assert !regionNode.isInTransition();
-          regionNode.setProcedure(proc);
-        } finally {
-          regionNode.unlock();
-        }
-        return proc;
-      }).toArray(TransitRegionStateProcedure[]::new);
+      List<RegionInfo> regions, int regionReplication, ServerName targetServer) {
+    // create the assign procs only for the primary region using the targetServer
+    TransitRegionStateProcedure[] primaryRegionProcs = regions.stream()
+        .map(env.getAssignmentManager().getRegionStates()::getOrCreateRegionStateNode)
+        .map(regionNode -> {
+          TransitRegionStateProcedure proc =
+              TransitRegionStateProcedure.assign(env, regionNode.getRegionInfo(), targetServer);
+          regionNode.lock();
+          try {
+            // should never fail, as we have the exclusive region lock, and the region is newly
+            // created, or has been successfully closed so should not be on any servers, so SCP will
+            // not process it either.
+            assert !regionNode.isInTransition();
+            regionNode.setProcedure(proc);
+          } finally {
+            regionNode.unlock();
+          }
+          return proc;
+        }).toArray(TransitRegionStateProcedure[]::new);
+    if (regionReplication == DEFAULT_REGION_REPLICA) {
+      // this is the default case
+      return primaryRegionProcs;
+    }
+    // collect the replica region infos
+    List<RegionInfo> replicaRegionInfos =
+        new ArrayList<RegionInfo>(regions.size() * (regionReplication - 1));
+    for (RegionInfo hri : regions) {
+      // start the index from 1
+      for (int i = 1; i < regionReplication; i++) {
+        replicaRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(hri, i));
+      }
+    }
+    // create round robin procs. Note that we exclude the primary region's target server
+    TransitRegionStateProcedure[] replicaRegionAssignProcs =
+        env.getAssignmentManager().createRoundRobinAssignProcedures(replicaRegionInfos,
+          Collections.singletonList(targetServer));
+    // combine both the procs and return the result
+    return ArrayUtils.addAll(primaryRegionProcs, replicaRegionAssignProcs);
   }
 
   static TransitRegionStateProcedure[] createAssignProceduresForOpeningNewRegions(
-      MasterProcedureEnv env, Stream<RegionInfo> regions, int regionReplication,
+      MasterProcedureEnv env, List<RegionInfo> regions, int regionReplication,
       ServerName targetServer) {
     return createAssignProcedures(env, regions, regionReplication, targetServer);
   }
 
-  static void reopenRegionsForRollback(MasterProcedureEnv env, Stream<RegionInfo> regions,
+  static void reopenRegionsForRollback(MasterProcedureEnv env, List<RegionInfo> regions,
       int regionReplication, ServerName targetServer) {
     TransitRegionStateProcedure[] procs =
-      createAssignProcedures(env, regions, regionReplication, targetServer);
+        createAssignProcedures(env, regions, regionReplication, targetServer);
     env.getMasterServices().getMasterProcedureExecutor().submitProcedures(procs);
   }
 

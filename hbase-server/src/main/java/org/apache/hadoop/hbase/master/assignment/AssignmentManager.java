@@ -663,16 +663,22 @@ public class AssignmentManager implements ServerListener {
    *         scheme). If at assign-time, the target chosen is no longer up, thats fine, the
    *         AssignProcedure will ask the balancer for a new target, and so on.
    */
-  public TransitRegionStateProcedure[] createRoundRobinAssignProcedures(
-      List<RegionInfo> hris) {
+  public TransitRegionStateProcedure[] createRoundRobinAssignProcedures(List<RegionInfo> hris,
+      List<ServerName> serversToExclude) {
     if (hris.isEmpty()) {
       return new TransitRegionStateProcedure[0];
+    }
+
+    if (serversToExclude != null
+        && this.master.getServerManager().getOnlineServersList().size() == 1) {
+      LOG.debug("Only one region server found and hence going ahead with the assignment");
+      serversToExclude = null;
     }
     try {
       // Ask the balancer to assign our regions. Pass the regions en masse. The balancer can do
       // a better job if it has all the assignments in the one lump.
       Map<ServerName, List<RegionInfo>> assignments = getBalancer().roundRobinAssignment(hris,
-        this.master.getServerManager().createDestinationServersList(null));
+        this.master.getServerManager().createDestinationServersList(serversToExclude));
       // Return mid-method!
       return createAssignProcedures(assignments);
     } catch (HBaseIOException hioe) {
@@ -680,6 +686,17 @@ public class AssignmentManager implements ServerListener {
     }
     // If an error above, fall-through to this simpler assign. Last resort.
     return createAssignProcedures(hris);
+  }
+
+  /**
+   * Create round-robin assigns. Use on table creation to distribute out regions across cluster.
+   * @return AssignProcedures made out of the passed in <code>hris</code> and a call to the balancer
+   *         to populate the assigns with targets chosen using round-robin (default balancer
+   *         scheme). If at assign-time, the target chosen is no longer up, thats fine, the
+   *         AssignProcedure will ask the balancer for a new target, and so on.
+   */
+  public TransitRegionStateProcedure[] createRoundRobinAssignProcedures(List<RegionInfo> hris) {
+    return createRoundRobinAssignProcedures(hris, null);
   }
 
   @VisibleForTesting

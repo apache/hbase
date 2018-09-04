@@ -22,6 +22,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -539,8 +540,9 @@ public class SplitTableRegionProcedure
    * Rollback close parent region
    */
   private void openParentRegion(MasterProcedureEnv env) throws IOException {
-    AssignmentManagerUtil.reopenRegionsForRollback(env, Stream.of(getParentRegion()),
-      getRegionReplication(env), getParentRegionServerName(env));
+    AssignmentManagerUtil.reopenRegionsForRollback(env,
+      Collections.singletonList((getParentRegion())), getRegionReplication(env),
+      getParentRegionServerName(env));
   }
 
   /**
@@ -813,9 +815,11 @@ public class SplitTableRegionProcedure
 
   private TransitRegionStateProcedure[] createAssignProcedures(MasterProcedureEnv env)
       throws IOException {
-    return AssignmentManagerUtil.createAssignProceduresForOpeningNewRegions(env,
-      Stream.of(daughter_1_RI, daughter_2_RI), getRegionReplication(env),
-      getParentRegionServerName(env));
+    List<RegionInfo> hris = new ArrayList<RegionInfo>(2);
+    hris.add(daughter_1_RI);
+    hris.add(daughter_2_RI);
+    return AssignmentManagerUtil.createAssignProceduresForOpeningNewRegions(env, hris,
+      getRegionReplication(env), getParentRegionServerName(env));
   }
 
   private int getRegionReplication(final MasterProcedureEnv env) throws IOException {
