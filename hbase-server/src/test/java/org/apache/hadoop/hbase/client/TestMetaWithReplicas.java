@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -46,8 +47,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.master.NoSuchProcedureException;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -103,18 +104,14 @@ public class TestMetaWithReplicas {
             getMetaRegionLocation(TEST_UTIL.getZooKeeperWatcher());
     LOG.info("HBASE:META DEPLOY: on " + hbaseMetaServerName);
     sns.add(hbaseMetaServerName);
-    for (int replicaId = 1; replicaId < 3; replicaId ++) {
-      RegionInfo h =
-          RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO,
-              replicaId);
-      try {
-        am.waitForAssignment(h);
-        ServerName sn = am.getRegionStates().getRegionServerOfRegion(h);
-        LOG.info("HBASE:META DEPLOY: " + h.getRegionNameAsString() + " on " + sn);
-        sns.add(sn);
-      } catch (NoSuchProcedureException e) {
-        LOG.info("Presume the procedure has been cleaned up so just proceed: " + e.toString());
-      }
+    for (int replicaId = 1; replicaId < 3; replicaId++) {
+      RegionInfo h = RegionReplicaUtil
+        .getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId);
+      AssignmentTestingUtil.waitForAssignment(am, h);
+      ServerName sn = am.getRegionStates().getRegionServerOfRegion(h);
+      assertNotNull(sn);
+      LOG.info("HBASE:META DEPLOY: " + h.getRegionNameAsString() + " on " + sn);
+      sns.add(sn);
     }
     // Fun. All meta region replicas have ended up on the one server. This will cause this test
     // to fail ... sometimes.
