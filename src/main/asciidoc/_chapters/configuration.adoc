@@ -111,23 +111,23 @@ HBase recommends downstream users rely on JDK releases that are marked as Long T
 |JDK 10
 
 |2.0
-|link:http://search-hadoop.com/m/YGbbsPxZ723m3as[Not Supported]
-|yes
-|link:https://issues.apache.org/jira/browse/HBASE-20264[Not Supported]
-|link:https://issues.apache.org/jira/browse/HBASE-20264[Not Supported]
+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:exclamation-circle[role="yellow"] Non-LTS, see link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
+|icon:exclamation-circle[role="yellow"] Non-LTS, see link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
 
 |1.3
-|yes
-|yes
-|link:https://issues.apache.org/jira/browse/HBASE-20264[Not Supported]
-|link:https://issues.apache.org/jira/browse/HBASE-20264[Not Supported]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:exclamation-circle[role="yellow"] Non-LTS, see link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
+|icon:exclamation-circle[role="yellow"] Non-LTS, see link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
 
 
 |1.2
-|yes
-|yes
-|link:https://issues.apache.org/jira/browse/HBASE-20264[Not Supported]
-|link:https://issues.apache.org/jira/browse/HBASE-20264[Not Supported]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:exclamation-circle[role="yellow"] Non-LTS, see link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
+|icon:exclamation-circle[role="yellow"] Non-LTS, see link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
 
 |===
 
@@ -213,26 +213,28 @@ Use the following legend to interpret this table:
 
 .Hadoop version support matrix
 
-* "S" = supported
-* "X" = not supported
-* "NT" = Not tested
+* icon:check-circle[role="green"] = Tested to be fully-functional
+* icon:times-circle[role="red"] = Known to not be fully-functional
+* icon:exclamation-circle[role="yellow"] = Not tested, may/may-not function
 
 [cols="1,1,1,1,1,1", options="header"]
 |===
 | | HBase-1.2.x | HBase-1.3.x | HBase-1.5.x | HBase-2.0.x | HBase-2.1.x
-|Hadoop-2.4.x | S | S | X | X | X
-|Hadoop-2.5.x | S | S | X | X | X
-|Hadoop-2.6.0 | X | X | X | X | X
-|Hadoop-2.6.1+ | S | S | X | S | X
-|Hadoop-2.7.0 | X | X | X | X | X
-|Hadoop-2.7.1+ | S | S | S | S | S
-|Hadoop-2.8.[0-1] | X | X | X | X | X
-|Hadoop-2.8.2 | NT | NT | NT | NT | NT
-|Hadoop-2.8.3+ | NT | NT | NT | S | S
-|Hadoop-2.9.0 | X | X | X | X | X
-|Hadoop-2.9.1+ | NT | NT | NT | NT | NT
-|Hadoop-3.0.x | X | X | X | X | X
-|Hadoop-3.1.0 | X | X | X | X | X
+|Hadoop-2.4.x | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.5.x | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.6.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.6.1+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-2.7.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.7.1+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-2.8.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.8.2 | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"]
+|Hadoop-2.8.3+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-2.9.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.9.1+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"]
+|Hadoop-3.0.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.0.3+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |===
 
 .Hadoop Pre-2.6.1 and JDK 1.8 Kerberos
