@@ -50,7 +50,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
   private final ProcedureCoordinator coordinator;
 
   public EnabledTableSnapshotHandler(SnapshotDescription snapshot, MasterServices master,
-                                     final SnapshotManager manager) {
+      final SnapshotManager manager) throws IOException {
     super(snapshot, master, manager);
     this.coordinator = manager.getCoordinator();
   }

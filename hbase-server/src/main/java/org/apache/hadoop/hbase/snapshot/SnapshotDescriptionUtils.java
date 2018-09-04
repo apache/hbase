@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
+import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 
@@ -28,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
@@ -112,6 +115,12 @@ public final class SnapshotDescriptionUtils {
   /** Temporary directory under the snapshot directory to store in-progress snapshots */
   public static final String SNAPSHOT_TMP_DIR_NAME = ".tmp";
 
+  /**
+   * The configuration property that determines the filepath of the snapshot
+   * base working directory
+   */
+  public static final String SNAPSHOT_WORKING_DIR = "hbase.snapshot.working.dir";
+
   /** This tag will be created in in-progess snapshots */
   public static final String SNAPSHOT_IN_PROGRESS = ".inprogress";
   // snapshot operation values
@@ -191,46 +200,52 @@ public final class SnapshotDescriptionUtils {
    * @return the final directory for the completed snapshot
    */
   public static Path getCompletedSnapshotDir(final String snapshotName, final Path rootDir) {
-    return getCompletedSnapshotDir(getSnapshotsDir(rootDir), snapshotName);
+    return getSpecifiedSnapshotDir(getSnapshotsDir(rootDir), snapshotName);
   }
 
   /**
    * Get the general working directory for snapshots - where they are built, where they are
    * temporarily copied on export, etc.
    * @param rootDir root directory of the HBase installation
+   * @param conf Configuration of the HBase instance
    * @return Path to the snapshot tmp directory, relative to the passed root directory
    */
-  public static Path getWorkingSnapshotDir(final Path rootDir) {
-    return new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME);
+  public static Path getWorkingSnapshotDir(final Path rootDir, final Configuration conf) {
+    return new Path(conf.get(SNAPSHOT_WORKING_DIR,
+        getDefaultWorkingSnapshotDir(rootDir).toString()));
   }
 
   /**
    * Get the directory to build a snapshot, before it is finalized
    * @param snapshot snapshot that will be built
    * @param rootDir root directory of the hbase installation
+   * @param conf Configuration of the HBase instance
    * @return {@link Path} where one can build a snapshot
    */
-  public static Path getWorkingSnapshotDir(SnapshotDescription snapshot, final Path rootDir) {
-    return getCompletedSnapshotDir(getWorkingSnapshotDir(rootDir), snapshot.getName());
+  public static Path getWorkingSnapshotDir(SnapshotDescription snapshot, final Path rootDir,
+      Configuration conf) {
+    return getWorkingSnapshotDir(snapshot.getName(), rootDir, conf);
   }
 
   /**
    * Get the directory to build a snapshot, before it is finalized
    * @param snapshotName name of the snapshot
    * @param rootDir root directory of the hbase installation
+   * @param conf Configuration of the HBase instance
    * @return {@link Path} where one can build a snapshot
    */
-  public static Path getWorkingSnapshotDir(String snapshotName, final Path rootDir) {
-    return getCompletedSnapshotDir(getWorkingSnapshotDir(rootDir), snapshotName);
+  public static Path getWorkingSnapshotDir(String snapshotName, final Path rootDir,
+      Configuration conf) {
+    return getSpecifiedSnapshotDir(getWorkingSnapshotDir(rootDir, conf), snapshotName);
   }
 
   /**
-   * Get the directory to store the snapshot instance
-   * @param snapshotsDir hbase-global directory for storing all snapshots
+   * Get the directory within the given filepath to store the snapshot instance
+   * @param snapshotsDir directory to store snapshot directory within
    * @param snapshotName name of the snapshot to take
-   * @return the final directory for the completed snapshot
+   * @return the final directory for the snapshot in the given filepath
    */
-  private static final Path getCompletedSnapshotDir(final Path snapshotsDir, String snapshotName) {
+  private static final Path getSpecifiedSnapshotDir(final Path snapshotsDir, String snapshotName) {
     return new Path(snapshotsDir, snapshotName);
   }
 
@@ -240,6 +255,40 @@ public final class SnapshotDescriptionUtils {
    */
   public static final Path getSnapshotsDir(Path rootDir) {
     return new Path(rootDir, HConstants.SNAPSHOT_DIR_NAME);
+  }
+
+  /**
+   * Determines if the given workingDir is a subdirectory of the given "root directory"
+   * @param workingDir a directory to check
+   * @param rootDir root directory of the HBase installation
+   * @return true if the given workingDir is a subdirectory of the given root directory,
+   *   false otherwise
+   */
+  public static boolean isSubDirectoryOf(final Path workingDir, final Path rootDir) {
+    return workingDir.toString().startsWith(rootDir.toString() + Path.SEPARATOR);
+  }
+
+  /**
+   * Determines if the given workingDir is a subdirectory of the default working snapshot directory
+   * @param workingDir a directory to check
+   * @param conf configuration for the HBase cluster
+   * @return true if the given workingDir is a subdirectory of the default working directory for
+   *   snapshots, false otherwise
+   */
+  public static boolean isWithinDefaultWorkingDir(final Path workingDir, Configuration conf)
+      throws IOException {
+    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(FSUtils.getRootDir(conf));
+    return workingDir.equals(defaultWorkingDir) || isSubDirectoryOf(workingDir, defaultWorkingDir);
+  }
+
+  /**
+   * Get the default working directory for snapshots - where they are built, where they are
+   * temporarily copied on export, etc.
+   * @param rootDir root directory of the HBase installation
+   * @return Path to the default snapshot tmp directory, relative to the passed root directory
+   */
+  private static Path getDefaultWorkingSnapshotDir(final Path rootDir) {
+    return new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME);
   }
 
   /**
@@ -346,24 +395,69 @@ public final class SnapshotDescriptionUtils {
   /**
    * Move the finished snapshot to its final, publicly visible directory - this marks the snapshot
    * as 'complete'.
-   * @param snapshot description of the snapshot being tabken
-   * @param rootdir root directory of the hbase installation
-   * @param workingDir directory where the in progress snapshot was built
-   * @param fs {@link FileSystem} where the snapshot was built
+   * @param snapshotDir The file path of the completed snapshots
+   * @param workingDir The file path of the in progress snapshots
+   * @param fs {@link FileSystem} The file system of the completed snapshots
+   * @param workingDirFs The file system of the in progress snapshots
    * @throws org.apache.hadoop.hbase.snapshot.SnapshotCreationException if the
    * snapshot could not be moved
    * @throws IOException the filesystem could not be reached
    */
-  public static void completeSnapshot(SnapshotDescription snapshot, Path rootdir, Path workingDir,
-      FileSystem fs) throws SnapshotCreationException, IOException {
-    Path finishedDir = getCompletedSnapshotDir(snapshot, rootdir);
+  public static void completeSnapshot(Path snapshotDir, Path workingDir, FileSystem fs,
+      FileSystem workingDirFs, Configuration conf) throws SnapshotCreationException, IOException {
     LOG.debug("Snapshot is done, just moving the snapshot from " + workingDir + " to "
-        + finishedDir);
-    if (!fs.rename(workingDir, finishedDir)) {
-      throw new SnapshotCreationException("Failed to move working directory(" + workingDir
-          + ") to completed directory(" + finishedDir + ").", snapshot);
+        + snapshotDir);
+    if (!workingDirFs.exists(workingDir)) {
+      throw new IOException("Failed to moving nonexistent snapshot working directory "
+          + workingDir + " to " + snapshotDir);
+    }
+    // If the working and completed snapshot directory are on the same file system, attempt
+    // to rename the working snapshot directory to the completed location. If that fails,
+    // or the file systems differ, attempt to copy the directory over, throwing an exception
+    // if this fails
+    URI workingURI = workingDirFs.getUri();
+    URI rootURI = fs.getUri();
+
+    if ((shouldSkipRenameSnapshotDirectories(workingURI, rootURI)
+        || !fs.rename(workingDir, snapshotDir))
+         && !FileUtil.copy(workingDirFs, workingDir, fs, snapshotDir, true, true, conf)) {
+      throw new SnapshotCreationException("Failed to copy working directory(" + workingDir
+          + ") to completed directory(" + snapshotDir + ").");
     }
   }
+
+  @VisibleForTesting
+  static boolean shouldSkipRenameSnapshotDirectories(URI workingURI, URI rootURI) {
+    // check scheme, e.g. file, hdfs
+    if (workingURI.getScheme() == null &&
+        (rootURI.getScheme() != null && !rootURI.getScheme().equalsIgnoreCase("file"))) {
+      return true;
+    }
+    if (workingURI.getScheme() != null && !workingURI.getScheme().equals(rootURI.getScheme())) {
+      return true;
+    }
+
+    // check Authority, e.g. localhost:port
+    if (workingURI.getAuthority() == null && rootURI.getAuthority() != null) {
+      return true;
+    }
+    if (workingURI.getAuthority() != null &&
+        !workingURI.getAuthority().equals(rootURI.getAuthority())) {
+      return true;
+    }
+
+    // check UGI/userInfo
+    if (workingURI.getUserInfo() == null && rootURI.getUserInfo() != null) {
+      return true;
+    }
+    if (workingURI.getUserInfo() != null &&
+        !workingURI.getUserInfo().equals(rootURI.getUserInfo())) {
+      return true;
+    }
+
+    return false;
+  }
+
 
   /**
    * Check if the user is this table snapshot's owner

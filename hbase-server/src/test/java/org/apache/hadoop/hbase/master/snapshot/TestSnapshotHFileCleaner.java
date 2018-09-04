@@ -136,7 +136,8 @@ public class TestSnapshotHFileCleaner {
     } catch (CorruptedSnapshotException cse) {
       LOG.info("Expected exception " + cse);
     } finally {
-      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
+      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
+          TEST_UTIL.getConfiguration()), true);
     }
   }
 
@@ -163,7 +164,8 @@ public class TestSnapshotHFileCleaner {
     } catch (CorruptedSnapshotException cse) {
       LOG.info("Expected exception " + cse);
     } finally {
-      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
+      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
+          TEST_UTIL.getConfiguration()), true);
     }
   }
 

@@ -68,12 +68,13 @@ public final class SnapshotManifestV2 {
                     SnapshotRegionManifest.Builder, SnapshotRegionManifest.FamilyFiles.Builder> {
     private final Configuration conf;
     private final Path snapshotDir;
-    private final FileSystem fs;
+    private final FileSystem rootFs;
 
-    public ManifestBuilder(final Configuration conf, final FileSystem fs, final Path snapshotDir) {
+    public ManifestBuilder(final Configuration conf, final FileSystem rootFs,
+        final Path snapshotDir) {
       this.snapshotDir = snapshotDir;
       this.conf = conf;
-      this.fs = fs;
+      this.rootFs = rootFs;
     }
 
     public SnapshotRegionManifest.Builder regionOpen(final HRegionInfo regionInfo) {
@@ -85,9 +86,11 @@ public final class SnapshotManifestV2 {
     public void regionClose(final SnapshotRegionManifest.Builder region) throws IOException {
       // we should ensure the snapshot dir exist, maybe it has been deleted by master
       // see HBASE-16464
-      if (fs.exists(snapshotDir)) {
+      FileSystem workingDirFs = snapshotDir.getFileSystem(this.conf);
+      if (workingDirFs.exists(snapshotDir)) {
         SnapshotRegionManifest manifest = region.build();
-        FSDataOutputStream stream = fs.create(getRegionManifestPath(snapshotDir, manifest));
+        FSDataOutputStream stream = workingDirFs.create(
+            getRegionManifestPath(snapshotDir, manifest));
         try {
           manifest.writeTo(stream);
         } finally {
@@ -120,7 +123,7 @@ public final class SnapshotManifestV2 {
       if (storeFile.isReference()) {
         sfManifest.setReference(storeFile.getReference().convert());
       }
-      sfManifest.setFileSize(storeFile.getReferencedFileStatus(fs).getLen());
+      sfManifest.setFileSize(storeFile.getReferencedFileStatus(rootFs).getLen());
       family.addStoreFiles(sfManifest.build());
     }
   }
