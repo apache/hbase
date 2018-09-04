@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
  */
 @InterfaceAudience.Private
 final class AssignmentManagerUtil {
+  private static final int DEFAULT_REGION_REPLICA = 1;
+
   private AssignmentManagerUtil() {
   }
 
@@ -142,8 +144,6 @@ final class AssignmentManagerUtil {
       List<RegionInfo> regions, int regionReplication, ServerName targetServer) {
     // create the assign procs only for the primary region using the targetServer
     TransitRegionStateProcedure[] primaryRegionProcs = regions.stream()
-        .flatMap(hri -> IntStream.range(0, 1) // yes, only the primary
-            .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(hri, i)))
         .map(env.getAssignmentManager().getRegionStates()::getOrCreateRegionStateNode)
         .map(regionNode -> {
           TransitRegionStateProcedure proc =
@@ -160,7 +160,7 @@ final class AssignmentManagerUtil {
           }
           return proc;
         }).toArray(TransitRegionStateProcedure[]::new);
-    if (regionReplication == 1) {
+    if (regionReplication == DEFAULT_REGION_REPLICA) {
       // this is the default case
       return primaryRegionProcs;
     }

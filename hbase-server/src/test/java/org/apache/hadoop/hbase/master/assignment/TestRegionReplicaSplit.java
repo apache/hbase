@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -66,24 +68,24 @@ public class TestRegionReplicaSplit {
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @BeforeClass
-  public static void before() throws Exception {
+  public static void beforeClass() throws Exception {
     HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
     HTU.startMiniCluster(NB_SERVERS);
     final TableName tableName = TableName.valueOf(TestRegionReplicaSplit.class.getSimpleName());
 
     // Create table then get the single region for our new table.
-    createTableDirectlyFromHTD(tableName);
+    createTable(tableName);
   }
 
   @Rule
   public TestName name = new TestName();
 
-  private static void createTableDirectlyFromHTD(final TableName tableName) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.setRegionReplication(3);
+  private static void createTable(final TableName tableName) throws IOException {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    builder.setRegionReplication(3);
     // create a table with 3 replication
 
-    table = HTU.createTable(htd, new byte[][] { f }, getSplits(2),
+    table = HTU.createTable(builder.build(), new byte[][] { f }, getSplits(2),
       new Configuration(HTU.getConfiguration()));
   }
 
@@ -101,63 +103,57 @@ public class TestRegionReplicaSplit {
     HTU.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000)
   public void testRegionReplicaSplitRegionAssignment() throws Exception {
-    try {
-      HTU.loadNumericRows(table, f, 0, 3);
-      // split the table
-      List<RegionInfo> regions = new ArrayList<RegionInfo>();
+    HTU.loadNumericRows(table, f, 0, 3);
+    // split the table
+    List<RegionInfo> regions = new ArrayList<RegionInfo>();
+    for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
+      for (Region r : rs.getRegionServer().getRegions(table.getName())) {
+        System.out.println("the region before split is is " + r.getRegionInfo()
+            + rs.getRegionServer().getServerName());
+        regions.add(r.getRegionInfo());
+      }
+    }
+    HTU.getAdmin().split(table.getName(), Bytes.toBytes(1));
+    int count = 0;
+    while (true) {
       for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
         for (Region r : rs.getRegionServer().getRegions(table.getName())) {
-          System.out.println("the region before split is is " + r.getRegionInfo()
+          count++;
+        }
+      }
+      if (count >= 9) {
+        break;
+      }
+      count = 0;
+    }
+    List<ServerName> newRegionLocations = new ArrayList<ServerName>();
+    for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
+      RegionInfo prevInfo = null;
+      for (Region r : rs.getRegionServer().getRegions(table.getName())) {
+        if (!regions.contains(r.getRegionInfo())
+            && !RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
+          LOG.info("The region is " + r.getRegionInfo() + " the location is "
               + rs.getRegionServer().getServerName());
-          regions.add(r.getRegionInfo());
-        }
-      }
-      HTU.getAdmin().split(table.getName(), Bytes.toBytes(1));
-      int count = 0;
-      while (true) {
-        for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-          for (Region r : rs.getRegionServer().getRegions(table.getName())) {
-            count++;
-          }
-        }
-        if (count >= 9) {
-          break;
-        }
-        count = 0;
-      }
-      List<ServerName> newRegionLocations = new ArrayList<ServerName>();
-      for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-        RegionInfo prevInfo = null;
-        for (Region r : rs.getRegionServer().getRegions(table.getName())) {
-          if (!regions.contains(r.getRegionInfo())
-              && !RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
-            LOG.info("The region is " + r.getRegionInfo() + " the location is "
-                + rs.getRegionServer().getServerName());
+          if (!RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())
+              && newRegionLocations.contains(rs.getRegionServer().getServerName())
+              && prevInfo != null
+              && Bytes.equals(prevInfo.getStartKey(), r.getRegionInfo().getStartKey())
+              && Bytes.equals(prevInfo.getEndKey(), r.getRegionInfo().getEndKey())) {
+            fail("Splitted regions should not be assigned to same region server");
+          } else {
+            prevInfo = r.getRegionInfo();
             if (!RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())
-                && newRegionLocations.contains(rs.getRegionServer().getServerName())
-                && prevInfo != null
-                && Bytes.equals(prevInfo.getStartKey(), r.getRegionInfo().getStartKey())
-                && Bytes.equals(prevInfo.getEndKey(), r.getRegionInfo().getEndKey())) {
-              fail("Splitted regions should not be assigned to same region server");
-            } else {
-              prevInfo = r.getRegionInfo();
-              if (!RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())
-                  && !newRegionLocations.contains(rs.getRegionServer().getServerName())) {
-                newRegionLocations.add(rs.getRegionServer().getServerName());
-              }
+                && !newRegionLocations.contains(rs.getRegionServer().getServerName())) {
+              newRegionLocations.add(rs.getRegionServer().getServerName());
             }
           }
         }
       }
-      // since we assign the daughter regions in round robin fashion, both the daugther region
-      // replicas will be assigned to two unique servers.
-      assertEquals("The new regions should be assigned to 3 unique servers ", 3,
-        newRegionLocations.size());
-    } finally {
-      HTU.getAdmin().disableTable(table.getName());
-      HTU.getAdmin().deleteTable(table.getName());
     }
+    // since we assign the daughter regions in round robin fashion, both the daugther region
+    // replicas will be assigned to two unique servers.
+    assertEquals("The new regions should be assigned to 3 unique servers ", 3,
+      newRegionLocations.size());
   }
 }
