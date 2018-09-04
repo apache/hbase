@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -106,5 +107,59 @@ public class TestSnapshotDescriptionUtils {
     } catch (IOException e) {
       LOG.info("Correctly failed to move non-existant directory: " + e.getMessage());
     }
+  }
+
+  @Test
+  public void testIsSubDirectoryWorks() {
+    Path rootDir = new Path("hdfs://root/.hbase-snapshot/");
+
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(rootDir, rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://root/.hbase-snapshotdir"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://root/.hbase-snapshot"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://.hbase-snapshot"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://.hbase-snapshot/.tmp"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(new Path("hdfs://root"), rootDir));
+    assertTrue(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://root/.hbase-snapshot/.tmp"), rootDir));
+    assertTrue(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://root/.hbase-snapshot/.tmp/snapshot"), rootDir));
+
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("s3://root/.hbase-snapshot/"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(new Path("s3://root"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("s3://root/.hbase-snapshot/.tmp/snapshot"), rootDir));
+  }
+
+  @Test
+  public void testIsWithinWorkingDir() {
+    Configuration conf = new Configuration();
+    conf.set(HConstants.HBASE_DIR, "hdfs://root/");
+
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/.hbase-snapshotdir"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/.hbase-snapshot"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://.hbase-snapshot"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://.hbase-snapshot/.tmp"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(new Path("hdfs://root"), conf));
+    assertTrue(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/.hbase-snapshot/.tmp"), conf));
+    assertTrue(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/.hbase-snapshot/.tmp/snapshot"), conf));
+
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("s3://root/.hbase-snapshot/"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(new Path("s3://root"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("s3://root/.hbase-snapshot/.tmp/snapshot"), conf));
   }
 }
