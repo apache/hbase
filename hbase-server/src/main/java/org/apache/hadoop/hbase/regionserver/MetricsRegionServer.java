@@ -203,7 +203,7 @@ public class MetricsRegionServer {
     serverSource.updateFlushMemstoreSize(memstoreSize);
     serverSource.updateFlushOutputSize(fileSize);
 
-    if (metricsTable != null && table != null) {
+    if (table != null) {
       metricsTable.updateFlushTime(table, memstoreSize);
       metricsTable.updateFlushMemstoreSize(table, memstoreSize);
       metricsTable.updateFlushOutputSize(table, fileSize);
@@ -218,7 +218,7 @@ public class MetricsRegionServer {
     serverSource.updateCompactionInputSize(isMajor, inputBytes);
     serverSource.updateCompactionOutputSize(isMajor, outputBytes);
 
-    if (metricsTable != null && table != null) {
+    if (table != null) {
       metricsTable.updateCompactionTime(table, isMajor, t);
       metricsTable.updateCompactionInputFileCount(table, isMajor, inputFileCount);
       metricsTable.updateCompactionOutputFileCount(table, isMajor, outputFileCount);
