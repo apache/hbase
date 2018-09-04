@@ -27,12 +27,12 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
-  public long getReadRequestCount(String table) {
+  public long getReadRequestsCount(String table) {
     return 10;
   }
 
   @Override
-  public long getWriteRequestCount(String table) {
+  public long getWriteRequestsCount(String table) {
     return 20;
   }
 
@@ -42,17 +42,12 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
-  public long getFilteredReadRequestCount(String table) {
-    return 40;
-  }
-
-  @Override
-  public long getMemstoreSize(String table) {
+  public long getMemstoresSize(String table) {
     return 1000;
   }
 
   @Override
-  public long getStoreFileSize(String table) {
+  public long getStoreFilesSize(String table) {
     return 2000;
   }
 
@@ -63,45 +58,5 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
 
   public String getTableName() {
     return tableName;
-  }
-
-  @Override
-  public long getNumRegions(String table) {
-    return 11;
-  }
-
-  @Override
-  public long getNumStores(String table) {
-    return 22;
-  }
-
-  @Override
-  public long getNumStoreFiles(String table) {
-    return 33;
-  }
-
-  @Override
-  public long getMaxStoreFileAge(String table) {
-    return 44;
-  }
-
-  @Override
-  public long getMinStoreFileAge(String table) {
-    return 55;
-  }
-
-  @Override
-  public long getAvgStoreFileAge(String table) {
-    return 66;
-  }
-
-  @Override
-  public long getNumReferenceFiles(String table) {
-    return 77;
-  }
-
-  @Override
-  public long getAvgRegionSize(String table) {
-    return 88;
   }
 }

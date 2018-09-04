@@ -50,16 +50,18 @@ public interface MetricsTableAggregateSource extends BaseSource {
   String NUMBER_OF_TABLES_DESC = "Number of tables in the metrics system";
 
   /**
-   * Returns MetricsTableSource registered for the table. Creates one if not defined.
+   * Register a MetricsTableSource as being open.
+   *
    * @param table The table name
+   * @param source the source for the table being opened.
    */
-  MetricsTableSource getOrCreateTableSource(String table, MetricsTableWrapperAggregate wrapper);
+  void register(String table, MetricsTableSource source);
 
   /**
    * Remove a table's source. This is called when regions of a table are closed.
    *
    * @param table The table name
    */
-  void deleteTableSource(String table);
+  void deregister(String table);
 
 }

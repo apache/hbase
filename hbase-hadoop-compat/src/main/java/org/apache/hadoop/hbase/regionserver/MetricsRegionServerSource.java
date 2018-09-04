@@ -248,9 +248,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String TOTAL_ROW_ACTION_REQUEST_COUNT_DESC =
       "Total number of region requests this RegionServer has answered, count by row-level action";
   String READ_REQUEST_COUNT = "readRequestCount";
-  String FILTERED_READ_REQUEST_COUNT = "filteredReadRequestCount";
-  String FILTERED_READ_REQUEST_COUNT_DESC =
-      "Number of read requests this region server has answered.";
   String READ_REQUEST_COUNT_DESC =
       "Number of read requests this region server has answered.";
   String WRITE_REQUEST_COUNT = "writeRequestCount";

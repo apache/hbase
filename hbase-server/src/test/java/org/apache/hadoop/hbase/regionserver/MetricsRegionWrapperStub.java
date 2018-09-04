@@ -157,9 +157,4 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   public long getMaxFlushQueueSize() {
     return 6;
   }
-
-  @Override
-  public long getTotalRequestCount() {
-    return 0;
-  }
 }

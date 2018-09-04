@@ -43,8 +43,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   private Runnable runnable;
   private long period;
   private ScheduledFuture<?> tableMetricsUpdateTask;
-  private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap
-    = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap = new ConcurrentHashMap<>();
 
   public MetricsTableWrapperAggregateImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
@@ -52,8 +51,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       HConstants.DEFAULT_REGIONSERVER_METRICS_PERIOD) + 1000;
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new TableMetricsWrapperRunnable();
-    this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, period,
-      this.period, TimeUnit.MILLISECONDS);
+    this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, period, this.period,
+      TimeUnit.MILLISECONDS);
   }
 
   public class TableMetricsWrapperRunnable implements Runnable {
@@ -63,43 +62,33 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       Map<TableName, MetricsTableValues> localMetricsTableMap = new HashMap<>();
 
       for (Region r : regionServer.getOnlineRegionsLocalContext()) {
-        TableName tbl = r.getTableDesc().getTableName();
-        MetricsTableValues mt = localMetricsTableMap.get(tbl);
-        if (mt == null) {
-          mt = new MetricsTableValues();
-          localMetricsTableMap.put(tbl, mt);
+        TableName tbl= r.getTableDesc().getTableName();
+        MetricsTableValues metricsTable = localMetricsTableMap.get(tbl);
+        if (metricsTable == null) {
+          metricsTable = new MetricsTableValues();
+          localMetricsTableMap.put(tbl, metricsTable);
         }
-
-        if (r.getStores() != null) {
-          for (Store store : r.getStores()) {
-            mt.storeFileCount += store.getStorefilesCount();
-            mt.memstoreSize += store.getMemStoreSize();
-            mt.storeFileSize += store.getStorefilesSize();
-            mt.referenceFileCount += store.getNumReferenceFiles();
-
-            mt.maxStoreFileAge = Math.max(mt.maxStoreFileAge, store.getMaxStoreFileAge());
-            mt.minStoreFileAge = Math.min(mt.minStoreFileAge, store.getMinStoreFileAge());
-            mt.totalStoreFileAge = store.getAvgStoreFileAge() * store.getStorefilesCount();
-            mt.storeCount += 1;
-          }
+        long tempStorefilesSize = 0;
+        for (Store store : r.getStores()) {
+          tempStorefilesSize += store.getStorefilesSize();
         }
-
-        mt.regionCount += 1;
-
-        mt.readRequestCount += r.getReadRequestsCount();
-        mt.filteredReadRequestCount += getFilteredReadRequestCount(tbl.getNameAsString());
-        mt.writeRequestCount += r.getWriteRequestsCount();
+        metricsTable.setMemstoresSize(metricsTable.getMemstoresSize() + r.getMemstoreSize());
+        metricsTable.setStoreFilesSize(metricsTable.getStoreFilesSize() + tempStorefilesSize);
+        metricsTable.setTableSize(metricsTable.getMemstoresSize() + metricsTable.getStoreFilesSize());
+        metricsTable.setReadRequestsCount(metricsTable.getReadRequestsCount() + r.getReadRequestsCount());
+        metricsTable.setWriteRequestsCount(metricsTable.getWriteRequestsCount() + r.getWriteRequestsCount());
+        metricsTable.setTotalRequestsCount(metricsTable.getReadRequestsCount() + metricsTable.getWriteRequestsCount());
       }
 
-      for (Map.Entry<TableName, MetricsTableValues> entry : localMetricsTableMap.entrySet()) {
+      for(Map.Entry<TableName, MetricsTableValues> entry : localMetricsTableMap.entrySet()) {
         TableName tbl = entry.getKey();
         if (metricsTableMap.get(tbl) == null) {
-          // this will add the Wrapper to the list of TableMetrics
+          MetricsTableSource tableSource = CompatibilitySingletonFactory
+              .getInstance(MetricsRegionServerSourceFactory.class).createTable(tbl.getNameAsString(),
+                MetricsTableWrapperAggregateImpl.this);
           CompatibilitySingletonFactory
-              .getInstance(MetricsRegionServerSourceFactory.class)
-              .getTableAggregate()
-              .getOrCreateTableSource(tbl.getNameAsString(), MetricsTableWrapperAggregateImpl.this);
-
+          .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate()
+          .register(tbl.getNameAsString(), tableSource);
         }
         metricsTableMap.put(entry.getKey(), entry.getValue());
       }
@@ -108,7 +97,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       MetricsTableAggregateSource agg = CompatibilitySingletonFactory
           .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
       for (TableName table : existingTableNames) {
-        agg.deleteTableSource(table.getNameAsString());
+        agg.deregister(table.getNameAsString());
         if (metricsTableMap.get(table) != null) {
           metricsTableMap.remove(table);
         }
@@ -117,145 +106,57 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
-  public long getReadRequestCount(String table) {
+  public long getReadRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null)
       return 0;
     else
-      return metricsTable.readRequestCount;
+      return metricsTable.getReadRequestsCount();
   }
 
   @Override
-  public long getFilteredReadRequestCount(String table) {
+  public long getWriteRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
+    if (metricsTable == null)
       return 0;
-    }
-    return metricsTable.filteredReadRequestCount;
-  }
-
-  @Override
-  public long getWriteRequestCount(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-    return metricsTable.writeRequestCount;
+    else
+      return metricsTable.getWriteRequestsCount();
   }
 
   @Override
   public long getTotalRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
+    if (metricsTable == null)
       return 0;
-    }
-    return metricsTable.readRequestCount + metricsTable.writeRequestCount;
+    else
+      return metricsTable.getTotalRequestsCount();
   }
 
   @Override
-  public long getMemstoreSize(String table) {
+  public long getMemstoresSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
+    if (metricsTable == null)
       return 0;
-    }
-    return metricsTable.memstoreSize;
+    else
+      return metricsTable.getMemstoresSize();
   }
 
   @Override
-  public long getStoreFileSize(String table) {
+  public long getStoreFilesSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
+    if (metricsTable == null)
       return 0;
-    }
-    return metricsTable.storeFileSize;
+    else
+      return metricsTable.getStoreFilesSize();
   }
 
   @Override
   public long getTableSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
+    if (metricsTable == null)
       return 0;
-    }
-    return metricsTable.memstoreSize + metricsTable.storeFileSize;
-  }
-
-  @Override
-  public long getNumRegions(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-    return metricsTable.regionCount;
-  }
-
-  @Override
-  public long getNumStores(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-    return metricsTable.storeCount;
-  }
-
-  @Override
-  public long getNumStoreFiles(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-    return metricsTable.storeFileCount;
-  }
-
-  @Override
-  public long getMaxStoreFileAge(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-    return metricsTable.maxStoreFileAge;
-  }
-
-  @Override
-  public long getMinStoreFileAge(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-
-    return metricsTable.minStoreFileAge == Long.MAX_VALUE ? 0 : metricsTable.minStoreFileAge;
-  }
-
-  @Override
-  public long getAvgStoreFileAge(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-
-    return metricsTable.storeFileCount == 0
-        ? 0
-        : (metricsTable.totalStoreFileAge / metricsTable.storeFileCount);
-  }
-
-  @Override
-  public long getNumReferenceFiles(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-    return metricsTable.referenceFileCount;
-  }
-
-  @Override
-  public long getAvgRegionSize(String table) {
-    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
-    if (metricsTable == null) {
-      return 0;
-    }
-
-    return metricsTable.regionCount == 0
-        ? 0
-        : (metricsTable.memstoreSize + metricsTable.storeFileSize) / metricsTable.regionCount;
+    else
+      return metricsTable.getTableSize();
   }
 
   @Override
@@ -264,18 +165,61 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   private static class MetricsTableValues {
-    long readRequestCount;
-    long filteredReadRequestCount;
-    long writeRequestCount;
-    long memstoreSize;
-    long regionCount;
-    long storeCount;
-    long storeFileCount;
-    long storeFileSize;
-    long maxStoreFileAge;
-    long minStoreFileAge = Long.MAX_VALUE;
-    long totalStoreFileAge;
-    long referenceFileCount;
+
+    private long totalRequestsCount;
+    private long readRequestsCount;
+    private long writeRequestsCount;
+    private long memstoresSize;
+    private long storeFilesSize;
+    private long tableSize;
+
+    public long getTotalRequestsCount() {
+      return totalRequestsCount;
+    }
+
+    public void setTotalRequestsCount(long totalRequestsCount) {
+      this.totalRequestsCount = totalRequestsCount;
+    }
+
+    public long getReadRequestsCount() {
+      return readRequestsCount;
+    }
+
+    public void setReadRequestsCount(long readRequestsCount) {
+      this.readRequestsCount = readRequestsCount;
+    }
+
+    public long getWriteRequestsCount() {
+      return writeRequestsCount;
+    }
+
+    public void setWriteRequestsCount(long writeRequestsCount) {
+      this.writeRequestsCount = writeRequestsCount;
+    }
+
+    public long getMemstoresSize() {
+      return memstoresSize;
+    }
+
+    public void setMemstoresSize(long memstoresSize) {
+      this.memstoresSize = memstoresSize;
+    }
+
+    public long getStoreFilesSize() {
+      return storeFilesSize;
+    }
+
+    public void setStoreFilesSize(long storeFilesSize) {
+      this.storeFilesSize = storeFilesSize;
+    }
+
+    public long getTableSize() {
+      return tableSize;
+    }
+
+    public void setTableSize(long tableSize) {
+      this.tableSize = tableSize;
+    }
   }
 
 }

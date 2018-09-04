@@ -1380,10 +1380,9 @@ public class HStore implements Store {
       long now = EnvironmentEdgeManager.currentTime();
       if (region.getRegionServerServices() != null
           && region.getRegionServerServices().getMetrics() != null) {
-        region.getRegionServerServices().getMetrics().updateCompaction(
-          region.getTableDesc().getTableName().getNameAsString(),
-          cr.isMajor(), now - compactionStartTime, cr.getFiles().size(),
-          newFiles.size(), cr.getSize(), outputBytes);
+        region.getRegionServerServices().getMetrics().updateCompaction(cr.isMajor(),
+          now - compactionStartTime, cr.getFiles().size(), newFiles.size(), cr.getSize(),
+          outputBytes);
       }
 
       logCompactionEndMessage(cr, sfs, now, compactionStartTime);
@@ -2253,7 +2252,7 @@ public class HStore implements Store {
       latestTS = (createdTS > latestTS) ? createdTS : latestTS;
     }
     long now = EnvironmentEdgeManager.currentTime();
-    return latestTS == 0 ? 0 : now - latestTS;
+    return now - latestTS;
   }
 
   @Override
