@@ -507,7 +507,7 @@ public final class SnapshotTestingUtils {
         this.htd = htd;
         this.desc = desc;
         this.tableRegions = tableRegions;
-        this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+        this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
         new FSTableDescriptors(conf)
           .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
       }
@@ -687,7 +687,7 @@ public final class SnapshotTestingUtils {
         .setVersion(version)
         .build();
 
-      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
       SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
       return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
     }

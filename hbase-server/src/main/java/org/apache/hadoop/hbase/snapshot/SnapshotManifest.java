@@ -81,18 +81,29 @@ public final class SnapshotManifest {
   private final ForeignExceptionSnare monitor;
   private final Configuration conf;
   private final Path workingDir;
-  private final FileSystem fs;
+  private final FileSystem rootFs;
+  private final FileSystem workingDirFs;
   private int manifestSizeLimit;
 
-  private SnapshotManifest(final Configuration conf, final FileSystem fs,
+  /**
+   *
+   * @param conf configuration file for HBase setup
+   * @param rootFs root filesystem containing HFiles
+   * @param workingDir file path of where the manifest should be located
+   * @param desc description of snapshot being taken
+   * @param monitor monitor of foreign exceptions
+   * @throws IOException if the working directory file system cannot be
+   *                     determined from the config file
+   */
+  private SnapshotManifest(final Configuration conf, final FileSystem rootFs,
       final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor) {
+      final ForeignExceptionSnare monitor) throws IOException {
     this.monitor = monitor;
     this.desc = desc;
     this.workingDir = workingDir;
     this.conf = conf;
-    this.fs = fs;
-
+    this.rootFs = rootFs;
+    this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.manifestSizeLimit = conf.getInt(SNAPSHOT_MANIFEST_SIZE_LIMIT_CONF_KEY, 64 * 1024 * 1024);
   }
 
@@ -111,7 +122,7 @@ public final class SnapshotManifest {
    */
   public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
       final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor) {
+      final ForeignExceptionSnare monitor) throws IOException {
     return new SnapshotManifest(conf, fs, workingDir, desc, monitor);
 
   }
@@ -154,9 +165,9 @@ public final class SnapshotManifest {
   private RegionVisitor createRegionVisitor(final SnapshotDescription desc) throws IOException {
     switch (getSnapshotFormat(desc)) {
       case SnapshotManifestV1.DESCRIPTOR_VERSION:
-        return new SnapshotManifestV1.ManifestBuilder(conf, fs, workingDir);
+        return new SnapshotManifestV1.ManifestBuilder(conf, rootFs, workingDir);
       case SnapshotManifestV2.DESCRIPTOR_VERSION:
-        return new SnapshotManifestV2.ManifestBuilder(conf, fs, workingDir);
+        return new SnapshotManifestV2.ManifestBuilder(conf, rootFs, workingDir);
       default:
       throw new CorruptedSnapshotException("Invalid Snapshot version: " + desc.getVersion(),
         ProtobufUtil.createSnapshotDesc(desc));
@@ -275,7 +286,7 @@ public final class SnapshotManifest {
       if (isMobRegion) {
         baseDir = FSUtils.getTableDir(MobUtils.getMobHome(conf), regionInfo.getTable());
       }
-      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
+      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, rootFs,
         baseDir, regionInfo, true);
       monitor.rethrowException();
 
@@ -323,12 +334,12 @@ public final class SnapshotManifest {
   }
 
   private List<StoreFileInfo> getStoreFiles(Path storeDir) throws IOException {
-    FileStatus[] stats = FSUtils.listStatus(fs, storeDir);
+    FileStatus[] stats = FSUtils.listStatus(rootFs, storeDir);
     if (stats == null) return null;
 
     ArrayList<StoreFileInfo> storeFiles = new ArrayList<>(stats.length);
     for (int i = 0; i < stats.length; ++i) {
-      storeFiles.add(new StoreFileInfo(conf, fs, stats[i]));
+      storeFiles.add(new StoreFileInfo(conf, rootFs, stats[i]));
     }
     return storeFiles;
   }
@@ -364,11 +375,11 @@ public final class SnapshotManifest {
   private void load() throws IOException {
     switch (getSnapshotFormat(desc)) {
       case SnapshotManifestV1.DESCRIPTOR_VERSION: {
-        this.htd = FSTableDescriptors.getTableDescriptorFromFs(fs, workingDir);
+        this.htd = FSTableDescriptors.getTableDescriptorFromFs(workingDirFs, workingDir);
         ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
         try {
           this.regionManifests =
-            SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
+            SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs, workingDir, desc);
         } finally {
           tpool.shutdown();
         }
@@ -385,9 +396,10 @@ public final class SnapshotManifest {
           List<SnapshotRegionManifest> v1Regions, v2Regions;
           ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
           try {
-            v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
-            v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc,
-                manifestSizeLimit);
+            v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs,
+                workingDir, desc);
+            v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, rootFs,
+                workingDir, desc, manifestSizeLimit);
           } catch (InvalidProtocolBufferException e) {
             throw new CorruptedSnapshotException("unable to parse region manifest " +
                 e.getMessage(), e);
@@ -460,7 +472,7 @@ public final class SnapshotManifest {
       Path rootDir = FSUtils.getRootDir(conf);
       LOG.info("Using old Snapshot Format");
       // write a copy of descriptor to the snapshot directory
-      new FSTableDescriptors(conf, fs, rootDir)
+      new FSTableDescriptors(conf, workingDirFs, rootDir)
         .createTableDescriptorForTableDirectory(workingDir, htd, false);
     } else {
       LOG.debug("Convert to Single Snapshot Manifest");
@@ -477,9 +489,10 @@ public final class SnapshotManifest {
     List<SnapshotRegionManifest> v1Regions, v2Regions;
     ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
     try {
-      v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
-      v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc,
-          manifestSizeLimit);
+      v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, workingDirFs,
+          workingDir, desc);
+      v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, workingDirFs,
+          workingDir, desc, manifestSizeLimit);
     } finally {
       tpool.shutdown();
     }
@@ -509,12 +522,12 @@ public final class SnapshotManifest {
     // them we will get the same information.
     if (v1Regions != null && v1Regions.size() > 0) {
       for (SnapshotRegionManifest regionManifest: v1Regions) {
-        SnapshotManifestV1.deleteRegionManifest(fs, workingDir, regionManifest);
+        SnapshotManifestV1.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
       }
     }
     if (v2Regions != null && v2Regions.size() > 0) {
       for (SnapshotRegionManifest regionManifest: v2Regions) {
-        SnapshotManifestV2.deleteRegionManifest(fs, workingDir, regionManifest);
+        SnapshotManifestV2.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
       }
     }
   }
@@ -524,7 +537,7 @@ public final class SnapshotManifest {
    */
   private void writeDataManifest(final SnapshotDataManifest manifest)
       throws IOException {
-    FSDataOutputStream stream = fs.create(new Path(workingDir, DATA_MANIFEST_NAME));
+    FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME));
     try {
       manifest.writeTo(stream);
     } finally {
@@ -538,7 +551,7 @@ public final class SnapshotManifest {
   private SnapshotDataManifest readDataManifest() throws IOException {
     FSDataInputStream in = null;
     try {
-      in = fs.open(new Path(workingDir, DATA_MANIFEST_NAME));
+      in = workingDirFs.open(new Path(workingDir, DATA_MANIFEST_NAME));
       CodedInputStream cin = CodedInputStream.newInstance(in);
       cin.setSizeLimit(manifestSizeLimit);
       return SnapshotDataManifest.parseFrom(cin);
