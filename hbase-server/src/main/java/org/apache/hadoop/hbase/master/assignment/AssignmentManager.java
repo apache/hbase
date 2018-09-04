@@ -37,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.master.AssignmentListener;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
-import org.apache.hadoop.hbase.master.NoSuchProcedureException;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -561,11 +559,6 @@ public class AssignmentManager implements ServerListener {
     return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
-  @VisibleForTesting
-  public boolean waitForAssignment(final RegionInfo regionInfo) throws IOException {
-    return waitForAssignment(regionInfo, Long.MAX_VALUE);
-  }
-
   /**
    * Create round-robin assigns. Use on table creation to distribute out regions across cluster.
    * @return AssignProcedures made out of the passed in <code>hris</code> and a call to the balancer
@@ -575,38 +568,6 @@ public class AssignmentManager implements ServerListener {
    */
   public AssignProcedure[] createRoundRobinAssignProcedures(List<RegionInfo> hris) {
     return createRoundRobinAssignProcedures(hris, null);
-  }
-
-  @VisibleForTesting
-  // TODO: Remove this?
-  public boolean waitForAssignment(final RegionInfo regionInfo, final long timeout)
-  throws IOException {
-    RegionStateNode node = null;
-    // This method can be called before the regionInfo has made it into the regionStateMap
-    // so wait around here a while.
-    long startTime = System.currentTimeMillis();
-    // Something badly wrong if takes ten seconds to register a region.
-    long endTime = startTime + 10000;
-    while ((node = regionStates.getRegionStateNode(regionInfo)) == null && isRunning() &&
-        System.currentTimeMillis() < endTime) {
-      // Presume it not yet added but will be added soon. Let it spew a lot so we can tell if
-      // we are waiting here alot.
-      LOG.debug("Waiting on " + regionInfo + " to be added to regionStateMap");
-      Threads.sleep(10);
-    }
-    if (node == null) {
-      if (!isRunning()) return false;
-      throw new RegionException(regionInfo.getRegionNameAsString() + " never registered with Assigment.");
-    }
-
-    RegionTransitionProcedure proc = node.getProcedure();
-    if (proc == null) {
-      throw new NoSuchProcedureException(node.toString());
-    }
-
-    ProcedureSyncWait.waitForProcedureToCompleteIOE(
-      master.getMasterProcedureExecutor(), proc, timeout);
-    return true;
   }
 
   // ============================================================================================
@@ -1917,5 +1878,10 @@ public class AssignmentManager implements ServerListener {
       rtp.remoteCallFailed(master.getMasterProcedureExecutor().getEnvironment(), serverName,
           new ServerCrashException(rtp.getProcId(), serverName));
     }
+  }
+
+  @VisibleForTesting
+  MasterServices getMaster() {
+    return master;
   }
 }

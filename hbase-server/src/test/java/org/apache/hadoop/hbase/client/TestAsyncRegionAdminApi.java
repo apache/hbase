@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.NoSuchProcedureException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -82,22 +81,10 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     // Region is assigned now. Let's assign it again.
     // Master should not abort, and region should stay assigned.
     admin.assign(hri.getRegionName()).get();
-    try {
-      am.waitForAssignment(hri);
-      fail("Expected NoSuchProcedureException");
-    } catch (NoSuchProcedureException e) {
-      // Expected
-    }
     assertTrue(regionStates.getRegionState(hri).isOpened());
 
     // unassign region
     admin.unassign(hri.getRegionName(), true).get();
-    try {
-      am.waitForAssignment(hri);
-      fail("Expected NoSuchProcedureException");
-    } catch (NoSuchProcedureException e) {
-      // Expected
-    }
     assertTrue(regionStates.getRegionState(hri).isClosed());
   }
 
