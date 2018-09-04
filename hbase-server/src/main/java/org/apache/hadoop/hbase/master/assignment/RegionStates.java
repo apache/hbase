@@ -497,7 +497,7 @@ public class RegionStates {
     return regionsMap.get(regionName);
   }
 
-  protected RegionStateNode getRegionStateNode(final RegionInfo regionInfo) {
+  public RegionStateNode getRegionStateNode(final RegionInfo regionInfo) {
     return getRegionStateNodeFromName(regionInfo.getRegionName());
   }
 
