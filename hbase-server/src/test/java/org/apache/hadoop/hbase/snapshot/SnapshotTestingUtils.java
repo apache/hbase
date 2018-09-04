@@ -499,8 +499,8 @@ public final class SnapshotTestingUtils {
         this.htd = htd;
         this.desc = desc;
         this.tableRegions = tableRegions;
-        this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
-        new FSTableDescriptors(conf)
+        this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
+        new FSTableDescriptors(conf, snapshotDir.getFileSystem(conf), rootDir)
           .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
       }
 
@@ -624,8 +624,11 @@ public final class SnapshotTestingUtils {
         SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
         manifest.addTableDescriptor(htd);
         manifest.consolidate();
-        SnapshotDescriptionUtils.completeSnapshot(desc, rootDir, snapshotDir, fs);
-        snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
+        Path workingDir = snapshotDir;
+        Path completedSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
+        SnapshotDescriptionUtils.completeSnapshot(completedSnapshotDir, workingDir, fs,
+            workingDir.getFileSystem(conf), conf);
+        snapshotDir = completedSnapshotDir;
         return snapshotDir;
       }
 
@@ -679,8 +682,8 @@ public final class SnapshotTestingUtils {
         .setVersion(version)
         .build();
 
-      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
-      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
+      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
+      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, workingDir.getFileSystem(conf));
       return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
     }
 

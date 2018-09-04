@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
@@ -77,21 +78,20 @@ public final class MasterSnapshotVerifier {
   private static final Log LOG = LogFactory.getLog(MasterSnapshotVerifier.class);
 
   private SnapshotDescription snapshot;
-  private FileSystem fs;
-  private Path rootDir;
+  private FileSystem workingDirFs;
   private TableName tableName;
   private MasterServices services;
 
   /**
    * @param services services for the master
    * @param snapshot snapshot to check
-   * @param rootDir root directory of the hbase installation.
+   * @param workingDirFs the file system containing the temporary snapshot information
    */
-  public MasterSnapshotVerifier(MasterServices services, SnapshotDescription snapshot, Path rootDir) {
-    this.fs = services.getMasterFileSystem().getFileSystem();
+  public MasterSnapshotVerifier(MasterServices services,
+      SnapshotDescription snapshot, FileSystem workingDirFs) {
+    this.workingDirFs = workingDirFs;
     this.services = services;
     this.snapshot = snapshot;
-    this.rootDir = rootDir;
     this.tableName = TableName.valueOf(snapshot.getTable());
   }
 
@@ -105,7 +105,7 @@ public final class MasterSnapshotVerifier {
    */
   public void verifySnapshot(Path snapshotDir, Set<String> snapshotServers)
       throws CorruptedSnapshotException, IOException {
-    SnapshotManifest manifest = SnapshotManifest.open(services.getConfiguration(), fs,
+    SnapshotManifest manifest = SnapshotManifest.open(services.getConfiguration(), workingDirFs,
                                                       snapshotDir, snapshot);
     // verify snapshot info matches
     verifySnapshotDescription(snapshotDir);
@@ -122,7 +122,8 @@ public final class MasterSnapshotVerifier {
    * @param snapshotDir snapshot directory to check
    */
   private void verifySnapshotDescription(Path snapshotDir) throws CorruptedSnapshotException {
-    SnapshotDescription found = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    SnapshotDescription found = SnapshotDescriptionUtils.readSnapshotInfo(workingDirFs,
+        snapshotDir);
     if (!this.snapshot.equals(found)) {
       throw new CorruptedSnapshotException("Snapshot read (" + found
           + ") doesn't equal snapshot we ran (" + snapshot + ").", snapshot);
@@ -195,7 +196,9 @@ public final class MasterSnapshotVerifier {
     }
 
     // Verify Snapshot HFiles
-    SnapshotReferenceUtil.verifySnapshot(services.getConfiguration(), fs, manifest);
+    // Requires the root directory file system as HFiles are stored in the root directory
+    SnapshotReferenceUtil.verifySnapshot(services.getConfiguration(),
+        FSUtils.getRootDirFileSystem(services.getConfiguration()), manifest);
   }
 
   /**

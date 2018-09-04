@@ -66,17 +66,20 @@ public final class SnapshotManifestV1 {
                                                           HRegionFileSystem, Path> {
     private final Configuration conf;
     private final Path snapshotDir;
-    private final FileSystem fs;
+    private final FileSystem rootFs;
+    private final FileSystem workingDirFs;
 
-    public ManifestBuilder(final Configuration conf, final FileSystem fs, final Path snapshotDir) {
+    public ManifestBuilder(final Configuration conf, final FileSystem rootFs,
+        final Path snapshotDir) throws IOException {
       this.snapshotDir = snapshotDir;
       this.conf = conf;
-      this.fs = fs;
+      this.rootFs = rootFs;
+      this.workingDirFs = snapshotDir.getFileSystem(conf);
     }
 
     public HRegionFileSystem regionOpen(final HRegionInfo regionInfo) throws IOException {
       HRegionFileSystem snapshotRegionFs = HRegionFileSystem.createRegionOnFileSystem(conf,
-        fs, snapshotDir, regionInfo);
+        workingDirFs, snapshotDir, regionInfo);
       return snapshotRegionFs;
     }
 
@@ -97,13 +100,13 @@ public final class SnapshotManifestV1 {
       boolean success = true;
       if (storeFile.isReference()) {
         // write the Reference object to the snapshot
-        storeFile.getReference().write(fs, referenceFile);
+        storeFile.getReference().write(workingDirFs, referenceFile);
       } else {
         // create "reference" to this store file.  It is intentionally an empty file -- all
         // necessary information is captured by its fs location and filename.  This allows us to
         // only figure out what needs to be done via a single nn operation (instead of having to
         // open and read the files as well).
-        success = fs.createNewFile(referenceFile);
+        success = workingDirFs.createNewFile(referenceFile);
       }
       if (!success) {
         throw new IOException("Failed to create reference file:" + referenceFile);

@@ -264,11 +264,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   void resetTempDir() throws IOException {
     // cleanup any existing snapshots.
-    Path tmpdir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir);
-    if (master.getMasterFileSystem().getFileSystem().exists(tmpdir)) {
-      if (!master.getMasterFileSystem().getFileSystem().delete(tmpdir, true)) {
-        LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
-      }
+    Path tmpdir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
+        master.getConfiguration());
+    FileSystem tmpFs = tmpdir.getFileSystem(master.getConfiguration());
+    if (!tmpFs.delete(tmpdir, true)) {
+      LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
     }
   }
 
@@ -419,8 +419,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   private synchronized void prepareToTakeSnapshot(SnapshotDescription snapshot)
       throws HBaseSnapshotException {
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir,
+        master.getConfiguration());
     TableName snapshotTable =
         TableName.valueOf(snapshot.getTable());
 
@@ -445,12 +445,13 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
 
     try {
+      FileSystem workingDirFS = workingDir.getFileSystem(master.getConfiguration());
       // delete the working directory, since we aren't running the snapshot. Likely leftovers
       // from a failed attempt.
-      fs.delete(workingDir, true);
+      workingDirFS.delete(workingDir, true);
 
       // recreate the working directory for the snapshot
-      if (!fs.mkdirs(workingDir)) {
+      if (!workingDirFS.mkdirs(workingDir)) {
         throw new SnapshotCreationException("Couldn't create working directory (" + workingDir
             + ") for snapshot" , snapshot);
       }
@@ -465,10 +466,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   /**
    * Take a snapshot of a disabled table.
    * @param snapshot description of the snapshot to take. Modified to be {@link Type#DISABLED}.
-   * @throws HBaseSnapshotException if the snapshot could not be started
+   * @throws IOException if the snapshot could not be started or filesystem for snapshot
+   *         temporary directory could not be determined
    */
   private synchronized void snapshotDisabledTable(SnapshotDescription snapshot)
-      throws HBaseSnapshotException {
+      throws IOException {
     // setup the snapshot
     prepareToTakeSnapshot(snapshot);
 
@@ -484,10 +486,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   /**
    * Take a snapshot of an enabled table.
    * @param snapshot description of the snapshot to take.
-   * @throws HBaseSnapshotException if the snapshot could not be started
+   * @throws IOException if the snapshot could not be started or filesystem for snapshot
+   *         temporary directory could not be determined
    */
   private synchronized void snapshotEnabledTable(SnapshotDescription snapshot)
-      throws HBaseSnapshotException {
+          throws IOException {
     // setup the snapshot
     prepareToTakeSnapshot(snapshot);
 
@@ -506,16 +509,18 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param handler the snapshot handler
    */
   private synchronized void snapshotTable(SnapshotDescription snapshot,
-      final TakeSnapshotHandler handler) throws HBaseSnapshotException {
+      final TakeSnapshotHandler handler) throws IOException {
     try {
       handler.prepare();
       this.executorService.submit(handler);
       this.snapshotHandlers.put(TableName.valueOf(snapshot.getTable()), handler);
     } catch (Exception e) {
       // cleanup the working directory by trying to delete it from the fs.
-      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir,
+          master.getConfiguration());
+      FileSystem workingDirFs = workingDir.getFileSystem(master.getConfiguration());
       try {
-        if (!this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
+        if (!workingDirFs.delete(workingDir, true)) {
           LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
               ClientSnapshotDescriptionUtils.toString(snapshot));
         }

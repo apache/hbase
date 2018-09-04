@@ -3944,7 +3944,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void addRegionToSnapshot(SnapshotDescription desc,
       ForeignExceptionSnare exnSnare) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+    Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
 
     SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
                                                         snapshotDir, desc, exnSnare);
