@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.File;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -28,7 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.NoSuchProcedureException;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -42,7 +41,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +93,7 @@ public class TestSeparateClientZKCluster {
     FileUtils.deleteDirectory(clientZkDir);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testBasicOperation() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());
     // create table
@@ -122,7 +120,7 @@ public class TestSeparateClientZKCluster {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMasterSwitch() throws Exception {
     // get an admin instance and issue some request first
     Connection conn = TEST_UTIL.getConnection();
@@ -146,7 +144,7 @@ public class TestSeparateClientZKCluster {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMetaRegionMove() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());
     // create table
@@ -202,7 +200,7 @@ public class TestSeparateClientZKCluster {
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
   public void testMetaMoveDuringClientZkClusterRestart() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());
     // create table
@@ -233,12 +231,8 @@ public class TestSeparateClientZKCluster {
         Thread.sleep(200);
       }
       // wait for meta region online
-      try {
-        cluster.getMaster().getAssignmentManager()
-          .waitForAssignment(RegionInfoBuilder.FIRST_META_REGIONINFO);
-      } catch (NoSuchProcedureException e) {
-        // we don't need to take any further action
-      }
+      AssignmentTestingUtil.waitForAssignment(cluster.getMaster().getAssignmentManager(),
+        RegionInfoBuilder.FIRST_META_REGIONINFO);
       // wait some long time to make sure we will retry sync data to client ZK until data set
       Thread.sleep(10000);
       clientZkCluster.startup(clientZkDir);
@@ -253,7 +247,7 @@ public class TestSeparateClientZKCluster {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testAsyncTable() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());
     ColumnFamilyDescriptorBuilder cfDescBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);

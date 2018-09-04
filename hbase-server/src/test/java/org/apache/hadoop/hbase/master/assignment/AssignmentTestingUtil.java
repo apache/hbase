@@ -18,14 +18,18 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
+import java.io.IOException;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -34,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class AssignmentTestingUtil {
+public final class AssignmentTestingUtil {
   private static final Logger LOG = LoggerFactory.getLogger(AssignmentTestingUtil.class);
 
   private AssignmentTestingUtil() {}
@@ -121,5 +125,31 @@ public abstract class AssignmentTestingUtil {
 
   private static HMaster getMaster(final HBaseTestingUtility util) {
     return util.getMiniHBaseCluster().getMaster();
+  }
+
+  public static boolean waitForAssignment(AssignmentManager am, RegionInfo regionInfo)
+      throws IOException {
+    // This method can be called before the regionInfo has made it into the regionStateMap
+    // so wait around here a while.
+    Waiter.waitFor(am.getConfiguration(), 10000,
+      () -> am.getRegionStates().getRegionStateNode(regionInfo) != null);
+    RegionStateNode regionNode = am.getRegionStates().getRegionStateNode(regionInfo);
+    // Wait until the region has already been open, or we have a TRSP along with it.
+    Waiter.waitFor(am.getConfiguration(), 30000,
+      () -> regionNode.isInState(State.OPEN) || regionNode.isInTransition());
+    TransitRegionStateProcedure proc = regionNode.getProcedure();
+    regionNode.lock();
+    try {
+      if (regionNode.isInState(State.OPEN)) {
+        return true;
+      }
+      proc = regionNode.getProcedure();
+    } finally {
+      regionNode.unlock();
+    }
+    assertNotNull(proc);
+    ProcedureSyncWait.waitForProcedureToCompleteIOE(am.getMaster().getMasterProcedureExecutor(),
+      proc, 5L * 60 * 1000);
+    return true;
   }
 }

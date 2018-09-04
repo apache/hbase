@@ -75,10 +75,10 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
-import org.apache.hadoop.hbase.master.NoSuchProcedureException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -167,11 +167,7 @@ public class TestSplitTransactionOnCluster {
       throws IOException, InterruptedException {
     assertEquals(1, regions.size());
     RegionInfo hri = regions.get(0).getRegionInfo();
-    try {
-      cluster.getMaster().getAssignmentManager().waitForAssignment(hri, 600000);
-    } catch (NoSuchProcedureException e) {
-      LOG.info("Presume the procedure has been cleaned up so just proceed: " + e.toString());
-    }
+    AssignmentTestingUtil.waitForAssignment(cluster.getMaster().getAssignmentManager(), hri);
     return hri;
   }
 

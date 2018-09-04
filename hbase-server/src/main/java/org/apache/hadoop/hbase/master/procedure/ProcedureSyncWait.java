@@ -40,6 +40,8 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
+
 /**
  * Helper to synchronously wait on conditions.
  * This will be removed in the future (mainly when the AssignmentManager will be
@@ -135,18 +137,25 @@ public final class ProcedureSyncWait {
   }
 
   public static byte[] waitForProcedureToComplete(
-      final ProcedureExecutor<MasterProcedureEnv> procExec,
-      final Procedure<?> proc, final long timeout)
-      throws IOException {
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final Procedure<?> proc,
+      final long timeout) throws IOException {
     waitFor(procExec.getEnvironment(), "pid=" + proc.getProcId(),
       new ProcedureSyncWait.Predicate<Boolean>() {
         @Override
         public Boolean evaluate() throws IOException {
-          return !procExec.isRunning() || procExec.isFinished(proc.getProcId());
+          if (!procExec.isRunning()) {
+            return true;
+          }
+          ProcedureState state = proc.getState();
+          if (state == ProcedureState.INITIALIZING || state == ProcedureState.RUNNABLE) {
+            // under these states the procedure may have not been added to procExec yet, so do not
+            // use isFinished to test whether it is finished, as this method will just check if the
+            // procedure is in the running procedure list
+            return false;
+          }
+          return procExec.isFinished(proc.getProcId());
         }
-      }
-    );
-
+      });
     if (!procExec.isRunning()) {
       throw new IOException("The Master is Aborting");
     }

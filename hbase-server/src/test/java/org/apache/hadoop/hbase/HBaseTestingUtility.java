@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -3358,17 +3359,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Uses directly the assignment manager to assign the region.
-   * and waits until the specified region has completed assignment.
-   * @throws IOException
-   * @throw InterruptedException
+   * Uses directly the assignment manager to assign the region. and waits until the specified region
+   * has completed assignment.
    * @return true if the region is assigned false otherwise.
    */
   public boolean assignRegion(final RegionInfo regionInfo)
       throws IOException, InterruptedException {
     final AssignmentManager am = getHBaseCluster().getMaster().getAssignmentManager();
     am.assign(regionInfo);
-    return am.waitForAssignment(regionInfo);
+    return AssignmentTestingUtil.waitForAssignment(am, regionInfo);
   }
 
   /**
