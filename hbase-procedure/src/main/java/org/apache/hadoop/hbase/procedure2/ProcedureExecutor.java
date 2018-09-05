@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
@@ -986,7 +987,7 @@ public class ProcedureExecutor<TEnvironment> {
    * <p>
    * If the procedure is in WAITING state, will set it to RUNNABLE add it to run queue.
    * TODO: What about WAITING_TIMEOUT?
-   * @param id the procedure id
+   * @param pids the procedure id
    * @param lockWait time to wait lock
    * @param force if force set to true, we will bypass the procedure even if it is executing.
    *              This is for procedures which can't break out during executing(due to bug, mostly)
@@ -997,15 +998,23 @@ public class ProcedureExecutor<TEnvironment> {
    * @return true if bypass success
    * @throws IOException IOException
    */
-  public boolean bypassProcedure(long id, long lockWait, boolean force) throws IOException  {
-    Procedure<TEnvironment> procedure = getProcedure(id);
+  public List<Boolean> bypassProcedure(List<Long> pids, long lockWait, boolean force)
+      throws IOException {
+    List<Boolean> result = new ArrayList<Boolean>(pids.size());
+    for(long pid: pids) {
+      result.add(bypassProcedure(pid, lockWait, force));
+    }
+    return result;
+  }
+
+  boolean bypassProcedure(long pid, long lockWait, boolean force) throws IOException {
+    Procedure<TEnvironment> procedure = getProcedure(pid);
     if (procedure == null) {
-      LOG.debug("Procedure with id={} does not exist, skipping bypass", id);
+      LOG.debug("Procedure with id={} does not exist, skipping bypass", pid);
       return false;
     }
 
     LOG.debug("Begin bypass {} with lockWait={}, force={}", procedure, lockWait, force);
-
     IdLock.Entry lockEntry = procExecutionLock.tryLockEntry(procedure.getProcId(), lockWait);
     if (lockEntry == null && !force) {
       LOG.debug("Waited {} ms, but {} is still running, skipping bypass with force={}",

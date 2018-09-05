@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
@@ -127,5 +129,26 @@ public class HBaseHbck implements Hbck {
 
   private static String toCommaDelimitedString(List<String> list) {
     return list.stream().collect(Collectors.joining(", "));
+  }
+
+  @Override
+  public List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean force)
+      throws IOException {
+    MasterProtos.BypassProcedureResponse response = ProtobufUtil.call(
+        new Callable<MasterProtos.BypassProcedureResponse>() {
+          @Override
+          public MasterProtos.BypassProcedureResponse call() throws Exception {
+            try {
+              return hbck.bypassProcedure(rpcControllerFactory.newController(),
+                  MasterProtos.BypassProcedureRequest.newBuilder().addAllProcId(pids).
+                      setWaitTime(waitTime).setForce(force).build());
+            } catch (Throwable t) {
+              LOG.error(pids.stream().map(i -> i.toString()).
+                  collect(Collectors.joining(", ")), t);
+              throw t;
+            }
+          }
+        });
+    return response.getBypassedList();
   }
 }
