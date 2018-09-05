@@ -80,7 +80,7 @@
   final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
   String sortKey = request.getParameter("sort");
   String reverse = request.getParameter("reverse");
-  final boolean reverseOrder = (reverse==null||!reverse.equals("false"));
+  final boolean reverseOrder = (reverse != null && reverse.equals("true"));
   String showWholeKey = request.getParameter("showwhole");
   final boolean showWhole = (showWholeKey!=null && showWholeKey.equals("true"));
   Table table;
@@ -443,7 +443,7 @@ Sort As
 <option value="locality">Locality</option>
 </select>
 Ascending<input type="checkbox" id="ascending" value="Ascending" style="margin-right:10px">
-ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-right:10px">
+ShowDetailName<input type="checkbox" id="showWhole" style="margin-right:10px">
 <input type="button" id="submit" value="Reorder" onClick="reloadAsSort()" style="font-size: 12pt; width: 5em; margin-bottom: 5px" class="btn">
 <p>
 
@@ -622,8 +622,8 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   <td><%= fileCount%></td>
   <td><%= memSize%></td>
   <td><%= locality%></td>
-  <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getStartKey()):"-")%></td>
-  <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getEndKey()):"-")%></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
   <%
   if (withReplica) {
   %>
