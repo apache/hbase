@@ -179,7 +179,9 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
           .addGauge(Interns.info(NUM_ACTIVE_READ_HANDLER_NAME, NUM_ACTIVE_READ_HANDLER_DESC),
             wrapper.getActiveReadRpcHandlerCount())
           .addGauge(Interns.info(NUM_ACTIVE_SCAN_HANDLER_NAME, NUM_ACTIVE_SCAN_HANDLER_DESC),
-            wrapper.getActiveScanRpcHandlerCount());
+            wrapper.getActiveScanRpcHandlerCount())
+          .addGauge(Interns.info(NETTY_DM_USAGE_NAME, NETTY_DM_USAGE_DESC),
+            wrapper.getNettyDmUsage());
     }
 
     metricsRegistry.snapshot(mrb, all);
