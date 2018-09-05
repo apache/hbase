@@ -30,6 +30,12 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,15 +69,57 @@ public class TestHbck {
 
   private static final TableName TABLE_NAME = TableName.valueOf(TestHbck.class.getSimpleName());
 
+  private static ProcedureExecutor<MasterProcedureEnv> procExec;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, Bytes.toBytes("family1"), 5);
+    procExec = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  public static class SuspendProcedure extends
+      ProcedureTestingUtility.NoopProcedure<MasterProcedureEnv> implements TableProcedureInterface {
+    public SuspendProcedure() {
+      super();
+    }
+
+    @Override
+    protected Procedure[] execute(final MasterProcedureEnv env)
+        throws ProcedureSuspendedException {
+      // Always suspend the procedure
+      throw new ProcedureSuspendedException();
+    }
+
+    @Override
+    public TableName getTableName() {
+      return TABLE_NAME;
+    }
+
+    @Override
+    public TableOperationType getTableOperationType() {
+      return TableOperationType.READ;
+    }
+  }
+
+  @Test
+  public void testBypassProcedure() throws Exception {
+    // SuspendProcedure
+    final SuspendProcedure proc = new SuspendProcedure();
+    long procId = procExec.submitProcedure(proc);
+    Thread.sleep(500);
+
+    //bypass the procedure
+    List<Long> pids = Arrays.<Long>asList(procId);
+    List<Boolean> results = TEST_UTIL.getHbck().bypassProcedure(pids, 30000, false);
+    assertTrue("Failed to by pass procedure!", results.get(0));
+    TEST_UTIL.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
+    LOG.info("{} finished", proc);
   }
 
   @Test
