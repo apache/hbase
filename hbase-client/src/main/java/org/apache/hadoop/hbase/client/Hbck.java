@@ -26,15 +26,9 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Hbck APIs for HBase. Obtain an instance from {@link ClusterConnection#getHbck()} and call
+ * Hbck fixup tool APIs. Obtain an instance from {@link ClusterConnection#getHbck()} and call
  * {@link #close()} when done.
- * <p>Hbck client APIs will be mostly used by hbck tool which in turn can be used by operators to
- * fix HBase and bringing it to consistent state.</p>
- *
- * <p>NOTE: The methods in here can do damage to a cluster if applied in the wrong sequence or at
- * the wrong time. Use with caution. For experts only. These methods are only for the
- * extreme case where the cluster has been damaged or has achieved an inconsistent state because
- * of some unforeseen circumstance or bug and requires manual intervention.
+ * <p>WARNING: the below methods can damage the cluster. For experienced users only.
  *
  * @see ConnectionFactory
  * @see ClusterConnection
@@ -45,10 +39,6 @@ public interface Hbck extends Abortable, Closeable {
   /**
    * Update table state in Meta only. No procedures are submitted to open/assign or
    * close/unassign regions of the table.
-   *
-   * <p>>NOTE: This is a dangerous action, as existing running procedures for the table or regions
-   * which belong to the table may get confused.
-   *
    * @param state table state
    * @return previous state of the table in Meta
    */
@@ -75,4 +65,17 @@ public interface Hbck extends Abortable, Closeable {
    *                           example of what a random user-space encoded Region name looks like.
    */
   List<Long> unassigns(List<String> encodedRegionNames) throws IOException;
+
+  /**
+   * Bypass specified procedure and move it to completion. Procedure is marked completed but
+   * no actual work is done from the current state/step onwards. Parents of the procedure are
+   * also marked for bypass.
+   *
+   * @param pids of procedures to complete.
+   * @param waitTime wait time in ms for acquiring lock for a procedure
+   * @param force if force set to true, we will bypass the procedure even if it is executing.
+   *   This is for procedures which can't break out during execution (bugs?).
+   * @return true if procedure is marked for bypass successfully, false otherwise
+   */
+  List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean force) throws IOException;
 }

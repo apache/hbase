@@ -1032,6 +1032,16 @@ message UnassignsResponse {
   repeated uint64 pid = 1;
 }
 
+message BypassProcedureRequest {
+  repeated uint64 proc_id = 1;
+  optional uint64 waitTime = 2; // wait time in ms to acquire lock on a procedure
+  optional bool force = 3; // if true, procedure is marked for bypass even if its executing
+}
+
+message BypassProcedureResponse {
+  repeated bool bypassed = 1;
+}
+
 service HbckService {
   /** Update state of the table in meta only*/
   rpc SetTableStateInMeta(SetTableStateInMetaRequest)
@@ -1054,4 +1064,8 @@ service HbckService {
    */
   rpc Unassigns(UnassignsRequest)
     returns(UnassignsResponse);
+
+  /** Bypass a procedure to completion, procedure is completed but no actual work is done*/
+  rpc BypassProcedure(BypassProcedureRequest)
+    returns(BypassProcedureResponse);
 }

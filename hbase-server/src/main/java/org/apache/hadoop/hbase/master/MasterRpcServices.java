@@ -2426,4 +2426,28 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(ioe);
     }
   }
+
+  /**
+   * Bypass specified procedure to completion. Procedure is marked completed but no actual work
+   * is done from the current state/ step onwards. Parents of the procedure are also marked for
+   * bypass.
+   *
+   * NOTE: this is a dangerous operation and may be used to unstuck buggy procedures. This may
+   * leave system in inconherent state. This may need to be followed by some cleanup steps/
+   * actions by operator.
+   *
+   * @return BypassProcedureToCompletionResponse indicating success or failure
+   */
+  @Override
+  public MasterProtos.BypassProcedureResponse bypassProcedure(RpcController controller,
+      MasterProtos.BypassProcedureRequest request) throws ServiceException {
+    try {
+      List<Boolean> ret =
+          master.getMasterProcedureExecutor().bypassProcedure(request.getProcIdList(),
+          request.getWaitTime(), request.getForce());
+      return MasterProtos.BypassProcedureResponse.newBuilder().addAllBypassed(ret).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
 }
