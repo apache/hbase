@@ -83,6 +83,7 @@ public final class ProcedureWALFormat {
       // Ignore the last log which is current active log.
       while (logs.hasNext()) {
         ProcedureWALFile log = logs.next();
+        LOG.debug("Loading WAL id={}", log.getLogId());
         log.open();
         try {
           reader.read(log);

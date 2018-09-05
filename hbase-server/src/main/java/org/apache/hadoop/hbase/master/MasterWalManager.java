@@ -143,6 +143,11 @@ public class MasterWalManager {
     return this.fsOk;
   }
 
+  /**
+   * @return Return listing of ServerNames found in the filesystem under the WAL directory
+   *   that COULD BE 'alive'; excludes those that have a '-splitting' suffix as these are already
+   *   being split -- they cannot be 'alive'.
+   */
   public Set<ServerName> getLiveServersFromWALDir() throws IOException {
     Path walDirPath = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
     FileStatus[] walDirForLiveServers = FSUtils.listStatus(fs, walDirPath,
