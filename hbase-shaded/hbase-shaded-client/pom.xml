@@ -45,6 +45,34 @@
                     <skipAssembly>true</skipAssembly>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>aggregate-into-a-jar-with-relocated-third-parties</id>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <!--
+                                      Tell the shade plugin that in this case we want to include hadoop
+                                      by leaving out the exclude.
+                                      -->
+                                    <!-- The rest of these should be kept in sync with the parent pom -->
+                                    <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
+                                    <exclude>org.slf4j:*</exclude>
+                                    <exclude>com.google.code.findbugs:*</exclude>
+                                    <exclude>com.github.stephenc.findbugs:*</exclude>
+                                    <exclude>org.apache.htrace:*</exclude>
+                                    <exclude>org.apache.yetus:*</exclude>
+                                    <exclude>log4j:*</exclude>
+                                    <exclude>commons-logging:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
     <dependencies>
@@ -55,41 +83,4 @@
         </dependency>
     </dependencies>
 
-    <profiles>
-        <profile>
-            <id>release</id>
-            <build>
-                <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-shade-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <id>aggregate-into-a-jar-with-relocated-third-parties</id>
-                            <configuration>
-                                <artifactSet>
-                                    <excludes>
-                                        <!--
-                                          Tell the shade plugin that in this case we want to include hadoop
-                                          by leaving out the exclude.
-                                          -->
-                                        <!-- The rest of these should be kept in sync with the parent pom -->
-                                        <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
-                                        <exclude>org.slf4j:*</exclude>
-                                        <exclude>com.google.code.findbugs:*</exclude>
-                                        <exclude>com.github.stephenc.findbugs:*</exclude>
-                                        <exclude>org.apache.htrace:*</exclude>
-                                        <exclude>org.apache.yetus:*</exclude>
-                                        <exclude>log4j:*</exclude>
-                                        <exclude>commons-logging:*</exclude>
-                                    </excludes>
-                                </artifactSet>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
