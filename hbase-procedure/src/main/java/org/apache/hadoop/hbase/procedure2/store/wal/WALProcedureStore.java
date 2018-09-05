@@ -424,6 +424,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
       it.next(); // Skip the current log
 
       ProcedureWALFormat.load(it, storeTracker, new ProcedureWALFormat.Loader() {
+        long count = 0;
+
         @Override
         public void setMaxProcId(long maxProcId) {
           loader.setMaxProcId(maxProcId);
@@ -431,6 +433,11 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
         @Override
         public void load(ProcedureIterator procIter) throws IOException {
+          if ((++count % 1000) == 0) {
+            // Log every 1000 procedures otherwise it looks like Master is dead if loads of WALs
+            // and procedures to load.
+            LOG.debug("Loaded {} procedures", this.count);
+          }
           loader.load(procIter);
         }
 
