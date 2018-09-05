@@ -59,6 +59,10 @@
                     </archive>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
     <dependencies>
@@ -161,17 +165,6 @@
     </dependencies>
 
     <profiles>
-        <profile>
-            <id>release</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-shade-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
         <!-- These hadoop profiles should be derived from those in the hbase-mapreduce
              module. Essentially, you must list the same hadoop-* dependencies
              since provided dependencies are not transitively included.
