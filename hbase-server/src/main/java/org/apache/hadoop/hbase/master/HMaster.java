@@ -580,7 +580,7 @@ public class HMaster extends HRegionServer implements MasterServices {
               abort(error, t);
             }
           }
-        }));
+        }), getName() + ":becomeActiveMaster");
       }
       // Fall in here even if we have been aborted. Need to run the shutdown services and
       // the super run call will do this for us.
@@ -918,7 +918,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           HBaseFsck.createLockRetryCounterFactory(this.conf).create());
     }
 
-    status.setStatus("Initialze ServerManager and schedule SCP for crash servers");
+    status.setStatus("Initialize ServerManager and schedule SCP for crash servers");
     this.serverManager = createServerManager(this);
     createProcedureExecutor();
     @SuppressWarnings("rawtypes")
@@ -940,6 +940,9 @@ public class HMaster extends HRegionServer implements MasterServices {
         .collect(Collectors.toList());
     this.assignmentManager.setupRIT(ritList);
 
+    // Start RegionServerTracker with listing of servers found with exiting SCPs -- these should
+    // be registered in the deadServers set -- and with the list of servernames out on the
+    // filesystem that COULD BE 'alive' (we'll schedule SCPs for each and let SCP figure it out).
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
     this.regionServerTracker.start(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()

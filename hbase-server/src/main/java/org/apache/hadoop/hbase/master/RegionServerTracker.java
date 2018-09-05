@@ -111,13 +111,15 @@ public class RegionServerTracker extends ZKListener {
    * In this method, we will also construct the region server sets in {@link ServerManager}. If a
    * region server is dead between the crash of the previous master instance and the start of the
    * current master instance, we will schedule a SCP for it. This is done in
-   * {@link ServerManager#findOutDeadServersAndProcess(Set, Set)}, we call it here under the lock
+   * {@link ServerManager#findDeadServersAndProcess(Set, Set)}, we call it here under the lock
    * protection to prevent concurrency issues with server expiration operation.
    * @param deadServersFromPE the region servers which already have SCP associated.
    * @param liveServersFromWALDir the live region servers from wal directory.
    */
   public void start(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersFromWALDir)
       throws KeeperException, IOException {
+    LOG.info("Starting RegionServerTracker; {} have existing ServerCrashProcedures, {} " +
+        "possibly 'live' servers.", deadServersFromPE.size(), liveServersFromWALDir.size());
     watcher.registerListener(this);
     synchronized (this) {
       List<String> servers =
@@ -132,7 +134,7 @@ public class RegionServerTracker extends ZKListener {
           info.getVersionInfo().getVersion()) : ServerMetricsBuilder.of(serverName);
         serverManager.checkAndRecordNewServer(serverName, serverMetrics);
       }
-      serverManager.findOutDeadServersAndProcess(deadServersFromPE, liveServersFromWALDir);
+      serverManager.findDeadServersAndProcess(deadServersFromPE, liveServersFromWALDir);
     }
   }
 
