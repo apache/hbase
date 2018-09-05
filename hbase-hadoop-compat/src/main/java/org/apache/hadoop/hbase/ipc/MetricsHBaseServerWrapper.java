@@ -56,4 +56,6 @@ public interface MetricsHBaseServerWrapper {
   int getActiveReadRpcHandlerCount();
 
   int getActiveScanRpcHandlerCount();
+
+  long getNettyDmUsage();
 }

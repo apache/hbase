@@ -95,6 +95,11 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String NUM_LIFO_MODE_SWITCHES_NAME = "numLifoModeSwitches";
   String NUM_LIFO_MODE_SWITCHES_DESC = "Total number of calls in general queue which " +
     "were served from the tail of the queue";
+  // Direct Memory Usage metrics
+  String NETTY_DM_USAGE_NAME = "nettyDirectMemoryUsage";
+
+  String NETTY_DM_USAGE_DESC = "Current Netty direct memory usage.";
+
 
   void authorizationSuccess();
 

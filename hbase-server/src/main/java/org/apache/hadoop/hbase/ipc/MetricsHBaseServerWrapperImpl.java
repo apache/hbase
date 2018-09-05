@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -168,5 +169,14 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
       return 0;
     }
     return server.getScheduler().getActiveScanRpcHandlerCount();
+  }
+
+  @Override
+  public long getNettyDmUsage() {
+    if (!isServerStarted() || this.server.getScheduler() == null) {
+      return 0L;
+    }
+
+    return DirectMemoryUtils.getNettyDirectMemoryUsage();
   }
 }
