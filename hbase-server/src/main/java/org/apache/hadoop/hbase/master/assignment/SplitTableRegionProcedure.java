@@ -23,6 +23,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -551,11 +552,8 @@ public class SplitTableRegionProcedure
     final int regionReplication = getRegionReplication(env);
     final ServerName serverName = getParentRegionServerName(env);
 
-    final AssignProcedure[] procs = new AssignProcedure[regionReplication];
-    for (int i = 0; i < regionReplication; ++i) {
-      final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(getParentRegion(), i);
-      procs[i] = env.getAssignmentManager().createAssignProcedure(hri, serverName);
-    }
+    final AssignProcedure[] procs = createAssignProcedures(regionReplication, env,
+      Collections.singletonList(getParentRegion()), serverName);
     env.getMasterServices().getMasterProcedureExecutor().submitProcedures(procs);
   }
 
@@ -836,15 +834,37 @@ public class SplitTableRegionProcedure
   private AssignProcedure[] createAssignProcedures(final MasterProcedureEnv env,
       final int regionReplication) {
     final ServerName targetServer = getParentRegionServerName(env);
-    final AssignProcedure[] procs = new AssignProcedure[regionReplication * 2];
+    List<RegionInfo> daughterRegions = new ArrayList<RegionInfo>(2);
+    daughterRegions.add(daughter_1_RI);
+    daughterRegions.add(daughter_2_RI);
+    return createAssignProcedures(regionReplication, env, daughterRegions, targetServer);
+  }
+
+  private AssignProcedure[] createAssignProcedures(final int regionReplication,
+      final MasterProcedureEnv env, final List<RegionInfo> hris, final ServerName serverName) {
+    final AssignProcedure[] procs = new AssignProcedure[hris.size() * regionReplication];
     int procsIdx = 0;
-    for (int i = 0; i < regionReplication; ++i) {
-      final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(daughter_1_RI, i);
-      procs[procsIdx++] = env.getAssignmentManager().createAssignProcedure(hri, targetServer);
+    for (int i = 0; i < hris.size(); ++i) {
+      // create procs for the primary region with the target server.
+      final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), 0);
+      procs[procsIdx++] = env.getAssignmentManager().createAssignProcedure(hri, serverName);
     }
-    for (int i = 0; i < regionReplication; ++i) {
-      final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(daughter_2_RI, i);
-      procs[procsIdx++] = env.getAssignmentManager().createAssignProcedure(hri, targetServer);
+    if (regionReplication > 1) {
+      List<RegionInfo> regionReplicas =
+          new ArrayList<RegionInfo>(hris.size() * (regionReplication - 1));
+      for (int i = 0; i < hris.size(); ++i) {
+        // We don't include primary replica here
+        for (int j = 1; j < regionReplication; ++j) {
+          regionReplicas.add(RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j));
+        }
+      }
+      // for the replica regions exclude the primary region's server and call LB's roundRobin
+      // assignment
+      AssignProcedure[] replicaAssignProcs = env.getAssignmentManager()
+          .createRoundRobinAssignProcedures(regionReplicas, Collections.singletonList(serverName));
+      for (AssignProcedure proc : replicaAssignProcs) {
+        procs[procsIdx++] = proc;
+      }
     }
     return procs;
   }

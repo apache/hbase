@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -682,16 +683,38 @@ public class MergeTableRegionsProcedure
     final int regionReplication = getRegionReplication(env);
     final ServerName serverName = getServerName(env);
 
-    final AssignProcedure[] procs =
-        new AssignProcedure[regionsToMerge.length * regionReplication];
+    AssignProcedure[] procs =
+        createAssignProcedures(regionReplication, env, Arrays.asList(regionsToMerge), serverName);
+    env.getMasterServices().getMasterProcedureExecutor().submitProcedures(procs);
+  }
+  
+  private AssignProcedure[] createAssignProcedures(final int regionReplication,
+      final MasterProcedureEnv env, final List<RegionInfo> hris, final ServerName serverName) {
+    final AssignProcedure[] procs = new AssignProcedure[hris.size() * regionReplication];
     int procsIdx = 0;
-    for (int i = 0; i < regionsToMerge.length; ++i) {
-      for (int j = 0; j < regionReplication; ++j) {
-        final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(regionsToMerge[i], j);
-        procs[procsIdx++] = env.getAssignmentManager().createAssignProcedure(hri, serverName);
+    for (int i = 0; i < hris.size(); ++i) {
+      // create procs for the primary region with the target server.
+      final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), 0);
+      procs[procsIdx++] = env.getAssignmentManager().createAssignProcedure(hri, serverName);
+    }
+    if (regionReplication > 1) {
+      List<RegionInfo> regionReplicas =
+          new ArrayList<RegionInfo>(hris.size() * (regionReplication - 1));
+      for (int i = 0; i < hris.size(); ++i) {
+        // We don't include primary replica here
+        for (int j = 1; j < regionReplication; ++j) {
+          regionReplicas.add(RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j));
+        }
+      }
+      // for the replica regions exclude the primary region's server and call LB's roundRobin
+      // assignment
+      AssignProcedure[] replicaAssignProcs = env.getAssignmentManager()
+          .createRoundRobinAssignProcedures(regionReplicas, Collections.singletonList(serverName));
+      for (AssignProcedure proc : replicaAssignProcs) {
+        procs[procsIdx++] = proc;
       }
     }
-    env.getMasterServices().getMasterProcedureExecutor().submitProcedures(procs);
+    return procs;
   }
 
   private UnassignProcedure[] createUnassignProcedures(final MasterProcedureEnv env,
@@ -712,12 +735,8 @@ public class MergeTableRegionsProcedure
   private AssignProcedure[] createAssignProcedures(final MasterProcedureEnv env,
       final int regionReplication) {
     final ServerName targetServer = getServerName(env);
-    final AssignProcedure[] procs = new AssignProcedure[regionReplication];
-    for (int i = 0; i < procs.length; ++i) {
-      final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(mergedRegion, i);
-      procs[i] = env.getAssignmentManager().createAssignProcedure(hri, targetServer);
-    }
-    return procs;
+    return createAssignProcedures(regionReplication, env, Collections.singletonList(mergedRegion),
+      targetServer);
   }
 
   private int getRegionReplication(final MasterProcedureEnv env) throws IOException {

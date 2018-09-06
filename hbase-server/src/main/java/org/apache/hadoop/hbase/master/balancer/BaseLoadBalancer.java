@@ -1271,13 +1271,30 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     List<RegionInfo> lastFewRegions = new ArrayList<>();
     // assign the remaining by going through the list and try to assign to servers one-by-one
     int serverIdx = RANDOM.nextInt(numServers);
-    for (RegionInfo region : unassignedRegions) {
+    OUTER : for (RegionInfo region : unassignedRegions) {
       boolean assigned = false;
-      for (int j = 0; j < numServers; j++) { // try all servers one by one
+      INNER : for (int j = 0; j < numServers; j++) { // try all servers one by one
         ServerName serverName = servers.get((j + serverIdx) % numServers);
         if (!cluster.wouldLowerAvailability(region, serverName)) {
           List<RegionInfo> serverRegions =
               assignments.computeIfAbsent(serverName, k -> new ArrayList<>());
+          if (!RegionReplicaUtil.isDefaultReplica(region.getReplicaId())) {
+            // if the region is not a default replica
+            // check if the assignments map has the other replica region on this server
+            for (RegionInfo hri : serverRegions) {
+              if (RegionReplicaUtil.isReplicasForSameRegion(region, hri)) {
+                if (LOG.isTraceEnabled()) {
+                  LOG.trace("Skipping the server, " + serverName
+                      + " , got the same server for the region " + region);
+                }
+                // do not allow this case. The unassignedRegions we got because the
+                // replica region in this list was not assigned because of lower availablity issue.
+                // So when we assign here we should ensure that as far as possible the server being
+                // selected does not have the server where the replica region was not assigned.
+                continue INNER; // continue the inner loop, ie go to the next server
+              }
+            }
+          }
           serverRegions.add(region);
           cluster.doAssignRegion(region, serverName);
           serverIdx = (j + serverIdx + 1) % numServers; //remain from next server

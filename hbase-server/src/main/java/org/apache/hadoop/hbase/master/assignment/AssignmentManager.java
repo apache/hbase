@@ -566,6 +566,17 @@ public class AssignmentManager implements ServerListener {
     return waitForAssignment(regionInfo, Long.MAX_VALUE);
   }
 
+  /**
+   * Create round-robin assigns. Use on table creation to distribute out regions across cluster.
+   * @return AssignProcedures made out of the passed in <code>hris</code> and a call to the balancer
+   *         to populate the assigns with targets chosen using round-robin (default balancer
+   *         scheme). If at assign-time, the target chosen is no longer up, thats fine, the
+   *         AssignProcedure will ask the balancer for a new target, and so on.
+   */
+  public AssignProcedure[] createRoundRobinAssignProcedures(List<RegionInfo> hris) {
+    return createRoundRobinAssignProcedures(hris, null);
+  }
+
   @VisibleForTesting
   // TODO: Remove this?
   public boolean waitForAssignment(final RegionInfo regionInfo, final long timeout)
@@ -609,15 +620,21 @@ public class AssignmentManager implements ServerListener {
    * balancer scheme). If at assign-time, the target chosen is no longer up, thats fine,
    * the AssignProcedure will ask the balancer for a new target, and so on.
    */
-  public AssignProcedure[] createRoundRobinAssignProcedures(final List<RegionInfo> hris) {
+  public AssignProcedure[] createRoundRobinAssignProcedures(final List<RegionInfo> hris,
+      List<ServerName> serversToExclude) {
     if (hris.isEmpty()) {
       return null;
+    }
+    if (serversToExclude != null
+        && this.master.getServerManager().getOnlineServersList().size() == 1) {
+      LOG.debug("Only one region server found and hence going ahead with the assignment");
+      serversToExclude = null;
     }
     try {
       // Ask the balancer to assign our regions. Pass the regions en masse. The balancer can do
       // a better job if it has all the assignments in the one lump.
       Map<ServerName, List<RegionInfo>> assignments = getBalancer().roundRobinAssignment(hris,
-          this.master.getServerManager().createDestinationServersList(null));
+          this.master.getServerManager().createDestinationServersList(serversToExclude));
       // Return mid-method!
       return createAssignProcedures(assignments, hris.size());
     } catch (HBaseIOException hioe) {
