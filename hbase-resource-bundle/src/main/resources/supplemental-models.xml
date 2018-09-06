@@ -2561,5 +2561,18 @@ Copyright (c) 2007-2011 The JRuby project
       </licenses>
     </project>
   </supplement>
-
+  <supplement>
+    <project>
+      <groupId>dnsjava</groupId>
+      <artifactId>dnsjava</artifactId>
+      <version>2.1.7</version>
+      <licenses>
+        <license>
+          <name>BSD license</name>
+          <url>https://github.com/dnsjava/dnsjava/blob/master/LICENSE</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
 </supplementalDataModels>
