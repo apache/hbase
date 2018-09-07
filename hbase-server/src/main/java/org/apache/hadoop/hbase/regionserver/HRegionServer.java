@@ -129,9 +129,7 @@ import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.Superusers;
@@ -542,7 +540,6 @@ public class HRegionServer extends HasThread implements
       checkCodecs(this.conf);
       this.userProvider = UserProvider.instantiate(conf);
       FSUtils.setupShortCircuitRead(this.conf);
-      decorateRegionServerConfiguration(this.conf);
 
       // Disable usage of meta replicas in the regionserver
       this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
@@ -3722,22 +3719,6 @@ public class HRegionServer extends HasThread implements
         rssStub = null;
       }
       throw ProtobufUtil.getRemoteException(se);
-    }
-  }
-
-  /**
-   * This method modifies the region server's configuration in order to inject replication-related
-   * features
-   * @param conf region server configurations
-   */
-  static void decorateRegionServerConfiguration(Configuration conf) {
-    if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
-      String plugins = conf.get(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, "");
-      String rsCoprocessorClass = ReplicationObserver.class.getCanonicalName();
-      if (!plugins.contains(rsCoprocessorClass)) {
-        conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-          plugins + "," + rsCoprocessorClass);
-      }
     }
   }
 

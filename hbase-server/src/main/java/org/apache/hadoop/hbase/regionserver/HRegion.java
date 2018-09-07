@@ -120,6 +120,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver.MutationType;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
@@ -148,6 +149,8 @@ import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -810,6 +813,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         this.htableDescriptor.getDurability() == Durability.USE_DEFAULT ? defaultDurability :
           this.htableDescriptor.getDurability();
 
+    decorateRegionConfiguration(conf);
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -8625,4 +8629,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     requestFlush0(tracker);
   }
 
+  /**
+   * This method modifies the region's configuration in order to inject replication-related
+   * features
+   * @param conf region configurations
+   */
+  static void decorateRegionConfiguration(Configuration conf) {
+    if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
+      String plugins = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,"");
+      String replicationCoprocessorClass = ReplicationObserver.class.getCanonicalName();
+      if (!plugins.contains(replicationCoprocessorClass)) {
+        conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+            (plugins.equals("") ? "" : (plugins + ",")) + replicationCoprocessorClass);
+      }
+    }
+  }
 }
