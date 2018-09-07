@@ -2923,7 +2923,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  void checkServiceStarted() throws ServerNotRunningYetException {
+  @VisibleForTesting
+  protected void checkServiceStarted() throws ServerNotRunningYetException {
     if (!serviceStarted) {
       throw new ServerNotRunningYetException("Server is not running yet");
     }
