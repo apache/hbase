@@ -43,6 +43,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.zookeeper.ZooKeeper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -119,6 +124,8 @@ public class LoadTestTool extends AbstractHBaseTool {
         + "compression) to use for data blocks in the test column family, "
         + "one of " + Arrays.toString(DataBlockEncoding.values()) + ".";
 
+  protected static final String OPT_VERBOSE = "verbose";
+
   public static final String OPT_BLOOM = "bloom";
   public static final String OPT_COMPRESSION = "compression";
   public static final String OPT_DEFERRED_LOG_FLUSH = "deferredlogflush";
@@ -191,7 +198,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   protected long startKey, endKey;
 
-  protected boolean isWrite, isRead, isUpdate;
+  protected boolean isVerbose, isWrite, isRead, isUpdate;
   protected boolean deferredLogFlush;
 
   // Column family options
@@ -309,6 +316,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   @Override
   protected void addOptions() {
+    addOptNoArg("v", OPT_VERBOSE, "Will display a full readout of logs, including ZooKeeper");
     addOptWithArg(OPT_ZK_QUORUM, "ZK quorum as comma-separated host names " +
         "without port numbers");
     addOptWithArg(OPT_ZK_PARENT_NODE, "name of parent znode in zookeeper");
@@ -376,6 +384,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       families = DEFAULT_COLUMN_FAMILIES;
     }
 
+    isVerbose = cmd.hasOption(OPT_VERBOSE);
     isWrite = cmd.hasOption(OPT_WRITE);
     isRead = cmd.hasOption(OPT_READ);
     isUpdate = cmd.hasOption(OPT_UPDATE);
@@ -534,6 +543,9 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   @Override
   protected int doWork() throws IOException {
+    if (!isVerbose) {
+        LogManager.getLogger(ZooKeeper.class.getName()).setLevel(Level.WARN);
+    }
     if (numTables > 1) {
       return parallelLoadTables();
     } else {
