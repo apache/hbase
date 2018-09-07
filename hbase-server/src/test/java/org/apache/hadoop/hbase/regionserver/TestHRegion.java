@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BigDecimalComparator;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -140,6 +141,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -6207,6 +6209,29 @@ public class TestHRegion {
     this.region.mutateRow(rm);
     long wrcAfterMutate = this.region.writeRequestsCount.longValue();
     Assert.assertEquals(wrcBeforeMutate + rm.getMutations().size(), wrcAfterMutate);
+  }
+
+  @Test
+  public void testBulkLoadReplicationEnabled() throws IOException {
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
+    final ServerName serverName = ServerName.valueOf(name.getMethodName(), 100, 42);
+    final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
+
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    htd.addFamily(new HColumnDescriptor(fam1));
+    HRegionInfo hri = new HRegionInfo(htd.getTableName(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
+    region = HRegion.openHRegion(hri, htd, rss.getWAL(hri), TEST_UTIL.getConfiguration(),
+        rss, null);
+
+    assertTrue(region.conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, false));
+    String plugins = region.conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
+    String replicationCoprocessorClass = ReplicationObserver.class.getCanonicalName();
+    assertTrue(plugins.contains(replicationCoprocessorClass));
+    assertTrue(region.getCoprocessorHost().
+        getCoprocessors().contains(ReplicationObserver.class.getSimpleName()));
+
+    region.close();
   }
 
   /**
