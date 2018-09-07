@@ -628,9 +628,14 @@ class ConnectionManager {
     private final ReentrantLock userRegionLock = new ReentrantLock();
 
 
-     HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
-       this(conf, managed, null, null);
-     }
+    HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
+      this(conf, managed, null, null);
+    }
+
+    HConnectionImplementation(Configuration conf, boolean managed, ExecutorService pool, User user)
+      throws IOException {
+      this(conf, managed, pool, user, null);
+    }
 
     /**
      * constructor
@@ -644,7 +649,8 @@ class ConnectionManager {
      * users of an HConnectionImplementation instance.
      */
     HConnectionImplementation(Configuration conf, boolean managed,
-        ExecutorService pool, User user) throws IOException {
+        ExecutorService pool, User user, String clusterId) throws IOException {
+      this.clusterId = clusterId;
       this.conf = conf;
       this.user = user;
       this.batchPool = pool;
