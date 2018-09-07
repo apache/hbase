@@ -5,6 +5,7 @@ Release Notes - HBase - Version 1.2.7
 
 ** Sub-task
     * [HBASE-15691] - Port HBASE-10205 (ConcurrentModificationException in BucketAllocator) to branch-1
+    * [HBASE-16848] - Usage for show_peer_tableCFs command doesn't include peer
     * [HBASE-18268] - Eliminate the findbugs warnings for hbase-client
     * [HBASE-18293] - Only add the spotbugs dependency when jdk8 is active
     * [HBASE-18308] - Eliminate the findbugs warnings for hbase-server
@@ -24,14 +25,20 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-19373] - Fix Checkstyle error in hbase-annotations
     * [HBASE-19502] - Make sure we have closed all StoreFileScanners if we fail to open any StoreFileScanners
     * [HBASE-19877] - hbase-common and hbase-zookeeper don't add the log4j.properties to the resource path for testing
+    * [HBASE-20317] - Backport HBASE-20261 "Table page (table.jsp) in Master UI does not show replicaIds for hbase meta table" to branch-1
+    * [HBASE-20974] - Backport HBASE-20583 (SplitLogWorker should handle FileNotFoundException when split a wal) to branch-1
+    * [HBASE-21060] - fix dead store in SecureBulkLoadEndpoint
+    * [HBASE-21061] - fix synchronization of org.apache.hadoop.hbase.ipc.RpcServer$Connection.useWrap
 
 ** Bug
     * [HBASE-9393] - Hbase does not closing a closed socket resulting in many CLOSE_WAIT
     * [HBASE-14497] - Reverse Scan threw StackOverflow caused by readPt checking
     * [HBASE-14499] - Master coprocessors shutdown will not happen on master abort
     * [HBASE-14897] - TestTableLockManager.testReapAllTableLocks is flakey
+    * [HBASE-15291] - FileSystem not closed in secure bulkLoad
     * [HBASE-15497] - Incorrect javadoc for atomicity guarantee of Increment and Append
     * [HBASE-15548] - SyncTable: sourceHashDir is supposed to be optional but won't work without
+    * [HBASE-15871] - Memstore flush doesn't finish because of backwardseek() in memstore scanner.
     * [HBASE-15947] - Classes used only for tests included in main code base
     * [HBASE-16090] - ResultScanner is not closed in SyncTable#finishRemainingHashRanges()
     * [HBASE-16731] - Inconsistent results from the Get/Scan if we use the empty FilterList
@@ -40,14 +47,18 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-17513] - Thrift Server 1 uses different QOP settings than RPC and Thrift Server 2 and can easily be misconfigured so there is no encryption when the operator expects it.
     * [HBASE-17590] - Drop cache hint should work for StoreFile write path
     * [HBASE-17617] - Backport HBASE-16731 (Inconsistent results from the Get/Scan if we use the empty FilterList) to branch-1
+    * [HBASE-17631] - Canary interval too low
     * [HBASE-17648] - HBase Table-level synchronization fails between two secured(kerberized) clusters
     * [HBASE-17658] - Fix bookkeeping error with max regions for a table
     * [HBASE-17803] - PE always re-creates table when we specify the split policy
+    * [HBASE-17861] - Regionserver down when checking the permission of staging dir if hbase.rootdir is on S3
+    * [HBASE-17885] - Backport HBASE-15871 to branch-1
     * [HBASE-18024] - HRegion#initializeRegionInternals should not re-create .hregioninfo file when the region directory no longer exists
     * [HBASE-18025] - CatalogJanitor should collect outdated RegionStates from the AM
     * [HBASE-18030] - Per Cell TTL tags may get duplicated with increments/Append causing tags length overflow
     * [HBASE-18036] - HBase 1.x : Data locality is not maintained after cluster restart or SSH
     * [HBASE-18066] - Get with closest_row_before on "hbase:meta" can return empty Cell during region merge/split
+    * [HBASE-18099] - FlushSnapshotSubprocedure should wait for concurrent Region#flush() to finish
     * [HBASE-18122] - Scanner id should include ServerName of region server
     * [HBASE-18125] - HBase shell disregards spaces at the end of a split key in a split file
     * [HBASE-18132] - Low replication should be checked in period in case of datanode rolling upgrade
@@ -69,6 +80,7 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-18362] - hbck should not report split replica parent region from meta as errors
     * [HBASE-18390] - Sleep too long when finding region location failed
     * [HBASE-18438] - Precommit doesn't warn about unused imports
+    * [HBASE-18441] - ZookeeperWatcher#interruptedException should throw exception
     * [HBASE-18461] - Build broken If the username contains a backslash
     * [HBASE-18470] - Remove the redundant comma from RetriesExhaustedWithDetailsException#getDesc
     * [HBASE-18471] - The DeleteFamily cell is skipped when StoreScanner seeks to next column
@@ -79,6 +91,8 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-18487] - Minor fixes in row lock implementation
     * [HBASE-18488] - Backport HBASE-15710(Include issue servers information in RetriesExhaustedWithDetailsException message) to branch-1.2
     * [HBASE-18505] - Our build/yetus personality will run tests on individual modules and then on all (i.e. 'root'). Should do one or other
+    * [HBASE-18512] - Region Server will abort with IllegalStateException if HDFS umask has limited scope
+    * [HBASE-18568] - Correct  metric of  numRegions
     * [HBASE-18572] - Delete can't remove the cells which have no visibility label
     * [HBASE-18577] - shaded client includes several non-relocated third party dependencies
     * [HBASE-18607] - fix submit-patch.py to support utf8
@@ -88,7 +102,10 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-18743] - HFiles in use by a table which has the same name and namespace with a default table cloned from snapshot may be deleted when that snapshot and default table are deleted
     * [HBASE-18757] - Fix Improper bitwise & in BucketCache offset calculation
     * [HBASE-18818] - TestConnectionImplemenation fails
+    * [HBASE-18842] - The hbase shell clone_snaphost command returns bad error message
     * [HBASE-18847] - Remove unneeded synchronized block from hfilev2 warning in branch-1.2
+    * [HBASE-18862] - backport HBASE-15109 to branch-1.2,branch-1.3
+    * [HBASE-18864] - NullPointerException thrown when adding rows to a table from peer cluster, table with replication factor other than 0 or 1
     * [HBASE-18885] - HFileOutputFormat2 hardcodes default FileOutputCommitter
     * [HBASE-18890] - Backport HBASE-14499 (Master coprocessors shutdown will not happen on master abort) to branch-1
     * [HBASE-18891] - Upgrade netty-all jar
@@ -127,7 +144,9 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-19249] - test for "hbase antipatterns" should check _count_ of occurance rather than text of
     * [HBASE-19260] - Add lock back to avoid parallel accessing meta to locate region
     * [HBASE-19340] - Backport missing options in shell
+    * [HBASE-19343] - Restore snapshot makes split parent region online
     * [HBASE-19350] - TestMetaWithReplicas is flaky
+    * [HBASE-19377] - Compatibility checker complaining about hash collisions
     * [HBASE-19383] - [1.2] java.lang.AssertionError: expected:<2> but was:<1> 	at org.apache.hadoop.hbase.TestChoreService.testTriggerNowFailsWhenNotScheduled(TestChoreService.java:707)
     * [HBASE-19388] - Incorrect value is being set for Compaction Pressure in RegionLoadStats object inside HRegion class
     * [HBASE-19393] - HTTP 413 FULL head while accessing HBase UI using SSL.
@@ -142,30 +161,71 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-19728] - Add lock to filesCompacting in all place.
     * [HBASE-19730] - Backport HBASE-14497 Reverse Scan threw StackOverflow caused by readPt checking
     * [HBASE-19796] - ReplicationSynUp tool is not replicating the data if the WAL is moved to splitting directory
+    * [HBASE-19802] - Wrong usage messages on shell commands (grant/revoke namespace syntax)
     * [HBASE-19871] - delete.rb should require user to provide the column
     * [HBASE-19876] - The exception happening in converting pb mutation to hbase.mutation messes up the CellScanner
     * [HBASE-19900] - Region-level exception destroy the result of batch
     * [HBASE-19901] - Up yetus proclimit on nightlies
+    * [HBASE-19924] - hbase rpc throttling does not work for multi() with request count rater.
     * [HBASE-19981] - Boolean#getBoolean is used to parse value
     * [HBASE-20001] - cleanIfNoMetaEntry() uses encoded instead of region name to lookup region
+    * [HBASE-20004] - Client is not able to execute REST queries in a secure cluster
     * [HBASE-20016] - TestCatalogJanitorInMemoryStates#testInMemoryForReplicaParentCleanup is flaky
     * [HBASE-20051] - Correct usage statement of endtime for VerifyReplication
     * [HBASE-20056] - Performance optimization on MultiTableInputFormatBase#getSplits()
     * [HBASE-20061] - HStore synchronized member variable filesCompacting should be private
     * [HBASE-20062] - findbugs is not running on precommit checks
+    * [HBASE-20068] - Hadoopcheck project health check uses default maven repo instead of yetus managed ones
     * [HBASE-20106] - API Compliance checker should fall back to specifying origin as remote repo
+    * [HBASE-20134] - support scripts use hard-coded /tmp
+    * [HBASE-20146] - Regions are stuck while opening when WAL is disabled
+    * [HBASE-20162] - [nightly] depending on pipeline execution we sometimes refer to the wrong workspace
+    * [HBASE-20164] - failed hadoopcheck should add footer link
+    * [HBASE-20189] - Typo in Required Java Version error message while building HBase.
+    * [HBASE-20231] - Not able to delete column family from a row using RemoteHTable
+    * [HBASE-20261] - Table page (table.jsp) in Master UI does not show replicaIds for hbase meta table
+    * [HBASE-20290] - Typo in enable_table_replication error message
+    * [HBASE-20292] - Wrong URLs in the descriptions for update_all_config and update_config commands in shell
+    * [HBASE-20302] - CatalogJanitor should log the reason why it is disabled
+    * [HBASE-20335] - nightly jobs no longer contain machine information
+    * [HBASE-20364] - nightly job gives old results or no results for stages that timeout on SCM
+    * [HBASE-20517] - Fix PerformanceEvaluation 'column' parameter
+    * [HBASE-20575] - Fail to config COMPACTION_ENABLED by hbase shell
+    * [HBASE-20583] - SplitLogWorker should handle FileNotFoundException when split a wal
+    * [HBASE-20590] - REST Java client is not able to negotiate with the server in the secure mode
+    * [HBASE-20591] - nightly job doesn't respect maven options
+    * [HBASE-20597] - Use a lock to serialize access to a shared reference to ZooKeeperWatcher in HBaseReplicationEndpoint
+    * [HBASE-20638] - nightly source artifact testing should fail the stage if it's going to report an error on jira
+    * [HBASE-20664] - Variable shared across multiple threads
+    * [HBASE-20669] - [findbugs] autoboxing to parse primitive
+    * [HBASE-20689] - Docker fails to install rubocop for precommit
+    * [HBASE-20697] - Can't cache All region locations of the specify table by calling table.getRegionLocator().getAllRegionLocations()
+    * [HBASE-20771] - PUT operation fail with "No server address listed in hbase:meta for region xxxxx"
+    * [HBASE-20895] - NPE in RpcServer#readAndProcess
+    * [HBASE-20908] - Infinite loop on regionserver if region replica are reduced
+    * [HBASE-20997] - rebuildUserRegions() does not build ReplicaMapping during master switchover
+    * [HBASE-21007] - Memory leak in HBase rest server
+    * [HBASE-21030] - Correct javadoc for append operation
+    * [HBASE-21042] - processor.getRowsToLock() always assumes there is some row being locked in HRegion#processRowsWithLocks
+    * [HBASE-21058] - Nightly tests for branches 1 fail to build ref guide
+    * [HBASE-21059] - Findbugs failures on branch-1.2
+    * [HBASE-21074] - JDK7 branches need to pass "-Dhttps.protocols=TLSv1.2" to maven when building
+    * [HBASE-21104] - client.TestRestoreSnapshotFromClientWithRegionReplicas failing on branch-1.3, branch-1.2
 
 ** New Feature
     * [HBASE-19189] - Ad-hoc test job for running a subset of tests lots of times
 
 ** Improvement
     * [HBASE-14220] - nightly tests should verify src tgz generates and builds correctly
+    * [HBASE-15466] - precommit should not run all java goals when given a docs-only patch
+    * [HBASE-15931] - Add log for long-running tasks in AsyncProcess
     * [HBASE-16116] - Remove redundant pattern *.iml
     * [HBASE-16351] - do dependency license check via enforcer plugin
     * [HBASE-18020] - Update API Compliance Checker to Incorporate Improvements Done in Hadoop
     * [HBASE-18041] - Add pylintrc file to HBase
     * [HBASE-18387] - [Thrift] Make principal configurable in DemoClient.java
     * [HBASE-18426] - nightly job should use independent stages to check supported jdks
+    * [HBASE-18467] - nightly job needs to run all stages and then comment on jira
     * [HBASE-18631] - Allow configuration of ChaosMonkey properties via hbase-site
     * [HBASE-18675] - Making {max,min}SessionTimeout configurable for MiniZooKeeperCluster
     * [HBASE-18746] - Throw exception with job.getStatus().getFailureInfo() when ExportSnapshot fails
@@ -181,14 +241,26 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-19571] - Minor refactor of Nightly run scripts
     * [HBASE-19684] - BlockCacheKey toString Performance
     * [HBASE-19789] - Not exclude flaky tests from nightly builds
+    * [HBASE-20379] - shadedjars yetus plugin should add a footer link
+    * [HBASE-20387] - flaky infrastructure should work for all branches
+    * [HBASE-20523] - PE tool should support configuring client side buffering sizes
+    * [HBASE-20605] - Exclude new Azure Storage FileSystem from SecureBulkLoadEndpoint permission check
+    * [HBASE-20651] - Master, prevents hbck or shell command to reassign the split parent region
+    * [HBASE-20733] - QABot should run checkstyle tests if the checkstyle configs change
+    * [HBASE-20806] - Split style journal for flushes and compactions
+    * [HBASE-20826] - Truncate responseInfo attributes on RpcServer WARN messages
+    * [HBASE-20930] - MetaScanner.metaScan should use passed variable for meta table name rather than TableName.META_TABLE_NAME
 
 ** Test
     * [HBASE-17703] - TestThriftServerCmdLine is flaky in master branch
     * [HBASE-18147] - nightly job to check health of active branches
     * [HBASE-19414] - enable TestMasterOperationsForRegionReplicas#testIncompleteMetaTableReplicaInformation in branch-1.3 and branch-1.2
     * [HBASE-19514] - Use random port for TestJMXListener
+    * [HBASE-20505] - PE should support multi column family read and write cases
+    * [HBASE-21076] - TestTableResource fails with NPE
 
 ** Task
+    * [HBASE-15151] - Rely on nightly tests for findbugs compliance on existing branch
     * [HBASE-16459] - Remove unused hbase shell --format option
     * [HBASE-17954] - Switch findbugs implementation to spotbugs
     * [HBASE-18276] - Release 1.2.7
@@ -200,8 +272,15 @@ Release Notes - HBase - Version 1.2.7
     * [HBASE-18833] - Ensure precommit personality is up to date on all active branches
     * [HBASE-18996] - Backport HBASE-17703 (TestThriftServerCmdLine is flaky in master branch) to branch-1
     * [HBASE-19097] - update testing to use Apache Yetus Test Patch version 0.6.0
+    * [HBASE-19475] - Extend backporting strategy in documentation
     * [HBASE-19637] - Add .checkstyle to gitignore
+    * [HBASE-20075] - remove logic for branch-1.1 nightly testing
     * [HBASE-20098] - Fix TestSplitTransactionOnCluster#testMasterRestartWhenSplittingIsPartial for branch-1.2
+    * [HBASE-20112] - Include test results from nightly hadoop3 tests in jenkins test results
+    * [HBASE-20665] - "Already cached block XXX" message should be DEBUG
+    * [HBASE-20884] - Replace usage of our Base64 implementation with java.util.Base64
+    * [HBASE-20905] - branch-1 docker build fails
+    * [HBASE-20931] - [branch-1] Add -Dhttps.protocols=TLSv1.2 to Maven command line in make_rc.sh
 
 ** Umbrella
     * [HBASE-18266] - Eliminate the warnings from the spotbugs
