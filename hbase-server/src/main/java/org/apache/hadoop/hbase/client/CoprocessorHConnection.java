@@ -96,7 +96,7 @@ public class CoprocessorHConnection extends HConnectionImplementation {
    * @throws IOException if we cannot create the connection
    */
   public CoprocessorHConnection(Configuration conf, HRegionServer server) throws IOException {
-    super(conf, false, null, UserProvider.instantiate(conf).getCurrent());
+    super(conf, false, null, UserProvider.instantiate(conf).getCurrent(), server.getClusterId());
     this.server = server;
     this.serverName = server.getServerName();
   }
