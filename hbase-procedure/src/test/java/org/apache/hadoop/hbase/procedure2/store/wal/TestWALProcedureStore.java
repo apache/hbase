@@ -898,6 +898,22 @@ public class TestWALProcedureStore {
     assertEquals("WALs=" + procStore.getActiveLogs(), 1, procStore.getActiveLogs().size());
   }
 
+  @Test
+  public void testWALDirAndWALArchiveDir() throws IOException {
+    Configuration conf = htu.getConfiguration();
+    procStore = createWALProcedureStore(conf);
+    assertEquals(procStore.getFileSystem(), procStore.getWalArchiveDir().getFileSystem(conf));
+  }
+
+  private WALProcedureStore createWALProcedureStore(Configuration conf) throws IOException {
+    return new WALProcedureStore(conf, new WALProcedureStore.LeaseRecovery() {
+      @Override
+      public void recoverFileLease(FileSystem fs, Path path) throws IOException {
+        // no-op
+      }
+    });
+  }
+
   private LoadCounter restartAndAssert(long maxProcId, long runnableCount,
       int completedCount, int corruptedCount) throws Exception {
     return ProcedureTestingUtility.storeRestartAndAssert(procStore, maxProcId,
