@@ -174,7 +174,7 @@ public class SplitLogManager {
       }
       FileStatus[] logfiles = FSUtils.listStatus(fs, logDir, filter);
       if (logfiles == null || logfiles.length == 0) {
-        LOG.info(logDir + " dir is empty, no logs to split.");
+        LOG.info("{} dir is empty, no logs to split.", logDir);
       } else {
         Collections.addAll(fileStatus, logfiles);
       }
@@ -292,7 +292,7 @@ public class SplitLogManager {
     String msg = "Finished splitting (more than or equal to) " + totalSize +
         " bytes in " + ((batch == null)? 0: batch.installed) +
         " log files in " + logDirs + " in " +
-        ((startTime == -1)? startTime: (EnvironmentEdgeManager.currentTime() - startTime)) + "ms";
+        ((startTime == 0)? startTime: (EnvironmentEdgeManager.currentTime() - startTime)) + "ms";
     status.markComplete(msg);
     LOG.info(msg);
     return totalSize;
