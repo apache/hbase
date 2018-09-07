@@ -2182,7 +2182,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
               conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
                   HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2),
           // By default make direct byte buffers from the buffer pool.
-          conf.getBoolean("hbase.ipc.server.reservoir.direct.buffer", true));
+          conf.getBoolean("hbase.ipc.server.reservoir.direct.buffer", false));
     } else {
       reservoir = null;
     }
