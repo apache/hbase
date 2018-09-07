@@ -144,7 +144,7 @@ public class MasterWalManager {
   }
 
   /**
-   * @return Return listing of ServerNames found in the filesystem under the WAL directory
+   * @return listing of ServerNames found in the filesystem under the WAL directory
    *   that COULD BE 'alive'; excludes those that have a '-splitting' suffix as these are already
    *   being split -- they cannot be 'alive'.
    */
