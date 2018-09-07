@@ -2656,7 +2656,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     stop("Stopped by " + Thread.currentThread().getName());
   }
 
-  void checkServiceStarted() throws ServerNotRunningYetException {
+  @Override
+  public void stop(String msg) {
+    if (!isStopped()) {
+      super.stop(msg);
+      if (this.activeMasterManager != null) {
+        this.activeMasterManager.stop();
+      }
+    }
+  }
+
+  @VisibleForTesting
+  protected void checkServiceStarted() throws ServerNotRunningYetException {
     if (!serviceStarted) {
       throw new ServerNotRunningYetException("Server is not running yet");
     }
