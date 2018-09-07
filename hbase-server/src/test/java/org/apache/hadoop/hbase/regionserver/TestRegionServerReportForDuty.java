@@ -21,6 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.io.StringWriter;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -28,11 +31,17 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.log4j.Appender;
+import org.apache.log4j.Layout;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.WriterAppender;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -75,6 +84,85 @@ public class TestRegionServerReportForDuty {
     cluster.join();
     testUtil.shutdownMiniZKCluster();
     testUtil.shutdownMiniDFSCluster();
+  }
+
+  /**
+   * LogCapturer is similar to {@link org.apache.hadoop.test.GenericTestUtils.LogCapturer}
+   * except that this implementation has a default appender to the root logger.
+   * Hadoop 2.8+ supports the default appender in the LogCapture it ships and this can be replaced.
+   * TODO: This class can be removed after we upgrade Hadoop dependency.
+   */
+  static class LogCapturer {
+    private StringWriter sw = new StringWriter();
+    private WriterAppender appender;
+    private org.apache.log4j.Logger logger;
+
+    LogCapturer(org.apache.log4j.Logger logger) {
+      this.logger = logger;
+      Appender defaultAppender = org.apache.log4j.Logger.getRootLogger().getAppender("stdout");
+      if (defaultAppender == null) {
+        defaultAppender = org.apache.log4j.Logger.getRootLogger().getAppender("console");
+      }
+      final Layout layout = (defaultAppender == null) ? new PatternLayout() :
+          defaultAppender.getLayout();
+      this.appender = new WriterAppender(layout, sw);
+      this.logger.addAppender(this.appender);
+    }
+
+    String getOutput() {
+      return sw.toString();
+    }
+
+    public void stopCapturing() {
+      this.logger.removeAppender(this.appender);
+    }
+  }
+
+  /**
+   * This test HMaster class will always throw ServerNotRunningYetException if checked.
+   */
+  public static class NeverInitializedMaster extends HMaster {
+    public NeverInitializedMaster(Configuration conf) throws IOException, KeeperException {
+      super(conf);
+    }
+
+    @Override
+    protected void checkServiceStarted() throws ServerNotRunningYetException {
+      throw new ServerNotRunningYetException("Server is not running yet");
+    }
+  }
+
+  /**
+   * Tests region server should backoff to report for duty if master is not ready.
+   */
+  @Test
+  public void testReportForDutyBackoff() throws IOException, InterruptedException {
+    cluster.getConfiguration().set(HConstants.MASTER_IMPL, NeverInitializedMaster.class.getName());
+    master = cluster.addMaster();
+    master.start();
+
+    LogCapturer capturer = new LogCapturer(org.apache.log4j.Logger.getLogger(HRegionServer.class));
+    // Set sleep interval relatively low so that exponential backoff is more demanding.
+    int msginterval = 100;
+    cluster.getConfiguration().setInt("hbase.regionserver.msginterval", msginterval);
+    rs = cluster.addRegionServer();
+    rs.start();
+
+    int interval = 10_000;
+    Thread.sleep(interval);
+    capturer.stopCapturing();
+    String output = capturer.getOutput();
+    LOG.info("{}", output);
+    String failMsg = "reportForDuty failed;";
+    int count = StringUtils.countMatches(output, failMsg);
+
+    // Following asserts the actual retry number is in range (expectedRetry/2, expectedRetry*2).
+    // Ideally we can assert the exact retry count. We relax here to tolerate contention error.
+    int expectedRetry = (int)Math.ceil(Math.log(interval - msginterval));
+    assertTrue(String.format("reportForDuty retries %d times, less than expected min %d",
+        count, expectedRetry / 2), count > expectedRetry / 2);
+    assertTrue(String.format("reportForDuty retries %d times, more than expected max %d",
+        count, expectedRetry * 2), count < expectedRetry * 2);
   }
 
   /**
