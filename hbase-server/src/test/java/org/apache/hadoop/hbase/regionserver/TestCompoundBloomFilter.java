@@ -225,7 +225,9 @@ public class TestCompoundBloomFilter {
     // Test for false positives (some percentage allowed). We test in two modes:
     // "fake lookup" which ignores the key distribution, and production mode.
     for (boolean fakeLookupEnabled : new boolean[] { true, false }) {
-      BloomFilterUtil.setFakeLookupMode(fakeLookupEnabled);
+      if (fakeLookupEnabled) {
+        BloomFilterUtil.setRandomGeneratorForTest(new Random(283742987L));
+      }
       try {
         String fakeLookupModeStr = ", fake lookup is " + (fakeLookupEnabled ?
             "enabled" : "disabled");
@@ -275,7 +277,7 @@ public class TestCompoundBloomFilter {
         validateFalsePosRate(falsePosRate, nTrials, -2.58, cbf,
             fakeLookupModeStr);
       } finally {
-        BloomFilterUtil.setFakeLookupMode(false);
+        BloomFilterUtil.setRandomGeneratorForTest(null);
       }
     }
 
