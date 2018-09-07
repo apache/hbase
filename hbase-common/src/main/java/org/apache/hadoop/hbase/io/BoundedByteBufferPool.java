@@ -46,6 +46,7 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>This class is thread safe.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("NonAtomicVolatileUpdate") // Suppress error-prone warning, see HBASE-21162
 public class BoundedByteBufferPool {
   private static final Log LOG = LogFactory.getLog(BoundedByteBufferPool.class);
 
@@ -60,7 +61,7 @@ public class BoundedByteBufferPool {
   volatile int runningAverage;
 
   // Scratch that keeps rough total size of pooled bytebuffers
-  private AtomicLong totalReservoirCapacity = new AtomicLong(0);
+  private volatile int totalReservoirCapacity;
 
   // For reporting
   private AtomicLong allocations = new AtomicLong(0);
@@ -89,7 +90,7 @@ public class BoundedByteBufferPool {
     try {
       bb = this.buffers.poll();
       if (bb != null) {
-        this.totalReservoirCapacity.addAndGet(-bb.capacity());
+        this.totalReservoirCapacity -= bb.capacity();
       }
     } finally {
       lock.unlock();
@@ -119,8 +120,8 @@ public class BoundedByteBufferPool {
     try {
       success = this.buffers.offer(bb);
       if (success) {
-        average = (int) this.totalReservoirCapacity.addAndGet(bb.capacity()) /
-            this.buffers.size(); // size will never be 0.
+        this.totalReservoirCapacity += bb.capacity();
+        average = this.totalReservoirCapacity / this.buffers.size(); // size will never be 0.
       }
     } finally {
       lock.unlock();
