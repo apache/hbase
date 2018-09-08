@@ -47,6 +47,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 /**
  * ProcedureWALPrettyPrinter prints the contents of a given ProcedureWAL file
+ * @see WALProcedureStore#main(String[]) if you want to check parse of a directory of WALs.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
