@@ -43,9 +43,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
@@ -64,6 +66,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.queue.Circula
 
 /**
  * WAL implementation of the ProcedureStore.
+ * @see ProcedureWALPrettyPrinter for printing content of a single WAL.
+ * @see #main(String[]) to parse a directory of MasterWALProcs.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -424,7 +428,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
       it.next(); // Skip the current log
 
       ProcedureWALFormat.load(it, storeTracker, new ProcedureWALFormat.Loader() {
-        long count = 0;
 
         @Override
         public void setMaxProcId(long maxProcId) {
@@ -433,11 +436,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
         @Override
         public void load(ProcedureIterator procIter) throws IOException {
-          if ((++count % 1000) == 0) {
-            // Log every 1000 procedures otherwise it looks like Master is dead if loads of WALs
-            // and procedures to load.
-            LOG.debug("Loaded {} procedures", this.count);
-          }
           loader.load(procIter);
         }
 
@@ -1323,5 +1321,33 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
     log.close();
     return log;
+  }
+
+  /**
+   * Parses a directory of WALs building up ProcedureState.
+   * For testing parse and profiling.
+   * @param args Include pointer to directory of WAL files for a store instance to parse & load.
+   */
+  public static void main(String [] args) throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    if (args == null || args.length != 1) {
+      System.out.println("ERROR: Empty arguments list; pass path to MASTERPROCWALS_DIR.");
+      System.out.println("Usage: WALProcedureStore MASTERPROCWALS_DIR");
+      System.exit(-1);
+    }
+    WALProcedureStore store = new WALProcedureStore(conf, new Path(args[0]), null,
+      new WALProcedureStore.LeaseRecovery() {
+        @Override
+        public void recoverFileLease(FileSystem fs, Path path) throws IOException {
+          // no-op
+        }
+      });
+    try {
+      store.start(16);
+      ProcedureExecutor pe = new ProcedureExecutor(conf, new Object()/*Pass anything*/, store);
+      pe.init(1, true);
+    } finally {
+      store.stop(true);
+    }
   }
 }
