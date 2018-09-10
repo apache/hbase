@@ -466,23 +466,37 @@ public class RegionStates {
   public Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(
       final Collection<RegionInfo> regions) {
     final Map<ServerName, List<RegionInfo>> result = new HashMap<ServerName, List<RegionInfo>>();
-    for (RegionInfo hri: regions) {
-      final RegionStateNode node = getRegionStateNode(hri);
-      if (node == null) continue;
-
-      // TODO: State.OPEN
-      final ServerName serverName = node.getRegionLocation();
-      if (serverName == null) continue;
-
-      List<RegionInfo> serverRegions = result.get(serverName);
-      if (serverRegions == null) {
-        serverRegions = new ArrayList<RegionInfo>();
-        result.put(serverName, serverRegions);
+    if (regions != null) {
+      for (RegionInfo hri : regions) {
+        final RegionStateNode node = getRegionStateNode(hri);
+        if (node == null) {
+          continue;
+        }
+        createSnapshot(node, result);
       }
-
-      serverRegions.add(node.getRegionInfo());
+    } else {
+      for (RegionStateNode node : regionsMap.values()) {
+        if (node == null) {
+          continue;
+        }
+        createSnapshot(node, result);
+      }
     }
     return result;
+  }
+
+  private void createSnapshot(RegionStateNode node, Map<ServerName, List<RegionInfo>> result) {
+    final ServerName serverName = node.getRegionLocation();
+    if (serverName == null) {
+      return;
+    }
+
+    List<RegionInfo> serverRegions = result.get(serverName);
+    if (serverRegions == null) {
+      serverRegions = new ArrayList<RegionInfo>();
+      result.put(serverName, serverRegions);
+    }
+    serverRegions.add(node.getRegionInfo());
   }
 
   public Map<RegionInfo, ServerName> getRegionAssignments() {
