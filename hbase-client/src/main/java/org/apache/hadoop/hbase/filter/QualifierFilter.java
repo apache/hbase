@@ -78,11 +78,8 @@ public class QualifierFilter extends CompareFilter {
 
   @Override
   public ReturnCode filterCell(final Cell c) {
-    int qualifierLength = c.getQualifierLength();
-    if (qualifierLength > 0) {
-      if (compareQualifier(getCompareOperator(), this.comparator, c)) {
-        return ReturnCode.SKIP;
-      }
+    if (compareQualifier(getCompareOperator(), this.comparator, c)) {
+      return ReturnCode.SKIP;
     }
     return ReturnCode.INCLUDE;
   }
