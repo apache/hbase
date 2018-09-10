@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -321,7 +322,7 @@ public class TransitRegionStateProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      long backoff = getBackoffTime(this.attempt++);
+      long backoff = ProcedureUtil.getBackoffTimeMs(this.attempt++);
       LOG.warn(
         "Failed transition, suspend {}secs {}; {}; waiting on rectified condition fixed " +
           "by other Procedure or operator intervention",
@@ -441,18 +442,11 @@ public class TransitRegionStateProcedure
     }
   }
 
-  private long getBackoffTime(int attempts) {
-    long backoffTime = (long) (1000 * Math.pow(2, attempts));
-    long maxBackoffTime = 60 * 60 * 1000; // An hour. Hard-coded for for now.
-    return backoffTime < maxBackoffTime ? backoffTime : maxBackoffTime;
-  }
-
   private boolean incrementAndCheckMaxAttempts(MasterProcedureEnv env, RegionStateNode regionNode) {
     int retries = env.getAssignmentManager().getRegionStates().addToFailedOpen(regionNode)
       .incrementAndGetRetries();
     int max = env.getAssignmentManager().getAssignMaxAttempts();
-    LOG.info(
-      "Retry=" + retries + " of max=" + max + "; " + this + "; " + regionNode.toShortString());
+    LOG.info("Retry={} of max={}; {}; {}", retries, max, this, regionNode.toShortString());
     return retries >= max;
   }
 
