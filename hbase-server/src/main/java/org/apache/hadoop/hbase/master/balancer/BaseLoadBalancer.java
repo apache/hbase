@@ -1562,6 +1562,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       sn = servers.get(i);
       if (!usedSNs.contains(sn)) {
         usedSNs.add(sn);
+      }
     } while (cluster.wouldLowerAvailability(regionInfo, sn)
         && iterations++ < maxIterations);
     if (iterations >= maxIterations) {
