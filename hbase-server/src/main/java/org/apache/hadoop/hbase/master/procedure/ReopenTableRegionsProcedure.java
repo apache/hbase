@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReopenTableRegionsState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReopenTableRegionsStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
  * Used for reopening the regions for a table.
@@ -51,6 +53,8 @@ public class ReopenTableRegionsProcedure
   private TableName tableName;
 
   private List<HRegionLocation> regions = Collections.emptyList();
+
+  private int attempt;
 
   public ReopenTableRegionsProcedure() {
   }
@@ -104,23 +108,34 @@ public class ReopenTableRegionsProcedure
           return Flow.NO_MORE_STATE;
         }
         if (regions.stream().anyMatch(l -> l.getSeqNum() >= 0)) {
+          attempt = 0;
           setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
           return Flow.HAS_MORE_STATE;
         }
-        LOG.info("There are still {} region(s) which need to be reopened for table {} are in " +
-          "OPENING state, try again later", regions.size(), tableName);
         // All the regions need to reopen are in OPENING state which means we can not schedule any
-        // MRPs. Then sleep for one second, and yield the procedure to let other procedures run
-        // first and hope next time we can get some regions in other state to make progress.
-        // TODO: add a delay for ProcedureYieldException so that we do not need to sleep here which
-        // blocks a procedure worker.
-        Thread.sleep(1000);
-        throw new ProcedureYieldException();
+        // MRPs.
+        long backoff = ProcedureUtil.getBackoffTimeMs(this.attempt++);
+        LOG.info(
+          "There are still {} region(s) which need to be reopened for table {} are in " +
+            "OPENING state, suspend {}secs and try again later",
+          regions.size(), tableName, backoff / 1000);
+        setTimeout(Math.toIntExact(backoff));
+        setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+        throw new ProcedureSuspendedException();
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
     }
   }
 
+  /**
+   * At end of timeout, wake ourselves up so we run again.
+   */
+  @Override
+  protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
+    setState(ProcedureProtos.ProcedureState.RUNNABLE);
+    env.getProcedureScheduler().addFront(this);
+    return false; // 'false' means that this procedure handled the timeout
+  }
   @Override
   protected void rollbackState(MasterProcedureEnv env, ReopenTableRegionsState state)
       throws IOException, InterruptedException {
