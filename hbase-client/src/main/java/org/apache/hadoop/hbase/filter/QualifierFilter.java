@@ -61,12 +61,9 @@ public class QualifierFilter extends CompareFilter {
 
   @Override
   public ReturnCode filterKeyValue(Cell v) {
-    int qualifierLength = v.getQualifierLength();
-    if (qualifierLength > 0) {
-      if (doCompare(this.compareOp, this.comparator, v.getQualifierArray(),
-          v.getQualifierOffset(), qualifierLength)) {
-        return ReturnCode.SKIP;
-      }
+    if (doCompare(this.compareOp, this.comparator, v.getQualifierArray(),
+        v.getQualifierOffset(), v.getQualifierLength())) {
+      return ReturnCode.SKIP;
     }
     return ReturnCode.INCLUDE;
   }
