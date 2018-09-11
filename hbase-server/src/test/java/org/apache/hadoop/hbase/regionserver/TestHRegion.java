@@ -266,7 +266,7 @@ public class TestHRegion {
     assertEquals(HConstants.NO_SEQNUM, region.getMaxFlushedSeqId());
     // Weird. This returns 0 if no store files or no edits. Afraid to change it.
     assertEquals(0, (long)region.getMaxStoreSeqId().get(COLUMN_FAMILY_BYTES));
-    region.close();
+    HBaseTestingUtility.closeRegionAndWAL(this.region);
     assertEquals(HConstants.NO_SEQNUM, region.getMaxFlushedSeqId());
     assertEquals(0, (long)region.getMaxStoreSeqId().get(COLUMN_FAMILY_BYTES));
     // Open region again.
@@ -281,8 +281,9 @@ public class TestHRegion {
     assertEquals(0, (long)region.getMaxStoreSeqId().get(COLUMN_FAMILY_BYTES));
     region.flush(true);
     long max = region.getMaxFlushedSeqId();
-    region.close();
+    HBaseTestingUtility.closeRegionAndWAL(this.region);
     assertEquals(max, region.getMaxFlushedSeqId());
+    this.region = null;
   }
 
   /**
@@ -312,9 +313,9 @@ public class TestHRegion {
     put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
     region.put(put);
     // Close with something in memstore and something in the snapshot.  Make sure all is cleared.
-    region.close();
-    assertEquals(0, region.getMemStoreDataSize());
     HBaseTestingUtility.closeRegionAndWAL(region);
+    assertEquals(0, region.getMemStoreDataSize());
+    region = null;
   }
 
   /*
@@ -575,7 +576,8 @@ public class TestHRegion {
           p2.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual3, 3, (byte[])null));
           region.put(p2);
           // Now try close on top of a failing flush.
-          region.close();
+          HBaseTestingUtility.closeRegionAndWAL(region);
+          region = null;
           fail();
         } catch (DroppedSnapshotException dse) {
           // Expected
@@ -948,7 +950,7 @@ public class TestHRegion {
       // close the region now, and reopen again
       region.getTableDescriptor();
       region.getRegionInfo();
-      region.close();
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       try {
         region = HRegion.openHRegion(region, null);
       } catch (WrongRegionException wre) {
@@ -1078,9 +1080,8 @@ public class TestHRegion {
         }
       }
 
-
       // close the region now, and reopen again
-      region.close();
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       region = HRegion.openHRegion(region, null);
 
       // now check whether we have can read back the data from region
@@ -1277,6 +1278,7 @@ public class TestHRegion {
     } finally {
       if (this.region != null) {
         HBaseTestingUtility.closeRegionAndWAL(this.region);
+        this.region = null;
       }
     }
     done.set(true);
@@ -1557,6 +1559,7 @@ public class TestHRegion {
           Thread.sleep(10);
           startingClose.countDown();
           HBaseTestingUtility.closeRegionAndWAL(region);
+          region = null;
         } catch (IOException e) {
           throw new RuntimeException(e);
         } catch (InterruptedException e) {
@@ -4172,6 +4175,8 @@ public class TestHRegion {
     // Verify that the .regioninfo file is still there
     assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
         fs.exists(new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE)));
+
+    region = null;
   }
 
   /**
@@ -6230,8 +6235,6 @@ public class TestHRegion {
     assertTrue(plugins.contains(replicationCoprocessorClass));
     assertTrue(region.getCoprocessorHost().
         getCoprocessors().contains(ReplicationObserver.class.getSimpleName()));
-
-    region.close();
   }
 
   /**
