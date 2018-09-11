@@ -117,7 +117,7 @@ public class TestReopenTableRegionsProcedureBackoff {
     }
     regionNode.lock();
     try {
-      // make a fake state to let the procedure wait.
+      // reset to the correct state
       regionNode.setState(State.OPEN);
       regionNode.setOpenSeqNum(openSeqNum);
       regionNode.unsetProcedure(trsp);
