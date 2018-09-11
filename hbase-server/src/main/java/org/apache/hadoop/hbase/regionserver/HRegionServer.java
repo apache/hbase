@@ -1650,11 +1650,15 @@ public class HRegionServer extends HasThread implements
 
   static class PeriodicMemstoreFlusher extends ScheduledChore {
     final HRegionServer server;
-    final static int RANGE_OF_DELAY = 5 * 60 * 1000; // 5 min in milliseconds
+    final static int RANGE_OF_DELAY = 5 * 60; // 5 min in seconds
     final static int MIN_DELAY_TIME = 0; // millisec
+    final int rangeOfDelay;
     public PeriodicMemstoreFlusher(int cacheFlushInterval, final HRegionServer server) {
       super(server.getServerName() + "-MemstoreFlusherChore", server, cacheFlushInterval);
       this.server = server;
+
+      this.rangeOfDelay = this.server.conf.getInt("hbase.regionserver.periodicmemstoreflusher.rangeofdelayseconds",
+              RANGE_OF_DELAY)*1000;
     }
 
     @Override
@@ -1665,7 +1669,7 @@ public class HRegionServer extends HasThread implements
         if (((HRegion) r).shouldFlush(whyFlush)) {
           FlushRequester requester = server.getFlushRequester();
           if (requester != null) {
-            long randomDelay = (long) RandomUtils.nextInt(RANGE_OF_DELAY) + MIN_DELAY_TIME;
+            long randomDelay = (long) RandomUtils.nextInt(rangeOfDelay) + MIN_DELAY_TIME;
             //Throttle the flushes by putting a delay. If we don't throttle, and there
             //is a balanced write-load on the regions in a table, we might end up
             //overwhelming the filesystem with too many flushes at once.

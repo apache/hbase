@@ -64,6 +64,7 @@ public class TestRegionServerMetrics {
     conf.getLong("hbase.splitlog.max.resubmit", 0);
     // Make the failure test faster
     conf.setInt("zookeeper.recovery.retry", 0);
+    conf.setInt("hbase.regionserver.periodicmemstoreflusher.rangeofdelayseconds", 4*60);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
 
     TEST_UTIL.startMiniCluster(1, 1);
