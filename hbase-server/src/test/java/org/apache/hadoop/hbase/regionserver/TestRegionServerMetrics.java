@@ -112,6 +112,7 @@ public class TestRegionServerMetrics {
     // testMobMetrics creates few hfiles and manages compaction manually.
     conf.setInt("hbase.hstore.compactionThreshold", 100);
     conf.setInt("hbase.hstore.compaction.max", 100);
+    conf.setInt("hbase.regionserver.periodicmemstoreflusher.rangeofdelayseconds", 4*60);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
 
     TEST_UTIL.startMiniCluster(1, 1);
