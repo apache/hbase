@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.procedure2.FailedRemoteDispatchException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
@@ -360,7 +361,7 @@ public abstract class RegionTransitionProcedure
       // If here, success so clear out the attempt counter so we start fresh each time we get stuck.
       this.attempt = 0;
     } catch (IOException e) {
-      long backoff = getBackoffTime(this.attempt++);
+      long backoff = ProcedureUtil.getBackoffTimeMs(this.attempt++);
       LOG.warn("Failed transition, suspend {}secs {}; {}; waiting on rectified condition fixed " +
               "by other Procedure or operator intervention", backoff / 1000, this,
           regionNode.toShortString(), e);
@@ -370,12 +371,6 @@ public abstract class RegionTransitionProcedure
     }
 
     return new Procedure[] {this};
-  }
-
-  private long getBackoffTime(int attempts) {
-    long backoffTime = (long)(1000 * Math.pow(2, attempts));
-    long maxBackoffTime = 60 * 60 * 1000; // An hour. Hard-coded for for now.
-    return backoffTime < maxBackoffTime? backoffTime: maxBackoffTime;
   }
 
   /**
