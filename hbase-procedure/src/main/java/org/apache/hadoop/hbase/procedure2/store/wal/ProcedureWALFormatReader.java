@@ -140,6 +140,7 @@ public class ProcedureWALFormatReader {
       LOG.info("Rebuilding tracker for " + log);
     }
 
+    long count = 0;
     FSDataInputStream stream = log.getStream();
     try {
       boolean hasMore = true;
@@ -149,6 +150,7 @@ public class ProcedureWALFormatReader {
           LOG.warn("Nothing left to decode. Exiting with missing EOF, log=" + log);
           break;
         }
+        count++;
         switch (entry.getType()) {
           case PROCEDURE_WAL_INIT:
             readInitEntry(entry);
@@ -170,8 +172,9 @@ public class ProcedureWALFormatReader {
             throw new CorruptedWALProcedureStoreException("Invalid entry: " + entry);
         }
       }
+      LOG.info("Read {} entries in {}", count, log);
     } catch (InvalidProtocolBufferException e) {
-      LOG.error("While reading procedure from " + log, e);
+      LOG.error("While reading entry #{} in {}", count, log, e);
       loader.markCorruptedWAL(log, e);
     }
 
