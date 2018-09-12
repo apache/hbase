@@ -148,14 +148,34 @@ public class MasterWalManager {
     return this.fsOk;
   }
 
+  /**
+   * Get Servernames which are currently splitting; paths have a '-splitting' suffix.
+   * @return ServerName
+   * @throws IOException IOException
+   */
+  public Set<ServerName> getSplittingServersFromWALDir() throws  IOException {
+    return getServerNamesFromWALDirPath(
+      p -> p.getName().endsWith(AbstractFSWALProvider.SPLITTING_EXT));
+  }
+
+  /**
+   * Get Servernames that COULD BE 'alive'; excludes those that have a '-splitting' suffix as these
+   * are already being split -- they cannot be 'alive'.
+   * @return ServerName
+   * @throws IOException IOException
+   */
   public Set<ServerName> getLiveServersFromWALDir() throws IOException {
-    Path walDirPath = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
-    FileStatus[] walDirForLiveServers = FSUtils.listStatus(fs, walDirPath,
+    return getServerNamesFromWALDirPath(
       p -> !p.getName().endsWith(AbstractFSWALProvider.SPLITTING_EXT));
-    if (walDirForLiveServers == null) {
-      return Collections.emptySet();
-    }
-    return Stream.of(walDirForLiveServers).map(s -> {
+  }
+
+  /**
+   * @return listing of ServerNames found by parsing WAL directory paths in FS.
+   *
+   */
+  public Set<ServerName> getServerNamesFromWALDirPath(final PathFilter filter) throws IOException {
+    FileStatus[] walDirForServerNames = getWALDirPaths(filter);
+    return Stream.of(walDirForServerNames).map(s -> {
       ServerName serverName = AbstractFSWALProvider.getServerNameFromWALDirectoryName(s.getPath());
       if (serverName == null) {
         LOG.warn("Log folder {} doesn't look like its name includes a " +

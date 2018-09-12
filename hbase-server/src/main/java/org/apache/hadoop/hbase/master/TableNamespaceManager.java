@@ -383,12 +383,16 @@ public class TableNamespaceManager implements Stoppable {
       return;
     }
     try {
-      this.zkNamespaceManager.stop();
+      if (this.zkNamespaceManager != null) {
+        this.zkNamespaceManager.stop();
+      }
     } catch (IOException ioe) {
       LOG.warn("Failed NamespaceManager close", ioe);
     }
     try {
-      this.nsTable.close();
+      if (this.nsTable != null) {
+        this.nsTable.close();
+      }
     } catch (IOException ioe) {
       LOG.warn("Failed Namespace Table close", ioe);
     }

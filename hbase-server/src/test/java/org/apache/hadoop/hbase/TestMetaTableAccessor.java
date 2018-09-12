@@ -108,7 +108,7 @@ public class TestMetaTableAccessor {
   @Test
   public void testIsMetaWhenAllHealthy() throws InterruptedException {
     HMaster m = UTIL.getMiniHBaseCluster().getMaster();
-    assertTrue(m.waitForMetaOnline());
+    assertTrue(m.waitUntilMetaOnline());
   }
 
   @Test
@@ -117,7 +117,7 @@ public class TestMetaTableAccessor {
     int index = UTIL.getMiniHBaseCluster().getServerWithMeta();
     HRegionServer rsWithMeta = UTIL.getMiniHBaseCluster().getRegionServer(index);
     rsWithMeta.abort("TESTING");
-    assertTrue(m.waitForMetaOnline());
+    assertTrue(m.waitUntilMetaOnline());
   }
 
   /**

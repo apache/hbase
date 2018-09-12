@@ -55,6 +55,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -858,11 +859,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Create Assignment Manager
     this.assignmentManager = new AssignmentManager(this);
     this.assignmentManager.start();
+    // Start RegionServerTracker with listing of servers found with exiting SCPs -- these should
+    // be registered in the deadServers set -- and with the list of servernames out on the
+    // filesystem that COULD BE 'alive' (we'll schedule SCPs for each and let SCP figure it out).
+    // We also pass dirs that are already 'splitting'... so we can do some checks down in tracker.
+    // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
     this.regionServerTracker.start(
       procedureExecutor.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
         .map(p -> ((ServerCrashProcedure) p).getServerName()).collect(Collectors.toSet()),
-      walManager.getLiveServersFromWALDir());
+      walManager.getLiveServersFromWALDir(), walManager.getSplittingServersFromWALDir());
     // This manager will be started AFTER hbase:meta is confirmed on line.
     // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
     // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
@@ -894,6 +900,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       this.cpHost = new MasterCoprocessorHost(this, this.conf);
     }
 
+    // Checking if meta needs initializing.
     status.setStatus("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
     // Print out state of hbase:meta on startup; helps debugging.
@@ -902,8 +909,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     LOG.info("hbase:meta {}", rs);
     if (rs.isOffline()) {
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
-          .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
-          initMetaProc = optProc.orElseGet(() -> {
+        .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
+      initMetaProc = optProc.orElseGet(() -> {
         // schedule an init meta procedure if meta has not been deployed yet
         InitMetaProcedure temp = new InitMetaProcedure();
         procedureExecutor.submitProcedure(temp);
@@ -948,8 +955,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     // This is the FIRST attempt at going to hbase:meta. Meta on-lining is going on in background
     // as procedures run -- in particular SCPs for crashed servers... One should put up hbase:meta
     // if it is down. It may take a while to come online. So, wait here until meta if for sure
-    // available. That's what waitForMetaOnline does.
-    if (!waitForMetaOnline()) {
+    // available. Thats what waitUntilMetaOnline does.
+    if (!waitUntilMetaOnline()) {
       return;
     }
     this.assignmentManager.joinCluster();
@@ -962,10 +969,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       snapshotOfRegionAssignment.initialize();
       favoredNodesManager.initialize(snapshotOfRegionAssignment);
     }
-
-    // Fix up assignment manager status
-    status.setStatus("Starting assignment manager");
-    this.assignmentManager.joinCluster();
 
     // set cluster status again after user regions are assigned
     this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
@@ -985,7 +988,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Here we expect hbase:namespace to be online. See inside initClusterSchemaService.
     // TODO: Fix this. Namespace is a pain being a sort-of system table. Fold it in to hbase:meta.
     // isNamespace does like isMeta and waits until namespace is onlined before allowing progress.
-    if (!waitForNamespaceOnline()) {
+    if (!waitUntilNamespaceOnline()) {
       return;
     }
     status.setStatus("Starting cluster schema service");
@@ -1075,7 +1078,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *   and we will hold here until operator intervention.
    */
   @VisibleForTesting
-  public boolean waitForMetaOnline() throws InterruptedException {
+  public boolean waitUntilMetaOnline() throws InterruptedException {
     return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
@@ -1099,8 +1102,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       // Page will talk about loss of edits, how to schedule at least the meta WAL recovery, and
       // then how to assign including how to break region lock if one held.
       LOG.warn("{} is NOT online; state={}; ServerCrashProcedures={}. Master startup cannot " +
-          "progress, in holding-pattern until region onlined.",
-          ri.getRegionNameAsString(), rs, optProc.isPresent());
+          "progress, in holding-pattern until region onlined; operator intervention required. " +
+          "Schedule an assign.", ri.getRegionNameAsString(), rs, optProc.isPresent());
       // Check once-a-minute.
       if (rc == null) {
         rc = new RetryCounterFactory(1000).create();
@@ -1116,7 +1119,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return True if namespace table is up/online.
    */
   @VisibleForTesting
-  public boolean waitForNamespaceOnline() throws InterruptedException {
+  public boolean waitUntilNamespaceOnline() throws InterruptedException {
     List<RegionInfo> ris = this.assignmentManager.getRegionStates().
         getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME);
     if (ris.isEmpty()) {
