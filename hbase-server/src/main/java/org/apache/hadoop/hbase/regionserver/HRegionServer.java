@@ -714,8 +714,12 @@ public class HRegionServer extends HasThread implements
       "hbase.regionserver.kerberos.principal", host);
   }
 
-  protected void waitForMasterActive() {
-  }
+
+  /**
+   * Wait for an active Master.
+   * See override in Master superclass for how it is used.
+   */
+  protected void waitForMasterActive() {}
 
   protected String getProcessName() {
     return REGIONSERVER;
@@ -876,10 +880,6 @@ public class HRegionServer extends HasThread implements
       }
     }
 
-    // In case colocated master, wait here till it's active.
-    // So backup masters won't start as regionservers.
-    // This is to avoid showing backup masters as regionservers
-    // in master web UI, or assigning any region to them.
     waitForMasterActive();
     if (isStopped() || isAborted()) {
       return; // No need for further initialization
