@@ -115,11 +115,19 @@ public class RegionServerTracker extends ZKListener {
    * protection to prevent concurrency issues with server expiration operation.
    * @param deadServersFromPE the region servers which already have SCP associated.
    * @param liveServersFromWALDir the live region servers from wal directory.
+   * @param splittingServersFromWALDir Servers whose WALs are being actively 'split'.
    */
-  public void start(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersFromWALDir)
+  public void start(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersFromWALDir,
+      Set<ServerName> splittingServersFromWALDir)
       throws KeeperException, IOException {
     LOG.info("Starting RegionServerTracker; {} have existing ServerCrashProcedures, {} " +
-        "possibly 'live' servers.", deadServersFromPE.size(), liveServersFromWALDir.size());
+        "possibly 'live' servers, and {} 'splitting'.", deadServersFromPE.size(),
+        liveServersFromWALDir.size(), splittingServersFromWALDir.size());
+    // deadServersFromPE is made from a list of outstanding ServerCrashProcedures.
+    // splittingServersFromWALDir are being actively split -- the directory in the FS ends in
+    // '-SPLITTING'. Each splitting server should have a corresponding SCP. Log if not.
+    splittingServersFromWALDir.stream().map(s -> !deadServersFromPE.contains(s)).
+        forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
     watcher.registerListener(this);
     synchronized (this) {
       List<String> servers =

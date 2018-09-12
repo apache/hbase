@@ -1186,8 +1186,9 @@ public class AssignmentManager implements ServerListener {
     long startTime = System.nanoTime();
     LOG.debug("Joining cluster...");
 
-    // Scan hbase:meta to build list of existing regions, servers, and assignment
-    // hbase:meta is online when we get to here and TableStateManager has been started.
+    // Scan hbase:meta to build list of existing regions, servers, and assignment.
+    // hbase:meta is online now or will be. Inside loadMeta, we keep trying. Can't make progress
+    // w/o  meta.
     loadMeta();
 
     while (master.getServerManager().countOfRegionServers() < 1) {

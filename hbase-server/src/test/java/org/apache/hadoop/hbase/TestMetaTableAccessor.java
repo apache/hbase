@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.ipc.CallRunner;
 import org.apache.hadoop.hbase.ipc.DelegatingRpcScheduler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
@@ -102,6 +103,21 @@ public class TestMetaTableAccessor {
   @AfterClass public static void afterClass() throws Exception {
     connection.close();
     UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testIsMetaWhenAllHealthy() throws InterruptedException {
+    HMaster m = UTIL.getMiniHBaseCluster().getMaster();
+    assertTrue(m.waitUntilMetaOnline());
+  }
+
+  @Test
+  public void testIsMetaWhenMetaGoesOffline() throws InterruptedException {
+    HMaster m = UTIL.getMiniHBaseCluster().getMaster();
+    int index = UTIL.getMiniHBaseCluster().getServerWithMeta();
+    HRegionServer rsWithMeta = UTIL.getMiniHBaseCluster().getRegionServer(index);
+    rsWithMeta.abort("TESTING");
+    assertTrue(m.waitUntilMetaOnline());
   }
 
   /**
