@@ -261,7 +261,7 @@ public class DisableTableProcedure
       TableStateManager tsm = env.getMasterServices().getTableStateManager();
       TableState ts = tsm.getTableState(tableName);
       if (!ts.isEnabled()) {
-        LOG.info("Not ENABLED skipping {}", this);
+        LOG.info("Not ENABLED, state={}, skipping disable; {}", ts.getState(), this);
         setFailure("master-disable-table", new TableNotEnabledException(ts.toString()));
         canTableBeDisabled = false;
       }

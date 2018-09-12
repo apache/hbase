@@ -55,6 +55,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -196,6 +197,8 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
@@ -943,11 +946,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Start RegionServerTracker with listing of servers found with exiting SCPs -- these should
     // be registered in the deadServers set -- and with the list of servernames out on the
     // filesystem that COULD BE 'alive' (we'll schedule SCPs for each and let SCP figure it out).
+    // We also pass dirs that are already 'splitting'... so we can do some checks down in tracker.
+    // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
     this.regionServerTracker.start(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
         .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
-      walManager.getLiveServersFromWALDir());
+      walManager.getLiveServersFromWALDir(), walManager.getSplittingServersFromWALDir());
     // This manager will be started AFTER hbase:meta is confirmed on line.
     // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
     // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
@@ -978,10 +983,14 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.setStatus("Initializing master coprocessors");
     this.cpHost = new MasterCoprocessorHost(this, this.conf);
 
+    // Checking if meta needs initializing.
     status.setStatus("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
-    if (assignmentManager.getRegionStates().getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO)
-      .isOffline()) {
+    // Print out state of hbase:meta on startup; helps debugging.
+    RegionState rs = this.assignmentManager.getRegionStates().
+        getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    LOG.info("hbase:meta {}", rs);
+    if (rs.isOffline()) {
       Optional<Procedure<MasterProcedureEnv>> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).findAny();
       if (optProc.isPresent()) {
@@ -1008,7 +1017,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (initMetaProc != null) {
       initMetaProc.await();
     }
-    tableStateManager.start();
     // Wake up this server to check in
     sleeper.skipSleepCycle();
 
@@ -1025,17 +1033,26 @@ public class HMaster extends HRegionServer implements MasterServices {
       return;
     }
 
-    //Initialize after meta as it scans meta
+    status.setStatus("Starting assignment manager");
+    // FIRST HBASE:META READ!!!!
+    // The below cannot make progress w/o hbase:meta being online.
+    // This is the FIRST attempt at going to hbase:meta. Meta on-lining is going on in background
+    // as procedures run -- in particular SCPs for crashed servers... One should put up hbase:meta
+    // if it is down. It may take a while to come online. So, wait here until meta if for sure
+    // available. Thats what waitUntilMetaOnline does.
+    if (!waitUntilMetaOnline()) {
+      return;
+    }
+    this.assignmentManager.joinCluster();
+    // The below depends on hbase:meta being online.
+    this.tableStateManager.start();
+    // Initialize after meta is up as below scans meta
     if (favoredNodesManager != null) {
       SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
           new SnapshotOfRegionAssignmentFromMeta(getConnection());
       snapshotOfRegionAssignment.initialize();
       favoredNodesManager.initialize(snapshotOfRegionAssignment);
     }
-
-    // Fix up assignment manager status
-    status.setStatus("Starting assignment manager");
-    this.assignmentManager.joinCluster();
 
     // set cluster status again after user regions are assigned
     this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
@@ -1051,6 +1068,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.catalogJanitorChore = new CatalogJanitor(this);
     getChoreService().scheduleChore(catalogJanitorChore);
 
+    // NAMESPACE READ!!!!
+    // Here we expect hbase:namespace to be online. See inside initClusterSchemaService.
+    // TODO: Fix this. Namespace is a pain being a sort-of system table. Fold it in to hbase:meta.
+    // isNamespace does like isMeta and waits until namespace is onlined before allowing progress.
+    if (!waitUntilNamespaceOnline()) {
+      return;
+    }
     status.setStatus("Starting cluster schema service");
     initClusterSchemaService();
 
@@ -1124,6 +1148,68 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.debug("Balancer post startup initialization complete, took " + (
           (System.currentTimeMillis() - start) / 1000) + " seconds");
     }
+  }
+
+  /**
+   * Check hbase:meta is up and ready for reading. For use during Master startup only.
+   * @return True if meta is UP and online and startup can progress. Otherwise, meta is not online
+   *   and we will hold here until operator intervention.
+   */
+  @VisibleForTesting
+  public boolean waitUntilMetaOnline() throws InterruptedException {
+    return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
+  }
+
+  /**
+   * @return True if region is online and scannable else false if an error or shutdown (Otherwise
+   *   we just block in here holding up all forward-progess).
+   */
+  private boolean isRegionOnline(RegionInfo ri) throws InterruptedException {
+    RetryCounter rc = null;
+    while (!isStopped()) {
+      RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
+      if (rs.isOpened()) {
+        if (this.getServerManager().isServerOnline(rs.getServerName())) {
+          return true;
+        }
+      }
+      // Region is not OPEN.
+      Optional<Procedure<MasterProcedureEnv>> optProc = this.procedureExecutor.getProcedures().
+          stream().filter(p -> p instanceof ServerCrashProcedure).findAny();
+      // TODO: Add a page to refguide on how to do repair. Have this log message point to it.
+      // Page will talk about loss of edits, how to schedule at least the meta WAL recovery, and
+      // then how to assign including how to break region lock if one held.
+      LOG.warn("{} is NOT online; state={}; ServerCrashProcedures={}. Master startup cannot " +
+          "progress, in holding-pattern until region onlined; operator intervention required. " +
+          "Schedule an assign.", ri.getRegionNameAsString(), rs, optProc.isPresent());
+      // Check once-a-minute.
+      if (rc == null) {
+        rc = new RetryCounterFactory(1000).create();
+      }
+      Threads.sleep(rc.getBackoffTimeAndIncrementAttempts());
+    }
+    return false;
+  }
+
+  /**
+   * Check hbase:namespace table is assigned. If not, startup will hang looking for the ns table
+   * (TODO: Fix this! NS should not hold-up startup).
+   * @return True if namespace table is up/online.
+   */
+  @VisibleForTesting
+  public boolean waitUntilNamespaceOnline() throws InterruptedException {
+    List<RegionInfo> ris = this.assignmentManager.getRegionStates().
+        getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME);
+    if (ris.isEmpty()) {
+      // If empty, means we've not assigned the namespace table yet... Just return true so startup
+      // continues and the namespace table gets created.
+      return true;
+    }
+    // Else there are namespace regions up in meta. Ensure they are assigned before we go on.
+    for (RegionInfo ri: ris) {
+      isRegionOnline(ri);
+    }
+    return true;
   }
 
   /**
