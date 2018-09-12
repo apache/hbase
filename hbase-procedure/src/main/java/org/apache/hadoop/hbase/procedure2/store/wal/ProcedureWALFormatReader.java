@@ -113,6 +113,7 @@ public class ProcedureWALFormatReader {
   }
 
   public void read(ProcedureWALFile log, ProcedureWALFormat.Loader loader) throws IOException {
+    long count = 0;
     FSDataInputStream stream = log.getStream();
     try {
       boolean hasMore = true;
@@ -123,6 +124,7 @@ public class ProcedureWALFormatReader {
           hasMore = false;
           break;
         }
+        count++;
         switch (entry.getType()) {
           case PROCEDURE_WAL_INIT:
             readInitEntry(entry);
@@ -144,8 +146,9 @@ public class ProcedureWALFormatReader {
             throw new CorruptedWALProcedureStoreException("Invalid entry: " + entry);
         }
       }
+      LOG.info("Read " + count + " entries in " + log);
     } catch (InvalidProtocolBufferException e) {
-      LOG.error("got an exception while reading the procedure WAL: " + log, e);
+      LOG.error("While reading entry #" + count + " in " + log, e);
       loader.markCorruptedWAL(log, e);
     }
 
