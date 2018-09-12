@@ -2762,6 +2762,13 @@ public final class ProtobufUtil {
           ", row=" + getStringForByteString(r.getGet().getRow());
     } else if (m instanceof ClientProtos.MultiRequest) {
       ClientProtos.MultiRequest r = (ClientProtos.MultiRequest) m;
+
+      // Get the number of Actions
+      int actionsCount = 0;
+      for (ClientProtos.RegionAction regionAction : r.getRegionActionList()) {
+        actionsCount += regionAction.getActionCount();
+      }
+
       // Get first set of Actions.
       ClientProtos.RegionAction actions = r.getRegionActionList().get(0);
       String row = actions.getActionCount() <= 0? "":
@@ -2769,8 +2776,7 @@ public final class ProtobufUtil {
           actions.getAction(0).getGet().getRow():
           actions.getAction(0).getMutation().getRow());
       return "region= " + getStringForByteString(actions.getRegion().getValue()) +
-          ", for " + r.getRegionActionCount() +
-          " actions and 1st row key=" + row;
+          ", for " + actionsCount + " action(s) and 1st row key=" + row;
     } else if (m instanceof ClientProtos.MutateRequest) {
       ClientProtos.MutateRequest r = (ClientProtos.MutateRequest) m;
       return "region= " + getStringForByteString(r.getRegion().getValue()) +
