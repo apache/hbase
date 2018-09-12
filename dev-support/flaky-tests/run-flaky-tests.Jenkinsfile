@@ -49,11 +49,19 @@ pipeline {
             mvn_args=("${mvn_args[@]}" -X)
             set -x
           fi
-          ulimit -a
-          rm -rf local-repository/org/apache/hbase
           curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/includes"
           if [ -s includes.txt ]; then
-            mvn clean package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=3 -Dsurefire.secondPartForkCount=3
+            rm -rf local-repository/org/apache/hbase
+            mvn clean "${mvn_args[@]}"
+            rm -rf "target/machine" && mkdir -p "target/machine"
+            if [ -x dev-support/gather_machine_environment.sh ]; then
+              "./dev-support/gather_machine_environment.sh" "target/machine"
+              echo "got the following saved stats in 'target/machine'"
+              ls -lh "target/machine"
+            else
+              echo "Skipped gathering machine environment because we couldn't read the script to do so."
+            fi
+            mvn package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=3 -Dsurefire.secondPartForkCount=3
           else
             echo "set of flaky tests is currently empty."
           fi
@@ -65,7 +73,7 @@ pipeline {
     always {
       junit testResults: "**/surefire-reports/*.xml", allowEmptyResults: true
       // TODO compress these logs
-      archive 'includes.txt,**/surefire-reports/*,**/test-data/*'
+      archive 'includes.txt,**/surefire-reports/*,**/test-data/*,target/machine/*'
     }
   }
 }
