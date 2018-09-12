@@ -191,10 +191,6 @@ public abstract class RpcServer implements RpcServerInterface,
   protected static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   protected static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
-  protected static final int DEFAULT_TRACE_LOG_MAX_LENGTH = 1000;
-  protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
-  protected static final String KEY_WORD_TRUNCATED = " <TRUNCATED>";
-
   protected static final ObjectMapper MAPPER = new ObjectMapper();
 
   protected final int maxRequestSize;
@@ -504,7 +500,8 @@ public abstract class RpcServer implements RpcServerInterface,
     String stringifiedParam = ProtobufUtil.getShortTextFormat(param);
     if (stringifiedParam.length() > 150) {
       // Truncate to 1000 chars if TRACE is on, else to 150 chars
-      stringifiedParam = truncateTraceLog(stringifiedParam);
+      stringifiedParam = stringifiedParam.subSequence(
+          0, LOG.isTraceEnabled() ? 1000 : 150) + " <TRUNCATED>";
     }
     responseInfo.put("param", stringifiedParam);
     if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
@@ -518,24 +515,6 @@ public abstract class RpcServer implements RpcServerInterface,
       }
     }
     LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
-  }
-
-  /**
-   * Truncate to number of chars decided by conf hbase.ipc.trace.log.max.length
-   * if TRACE is on else to 150 chars Refer to Jira HBASE-20826 and HBASE-20942
-   * @param strParam stringifiedParam to be truncated
-   * @return truncated trace log string
-   */
-  @VisibleForTesting
-  String truncateTraceLog(String strParam) {
-    if (LOG.isTraceEnabled()) {
-      int traceLogMaxLength = getConf().getInt(TRACE_LOG_MAX_LENGTH, DEFAULT_TRACE_LOG_MAX_LENGTH);
-      int truncatedLength =
-          strParam.length() < traceLogMaxLength ? strParam.length() : traceLogMaxLength;
-      String truncatedFlag = truncatedLength == strParam.length() ? "" : KEY_WORD_TRUNCATED;
-      return strParam.subSequence(0, truncatedLength) + truncatedFlag;
-    }
-    return strParam.subSequence(0, 150) + KEY_WORD_TRUNCATED;
   }
 
   /**
