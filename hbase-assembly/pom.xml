@@ -111,7 +111,7 @@
             </goals>
             <configuration>
               <outputFile>${project.parent.basedir}/target/cached_classpath.txt</outputFile>
-              <excludeArtifactIds>jline,jruby-complete</excludeArtifactIds>
+              <excludeArtifactIds>jline,jruby-complete,hbase-shaded-client,hbase-shaded-client-byo-hadoop,hbase-shaded-mapreduce</excludeArtifactIds>
             </configuration>
           </execution>
 
