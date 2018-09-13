@@ -19,17 +19,22 @@
 package org.apache.hadoop.hbase.client;
 
 import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.After;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -52,23 +57,16 @@ public class TestHbck {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHbck.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private Admin admin;
-  private Hbck hbck;
 
   @Rule
   public TestName name = new TestName();
 
-  private static final TableName tableName = TableName.valueOf(TestHbck.class.getSimpleName());
+  private static final TableName TABLE_NAME = TableName.valueOf(TestHbck.class.getSimpleName());
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);
-
-    TEST_UTIL.createTable(tableName, "family1");
+    TEST_UTIL.createMultiRegionTable(TABLE_NAME, Bytes.toBytes("family1"), 5);
   }
 
   @AfterClass
@@ -76,29 +74,62 @@ public class TestHbck {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    this.admin = TEST_UTIL.getAdmin();
-    this.hbck = TEST_UTIL.getHbck();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    for (HTableDescriptor htd : this.admin.listTables()) {
-      TEST_UTIL.deleteTable(htd.getTableName());
-    }
-    this.hbck.close();
-  }
-
   @Test
   public void testSetTableStateInMeta() throws IOException {
+    Hbck hbck = TEST_UTIL.getHbck();
     // set table state to DISABLED
-    hbck.setTableStateInMeta(new TableState(tableName, TableState.State.DISABLED));
+    hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.DISABLED));
     // Method {@link Hbck#setTableStateInMeta()} returns previous state, which in this case
     // will be DISABLED
     TableState prevState =
-        hbck.setTableStateInMeta(new TableState(tableName, TableState.State.ENABLED));
+        hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
     assertTrue("Incorrect previous state! expeced=DISABLED, found=" + prevState.getState(),
         prevState.isDisabled());
+  }
+
+  @Test
+  public void testAssigns() throws IOException {
+    Hbck hbck = TEST_UTIL.getHbck();
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
+      for (RegionInfo ri: regions) {
+        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+            getRegionStates().getRegionState(ri.getEncodedName());
+        LOG.info("RS: {}", rs.toString());
+      }
+      List<Long> pids = hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).
+          collect(Collectors.toList()));
+      waitOnPids(pids);
+      for (RegionInfo ri: regions) {
+        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+            getRegionStates().getRegionState(ri.getEncodedName());
+        LOG.info("RS: {}", rs.toString());
+        assertTrue(rs.toString(), rs.isClosed());
+      }
+      pids = hbck.assigns(regions.stream().map(r -> r.getEncodedName()).
+          collect(Collectors.toList()));
+      waitOnPids(pids);
+      for (RegionInfo ri: regions) {
+        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+            getRegionStates().getRegionState(ri.getEncodedName());
+        LOG.info("RS: {}", rs.toString());
+        assertTrue(rs.toString(), rs.isOpened());
+      }
+      // What happens if crappy region list passed?
+      pids = hbck.assigns(Arrays.stream(new String [] {"a", "some rubbish name"}).
+          collect(Collectors.toList()));
+      for (long pid: pids) {
+        assertEquals(org.apache.hadoop.hbase.procedure2.Procedure.NO_PROC_ID, pid);
+      }
+    }
+  }
+
+  private void waitOnPids(List<Long> pids) {
+    for (Long pid: pids) {
+      while (!TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().
+          isFinished(pid)) {
+        Threads.sleep(100);
+      }
+    }
   }
 }

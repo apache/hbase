@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -2304,6 +2305,97 @@ public class MasterRpcServices extends RSRpcServices
       return GetTableStateResponse.newBuilder().setTableState(prevState).build();
     } catch (Exception e) {
       throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Get RegionInfo from Master using content of RegionSpecifier as key.
+   * @return RegionInfo found by decoding <code>rs</code> or null if none found
+   */
+  private RegionInfo getRegionInfo(HBaseProtos.RegionSpecifier rs) throws UnknownRegionException {
+    RegionInfo ri = null;
+    switch(rs.getType()) {
+      case REGION_NAME:
+        final byte[] regionName = rs.getValue().toByteArray();
+        ri = this.master.getAssignmentManager().getRegionInfo(regionName);
+        break;
+      case ENCODED_REGION_NAME:
+        String encodedRegionName = Bytes.toString(rs.getValue().toByteArray());
+        RegionState regionState = this.master.getAssignmentManager().getRegionStates().
+            getRegionState(encodedRegionName);
+        ri = regionState == null? null: regionState.getRegion();
+        break;
+      default:
+        break;
+    }
+    return ri;
+  }
+
+  /**
+   * Submit the Procedure that gets created by <code>f</code>
+   * @return pid of the submitted Procedure.
+   */
+  private long submitProcedure(HBaseProtos.RegionSpecifier rs, Function<RegionInfo, Procedure> f)
+    throws UnknownRegionException {
+    RegionInfo ri = getRegionInfo(rs);
+    long pid = Procedure.NO_PROC_ID;
+    if (ri == null) {
+      LOG.warn("No RegionInfo found to match {}", rs);
+    } else {
+      pid = this.master.getMasterProcedureExecutor().submitProcedure(f.apply(ri));
+    }
+    return pid;
+  }
+
+  /**
+   * A 'raw' version of assign that does bulk and skirts Master state checks (assigns can be made
+   * during Master startup). For use by Hbck2.
+   */
+  @Override
+  public MasterProtos.AssignsResponse assigns(RpcController controller,
+      MasterProtos.AssignsRequest request)
+    throws ServiceException {
+    LOG.info(master.getClientIdAuditPrefix() + " assigns");
+    if (this.master.getMasterProcedureExecutor() == null) {
+      throw new ServiceException("Master's ProcedureExecutor not initialized; retry later");
+    }
+    MasterProtos.AssignsResponse.Builder responseBuilder =
+        MasterProtos.AssignsResponse.newBuilder();
+    try {
+      for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
+        long pid = submitProcedure(rs,
+          r -> this.master.getAssignmentManager().createAssignProcedure(r));
+        responseBuilder.addPid(pid);
+      }
+      return responseBuilder.build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  /**
+   * A 'raw' version of unassign that does bulk and skirts Master state checks (unassigns can be
+   * made during Master startup). For use by Hbck2.
+   */
+  @Override
+  public MasterProtos.UnassignsResponse unassigns(RpcController controller,
+      MasterProtos.UnassignsRequest request)
+      throws ServiceException {
+    LOG.info(master.getClientIdAuditPrefix() + " unassigns");
+    if (this.master.getMasterProcedureExecutor() == null) {
+      throw new ServiceException("Master's ProcedureExecutor not initialized; retry later");
+    }
+    MasterProtos.UnassignsResponse.Builder responseBuilder =
+        MasterProtos.UnassignsResponse.newBuilder();
+    try {
+      for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
+        long pid = submitProcedure(rs,
+          ri -> this.master.getAssignmentManager().createUnassignProcedure(ri));
+        responseBuilder.addPid(pid);
+      }
+      return responseBuilder.build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
   }
 }

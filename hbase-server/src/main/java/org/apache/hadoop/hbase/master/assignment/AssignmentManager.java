@@ -694,6 +694,11 @@ public class AssignmentManager implements ServerListener {
     return proc;
   }
 
+  public UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo) {
+    return createUnassignProcedure(regionInfo, null, false);
+
+  }
+
   UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo,
       final ServerName destinationServer, final boolean force) {
     return createUnassignProcedure(regionInfo, destinationServer, force, false);
