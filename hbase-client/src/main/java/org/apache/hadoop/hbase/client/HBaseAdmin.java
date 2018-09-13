@@ -230,7 +230,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
  * @see Admin
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public class HBaseAdmin implements Admin {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseAdmin.class);
 

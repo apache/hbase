@@ -544,7 +544,8 @@ public class AssignmentManager implements ServerListener {
     }
   }
 
-  public void assign(RegionInfo regionInfo, ServerName sn) throws IOException {
+  // TODO: Need an async version of this for hbck2.
+  public long assign(RegionInfo regionInfo, ServerName sn) throws IOException {
     // TODO: should we use getRegionStateNode?
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
     TransitRegionStateProcedure proc;
@@ -557,13 +558,14 @@ public class AssignmentManager implements ServerListener {
       regionNode.unlock();
     }
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
+    return proc.getProcId();
   }
 
-  public void assign(RegionInfo regionInfo) throws IOException {
-    assign(regionInfo, null);
+  public long assign(RegionInfo regionInfo) throws IOException {
+    return assign(regionInfo, null);
   }
 
-  public void unassign(RegionInfo regionInfo) throws IOException {
+  public long unassign(RegionInfo regionInfo) throws IOException {
     RegionStateNode regionNode = regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {
       throw new UnknownRegionException("No RegionState found for " + regionInfo.getEncodedName());
@@ -578,6 +580,7 @@ public class AssignmentManager implements ServerListener {
       regionNode.unlock();
     }
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
+    return proc.getProcId();
   }
 
   private TransitRegionStateProcedure createMoveRegionProcedure(RegionInfo regionInfo,
