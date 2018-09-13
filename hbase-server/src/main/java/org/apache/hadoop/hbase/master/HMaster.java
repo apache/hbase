@@ -1180,8 +1180,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       // Page will talk about loss of edits, how to schedule at least the meta WAL recovery, and
       // then how to assign including how to break region lock if one held.
       LOG.warn("{} is NOT online; state={}; ServerCrashProcedures={}. Master startup cannot " +
-          "progress, in holding-pattern until region onlined; operator intervention required. " +
-          "Schedule an assign.", ri.getRegionNameAsString(), rs, optProc.isPresent());
+          "progress, in holding-pattern until region onlined.",
+          ri.getRegionNameAsString(), rs, optProc.isPresent());
       // Check once-a-minute.
       if (rc == null) {
         rc = new RetryCounterFactory(1000).create();

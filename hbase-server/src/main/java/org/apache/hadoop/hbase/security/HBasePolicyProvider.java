@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -27,6 +27,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Implementation of secure Hadoop policy provider for mapping
@@ -35,10 +36,13 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 @InterfaceAudience.Private
 public class HBasePolicyProvider extends PolicyProvider {
   protected final static Service[] services = {
-      new Service("security.client.protocol.acl", ClientService.BlockingInterface.class),
-      new Service("security.client.protocol.acl", AdminService.BlockingInterface.class),
-      new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
-      new Service("security.masterregion.protocol.acl", RegionServerStatusService.BlockingInterface.class)
+    new Service("security.client.protocol.acl", ClientService.BlockingInterface.class),
+    new Service("security.client.protocol.acl", AdminService.BlockingInterface.class),
+    new Service("security.client.protocol.acl",
+      MasterProtos.HbckService.BlockingInterface.class),
+    new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
+    new Service("security.masterregion.protocol.acl",
+      RegionServerStatusService.BlockingInterface.class)
   };
 
   @Override
