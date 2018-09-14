@@ -826,7 +826,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       byte[] regionName = regionEntry.getKey();
 
       Throwable regionException = responses.getExceptions().get(regionName);
-      cleanServerCache(server, regionException);
+      if (regionException != null) {
+        cleanServerCache(server, regionException);
+      }
 
       Map<Integer, Object> regionResults =
         results.containsKey(regionName) ? results.get(regionName).result : Collections.emptyMap();
