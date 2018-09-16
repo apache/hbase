@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.7
+Release Notes - HBase - Version 1.2.7 2018/09/16
 
 ** Sub-task
     * [HBASE-15691] - Port HBASE-10205 (ConcurrentModificationException in BucketAllocator) to branch-1
