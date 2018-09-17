@@ -178,6 +178,8 @@ public class MiniZooKeeperCluster {
     // set env and directly in order to handle static init/gc issues
     System.setProperty("zookeeper.preAllocSize", "100");
     FileTxnLog.setPreallocSize(100 * 1024);
+    // allow all 4 letter words
+    System.setProperty("zookeeper.4lw.commands.whitelist","*");
   }
 
   public int startup(File baseDir) throws IOException, InterruptedException {
