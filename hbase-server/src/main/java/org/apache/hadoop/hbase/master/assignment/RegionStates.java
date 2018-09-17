@@ -41,12 +41,14 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -820,23 +822,37 @@ public class RegionStates {
   public Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(
       final Collection<RegionInfo> regions) {
     final Map<ServerName, List<RegionInfo>> result = new HashMap<ServerName, List<RegionInfo>>();
-    for (RegionInfo hri: regions) {
-      final RegionStateNode node = getRegionStateNode(hri);
-      if (node == null) continue;
-
-      // TODO: State.OPEN
-      final ServerName serverName = node.getRegionLocation();
-      if (serverName == null) continue;
-
-      List<RegionInfo> serverRegions = result.get(serverName);
-      if (serverRegions == null) {
-        serverRegions = new ArrayList<RegionInfo>();
-        result.put(serverName, serverRegions);
+    if (regions != null) {
+      for (RegionInfo hri : regions) {
+        final RegionStateNode node = getRegionStateNode(hri);
+        if (node == null) {
+          continue;
+        }
+        createSnapshot(node, result);
       }
-
-      serverRegions.add(node.getRegionInfo());
+    } else {
+      for (RegionStateNode node : regionsMap.values()) {
+        if (node == null) {
+          continue;
+        }
+        createSnapshot(node, result);
+      }
     }
     return result;
+  }
+
+  private void createSnapshot(RegionStateNode node, Map<ServerName, List<RegionInfo>> result) {
+    final ServerName serverName = node.getRegionLocation();
+    if (serverName == null) {
+      return;
+    }
+
+    List<RegionInfo> serverRegions = result.get(serverName);
+    if (serverRegions == null) {
+      serverRegions = new ArrayList<RegionInfo>();
+      result.put(serverName, serverRegions);
+    }
+    serverRegions.add(node.getRegionInfo());
   }
 
   public Map<RegionInfo, ServerName> getRegionAssignments() {
@@ -1125,6 +1141,26 @@ public class RegionStates {
     ServerStateNode serverNode = getOrCreateServer(regionNode.getRegionLocation());
     serverNode.addRegion(regionNode);
     return serverNode;
+  }
+
+  public boolean isReplicaAvailableForRegion(final RegionInfo info) {
+    // if the region info itself is a replica return true.
+    if (!RegionReplicaUtil.isDefaultReplica(info)) {
+      return true;
+    }
+    // iterate the regionsMap for the given region name. If there are replicas it should
+    // list them in order.
+    for (RegionStateNode node : regionsMap.tailMap(info.getRegionName()).values()) {
+      if (!node.getTable().equals(info.getTable())
+          || !ServerRegionReplicaUtil.isReplicasForSameRegion(info, node.getRegionInfo())) {
+        break;
+      } else if (!RegionReplicaUtil.isDefaultReplica(node.getRegionInfo())) {
+        // we have replicas
+        return true;
+      }
+    }
+    // we don have replicas
+    return false;
   }
 
   public ServerStateNode removeRegionFromServer(final ServerName serverName,

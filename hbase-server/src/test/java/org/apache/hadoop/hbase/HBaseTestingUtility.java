@@ -1345,7 +1345,22 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys)
       throws IOException {
-    return createTable(tableName, families, splitKeys, new Configuration(getConfiguration()));
+    return createTable(tableName, families, splitKeys, 1, new Configuration(getConfiguration()));
+  }
+
+  /**
+   * Create a table.
+   * @param tableName the table name
+   * @param families the families
+   * @param splitKeys the splitkeys
+   * @param replicaCount the region replica count
+   * @return A Table instance for the created table.
+   * @throws IOException throws IOException
+   */
+  public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys,
+      int replicaCount) throws IOException {
+    return createTable(tableName, families, splitKeys, replicaCount,
+      new Configuration(getConfiguration()));
   }
 
   public Table createTable(TableName tableName, byte[][] families,
@@ -1436,16 +1451,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param splitKeys
+   * @param tableName the table name
+   * @param families the families
+   * @param splitKeys the split keys
+   * @param replicaCount the replica count
    * @param c Configuration to use
    * @return A Table instance for the created table.
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys,
-      final Configuration c) throws IOException {
-    return createTable(new HTableDescriptor(tableName), families, splitKeys, c);
+      int replicaCount, final Configuration c) throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.setRegionReplication(replicaCount);
+    return createTable(htd, families, splitKeys, c);
   }
 
   /**
