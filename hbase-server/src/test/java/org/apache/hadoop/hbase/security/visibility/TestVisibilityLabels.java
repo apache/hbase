@@ -423,6 +423,7 @@ public abstract class TestVisibilityLabels {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.setAuths(conn, auths, user);
         } catch (Throwable e) {
+          throw new IOException(e);
         }
         return null;
       }
@@ -450,7 +451,7 @@ public abstract class TestVisibilityLabels {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           authsResponse = VisibilityClient.getAuths(conn, user);
         } catch (Throwable e) {
-          fail("Should not have failed");
+          throw new IOException(e);
         }
         List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
@@ -475,7 +476,7 @@ public abstract class TestVisibilityLabels {
           try {
             authsResponse = VisibilityClient.getAuths(conn, user);
           } catch (Throwable e) {
-            fail("Should not have failed");
+            throw new IOException(e);
           }
         } catch (Throwable e) {
         }
@@ -515,7 +516,7 @@ public abstract class TestVisibilityLabels {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.setAuths(conn, auths, user);
         } catch (Throwable e) {
-          fail("Should not have failed");
+          throw new IOException(e);
         }
         // Removing the auths for SECRET and CONFIDENTIAL for the user.
         // Passing a non existing auth also.
@@ -553,7 +554,7 @@ public abstract class TestVisibilityLabels {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           authsResponse = VisibilityClient.getAuths(conn, user);
         } catch (Throwable e) {
-          fail("Should not have failed");
+          throw new IOException(e);
         }
         List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {

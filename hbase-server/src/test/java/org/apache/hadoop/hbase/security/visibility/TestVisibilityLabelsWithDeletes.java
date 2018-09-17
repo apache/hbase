@@ -313,8 +313,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             assertEquals(1, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -334,8 +332,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             assertEquals(0, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -366,8 +362,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             assertEquals(0, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -386,8 +380,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             assertEquals(0, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -417,8 +409,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             assertEquals(1, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -438,8 +428,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             assertEquals(0, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -470,8 +458,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             assertEquals(0, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -490,8 +476,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             assertEquals(0, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -522,8 +506,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             // The delete would not be able to apply it because of visibility mismatch
             Result[] next = scanner.next(3);
             assertEquals(1, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }
@@ -544,8 +526,6 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
             Result[] next = scanner.next(3);
             // this will alone match
             assertEquals(0, next.length);
-          } catch (Throwable t) {
-            throw new IOException(t);
           }
           return null;
         }

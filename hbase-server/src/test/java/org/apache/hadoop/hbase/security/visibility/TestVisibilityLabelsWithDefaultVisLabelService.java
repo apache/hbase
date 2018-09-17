@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityUtils.SYSTEM
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import com.google.protobuf.ByteString;
 import java.io.IOException;
@@ -94,7 +93,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           response = VisibilityClient.addLabels(conn, labels);
         } catch (Throwable e) {
-          fail("Should not have thrown exception");
+          throw new IOException(e);
         }
         List<RegionActionResult> resultList = response.getResultList();
         assertEquals(5, resultList.size());
@@ -183,7 +182,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           response = VisibilityClient.listLabels(conn, null);
         } catch (Throwable e) {
-          fail("Should not have thrown exception");
+          throw new IOException(e);
         }
         // The addLabels() in setup added:
         // { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
@@ -192,12 +191,12 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
         // The 'system' label is excluded.
         List<ByteString> labels = response.getLabelList();
         assertEquals(12, labels.size());
-        assertTrue(labels.contains(ByteString.copyFrom(SECRET.getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom(TOPSECRET.getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom(CONFIDENTIAL.getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom("ABC".getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom("XYZ".getBytes())));
-        assertFalse(labels.contains(ByteString.copyFrom(SYSTEM_LABEL.getBytes())));
+        assertTrue(labels.contains(ByteString.copyFrom(Bytes.toBytes(SECRET))));
+        assertTrue(labels.contains(ByteString.copyFrom(Bytes.toBytes(TOPSECRET))));
+        assertTrue(labels.contains(ByteString.copyFrom(Bytes.toBytes(CONFIDENTIAL))));
+        assertTrue(labels.contains(ByteString.copyFrom(Bytes.toBytes("ABC"))));
+        assertTrue(labels.contains(ByteString.copyFrom(Bytes.toBytes("XYZ"))));
+        assertFalse(labels.contains(ByteString.copyFrom(Bytes.toBytes(SYSTEM_LABEL))));
         return null;
       }
     };
@@ -214,13 +213,13 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           response = VisibilityClient.listLabels(conn, ".*secret");
         } catch (Throwable e) {
-          fail("Should not have thrown exception");
+          throw new IOException(e);
         }
         // Only return the labels that end with 'secret'
         List<ByteString> labels = response.getLabelList();
         assertEquals(2, labels.size());
-        assertTrue(labels.contains(ByteString.copyFrom(SECRET.getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom(TOPSECRET.getBytes())));
+        assertTrue(labels.contains(ByteString.copyFrom(Bytes.toBytes(SECRET))));
+        assertTrue(labels.contains(ByteString.copyFrom(Bytes.toBytes(TOPSECRET))));
         return null;
       }
     };
