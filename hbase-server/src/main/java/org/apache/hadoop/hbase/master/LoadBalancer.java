@@ -164,6 +164,9 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    */
   void postMasterStartupInitialize();
 
+  /*Updates balancer status tag reported to JMX*/
+  void updateBalancerStatus(boolean status);
+
   /**
    * @return true if Master carries regions
    */
