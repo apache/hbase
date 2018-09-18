@@ -2427,6 +2427,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
+  public LoadBalancer getLoadBalancer() {
+    return balancer;
+  }
+
+  @Override
   public ServerName getServerName() {
     return this.serverName;
   }

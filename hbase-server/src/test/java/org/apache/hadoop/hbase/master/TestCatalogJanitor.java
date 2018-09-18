@@ -284,6 +284,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public LoadBalancer getLoadBalancer() {
+      return null;
+    }
+
+    @Override
     public ServerManager getServerManager() {
       return sm;
     }

@@ -97,6 +97,11 @@ public interface MasterServices extends Server {
   ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor();
 
   /**
+   * @return load balancer
+   */
+  LoadBalancer getLoadBalancer();
+
+  /**
    * Check table is modifiable; i.e. exists and is offline.
    * @param tableName Name of table to check.
    * @throws TableNotDisabledException

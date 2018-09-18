@@ -85,6 +85,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public LoadBalancer getLoadBalancer() {
+    return null;
+  }
+
+  @Override
   public void checkTableModifiable(TableName tableName) throws IOException, TableNotFoundException, TableNotDisabledException {
 
   }
