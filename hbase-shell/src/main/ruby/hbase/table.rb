@@ -778,13 +778,16 @@ EOF
     end
 
     def convert_bytes(bytes, converter_class = nil, converter_method = nil)
-      convert_bytes_with_position(bytes, 0, bytes.length, converter_class, converter_method)
+      # Avoid nil
+      converter_class ||= 'org.apache.hadoop.hbase.util.Bytes'
+      converter_method ||= 'toStringBinary'
+      eval(converter_class).method(converter_method).call(bytes)
     end
 
     def convert_bytes_with_position(bytes, offset, len, converter_class, converter_method)
       # Avoid nil
-      converter_class = 'org.apache.hadoop.hbase.util.Bytes' unless converter_class
-      converter_method = 'toStringBinary' unless converter_method
+      converter_class ||= 'org.apache.hadoop.hbase.util.Bytes'
+      converter_method ||= 'toStringBinary'
       eval(converter_class).method(converter_method).call(bytes, offset, len)
     end
 
