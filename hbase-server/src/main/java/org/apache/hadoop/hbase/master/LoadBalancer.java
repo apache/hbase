@@ -157,4 +157,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * If balancer needs to do initialization after Master has started up, lets do that here.
    */
   void postMasterStartupInitialize();
+
+  /*Updates balancer status tag reported to JMX*/
+  void updateBalancerStatus(boolean status);
 }
