@@ -37,9 +37,11 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -770,6 +772,26 @@ public class RegionStates {
     ServerStateNode serverNode = getOrCreateServer(regionNode.getRegionLocation());
     serverNode.addRegion(regionNode);
     return serverNode;
+  }
+
+  public boolean isReplicaAvailableForRegion(final RegionInfo info) {
+    // if the region info itself is a replica return true.
+    if (!RegionReplicaUtil.isDefaultReplica(info)) {
+      return true;
+    }
+    // iterate the regionsMap for the given region name. If there are replicas it should
+    // list them in order.
+    for (RegionStateNode node : regionsMap.tailMap(info.getRegionName()).values()) {
+      if (!node.getTable().equals(info.getTable())
+          || !ServerRegionReplicaUtil.isReplicasForSameRegion(info, node.getRegionInfo())) {
+        break;
+      } else if (!RegionReplicaUtil.isDefaultReplica(node.getRegionInfo())) {
+        // we have replicas
+        return true;
+      }
+    }
+    // we don have replicas
+    return false;
   }
 
   public ServerStateNode removeRegionFromServer(final ServerName serverName,
