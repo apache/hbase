@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -51,15 +52,14 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The base class for load balancers. It provides the the functions used to by
@@ -1454,8 +1454,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     for (Map.Entry<RegionInfo, ServerName> entry : regions.entrySet()) {
       RegionInfo region = entry.getKey();
       ServerName oldServerName = entry.getValue();
-      if (!hasRegionReplica && !RegionReplicaUtil.isDefaultReplica(region)) {
-        hasRegionReplica = true;
+      // In the current set of regions even if one has region replica let us go with
+      // getting the entire snapshot
+      if (this.services != null && this.services.getAssignmentManager() != null) { // for tests
+        if (!hasRegionReplica && this.services.getAssignmentManager().getRegionStates()
+            .isReplicaAvailableForRegion(region)) {
+          hasRegionReplica = true;
+        }
       }
       List<ServerName> localServers = new ArrayList<>();
       if (oldServerName != null) {
