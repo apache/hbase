@@ -437,6 +437,21 @@ module Hbase
       end
     end
 
+    define_test 'get should work with a custom converter class' do
+      @test_table.put(1, 'x:v', 1234)
+      begin
+        res = @test_table._get_internal('1', 'COLUMNS' =>
+                    ['x:v:c(org.apache.hadoop.hbase.util.Bytes).len'])
+        assert_not_nil(res)
+        assert_kind_of(Hash, res)
+        assert_not_nil(res['x:v'])
+        assert_not_nil(/value=4/.match(res['x:v']))
+      ensure
+        # clean up newly added columns for this test only.
+        @test_table.deleteall(1, 'x:v')
+      end
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "scan should work w/o any params" do
@@ -677,6 +692,21 @@ module Hbase
     define_test "scan hbase meta table" do
       res = table("hbase:meta")._scan_internal
       assert_not_nil(res)
+    end
+
+    define_test 'scan should work with a custom converter class' do
+      @test_table.put(1, 'x:v', 1234)
+      begin
+        res = @test_table._scan_internal 'COLUMNS' =>
+                    ['x:v:c(org.apache.hadoop.hbase.util.Bytes).len']
+        assert_not_nil(res)
+        assert_kind_of(Hash, res)
+        assert_not_nil(res['1']['x:v'])
+        assert_not_nil(/value=4/.match(res['1']['x:v']))
+      ensure
+        # clean up newly added columns for this test only.
+        @test_table.deleteall(1, 'x:v')
+      end
     end
 
     define_test "mutation with TTL should expire" do
