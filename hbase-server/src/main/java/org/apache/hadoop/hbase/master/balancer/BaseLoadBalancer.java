@@ -1553,6 +1553,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
+  * Updates the balancer status tag reported to JMX
+  */
+  public void updateBalancerStatus(boolean status) {
+    metricsBalancer.balancerStatus(status);
+  }
+
+  /**
    * Used to assign a single region to a random server.
    */
   private ServerName randomAssignment(Cluster cluster, RegionInfo regionInfo,

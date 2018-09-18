@@ -57,6 +57,14 @@ public class MetricsStochasticBalancer extends MetricsBalancer {
   }
 
   /**
+   * Updates the balancer status tag reported to JMX
+   */
+  @Override
+  public void balancerStatus(boolean status) {
+    stochasticSource.updateBalancerStatus(status);
+  }
+
+  /**
    * Updates the number of metrics reported to JMX
    */
   public void updateMetricsSize(int size) {

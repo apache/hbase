@@ -473,4 +473,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   public void postMasterStartupInitialize() {
     this.internalBalancer.postMasterStartupInitialize();
   }
+
+  public void updateBalancerStatus(boolean status) {
+    internalBalancer.updateBalancerStatus(status);
+  }
 }
