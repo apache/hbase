@@ -37,6 +37,7 @@ public class MetricsBalancerSourceImpl extends BaseSourceImpl implements Metrics
                                    String metricsDescription,
                                    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
+    updateBalancerStatus(true);
   }
 
 
@@ -44,7 +45,6 @@ public class MetricsBalancerSourceImpl extends BaseSourceImpl implements Metrics
   public void init() {
     blanceClusterHisto = metricsRegistry.newTimeHistogram(BALANCE_CLUSTER);
     miscCount = metricsRegistry.newCounter(MISC_INVOATION_COUNT, "", 0L);
-
   }
 
   @Override
@@ -55,5 +55,10 @@ public class MetricsBalancerSourceImpl extends BaseSourceImpl implements Metrics
   @Override
   public void incrMiscInvocations() {
      miscCount.incr();
+  }
+
+  @Override
+  public void updateBalancerStatus(boolean status) {
+    metricsRegistry.tag(BALANCER_STATUS,"", String.valueOf(status), true);
   }
 }
