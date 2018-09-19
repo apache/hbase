@@ -1220,6 +1220,14 @@ public class StoreFile {
     }
 
     /**
+     * Return the ref count associated with the reader whenever a scanner associated with the
+     * reader is opened.
+     */
+    int getRefCount() {
+      return refCount.get();
+    }
+
+    /**
      * Increment the ref count associated with the reader when ever a scanner associated with the
      * reader is opened
      */
