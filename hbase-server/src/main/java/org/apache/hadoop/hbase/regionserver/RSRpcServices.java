@@ -2878,6 +2878,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 break;
               }
             }
+          } else if (!moreRows && !results.isEmpty()) {
+            // No more cells for the scan here, we need to ensure that the mayHaveMoreCellsInRow of
+            // last result is false. Otherwise it's possible that: the first nextRaw returned
+            // because BATCH_LIMIT_REACHED (BTW it happen to exhaust all cells of the scan),so the
+            // last result's mayHaveMoreCellsInRow will be true. while the following nextRaw will
+            // return with moreRows=false, which means moreResultsInRegion would be false, it will
+            // be a contradictory state (HBASE-21206).
+            int lastIdx = results.size() - 1;
+            Result r = results.get(lastIdx);
+            if (r.mayHaveMoreCellsInRow()) {
+              results.set(lastIdx, Result.create(r.rawCells(), r.getExists(), r.isStale(), false));
+            }
           }
           boolean sizeLimitReached = scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS);
           boolean timeLimitReached = scannerContext.checkTimeLimit(LimitScope.BETWEEN_ROWS);
@@ -2893,10 +2905,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             // there are more values to be read server side. If there aren't more values,
             // marking it as a heartbeat is wasteful because the client will need to issue
             // another ScanRequest only to realize that they already have all the values
-            if (moreRows) {
+            if (moreRows && timeLimitReached) {
               // Heartbeat messages occur when the time limit has been reached.
-              builder.setHeartbeatMessage(timeLimitReached);
-              if (timeLimitReached && rsh.needCursor) {
+              builder.setHeartbeatMessage(true);
+              if (rsh.needCursor) {
                 Cell cursorCell = scannerContext.getLastPeekedCell();
                 if (cursorCell != null) {
                   builder.setCursor(ProtobufUtil.toCursor(cursorCell));
