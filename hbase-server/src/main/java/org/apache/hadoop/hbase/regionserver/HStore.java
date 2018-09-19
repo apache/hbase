@@ -891,7 +891,7 @@ public class HStore implements Store {
           storeEngine.getStoreFileManager().clearCompactedFiles();
       // clear the compacted files
       if (compactedfiles != null && !compactedfiles.isEmpty()) {
-        removeCompactedfiles(compactedfiles);
+        removeCompactedfiles(compactedfiles, true);
       }
       if (!result.isEmpty()) {
         // initialize the thread pool for closing store files in parallel.
@@ -2751,6 +2751,11 @@ public class HStore implements Store {
 
   @Override
   public synchronized void closeAndArchiveCompactedFiles() throws IOException {
+    closeAndArchiveCompactedFiles(false);
+  }
+
+  @VisibleForTesting
+  public synchronized void closeAndArchiveCompactedFiles(boolean storeClosing) throws IOException {
     // ensure other threads do not attempt to archive the same files on close()
     archiveLock.lock();
     try {
@@ -2772,7 +2777,7 @@ public class HStore implements Store {
         lock.readLock().unlock();
       }
       if (copyCompactedfiles != null && !copyCompactedfiles.isEmpty()) {
-        removeCompactedfiles(copyCompactedfiles);
+        removeCompactedfiles(copyCompactedfiles, storeClosing);
       }
     } finally {
       archiveLock.unlock();
@@ -2784,20 +2789,38 @@ public class HStore implements Store {
    * @param compactedfiles The compacted files in this store that are not active in reads
    * @throws IOException
    */
-  private void removeCompactedfiles(Collection<StoreFile> compactedfiles)
+  private void removeCompactedfiles(Collection<StoreFile> compactedfiles, boolean storeClosing)
       throws IOException {
     final List<StoreFile> filesToRemove = new ArrayList<StoreFile>(compactedfiles.size());
     for (final StoreFile file : compactedfiles) {
       synchronized (file) {
         try {
           StoreFile.Reader r = file.getReader();
+
+          //Compacted files in the list should always be marked compacted away. In the event
+          //they're contradicting in order to guarantee data consistency
+          //should we choose one and ignore the other?
+          if (storeClosing && r != null && !r.isCompactedAway()) {
+            String msg =
+                "Region closing but StoreFile is in compacted list but not compacted away: " +
+                    file.getPath();
+            throw new IllegalStateException(msg);
+          }
+
           if (r == null) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("The file " + file + " was closed but still not archived.");
             }
             filesToRemove.add(file);
           }
-          if (r != null && r.isCompactedAway() && !r.isReferencedInReads()) {
+
+          //If store is closing we're ignoring any references to keep things consistent
+          //and remove compacted storefiles from the region directory
+          if (r != null && file.isCompactedAway() && (!r.isReferencedInReads() || storeClosing)) {
+            if (storeClosing && r.isReferencedInReads()) {
+              LOG.warn("Region closing but StoreFile still has references: file=" +
+                  file.getPath() + ", refCount=" + r.getRefCount());
+            }
             // Even if deleting fails we need not bother as any new scanners won't be
             // able to use the compacted file as the status is already compactedAway
             if (LOG.isTraceEnabled()) {
@@ -2808,13 +2831,21 @@ public class HStore implements Store {
             filesToRemove.add(file);
           } else {
             LOG.info("Can't archive compacted file " + file.getPath()
-                + " because of either isCompactedAway = " + r.isCompactedAway()
-                + " or file has reference, isReferencedInReads = " + r.isReferencedInReads()
-                + ", skipping for now.");
+                + " because of either isCompactedAway=" + r.isCompactedAway()
+                + " or file has reference, isReferencedInReads=" + r.isReferencedInReads()
+                + ", refCount=" + r.getRefCount() + ", skipping for now.");
           }
         } catch (Exception e) {
-          LOG.error(
-            "Exception while trying to close the compacted store file " + file.getPath().getName());
+          String msg = "Exception while trying to close the compacted store file " +
+              file.getPath();
+          if (storeClosing) {
+            msg = "Store is closing. " + msg;
+          }
+          LOG.error(msg, e);
+          //if we get an exception let caller know so it can abort the server
+          if (storeClosing) {
+            throw new IOException(msg, e);
+          }
         }
       }
     }
