@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -215,18 +216,12 @@ public class FSDataInputStreamWrapper {
 
   /** Close stream(s) if necessary. */
   public void close() throws IOException {
-    if (!doCloseStreams) return;
-    try {
-      if (stream != streamNoFsChecksum && streamNoFsChecksum != null) {
-        streamNoFsChecksum.close();
-        streamNoFsChecksum = null;
-      }
-    } finally {
-      if (stream != null) {
-        stream.close();
-        stream = null;
-      }
+    if (!doCloseStreams) {
+      return;
     }
+    // we do not care about the close exception as it is for reading, no data loss issue.
+    IOUtils.closeQuietly(streamNoFsChecksum);
+    IOUtils.closeQuietly(stream);
   }
 
   public HFileSystem getHfs() {
