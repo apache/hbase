@@ -32,6 +32,7 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import static junit.framework.Assert.assertFalse;
 import org.apache.commons.logging.Log;
@@ -66,6 +67,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -799,6 +801,77 @@ public class TestFromClientSide3 {
       } catch (InterruptedException ex) {
         throw new IOException(ex);
       }
+    }
+  }
+
+  private static byte[] generateHugeValue(int size) {
+    Random rand = ThreadLocalRandom.current();
+    byte[] value = new byte[size];
+    for (int i = 0; i < value.length; i++) {
+      value[i] = (byte) rand.nextInt(256);
+    }
+    return value;
+  }
+
+  @Test
+  public void testScanWithBatchSizeReturnIncompleteCells() throws IOException {
+    TableName tableName = TableName.valueOf("testScanWithBatchSizeReturnIncompleteCells");
+    HTableDescriptor hd = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY).setMaxVersions(3);
+    hd.addFamily(hcd);
+
+    Table table = TEST_UTIL.createTable(hd, null);
+
+    Put put = new Put(ROW);
+    put.addColumn(FAMILY, Bytes.toBytes(0), generateHugeValue(3 * 1024 * 1024));
+    table.put(put);
+
+    put = new Put(ROW);
+    put.addColumn(FAMILY, Bytes.toBytes(1), generateHugeValue(4 * 1024 * 1024));
+    table.put(put);
+
+    for (int i = 2; i < 5; i++) {
+      for (int version = 0; version < 2; version++) {
+        put = new Put(ROW);
+        put.addColumn(FAMILY, Bytes.toBytes(i), generateHugeValue(1024));
+        table.put(put);
+      }
+    }
+
+    Scan scan = new Scan();
+    scan.withStartRow(ROW).withStopRow(ROW).addFamily(FAMILY).setBatch(3)
+        .setMaxResultSize(4 * 1024 * 1024);
+    Result result;
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      List<Result> list = new ArrayList<>();
+      /*
+       * The first scan rpc should return a result with 2 cells, because 3MB + 4MB > 4MB; The second
+       * scan rpc should return a result with 3 cells, because reach the batch limit = 3; The
+       * mayHaveMoreCellsInRow in last result should be false in the scan rpc. BTW, the
+       * moreResultsInRegion also would be false. Finally, the client should collect all the cells
+       * into two result: 2+3 -> 3+2;
+       */
+      while ((result = scanner.next()) != null) {
+        list.add(result);
+      }
+
+      Assert.assertEquals(2, list.size());
+      Assert.assertEquals(3, list.get(0).size());
+      Assert.assertEquals(2, list.get(1).size());
+    }
+
+    scan = new Scan();
+    scan.withStartRow(ROW).withStopRow(ROW).addFamily(FAMILY).setBatch(2)
+        .setMaxResultSize(4 * 1024 * 1024);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      List<Result> list = new ArrayList<>();
+      while ((result = scanner.next()) != null) {
+        list.add(result);
+      }
+      Assert.assertEquals(3, list.size());
+      Assert.assertEquals(2, list.get(0).size());
+      Assert.assertEquals(2, list.get(1).size());
+      Assert.assertEquals(1, list.get(2).size());
     }
   }
 }
