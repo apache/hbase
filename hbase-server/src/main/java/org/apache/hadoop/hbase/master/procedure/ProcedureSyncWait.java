@@ -160,9 +160,10 @@ public final class ProcedureSyncWait {
       throw new IOException("The Master is Aborting");
     }
 
+    // If the procedure fails, we should always have an exception captured. Throw it.
+    // Needs to be an IOE to get out of here.
     if (proc.hasException()) {
-      // If the procedure fails, we should always have an exception captured. Throw it.
-      throw proc.getException().unwrapRemoteIOException();
+      throw MasterProcedureUtil.unwrapRemoteIOException(proc);
     } else {
       return proc.getResult();
     }
