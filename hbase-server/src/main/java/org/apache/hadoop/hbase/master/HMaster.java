@@ -978,7 +978,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // as procedures run -- in particular SCPs for crashed servers... One should put up hbase:meta
     // if it is down. It may take a while to come online. So, wait here until meta if for sure
     // available. Thats what waitUntilMetaOnline does.
-    if (!waitUntilMetaOnline()) {
+    if (!waitForMetaOnline()) {
       return;
     }
     this.assignmentManager.joinCluster();
@@ -1010,7 +1010,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Here we expect hbase:namespace to be online. See inside initClusterSchemaService.
     // TODO: Fix this. Namespace is a pain being a sort-of system table. Fold it in to hbase:meta.
     // isNamespace does like isMeta and waits until namespace is onlined before allowing progress.
-    if (!waitUntilNamespaceOnline()) {
+    if (!waitForNamespaceOnline()) {
       return;
     }
     status.setStatus("Starting cluster schema service");
@@ -1094,7 +1094,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *   and we will hold here until operator intervention.
    */
   @VisibleForTesting
-  public boolean waitUntilMetaOnline() throws InterruptedException {
+  public boolean waitForMetaOnline() throws InterruptedException {
     return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
@@ -1135,7 +1135,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return True if namespace table is up/online.
    */
   @VisibleForTesting
-  public boolean waitUntilNamespaceOnline() throws InterruptedException {
+  public boolean waitForNamespaceOnline() throws InterruptedException {
     List<RegionInfo> ris = this.assignmentManager.getRegionStates().
         getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME);
     if (ris.isEmpty()) {
