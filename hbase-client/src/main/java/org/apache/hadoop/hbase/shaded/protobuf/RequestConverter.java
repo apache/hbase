@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -1878,5 +1879,28 @@ public final class RequestConverter {
       pbServers.add(ProtobufUtil.toServerName(server));
     }
     return pbServers;
+  }
+
+  // HBCK2
+  public static MasterProtos.AssignsRequest toAssignRegionsRequest(
+      List<String> encodedRegionNames, boolean override) {
+    MasterProtos.AssignsRequest.Builder b = MasterProtos.AssignsRequest.newBuilder();
+    return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames)).
+        setOverride(override).build();
+  }
+
+  public static MasterProtos.UnassignsRequest toUnassignRegionsRequest(
+      List<String> encodedRegionNames, boolean override) {
+    MasterProtos.UnassignsRequest.Builder b =
+        MasterProtos.UnassignsRequest.newBuilder();
+    return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames)).
+        setOverride(override).build();
+  }
+
+  private static List<RegionSpecifier> toEncodedRegionNameRegionSpecifiers(
+      List<String> encodedRegionNames) {
+    return encodedRegionNames.stream().
+        map(r -> buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, Bytes.toBytes(r))).
+        collect(Collectors.toList());
   }
 }

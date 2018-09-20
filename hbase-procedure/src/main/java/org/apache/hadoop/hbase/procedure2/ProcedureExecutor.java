@@ -306,7 +306,7 @@ public class ProcedureExecutor<TEnvironment> {
   private Configuration conf;
 
   /**
-   * Created in the {@link #start(int, boolean)} method. Destroyed in {@link #join()} (FIX! Doing
+   * Created in the {@link #init(int, boolean)} method. Destroyed in {@link #join()} (FIX! Doing
    * resource handling rather than observing in a #join is unexpected).
    * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
    * (Should be ok).
@@ -314,7 +314,7 @@ public class ProcedureExecutor<TEnvironment> {
   private ThreadGroup threadGroup;
 
   /**
-   * Created in the {@link #start(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
+   * Created in the {@link #init(int, boolean)}  method. Terminated in {@link #join()} (FIX! Doing
    * resource handling rather than observing in a #join is unexpected).
    * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
    * (Should be ok).
@@ -322,7 +322,7 @@ public class ProcedureExecutor<TEnvironment> {
   private CopyOnWriteArrayList<WorkerThread> workerThreads;
 
   /**
-   * Created in the {@link #start(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
+   * Created in the {@link #init(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
    * resource handling rather than observing in a #join is unexpected).
    * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
    * (Should be ok).
@@ -966,7 +966,7 @@ public class ProcedureExecutor<TEnvironment> {
    * Bypass a procedure. If the procedure is set to bypass, all the logic in
    * execute/rollback will be ignored and it will return success, whatever.
    * It is used to recover buggy stuck procedures, releasing the lock resources
-   * and letting other procedures to run. Bypassing one procedure (and its ancestors will
+   * and letting other procedures run. Bypassing one procedure (and its ancestors will
    * be bypassed automatically) may leave the cluster in a middle state, e.g. region
    * not assigned, or some hdfs files left behind. After getting rid of those stuck procedures,
    * the operators may have to do some clean up on hdfs or schedule some assign procedures
@@ -985,7 +985,7 @@ public class ProcedureExecutor<TEnvironment> {
    * <p>
    * If the procedure is in WAITING state, will set it to RUNNABLE add it to run queue.
    * TODO: What about WAITING_TIMEOUT?
-   * @param id the procedure id
+   * @param pids the procedure ids
    * @param lockWait time to wait lock
    * @param force if force set to true, we will bypass the procedure even if it is executing.
    *              This is for procedures which can't break out during executing(due to bug, mostly)
@@ -993,26 +993,38 @@ public class ProcedureExecutor<TEnvironment> {
    *              there. We need to restart the master after bypassing, and letting the problematic
    *              procedure to execute wth bypass=true, so in that condition, the procedure can be
    *              successfully bypassed.
+   * @param recursive We will do an expensive search for children of each pid. EXPENSIVE!
    * @return true if bypass success
    * @throws IOException IOException
    */
-  public boolean bypassProcedure(long id, long lockWait, boolean force) throws IOException  {
-    Procedure<TEnvironment> procedure = getProcedure(id);
+  public List<Boolean> bypassProcedure(List<Long> pids, long lockWait, boolean force,
+      boolean recursive)
+      throws IOException {
+    List<Boolean> result = new ArrayList<Boolean>(pids.size());
+    for(long pid: pids) {
+      result.add(bypassProcedure(pid, lockWait, force, recursive));
+    }
+    return result;
+  }
+
+  boolean bypassProcedure(long pid, long lockWait, boolean override, boolean recursive)
+      throws IOException {
+    final Procedure<TEnvironment> procedure = getProcedure(pid);
     if (procedure == null) {
-      LOG.debug("Procedure with id={} does not exist, skipping bypass", id);
+      LOG.debug("Procedure pid={} does not exist, skipping bypass", pid);
       return false;
     }
 
-    LOG.debug("Begin bypass {} with lockWait={}, force={}", procedure, lockWait, force);
-
+    LOG.debug("Begin bypass {} with lockWait={}, override={}, recursive={}",
+        procedure, lockWait, override, recursive);
     IdLock.Entry lockEntry = procExecutionLock.tryLockEntry(procedure.getProcId(), lockWait);
-    if (lockEntry == null && !force) {
+    if (lockEntry == null && !override) {
       LOG.debug("Waited {} ms, but {} is still running, skipping bypass with force={}",
-          lockWait, procedure, force);
+          lockWait, procedure, override);
       return false;
     } else if (lockEntry == null) {
       LOG.debug("Waited {} ms, but {} is still running, begin bypass with force={}",
-          lockWait, procedure, force);
+          lockWait, procedure, override);
     }
     try {
       // check whether the procedure is already finished
@@ -1022,8 +1034,29 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       if (procedure.hasChildren()) {
-        LOG.debug("{} has children, skipping bypass", procedure);
-        return false;
+        if (recursive) {
+          // EXPENSIVE. Checks each live procedure of which there could be many!!!
+          // Is there another way to get children of a procedure?
+          LOG.info("Recursive bypass on children of pid={}", procedure.getProcId());
+          this.procedures.forEachValue(1 /*Single-threaded*/,
+            // Transformer
+            v -> {
+              return v.getParentProcId() == procedure.getProcId()? v: null;
+            },
+            // Consumer
+            v -> {
+              boolean result = false;
+              IOException ioe = null;
+              try {
+                result = bypassProcedure(v.getProcId(), lockWait, override, recursive);
+              } catch (IOException e) {
+                LOG.warn("Recursive bypass of pid={}", v.getProcId(), e);
+              }
+            });
+        } else {
+          LOG.debug("{} has children, skipping bypass", procedure);
+          return false;
+        }
       }
 
       // If the procedure has no parent or no child, we are safe to bypass it in whatever state
@@ -1033,6 +1066,7 @@ public class ProcedureExecutor<TEnvironment> {
         LOG.debug("Bypassing procedures in RUNNABLE, WAITING and WAITING_TIMEOUT states "
                 + "(with no parent), {}",
             procedure);
+        // Question: how is the bypass done here?
         return false;
       }
 
@@ -1042,7 +1076,7 @@ public class ProcedureExecutor<TEnvironment> {
       Procedure current = procedure;
       while (current != null) {
         LOG.debug("Bypassing {}", current);
-        current.bypass();
+        current.bypass(getEnvironment());
         store.update(procedure);
         long parentID = current.getParentProcId();
         current = getProcedure(parentID);

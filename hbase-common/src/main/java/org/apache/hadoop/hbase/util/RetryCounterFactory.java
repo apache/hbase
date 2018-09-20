@@ -28,6 +28,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RetryCounterFactory {
   private final RetryConfig retryConfig;
 
+  public RetryCounterFactory(int sleepIntervalMillis) {
+    this(Integer.MAX_VALUE, sleepIntervalMillis);
+  }
+
   public RetryCounterFactory(int maxAttempts, int sleepIntervalMillis) {
     this(maxAttempts, sleepIntervalMillis, -1);
   }

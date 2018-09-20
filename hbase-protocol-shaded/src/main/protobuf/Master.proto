@@ -99,6 +99,7 @@ message MergeTableRegionsResponse {
 
 message AssignRegionRequest {
   required RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
 }
 
 message AssignRegionResponse {
@@ -993,8 +994,78 @@ service MasterService {
 
 }
 
+// HBCK Service definitions.
+
+
+/** Like Admin's AssignRegionRequest except it can
+ * take one or more Regions at a time.
+ */
+// NOTE: In hbck.proto, there is a define for
+// AssignRegionRequest -- singular 'Region'. This
+// is plural to convey it can carry more than one
+// Region at a time.
+message AssignsRequest {
+  repeated RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
+}
+
+/** Like Admin's AssignRegionResponse except it can
+ * return one or more pids as result -- one per assign.
+ */
+message AssignsResponse {
+  repeated uint64 pid = 1;
+}
+
+/** Like Admin's UnassignRegionRequest except it can
+ * take one or more Regions at a time.
+ */
+message UnassignsRequest {
+  repeated RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
+}
+
+/** Like Admin's UnassignRegionResponse except it can
+ * return one or more pids as result -- one per unassign.
+ */
+message UnassignsResponse {
+  repeated uint64 pid = 1;
+}
+
+message BypassProcedureRequest {
+  repeated uint64 proc_id = 1;
+  optional uint64 waitTime = 2; // wait time in ms to acquire lock on a procedure
+  optional bool override = 3 [default = false]; // if true, procedure is marked for bypass even if its executing
+  optional bool recursive = 4;
+}
+
+message BypassProcedureResponse {
+  repeated bool bypassed = 1;
+}
+
 service HbckService {
   /** Update state of the table in meta only*/
   rpc SetTableStateInMeta(SetTableStateInMetaRequest)
     returns(GetTableStateResponse);
+
+  /**
+   * Assign regions.
+   * Like Admin's assign but works even if the
+   * Master is initializing. Also allows bulk'ing up
+   * assigns rather than one region at a time.
+   */
+  rpc Assigns(AssignsRequest)
+    returns(AssignsResponse);
+
+  /**
+   * Unassign regions
+   * Like Admin's unssign but works even if the
+   * Master is initializing. Also allows bulk'ing up
+   * assigns rather than one region at a time.
+   */
+  rpc Unassigns(UnassignsRequest)
+    returns(UnassignsResponse);
+
+  /** Bypass a procedure to completion, procedure is completed but no actual work is done*/
+  rpc BypassProcedure(BypassProcedureRequest)
+    returns(BypassProcedureResponse);
 }
