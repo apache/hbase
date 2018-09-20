@@ -2295,12 +2295,11 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public GetTableStateResponse setTableStateInMeta(RpcController controller,
       SetTableStateInMetaRequest request) throws ServiceException {
-    Connection conn = master.getConnection();
     TableName tn = ProtobufUtil.toTableName(request.getTableName());
-
     try {
-      HBaseProtos.TableState prevState = MetaTableAccessor.getTableState(conn, tn).convert();
-      MetaTableAccessor.updateTableState(conn, tn,
+      HBaseProtos.TableState prevState =
+          this.master.getTableStateManager().getTableState(tn).convert();
+      this.master.getTableStateManager().setTableState(tn,
           TableState.convert(tn, request.getTableState()).getState());
       return GetTableStateResponse.newBuilder().setTableState(prevState).build();
     } catch (Exception e) {
