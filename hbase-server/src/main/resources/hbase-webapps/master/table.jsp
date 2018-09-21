@@ -28,7 +28,6 @@
   import="java.util.LinkedHashMap"
   import="java.util.Map"
   import="java.util.Collections"
-  import="java.util.Comparator"
   import="java.util.Collection"
   import="org.apache.commons.lang.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
@@ -60,11 +59,6 @@
   MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
   final String escaped_fqtn = StringEscapeUtils.escapeHtml(fqtn);
-  String sortKey = request.getParameter("sort");
-  String reverse = request.getParameter("reverse");
-  final boolean reverseOrder = (reverse==null||!reverse.equals("false"));
-  String showWholeKey = request.getParameter("showwhole");
-  final boolean showWhole = (showWholeKey!=null && showWholeKey.equals("true"));
   HTable table = null;
   String tableHeader;
   boolean withReplica = false;
@@ -164,10 +158,10 @@
 if ( fqtn != null ) {
   table = new HTable(conf, fqtn);
   if (table.getTableDescriptor().getRegionReplication() > 1) {
-	tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>ReplicaID</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr>Name</th><th>Region Server</th>Start Key</th>End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr></thead>";
     withReplica = true;
   } else {
-	tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr>Name</th><th>Region Server</th>Start Key</th>End Key</th><th>Locality</th><th>Requests</th></tr></thead>";
   }
   if ( !readOnly && action != null ) { 
 %>
@@ -219,6 +213,7 @@ if ( fqtn != null ) {
   if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) {
 %>
 <%= tableHeader %>
+<tbody>
 <%
   // NOTE: Presumes meta with one or more replicas
   for (int j = 0; j < numMetaReplicas; j++) {
@@ -279,6 +274,7 @@ if ( fqtn != null ) {
 </tr>
 <%  } %>
 <%} %>
+</tbody>
 </table>
 <%} else {
   Admin admin = master.getConnection().getAdmin();
@@ -407,22 +403,8 @@ if ( fqtn != null ) {
 
   if(regions != null && regions.size() > 0) { %>
 <h2>Table Regions</h2>
-Sort As
-<select id="sel" style="margin-right: 10px">
-<option value="regionName">RegionName</option>
-<option value="readrequest">ReadRequest</option>
-<option value="writerequest">WriteRequest</option>
-<option value="size">StorefileSize</option>
-<option value="filecount">Num.Storefiles</option>
-<option value="memstore">MemstoreSize</option>
-<option value="locality">Locality</option>
-</select>
-Ascending<input type="checkbox" id="ascending" value="Ascending" style="margin-right:10px">
-ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-right:10px">
-<input type="button" id="submit" value="Reorder" onClick="reloadAsSort()" style="font-size: 12pt; width: 5em; margin-bottom: 5px" class="btn">
-<p>
-
-<table class="table table-striped">
+<table id="regionServerDetailsTable" class="tablesorter table table-striped">
+<thead>
 <tr>
 <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
 <th>Region Server</th>
@@ -441,161 +423,12 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 <%
   }
 %>
+</thead>
 </tr>
+<tbody>
 
 <%
   List<Map.Entry<HRegionInfo, RegionLoad>> entryList = new ArrayList<Map.Entry<HRegionInfo, RegionLoad>>(regionsToLoad.entrySet());
-  if(sortKey != null) {
-    if (sortKey.equals("readrequest")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                  Map.Entry<HRegionInfo, RegionLoad> entry1,
-                  Map.Entry<HRegionInfo, RegionLoad> entry2) {
-                if (entry1 == null || entry1.getValue() == null) {
-                  return -1;
-                } else if (entry2 == null || entry2.getValue() == null) {
-                  return 1;
-                }
-                int result = 0;
-                if (entry1.getValue().getReadRequestsCount() < entry2.getValue().getReadRequestsCount()) {
-                  result = -1;
-                } else if (entry1.getValue().getReadRequestsCount() > entry2.getValue().getReadRequestsCount()) {
-                  result = 1;
-                }
-                if (reverseOrder) {
-                  result = -1 * result;
-                }
-                return result;
-              }
-            });
-    } else if (sortKey.equals("writerequest")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-                if (entry1 == null || entry1.getValue() == null) {
-                  return -1;
-                } else if (entry2 == null || entry2.getValue() == null) {
-                  return 1;
-                }
-                int result = 0;
-                if (entry1.getValue().getWriteRequestsCount() < entry2.getValue()
-                    .getWriteRequestsCount()) {
-                  result = -1;
-                } else if (entry1.getValue().getWriteRequestsCount() > entry2.getValue()
-                    .getWriteRequestsCount()) {
-                  result = 1;
-                }
-                if (reverseOrder) {
-                  result = -1 * result;
-                }
-                return result;
-              }
-            });
-    } else if (sortKey.equals("size")) {
-       Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-                if (entry1 == null || entry1.getValue() == null) {
-                  return -1;
-                } else if (entry2 == null || entry2.getValue() == null) {
-                  return 1;
-                }
-                int result = 0;
-                if (entry1.getValue().getStorefileSizeMB() < entry2.getValue()
-                    .getStorefileSizeMB()) {
-                  result = -1;
-                } else if (entry1.getValue().getStorefileSizeMB() > entry2
-                    .getValue().getStorefileSizeMB()) {
-                  result = 1;
-                }
-                if (reverseOrder) {
-                  result = -1 * result;
-                }
-                return result;
-              }
-            });
-    } else if (sortKey.equals("filecount")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-                if (entry1 == null || entry1.getValue() == null) {
-                  return -1;
-                } else if (entry2 == null || entry2.getValue() == null) {
-                  return 1;
-                }
-                int result = 0;
-                if (entry1.getValue().getStorefiles() < entry2.getValue()
-                    .getStorefiles()) {
-                  result = -1;
-                } else if (entry1.getValue().getStorefiles() > entry2.getValue()
-                    .getStorefiles()) {
-                  result = 1;
-                }
-                if (reverseOrder) {
-                  result = -1 * result;
-                }
-                return result;
-              }
-            });
-    } else if (sortKey.equals("memstore")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-                if (entry1 == null || entry1.getValue()==null) {
-                  return -1;
-                } else if (entry2 == null || entry2.getValue()==null) {
-                  return 1;
-                }
-                int result = 0;
-                if (entry1.getValue().getMemStoreSizeMB() < entry2.getValue()
-                    .getMemStoreSizeMB()) {
-                  result = -1;
-                } else if (entry1.getValue().getMemStoreSizeMB() > entry2
-                    .getValue().getMemStoreSizeMB()) {
-                  result = 1;
-                }
-                if (reverseOrder) {
-                  result = -1 * result;
-                }
-                return result;
-              }
-            });
-    } else if (sortKey.equals("locality")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-                if (entry1 == null || entry1.getValue()==null) {
-                  return -1;
-                } else if (entry2 == null || entry2.getValue()==null) {
-                  return 1;
-                }
-                int result = 0;
-                if (entry1.getValue().getDataLocality() < entry2.getValue()
-                    .getDataLocality()) {
-                  result = -1;
-                } else if (entry1.getValue().getDataLocality() > entry2
-                    .getValue().getDataLocality()) {
-                  result = 1;
-                }
-                if (reverseOrder) {
-                  result = -1 * result;
-                }
-                return result;
-              }
-            });
-    }
-  }
   numRegions = regions.size();
   int numRegionsRendered = 0;
   // render all regions
@@ -641,7 +474,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
       numRegionsRendered++;
 %>
 <tr>
-  <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getRegionName()):regionInfo.getEncodedName()) %></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
   <%
   if (urlRegionServer != null) {
   %>
@@ -661,8 +494,8 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   <td><%= fileCount%></td>
   <td><%= memSize%></td>
   <td><%= locality%></td>
-  <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getStartKey()):"-")%></td>
-  <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getEndKey()):"-")%></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
   <%
   if (withReplica) {
   %>
@@ -673,6 +506,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 </tr>
 <% } %>
 <% } %>
+</tbody>
 </table>
 <% if (numRegions > numRegionsRendered) {
      String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
@@ -685,11 +519,12 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 <%
 if (withReplica) {
 %>
-<table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th><th>Primary Region Count</th></tr>
+<table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th><th>Primary Region Count</th></tr><thead>
 <%
 } else {
 %>
-<table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th></tr>
+<table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th></tr></thead>
+<tbody>
 <%
 }
 %>
@@ -710,6 +545,7 @@ if (withReplica) {
 %>
 </tr>
 <% } %>
+</tbody>
 </table>
 <% }
 } catch(Exception ex) {
@@ -803,41 +639,18 @@ Actions:
 </div>
 <% } %>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
+<script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
 </body>
 </html>
 
 <script>
-var index=0;
-var sortKeyValue='<%= StringEscapeUtils.escapeJavaScript(sortKey) %>';
-if(sortKeyValue=="readrequest")index=1;
-else if(sortKeyValue=="writerequest")index=2;
-else if(sortKeyValue=="size")index=3;
-else if(sortKeyValue=="filecount")index=4;
-else if(sortKeyValue=="memstore")index=5;
-else if(sortKeyValue=="locality")index=6;
-document.getElementById("sel").selectedIndex=index;
-
-<% // turned into a boolean when we pulled it out of the request. %>
-var reverse='<%= reverseOrder %>';
-if(reverse=='false')document.getElementById("ascending").checked=true;
-
-<% // turned into a boolean when we pulled it out of the request. %>
-var showWhole='<%= showWhole %>';
-if(showWhole=='true')document.getElementById("showWhole").checked=true;
-
-function reloadAsSort(){
-  var url="?name="+'<%= fqtn != null ? URLEncoder.encode(fqtn) : "" %>';
-  if(document.getElementById("sel").selectedIndex>0){
-    url=url+"&sort="+document.getElementById("sel").value;
-  }
-  if(document.getElementById("ascending").checked){
-    url=url+"&reverse=false";
-  }
-  if(document.getElementById("showWhole").checked){
-    url=url+"&showwhole=true";
-  }
-  location.href=url;
-}
+$(document).ready(function() 
+    { 
+        $("#regionServerTable").tablesorter();
+        $("#regionServerDetailsTable").tablesorter();
+        $("#tableRegionTable").tablesorter();
+    } 
+);
 </script>
