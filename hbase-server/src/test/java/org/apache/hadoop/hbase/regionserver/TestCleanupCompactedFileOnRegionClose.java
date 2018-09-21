@@ -174,7 +174,7 @@ public class TestCleanupCompactedFileOnRegionClose {
     StoreFile hsf = region.getStore(familyNameBytes).getStorefiles().iterator().next();
     long readPt = region.getReadpoint(IsolationLevel.READ_COMMITTED);
     StoreFileScanner preadScanner = hsf.getReader().getStoreFileScanner(
-        false, true, false, readPt, 0, false);
+        false, true, false, readPt);
     preadScanner.seek(KeyValue.LOWESTKEY);
 
     //Major compact to produce compacted storefiles that need to be cleaned up
