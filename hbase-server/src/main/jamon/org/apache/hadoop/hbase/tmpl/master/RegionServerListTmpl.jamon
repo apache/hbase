@@ -82,7 +82,8 @@ Arrays.sort(serverNames);
 <%args>
         ServerName [] serverNames;
 </%args>
-<table class="table table-striped">
+<table id="baseStatsTable" class="tablesorter table table-striped">
+<thead>
 <tr>
     <th>ServerName</th>
     <th>Start time</th>
@@ -91,6 +92,8 @@ Arrays.sort(serverNames);
     <th>Requests Per Second</th>
     <th>Num. Regions</th>
 </tr>
+</thead>
+<tbody>
 <%java>
     int totalRegions = 0;
     int totalRequestsPerSecond = 0;
@@ -128,6 +131,7 @@ Arrays.sort(serverNames);
 <%java>
 }
 </%java>
+</tbody>
 <tr><td>Total:<% servers.size() %></td>
 <td></td>
 <td></td>
@@ -146,7 +150,8 @@ Arrays.sort(serverNames);
 <%args>
     ServerName [] serverNames;
 </%args>
-<table class="table table-striped">
+<table id="memoryStatsTable" class="tablesorter table table-striped">
+<thead>
 <tr>
     <th>ServerName</th>
     <th>Used Heap</th>
@@ -154,6 +159,8 @@ Arrays.sort(serverNames);
     <th>Memstore Size</th>
 
 </tr>
+</thead>
+<tbody>
 <%java>
 for (ServerName serverName: serverNames) {
 
@@ -182,6 +189,7 @@ for (ServerName serverName: serverNames) {
         }
 }
 </%java>
+</tbody>
 </table>
 </%def>
 
@@ -190,7 +198,8 @@ for (ServerName serverName: serverNames) {
 <%args>
         ServerName [] serverNames;
         </%args>
-<table class="table table-striped">
+<table id="requestStatsTable" class="tablesorter table table-striped">
+<thead>
 <tr>
     <th>ServerName</th>
     <th>Request Per Second</th>
@@ -198,6 +207,8 @@ for (ServerName serverName: serverNames) {
     <th>Filtered Read Request Count</th>
     <th>Write Request Count</th>
 </tr>
+</thead>
+<tbody>
 <%java>
 for (ServerName serverName: serverNames) {
 
@@ -227,6 +238,7 @@ if (sl != null) {
         }
 }
 </%java>
+</tbody>
 </table>
 </%def>
 
@@ -235,7 +247,8 @@ if (sl != null) {
 <%args>
         ServerName [] serverNames;
         </%args>
-<table class="table table-striped">
+<table id="storeStatsTable" class="tablesorter table table-striped">
+<thead>
 <tr>
     <th>ServerName</th>
     <th>Num. Stores</th>
@@ -245,6 +258,8 @@ if (sl != null) {
     <th>Index Size</th>
     <th>Bloom Size</th>
 </tr>
+</thead>
+<tbody>
 <%java>
 for (ServerName serverName: serverNames) {
 
@@ -286,6 +301,7 @@ if (sl != null) {
     }
 }
 </%java>
+</tbody>
 </table>
 </%def>
 
@@ -293,7 +309,8 @@ if (sl != null) {
 <%args>
         ServerName [] serverNames;
         </%args>
-<table class="table table-striped">
+<table id="compactionStatsTable" class="tablesorter table table-striped">
+<thead>
 <tr>
     <th>ServerName</th>
     <th>Num. Compacting Cells</th>
@@ -301,6 +318,8 @@ if (sl != null) {
     <th>Remaining Cells</th>
     <th>Compaction Progress</th>
 </tr>
+</thead>
+<tbody>
 <%java>
 for (ServerName serverName: serverNames) {
 
@@ -333,6 +352,7 @@ if  (totalCompactingCells > 0) {
     }
 }
 </%java>
+</tbody>
 </table>
 </%def>
 
