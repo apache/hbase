@@ -2587,7 +2587,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
           if (storeClosing && !file.isCompactedAway()) {
             String msg =
                 "Region closing but StoreFile is in compacted list but not compacted away: " +
-                file.getPath().getName();
+                file.getPath();
             throw new IllegalStateException(msg);
           }
 
@@ -2595,8 +2595,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
           //and remove compacted storefiles from the region directory
           if (file.isCompactedAway() && (!file.isReferencedInReads() || storeClosing)) {
             if (storeClosing && file.isReferencedInReads()) {
-              LOG.debug("Region closing but StoreFile still has references: {}",
-                  file.getPath().getName());
+              LOG.warn("Region closing but StoreFile still has references: file={}, refCount={}",
+                  file.getPath(), r.getRefCount());
             }
             // Even if deleting fails we need not bother as any new scanners won't be
             // able to use the compacted file as the status is already compactedAway
@@ -2607,13 +2607,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
             filesToRemove.add(file);
           } else {
             LOG.info("Can't archive compacted file " + file.getPath()
-                + " because of either isCompactedAway = " + file.isCompactedAway()
-                + " or file has reference, isReferencedInReads = " + file.isReferencedInReads()
-                + ", skipping for now.");
+                + " because of either isCompactedAway=" + file.isCompactedAway()
+                + " or file has reference, isReferencedInReads=" + file.isReferencedInReads()
+                + ", refCount=" + r.getRefCount() + ", skipping for now.");
           }
         } catch (Exception e) {
           String msg = "Exception while trying to close the compacted store file " +
-              file.getPath().getName();
+              file.getPath();
           if (storeClosing) {
             msg = "Store is closing. " + msg;
           }
