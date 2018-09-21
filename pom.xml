@@ -942,6 +942,7 @@
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
               <!-- MIT http://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
+              <exclude>**/jquery.tablesorter.min.js</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
