@@ -32,7 +32,7 @@ public class FallbackDisallowedException extends HBaseIOException {
   private static final long serialVersionUID = -6942845066279358253L;
 
   public FallbackDisallowedException() {
-    super("Server asked us to fall back to SIMPLE auth, "
+    super("Server asks us to fall back to SIMPLE auth, "
         + "but this client is configured to only allow secure connections.");
   }
 }

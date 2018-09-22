@@ -89,9 +89,6 @@ public class TestRpcServerSlowConnectionSetup {
     Thread.sleep(5000);
     socket.getOutputStream().write(preamble, rpcHeaderLen + 1, 1);
     socket.getOutputStream().flush();
-    DataInputStream pis = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-    int responseCode = pis.readInt();
-    assertEquals(responseCode, 0);
 
     ConnectionHeader header = ConnectionHeader.newBuilder()
         .setServiceName(TestRpcServiceProtos.TestProtobufRpcProto.getDescriptor().getFullName())

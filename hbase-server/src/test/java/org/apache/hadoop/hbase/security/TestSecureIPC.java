@@ -176,16 +176,13 @@ public class TestSecureIPC {
     setRpcProtection("authentication", "privacy,authentication");
     callRpcService(User.create(ugi));
 
-    setRpcProtection("integrity,authentication",
-        "privacy,authentication");
+    setRpcProtection("integrity,authentication", "privacy,authentication");
     callRpcService(User.create(ugi));
 
-    setRpcProtection("integrity,authentication",
-        "integrity,authentication");
+    setRpcProtection("integrity,authentication", "integrity,authentication");
     callRpcService(User.create(ugi));
 
-    setRpcProtection("privacy,authentication",
-        "privacy,authentication");
+    setRpcProtection("privacy,authentication", "privacy,authentication");
     callRpcService(User.create(ugi));
   }
 
@@ -265,8 +262,8 @@ public class TestSecureIPC {
         for (int i = 0; i < messageSize.length; i++) {
           String input = RandomStringUtils.random(messageSize[i]);
           String result =
-              stub.echo(null,
-                  TestProtos.EchoRequestProto.newBuilder().setMessage(input).build()).getMessage();
+              stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(input).build())
+                  .getMessage();
           assertEquals(input, result);
         }
       } catch (ServiceException e) {
