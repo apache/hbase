@@ -66,8 +66,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
-import org.apache.hadoop.hbase.security.SaslStatus;
-import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -442,7 +440,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         OutputStream outStream = NetUtils.getOutputStream(socket, this.rpcClient.writeTO);
         // Write out the preamble -- MAGIC, version, and auth to use.
         writeConnectionHeaderPreamble(outStream);
-        readPreambleResponse(inStream);
         if (useSasl) {
           final InputStream in2 = inStream;
           final OutputStream out2 = outStream;
@@ -500,25 +497,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     thread = new Thread(this, threadName);
     thread.setDaemon(true);
     thread.start();
-  }
-
-  private void readPreambleResponse(InputStream inStream) throws IOException {
-    DataInputStream resultCode = new DataInputStream(new BufferedInputStream(inStream));
-    int state = resultCode.readInt();
-    if (state == SaslStatus.SUCCESS.state) {
-      int fallback = resultCode.readInt();
-      if (fallback == SaslStatus.SUCCESS.state) {
-        return;
-      }
-      if (fallback == SaslUtil.SWITCH_TO_SIMPLE_AUTH) {
-        if (this.rpcClient.fallbackAllowed) {
-          useSasl = false;
-          return;
-        }
-        throw new FallbackDisallowedException();
-      }
-    }
-    readResponse();
   }
 
   /**

@@ -58,7 +58,7 @@ abstract class RpcConnection {
 
   protected final AuthMethod authMethod;
 
-  protected boolean useSasl;
+  protected final boolean useSasl;
 
   protected final Token<? extends TokenIdentifier> token;
 

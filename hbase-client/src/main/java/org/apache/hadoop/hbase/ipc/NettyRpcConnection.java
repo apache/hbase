@@ -181,33 +181,6 @@ class NettyRpcConnection extends RpcConnection {
     }
   }
 
-  private void negotiate(final Channel ch) {
-    ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
-
-    Promise<Boolean> preamblePromise = ch.eventLoop().newPromise();
-    ChannelHandler preambleHandler = new NettyRpcNegotiateHandler(this, preamblePromise,
-        rpcClient.fallbackAllowed);
-    ch.pipeline().addFirst(preambleHandler);
-    preamblePromise.addListener(new FutureListener<Boolean>() {
-
-      @Override
-      public void operationComplete(Future<Boolean> future) throws Exception {
-        if (future.isSuccess()) {
-          ch.pipeline().remove(NettyRpcNegotiateHandler.class);
-          if (useSasl) {
-            saslNegotiate(ch);
-          } else {
-            established(ch);
-          }
-        } else {
-          final Throwable error = future.cause();
-          scheduleRelogin(error);
-          failInit(ch, toIOE(error));
-        }
-      }
-    });
-  }
-
   private void saslNegotiate(final Channel ch) {
     UserGroupInformation ticket = getUGI();
     if (ticket == null) {
@@ -263,7 +236,12 @@ class NettyRpcConnection extends RpcConnection {
               rpcClient.failedServers.addToFailedServers(remoteId.address, future.cause());
               return;
             }
-            negotiate(ch);
+            ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
+            if (useSasl) {
+              saslNegotiate(ch);
+            } else {
+              established(ch);
+            }
           }
         }).channel();
   }
