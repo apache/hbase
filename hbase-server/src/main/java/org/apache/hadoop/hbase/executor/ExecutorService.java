@@ -27,19 +27,22 @@ import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
+import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -64,12 +67,15 @@ public class ExecutorService {
   // Name of the server hosting this executor service.
   private final String servername;
 
+  private final ListeningScheduledExecutorService delayedSubmitTimer =
+    MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+      .setDaemon(true).setNameFormat("Event-Executor-Delay-Submit-Timer").build()));
+
   /**
    * Default constructor.
    * @param servername Name of the hosting server.
    */
   public ExecutorService(final String servername) {
-    super();
     this.servername = servername;
   }
 
@@ -99,6 +105,7 @@ public class ExecutorService {
   }
 
   public void shutdown() {
+    this.delayedSubmitTimer.shutdownNow();
     for(Entry<String, Executor> entry: this.executorMap.entrySet()) {
       List<Runnable> wasRunning =
         entry.getValue().threadPoolExecutor.shutdownNow();
@@ -144,6 +151,18 @@ public class ExecutorService {
     } else {
       executor.submit(eh);
     }
+  }
+
+  // Submit the handler after the given delay. Used for retrying.
+  public void delayedSubmit(EventHandler eh, long delay, TimeUnit unit) {
+    ListenableFuture<?> future = delayedSubmitTimer.schedule(() -> submit(eh), delay, unit);
+    future.addListener(() -> {
+      try {
+        future.get();
+      } catch (Exception e) {
+        LOG.error("Failed to submit the event handler {} to executor", eh, e);
+      }
+    }, MoreExecutors.directExecutor());
   }
 
   public Map<String, ExecutorStatus> getAllExecutorStatuses() {

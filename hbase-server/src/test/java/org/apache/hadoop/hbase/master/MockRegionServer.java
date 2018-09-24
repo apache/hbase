@@ -29,7 +29,6 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -70,10 +70,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.zookeeper.KeeperException;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
@@ -142,7 +142,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
  * store that the get pulls from.
  */
 class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
-ClientProtos.ClientService.BlockingInterface, RegionServerServices {
+    ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   private final ServerName sn;
   private final ZKWatcher zkw;
   private final Configuration conf;
@@ -338,8 +338,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public void postOpenDeployTasks(PostOpenDeployContext context) throws KeeperException,
-      IOException {
+  public void postOpenDeployTasks(PostOpenDeployContext context) throws IOException {
   }
 
   @Override
@@ -708,6 +707,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public ReplicationSourceService getReplicationSourceService() {
+    return null;
+  }
+
+  @Override
+  public TableDescriptors getTableDescriptors() {
     return null;
   }
 }
