@@ -32,8 +32,9 @@ public interface FlushRequester {
    * @param region the Region requesting the cache flush
    * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
    *          rolling.
+   * @return true if our region is added into the queue, false otherwise
    */
-  void requestFlush(Region region, boolean forceFlushAllStores);
+  boolean requestFlush(Region region, boolean forceFlushAllStores);
 
   /**
    * Tell the listener the cache needs to be flushed after a delay
@@ -42,8 +43,9 @@ public interface FlushRequester {
    * @param delay after how much time should the flush happen
    * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
    *          rolling.
+   * @return true if our region is added into the queue, false otherwise
    */
-  void requestDelayedFlush(Region region, long delay, boolean forceFlushAllStores);
+  boolean requestDelayedFlush(Region region, long delay, boolean forceFlushAllStores);
 
   /**
    * Register a FlushRequestListener

@@ -1136,21 +1136,20 @@ public class TestWALReplay {
   // Flusher used in this test.  Keep count of how often we are called and
   // actually run the flush inside here.
   class TestFlusher implements FlushRequester {
-    private HRegion r;
 
     @Override
-    public void requestFlush(Region region, boolean force) {
+    public boolean requestFlush(Region region, boolean force) {
       try {
-        r.flush(force);
+        region.flush(force);
+        return true;
       } catch (IOException e) {
         throw new RuntimeException("Exception flushing", e);
       }
     }
 
     @Override
-    public void requestDelayedFlush(Region region, long when, boolean forceFlushAllStores) {
-      // TODO Auto-generated method stub
-
+    public boolean requestDelayedFlush(Region region, long when, boolean forceFlushAllStores) {
+      return true;
     }
 
     @Override

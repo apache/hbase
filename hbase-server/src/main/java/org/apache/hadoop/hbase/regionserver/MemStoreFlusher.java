@@ -360,8 +360,7 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   @Override
-  public void requestFlush(Region r, boolean forceFlushAllStores) {
-    ((HRegion)r).incrementFlushesQueuedCount();
+  public boolean requestFlush(Region r, boolean forceFlushAllStores) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has no delay so it will be added at the top of the flush
@@ -369,13 +368,15 @@ class MemStoreFlusher implements FlushRequester {
         FlushRegionEntry fqe = new FlushRegionEntry(r, forceFlushAllStores);
         this.regionsInQueue.put(r, fqe);
         this.flushQueue.add(fqe);
+        ((HRegion)r).incrementFlushesQueuedCount();
+        return true;
       }
+      return false;
     }
   }
 
   @Override
-  public void requestDelayedFlush(Region r, long delay, boolean forceFlushAllStores) {
-    ((HRegion)r).incrementFlushesQueuedCount();
+  public boolean requestDelayedFlush(Region r, long delay, boolean forceFlushAllStores) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has some delay
@@ -383,7 +384,10 @@ class MemStoreFlusher implements FlushRequester {
         fqe.requeue(delay);
         this.regionsInQueue.put(r, fqe);
         this.flushQueue.add(fqe);
+        ((HRegion)r).incrementFlushesQueuedCount();
+        return true;
       }
+      return false;
     }
   }
 
