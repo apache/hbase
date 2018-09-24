@@ -1119,18 +1119,18 @@ public class TestWALReplay {
   class TestFlusher implements FlushRequester {
 
     @Override
-    public void requestFlush(Region region, boolean force) {
+    public boolean requestFlush(Region region, boolean force) {
       try {
         region.flush(force);
+        return true;
       } catch (IOException e) {
         throw new RuntimeException("Exception flushing", e);
       }
     }
 
     @Override
-    public void requestDelayedFlush(Region region, long when, boolean forceFlushAllStores) {
-      // TODO Auto-generated method stub
-
+    public boolean requestDelayedFlush(Region region, long when, boolean forceFlushAllStores) {
+      return true;
     }
 
     @Override
