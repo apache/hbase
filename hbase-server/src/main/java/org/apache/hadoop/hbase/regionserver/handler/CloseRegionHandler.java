@@ -36,6 +36,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 
 /**
  * Handles closing of a region on a region server.
+ * <p/>
+ * Now for regular close region request, we will use {@link UnassignRegionHandler} instead. But when
+ * shutting down the region server, will also close regions and the related methods still use this
+ * class so we keep it here.
+ * @see UnassignRegionHandler
  */
 @InterfaceAudience.Private
 public class CloseRegionHandler extends EventHandler {

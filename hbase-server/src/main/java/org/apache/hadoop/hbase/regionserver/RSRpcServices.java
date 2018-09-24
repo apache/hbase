@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
@@ -118,9 +119,11 @@ import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.handler.AssignRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -3590,6 +3593,60 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
   }
 
+  private void executeOpenRegionProcedures(OpenRegionRequest request,
+      Map<TableName, TableDescriptor> tdCache) {
+    long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
+    for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
+      RegionInfo regionInfo = ProtobufUtil.toRegionInfo(regionOpenInfo.getRegion());
+      TableDescriptor tableDesc = tdCache.get(regionInfo.getTable());
+      if (tableDesc == null) {
+        try {
+          tableDesc = regionServer.getTableDescriptors().get(regionInfo.getTable());
+        } catch (IOException e) {
+          // Here we do not fail the whole method since we also need deal with other
+          // procedures, and we can not ignore this one, so we still schedule a
+          // AssignRegionHandler and it will report back to master if we still can not get the
+          // TableDescriptor.
+          LOG.warn("Failed to get TableDescriptor of {}, will try again in the handler",
+            regionInfo.getTable(), e);
+        }
+      }
+      if (regionOpenInfo.getFavoredNodesCount() > 0) {
+        regionServer.updateRegionFavoredNodesMapping(regionInfo.getEncodedName(),
+          regionOpenInfo.getFavoredNodesList());
+      }
+      regionServer.executorService
+        .submit(AssignRegionHandler.create(regionServer, regionInfo, tableDesc, masterSystemTime));
+    }
+  }
+
+  private void executeCloseRegionProcedures(CloseRegionRequest request) {
+    String encodedName;
+    try {
+      encodedName = ProtobufUtil.getRegionEncodedName(request.getRegion());
+    } catch (DoNotRetryIOException e) {
+      throw new UncheckedIOException("Should not happen", e);
+    }
+    ServerName destination =
+      request.hasDestinationServer() ? ProtobufUtil.toServerName(request.getDestinationServer())
+        : null;
+    regionServer.executorService
+      .submit(UnassignRegionHandler.create(regionServer, encodedName, false, destination));
+  }
+
+  private void executeProcedures(RemoteProcedureRequest request) {
+    RSProcedureCallable callable;
+    try {
+      callable = Class.forName(request.getProcClass()).asSubclass(RSProcedureCallable.class)
+        .getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
+      regionServer.remoteProcedureComplete(request.getProcId(), e);
+      return;
+    }
+    callable.init(request.getProcData().toByteArray(), regionServer);
+    regionServer.executeProcedure(request.getProcId(), callable);
+  }
+
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public ExecuteProceduresResponse executeProcedures(RpcController controller,
@@ -3598,28 +3655,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       regionServer.getRegionServerCoprocessorHost().preExecuteProcedures();
       if (request.getOpenRegionCount() > 0) {
-        for (OpenRegionRequest req : request.getOpenRegionList()) {
-          openRegion(controller, req);
-        }
+        // Avoid reading from the TableDescritor every time(usually it will read from the file
+        // system)
+        Map<TableName, TableDescriptor> tdCache = new HashMap<>();
+        request.getOpenRegionList().forEach(req -> executeOpenRegionProcedures(req, tdCache));
       }
       if (request.getCloseRegionCount() > 0) {
-        for (CloseRegionRequest req : request.getCloseRegionList()) {
-          closeRegion(controller, req);
-        }
+        request.getCloseRegionList().forEach(this::executeCloseRegionProcedures);
       }
       if (request.getProcCount() > 0) {
-        for (RemoteProcedureRequest req : request.getProcList()) {
-          RSProcedureCallable callable;
-          try {
-            callable = Class.forName(req.getProcClass()).asSubclass(RSProcedureCallable.class)
-              .getDeclaredConstructor().newInstance();
-          } catch (Exception e) {
-            regionServer.remoteProcedureComplete(req.getProcId(), e);
-            continue;
-          }
-          callable.init(req.getProcData().toByteArray(), regionServer);
-          regionServer.executeProcedure(req.getProcId(), callable);
-        }
+        request.getProcList().forEach(this::executeProcedures);
       }
       regionServer.getRegionServerCoprocessorHost().postExecuteProcedures();
       return ExecuteProceduresResponse.getDefaultInstance();

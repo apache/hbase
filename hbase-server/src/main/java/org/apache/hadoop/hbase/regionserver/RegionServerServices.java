@@ -18,12 +18,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -34,11 +35,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-
-import com.google.protobuf.Service;
 
 /**
  * A curated subset of services provided by {@link HRegionServer}.
@@ -111,14 +109,10 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   }
 
   /**
-   * Tasks to perform after region open to complete deploy of region on
-   * regionserver
-   *
+   * Tasks to perform after region open to complete deploy of region on regionserver
    * @param context the context
-   * @throws KeeperException
-   * @throws IOException
    */
-  void postOpenDeployTasks(final PostOpenDeployContext context) throws KeeperException, IOException;
+  void postOpenDeployTasks(final PostOpenDeployContext context) throws IOException;
 
   class RegionStateTransitionContext {
     private final TransitionCode code;
@@ -239,4 +233,9 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    * @return True if cluster is up; false if cluster is not up (we are shutting down).
    */
   boolean isClusterUp();
+
+  /**
+   * @return Return table descriptors implementation.
+   */
+  TableDescriptors getTableDescriptors();
 }
