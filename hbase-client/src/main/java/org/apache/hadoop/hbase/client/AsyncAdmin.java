@@ -846,12 +846,15 @@ public interface AsyncAdmin {
       Map<String, String> props);
 
   /**
-   * abort a procedure
+   * Abort a procedure
+   * Do not use. Usually it is ignored but if not, it can do more damage than good. See hbck2.
    * @param procId ID of the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return true if aborted, false if procedure already completed or does not exist. the value is
    *         wrapped by {@link CompletableFuture}
+   * @deprecated Since 2.1.1 -- to be removed.
    */
+  @Deprecated
   CompletableFuture<Boolean> abortProcedure(long procId, boolean mayInterruptIfRunning);
 
   /**
