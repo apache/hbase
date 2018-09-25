@@ -296,9 +296,20 @@ public class IncrementalBackupManager extends BackupManager {
         currentLogFile = log.getPath().toString();
         resultLogFiles.add(currentLogFile);
         currentLogTS = BackupUtils.getCreationTime(log.getPath());
-        // newestTimestamps is up-to-date with the current list of hosts
-        // so newestTimestamps.get(host) will not be null.
-        if (currentLogTS > newestTimestamps.get(host)) {
+
+        // If newestTimestamps.get(host) is null, means that
+        // either RS (host) has been restarted recently with different port number
+        // or RS is down (was decommisioned). In any case, we treat this
+        // log file as eligible for inclusion into incremental backup log list
+        Long ts = newestTimestamps.get(host);
+        if (ts ==  null) {
+          LOG.warn("ORPHAN log found: " + log + " host=" + host);
+          LOG.debug("Known hosts (from newestTimestamps):");
+          for (String s: newestTimestamps.keySet()) {
+            LOG.debug(s);
+          }
+        }
+        if (ts == null || currentLogTS > ts) {
           newestLogs.add(currentLogFile);
         }
       }
@@ -343,7 +354,7 @@ public class IncrementalBackupManager extends BackupManager {
       // Even if these logs belong to a obsolete region server, we still need
       // to include they to avoid loss of edits for backup.
       Long newTimestamp = newestTimestamps.get(host);
-      if (newTimestamp != null && currentLogTS > newTimestamp) {
+      if (newTimestamp == null || currentLogTS > newTimestamp) {
         newestLogs.add(currentLogFile);
       }
     }
