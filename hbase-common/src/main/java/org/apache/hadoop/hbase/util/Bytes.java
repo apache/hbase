@@ -129,7 +129,8 @@ public class Bytes implements Comparable<Bytes> {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  @VisibleForTesting
+  static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   /**
    * Returns length of the byte array, returning 0 if the array is null.
@@ -1082,7 +1083,15 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    return ConverterHolder.BEST_CONVERTER.toShort(bytes, offset, length);
+    if (UNSAFE_UNALIGNED) {
+      return ConverterHolder.BEST_CONVERTER.toShort(bytes, offset, length);
+    } else {
+      short n = 0;
+      n = (short) (n ^ (bytes[offset] & 0xFF));
+      n = (short) (n << 8);
+      n = (short) (n ^ (bytes[offset + 1] & 0xFF));
+      return n;
+    }
   }
 
   /**

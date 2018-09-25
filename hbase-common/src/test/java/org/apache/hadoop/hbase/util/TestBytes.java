@@ -22,6 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -39,6 +41,49 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestBytes extends TestCase {
+
+  private static void setUnsafe(boolean value) throws Exception {
+    Field field = Bytes.class.getDeclaredField("UNSAFE_UNALIGNED");
+    field.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    int oldModifiers = field.getModifiers();
+    modifiersField.setInt(field, oldModifiers & ~Modifier.FINAL);
+    try {
+      field.set(null, value);
+    } finally {
+      modifiersField.setInt(field, oldModifiers);
+    }
+    assertEquals(Bytes.UNSAFE_UNALIGNED, value);
+  }
+
+  public void testShort() throws Exception  {
+    testShort(false);
+  }
+
+  public void testShortUnsafe() throws Exception  {
+    testShort(true);
+  }
+
+  private static void testShort(boolean unsafe) throws Exception  {
+    setUnsafe(unsafe);
+    try {
+      for (short n : Arrays.asList(
+              Short.MIN_VALUE,
+              (short) -100,
+              (short) -1,
+              (short) 0,
+              (short) 1,
+              (short) 300,
+              Short.MAX_VALUE)) {
+        byte[] bytes = Bytes.toBytes(n);
+        assertEquals(Bytes.toShort(bytes, 0, bytes.length), n);
+      }
+    } finally {
+      setUnsafe(UnsafeAvailChecker.unaligned());
+    }
+  }
+
   public void testNullHashCode() {
     byte [] b = null;
     Exception ee = null;
