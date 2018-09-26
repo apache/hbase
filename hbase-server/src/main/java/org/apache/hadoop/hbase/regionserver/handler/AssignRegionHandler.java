@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.PostOpenDeployContext;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,12 +55,15 @@ public class AssignRegionHandler extends EventHandler {
 
   private final long masterSystemTime;
 
+  private final RetryCounter retryCounter;
+
   public AssignRegionHandler(RegionServerServices server, RegionInfo regionInfo,
       @Nullable TableDescriptor tableDesc, long masterSystemTime, EventType eventType) {
     super(server, eventType);
     this.regionInfo = regionInfo;
     this.tableDesc = tableDesc;
     this.masterSystemTime = masterSystemTime;
+    this.retryCounter = HandlerUtil.getRetryCounter();
   }
 
   private RegionServerServices getServer() {
@@ -106,10 +110,11 @@ public class AssignRegionHandler extends EventHandler {
         // calling reportRegionStateTransition, so the HMaster will think the region is offline,
         // before we actually close the region, as reportRegionStateTransition is part of the
         // closing process.
-        LOG.info("Receiving OPEN for the region:{}, which we are trying to close, try again later",
-          regionName);
-        // TODO: backoff
-        rs.getExecutorService().delayedSubmit(this, 1, TimeUnit.SECONDS);
+        long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+        LOG.info(
+          "Receiving OPEN for the region:{}, which we are trying to close, try again after {}ms",
+          regionName, backoff);
+        rs.getExecutorService().delayedSubmit(this, backoff, TimeUnit.MILLISECONDS);
       }
       return;
     }
