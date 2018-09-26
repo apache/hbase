@@ -18,11 +18,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Operation retry accounting.
@@ -44,6 +47,7 @@ public class RetryCounter {
     private long maxSleepTime;
     private TimeUnit timeUnit;
     private BackoffPolicy backoffPolicy;
+    private float jitter;
 
     private static final BackoffPolicy DEFAULT_BACKOFF_POLICY = new ExponentialBackoffPolicy();
 
@@ -53,6 +57,7 @@ public class RetryCounter {
       maxSleepTime  = -1;
       timeUnit = TimeUnit.MILLISECONDS;
       backoffPolicy = DEFAULT_BACKOFF_POLICY;
+      jitter = 0.0f;
     }
 
     public RetryConfig(int maxAttempts, long sleepInterval, long maxSleepTime,
@@ -89,6 +94,13 @@ public class RetryCounter {
       return this;
     }
 
+    public RetryConfig setJitter(float jitter) {
+      Preconditions.checkArgument(jitter >= 0.0f && jitter < 1.0f,
+        "Invalid jitter: %s, should be in range [0.0, 1.0)", jitter);
+      this.jitter = jitter;
+      return this;
+    }
+
     public int getMaxAttempts() {
       return maxAttempts;
     }
@@ -105,9 +117,18 @@ public class RetryCounter {
       return timeUnit;
     }
 
+    public float getJitter() {
+      return jitter;
+    }
+
     public BackoffPolicy getBackoffPolicy() {
       return backoffPolicy;
     }
+  }
+
+  private static long addJitter(long interval, float jitter) {
+    long jitterInterval = (long) (interval * ThreadLocalRandom.current().nextFloat() * jitter);
+    return interval + jitterInterval;
   }
 
   /**
@@ -115,7 +136,7 @@ public class RetryCounter {
    */
   public static class BackoffPolicy {
     public long getBackoffTime(RetryConfig config, int attempts) {
-      return config.getSleepInterval();
+      return addJitter(config.getSleepInterval(), config.getJitter());
     }
   }
 
@@ -123,7 +144,7 @@ public class RetryCounter {
     @Override
     public long getBackoffTime(RetryConfig config, int attempts) {
       long backoffTime = (long) (config.getSleepInterval() * Math.pow(2, attempts));
-      return backoffTime;
+      return addJitter(backoffTime, config.getJitter());
     }
   }
 
@@ -155,7 +176,6 @@ public class RetryCounter {
 
   /**
    * Sleep for a back off time as supplied by the backoff policy, and increases the attempts
-   * @throws InterruptedException
    */
   public void sleepUntilNextRetry() throws InterruptedException {
     int attempts = getAttemptTimes();
