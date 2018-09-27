@@ -34,8 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -62,7 +60,6 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -268,14 +265,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     new ConcurrentSkipListMap<>(LOG_NAME_COMPARATOR);
 
   /**
-   * Map of {@link SyncFuture}s keyed by Handler objects. Used so we reuse SyncFutures.
+   * Map of {@link SyncFuture}s owned by Thread objects. Used so we reuse SyncFutures.
+   * Thread local is used so JVM can GC the terminated thread for us. See HBASE-21228
    * <p>
-   * TODO: Reuse FSWALEntry's rather than create them anew each time as we do SyncFutures here.
-   * <p>
-   * TODO: Add a FSWalEntry and SyncFuture as thread locals on handlers rather than have them get
-   * them from this Map?
    */
-  private final ConcurrentMap<Thread, SyncFuture> syncFuturesByHandler;
+  private final ThreadLocal<SyncFuture> cachedSyncFutures;
 
   /**
    * The class name of the runtime implementation, used as prefix for logging/tracing.
@@ -429,9 +423,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         .toNanos(conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS));
     this.walSyncTimeoutNs = TimeUnit.MILLISECONDS
         .toNanos(conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS));
-    int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
-    // Presize our map of SyncFutures by handler objects.
-    this.syncFuturesByHandler = new ConcurrentHashMap<>(maxHandlersCount);
+    this.cachedSyncFutures = new ThreadLocal<SyncFuture>() {
+      @Override
+      protected SyncFuture initialValue() {
+        return new SyncFuture();
+      }
+    };
     this.implClassName = getClass().getSimpleName();
   }
 
@@ -723,7 +720,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       // SyncFuture reuse by thread, if TimeoutIOException happens, ringbuffer
       // still refer to it, so if this thread use it next time may get a wrong
       // result.
-      this.syncFuturesByHandler.remove(Thread.currentThread());
+      this.cachedSyncFutures.remove();
       throw tioe;
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted", ie);
@@ -873,9 +870,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   protected final SyncFuture getSyncFuture(long sequence) {
-    return CollectionUtils
-        .computeIfAbsent(syncFuturesByHandler, Thread.currentThread(), SyncFuture::new)
-        .reset(sequence);
+    return cachedSyncFutures.get().reset(sequence);
   }
 
   protected final void requestLogRoll(boolean tooFewReplicas) {
