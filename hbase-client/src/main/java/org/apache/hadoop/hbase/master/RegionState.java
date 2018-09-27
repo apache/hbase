@@ -371,9 +371,9 @@ public class RegionState {
   public String toDescriptiveString() {
     long relTime = System.currentTimeMillis() - stamp;
     return hri.getRegionNameAsString()
-      + " state=" + state
-      + ", ts=" + new Date(stamp) + " (" + (relTime/1000) + "s ago)"
-      + ", server=" + serverName;
+      + " state=" + state + ", ts=" + new Date(stamp) + " (" +
+        java.time.Duration.ofMillis(relTime).toString() +
+        " ago), server=" + serverName;
   }
 
   /**

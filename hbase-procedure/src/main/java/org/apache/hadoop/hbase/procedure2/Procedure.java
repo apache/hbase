@@ -884,6 +884,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     return childrenLatch > 0;
   }
 
+  /**
+   * @return Count of children outstanding (Badly named).
+   */
   protected synchronized int getChildrenLatch() {
     return childrenLatch;
   }

@@ -306,7 +306,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
           exception.getClass().getSimpleName());
       if (!env.getMasterServices().getServerManager().expireServer(serverName)) {
         // Failed to queue an expire. Lots of possible reasons including it may be already expired.
-        // In ServerCrashProcedure and RecoverMetaProcedure, there is a handleRIT stage where we
+        // In ServerCrashProcedure, there is a handleRIT stage where we
         // will iterator over all the RIT procedures for the related regions of a crashed RS and
         // fail them with ServerCrashException. You can see the isSafeToProceed method above for
         // more details.

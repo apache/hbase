@@ -627,7 +627,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       boolean hasLock = true;
       final LockAndQueue[] regionLocks = new LockAndQueue[regionInfo.length];
       for (int i = 0; i < regionInfo.length; ++i) {
-        LOG.info("{} checking lock on {}", procedure, regionInfo[i].getEncodedName());
         assert regionInfo[i] != null;
         assert regionInfo[i].getTable() != null;
         assert regionInfo[i].getTable().equals(table): regionInfo[i] + " " + procedure;
@@ -635,12 +634,16 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
         regionLocks[i] = locking.getRegionLock(regionInfo[i].getEncodedName());
         if (!regionLocks[i].tryExclusiveLock(procedure)) {
+          LOG.info("Waiting xlock for {} held by pid={}", procedure,
+              regionLocks[i].getExclusiveLockProcIdOwner());
           waitProcedure(regionLocks[i], procedure);
           hasLock = false;
           while (i-- > 0) {
             regionLocks[i].releaseExclusiveLock(procedure);
           }
           break;
+        } else {
+          LOG.info("xlock for {}", procedure);
         }
       }
 

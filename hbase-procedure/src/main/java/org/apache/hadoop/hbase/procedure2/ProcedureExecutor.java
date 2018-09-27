@@ -1053,21 +1053,21 @@ public class ProcedureExecutor<TEnvironment> {
       return false;
     }
 
-    LOG.debug("Begin bypass {} with lockWait={}, override={}, recursive={}",
+    LOG.info("Begin bypass {} with lockWait={}, override={}, recursive={}",
         procedure, lockWait, override, recursive);
     IdLock.Entry lockEntry = procExecutionLock.tryLockEntry(procedure.getProcId(), lockWait);
     if (lockEntry == null && !override) {
-      LOG.debug("Waited {} ms, but {} is still running, skipping bypass with force={}",
+      LOG.info("Waited {} ms, but {} is still running, skipping bypass with force={}",
           lockWait, procedure, override);
       return false;
     } else if (lockEntry == null) {
-      LOG.debug("Waited {} ms, but {} is still running, begin bypass with force={}",
+      LOG.info("Waited {} ms, but {} is still running, begin bypass with force={}",
           lockWait, procedure, override);
     }
     try {
       // check whether the procedure is already finished
       if (procedure.isFinished()) {
-        LOG.debug("{} is already finished, skipping bypass", procedure);
+        LOG.info("{} is already finished, skipping bypass", procedure);
         return false;
       }
 
@@ -1092,7 +1092,7 @@ public class ProcedureExecutor<TEnvironment> {
               }
             });
         } else {
-          LOG.debug("{} has children, skipping bypass", procedure);
+          LOG.info("{} has children, skipping bypass", procedure);
           return false;
         }
       }
@@ -1101,7 +1101,7 @@ public class ProcedureExecutor<TEnvironment> {
       if (procedure.hasParent() && procedure.getState() != ProcedureState.RUNNABLE
           && procedure.getState() != ProcedureState.WAITING
           && procedure.getState() != ProcedureState.WAITING_TIMEOUT) {
-        LOG.debug("Bypassing procedures in RUNNABLE, WAITING and WAITING_TIMEOUT states "
+        LOG.info("Bypassing procedures in RUNNABLE, WAITING and WAITING_TIMEOUT states "
                 + "(with no parent), {}",
             procedure);
         // Question: how is the bypass done here?
@@ -1113,7 +1113,7 @@ public class ProcedureExecutor<TEnvironment> {
       // finished yet
       Procedure<TEnvironment> current = procedure;
       while (current != null) {
-        LOG.debug("Bypassing {}", current);
+        LOG.info("Bypassing {}", current);
         current.bypass(getEnvironment());
         store.update(procedure);
         long parentID = current.getParentProcId();
@@ -1133,9 +1133,9 @@ public class ProcedureExecutor<TEnvironment> {
       if (lockEntry != null) {
         // add the procedure to run queue,
         scheduler.addFront(procedure);
-        LOG.debug("Bypassing {} and its ancestors successfully, adding to queue", procedure);
+        LOG.info("Bypassing {} and its ancestors successfully, adding to queue", procedure);
       } else {
-        LOG.debug("Bypassing {} and its ancestors successfully, but since it is already running, "
+        LOG.info("Bypassing {} and its ancestors successfully, but since it is already running, "
             + "skipping add to queue", procedure);
       }
       return true;
@@ -1545,9 +1545,17 @@ public class ProcedureExecutor<TEnvironment> {
       procStack.release(proc);
 
       if (proc.isSuccess()) {
-        // update metrics on finishing the procedure
+        // update metrics on finishing the procedure.
         proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), true);
-        LOG.info("Finished " + proc + " in " + StringUtils.humanTimeDiff(proc.elapsedTime()));
+        // Print out count of outstanding siblings if this procedure has a parent.
+        Procedure<TEnvironment> parent = null;
+        if (proc.hasParent()) {
+          parent = procedures.get(proc.getParentProcId());
+        }
+        LOG.info("Finished {} in {}{}",
+            proc,
+            StringUtils.humanTimeDiff(proc.elapsedTime()),
+            parent != null? (", unfinishedSiblingCount=" + parent.getChildrenLatch()): "");
         // Finalize the procedure state
         if (proc.getProcId() == rootProcId) {
           procedureFinished(proc);
