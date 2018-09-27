@@ -241,8 +241,7 @@ public abstract class RegionTransitionProcedure
   public synchronized void remoteCallFailed(final MasterProcedureEnv env,
       final ServerName serverName, final IOException exception) {
     final RegionStateNode regionNode = getRegionState(env);
-    LOG.warn("Remote call failed {}; {}; {}; exception={}", serverName,
-        this, regionNode.toShortString(), exception.getClass().getSimpleName(), exception);
+    LOG.warn("Remote call failed {}; {}", regionNode.toShortString(), this, exception);
     if (remoteCallFailed(env, regionNode, exception)) {
       // NOTE: This call to wakeEvent puts this Procedure back on the scheduler.
       // Thereafter, another Worker can be in here so DO NOT MESS WITH STATE beyond

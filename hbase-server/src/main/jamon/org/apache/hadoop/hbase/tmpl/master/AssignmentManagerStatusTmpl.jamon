@@ -73,7 +73,7 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
              <div class="tab-pane" id="tab_rits<% (recordItr / ritsPerPage) + 1 %>">
                  </%if>
                  <table class="table table-striped" style="margin-bottom:0px;"><tr><th>Region</th>
-                     <th>State</th><th>RIT time (ms)</th> <th>Retries </th></tr>
+                     <th>State</th><th>Retries </th></tr>
              </%if>
 
              <%if ritStat.isRegionTwiceOverThreshold(rs.getRegion()) %>
@@ -96,7 +96,6 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
                         <td><% rs.getRegion().getEncodedName() %></td><td>
                         <% RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(rs,
                             assignmentManager.getConfiguration()) %></td>
-                        <td><% (currentTime - rs.getStamp()) %> </td>
                         <td> <% retryStatus %> </td>
                      </tr>
                      <%java recordItr++; %>
