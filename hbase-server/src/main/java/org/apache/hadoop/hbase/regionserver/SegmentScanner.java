@@ -55,6 +55,8 @@ public class SegmentScanner implements KeyValueScanner {
   // A flag represents whether could stop skipping KeyValues for MVCC
   // if have encountered the next row. Only used for reversed scan
   private boolean stopSkippingKVsIfNextRow = false;
+  // Stop skipping KeyValues for MVCC if finish this row. Only used for reversed scan
+  private Cell stopSkippingKVsRow;
   // last iterated KVs by seek (to restore the iterator state after reseek)
   private Cell last = null;
 
@@ -214,6 +216,7 @@ public class SegmentScanner implements KeyValueScanner {
       }
       Cell firstKeyOnPreviousRow = PrivateCellUtil.createFirstOnRow(lastCellBeforeRow);
       this.stopSkippingKVsIfNextRow = true;
+      this.stopSkippingKVsRow = firstKeyOnPreviousRow;
       seek(firstKeyOnPreviousRow);
       this.stopSkippingKVsIfNextRow = false;
       if (peek() == null
@@ -362,7 +365,6 @@ public class SegmentScanner implements KeyValueScanner {
    * skipping the cells with irrelevant MVCC
    */
   protected void updateCurrent() {
-    Cell startKV = current;
     Cell next = null;
 
     try {
@@ -372,9 +374,9 @@ public class SegmentScanner implements KeyValueScanner {
           current = next;
           return;// skip irrelevant versions
         }
-        if (stopSkippingKVsIfNextRow &&   // for backwardSeek() stay in the
-            startKV != null &&        // boundaries of a single row
-            segment.compareRows(next, startKV) > 0) {
+        // for backwardSeek() stay in the boundaries of a single row
+        if (stopSkippingKVsIfNextRow &&
+            segment.compareRows(next, stopSkippingKVsRow) > 0) {
           current = null;
           return;
         }
