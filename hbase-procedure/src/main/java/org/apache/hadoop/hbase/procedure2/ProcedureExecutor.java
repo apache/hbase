@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
@@ -37,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
@@ -1679,6 +1677,7 @@ public class ProcedureExecutor<TEnvironment> {
     Procedure<TEnvironment>[] subprocs = null;
     do {
       reExecute = false;
+      procedure.resetPersistence();
       try {
         subprocs = procedure.doExecute(getEnvironment());
         if (subprocs != null && subprocs.length == 0) {
@@ -1746,7 +1745,9 @@ public class ProcedureExecutor<TEnvironment> {
       //
       // Commit the transaction even if a suspend (state may have changed). Note this append
       // can take a bunch of time to complete.
-      updateStoreOnExec(procStack, procedure, subprocs);
+      if (procedure.needPersistence()) {
+        updateStoreOnExec(procStack, procedure, subprocs);
+      }
 
       // if the store is not running we are aborting
       if (!store.isRunning()) {
@@ -1939,6 +1940,11 @@ public class ProcedureExecutor<TEnvironment> {
 
   RootProcedureState<TEnvironment> getProcStack(long rootProcId) {
     return rollbackStack.get(rootProcId);
+  }
+
+  @VisibleForTesting
+  ProcedureScheduler getProcedureScheduler() {
+    return scheduler;
   }
 
   // ==========================================================================

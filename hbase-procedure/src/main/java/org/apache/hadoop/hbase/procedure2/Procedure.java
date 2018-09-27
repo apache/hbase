@@ -156,6 +156,20 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    */
   private volatile boolean bypass = false;
 
+  /**
+   * Indicate whether we need to persist the procedure to ProcedureStore after execution. Default to
+   * true, and the implementation can all {@link #skipPersistence()} to let the framework skip the
+   * persistence of the procedure.
+   * <p/>
+   * This is useful when the procedure is in error and you want to retry later. The retry interval
+   * and the number of retries are usually not critical so skip the persistence can save some
+   * resources, and also speed up the restart processing.
+   * <p/>
+   * Notice that this value will be reset to true every time before execution. And when rolling back
+   * we do not test this value.
+   */
+  private boolean persist = true;
+
   public boolean isBypass() {
     return bypass;
   }
@@ -168,6 +182,18 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    */
   void bypass() {
     this.bypass = true;
+  }
+
+  boolean needPersistence() {
+    return persist;
+  }
+
+  void resetPersistence() {
+    persist = true;
+  }
+
+  protected final void skipPersistence() {
+    persist = false;
   }
 
   /**
