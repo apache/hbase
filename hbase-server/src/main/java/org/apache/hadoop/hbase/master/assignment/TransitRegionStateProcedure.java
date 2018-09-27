@@ -329,6 +329,7 @@ public class TransitRegionStateProcedure
         backoff / 1000, this, regionNode.toShortString(), e);
       setTimeout(Math.toIntExact(backoff));
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+      skipPersistence();
       throw new ProcedureSuspendedException();
     }
   }

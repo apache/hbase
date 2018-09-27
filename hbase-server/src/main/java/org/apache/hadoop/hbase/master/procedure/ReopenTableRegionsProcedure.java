@@ -122,6 +122,7 @@ public class ReopenTableRegionsProcedure
           regions.size(), tableName, backoff / 1000);
         setTimeout(Math.toIntExact(backoff));
         setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+        skipPersistence();
         throw new ProcedureSuspendedException();
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
