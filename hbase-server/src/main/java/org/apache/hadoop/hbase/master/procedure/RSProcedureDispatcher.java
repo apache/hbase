@@ -109,12 +109,16 @@ public class RSProcedureDispatcher
   protected void remoteDispatch(final ServerName serverName,
       final Set<RemoteProcedure> remoteProcedures) {
     final int rsVersion = master.getServerManager().getVersionNumber(serverName);
-    if (rsVersion == 0 && !master.getServerManager().isServerOnline(serverName)) {
+    if (rsVersion >= RS_VERSION_WITH_EXEC_PROCS) {
+      LOG.trace("Using procedure batch rpc execution for serverName={} version={}", serverName,
+        rsVersion);
+      submitTask(new ExecuteProceduresRemoteCall(serverName, remoteProcedures));
+    } else if (rsVersion == 0 && !master.getServerManager().isServerOnline(serverName)) {
       submitTask(new DeadRSRemoteCall(serverName, remoteProcedures));
     } else {
-      // See HBASE-21237, fallback to CompatRemoteProcedureResolver for now. Since
-      // ExecuteProceduresRemoteCall will group all the open/close requests. If one
-      // fails, master will regard all the requests as failure and then cause some trouble.
+      LOG.info(String.format(
+        "Fallback to compat rpc execution for serverName=%s version=%s",
+        serverName, rsVersion));
       submitTask(new CompatRemoteProcedureResolver(serverName, remoteProcedures));
     }
   }
