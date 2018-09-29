@@ -28,14 +28,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Hbck fixup tool APIs. Obtain an instance from {@link ClusterConnection#getHbck()} and call
  * {@link #close()} when done.
- * <p>WARNING: the below methods can damage the cluster. It may leave the cluster in an
- * indeterminate state, e.g. region not assigned, or some hdfs files left behind. After running
- * any of the below, operators may have to do some clean up on hdfs or schedule some assign
- * procedures to get regions back online. DO AT YOUR OWN RISK. For experienced users only.
+ * <p>WARNING: the below methods can damage the cluster. For experienced users only.
  *
  * @see ConnectionFactory
  * @see ClusterConnection
- * @since 2.0.2, 2.1.1
+ * @since 2.2.0
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.HBCK)
 public interface Hbck extends Abortable, Closeable {
@@ -52,38 +49,22 @@ public interface Hbck extends Abortable, Closeable {
    * -- good if many Regions to online -- and it will schedule the assigns even in the case where
    * Master is initializing (as long as the ProcedureExecutor is up). Does NOT call Coprocessor
    * hooks.
-   * @param override You need to add the override for case where a region has previously been
-   *              bypassed. When a Procedure has been bypassed, a Procedure will have completed
-   *              but no other Procedure will be able to make progress on the target entity
-   *              (intentionally). This override flag will override this fencing mechanism.
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding
    *                           for hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an
    *                           example of what a random user-space encoded Region name looks like.
    */
-  List<Long> assigns(List<String> encodedRegionNames, boolean override) throws IOException;
-
-  default List<Long> assigns(List<String> encodedRegionNames) throws IOException {
-    return assigns(encodedRegionNames, false);
-  }
+  List<Long> assigns(List<String> encodedRegionNames) throws IOException;
 
   /**
    * Like {@link Admin#unassign(byte[], boolean)} but 'raw' in that it can do more than one Region
    * at a time -- good if many Regions to offline -- and it will schedule the assigns even in the
    * case where Master is initializing (as long as the ProcedureExecutor is up). Does NOT call
    * Coprocessor hooks.
-   * @param override You need to add the override for case where a region has previously been
-   *              bypassed. When a Procedure has been bypassed, a Procedure will have completed
-   *              but no other Procedure will be able to make progress on the target entity
-   *              (intentionally). This override flag will override this fencing mechanism.
    * @param encodedRegionNames Region encoded names; e.g. 1588230740 is the hard-coded encoding
    *                           for hbase:meta region and de00010733901a05f5a2a3a382e27dd4 is an
    *                           example of what a random user-space encoded Region name looks like.
    */
-  List<Long> unassigns(List<String> encodedRegionNames, boolean override) throws IOException;
-
-  default List<Long> unassigns(List<String> encodedRegionNames) throws IOException {
-    return unassigns(encodedRegionNames, false);
-  }
+  List<Long> unassigns(List<String> encodedRegionNames) throws IOException;
 
   /**
    * Bypass specified procedure and move it to completion. Procedure is marked completed but
@@ -92,12 +73,9 @@ public interface Hbck extends Abortable, Closeable {
    *
    * @param pids of procedures to complete.
    * @param waitTime wait time in ms for acquiring lock for a procedure
-   * @param override if override set to true, we will bypass the procedure even if it is executing.
+   * @param force if force set to true, we will bypass the procedure even if it is executing.
    *   This is for procedures which can't break out during execution (bugs?).
-   * @param recursive If set, if a parent procedure, we will find and bypass children and then
-   *   the parent procedure (Dangerous but useful in case where child procedure has been 'lost').
    * @return true if procedure is marked for bypass successfully, false otherwise
    */
-  List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override, boolean recursive)
-      throws IOException;
+  List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean force) throws IOException;
 }

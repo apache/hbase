@@ -102,12 +102,11 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Long> assigns(List<String> encodedRegionNames, boolean override)
-      throws IOException {
+  public List<Long> assigns(List<String> encodedRegionNames) throws IOException {
     try {
       MasterProtos.AssignsResponse response =
           this.hbck.assigns(rpcControllerFactory.newController(),
-              RequestConverter.toAssignRegionsRequest(encodedRegionNames, override));
+              RequestConverter.toAssignRegionsRequest(encodedRegionNames));
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
@@ -116,12 +115,11 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Long> unassigns(List<String> encodedRegionNames, boolean override)
-      throws IOException {
+  public List<Long> unassigns(List<String> encodedRegionNames) throws IOException {
     try {
       MasterProtos.UnassignsResponse response =
           this.hbck.unassigns(rpcControllerFactory.newController(),
-              RequestConverter.toUnassignRegionsRequest(encodedRegionNames, override));
+              RequestConverter.toUnassignRegionsRequest(encodedRegionNames));
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
@@ -134,8 +132,7 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override,
-      boolean recursive)
+  public List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean force)
       throws IOException {
     MasterProtos.BypassProcedureResponse response = ProtobufUtil.call(
         new Callable<MasterProtos.BypassProcedureResponse>() {
@@ -144,7 +141,7 @@ public class HBaseHbck implements Hbck {
             try {
               return hbck.bypassProcedure(rpcControllerFactory.newController(),
                   MasterProtos.BypassProcedureRequest.newBuilder().addAllProcId(pids).
-                      setWaitTime(waitTime).setOverride(override).setRecursive(recursive).build());
+                      setWaitTime(waitTime).setForce(force).build());
             } catch (Throwable t) {
               LOG.error(pids.stream().map(i -> i.toString()).
                   collect(Collectors.joining(", ")), t);

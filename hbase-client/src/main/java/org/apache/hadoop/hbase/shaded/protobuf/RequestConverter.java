@@ -1883,18 +1883,16 @@ public final class RequestConverter {
 
   // HBCK2
   public static MasterProtos.AssignsRequest toAssignRegionsRequest(
-      List<String> encodedRegionNames, boolean override) {
+      List<String> encodedRegionNames) {
     MasterProtos.AssignsRequest.Builder b = MasterProtos.AssignsRequest.newBuilder();
-    return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames)).
-        setOverride(override).build();
+    return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames)).build();
   }
 
   public static MasterProtos.UnassignsRequest toUnassignRegionsRequest(
-      List<String> encodedRegionNames, boolean override) {
+      List<String> encodedRegionNames) {
     MasterProtos.UnassignsRequest.Builder b =
         MasterProtos.UnassignsRequest.newBuilder();
-    return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames)).
-        setOverride(override).build();
+    return b.addAllRegion(toEncodedRegionNameRegionSpecifiers(encodedRegionNames)).build();
   }
 
   private static List<RegionSpecifier> toEncodedRegionNameRegionSpecifiers(

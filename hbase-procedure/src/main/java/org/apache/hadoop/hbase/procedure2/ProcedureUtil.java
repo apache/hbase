@@ -272,7 +272,7 @@ public final class ProcedureUtil {
     }
 
     if (proto.getBypass()) {
-      proc.bypass(null);
+      proc.bypass();
     }
 
     ProcedureStateSerializer serializer = null;
