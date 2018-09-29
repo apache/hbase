@@ -126,7 +126,7 @@ public class UnassignRegionHandler extends EventHandler {
 
   @Override
   protected void handleException(Throwable t) {
-    LOG.warn("Fatal error occured while closing region {}, aborting...", encodedName, t);
+    LOG.warn("Fatal error occurred while closing region {}, aborting...", encodedName, t);
     getServer().abort("Failed to close region " + encodedName + " and can not recover", t);
   }
 

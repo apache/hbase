@@ -62,7 +62,7 @@ public final class CombinedAsyncWriter implements AsyncWriter {
     }
     if (error != null) {
       throw new IOException("Failed to close at least one writer, please see the warn log above. " +
-        "The cause is the first exception occured", error);
+        "The cause is the first exception occurred", error);
     }
   }
 

@@ -149,7 +149,7 @@ public class AssignRegionHandler extends EventHandler {
 
   @Override
   protected void handleException(Throwable t) {
-    LOG.warn("Fatal error occured while opening region {}, aborting...",
+    LOG.warn("Fatal error occurred while opening region {}, aborting...",
       regionInfo.getRegionNameAsString(), t);
     getServer().abort(
       "Failed to open region " + regionInfo.getRegionNameAsString() + " and can not recover", t);

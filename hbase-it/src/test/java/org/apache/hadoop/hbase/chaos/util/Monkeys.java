@@ -55,7 +55,7 @@ public class Monkeys implements Closeable {
       try {
         monkeyRunner.getAndStartMonkey();
       } catch (Exception e) {
-        LOG.error("Exception occured when running chaos monkeys: ", e);
+        LOG.error("Exception occurred when running chaos monkeys: ", e);
       }
     };
     this.executor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
@@ -91,7 +91,7 @@ public class Monkeys implements Closeable {
       executor.awaitTermination(10, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      LOG.warn("Interruption occured while stopping chaos monkeys " + e);
+      LOG.warn("Interruption occurred while stopping chaos monkeys " + e);
     }
   }
 }

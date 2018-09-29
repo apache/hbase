@@ -479,7 +479,7 @@ public final class AccessChecker {
     try {
       return groupService.getGroups(user);
     } catch (IOException e) {
-      LOG.error("Error occured while retrieving group for " + user, e);
+      LOG.error("Error occurred while retrieving group for " + user, e);
       return new ArrayList<String>();
     }
   }
