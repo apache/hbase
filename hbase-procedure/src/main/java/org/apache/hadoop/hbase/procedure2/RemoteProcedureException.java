@@ -21,7 +21,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
  * their stacks traces and messages overridden to reflect the original 'remote' exception.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 @SuppressWarnings("serial")
 public class RemoteProcedureException extends ProcedureException {
 
@@ -74,6 +72,10 @@ public class RemoteProcedureException extends ProcedureException {
     return new Exception(cause);
   }
 
+  // NOTE: Does not throw DoNotRetryIOE because it does not
+  // have access (DNRIOE is in the client module). Use
+  // MasterProcedureUtil.unwrapRemoteIOException if need to
+  // throw DNRIOE.
   public IOException unwrapRemoteIOException() {
     final Exception cause = unwrapRemoteException();
     if (cause instanceof IOException) {

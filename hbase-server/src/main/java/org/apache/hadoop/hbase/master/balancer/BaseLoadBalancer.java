@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
@@ -1456,10 +1458,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       ServerName oldServerName = entry.getValue();
       // In the current set of regions even if one has region replica let us go with
       // getting the entire snapshot
-      if (this.services != null && this.services.getAssignmentManager() != null) { // for tests
-        if (!hasRegionReplica && this.services.getAssignmentManager().getRegionStates()
-            .isReplicaAvailableForRegion(region)) {
-          hasRegionReplica = true;
+      if (this.services != null) { // for tests
+        AssignmentManager am = this.services.getAssignmentManager();
+        if (am != null) {
+          RegionStates rss = am.getRegionStates();
+          if (!hasRegionReplica && rss.isReplicaAvailableForRegion(region)) {
+            hasRegionReplica = true;
+          }
         }
       }
       List<ServerName> localServers = new ArrayList<>();

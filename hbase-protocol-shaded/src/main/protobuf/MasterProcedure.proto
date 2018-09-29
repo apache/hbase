@@ -330,6 +330,7 @@ message AssignRegionStateData {
   optional ServerName target_server = 4;
   // Current attempt index used for expotential backoff when stuck
   optional int32 attempt = 5;
+  optional bool override = 6 [default = false];
 }
 
 message UnassignRegionStateData {
@@ -341,6 +342,7 @@ message UnassignRegionStateData {
   // This is the server currently hosting the Region, the
   // server we will send the unassign rpc too.
   optional ServerName hosting_server = 5;
+  // We hijacked an old param named 'force' and use it as 'override'.
   optional bool force = 4 [default = false];
   optional bool remove_after_unassigning = 6 [default = false];
   // Current attempt index used for expotential backoff when stuck

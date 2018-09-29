@@ -99,12 +99,16 @@ public class AssignProcedure extends RegionTransitionProcedure {
   }
 
   public AssignProcedure(final RegionInfo regionInfo) {
-    super(regionInfo);
-    this.targetServer = null;
+    this(regionInfo, null);
   }
 
   public AssignProcedure(final RegionInfo regionInfo, final ServerName destinationServer) {
-    super(regionInfo);
+    this(regionInfo, destinationServer, false);
+  }
+
+  public AssignProcedure(final RegionInfo regionInfo, final ServerName destinationServer,
+      boolean override) {
+    super(regionInfo, override);
     this.targetServer = destinationServer;
   }
 
@@ -138,6 +142,9 @@ public class AssignProcedure extends RegionTransitionProcedure {
     if (getAttempt() > 0) {
       state.setAttempt(getAttempt());
     }
+    if (isOverride()) {
+      state.setOverride(isOverride());
+    }
     serializer.serialize(state.build());
   }
 
@@ -148,6 +155,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
     setTransitionState(state.getTransitionState());
     setRegionInfo(ProtobufUtil.toRegionInfo(state.getRegionInfo()));
     forceNewPlan = state.getForceNewPlan();
+    setOverride(state.getOverride());
     if (state.hasTargetServer()) {
       this.targetServer = ProtobufUtil.toServerName(state.getTargetServer());
     }

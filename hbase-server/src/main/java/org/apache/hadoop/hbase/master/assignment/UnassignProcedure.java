@@ -84,10 +84,6 @@ public class UnassignProcedure extends RegionTransitionProcedure {
    */
   protected volatile ServerName destinationServer;
 
-  // TODO: should this be in a reassign procedure?
-  //       ...and keep unassign for 'disable' case?
-  private boolean force;
-
   /**
    * Whether deleting the region from in-memory states after unassigning the region.
    */
@@ -109,12 +105,11 @@ public class UnassignProcedure extends RegionTransitionProcedure {
   }
 
   public UnassignProcedure(final RegionInfo regionInfo, final ServerName hostingServer,
-      final ServerName destinationServer, final boolean force,
+      final ServerName destinationServer, final boolean override,
       final boolean removeAfterUnassigning) {
-    super(regionInfo);
+    super(regionInfo, override);
     this.hostingServer = hostingServer;
     this.destinationServer = destinationServer;
-    this.force = force;
     this.removeAfterUnassigning = removeAfterUnassigning;
 
     // we don't need REGION_TRANSITION_QUEUE, we jump directly to sending the request
@@ -147,7 +142,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     if (this.destinationServer != null) {
       state.setDestinationServer(ProtobufUtil.toServerName(destinationServer));
     }
-    if (force) {
+    if (isOverride()) {
       state.setForce(true);
     }
     if (removeAfterUnassigning) {
@@ -167,7 +162,8 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     setTransitionState(state.getTransitionState());
     setRegionInfo(ProtobufUtil.toRegionInfo(state.getRegionInfo()));
     this.hostingServer = ProtobufUtil.toServerName(state.getHostingServer());
-    force = state.getForce();
+    // The 'force' flag is the override flag in unassign.
+    setOverride(state.getForce());
     if (state.hasDestinationServer()) {
       this.destinationServer = ProtobufUtil.toServerName(state.getDestinationServer());
     }
