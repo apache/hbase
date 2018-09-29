@@ -677,37 +677,26 @@ public class AssignmentManager implements ServerListener {
    * Called by things like DisableTableProcedure to get a list of UnassignProcedure
    * to unassign the regions of the table.
    */
+  public UnassignProcedure[] createUnassignProcedures(final TableName tableName) {
+    return createUnassignProcedures(regionStates.getTableRegionStateNodes(tableName));
+  }
+
   public AssignProcedure createAssignProcedure(final RegionInfo regionInfo) {
-    return createAssignProcedure(regionInfo, null, false);
-  }
-
-  public AssignProcedure createAssignProcedure(final RegionInfo regionInfo, boolean override) {
-    return createAssignProcedure(regionInfo, null, override);
-  }
-
-  public AssignProcedure createAssignProcedure(final RegionInfo regionInfo,
-      ServerName targetServer) {
-    return createAssignProcedure(regionInfo, targetServer, false);
+    AssignProcedure proc = new AssignProcedure(regionInfo);
+    proc.setOwner(getProcedureEnvironment().getRequestUser().getShortName());
+    return proc;
   }
 
   public AssignProcedure createAssignProcedure(final RegionInfo regionInfo,
-      final ServerName targetServer, boolean override) {
-    AssignProcedure proc = new AssignProcedure(regionInfo, targetServer, override);
+      final ServerName targetServer) {
+    AssignProcedure proc = new AssignProcedure(regionInfo, targetServer);
     proc.setOwner(getProcedureEnvironment().getRequestUser().getShortName());
     return proc;
   }
 
   public UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo) {
     return createUnassignProcedure(regionInfo, null, false);
-  }
 
-  public UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo,
-      boolean override) {
-    return createUnassignProcedure(regionInfo, null, override);
-  }
-
-  public UnassignProcedure[] createUnassignProcedures(final TableName tableName) {
-    return createUnassignProcedures(regionStates.getTableRegionStateNodes(tableName));
   }
 
   UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo,

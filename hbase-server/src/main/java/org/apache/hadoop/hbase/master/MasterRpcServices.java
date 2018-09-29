@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -594,7 +595,7 @@ public class MasterRpcServices extends RSRpcServices
       BalanceRequest request) throws ServiceException {
     try {
       return BalanceResponse.newBuilder().setBalancerRan(master.balance(
-        request.hasForce()? request.getForce(): false)).build();
+        request.hasForce() ? request.getForce() : false)).build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }
@@ -1180,8 +1181,7 @@ public class MasterRpcServices extends RSRpcServices
         if (executor.isFinished(procId)) {
           builder.setState(GetProcedureResultResponse.State.FINISHED);
           if (result.isFailed()) {
-            IOException exception =
-                MasterProcedureUtil.unwrapRemoteIOException(result);
+            IOException exception = result.getException().unwrapRemoteIOException();
             builder.setException(ForeignExceptionUtil.toProtoForeignException(exception));
           }
           byte[] resultData = result.getResult();
@@ -2335,15 +2335,14 @@ public class MasterRpcServices extends RSRpcServices
    * Submit the Procedure that gets created by <code>f</code>
    * @return pid of the submitted Procedure.
    */
-  private long submitProcedure(HBaseProtos.RegionSpecifier rs, boolean override,
-      BiFunction<RegionInfo, Boolean, Procedure> f)
+  private long submitProcedure(HBaseProtos.RegionSpecifier rs, Function<RegionInfo, Procedure> f)
     throws UnknownRegionException {
     RegionInfo ri = getRegionInfo(rs);
     long pid = Procedure.NO_PROC_ID;
     if (ri == null) {
       LOG.warn("No RegionInfo found to match {}", rs);
     } else {
-      pid = this.master.getMasterProcedureExecutor().submitProcedure(f.apply(ri, override));
+      pid = this.master.getMasterProcedureExecutor().submitProcedure(f.apply(ri));
     }
     return pid;
   }
@@ -2363,10 +2362,9 @@ public class MasterRpcServices extends RSRpcServices
     MasterProtos.AssignsResponse.Builder responseBuilder =
         MasterProtos.AssignsResponse.newBuilder();
     try {
-      boolean override = request.getOverride();
       for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
-        long pid = submitProcedure(rs, override,
-          (r, b) -> this.master.getAssignmentManager().createAssignProcedure(r, b));
+        long pid = submitProcedure(rs,
+          r -> this.master.getAssignmentManager().createAssignProcedure(r));
         responseBuilder.addPid(pid);
       }
       return responseBuilder.build();
@@ -2390,10 +2388,9 @@ public class MasterRpcServices extends RSRpcServices
     MasterProtos.UnassignsResponse.Builder responseBuilder =
         MasterProtos.UnassignsResponse.newBuilder();
     try {
-      boolean override = request.getOverride();
       for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
-        long pid = submitProcedure(rs, override,
-          (r, b) -> this.master.getAssignmentManager().createUnassignProcedure(r, b));
+        long pid = submitProcedure(rs,
+          ri -> this.master.getAssignmentManager().createUnassignProcedure(ri));
         responseBuilder.addPid(pid);
       }
       return responseBuilder.build();
@@ -2419,7 +2416,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       List<Boolean> ret =
           master.getMasterProcedureExecutor().bypassProcedure(request.getProcIdList(),
-          request.getWaitTime(), request.getOverride(), request.getRecursive());
+          request.getWaitTime(), request.getForce());
       return MasterProtos.BypassProcedureResponse.newBuilder().addAllBypassed(ret).build();
     } catch (IOException e) {
       throw new ServiceException(e);

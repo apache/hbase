@@ -112,12 +112,6 @@ public abstract class RegionTransitionProcedure
   private RegionInfo regionInfo;
 
   /**
-   * this data member must also be persisted.
-   * @see #regionInfo
-   */
-  private boolean override;
-
-  /**
    * Like {@link #regionInfo}, the expectation is that subclasses persist the value of this
    * data member. It is used doing backoff when Procedure gets stuck.
    */
@@ -126,9 +120,8 @@ public abstract class RegionTransitionProcedure
   // Required by the Procedure framework to create the procedure on replay
   public RegionTransitionProcedure() {}
 
-  public RegionTransitionProcedure(final RegionInfo regionInfo, boolean override) {
+  public RegionTransitionProcedure(final RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
-    this.override = override;
   }
 
   @VisibleForTesting
@@ -141,7 +134,7 @@ public abstract class RegionTransitionProcedure
    * {@link #deserializeStateData(ProcedureStateSerializer)} method. Expectation is that
    * subclasses will persist `regioninfo` in their
    * {@link #serializeStateData(ProcedureStateSerializer)} method and then restore `regionInfo` on
-   * deserialization by calling this.
+   * deserialization by calling.
    */
   protected void setRegionInfo(final RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
@@ -149,21 +142,9 @@ public abstract class RegionTransitionProcedure
 
   /**
    * This setter is for subclasses to call in their
-   * {@link #deserializeStateData(ProcedureStateSerializer)} method. Expectation is that
-   * subclasses will persist `override` in their
-   * {@link #serializeStateData(ProcedureStateSerializer)} method and then restore `override` on
-   * deserialization by calling this.
+   * {@link #deserializeStateData(ProcedureStateSerializer)} method.
+   * @see #setRegionInfo(RegionInfo)
    */
-  protected void setOverride(boolean override) {
-    this.override = override;
-  }
-
-
-    /**
-     * This setter is for subclasses to call in their
-     * {@link #deserializeStateData(ProcedureStateSerializer)} method.
-     * @see #setRegionInfo(RegionInfo)
-     */
   protected void setAttempt(int attempt) {
     this.attempt = attempt;
   }
@@ -189,11 +170,6 @@ public abstract class RegionTransitionProcedure
     sb.append(getTableName());
     sb.append(", region=");
     sb.append(getRegionInfo() == null? null: getRegionInfo().getEncodedName());
-    if (isOverride()) {
-      // Only log if set.
-      sb.append(", override=");
-      sb.append(isOverride());
-    }
   }
 
   public RegionStateNode getRegionState(final MasterProcedureEnv env) {
@@ -332,19 +308,12 @@ public abstract class RegionTransitionProcedure
     final AssignmentManager am = env.getAssignmentManager();
     final RegionStateNode regionNode = getRegionState(env);
     if (!am.addRegionInTransition(regionNode, this)) {
-      if (this.isOverride()) {
-        LOG.info("{} owned by pid={}, OVERRIDDEN by 'this' (pid={}, override=true).",
-            regionNode.getRegionInfo().getEncodedName(),
-            regionNode.getProcedure().getProcId(), getProcId());
-        regionNode.unsetProcedure(regionNode.getProcedure());
-      } else {
-        String msg = String.format("%s owned by pid=%d, CANNOT run 'this' (pid=%d).",
-            regionNode.getRegionInfo().getEncodedName(),
-            regionNode.getProcedure().getProcId(), getProcId());
-        LOG.warn(msg);
-        setAbortFailure(getClass().getSimpleName(), msg);
-        return null;
-      }
+      String msg = String.format(
+        "There is already another procedure running on this region this=%s owner=%s",
+        this, regionNode.getProcedure());
+      LOG.warn(msg + " " + this + "; " + regionNode.toShortString());
+      setAbortFailure(getClass().getSimpleName(), msg);
+      return null;
     }
     try {
       boolean retry;
@@ -456,12 +425,8 @@ public abstract class RegionTransitionProcedure
     // TODO: Revisit this and move it to the executor
     if (env.getProcedureScheduler().waitRegion(this, getRegionInfo())) {
       try {
-        // Enable TRACE on this class to see lock dump. Can be really large when cluster is big
-        // or big tables being enabled/disabled.
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("{} pid={} {}", LockState.LOCK_EVENT_WAIT, getProcId(),
-              env.getProcedureScheduler().dumpLocks());
-        }
+        LOG.debug(LockState.LOCK_EVENT_WAIT + " pid=" + getProcId() + " " +
+          env.getProcedureScheduler().dumpLocks());
       } catch (IOException e) {
         // ignore, just for logging
       }
@@ -503,24 +468,5 @@ public abstract class RegionTransitionProcedure
   public void remoteOperationFailed(MasterProcedureEnv env, RemoteProcedureException error) {
     // should not be called for region operation until we modified the open/close region procedure
     throw new UnsupportedOperationException();
-  }
-
-  @Override
-  protected void bypass(MasterProcedureEnv env) {
-    // This override is just so I can write a note on how bypass is done in
-    // RTP. For RTP procedures -- i.e. assign/unassign -- if bypass is called,
-    // we intentionally do NOT cleanup our state. We leave a reference to the
-    // bypassed Procedure in the RegionStateNode. Doing this makes it so the
-    // RSN is in an odd state. The bypassed Procedure is finished but no one
-    // else can make progress on this RSN entity (see the #execute above where
-    // we check the RSN to see if an already registered procedure and if so,
-    // we exit without proceeding). This is done to intentionally block
-    // subsequent Procedures from running. Only a Procedure with the 'override' flag
-    // set can overwrite the RSN and make progress.
-    super.bypass(env);
-  }
-
-  boolean isOverride() {
-    return this.override;
   }
 }

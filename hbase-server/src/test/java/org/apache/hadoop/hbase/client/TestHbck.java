@@ -116,8 +116,7 @@ public class TestHbck {
 
     //bypass the procedure
     List<Long> pids = Arrays.<Long>asList(procId);
-    List<Boolean> results =
-        TEST_UTIL.getHbck().bypassProcedure(pids, 30000, false, false);
+    List<Boolean> results = TEST_UTIL.getHbck().bypassProcedure(pids, 30000, false);
     assertTrue("Failed to by pass procedure!", results.get(0));
     TEST_UTIL.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);

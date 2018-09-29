@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
@@ -874,7 +873,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         Procedure<?> result = masterServices.getMasterProcedureExecutor().getResult(procId);
         if (result != null && result.isFailed()) {
           throw new IOException("Failed to create group table. " +
-              MasterProcedureUtil.unwrapRemoteIOException(result));
+            result.getException().unwrapRemoteIOException());
         }
       }
     }
