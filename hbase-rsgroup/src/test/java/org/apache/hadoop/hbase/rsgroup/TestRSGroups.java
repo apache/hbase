@@ -133,7 +133,7 @@ public class TestRSGroups extends TestRSGroupsBase {
       INIT = true;
       afterMethod();
     }
-
+    observer.resetFlags();
   }
 
   @After
@@ -296,6 +296,23 @@ public class TestRSGroups extends TestRSGroupsBase {
     boolean postRemoveServersCalled = false;
     boolean preMoveServersAndTables = false;
     boolean postMoveServersAndTables = false;
+
+    void resetFlags() {
+      preBalanceRSGroupCalled = false;
+      postBalanceRSGroupCalled = false;
+      preMoveServersCalled = false;
+      postMoveServersCalled = false;
+      preMoveTablesCalled = false;
+      postMoveTablesCalled = false;
+      preAddRSGroupCalled = false;
+      postAddRSGroupCalled = false;
+      preRemoveRSGroupCalled = false;
+      postRemoveRSGroupCalled = false;
+      preRemoveServersCalled = false;
+      postRemoveServersCalled = false;
+      preMoveServersAndTables = false;
+      postMoveServersAndTables = false;
+    }
 
     @Override
     public Optional<MasterObserver> getMasterObserver() {
