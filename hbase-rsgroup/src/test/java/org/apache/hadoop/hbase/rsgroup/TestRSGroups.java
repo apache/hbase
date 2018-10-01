@@ -123,7 +123,7 @@ public class TestRSGroups extends TestRSGroupsBase {
       init = true;
       afterMethod();
     }
-
+    observer.resetFlags();
   }
 
   @After
@@ -149,7 +149,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     } catch (Exception ex) {
       // ignore
     }
-    assertTrue(observer.preMoveServersCalled);
+
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -222,9 +222,6 @@ public class TestRSGroups extends TestRSGroupsBase {
     String groupName = tablePrefix+"_foo";
     LOG.info("testNamespaceConstraint");
     rsGroupAdmin.addRSGroup(groupName);
-    assertTrue(observer.preAddRSGroupCalled);
-    assertTrue(observer.postAddRSGroupCalled);
-
     admin.createNamespace(NamespaceDescriptor.create(nsName)
         .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName)
         .build());
@@ -245,8 +242,6 @@ public class TestRSGroups extends TestRSGroupsBase {
     //test add non-existent group
     admin.deleteNamespace(nsName);
     rsGroupAdmin.removeRSGroup(groupName);
-    assertTrue(observer.preRemoveRSGroupCalled);
-    assertTrue(observer.postRemoveRSGroupCalled);
     try {
       admin.createNamespace(NamespaceDescriptor.create(nsName)
           .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "foo")
@@ -282,6 +277,23 @@ public class TestRSGroups extends TestRSGroupsBase {
     boolean postRemoveServersCalled = false;
     boolean preMoveServersAndTables = false;
     boolean postMoveServersAndTables = false;
+
+    void resetFlags() {
+      preBalanceRSGroupCalled = false;
+      postBalanceRSGroupCalled = false;
+      preMoveServersCalled = false;
+      postMoveServersCalled = false;
+      preMoveTablesCalled = false;
+      postMoveTablesCalled = false;
+      preAddRSGroupCalled = false;
+      postAddRSGroupCalled = false;
+      preRemoveRSGroupCalled = false;
+      postRemoveRSGroupCalled = false;
+      preRemoveServersCalled = false;
+      postRemoveServersCalled = false;
+      preMoveServersAndTables = false;
+      postMoveServersAndTables = false;
+    }
 
     @Override
     public void preMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
