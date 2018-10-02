@@ -1,5 +1,51 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.8 10/8/2018
+
+** Sub-task
+    * [HBASE-19275] - TestSnapshotFileCache never worked properly
+    * [HBASE-20317] - Backport HBASE-20261 "Table page (table.jsp) in Master UI does not show replicaIds for hbase meta table" to branch-1
+    * [HBASE-21061] - fix synchronization of org.apache.hadoop.hbase.ipc.RpcServer$Connection.useWrap
+    * [HBASE-21189] - flaky job should gather machine stats
+    * [HBASE-21190] - Log files and count of entries in each as we load from the MasterProcWAL store
+
+** Bug
+    * [HBASE-18451] - PeriodicMemstoreFlusher should inspect the queue before adding a delayed flush request
+    * [HBASE-18549] - Unclaimed replication queues can go undetected
+    * [HBASE-19418] - RANGE_OF_DELAY in PeriodicMemstoreFlusher should be configurable.
+    * [HBASE-20307] - LoadTestTool prints too much zookeeper logging
+    * [HBASE-20704] - Sometimes some compacted storefiles are not archived on region close
+    * [HBASE-20766] - Verify Replication Tool Has Typo "remove cluster"
+    * [HBASE-21030] - Correct javadoc for append operation
+    * [HBASE-21088] - HStoreFile should be closed in HStore#hasReferences
+    * [HBASE-21117] - Backport HBASE-18350  (fix RSGroups)  to branch-1 (Only port the part fixing table locking issue.)
+    * [HBASE-21127] - TableRecordReader need to handle cursor result too
+    * [HBASE-21158] - Empty qualifier cell is always returned when using QualifierFilter
+    * [HBASE-21162] - Revert suspicious change to BoundedByteBufferPool and disable use of direct buffers for IPC reservoir by default
+    * [HBASE-21166] - Creating a CoprocessorHConnection re-retrieves the cluster id from ZK
+    * [HBASE-21173] - Remove the duplicate HRegion#close in TestHRegion
+    * [HBASE-21174] - [REST] Failed to parse empty qualifier in TableResource#getScanResource
+    * [HBASE-21179] - Fix the number of actions in responseTooSlow log
+    * [HBASE-21203] - TestZKMainServer#testCommandLineWorks won't pass with default 4lw whitelist
+    * [HBASE-21206] - Scan with batch size may return incomplete cells
+    * [HBASE-21212] - Wrong flush time when update flush metric
+    * [HBASE-21228] - Memory leak since AbstractFSWAL caches Thread object and never clean later
+
+** Improvement
+    * [HBASE-20734] - Colocate recovered edits directory with hbase.wal.dir
+    * [HBASE-20857] - JMX - add Balancer status = enabled / disabled
+    * [HBASE-21147] - (1.4) Add ability for HBase Canary to ignore a configurable number of ZooKeeper down nodes
+    * [HBASE-21207] - Add client side sorting functionality in master web UI for table and region server details.
+
+** Test
+    * [HBASE-21138] - Close HRegion instance at the end of every test in TestHRegion
+    * [HBASE-21258] - Add resetting of flags for RS Group pre/post hooks in TestRSGroups
+    * [HBASE-21261] - Add log4j.properties for hbase-rsgroup tests
+
+** Task
+    * [HBASE-21168] - BloomFilterUtil uses hardcoded randomness
+
+
 Release Notes - HBase - Version 1.4.7 9/3/2018
 
 ** Sub-task
