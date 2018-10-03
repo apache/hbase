@@ -40,13 +40,13 @@ import org.slf4j.LoggerFactory;
  * Test enable RSGroup
  */
 @Category({ MediumTests.class })
-public class TestEnableRSGroup {
+public class TestEnableRSGroups {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestEnableRSGroup.class);
+      HBaseClassTestRule.forClass(TestEnableRSGroups.class);
 
-  protected static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroup.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroups.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -71,7 +71,8 @@ public class TestEnableRSGroup {
     LOG.info("stopped master...");
     final Configuration conf = TEST_UTIL.getMiniHBaseCluster().getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, RSGroupAdminEndpoint.class.getName());
-    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
+    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+      RSGroupBasedLoadBalancer.class.getName());
 
     TEST_UTIL.getMiniHBaseCluster().startMaster();
     TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(60000);
