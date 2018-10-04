@@ -431,9 +431,9 @@ public abstract class RegionTransitionProcedure
 
     // There is no rollback for assignment unless we cancel the operation by
     // dropping/disabling the table.
-    throw new UnsupportedOperationException("Unhandled state " + transitionState +
-        "; there is no rollback for assignment unless we cancel the operation by " +
-        "dropping/disabling the table");
+    LOG.warn("Unhandled state {}; no rollback for assignment! Doing NOTHING!" +
+        " May need manual intervention; {}",
+        transitionState, this);
   }
 
   protected abstract boolean isRollbackSupported(final RegionTransitionState state);
