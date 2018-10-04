@@ -37,9 +37,9 @@ import org.slf4j.LoggerFactory;
  * Test enable RSGroup
  */
 @Category({ MediumTests.class })
-public class TestEnableRSGroup {
+public class TestEnableRSGroups {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroup.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroups.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = TEST_UTIL.getConfiguration();
@@ -55,7 +55,7 @@ public class TestEnableRSGroup {
   }
 
   @Test
-  public void testEnableRSGroup() throws IOException, InterruptedException {
+  public void testEnableRSGroups() throws IOException, InterruptedException {
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
     LOG.info("stopped master...");
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, RSGroupAdminEndpoint.class.getName());

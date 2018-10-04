@@ -19,19 +19,15 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -40,31 +36,26 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 public abstract class TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroupsBase.class);
@@ -72,25 +63,128 @@ public abstract class TestRSGroupsBase {
   //shared
   protected final static String groupPrefix = "Group";
   protected final static String tablePrefix = "Group";
-  protected final static SecureRandom rand = new SecureRandom();
+  protected final static Random rand = new Random();
 
   //shared, cluster type specific
   protected static HBaseTestingUtility TEST_UTIL;
   protected static HBaseAdmin admin;
   protected static HBaseCluster cluster;
   protected static RSGroupAdmin rsGroupAdmin;
+  protected static HMaster master;
+  protected static boolean init = false;
+  protected static RSGroupAdminEndpoint RSGroupAdminEndpoint;
+  protected static CPMasterObserver observer;
 
   public final static long WAIT_TIMEOUT = 60000*5;
   public final static int NUM_SLAVES_BASE = 4; //number of slaves for the smallest cluster
 
+  public static void setUpTestBeforeClass() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL.getConfiguration().setFloat(
+            "hbase.master.balancer.stochastic.tableSkewCost", 6000);
+    TEST_UTIL.getConfiguration().set(
+        HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        RSGroupBasedLoadBalancer.class.getName());
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+        RSGroupAdminEndpoint.class.getName() + "," + CPMasterObserver.class.getName());
+    TEST_UTIL.getConfiguration().setBoolean(
+        HConstants.ZOOKEEPER_USEMULTI,
+        true);
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
+    TEST_UTIL.getConfiguration().setInt(
+        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+        NUM_SLAVES_BASE - 1);
+    TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    initialize();
+  }
 
+  protected static void initialize() throws Exception {
+    admin = TEST_UTIL.getHBaseAdmin();
+    cluster = TEST_UTIL.getHBaseCluster();
+    master = ((MiniHBaseCluster)cluster).getMaster();
+
+    //wait for balancer to come online
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return master.isInitialized() &&
+            ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline();
+      }
+    });
+    admin.setBalancerRunning(false,true);
+    rsGroupAdmin = new VerifyingRSGroupAdminClient(new RSGroupAdminClient(TEST_UTIL.getConnection()),
+        TEST_UTIL.getConfiguration());
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
+    observer = (CPMasterObserver) host.findCoprocessor(CPMasterObserver.class.getName());
+    RSGroupAdminEndpoint =
+        host.findCoprocessors(RSGroupAdminEndpoint.class).get(0);
+  }
+
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  public void setUpBeforeMethod() throws Exception {
+    if(!init) {
+      init = true;
+      tearDownAfterMethod();
+    }
+    observer.resetFlags();
+  }
+
+  public void tearDownAfterMethod() throws Exception {
+    deleteTableIfNecessary();
+    deleteNamespaceIfNecessary();
+    deleteGroups();
+
+    int missing = NUM_SLAVES_BASE - getNumServers();
+    LOG.info("Restoring servers: "+missing);
+    for(int i=0; i<missing; i++) {
+      ((MiniHBaseCluster)cluster).startRegionServer();
+    }
+
+    rsGroupAdmin.addRSGroup("master");
+    ServerName masterServerName =
+        ((MiniHBaseCluster)cluster).getMaster().getServerName();
+
+    try {
+      rsGroupAdmin.moveServers(
+          Sets.newHashSet(masterServerName.getAddress()),
+          "master");
+    } catch (Exception ex) {
+      // ignore
+    }
+
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        LOG.info("Waiting for cleanup to finish " + rsGroupAdmin.listRSGroups());
+        //Might be greater since moving servers back to default
+        //is after starting a server
+
+        return rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size()
+            == NUM_SLAVES_BASE;
+      }
+    });
+  }
+
+  // return the real number of region servers, excluding the master embedded region server in 2.0+
+  protected int getNumServers() throws IOException {
+    ClusterStatus status = admin.getClusterStatus();
+    ServerName master = status.getMaster();
+    int count = 0;
+    for (ServerName sn : status.getServers()) {
+      if (!sn.equals(master)) {
+        count++;
+      }
+    }
+    return count;
+  }
 
   protected RSGroupInfo addGroup(RSGroupAdmin gAdmin, String groupName,
                                  int serverCount) throws IOException, InterruptedException {
     RSGroupInfo defaultInfo = gAdmin
         .getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
-    assertTrue(defaultInfo != null);
-    assertTrue(defaultInfo.getServers().size() >= serverCount);
     gAdmin.addRSGroup(groupName);
 
     Set<Address> set = new HashSet<Address>();
@@ -102,7 +196,6 @@ public abstract class TestRSGroupsBase {
     }
     gAdmin.moveServers(set, groupName);
     RSGroupInfo result = gAdmin.getRSGroupInfo(groupName);
-    assertTrue(result.getServers().size() >= serverCount);
     return result;
   }
 
@@ -180,789 +273,127 @@ public abstract class TestRSGroupsBase {
     return map;
   }
 
-  @Test
-  public void testBogusArgs() throws Exception {
-    assertNull(rsGroupAdmin.getRSGroupInfoOfTable(TableName.valueOf("nonexistent")));
-    assertNull(rsGroupAdmin.getRSGroupOfServer(Address.fromParts("bogus",123)));
-    assertNull(rsGroupAdmin.getRSGroupInfo("bogus"));
-
-    try {
-      rsGroupAdmin.removeRSGroup("bogus");
-      fail("Expected removing bogus group to fail");
-    } catch(ConstraintException ex) {
-      //expected
-    }
-
-    try {
-      rsGroupAdmin.moveTables(Sets.newHashSet(TableName.valueOf("bogustable")), "bogus");
-      fail("Expected move with bogus group to fail");
-    } catch(ConstraintException ex) {
-      //expected
-    }
-
-    try {
-      rsGroupAdmin.moveServers(Sets.newHashSet(Address.fromParts("bogus",123)), "bogus");
-      fail("Expected move with bogus group to fail");
-    } catch(ConstraintException ex) {
-      //expected
-    }
-
-    try {
-      rsGroupAdmin.balanceRSGroup("bogus");
-      fail("Expected move with bogus group to fail");
-    } catch(ConstraintException ex) {
-      //expected
-    }
-  }
-
-  @Test
-  public void testCreateMultiRegion() throws IOException {
-    LOG.info("testCreateMultiRegion");
-    TableName tableName = TableName.valueOf(tablePrefix + "_testCreateMultiRegion");
-    byte[] end = {1,3,5,7,9};
-    byte[] start = {0,2,4,6,8};
-    byte[][] f = {Bytes.toBytes("f")};
-    TEST_UTIL.createTable(tableName, f,1,start,end,10);
-  }
-
-  @Test
-  public void testCreateAndDrop() throws Exception {
-    LOG.info("testCreateAndDrop");
-
-    final TableName tableName = TableName.valueOf(tablePrefix + "_testCreateAndDrop");
-    TEST_UTIL.createTable(tableName, Bytes.toBytes("cf"));
-    //wait for created table to be assigned
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return getTableRegionMap().get(tableName) != null;
-      }
-    });
-    TEST_UTIL.deleteTable(tableName);
-  }
-
-  @Test
-  public void testSimpleRegionServerMove() throws IOException,
-      InterruptedException {
-    LOG.info("testSimpleRegionServerMove");
-
-    int initNumGroups = rsGroupAdmin.listRSGroups().size();
-    RSGroupInfo appInfo = addGroup(rsGroupAdmin, getGroupName("testSimpleRegionServerMove"), 1);
-    RSGroupInfo adminInfo = addGroup(rsGroupAdmin, getGroupName("testSimpleRegionServerMove"), 1);
-    RSGroupInfo dInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
-    Assert.assertEquals(initNumGroups + 2, rsGroupAdmin.listRSGroups().size());
-    assertEquals(1, adminInfo.getServers().size());
-    assertEquals(1, appInfo.getServers().size());
-    assertEquals(getNumServers() - 2, dInfo.getServers().size());
-    rsGroupAdmin.moveServers(appInfo.getServers(),
-        RSGroupInfo.DEFAULT_GROUP);
-    rsGroupAdmin.removeRSGroup(appInfo.getName());
-    rsGroupAdmin.moveServers(adminInfo.getServers(),
-        RSGroupInfo.DEFAULT_GROUP);
-    rsGroupAdmin.removeRSGroup(adminInfo.getName());
-    Assert.assertEquals(rsGroupAdmin.listRSGroups().size(), initNumGroups);
-  }
-
-  // return the real number of region servers, excluding the master embedded region server in 2.0+
-  public int getNumServers() throws IOException {
-    ClusterStatus status = admin.getClusterStatus();
-    ServerName master = status.getMaster();
-    int count = 0;
-    for (ServerName sn : status.getServers()) {
-      if (!sn.equals(master)) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  @Test
-  public void testMoveServers() throws Exception {
-    LOG.info("testMoveServers");
-
-    //create groups and assign servers
-    addGroup(rsGroupAdmin, "bar", 3);
-    rsGroupAdmin.addRSGroup("foo");
-
-    RSGroupInfo barGroup = rsGroupAdmin.getRSGroupInfo("bar");
-    RSGroupInfo fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
-    assertEquals(3, barGroup.getServers().size());
-    assertEquals(0, fooGroup.getServers().size());
-
-    //test fail bogus server move
-    try {
-      rsGroupAdmin.moveServers(Sets.newHashSet(Address.fromString("foo:9999")),"foo");
-      fail("Bogus servers shouldn't have been successfully moved.");
-    } catch(IOException ex) {
-      String exp = "Server foo:9999 does not have a group.";
-      String msg = "Expected '"+exp+"' in exception message: ";
-      assertTrue(msg+" "+ex.getMessage(), ex.getMessage().contains(exp));
-    }
-
-    //test success case
-    LOG.info("moving servers "+barGroup.getServers()+" to group foo");
-    rsGroupAdmin.moveServers(barGroup.getServers(), fooGroup.getName());
-
-    barGroup = rsGroupAdmin.getRSGroupInfo("bar");
-    fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
-    assertEquals(0,barGroup.getServers().size());
-    assertEquals(3,fooGroup.getServers().size());
-
-    LOG.info("moving servers "+fooGroup.getServers()+" to group default");
-    rsGroupAdmin.moveServers(fooGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
-
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return getNumServers() ==
-        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size();
-      }
-    });
-
-    fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
-    assertEquals(0,fooGroup.getServers().size());
-
-    //test group removal
-    LOG.info("Remove group "+barGroup.getName());
-    rsGroupAdmin.removeRSGroup(barGroup.getName());
-    Assert.assertEquals(null, rsGroupAdmin.getRSGroupInfo(barGroup.getName()));
-    LOG.info("Remove group "+fooGroup.getName());
-    rsGroupAdmin.removeRSGroup(fooGroup.getName());
-    Assert.assertEquals(null, rsGroupAdmin.getRSGroupInfo(fooGroup.getName()));
-  }
-
-  @Test
-  public void testTableMoveTruncateAndDrop() throws Exception {
-    LOG.info("testTableMove");
-
-    final TableName tableName = TableName.valueOf(tablePrefix + "_testTableMoveAndDrop");
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    String newGroupName = getGroupName("testTableMove");
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, newGroupName, 2);
-
-    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 5);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null)
-          return false;
-        return getTableRegionMap().get(tableName).size() >= 5;
-      }
-    });
-
-    RSGroupInfo tableGrp = rsGroupAdmin.getRSGroupInfoOfTable(tableName);
-    assertTrue(tableGrp.getName().equals(RSGroupInfo.DEFAULT_GROUP));
-
-    //change table's group
-    LOG.info("Moving table "+tableName+" to "+newGroup.getName());
-    rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
-
-    //verify group change
-    Assert.assertEquals(newGroup.getName(),
-        rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
-
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        Map<ServerName, List<String>> serverMap = getTableServerRegionMap().get(tableName);
-        int count = 0;
-        if (serverMap != null) {
-          for (ServerName rs : serverMap.keySet()) {
-            if (newGroup.containsServer(rs.getAddress())) {
-              count += serverMap.get(rs).size();
-            }
-          }
-        }
-        return count == 5;
-      }
-    });
-
-    //test truncate
-    admin.disableTable(tableName);
-    admin.truncateTable(tableName, true);
-    Assert.assertEquals(1, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
-    Assert.assertEquals(tableName, rsGroupAdmin.getRSGroupInfo(
-        newGroup.getName()).getTables().first());
-
-    //verify removed table is removed from group
-    TEST_UTIL.deleteTable(tableName);
-    Assert.assertEquals(0, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
-  }
-
-  @Test
-  public void testGroupBalance() throws Exception {
-    LOG.info("testGroupBalance");
-    String newGroupName = getGroupName("testGroupBalance");
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, newGroupName, 3);
-
-    final TableName tableName = TableName.valueOf(tablePrefix+"_ns", "testGroupBalance");
-    admin.createNamespace(
-        NamespaceDescriptor.create(tableName.getNamespaceAsString())
-            .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor("f"));
-    byte [] startKey = Bytes.toBytes("aaaaa");
-    byte [] endKey = Bytes.toBytes("zzzzz");
-    admin.createTable(desc, startKey, endKey, 6);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null) {
-          return false;
-        }
-        return regions.size() >= 6;
-      }
-    });
-
-    //make assignment uneven, move all regions to one server
-    Map<ServerName,List<String>> assignMap =
-        getTableServerRegionMap().get(tableName);
-    final ServerName first = assignMap.entrySet().iterator().next().getKey();
-    for(HRegionInfo region: admin.getTableRegions(tableName)) {
-      if(!assignMap.get(first).contains(region.getRegionNameAsString())) {
-        admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(first.getServerName()));
-      }
-    }
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        Map<ServerName, List<String>> map = getTableServerRegionMap().get(tableName);
-        if (map == null) {
-          return true;
-        }
-        List<String> regions = map.get(first);
-        if (regions == null) {
-          return true;
-        }
-        return regions.size() >= 6;
-      }
-    });
-
-    //balance the other group and make sure it doesn't affect the new group
-    rsGroupAdmin.balanceRSGroup(RSGroupInfo.DEFAULT_GROUP);
-    assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
-
-    rsGroupAdmin.balanceRSGroup(newGroupName);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        for (List<String> regions : getTableServerRegionMap().get(tableName).values()) {
-          if (2 != regions.size()) {
-            return false;
-          }
-        }
-        return true;
-      }
-    });
-  }
-
-  @Test
-  public void testRegionMove() throws Exception {
-    LOG.info("testRegionMove");
-
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, getGroupName("testRegionMove"), 1);
-    final TableName tableName = TableName.valueOf(tablePrefix + rand.nextInt());
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    // All the regions created below will be assigned to the default group.
-    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 6);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null)
-          return false;
-        return getTableRegionMap().get(tableName).size() >= 6;
-      }
-    });
-
-    //get target region to move
-    Map<ServerName,List<String>> assignMap =
-        getTableServerRegionMap().get(tableName);
-    String targetRegion = null;
-    for(ServerName server : assignMap.keySet()) {
-      targetRegion = assignMap.get(server).size() > 0 ? assignMap.get(server).get(0) : null;
-      if(targetRegion != null) {
-        break;
-      }
-    }
-    //get server which is not a member of new group
-    ServerName targetServer = null;
-    for(ServerName server : admin.getClusterStatus().getServers()) {
-      if(!newGroup.containsServer(server.getAddress())) {
-        targetServer = server;
-        break;
-      }
-    }
-    assertNotNull(targetServer);
-
-    final AdminProtos.AdminService.BlockingInterface targetRS =
-        admin.getConnection().getAdmin(targetServer);
-
-    //move target server to group
-    rsGroupAdmin.moveServers(Sets.newHashSet(targetServer.getAddress()),
-        newGroup.getName());
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return ProtobufUtil.getOnlineRegions(targetRS).size() <= 0;
-      }
-    });
-
-    // Lets move this region to the new group.
-    TEST_UTIL.getHBaseAdmin().move(Bytes.toBytes(HRegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))),
-        Bytes.toBytes(targetServer.getServerName()));
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        Set<RegionState> regionsInTransition = admin.getClusterStatus().getRegionsInTransition();
-        return (regions != null && getTableRegionMap().get(tableName).size() == 6) &&
-           ( regionsInTransition == null || regionsInTransition.size() < 1);
-      }
-    });
-
-    //verify that targetServer didn't open it
-    for (HRegionInfo region: ProtobufUtil.getOnlineRegions(targetRS)) {
-      if (targetRegion.equals(region.getRegionNameAsString())) {
-        fail("Target server opened region");
-      }
-    }
-  }
-
-  @Test
-  public void testFailRemoveGroup() throws IOException, InterruptedException {
-    LOG.info("testFailRemoveGroup");
-
-    int initNumGroups = rsGroupAdmin.listRSGroups().size();
-    addGroup(rsGroupAdmin, "bar", 3);
-    TableName tableName = TableName.valueOf(tablePrefix+"_my_table");
-    TEST_UTIL.createTable(tableName, Bytes.toBytes("f"));
-    rsGroupAdmin.moveTables(Sets.newHashSet(tableName), "bar");
-    RSGroupInfo barGroup = rsGroupAdmin.getRSGroupInfo("bar");
-    //group is not empty therefore it should fail
-    try {
-      rsGroupAdmin.removeRSGroup(barGroup.getName());
-      fail("Expected remove group to fail");
-    } catch(IOException e) {
-    }
-    //group cannot lose all it's servers therefore it should fail
-    try {
-      rsGroupAdmin.moveServers(barGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
-      fail("Expected move servers to fail");
-    } catch(IOException e) {
-    }
-
-    rsGroupAdmin.moveTables(barGroup.getTables(), RSGroupInfo.DEFAULT_GROUP);
-    try {
-      rsGroupAdmin.removeRSGroup(barGroup.getName());
-      fail("Expected move servers to fail");
-    } catch(IOException e) {
-    }
-
-    rsGroupAdmin.moveServers(barGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
-    rsGroupAdmin.removeRSGroup(barGroup.getName());
-
-    Assert.assertEquals(initNumGroups, rsGroupAdmin.listRSGroups().size());
-  }
-
-  @Test
-  public void testKillRS() throws Exception {
-    LOG.info("testKillRS");
-    RSGroupInfo appInfo = addGroup(rsGroupAdmin, "appInfo", 1);
-
-    final TableName tableName = TableName.valueOf(tablePrefix+"_ns", "_testKillRS");
-    admin.createNamespace(
-        NamespaceDescriptor.create(tableName.getNamespaceAsString())
-            .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor("f"));
-    admin.createTable(desc);
-    //wait for created table to be assigned
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return getTableRegionMap().get(desc.getTableName()) != null;
-      }
-    });
-
-    ServerName targetServer = ServerName.parseServerName(
-        appInfo.getServers().iterator().next().toString());
-    AdminProtos.AdminService.BlockingInterface targetRS =
-        admin.getConnection().getAdmin(targetServer);
-    Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(targetRS).size());
-
-    try {
-      //stopping may cause an exception
-      //due to the connection loss
-      targetRS.stopServer(null,
-          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
-    } catch(Exception e) {
-    }
-    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
-
-    //wait for created table to be assigned
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return cluster.getClusterStatus().getRegionsInTransition().size() == 0;
-      }
-    });
-    Set<Address> newServers = Sets.newHashSet();
-    newServers.add(
-        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().iterator().next());
-    rsGroupAdmin.moveServers(newServers, appInfo.getName());
-
-    //Make sure all the table's regions get reassigned
-    //disabling the table guarantees no conflicting assign/unassign (ie SSH) happens
-    admin.disableTable(tableName);
-    admin.enableTable(tableName);
-
-    //wait for region to be assigned
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return cluster.getClusterStatus().getRegionsInTransition().size() == 0;
-      }
-    });
-
-    targetServer = ServerName.parseServerName(
-        newServers.iterator().next().toString());
-    targetRS =
-        admin.getConnection().getAdmin(targetServer);
-    Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(targetRS).size());
-    Assert.assertEquals(tableName,
-        ProtobufUtil.getOnlineRegions(targetRS).get(0).getTable());
-  }
-
-  @Test
-  public void testValidGroupNames() throws IOException {
-    String[] badNames = {"foo*","foo@","-"};
-    String[] goodNames = {"foo_123"};
-
-    for(String entry: badNames) {
-      try {
-        rsGroupAdmin.addRSGroup(entry);
-        fail("Expected a constraint exception for: "+entry);
-      } catch(ConstraintException ex) {
-        //expected
-      }
-    }
-
-    for(String entry: goodNames) {
-      rsGroupAdmin.addRSGroup(entry);
-    }
-  }
-
-  private String getGroupName(String baseName) {
+  protected String getGroupName(String baseName) {
     return groupPrefix+"_"+baseName+"_"+rand.nextInt(Integer.MAX_VALUE);
   }
 
-  @Test
-  public void testMultiTableMove() throws Exception {
-    LOG.info("testMultiTableMove");
+  public static class CPMasterObserver extends BaseMasterObserver {
+    boolean preBalanceRSGroupCalled = false;
+    boolean postBalanceRSGroupCalled = false;
+    boolean preMoveServersCalled = false;
+    boolean postMoveServersCalled = false;
+    boolean preMoveTablesCalled = false;
+    boolean postMoveTablesCalled = false;
+    boolean preAddRSGroupCalled = false;
+    boolean postAddRSGroupCalled = false;
+    boolean preRemoveRSGroupCalled = false;
+    boolean postRemoveRSGroupCalled = false;
+    boolean preRemoveServersCalled = false;
+    boolean postRemoveServersCalled = false;
+    boolean preMoveServersAndTables = false;
+    boolean postMoveServersAndTables = false;
 
-    final TableName tableNameA = TableName.valueOf(tablePrefix + "_testMultiTableMoveA");
-    final TableName tableNameB = TableName.valueOf(tablePrefix + "_testMultiTableMoveB");
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    String newGroupName = getGroupName("testMultiTableMove");
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, newGroupName, 1);
-
-    TEST_UTIL.createTable(tableNameA, familyNameBytes);
-    TEST_UTIL.createTable(tableNameB, familyNameBytes);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regionsA = getTableRegionMap().get(tableNameA);
-        if (regionsA == null)
-          return false;
-        List<String> regionsB = getTableRegionMap().get(tableNameB);
-        if (regionsB == null)
-          return false;
-
-        return getTableRegionMap().get(tableNameA).size() >= 1
-                && getTableRegionMap().get(tableNameB).size() >= 1;
-      }
-    });
-
-    RSGroupInfo tableGrpA = rsGroupAdmin.getRSGroupInfoOfTable(tableNameA);
-    assertTrue(tableGrpA.getName().equals(RSGroupInfo.DEFAULT_GROUP));
-
-    RSGroupInfo tableGrpB = rsGroupAdmin.getRSGroupInfoOfTable(tableNameB);
-    assertTrue(tableGrpB.getName().equals(RSGroupInfo.DEFAULT_GROUP));
-    //change table's group
-    LOG.info("Moving table [" + tableNameA + "," + tableNameB + "] to " + newGroup.getName());
-    rsGroupAdmin.moveTables(Sets.newHashSet(tableNameA, tableNameB), newGroup.getName());
-
-    //verify group change
-    Assert.assertEquals(newGroup.getName(),
-            rsGroupAdmin.getRSGroupInfoOfTable(tableNameA).getName());
-
-    Assert.assertEquals(newGroup.getName(),
-            rsGroupAdmin.getRSGroupInfoOfTable(tableNameB).getName());
-
-    //verify tables' not exist in old group
-    Set<TableName> DefaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
-    assertFalse(DefaultTables.contains(tableNameA));
-    assertFalse(DefaultTables.contains(tableNameB));
-
-    //verify tables' exist in new group
-    Set<TableName> newGroupTables = rsGroupAdmin.getRSGroupInfo(newGroupName).getTables();
-    assertTrue(newGroupTables.contains(tableNameA));
-    assertTrue(newGroupTables.contains(tableNameB));
-  }
-
-  @Test
-  public void testMoveServersAndTables() throws Exception {
-    final TableName tableName = TableName.valueOf(tablePrefix + "_testMoveServersAndTables");
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, getGroupName("testMoveServersAndTables"), 1);
-
-    //create table
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 5);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null)
-          return false;
-        return getTableRegionMap().get(tableName).size() >= 5;
-      }
-    });
-
-    //get server which is not a member of new group
-    ServerName targetServer = null;
-    for(ServerName server : admin.getClusterStatus().getServers()) {
-      if(!newGroup.containsServer(server.getAddress()) && 
-           !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
-        targetServer = server;
-        break;
-      }
+    public void resetFlags() {
+      preBalanceRSGroupCalled = false;
+      postBalanceRSGroupCalled = false;
+      preMoveServersCalled = false;
+      postMoveServersCalled = false;
+      preMoveTablesCalled = false;
+      postMoveTablesCalled = false;
+      preAddRSGroupCalled = false;
+      postAddRSGroupCalled = false;
+      preRemoveRSGroupCalled = false;
+      postRemoveRSGroupCalled = false;
+      preRemoveServersCalled = false;
+      postRemoveServersCalled = false;
+      preMoveServersAndTables = false;
+      postMoveServersAndTables = false;
     }
 
-    LOG.debug("Print group info : " + rsGroupAdmin.listRSGroups());
-    int oldDefaultGroupServerSize =
-            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size();
-    int oldDefaultGroupTableSize =
-            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size();
-
-    //test fail bogus server move
-    try {
-      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(Address.fromString("foo:9999")),
-              Sets.newHashSet(tableName), newGroup.getName());
-      fail("Bogus servers shouldn't have been successfully moved.");
-    } catch(IOException ex) {
+    @Override
+    public void preMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+      preMoveServersAndTables = true;
     }
 
-    //test fail server move
-    try {
-      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
-              Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
-      fail("servers shouldn't have been successfully moved.");
-    } catch(IOException ex) {
+    @Override
+    public void postMoveServersAndTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+      postMoveServersAndTables = true;
     }
 
-    //verify default group info
-    Assert.assertEquals(oldDefaultGroupServerSize,
-            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size());
-    Assert.assertEquals(oldDefaultGroupTableSize,
-            rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size());
-
-    //verify new group info
-    Assert.assertEquals(1,
-            rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers().size());
-    Assert.assertEquals(0,
-            rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
-
-    //get all region to move targetServer
-    List<String> regionList = getTableRegionMap().get(tableName);
-    for(String region : regionList) {
-      // Lets move this region to the targetServer
-      admin.move(Bytes.toBytes(HRegionInfo.encodeRegionName(Bytes.toBytes(region))),
-              Bytes.toBytes(targetServer.getServerName()));
+    @Override
+    public void preRemoveServers(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers) throws IOException {
+      preRemoveServersCalled = true;
     }
 
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        Map<ServerName, List<String>> serverMap = getTableServerRegionMap().get(tableName);
-        Set<RegionState> regionsInTransition = admin.getClusterStatus().getRegionsInTransition();
-        return (regions != null && regions.size() == 5) &&
-          (serverMap != null && serverMap.size() == 1) &&
-          (regionsInTransition == null || regionsInTransition.size() < 1);
-      }
-    });
-
-    //verify that all region move to targetServer
-    Assert.assertNotNull(getTableServerRegionMap().get(tableName));
-    Assert.assertNotNull(getTableServerRegionMap().get(tableName).get(targetServer));
-    Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
-
-    //move targetServer and table to newGroup
-    LOG.info("moving server and table to newGroup");
-    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
-            Sets.newHashSet(tableName), newGroup.getName());
-
-    //verify group change
-    Assert.assertEquals(newGroup.getName(),
-            rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
-
-    //verify servers' not exist in old group
-    Set<Address> defaultServers = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers();
-    assertFalse(defaultServers.contains(targetServer.getAddress()));
-
-    //verify servers' exist in new group
-    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
-    assertTrue(newGroupServers.contains(targetServer.getAddress()));
-
-    //verify tables' not exist in old group
-    Set<TableName> defaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
-    assertFalse(defaultTables.contains(tableName));
-
-    //verify tables' exist in new group
-    Set<TableName> newGroupTables = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables();
-    assertTrue(newGroupTables.contains(tableName));
-  }
-
-  @Test
-  public void testDisabledTableMove() throws Exception {
-    final TableName tableName = TableName.valueOf(tablePrefix + "_testDisabledTableMove");
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    String newGroupName = getGroupName("testDisabledTableMove");
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, newGroupName, 2);
-
-    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 5);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null) {
-          return false;
-        }
-        return getTableRegionMap().get(tableName).size() >= 5;
-      }
-    });
-
-    RSGroupInfo tableGrp = rsGroupAdmin.getRSGroupInfoOfTable(tableName);
-    assertTrue(tableGrp.getName().equals(RSGroupInfo.DEFAULT_GROUP));
-
-    //test disable table
-    admin.disableTable(tableName);
-
-    //change table's group
-    LOG.info("Moving table "+ tableName + " to " + newGroup.getName());
-    rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
-
-    //verify group change
-    Assert.assertEquals(newGroup.getName(),
-        rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
-  }
-
-  @Test
-  public void testClearDeadServers() throws Exception {
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, "testClearDeadServers", 3);
-
-    ServerName targetServer = ServerName.parseServerName(
-        newGroup.getServers().iterator().next().toString());
-    AdminProtos.AdminService.BlockingInterface targetRS =
-        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
-    try {
-      targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
-          GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
-      //stopping may cause an exception
-      //due to the connection loss
-      targetRS.stopServer(null,
-          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
-    } catch(Exception e) {
-    }
-    final HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    //wait for stopped regionserver to dead server list
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return !master.getServerManager().areDeadServersInProgress()
-            && cluster.getClusterStatus().getDeadServerNames().size() > 0;
-      }
-    });
-    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
-    assertTrue(cluster.getClusterStatus().getDeadServerNames().contains(targetServer));
-    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
-
-    //clear dead servers list
-    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(targetServer));
-    assertEquals(0, notClearedServers.size());
-
-    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
-    assertFalse(newGroupServers.contains(targetServer.getAddress()));
-    assertEquals(2, newGroupServers.size());
-  }
-
-  @Test
-  public void testRemoveServers() throws Exception {
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, "testRemoveServers", 3);
-    ServerName targetServer = ServerName.parseServerName(
-        newGroup.getServers().iterator().next().toString());
-    try {
-      rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
-      fail("Online servers shouldn't have been successfully removed.");
-    } catch(IOException ex) {
-      String exp = "Server " + targetServer.getAddress()
-          + " is an online server, not allowed to remove.";
-      String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
-    }
-    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
-
-    AdminProtos.AdminService.BlockingInterface targetRS =
-        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
-    try {
-      targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
-          GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
-      //stopping may cause an exception
-      //due to the connection loss
-      targetRS.stopServer(null,
-          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
-    } catch(Exception e) {
+    @Override
+    public void postRemoveServers(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers) throws IOException {
+      postRemoveServersCalled = true;
     }
 
-    final HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    //wait for stopped regionserver to dead server list
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return !master.getServerManager().areDeadServersInProgress()
-            && cluster.getClusterStatus().getDeadServerNames().size() > 0;
-      }
-    });
-
-    try {
-      rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
-      fail("Dead servers shouldn't have been successfully removed.");
-    } catch(IOException ex) {
-      String exp = "Server " + targetServer.getAddress() + " is on the dead servers list,"
-          + " Maybe it will come back again, not allowed to remove.";
-      String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+    @Override
+    public void preRemoveRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String name) throws IOException {
+      preRemoveRSGroupCalled = true;
     }
-    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
-    ServerName sn = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
-    TEST_UTIL.getHBaseClusterInterface().stopMaster(sn);
-    TEST_UTIL.getHBaseClusterInterface().waitForMasterToStop(sn, 60000);
-    TEST_UTIL.getHBaseClusterInterface().startMaster(sn.getHostname(), 0);
-    TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster(60000);
+    @Override
+    public void postRemoveRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String name) throws IOException {
+      postRemoveRSGroupCalled = true;
+    }
 
-    assertEquals(3, cluster.getClusterStatus().getServersSize());
-    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
-    assertFalse(cluster.getClusterStatus().getDeadServerNames().contains(targetServer));
-    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
+    @Override
+    public void preAddRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String name) throws IOException {
+      preAddRSGroupCalled = true;
+    }
 
-    rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
-    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
-    assertFalse(newGroupServers.contains(targetServer.getAddress()));
-    assertEquals(2, newGroupServers.size());
+    @Override
+    public void postAddRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String name) throws IOException {
+      postAddRSGroupCalled = true;
+    }
+
+    @Override
+    public void preMoveTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<TableName> tables, String targetGroup) throws IOException {
+      preMoveTablesCalled = true;
+    }
+
+    @Override
+    public void postMoveTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<TableName> tables, String targetGroup) throws IOException {
+      postMoveTablesCalled = true;
+    }
+
+    @Override
+    public void preMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, String targetGroup) throws IOException {
+      preMoveServersCalled = true;
+    }
+
+    @Override
+    public void postMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, String targetGroup) throws IOException {
+      postMoveServersCalled = true;
+    }
+
+    @Override
+    public void preBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String groupName) throws IOException {
+      preBalanceRSGroupCalled = true;
+    }
+
+    @Override
+    public void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String groupName, boolean balancerRan) throws IOException {
+      postBalanceRSGroupCalled = true;
+    }
   }
 }
