@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.datasources.hbase
+package org.apache.hadoop.hbase.spark.datasources
 
 import org.apache.hadoop.hbase.spark.AvroSerdes
 import org.apache.hadoop.hbase.util.Bytes

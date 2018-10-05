@@ -15,21 +15,17 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.datasources.hbase
+package org.apache.hadoop.hbase.spark.datasources
 
 import org.apache.avro.Schema
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.spark.Logging
-import org.apache.hadoop.hbase.spark.SchemaConverters
-import org.apache.hadoop.hbase.spark.datasources._
-import org.apache.hadoop.hbase.spark.hbase._
+import org.apache.yetus.audience.InterfaceAudience
+import org.apache.hadoop.hbase.spark.{Logging, SchemaConverters}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.sql.types._
 import org.json4s.jackson.JsonMethods._
 
 import scala.collection.mutable
 
-// Due the access issue defined in spark, we have to locate the file in this package.
 // The definition of each column cell, which may be composite type
 // TODO: add avro support
 @InterfaceAudience.Private

@@ -17,9 +17,8 @@
 
 package org.apache.hadoop.hbase.spark
 
-import org.apache.hadoop.hbase.spark.datasources.{DoubleSerDes, SerDes}
+import org.apache.hadoop.hbase.spark.datasources.{DataTypeParserWrapper, DoubleSerDes, HBaseTableCatalog}
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.sql.datasources.hbase.{DataTypeParserWrapper, HBaseTableCatalog}
 import org.apache.spark.sql.types._
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
 
