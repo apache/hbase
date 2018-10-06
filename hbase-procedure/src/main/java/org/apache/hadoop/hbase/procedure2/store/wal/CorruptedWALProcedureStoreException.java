@@ -15,19 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Thrown when a procedure WAL is corrupted
  */
 @InterfaceAudience.Private
-@InterfaceStability.Stable
 public class CorruptedWALProcedureStoreException extends HBaseIOException {
+
+  private static final long serialVersionUID = -3407300445435898074L;
+
   /** default constructor */
   public CorruptedWALProcedureStoreException() {
     super();
