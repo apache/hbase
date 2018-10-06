@@ -81,6 +81,8 @@ public class WALPrettyPrinter {
   // for JSON encoding
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
+  private long position;
+
   /**
    * Basic constructor that simply initializes values to reasonable defaults.
    */
@@ -121,7 +123,8 @@ public class WALPrettyPrinter {
    *          PrettyPrinter's output.
    */
   public WALPrettyPrinter(boolean outputValues, boolean outputJSON,
-      long sequence, String region, String row, boolean persistentOutput,
+      long sequence, String region, String row, boolean
+      persistentOutput,
       PrintStream out) {
     this.outputValues = outputValues;
     this.outputJSON = outputJSON;
@@ -269,7 +272,11 @@ public class WALPrettyPrinter {
       out.print("[");
       firstTxn = true;
     }
-    
+
+    if (position > 0) {
+      log.seek(position);
+    }
+
     try {
       WAL.Entry entry;
       while ((entry = log.next()) != null) {
@@ -293,6 +300,8 @@ public class WALPrettyPrinter {
           if (row == null || ((String) op.get("row")).equals(row)) {
             actions.add(op);
           }
+          op.put("total_size_sum", CellUtil.estimatedHeapSizeOf(cell));
+
         }
         if (actions.size() == 0)
           continue;
@@ -317,8 +326,11 @@ public class WALPrettyPrinter {
               out.println("    tag: " + op.get("tag"));
             }
             if (outputValues) out.println("    value: " + op.get("value"));
+            out.println("cell total size sum: " + op.get("total_size_sum"));
           }
         }
+        out.println("edit heap size: " + entry.getEdit().heapSize());
+        out.println("position: " + log.getPosition());
       }
     } finally {
       log.close();
@@ -377,6 +389,7 @@ public class WALPrettyPrinter {
     options.addOption("s", "sequence", true,
         "Sequence to filter by. Pass sequence number.");
     options.addOption("w", "row", true, "Row to filter by. Pass row name.");
+    options.addOption("g", "goto", true, "Position to seek to in the file");
 
     WALPrettyPrinter printer = new WALPrettyPrinter();
     CommandLineParser parser = new PosixParser();
@@ -400,6 +413,9 @@ public class WALPrettyPrinter {
         printer.setSequenceFilter(Long.parseLong(cmd.getOptionValue("s")));
       if (cmd.hasOption("w"))
         printer.setRowFilter(cmd.getOptionValue("w"));
+      if (cmd.hasOption("g")) {
+        printer.setPosition(Long.parseLong(cmd.getOptionValue("g")));
+      }
     } catch (ParseException e) {
       e.printStackTrace();
       HelpFormatter formatter = new HelpFormatter();
@@ -422,5 +438,9 @@ public class WALPrettyPrinter {
       printer.processFile(conf, file);
     }
     printer.endPersistentOutput();
+  }
+
+  public void setPosition(long position) {
+    this.position = position;
   }
 }
