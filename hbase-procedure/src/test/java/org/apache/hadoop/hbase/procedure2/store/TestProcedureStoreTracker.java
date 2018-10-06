@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker.BitSetNode;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -119,29 +118,29 @@ public class TestProcedureStoreTracker {
     tracker.insert(procs[0]);
     tracker.insert(procs[1], new long[] { procs[2], procs[3], procs[4] });
     assertFalse(tracker.isEmpty());
-    assertTrue(tracker.isUpdated());
+    assertTrue(tracker.isAllModified());
 
-    tracker.resetUpdates();
-    assertFalse(tracker.isUpdated());
+    tracker.resetModified();
+    assertFalse(tracker.isAllModified());
 
     for (int i = 0; i < 4; ++i) {
       tracker.update(procs[i]);
       assertFalse(tracker.isEmpty());
-      assertFalse(tracker.isUpdated());
+      assertFalse(tracker.isAllModified());
     }
 
     tracker.update(procs[4]);
     assertFalse(tracker.isEmpty());
-    assertTrue(tracker.isUpdated());
+    assertTrue(tracker.isAllModified());
 
     tracker.update(procs[5]);
     assertFalse(tracker.isEmpty());
-    assertTrue(tracker.isUpdated());
+    assertTrue(tracker.isAllModified());
 
     for (int i = 0; i < 5; ++i) {
       tracker.delete(procs[i]);
       assertFalse(tracker.isEmpty());
-      assertTrue(tracker.isUpdated());
+      assertTrue(tracker.isAllModified());
     }
     tracker.delete(procs[5]);
     assertTrue(tracker.isEmpty());
@@ -235,7 +234,7 @@ public class TestProcedureStoreTracker {
     for (long i : active) {
       tracker.insert(i);
     }
-    tracker.resetUpdates();
+    tracker.resetModified();
     for (long i : updated) {
       tracker.update(i);
     }
@@ -252,11 +251,11 @@ public class TestProcedureStoreTracker {
   BitSetNode buildBitSetNode(long[] active, long[] updated, long[] deleted) {
     BitSetNode bitSetNode = new BitSetNode(0L, false);
     for (long i : active) {
-      bitSetNode.update(i);
+      bitSetNode.insertOrUpdate(i);
     }
-    bitSetNode.resetUpdates();
+    bitSetNode.resetModified();
     for (long i : updated) {
-      bitSetNode.update(i);
+      bitSetNode.insertOrUpdate(i);
     }
     for (long i : deleted) {
       bitSetNode.delete(i);
@@ -276,9 +275,9 @@ public class TestProcedureStoreTracker {
     assertEquals(false, tracker.isEmpty());
 
     for (int i = 0; i < procIds.length; ++i) {
-      tracker.setDeletedIfSet(procIds[i] - 1);
-      tracker.setDeletedIfSet(procIds[i]);
-      tracker.setDeletedIfSet(procIds[i] + 1);
+      tracker.setDeletedIfModified(procIds[i] - 1);
+      tracker.setDeletedIfModified(procIds[i]);
+      tracker.setDeletedIfModified(procIds[i] + 1);
     }
     assertEquals(true, tracker.isEmpty());
 
@@ -289,7 +288,7 @@ public class TestProcedureStoreTracker {
     }
     assertEquals(false, tracker.isEmpty());
 
-    tracker.setDeletedIfSet(procIds);
+    tracker.setDeletedIfModified(procIds);
     assertEquals(true, tracker.isEmpty());
   }
 }
