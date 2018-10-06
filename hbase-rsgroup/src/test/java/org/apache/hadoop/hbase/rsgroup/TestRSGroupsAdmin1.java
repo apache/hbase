@@ -141,6 +141,8 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     String groupName = tablePrefix+"_foo";
     LOG.info("testNamespaceConstraint");
     rsGroupAdmin.addRSGroup(groupName);
+    assertTrue(observer.preAddRSGroupCalled);
+    assertTrue(observer.postAddRSGroupCalled);
     admin.createNamespace(NamespaceDescriptor.create(nsName)
         .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName)
         .build());
@@ -161,6 +163,8 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     //test add non-existent group
     admin.deleteNamespace(nsName);
     rsGroupAdmin.removeRSGroup(groupName);
+    assertTrue(observer.preRemoveRSGroupCalled);
+    assertTrue(observer.postRemoveRSGroupCalled);
     try {
       admin.createNamespace(NamespaceDescriptor.create(nsName)
           .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "foo")
