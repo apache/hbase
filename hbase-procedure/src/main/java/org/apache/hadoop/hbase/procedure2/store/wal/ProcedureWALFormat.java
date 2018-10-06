@@ -18,25 +18,22 @@
 
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Iterator;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALTrailer;
@@ -45,9 +42,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
  * Helper class that contains the WAL serialization utils.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public final class ProcedureWALFormat {
-  private static final Logger LOG = LoggerFactory.getLogger(ProcedureWALFormat.class);
 
   static final byte LOG_TYPE_STREAM = 0;
   static final byte LOG_TYPE_COMPACTED = 1;
@@ -60,6 +55,9 @@ public final class ProcedureWALFormat {
 
   @InterfaceAudience.Private
   public static class InvalidWALDataException extends IOException {
+
+    private static final long serialVersionUID = 5471733223070202196L;
+
     public InvalidWALDataException(String s) {
       super(s);
     }
@@ -75,9 +73,9 @@ public final class ProcedureWALFormat {
 
   private ProcedureWALFormat() {}
 
-  public static void load(final Iterator<ProcedureWALFile> logs,
-      final ProcedureStoreTracker tracker, final Loader loader) throws IOException {
-    final ProcedureWALFormatReader reader = new ProcedureWALFormatReader(tracker, loader);
+  public static void load(Iterator<ProcedureWALFile> logs, ProcedureStoreTracker tracker,
+      Loader loader) throws IOException {
+    ProcedureWALFormatReader reader = new ProcedureWALFormatReader(tracker, loader);
     tracker.setKeepDeletes(true);
     try {
       // Ignore the last log which is current active log.
@@ -93,8 +91,10 @@ public final class ProcedureWALFormat {
       reader.finish();
 
       // The tracker is now updated with all the procedures read from the logs
-      tracker.setPartialFlag(false);
-      tracker.resetUpdates();
+      if (tracker.isPartial()) {
+        tracker.setPartialFlag(false);
+      }
+      tracker.resetModified();
     } finally {
       tracker.setKeepDeletes(false);
     }
@@ -205,7 +205,7 @@ public final class ProcedureWALFormat {
   }
 
   public static void writeEntry(ByteSlot slot, ProcedureWALEntry.Type type,
-      Procedure proc, Procedure[] subprocs) throws IOException {
+      Procedure<?> proc, Procedure<?>[] subprocs) throws IOException {
     final ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(type);
     builder.addProcedure(ProcedureUtil.convertToProtoProcedure(proc));
@@ -217,17 +217,17 @@ public final class ProcedureWALFormat {
     builder.build().writeDelimitedTo(slot);
   }
 
-  public static void writeInsert(ByteSlot slot, Procedure proc)
+  public static void writeInsert(ByteSlot slot, Procedure<?> proc)
       throws IOException {
     writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_INIT, proc, null);
   }
 
-  public static void writeInsert(ByteSlot slot, Procedure proc, Procedure[] subprocs)
+  public static void writeInsert(ByteSlot slot, Procedure<?> proc, Procedure<?>[] subprocs)
       throws IOException {
     writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_INSERT, proc, subprocs);
   }
 
-  public static void writeUpdate(ByteSlot slot, Procedure proc)
+  public static void writeUpdate(ByteSlot slot, Procedure<?> proc)
       throws IOException {
     writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_UPDATE, proc, null);
   }
@@ -240,7 +240,7 @@ public final class ProcedureWALFormat {
     builder.build().writeDelimitedTo(slot);
   }
 
-  public static void writeDelete(ByteSlot slot, Procedure proc, long[] subprocs)
+  public static void writeDelete(ByteSlot slot, Procedure<?> proc, long[] subprocs)
       throws IOException {
     final ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(ProcedureWALEntry.Type.PROCEDURE_WAL_DELETE);

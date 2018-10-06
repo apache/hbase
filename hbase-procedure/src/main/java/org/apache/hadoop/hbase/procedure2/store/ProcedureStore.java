@@ -81,6 +81,7 @@ public interface ProcedureStore {
      * @throws IOException if there was an error fetching/deserializing the procedure
      * @return the next procedure in the iteration.
      */
+    @SuppressWarnings("rawtypes")
     Procedure next() throws IOException;
   }
 
@@ -173,7 +174,7 @@ public interface ProcedureStore {
    * @param proc the procedure to serialize and write to the store.
    * @param subprocs the newly created child of the proc.
    */
-  void insert(Procedure proc, Procedure[] subprocs);
+  void insert(Procedure<?> proc, Procedure<?>[] subprocs);
 
   /**
    * Serialize a set of new procedures.
@@ -182,14 +183,14 @@ public interface ProcedureStore {
    *
    * @param procs the procedures to serialize and write to the store.
    */
-  void insert(Procedure[] procs);
+  void insert(Procedure<?>[] procs);
 
   /**
    * The specified procedure was executed,
    * and the new state should be written to the store.
    * @param proc the procedure to serialize and write to the store.
    */
-  void update(Procedure proc);
+  void update(Procedure<?> proc);
 
   /**
    * The specified procId was removed from the executor,
@@ -205,7 +206,7 @@ public interface ProcedureStore {
    * @param parentProc the parent procedure to serialize and write to the store.
    * @param subProcIds the IDs of the sub-procedure to remove.
    */
-  void delete(Procedure parentProc, long[] subProcIds);
+  void delete(Procedure<?> parentProc, long[] subProcIds);
 
   /**
    * The specified procIds were removed from the executor,
