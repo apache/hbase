@@ -350,7 +350,7 @@ public class MasterRpcServices extends RSRpcServices
       throws IOException {
     // RpcServer at HM by default enable ByteBufferPool iff HM having user table region in it
     boolean reservoirEnabled = conf.getBoolean(RESERVOIR_ENABLED_KEY,
-        (LoadBalancer.isTablesOnMaster(conf) && !LoadBalancer.isSystemTablesOnlyOnMaster(conf)));
+        LoadBalancer.isMasterCanHostUserRegions(conf));
     try {
       return RpcServerFactory.createRpcServer(server, name, getServices(),
           bindAddress, // use final bindAddress for this server.
@@ -1524,11 +1524,7 @@ public class MasterRpcServices extends RSRpcServices
       final RpcController controller,
       final IsInMaintenanceModeRequest request) throws ServiceException {
     IsInMaintenanceModeResponse.Builder response = IsInMaintenanceModeResponse.newBuilder();
-    try {
-      response.setInMaintenanceMode(master.isInMaintenanceMode());
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+    response.setInMaintenanceMode(master.isInMaintenanceMode());
     return response.build();
   }
 
