@@ -2485,8 +2485,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private boolean shouldRejectRequestsFromClient(HRegion region) {
-    return regionServer.getReplicationSourceService().getSyncReplicationPeerInfoProvider()
-      .checkState(region.getRegionInfo().getTable(), RejectRequestsFromClientStateChecker.get());
+    TableName table = region.getRegionInfo().getTable();
+    ReplicationSourceService service = regionServer.getReplicationSourceService();
+    return service != null && service.getSyncReplicationPeerInfoProvider()
+            .checkState(table, RejectRequestsFromClientStateChecker.get());
   }
 
   private void rejectIfInStandByState(HRegion region) throws DoNotRetryIOException {

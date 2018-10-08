@@ -74,8 +74,7 @@ public class TestMaster {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestMaster.class);
-  private static final TableName TABLENAME =
-      TableName.valueOf("TestMaster");
+  private static final TableName TABLENAME = TableName.valueOf("TestMaster");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
   private static Admin admin;
 

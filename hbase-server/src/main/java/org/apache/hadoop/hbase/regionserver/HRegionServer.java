@@ -948,6 +948,7 @@ public class HRegionServer extends HasThread implements
       // Try and register with the Master; tell it we are here.  Break if server is stopped or the
       // clusterup flag is down or hdfs went wacky. Once registered successfully, go ahead and start
       // up all Services. Use RetryCounter to get backoff in case Master is struggling to come up.
+      LOG.debug("About to register with Master.");
       RetryCounterFactory rcf = new RetryCounterFactory(Integer.MAX_VALUE,
           this.sleeper.getPeriod(), 1000 * 60 * 5);
       RetryCounter rc = rcf.create();
@@ -1812,7 +1813,7 @@ public class HRegionServer extends HasThread implements
    */
   private void setupWALAndReplication() throws IOException {
     boolean isMasterNoTableOrSystemTableOnly = this instanceof HMaster &&
-      (!LoadBalancer.isTablesOnMaster(conf) || LoadBalancer.isSystemTablesOnlyOnMaster(conf));
+        !LoadBalancer.isMasterCanHostUserRegions(conf);
     WALFactory factory =
         new WALFactory(conf, serverName.toString(), !isMasterNoTableOrSystemTableOnly);
     if (!isMasterNoTableOrSystemTableOnly) {
