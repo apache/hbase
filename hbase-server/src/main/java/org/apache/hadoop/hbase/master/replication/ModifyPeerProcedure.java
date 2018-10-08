@@ -75,7 +75,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
    * all checks passes then the procedure can not be rolled back any more.
    */
   protected abstract void prePeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException;
+      throws IOException, ReplicationException, InterruptedException;
 
   protected abstract void updatePeerStorage(MasterProcedureEnv env) throws ReplicationException;
 
@@ -91,7 +91,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   protected abstract void postPeerModification(MasterProcedureEnv env)
       throws IOException, ReplicationException;
 
-  private void releaseLatch() {
+  protected void releaseLatch(MasterProcedureEnv env) {
     ProcedurePrepareLatch.releaseLatch(latch, this);
   }
 
@@ -241,7 +241,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, PeerModificationState state)
-      throws ProcedureSuspendedException {
+      throws ProcedureSuspendedException, InterruptedException {
     switch (state) {
       case PRE_PEER_MODIFICATION:
         try {
@@ -250,7 +250,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
           LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, " +
             "mark the procedure as failure and give up", getClass().getName(), peerId, e);
           setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
-          releaseLatch();
+          releaseLatch(env);
           return Flow.NO_MORE_STATE;
         } catch (ReplicationException e) {
           long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
@@ -330,7 +330,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
           LOG.warn("{} failed to call post CP hook for peer {}, " +
             "ignore since the procedure has already done", getClass().getName(), peerId, e);
         }
-        releaseLatch();
+        releaseLatch(env);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);

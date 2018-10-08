@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Semaphore;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -75,6 +76,9 @@ public class ReplicationPeerManager {
       SyncReplicationState.DOWNGRADE_ACTIVE,
       EnumSet.of(SyncReplicationState.STANDBY, SyncReplicationState.ACTIVE)));
 
+  // Only allow to add one sync replication peer concurrently
+  private final Semaphore syncReplicationPeerLock = new Semaphore(1);
+
   ReplicationPeerManager(ReplicationPeerStorage peerStorage, ReplicationQueueStorage queueStorage,
       ConcurrentMap<String, ReplicationPeerDescription> peers) {
     this.peerStorage = peerStorage;
@@ -105,6 +109,9 @@ public class ReplicationPeerManager {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
     checkPeerConfig(peerConfig);
+    if (peerConfig.isSyncReplication()) {
+      checkSyncReplicationPeerConfigConflict(peerConfig);
+    }
     if (peers.containsKey(peerId)) {
       throw new DoNotRetryIOException("Replication peer " + peerId + " already exists");
     }
@@ -385,6 +392,7 @@ public class ReplicationPeerManager {
           "Only support replicated table config for sync replication peer");
       }
     }
+
     Path remoteWALDir = new Path(peerConfig.getRemoteWALDir());
     if (!remoteWALDir.isAbsolute()) {
       throw new DoNotRetryIOException(
@@ -394,6 +402,19 @@ public class ReplicationPeerManager {
     if (remoteWALDirUri.getScheme() == null || remoteWALDirUri.getAuthority() == null) {
       throw new DoNotRetryIOException("The remote WAL directory " + peerConfig.getRemoteWALDir() +
         " is not qualified, you must provide scheme and authority");
+    }
+  }
+
+  private void checkSyncReplicationPeerConfigConflict(ReplicationPeerConfig peerConfig)
+      throws DoNotRetryIOException {
+    for (TableName tableName : peerConfig.getTableCFsMap().keySet()) {
+      for (Map.Entry<String, ReplicationPeerDescription> entry : peers.entrySet()) {
+        ReplicationPeerConfig rpc = entry.getValue().getPeerConfig();
+        if (rpc.isSyncReplication() && rpc.getTableCFsMap().containsKey(tableName)) {
+          throw new DoNotRetryIOException(
+              "Table " + tableName + " has been replicated by peer " + entry.getKey());
+        }
+      }
     }
   }
 
@@ -492,5 +513,13 @@ public class ReplicationPeerManager {
       return StringUtils.isBlank(s2);
     }
     return s1.equals(s2);
+  }
+
+  public void acquireSyncReplicationPeerLock() throws InterruptedException {
+    syncReplicationPeerLock.acquire();
+  }
+
+  public void releaseSyncReplicationPeerLock() {
+    syncReplicationPeerLock.release();
   }
 }
