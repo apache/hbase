@@ -299,11 +299,14 @@ class RegionLocationFinder {
   }
 
   public void refreshAndWait(Collection<RegionInfo> hris) {
-    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures = new ArrayList<>(hris.size());
+    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures =
+        new ArrayList<>(hris.size());
     for (RegionInfo hregionInfo : hris) {
       regionLocationFutures.add(asyncGetBlockDistribution(hregionInfo));
     }
     int index = 0;
+    LOG.info("Refreshing block distribution cache for {} regions (Can take a while on big cluster)",
+        hris.size());
     for (RegionInfo hregionInfo : hris) {
       ListenableFuture<HDFSBlocksDistribution> future = regionLocationFutures
           .get(index);
@@ -318,6 +321,7 @@ class RegionLocationFinder {
       }
       index++;
     }
+    LOG.info("Finished refreshing block distribution cache for {} regions", hris.size());
   }
 
   // For test
