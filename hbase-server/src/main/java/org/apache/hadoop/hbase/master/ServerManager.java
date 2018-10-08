@@ -715,19 +715,22 @@ public class ServerManager {
    * RegionServers to check-in.
    */
   private int getMinToStart() {
-    // One server should be enough to get us off the ground.
-    int requiredMinToStart = 1;
-    if (LoadBalancer.isTablesOnMaster(master.getConfiguration())) {
-      if (LoadBalancer.isSystemTablesOnlyOnMaster(master.getConfiguration())) {
-        // If Master is carrying regions but NOT user-space regions, it
-        // still shows as a 'server'. We need at least one more server to check
-        // in before we can start up so set defaultMinToStart to 2.
-        requiredMinToStart = requiredMinToStart + 1;
-      }
+    if (master.isInMaintenanceMode()) {
+      // If in maintenance mode, then master hosting meta will be the only server available
+      return 1;
     }
+
+    int minimumRequired = 1;
+    if (LoadBalancer.isTablesOnMaster(master.getConfiguration()) &&
+        LoadBalancer.isSystemTablesOnlyOnMaster(master.getConfiguration())) {
+      // If Master is carrying regions it will show up as a 'server', but is not handling user-
+      // space regions, so we need a second server.
+      minimumRequired = 2;
+    }
+
     int minToStart = this.master.getConfiguration().getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
-    // Ensure we are never less than requiredMinToStart else stuff won't work.
-    return minToStart == -1 || minToStart < requiredMinToStart? requiredMinToStart: minToStart;
+    // Ensure we are never less than minimumRequired else stuff won't work.
+    return Math.max(minToStart, minimumRequired);
   }
 
   /**
