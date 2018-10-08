@@ -199,14 +199,16 @@ public class MasterFileSystem {
   }
 
   /**
-   * @return HBase root dir.
+   * @return HBase root directory.
    */
   public Path getRootDir() {
     return this.rootdir;
   }
 
   /**
-   * @return HBase root log dir.
+   * @return HBase WAL root directory, usually the same as {@link #getRootDir()} but can be
+   *   different if hfiles on one fs and WALs on another. The 'WALs' dir gets made underneath
+   *   the root dir returned here; i.e. this is '/hbase', not '/hbase/WALs'.
    */
   public Path getWALRootDir() { return this.walRootDir; }
 

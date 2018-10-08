@@ -137,8 +137,10 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       throws IOException {
     UnassignRegionStateData.Builder state = UnassignRegionStateData.newBuilder()
         .setTransitionState(getTransitionState())
-        .setHostingServer(ProtobufUtil.toServerName(this.hostingServer))
         .setRegionInfo(ProtobufUtil.toRegionInfo(getRegionInfo()));
+    if (this.hostingServer != null) {
+      state.setHostingServer(ProtobufUtil.toServerName(this.hostingServer));
+    }
     if (this.destinationServer != null) {
       state.setDestinationServer(ProtobufUtil.toServerName(destinationServer));
     }
@@ -161,9 +163,10 @@ public class UnassignProcedure extends RegionTransitionProcedure {
         serializer.deserialize(UnassignRegionStateData.class);
     setTransitionState(state.getTransitionState());
     setRegionInfo(ProtobufUtil.toRegionInfo(state.getRegionInfo()));
-    this.hostingServer = ProtobufUtil.toServerName(state.getHostingServer());
     // The 'force' flag is the override flag in unassign.
     setOverride(state.getForce());
+    this.hostingServer =
+        state.hasHostingServer()? ProtobufUtil.toServerName(state.getHostingServer()): null;
     if (state.hasDestinationServer()) {
       this.destinationServer = ProtobufUtil.toServerName(state.getDestinationServer());
     }
@@ -259,6 +262,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
       // This exception comes from ServerCrashProcedure AFTER log splitting. Its a signaling
       // exception. SCP found this region as a RIT during its processing of the crash.  Its call
       // into here says it is ok to let this procedure go complete.
+      LOG.info("Safe to let procedure move to next step; {}", this);
       return true;
     }
     if (exception instanceof NotServingRegionException) {
@@ -333,6 +337,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
           // Return true; wake up the procedure so we can act on proceed.
           return true;
         }
+        LOG.info("Failed expiration and log splitting not done on {}", serverName);
       }
       // Return false so this procedure stays in suspended state. It will be woken up by the
       // ServerCrashProcedure that was scheduled when we called #expireServer above. SCP calls

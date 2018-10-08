@@ -434,7 +434,8 @@ public class RegionStates {
 
     @Override
     public String toString() {
-      return String.format("ServerStateNode(%s)", getServerName());
+      return String.format("name=%s, state=%s, regionCount=%d", getServerName(), getState(),
+          getRegionCount());
     }
   }
 
@@ -1093,9 +1094,10 @@ public class RegionStates {
    * you could mess up online server accounting. TOOD: Review usage and convert
    * to {@link #getServerNode(ServerName)} where we can.
    */
-  public ServerStateNode getOrCreateServer(final ServerName serverName) {
+  ServerStateNode getOrCreateServer(final ServerName serverName) {
     ServerStateNode node = serverMap.get(serverName);
     if (node == null) {
+      LOG.trace("CREATING! {}", serverName, new RuntimeException("WHERE AM I?"));
       node = new ServerStateNode(serverName);
       ServerStateNode oldNode = serverMap.putIfAbsent(serverName, node);
       node = oldNode != null ? oldNode : node;
@@ -1107,7 +1109,7 @@ public class RegionStates {
     serverMap.remove(serverName);
   }
 
-  protected ServerStateNode getServerNode(final ServerName serverName) {
+  public ServerStateNode getServerNode(final ServerName serverName) {
     return serverMap.get(serverName);
   }
 
@@ -1121,16 +1123,26 @@ public class RegionStates {
     return numServers == 0 ? 0.0: (double)totalLoad / (double)numServers;
   }
 
-  public ServerStateNode addRegionToServer(final RegionStateNode regionNode) {
-    ServerStateNode serverNode = getOrCreateServer(regionNode.getRegionLocation());
-    serverNode.addRegion(regionNode);
-    return serverNode;
+  /**
+   * Add reference to region to serverstatenode.
+   * DOES NOT AUTO-CREATE ServerStateNode instance.
+   * @return Return serverstatenode or null if none.
+   */
+  ServerStateNode addRegionToServer(final RegionStateNode regionNode) {
+    ServerStateNode ssn = getServerNode(regionNode.getRegionLocation());
+    if (ssn == null) {
+      return ssn;
+    }
+    ssn.addRegion(regionNode);
+    return ssn;
   }
 
   public ServerStateNode removeRegionFromServer(final ServerName serverName,
       final RegionStateNode regionNode) {
-    ServerStateNode serverNode = getOrCreateServer(serverName);
-    serverNode.removeRegion(regionNode);
+    ServerStateNode serverNode = getServerNode(serverName);
+    if (serverNode != null) {
+      serverNode.removeRegion(regionNode);
+    }
     return serverNode;
   }
 

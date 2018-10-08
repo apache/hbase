@@ -77,6 +77,11 @@ public class MasterWalManager {
 
   // The Path to the old logs dir
   private final Path oldLogDir;
+
+  /**
+   * This is the hbase rootdir.
+   * We'll put the WALs under this dir.
+   */
   private final Path rootDir;
 
   // create the split log lock
@@ -163,6 +168,22 @@ public class MasterWalManager {
   }
 
   /**
+   * @return Returns the WALs dir under <code>rootDir</code>
+   */
+  Path getWALDirPath() {
+    return new Path(this.rootDir, HConstants.HREGION_LOGDIR_NAME);
+  }
+
+  /**
+   * @return List of all RegionServer WAL dirs; i.e. this.rootDir/HConstants.HREGION_LOGDIR_NAME.
+   */
+  public FileStatus[] getWALDirPaths(final PathFilter filter) throws IOException {
+    Path walDirPath = getWALDirPath();
+    FileStatus[] walDirForServerNames = FSUtils.listStatus(fs, walDirPath, filter);
+    return walDirForServerNames == null? new FileStatus[0]: walDirForServerNames;
+  }
+
+  /**
    * Inspect the log directory to find dead servers which need recovery work
    * @return A set of ServerNames which aren't running but still have WAL files left in file system
    * @deprecated With proc-v2, we can record the crash server with procedure store, so do not need
@@ -176,7 +197,7 @@ public class MasterWalManager {
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 
     Set<ServerName> serverNames = new HashSet<>();
-    Path logsDirPath = new Path(this.rootDir, HConstants.HREGION_LOGDIR_NAME);
+    Path logsDirPath = getWALDirPath();
 
     do {
       if (services.isStopped()) {
@@ -257,10 +278,50 @@ public class MasterWalManager {
     splitLog(serverNames, META_FILTER);
   }
 
+  /**
+   * @return True if a WAL directory exists (will return true also if WALs found in
+   *   servername'-splitting' too).
+   */
+  boolean isWALDirectoryNameWithWALs(ServerName serverName) {
+    FileStatus [] fss = null;
+    try {
+      // 'startsWith' will also return dirs ending in AbstractFSWALProvider.SPLITTING_EXT
+      fss = getWALDirPaths(p -> p.getName().startsWith(serverName.toString()));
+    } catch (IOException ioe) {
+      LOG.warn("{}", serverName, ioe);
+      // Something wrong reading from fs. Returning 'true' to bring on more fs activity
+      return true;
+    }
+    if (fss != null) {
+      for (FileStatus fileStatus: fss) {
+        if (fileStatus.isDirectory()) {
+          // Not testing for existence; presuming exists if we got it out of getWALDirPaths
+          // listing. I used to test for presence of WAL and return false if empty but it can be
+          // empty if a clean shutdown. Even clean shutdowns need to be recovered so the meta
+          // and namespace assigns get triggered.
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Depends on current FS Layout!
+   * @return The Path to the WAL directory for <code>serverName</code>
+   */
+  Path getWALDirectoryName(ServerName serverName) {
+    return new Path(this.rootDir, AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
+  }
+
+  /**
+   * Finds WAL dirs for <code>serverNames</code> and renames them with '-splitting' suffix.
+   * @return List of '-splitting' directories that pertain to <code>serverNames</code>
+   */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UL_UNRELEASED_LOCK", justification=
       "We only release this lock when we set it. Updates to code that uses it should verify use " +
       "of the guard boolean.")
-  private List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
+  List<Path> createAndGetLogDirs(final Set<ServerName> serverNames) throws IOException {
     List<Path> logDirs = new ArrayList<>();
     boolean needReleaseLock = false;
     if (!this.services.isInitialized()) {
@@ -271,8 +332,8 @@ public class MasterWalManager {
     }
     try {
       for (ServerName serverName : serverNames) {
-        Path logDir = new Path(this.rootDir,
-          AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
+        Path logDir = getWALDirectoryName(serverName);
+        // This adds the -splitting suffix to logDir.
         Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
         // Rename the directory so a rogue RS doesn't create more WALs
         if (fs.exists(logDir)) {
@@ -312,7 +373,7 @@ public class MasterWalManager {
    */
   public void splitLog(final Set<ServerName> serverNames, PathFilter filter) throws IOException {
     long splitTime = 0, splitLogSize = 0;
-    List<Path> logDirs = getLogDirs(serverNames);
+    List<Path> logDirs = createAndGetLogDirs(serverNames);
 
     splitLogManager.handleDeadWorkers(serverNames);
     splitTime = EnvironmentEdgeManager.currentTime();

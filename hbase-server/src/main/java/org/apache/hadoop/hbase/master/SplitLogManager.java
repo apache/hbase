@@ -448,7 +448,7 @@ public class SplitLogManager {
       }
       deadWorkers.add(workerName);
     }
-    LOG.info("dead splitlog worker " + workerName);
+    LOG.debug("Dead splitlog worker {}", workerName);
   }
 
   void handleDeadWorkers(Set<ServerName> serverNames) {
@@ -458,7 +458,7 @@ public class SplitLogManager {
       }
       deadWorkers.addAll(serverNames);
     }
-    LOG.info("dead splitlog workers " + serverNames);
+    LOG.debug("Dead splitlog workers {}", serverNames);
   }
 
   /**
