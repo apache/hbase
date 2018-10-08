@@ -187,7 +187,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.MasterMaintenanceModeTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -304,9 +303,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Tracker for region normalizer state
   private RegionNormalizerTracker regionNormalizerTracker;
 
-  //Tracker for master maintenance mode setting
-  private MasterMaintenanceModeTracker maintenanceModeTracker;
-
   private ClusterSchemaService clusterSchemaService;
 
   public static final String HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS =
@@ -416,6 +412,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   /** jetty server for master to redirect requests to regionserver infoServer */
   private Server masterJettyServer;
 
+  // Determine if we should do normal startup or minimal "single-user" mode with no region
+  // servers and no user tables. Useful for repair and recovery of hbase:meta
+  private final boolean maintenanceMode;
+  static final String MAINTENANCE_MODE = "hbase.master.maintenance_mode";
+
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
     private final int regionServerInfoPort;
@@ -475,6 +476,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     super(conf);
     TraceUtil.initTracer(conf);
     try {
+      if (conf.getBoolean(MAINTENANCE_MODE, false)) {
+        LOG.info("Detected {}=true via configuration.", MAINTENANCE_MODE);
+        maintenanceMode = true;
+      } else if (Boolean.getBoolean(MAINTENANCE_MODE)) {
+        LOG.info("Detected {}=true via environment variables.", MAINTENANCE_MODE);
+        maintenanceMode = true;
+      } else {
+        maintenanceMode = false;
+      }
+
       this.rsFatals = new MemoryBoundedLogMessageBuffer(
           conf.getLong("hbase.master.buffer.for.rs.fatals", 1 * 1024 * 1024));
       LOG.info("hbase.rootdir=" + getRootDir() +
@@ -659,6 +670,9 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   @Override
   protected void waitForMasterActive(){
+    if (maintenanceMode) {
+      return;
+    }
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(conf);
     while (!(tablesOnMaster && activeMaster) && !isStopped() && !isAborted()) {
       sleeper.sleep();
@@ -738,9 +752,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
-
-    this.maintenanceModeTracker = new MasterMaintenanceModeTracker(zooKeeper);
-    this.maintenanceModeTracker.start();
 
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
@@ -872,28 +883,32 @@ public class HMaster extends HRegionServer implements MasterServices {
             conf, this.clusterConnection);
     tableCFsUpdater.copyTableCFs();
 
-    // Add the Observer to delete quotas on table deletion before starting all CPs by
-    // default with quota support, avoiding if user specifically asks to not load this Observer.
-    if (QuotaUtil.isQuotaEnabled(conf)) {
-      updateConfigurationForQuotasObserver(conf);
+    if (!maintenanceMode) {
+      // Add the Observer to delete quotas on table deletion before starting all CPs by
+      // default with quota support, avoiding if user specifically asks to not load this Observer.
+      if (QuotaUtil.isQuotaEnabled(conf)) {
+        updateConfigurationForQuotasObserver(conf);
+      }
+      // initialize master side coprocessors before we start handling requests
+      status.setStatus("Initializing master coprocessors");
+      this.cpHost = new MasterCoprocessorHost(this, this.conf);
     }
-    // initialize master side coprocessors before we start handling requests
-    status.setStatus("Initializing master coprocessors");
-    this.cpHost = new MasterCoprocessorHost(this, this.conf);
 
     status.setStatus("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
-    if (assignmentManager.getRegionStates().getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO)
-      .isOffline()) {
-      Optional<Procedure<MasterProcedureEnv>> optProc = procedureExecutor.getProcedures().stream()
-        .filter(p -> p instanceof InitMetaProcedure).findAny();
-      if (optProc.isPresent()) {
-        initMetaProc = (InitMetaProcedure) optProc.get();
-      } else {
+    // Print out state of hbase:meta on startup; helps debugging.
+    RegionState rs = this.assignmentManager.getRegionStates().
+        getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    LOG.info("hbase:meta {}", rs);
+    if (rs.isOffline()) {
+      Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
+          .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
+          initMetaProc = optProc.orElseGet(() -> {
         // schedule an init meta procedure if meta has not been deployed yet
-        initMetaProc = new InitMetaProcedure();
-        procedureExecutor.submitProcedure(initMetaProc);
-      }
+        InitMetaProcedure temp = new InitMetaProcedure();
+        procedureExecutor.submitProcedure(temp);
+        return temp;
+      });
     }
     if (this.balancer instanceof FavoredNodesPromoter) {
       favoredNodesManager = new FavoredNodesManager(this);
@@ -934,7 +949,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // This is the FIRST attempt at going to hbase:meta. Meta on-lining is going on in background
     // as procedures run -- in particular SCPs for crashed servers... One should put up hbase:meta
     // if it is down. It may take a while to come online. So, wait here until meta if for sure
-    // available. Thats what waitUntilMetaOnline does.
+    // available. That's what waitForMetaOnline does.
     if (!waitForMetaOnline()) {
       return;
     }
@@ -942,7 +957,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // The below depends on hbase:meta being online.
     this.tableStateManager.start();
     // Initialize after meta is up as below scans meta
-    if (favoredNodesManager != null) {
+    if (favoredNodesManager != null && !maintenanceMode) {
       SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
           new SnapshotOfRegionAssignmentFromMeta(getConnection());
       snapshotOfRegionAssignment.initialize();
@@ -994,6 +1009,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     configurationManager.registerObserver(this.logCleaner);
     // Set master as 'initialized'.
     setInitialized(true);
+
+    if (maintenanceMode) {
+      LOG.info("Detected repair mode, skipping final initialization steps.");
+      return;
+    }
+
     assignmentManager.checkIfShouldMoveSystemRegionAsync();
     status.setStatus("Assign meta replicas");
     MasterMetaBootstrap metaBootstrap = createMetaBootstrap();
@@ -2977,11 +2998,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return true if master is in maintenanceMode
    */
   @Override
-  public boolean isInMaintenanceMode() throws IOException {
-    if (!isInitialized()) {
-      throw new PleaseHoldException("Master is initializing");
-    }
-    return maintenanceModeTracker.isInMaintenanceMode();
+  public boolean isInMaintenanceMode() {
+    return maintenanceMode;
   }
 
   @VisibleForTesting
@@ -3500,14 +3518,9 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   public boolean isBalancerOn() {
-    try {
-      if (null == loadBalancerTracker || isInMaintenanceMode()) {
-        return false;
-      }
-    } catch (IOException e) {
-      return false;
-    }
-    return loadBalancerTracker.isBalancerOn();
+    return !isInMaintenanceMode()
+        && loadBalancerTracker != null
+        && loadBalancerTracker.isBalancerOn();
   }
 
   /**
@@ -3515,12 +3528,9 @@ public class HMaster extends HRegionServer implements MasterServices {
    * false is returned.
    */
   public boolean isNormalizerOn() {
-    try {
-      return (null == regionNormalizerTracker || isInMaintenanceMode()) ?
-          false: regionNormalizerTracker.isNormalizerOn();
-    } catch (IOException e) {
-      return false;
-    }
+    return !isInMaintenanceMode()
+        && regionNormalizerTracker != null
+        && regionNormalizerTracker.isNormalizerOn();
   }
 
   /**
@@ -3531,14 +3541,9 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   @Override
   public boolean isSplitOrMergeEnabled(MasterSwitchType switchType) {
-    try {
-      if (null == splitOrMergeTracker || isInMaintenanceMode()) {
-        return false;
-      }
-    } catch (IOException e) {
-      return false;
-    }
-    return splitOrMergeTracker.isSplitOrMergeEnabled(switchType);
+    return !isInMaintenanceMode()
+        && splitOrMergeTracker != null
+        && splitOrMergeTracker.isSplitOrMergeEnabled(switchType);
   }
 
   /**

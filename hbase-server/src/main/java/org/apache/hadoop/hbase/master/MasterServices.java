@@ -350,7 +350,7 @@ public interface MasterServices extends Server {
    * @return true if master is in maintanceMode
    * @throws IOException if the inquiry failed due to an IO problem
    */
-  boolean isInMaintenanceMode() throws IOException;
+  boolean isInMaintenanceMode();
 
   /**
    * Abort a procedure.

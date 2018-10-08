@@ -926,6 +926,7 @@ public class HRegionServer extends HasThread implements
       // Try and register with the Master; tell it we are here.  Break if
       // server is stopped or the clusterup flag is down or hdfs went wacky.
       // Once registered successfully, go ahead and start up all Services.
+      LOG.debug("About to register with Master.");
       while (keepLooping()) {
         RegionServerStartupResponse w = reportForDuty();
         if (w == null) {
