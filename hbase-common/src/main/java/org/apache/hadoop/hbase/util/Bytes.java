@@ -752,16 +752,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_LONG || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    if (UNSAFE_UNALIGNED) {
-      return toLongUnsafe(bytes, offset);
-    } else {
-      long l = 0;
-      for(int i = offset; i < offset + length; i++) {
-        l <<= 8;
-        l ^= bytes[i] & 0xFF;
-      }
-      return l;
-    }
+    return ConverterHolder.BEST_CONVERTER.toLong(bytes, offset, length);
   }
 
   private static IllegalArgumentException
@@ -793,16 +784,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a long at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UNSAFE_UNALIGNED) {
-      return putLongUnsafe(bytes, offset, val);
-    } else {
-      for(int i = offset + 7; i > offset; i--) {
-        bytes[i] = (byte) val;
-        val >>>= 8;
-      }
-      bytes[offset] = (byte) val;
-      return offset + SIZEOF_LONG;
-    }
+    return ConverterHolder.BEST_CONVERTER.putLong(bytes, offset, val);
   }
 
   /**
@@ -948,16 +930,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_INT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
-    if (UNSAFE_UNALIGNED) {
-      return toIntUnsafe(bytes, offset);
-    } else {
-      int n = 0;
-      for(int i = offset; i < (offset + length); i++) {
-        n <<= 8;
-        n ^= bytes[i] & 0xFF;
-      }
-      return n;
-    }
+    return ConverterHolder.BEST_CONVERTER.toInt(bytes, offset, length);
   }
 
   /**
@@ -1044,16 +1017,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put an int at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UNSAFE_UNALIGNED) {
-      return putIntUnsafe(bytes, offset, val);
-    } else {
-      for(int i= offset + 3; i > offset; i--) {
-        bytes[i] = (byte) val;
-        val >>>= 8;
-      }
-      bytes[offset] = (byte) val;
-      return offset + SIZEOF_INT;
-    }
+    return ConverterHolder.BEST_CONVERTER.putInt(bytes, offset, val);
   }
 
   /**
@@ -1118,15 +1082,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    if (UNSAFE_UNALIGNED) {
-      return toShortUnsafe(bytes, offset);
-    } else {
-      short n = 0;
-      n = (short) ((n ^ bytes[offset]) & 0xFF);
-      n = (short) (n << 8);
-      n = (short) ((n ^ bytes[offset+1]) & 0xFF);
-      return n;
-   }
+    return ConverterHolder.BEST_CONVERTER.toShort(bytes, offset, length);
   }
 
   /**
@@ -1156,14 +1112,7 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a short at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UNSAFE_UNALIGNED) {
-      return putShortUnsafe(bytes, offset, val);
-    } else {
-      bytes[offset+1] = (byte) val;
-      val >>= 8;
-      bytes[offset] = (byte) val;
-      return offset + SIZEOF_SHORT;
-    }
+    return ConverterHolder.BEST_CONVERTER.putShort(bytes, offset, val);
   }
 
   /**
@@ -1396,9 +1345,159 @@ public class Bytes implements Comparable<Bytes> {
     );
   }
 
+  static abstract class Converter {
+    abstract long toLong(byte[] bytes, int offset, int length);
+    abstract int putLong(byte[] bytes, int offset, long val);
+
+    abstract int toInt(byte[] bytes, int offset, final int length);
+    abstract int putInt(byte[] bytes, int offset, int val);
+
+    abstract short toShort(byte[] bytes, int offset, final int length);
+    abstract int putShort(byte[] bytes, int offset, short val);
+
+  }
+
   @VisibleForTesting
   static Comparer<byte[]> lexicographicalComparerJavaImpl() {
     return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
+  }
+
+  static class ConverterHolder {
+    static final String UNSAFE_CONVERTER_NAME =
+            ConverterHolder.class.getName() + "$UnsafeConverter";
+
+    static final Converter BEST_CONVERTER = getBestConverter();
+    /**
+     * Returns the Unsafe-using Converter, or falls back to the pure-Java
+     * implementation if unable to do so.
+     */
+    static Converter getBestConverter() {
+      try {
+        Class<?> theClass = Class.forName(UNSAFE_CONVERTER_NAME);
+
+        // yes, UnsafeComparer does implement Comparer<byte[]>
+        @SuppressWarnings("unchecked")
+        Converter converter = (Converter) theClass.getConstructor().newInstance();
+        return converter;
+      } catch (Throwable t) { // ensure we really catch *everything*
+        return PureJavaConverter.INSTANCE;
+      }
+    }
+
+    protected static final class PureJavaConverter extends Converter {
+      static final PureJavaConverter INSTANCE = new PureJavaConverter();
+
+      private PureJavaConverter() {}
+
+      @Override
+      long toLong(byte[] bytes, int offset, int length) {
+        long l = 0;
+        for(int i = offset; i < offset + length; i++) {
+          l <<= 8;
+          l ^= bytes[i] & 0xFF;
+        }
+        return l;
+      }
+
+      @Override
+      int putLong(byte[] bytes, int offset, long val) {
+        for(int i = offset + 7; i > offset; i--) {
+          bytes[i] = (byte) val;
+          val >>>= 8;
+        }
+        bytes[offset] = (byte) val;
+        return offset + SIZEOF_LONG;
+      }
+
+      @Override
+      int toInt(byte[] bytes, int offset, int length) {
+        int n = 0;
+        for(int i = offset; i < (offset + length); i++) {
+          n <<= 8;
+          n ^= bytes[i] & 0xFF;
+        }
+        return n;
+      }
+
+      @Override
+      int putInt(byte[] bytes, int offset, int val) {
+        for(int i= offset + 3; i > offset; i--) {
+          bytes[i] = (byte) val;
+          val >>>= 8;
+        }
+        bytes[offset] = (byte) val;
+        return offset + SIZEOF_INT;
+      }
+
+      @Override
+      short toShort(byte[] bytes, int offset, int length) {
+        short n = 0;
+        n = (short) ((n ^ bytes[offset]) & 0xFF);
+        n = (short) (n << 8);
+        n ^= (short) (bytes[offset+1] & 0xFF);
+        return n;
+      }
+
+      @Override
+      int putShort(byte[] bytes, int offset, short val) {
+        bytes[offset+1] = (byte) val;
+        val >>= 8;
+        bytes[offset] = (byte) val;
+        return offset + SIZEOF_SHORT;
+      }
+    }
+
+    protected static final class UnsafeConverter extends Converter {
+
+      static final Unsafe theUnsafe;
+
+      public UnsafeConverter() {}
+
+      static {
+        if (UNSAFE_UNALIGNED) {
+          theUnsafe = UnsafeAccess.theUnsafe;
+        } else {
+          // It doesn't matter what we throw;
+          // it's swallowed in getBestComparer().
+          throw new Error();
+        }
+
+        // sanity check - this should never fail
+        if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
+          throw new AssertionError();
+        }
+      }
+
+      @Override
+      long toLong(byte[] bytes, int offset, int length) {
+        return UnsafeAccess.toLong(bytes, offset);
+      }
+
+      @Override
+      int putLong(byte[] bytes, int offset, long val) {
+        return UnsafeAccess.putLong(bytes, offset, val);
+      }
+
+      @Override
+      int toInt(byte[] bytes, int offset, int length) {
+        return UnsafeAccess.toInt(bytes, offset);
+      }
+
+      @Override
+      int putInt(byte[] bytes, int offset, int val) {
+        return UnsafeAccess.putInt(bytes, offset, val);
+      }
+
+      @Override
+      short toShort(byte[] bytes, int offset, int length) {
+        return UnsafeAccess.toShort(bytes, offset);
+      }
+
+      @Override
+      int putShort(byte[] bytes, int offset, short val) {
+        return UnsafeAccess.putShort(bytes, offset, val);
+      }
+    }
   }
 
   /**

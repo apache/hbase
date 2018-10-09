@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -342,19 +341,13 @@ public class FuzzyRowFilter extends FilterBase {
     }
     length = Math.min(length, fuzzyKeyBytes.length);
     int numWords = length / Bytes.SIZEOF_LONG;
-    int offsetAdj = offset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
 
     int j = numWords << 3; // numWords * SIZEOF_LONG;
 
     for (int i = 0; i < j; i += Bytes.SIZEOF_LONG) {
-
-      long fuzzyBytes =
-          UnsafeAccess.theUnsafe.getLong(fuzzyKeyBytes, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) i);
-      long fuzzyMeta =
-          UnsafeAccess.theUnsafe.getLong(fuzzyKeyMeta, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) i);
-      long rowValue = UnsafeAccess.theUnsafe.getLong(row, offsetAdj + (long) i);
+      long fuzzyBytes = Bytes.toLong(fuzzyKeyBytes, i);
+      long fuzzyMeta = Bytes.toLong(fuzzyKeyMeta, i);
+      long rowValue = Bytes.toLong(row, offset + i);
       if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
@@ -364,13 +357,9 @@ public class FuzzyRowFilter extends FilterBase {
     int off = j;
 
     if (length - off >= Bytes.SIZEOF_INT) {
-      int fuzzyBytes =
-          UnsafeAccess.theUnsafe.getInt(fuzzyKeyBytes, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) off);
-      int fuzzyMeta =
-          UnsafeAccess.theUnsafe.getInt(fuzzyKeyMeta, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) off);
-      int rowValue = UnsafeAccess.theUnsafe.getInt(row, offsetAdj + (long) off);
+      int fuzzyBytes = Bytes.toInt(fuzzyKeyBytes, off);
+      int fuzzyMeta = Bytes.toInt(fuzzyKeyMeta, off);
+      int rowValue = Bytes.toInt(row, offset + off);
       if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
@@ -379,13 +368,9 @@ public class FuzzyRowFilter extends FilterBase {
     }
 
     if (length - off >= Bytes.SIZEOF_SHORT) {
-      short fuzzyBytes =
-          UnsafeAccess.theUnsafe.getShort(fuzzyKeyBytes, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) off);
-      short fuzzyMeta =
-          UnsafeAccess.theUnsafe.getShort(fuzzyKeyMeta, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) off);
-      short rowValue = UnsafeAccess.theUnsafe.getShort(row, offsetAdj + (long) off);
+      short fuzzyBytes = Bytes.toShort(fuzzyKeyBytes, off);
+      short fuzzyMeta = Bytes.toShort(fuzzyKeyMeta, off);
+      short rowValue = Bytes.toShort(row, offset + off);
       if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
         // We always return NEXT_EXISTS
         // even if it does not (in this case getNextForFuzzyRule

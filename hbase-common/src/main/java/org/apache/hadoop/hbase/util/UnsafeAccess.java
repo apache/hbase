@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -42,6 +43,9 @@ public final class UnsafeAccess {
 
   /** The offset to the first element in a byte array. */
   public static final int BYTE_ARRAY_BASE_OFFSET;
+
+  public static final boolean LITTLE_ENDIAN =
+    ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
 
   // This number limits the number of bytes to copy per call to Unsafe's
   // copyMemory method. A limit is imposed to allow for safepoint polling
@@ -154,5 +158,268 @@ public final class UnsafeAccess {
       destBase = dest.array();
     }
     unsafeCopy(srcBase, srcAddress, destBase, destAddress, length);
+  }
+
+  // APIs to read primitive data from a byte[] using Unsafe way
+  /**
+   * Converts a byte array to a short value considering it was written in big-endian format.
+   * @param bytes byte array
+   * @param offset offset into array
+   * @return the short value
+   */
+  public static short toShort(byte[] bytes, int offset) {
+    if (LITTLE_ENDIAN) {
+      return Short.reverseBytes(theUnsafe.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
+    } else {
+      return theUnsafe.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
+    }
+  }
+
+  /**
+   * Converts a byte array to an int value considering it was written in big-endian format.
+   * @param bytes byte array
+   * @param offset offset into array
+   * @return the int value
+   */
+  public static int toInt(byte[] bytes, int offset) {
+    if (LITTLE_ENDIAN) {
+      return Integer.reverseBytes(theUnsafe.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
+    } else {
+      return theUnsafe.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
+    }
+  }
+
+  /**
+   * Converts a byte array to a long value considering it was written in big-endian format.
+   * @param bytes byte array
+   * @param offset offset into array
+   * @return the long value
+   */
+  public static long toLong(byte[] bytes, int offset) {
+    if (LITTLE_ENDIAN) {
+      return Long.reverseBytes(theUnsafe.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
+    } else {
+      return theUnsafe.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
+    }
+  }
+
+  // APIs to write primitive data to a byte[] using Unsafe way
+  /**
+   * Put a short value out to the specified byte array position in big-endian format.
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param val short to write out
+   * @return incremented offset
+   */
+  public static int putShort(byte[] bytes, int offset, short val) {
+    if (LITTLE_ENDIAN) {
+      val = Short.reverseBytes(val);
+    }
+    theUnsafe.putShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
+    return offset + Bytes.SIZEOF_SHORT;
+  }
+
+  /**
+   * Put an int value out to the specified byte array position in big-endian format.
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param val int to write out
+   * @return incremented offset
+   */
+  public static int putInt(byte[] bytes, int offset, int val) {
+    if (LITTLE_ENDIAN) {
+      val = Integer.reverseBytes(val);
+    }
+    theUnsafe.putInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
+    return offset + Bytes.SIZEOF_INT;
+  }
+
+  /**
+   * Put a long value out to the specified byte array position in big-endian format.
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param val long to write out
+   * @return incremented offset
+   */
+  public static int putLong(byte[] bytes, int offset, long val) {
+    if (LITTLE_ENDIAN) {
+      val = Long.reverseBytes(val);
+    }
+    theUnsafe.putLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
+    return offset + Bytes.SIZEOF_LONG;
+  }
+
+  // APIs to read primitive data from a ByteBuffer using Unsafe way
+  /**
+   * Reads a short value at the given buffer's offset considering it was written in big-endian
+   * format.
+   *
+   * @param buf
+   * @param offset
+   * @return short value at offset
+   */
+  public static short toShort(ByteBuffer buf, int offset) {
+    if (LITTLE_ENDIAN) {
+      return Short.reverseBytes(getAsShort(buf, offset));
+    }
+    return getAsShort(buf, offset);
+  }
+
+  /**
+   * Reads bytes at the given offset as a short value.
+   * @param buf
+   * @param offset
+   * @return short value at offset
+   */
+  static short getAsShort(ByteBuffer buf, int offset) {
+    if (buf.isDirect()) {
+      return theUnsafe.getShort(((DirectBuffer) buf).address() + offset);
+    }
+    return theUnsafe.getShort(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+  }
+
+  /**
+   * Reads an int value at the given buffer's offset considering it was written in big-endian
+   * format.
+   *
+   * @param buf
+   * @param offset
+   * @return int value at offset
+   */
+  public static int toInt(ByteBuffer buf, int offset) {
+    if (LITTLE_ENDIAN) {
+      return Integer.reverseBytes(getAsInt(buf, offset));
+    }
+    return getAsInt(buf, offset);
+  }
+
+  /**
+   * Reads bytes at the given offset as an int value.
+   * @param buf
+   * @param offset
+   * @return int value at offset
+   */
+  static int getAsInt(ByteBuffer buf, int offset) {
+    if (buf.isDirect()) {
+      return theUnsafe.getInt(((DirectBuffer) buf).address() + offset);
+    }
+    return theUnsafe.getInt(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+  }
+
+  /**
+   * Reads a long value at the given buffer's offset considering it was written in big-endian
+   * format.
+   *
+   * @param buf
+   * @param offset
+   * @return long value at offset
+   */
+  public static long toLong(ByteBuffer buf, int offset) {
+    if (LITTLE_ENDIAN) {
+      return Long.reverseBytes(getAsLong(buf, offset));
+    }
+    return getAsLong(buf, offset);
+  }
+
+  /**
+   * Reads bytes at the given offset as a long value.
+   * @param buf
+   * @param offset
+   * @return long value at offset
+   */
+  static long getAsLong(ByteBuffer buf, int offset) {
+    if (buf.isDirect()) {
+      return theUnsafe.getLong(((DirectBuffer) buf).address() + offset);
+    }
+    return theUnsafe.getLong(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+  }
+
+  /**
+   * Put an int value out to the specified ByteBuffer offset in big-endian format.
+   * @param buf the ByteBuffer to write to
+   * @param offset offset in the ByteBuffer
+   * @param val int to write out
+   * @return incremented offset
+   */
+  public static int putInt(ByteBuffer buf, int offset, int val) {
+    if (LITTLE_ENDIAN) {
+      val = Integer.reverseBytes(val);
+    }
+    if (buf.isDirect()) {
+      theUnsafe.putInt(((DirectBuffer) buf).address() + offset, val);
+    } else {
+      theUnsafe.putInt(buf.array(), offset + buf.arrayOffset() + BYTE_ARRAY_BASE_OFFSET, val);
+    }
+    return offset + Bytes.SIZEOF_INT;
+  }
+
+  // APIs to add primitives to BBs
+  /**
+   * Put a short value out to the specified BB position in big-endian format.
+   * @param buf the byte buffer
+   * @param offset position in the buffer
+   * @param val short to write out
+   * @return incremented offset
+   */
+  public static int putShort(ByteBuffer buf, int offset, short val) {
+    if (LITTLE_ENDIAN) {
+      val = Short.reverseBytes(val);
+    }
+    if (buf.isDirect()) {
+      theUnsafe.putShort(((DirectBuffer) buf).address() + offset, val);
+    } else {
+      theUnsafe.putShort(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
+    }
+    return offset + Bytes.SIZEOF_SHORT;
+  }
+
+  /**
+   * Put a long value out to the specified BB position in big-endian format.
+   * @param buf the byte buffer
+   * @param offset position in the buffer
+   * @param val long to write out
+   * @return incremented offset
+   */
+  public static int putLong(ByteBuffer buf, int offset, long val) {
+    if (LITTLE_ENDIAN) {
+      val = Long.reverseBytes(val);
+    }
+    if (buf.isDirect()) {
+      theUnsafe.putLong(((DirectBuffer) buf).address() + offset, val);
+    } else {
+      theUnsafe.putLong(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
+    }
+    return offset + Bytes.SIZEOF_LONG;
+  }
+
+  /**
+   * Put a byte value out to the specified BB position in big-endian format.
+   * @param buf the byte buffer
+   * @param offset position in the buffer
+   * @param b byte to write out
+   * @return incremented offset
+   */
+  public static int putByte(ByteBuffer buf, int offset, byte b) {
+    if (buf.isDirect()) {
+      theUnsafe.putByte(((DirectBuffer) buf).address() + offset, b);
+    } else {
+      theUnsafe.putByte(buf.array(),
+        BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, b);
+    }
+    return offset + 1;
+  }
+
+  /**
+   * Returns the byte at the given offset
+   * @param buf the buffer to read
+   * @param offset the offset at which the byte has to be read
+   * @return the byte at the given offset
+   */
+  public static byte toByte(ByteBuffer buf, int offset) {
+    if (buf.isDirect()) {
+      return theUnsafe.getByte(((DirectBuffer) buf).address() + offset);
+    } else {
+      return theUnsafe.getByte(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    }
   }
 }
