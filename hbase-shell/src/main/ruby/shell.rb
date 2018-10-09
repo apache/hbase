@@ -361,6 +361,7 @@ Shell.load_command_group(
     clear_block_cache
     stop_master
     stop_regionserver
+    rit
   ],
   # TODO: remove older hlog_roll command
   aliases: {
