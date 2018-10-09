@@ -217,12 +217,12 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         </%if>
         <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null %>
           <section>
-            <h2>RSGroup</h2>
+            <h2><a name="rsgroup">RSGroup</a></h2>
             <& RSGroupListTmpl; master= master; serverManager= serverManager&>
           </section>
         </%if>
         <section>
-            <h2>Region Servers</h2>
+            <h2><a name="regionservers">Region Servers</a></h2>
             <& RegionServerListTmpl; master= master; servers = servers &>
 
             <%if (deadServers != null) %>
@@ -233,7 +233,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             <& BackupMasterStatusTmpl; master = master &>
         </section>
         <section>
-            <h2>Tables</h2>
+            <h2><a name="tables">Tables</a></h2>
             <div class="tabbable">
                 <ul class="nav nav-pills">
                     <li class="active">
@@ -264,7 +264,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             </div>
         </section>
         <section>
-            <h2>Peers</h2>
+            <h2><a name="peers">Peers</a></h2>
             <& peerConfigs &>
         </section>
         <%if master.getAssignmentManager() != null %>
@@ -282,7 +282,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         </section>
 
         <section>
-            <h2>Software Attributes</h2>
+            <h2><a name="attributes">Software Attributes</a></h2>
             <table id="attributes_table" class="table table-striped">
                 <tr>
                     <th>Attribute Name</th>
