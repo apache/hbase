@@ -976,6 +976,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Returns the ClusterStatus of the cluster
+    def getClusterStatus
+      @admin.getClusterStatus
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns a list of regionservers
     def getRegionServers()
       return @admin.getClusterStatus.getServers.map { |serverName| serverName }
