@@ -229,12 +229,6 @@
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Some tests rely on Hadoop's KeyStoreTestUtil, which needs bc. -->
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk16</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->
