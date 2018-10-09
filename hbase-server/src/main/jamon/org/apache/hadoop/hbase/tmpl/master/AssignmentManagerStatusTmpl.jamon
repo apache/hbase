@@ -49,7 +49,7 @@ int ritsPerPage = Math.min(5, numOfRITs);
 int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
 </%java>
     <section>
-    <h2>Regions in Transition</h2>
+    <h2><a name="rit">Regions in Transition</a></h2>
      <p><% numOfRITs %> region(s) in transition.
      <%if ritStat.hasRegionsTwiceOverThreshold()  %>
          <span class="label label-danger" style="font-size:100%;font-weight:normal">
