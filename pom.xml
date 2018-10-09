@@ -1428,8 +1428,8 @@
     <metrics-core.version>3.2.1</metrics-core.version>
     <jackson.version>2.9.2</jackson.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
-    <jetty.version>9.3.19.v20170502</jetty.version>
-    <jetty-jsp.version>9.2.19.v20160908</jetty-jsp.version>
+    <jetty.version>9.3.25.v20180904</jetty.version>
+    <jetty-jsp.version>9.2.26.v20180806</jetty-jsp.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.0.1</wx.rs.api.version>
     <!-- Jersey 2.26 requires jetty 9.4 which breaks hadoop. Tread lightly. -->
