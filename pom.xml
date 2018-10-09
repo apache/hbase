@@ -1522,7 +1522,7 @@
     <joni.version>2.1.11</joni.version>
     <jcodings.version>1.0.18</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.46</bouncycastle.version>
+    <bouncycastle.version>1.60</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.0.0</curator.version>
@@ -2199,7 +2199,7 @@
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk16</artifactId>
+        <artifactId>bcprov-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
