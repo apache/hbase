@@ -453,6 +453,12 @@
       <timezone>-5</timezone>
     </developer>
     <developer>
+      <id>meszibalu</id>
+      <name>Balazs Meszaros</name>
+      <email>meszibalu@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>misty</id>
       <name>Misty Stanley-Jones</name>
       <email>misty@apache.org</email>
