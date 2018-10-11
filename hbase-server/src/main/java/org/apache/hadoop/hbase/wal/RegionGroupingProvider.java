@@ -121,8 +121,6 @@ public class RegionGroupingProvider implements WALProvider {
 
   /** delegate provider for WAL creation/roll/close */
   public static final String DELEGATE_PROVIDER = "hbase.wal.regiongrouping.delegate.provider";
-  public static final String DELEGATE_PROVIDER_CLASS =
-            "hbase.wal.regiongrouping.delegate.provider.class";
   public static final String DEFAULT_DELEGATE_PROVIDER = WALFactory.Providers.defaultProvider
       .name();
 
@@ -157,8 +155,7 @@ public class RegionGroupingProvider implements WALProvider {
     }
     this.providerId = sb.toString();
     this.strategy = getStrategy(conf, REGION_GROUPING_STRATEGY, DEFAULT_REGION_GROUPING_STRATEGY);
-    this.providerClass = factory.getProviderClass(DELEGATE_PROVIDER_CLASS, DELEGATE_PROVIDER,
-        DEFAULT_DELEGATE_PROVIDER);
+    this.providerClass = factory.getProviderClass(DELEGATE_PROVIDER, DEFAULT_DELEGATE_PROVIDER);
   }
 
   private WALProvider createProvider(String group) throws IOException {

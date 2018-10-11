@@ -80,11 +80,8 @@ public class WALFactory {
 
   public static final String WAL_PROVIDER = "hbase.wal.provider";
   static final String DEFAULT_WAL_PROVIDER = Providers.defaultProvider.name();
-  public static final String WAL_PROVIDER_CLASS = "hbase.wal.provider.class";
-  static final Class<? extends WALProvider> DEFAULT_WAL_PROVIDER_CLASS = AsyncFSWALProvider.class;
 
   public static final String META_WAL_PROVIDER = "hbase.wal.meta_provider";
-  public static final String META_WAL_PROVIDER_CLASS = "hbase.wal.meta_provider.class";
 
   final String factoryId;
   private final WALProvider provider;
@@ -128,25 +125,7 @@ public class WALFactory {
   }
 
   @VisibleForTesting
-  /*
-   * @param clsKey config key for provider classname
-   * @param key config key for provider enum
-   * @param defaultValue default value for provider enum
-   * @return Class which extends WALProvider
-   */
-  public Class<? extends WALProvider> getProviderClass(String clsKey, String key,
-      String defaultValue) {
-    String clsName = conf.get(clsKey);
-    if (clsName == null || clsName.isEmpty()) {
-      clsName = conf.get(key, defaultValue);
-    }
-    if (clsName != null && !clsName.isEmpty()) {
-      try {
-        return (Class<? extends WALProvider>) Class.forName(clsName);
-      } catch (ClassNotFoundException exception) {
-        // try with enum key next
-      }
-    }
+  public Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
     try {
       Providers provider = Providers.valueOf(conf.get(key, defaultValue));
 
@@ -170,7 +149,7 @@ public class WALFactory {
       // Fall back to them specifying a class name
       // Note that the passed default class shouldn't actually be used, since the above only fails
       // when there is a config value present.
-      return conf.getClass(key, AsyncFSWALProvider.class, WALProvider.class);
+      return conf.getClass(key, Providers.defaultProvider.clazz, WALProvider.class);
     }
   }
 
@@ -217,8 +196,7 @@ public class WALFactory {
     this.factoryId = factoryId;
     // end required early initialization
     if (conf.getBoolean("hbase.regionserver.hlog.enabled", true)) {
-      WALProvider provider = createProvider(
-          getProviderClass(WAL_PROVIDER_CLASS, WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
+      WALProvider provider = createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
       if (enableSyncReplicationWALProvider) {
         provider = new SyncReplicationWALProvider(provider);
       }
@@ -282,10 +260,8 @@ public class WALFactory {
       if (provider != null) {
         return provider;
       }
-      boolean metaWALProvPresent = conf.get(META_WAL_PROVIDER_CLASS) != null;
-      provider = createProvider(getProviderClass(
-          metaWALProvPresent ? META_WAL_PROVIDER_CLASS : WAL_PROVIDER_CLASS,
-          META_WAL_PROVIDER, conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER)));
+      provider = createProvider(getProviderClass(META_WAL_PROVIDER,
+          conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER)));
       provider.init(this, conf, AbstractFSWALProvider.META_WAL_PROVIDER_ID);
       provider.addWALActionsListener(new MetricsWAL());
       if (metaProvider.compareAndSet(null, provider)) {

@@ -680,7 +680,6 @@ public class TestWALFactory {
   @Test
   public void testWALProviders() throws IOException {
     Configuration conf = new Configuration();
-    conf.set(HConstants.HBASE_DIR, TestWALFactory.conf.get(HConstants.HBASE_DIR));
     // if providers are not set but enable SyncReplicationWALProvider by default for master node
     // with not only system tables
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
@@ -697,30 +696,28 @@ public class TestWALFactory {
   @Test
   public void testOnlySetWALProvider() throws IOException {
     Configuration conf = new Configuration();
-    conf.set(WAL_PROVIDER, RegionGroupingProvider.class.getName());
-    conf.set(HConstants.HBASE_DIR, TestWALFactory.conf.get(HConstants.HBASE_DIR));
+    conf.set(WAL_PROVIDER, WALFactory.Providers.multiwal.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
     WALProvider wrappedWALProvider = ((SyncReplicationWALProvider) walFactory.getWALProvider())
         .getWrappedProvider();
 
     assertEquals(SyncReplicationWALProvider.class, walFactory.getWALProvider().getClass());
     // class of WALProvider and metaWALProvider are the same when metaWALProvider is not set
-    assertEquals(RegionGroupingProvider.class, wrappedWALProvider.getClass());
-    assertEquals(RegionGroupingProvider.class, walFactory.getMetaProvider().getClass());
+    assertEquals(WALFactory.Providers.multiwal.clazz, wrappedWALProvider.getClass());
+    assertEquals(WALFactory.Providers.multiwal.clazz, walFactory.getMetaProvider().getClass());
   }
 
   @Test
   public void testOnlySetMetaWALProvider() throws IOException {
     Configuration conf = new Configuration();
-    conf.set(META_WAL_PROVIDER, AsyncFSWALProvider.class.getName());
-    conf.set(HConstants.HBASE_DIR, TestWALFactory.conf.get(HConstants.HBASE_DIR));
+    conf.set(META_WAL_PROVIDER, WALFactory.Providers.asyncfs.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
     WALProvider wrappedWALProvider = ((SyncReplicationWALProvider) walFactory.getWALProvider())
         .getWrappedProvider();
 
     assertEquals(SyncReplicationWALProvider.class, walFactory.getWALProvider().getClass());
-    assertEquals(AsyncFSWALProvider.class, wrappedWALProvider.getClass());
-    assertEquals(AsyncFSWALProvider.class, walFactory.getMetaProvider().getClass());
+    assertEquals(WALFactory.Providers.defaultProvider.clazz, wrappedWALProvider.getClass());
+    assertEquals(WALFactory.Providers.asyncfs.clazz, walFactory.getMetaProvider().getClass());
   }
 
   @Test
@@ -729,7 +726,7 @@ public class TestWALFactory {
     // AsyncFSWal is the default, we should be able to request any WAL.
     final WALFactory normalWalFactory = new WALFactory(conf, this.currentServername.toString());
     Class<? extends WALProvider> fshLogProvider = normalWalFactory.getProviderClass(
-        WALFactory.WAL_PROVIDER_CLASS, WALFactory.WAL_PROVIDER, Providers.filesystem.name());
+        WALFactory.WAL_PROVIDER, Providers.filesystem.name());
     assertEquals(Providers.filesystem.clazz, fshLogProvider);
 
     // Imagine a world where MultiWAL is the default
@@ -742,31 +739,7 @@ public class TestWALFactory {
     };
     // If we don't specify a WALProvider, we should get the default implementation.
     Class<? extends WALProvider> multiwalProviderClass = customizedWalFactory.getProviderClass(
-        WALFactory.WAL_PROVIDER_CLASS, WALFactory.WAL_PROVIDER, Providers.multiwal.name());
+        WALFactory.WAL_PROVIDER, Providers.multiwal.name());
     assertEquals(Providers.multiwal.clazz, multiwalProviderClass);
-  }
-
-  @Test
-  public void testCustomProvider() throws IOException {
-    final Configuration config = new Configuration();
-    config.set(WALFactory.WAL_PROVIDER_CLASS, IOTestProvider.class.getName());
-    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
-    Class<? extends WALProvider> walProvider = walFactory.getProviderClass(
-        WALFactory.WAL_PROVIDER_CLASS, WALFactory.WAL_PROVIDER, Providers.filesystem.name());
-    assertEquals(IOTestProvider.class, walProvider);
-    WALProvider metaWALProvider = walFactory.getMetaProvider();
-    assertEquals(IOTestProvider.class, metaWALProvider.getClass());
-  }
-
-  @Test
-  public void testCustomMetaProvider() throws IOException {
-    final Configuration config = new Configuration();
-    config.set(WALFactory.META_WAL_PROVIDER_CLASS, IOTestProvider.class.getName());
-    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
-    Class<? extends WALProvider> walProvider = walFactory.getProviderClass(
-        WALFactory.WAL_PROVIDER_CLASS, WALFactory.WAL_PROVIDER, Providers.filesystem.name());
-    assertEquals(Providers.filesystem.clazz, walProvider);
-    WALProvider metaWALProvider = walFactory.getMetaProvider();
-    assertEquals(IOTestProvider.class, metaWALProvider.getClass());
   }
 }
