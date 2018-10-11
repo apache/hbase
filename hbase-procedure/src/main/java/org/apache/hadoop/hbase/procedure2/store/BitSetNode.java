@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.procedure2.store;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker.DeleteState;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -194,6 +196,27 @@ class BitSetNode {
       }
     }
     return true;
+  }
+
+  /**
+   * @return all the active procedure ids in this bit set.
+   */
+  public long[] getActiveProcIds() {
+    List<Long> procIds = new ArrayList<>();
+    for (int wordIndex = 0; wordIndex < modified.length; wordIndex++) {
+      if (deleted[wordIndex] == WORD_MASK || modified[wordIndex] == 0) {
+        // This should be the common case, where most procedures has been deleted.
+        continue;
+      }
+      long baseProcId = getStart() + (wordIndex << ADDRESS_BITS_PER_WORD);
+      for (int i = 0; i < (1 << ADDRESS_BITS_PER_WORD); i++) {
+        long mask = 1L << i;
+        if ((deleted[wordIndex] & mask) == 0 && (modified[wordIndex] & mask) != 0) {
+          procIds.add(baseProcId + i);
+        }
+      }
+    }
+    return procIds.stream().mapToLong(Long::longValue).toArray();
   }
 
   /**

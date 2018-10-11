@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.Superusers;
@@ -68,26 +67,6 @@ public class MasterProcedureEnv implements ConfigurationObserver {
 
     private boolean isRunning() {
       return !master.isStopped() && !master.isStopping() && !master.isAborted();
-    }
-  }
-
-  @InterfaceAudience.Private
-  public static class MasterProcedureStoreListener
-      implements ProcedureStore.ProcedureStoreListener {
-    private final MasterServices master;
-
-    public MasterProcedureStoreListener(final MasterServices master) {
-      this.master = master;
-    }
-
-    @Override
-    public void postSync() {
-      // no-op
-    }
-
-    @Override
-    public void abortProcess() {
-      master.abort("The Procedure Store lost the lease", null);
     }
   }
 

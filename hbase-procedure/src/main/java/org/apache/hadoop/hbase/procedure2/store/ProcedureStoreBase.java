@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -58,19 +56,15 @@ public abstract class ProcedureStoreBase implements ProcedureStore {
     return listeners.remove(listener);
   }
 
-  protected void sendPostSyncSignal() {
-    if (!this.listeners.isEmpty()) {
-      for (ProcedureStoreListener listener : this.listeners) {
-        listener.postSync();
-      }
-    }
+  protected final void sendPostSyncSignal() {
+    listeners.forEach(ProcedureStoreListener::postSync);
   }
 
-  protected void sendAbortProcessSignal() {
-    if (!this.listeners.isEmpty()) {
-      for (ProcedureStoreListener listener : this.listeners) {
-        listener.abortProcess();
-      }
-    }
+  protected final void sendAbortProcessSignal() {
+    listeners.forEach(ProcedureStoreListener::abortProcess);
+  }
+
+  protected final void sendForceUpdateSignal(long[] procIds) {
+    listeners.forEach(l -> l.forceUpdate(procIds));
   }
 }
