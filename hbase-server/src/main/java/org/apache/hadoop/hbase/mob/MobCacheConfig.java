@@ -42,6 +42,11 @@ public class MobCacheConfig extends CacheConfig {
     instantiateMobFileCache(conf);
   }
 
+  public MobCacheConfig(Configuration conf, boolean needBlockCache) {
+    super(conf, needBlockCache);
+    instantiateMobFileCache(conf);
+  }
+
   /**
    * Instantiates the MobFileCache.
    * @param conf The current configuration.
