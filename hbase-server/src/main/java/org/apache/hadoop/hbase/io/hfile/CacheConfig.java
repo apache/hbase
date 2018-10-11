@@ -48,9 +48,7 @@ public class CacheConfig {
   /**
    * Disabled cache configuration
    */
-
   public static final CacheConfig DISABLED = new CacheConfig();
-
 
   /**
    * Configuration key to cache data blocks on read. Bloom blocks and index blocks are always be
@@ -247,7 +245,11 @@ public class CacheConfig {
    * @param conf hbase configuration
    */
   public CacheConfig(Configuration conf) {
-    this(CacheConfig.instantiateBlockCache(conf),
+    this(conf, true);
+  }
+
+  public CacheConfig(Configuration conf, boolean enableBlockCache) {
+    this(conf, enableBlockCache,
         conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ),
         DEFAULT_IN_MEMORY, // This is a family-level setting so can't be set
                            // strictly from conf
@@ -257,9 +259,30 @@ public class CacheConfig {
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
-        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
-     );
+        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT));
     LOG.info("Created cacheConfig: " + this);
+  }
+
+  private CacheConfig(Configuration conf, boolean enableBlockCache,
+      final boolean cacheDataOnRead, final boolean inMemory,
+      final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
+      final boolean cacheBloomsOnWrite, final boolean evictOnClose,
+      final boolean cacheDataCompressed, final boolean prefetchOnOpen,
+      final boolean dropBehindCompaction) {
+    if (enableBlockCache) {
+      this.blockCache = CacheConfig.instantiateBlockCache(conf);
+    } else {
+      this.blockCache = null;
+    }
+    this.cacheDataOnRead = cacheDataOnRead;
+    this.inMemory = inMemory;
+    this.cacheDataOnWrite = cacheDataOnWrite;
+    this.cacheIndexesOnWrite = cacheIndexesOnWrite;
+    this.cacheBloomsOnWrite = cacheBloomsOnWrite;
+    this.evictOnClose = evictOnClose;
+    this.cacheDataCompressed = cacheDataCompressed;
+    this.prefetchOnOpen = prefetchOnOpen;
+    this.dropBehindCompaction = dropBehindCompaction;
   }
 
   /**
@@ -274,11 +297,10 @@ public class CacheConfig {
    * @param evictOnClose whether blocks should be evicted when HFile is closed
    * @param cacheDataCompressed whether to store blocks as compressed in the cache
    * @param prefetchOnOpen whether to prefetch blocks upon open
-   * @param cacheDataInL1 If more than one cache tier deployed, if true, cache this column families
-   *          data blocks up in the L1 tier.
    * @param dropBehindCompaction indicate that we should set drop behind to true when open a store
    *          file reader for compaction
    */
+  @VisibleForTesting
   CacheConfig(final BlockCache blockCache,
       final boolean cacheDataOnRead, final boolean inMemory,
       final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
