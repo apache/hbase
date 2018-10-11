@@ -408,11 +408,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.blocksize = WALUtil.getWALBlockSize(this.conf, this.fs, this.walDir);
     float multiplier = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.5f);
     this.logrollsize = (long)(this.blocksize * multiplier);
-
-    boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
-    if (maxLogsDefined) {
-      LOG.warn("'hbase.regionserver.maxlogs' was deprecated.");
-    }
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
       Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
 
