@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -262,6 +263,12 @@ public class TestMaster {
         TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     // Assert lock gets put in place again.
     assertTrue(fs.exists(hbckLockPath));
+  }
+
+  @Test
+  public void testMasterBlockCache() {
+    // Master not carry table in default, so no need to instantiate block cache, too.
+    assertNull(TEST_UTIL.getMiniHBaseCluster().getMaster().getCacheConfig().getBlockCache());
   }
 }
 

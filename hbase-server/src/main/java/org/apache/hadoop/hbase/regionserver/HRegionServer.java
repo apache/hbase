@@ -590,8 +590,11 @@ public class HRegionServer extends HasThread implements
       Superusers.initialize(conf);
 
       regionServerAccounting = new RegionServerAccounting(conf);
-      cacheConfig = new CacheConfig(conf);
-      mobCacheConfig = new MobCacheConfig(conf);
+      boolean isMasterNotCarryTable =
+          this instanceof HMaster && !LoadBalancer.isTablesOnMaster(conf) && !LoadBalancer
+              .isSystemTablesOnlyOnMaster(conf);
+      cacheConfig = new CacheConfig(conf, !isMasterNotCarryTable);
+      mobCacheConfig = new MobCacheConfig(conf, !isMasterNotCarryTable);
       uncaughtExceptionHandler = new UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(Thread t, Throwable e) {
