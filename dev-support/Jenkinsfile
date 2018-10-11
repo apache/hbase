@@ -80,7 +80,8 @@ pipeline {
               if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
                 YETUS_DIR="${WORKSPACE}/yetus-${YETUS_RELEASE}"
                 echo "Checking for Yetus ${YETUS_RELEASE} in '${YETUS_DIR}'"
-                if [ ! -d "${YETUS_DIR}" ]; then
+                if ! "${YETUS_DIR}/bin/test-patch" --version >/dev/null 2>&1 ; then
+                  rm -rf "${YETUS_DIR}"
                   "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                       --working-dir "${WORKSPACE}/downloads-yetus" \
                       --keys 'https://www.apache.org/dist/yetus/KEYS' \
