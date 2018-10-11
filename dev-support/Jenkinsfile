@@ -64,8 +64,9 @@ echo "Ensure we have a copy of Apache Yetus."
 if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
   YETUS_DIR="${WORKSPACE}/yetus-${YETUS_RELEASE}"
   echo "Checking for Yetus ${YETUS_RELEASE} in '${YETUS_DIR}'"
-  if [ ! -d "${YETUS_DIR}" ]; then
+  if ! "${YETUS_DIR}/bin/test-patch" --version >/dev/null 2>&1 ; then
     echo "New download of Apache Yetus version ${YETUS_RELEASE}."
+    rm -rf "${YETUS_DIR}"
     rm -rf "${WORKSPACE}/.gpg"
     mkdir -p "${WORKSPACE}/.gpg"
     chmod -R 700 "${WORKSPACE}/.gpg"
