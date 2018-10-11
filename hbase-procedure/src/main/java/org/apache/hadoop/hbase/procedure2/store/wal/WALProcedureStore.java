@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
@@ -98,7 +99,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
  * with the tracker of every newer wal files, using the
  * {@link ProcedureStoreTracker#setDeletedIfModifiedInBoth(ProcedureStoreTracker)}. If we find out
  * that all the modified procedures for the oldest wal file are modified or deleted in newer wal
- * files, then we can delete it.
+ * files, then we can delete it. This is because that, every time we call
+ * {@link ProcedureStore#insert(Procedure[])} or {@link ProcedureStore#update(Procedure)}, we will
+ * persist the full state of a Procedure, so the earlier wal records for this procedure can all be
+ * deleted.
  * @see ProcedureWALPrettyPrinter for printing content of a single WAL.
  * @see #main(String[]) to parse a directory of MasterWALProcs.
  */
@@ -116,7 +120,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   public static final String WAL_COUNT_WARN_THRESHOLD_CONF_KEY =
     "hbase.procedure.store.wal.warn.threshold";
-  private static final int DEFAULT_WAL_COUNT_WARN_THRESHOLD = 64;
+  private static final int DEFAULT_WAL_COUNT_WARN_THRESHOLD = 10;
 
   public static final String EXEC_WAL_CLEANUP_ON_LOAD_CONF_KEY =
     "hbase.procedure.store.wal.exec.cleanup.on.load";
@@ -496,7 +500,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   private void tryCleanupLogsOnLoad() {
     // nothing to cleanup.
-    if (logs.size() <= 1) return;
+    if (logs.size() <= 1) {
+      return;
+    }
 
     // the config says to not cleanup wals on load.
     if (!conf.getBoolean(EXEC_WAL_CLEANUP_ON_LOAD_CONF_KEY,
@@ -967,7 +973,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   @VisibleForTesting
-  protected void periodicRollForTesting() throws IOException {
+  void periodicRollForTesting() throws IOException {
     lock.lock();
     try {
       periodicRoll();
@@ -977,7 +983,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   @VisibleForTesting
-  protected boolean rollWriterForTesting() throws IOException {
+  boolean rollWriterForTesting() throws IOException {
     lock.lock();
     try {
       return rollWriter();
@@ -987,7 +993,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   @VisibleForTesting
-  protected void removeInactiveLogsForTesting() throws Exception {
+  void removeInactiveLogsForTesting() throws Exception {
     lock.lock();
     try {
       removeInactiveLogs();
@@ -1041,7 +1047,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   @VisibleForTesting
-  boolean rollWriter(final long logId) throws IOException {
+  boolean rollWriter(long logId) throws IOException {
     assert logId > flushLogId : "logId=" + logId + " flushLogId=" + flushLogId;
     assert lock.isHeldByCurrentThread() : "expected to be the lock owner. " + lock.isLocked();
 
@@ -1059,10 +1065,10 @@ public class WALProcedureStore extends ProcedureStoreBase {
     try {
       newStream = CommonFSUtils.createForWal(fs, newLogFile, false);
     } catch (FileAlreadyExistsException e) {
-      LOG.error("Log file with id=" + logId + " already exists", e);
+      LOG.error("Log file with id={} already exists", logId, e);
       return false;
     } catch (RemoteException re) {
-      LOG.warn("failed to create log file with id=" + logId, re);
+      LOG.warn("failed to create log file with id={}", logId, re);
       return false;
     }
     // After we create the stream but before we attempt to use it at all
@@ -1099,9 +1105,19 @@ public class WALProcedureStore extends ProcedureStoreBase {
     if (logs.size() == 2) {
       buildHoldingCleanupTracker();
     } else if (logs.size() > walCountWarnThreshold) {
-      LOG.warn("procedure WALs count=" + logs.size() +
-        " above the warning threshold " + walCountWarnThreshold +
-        ". check running procedures to see if something is stuck.");
+      LOG.warn("procedure WALs count={} above the warning threshold {}. check running procedures" +
+        " to see if something is stuck.", logs.size(), walCountWarnThreshold);
+      // This is just like what we have done at RS side when there are too many wal files. For RS,
+      // if there are too many wal files, we will find out the wal entries in the oldest file, and
+      // tell the upper layer to flush these regions so the wal entries will be useless and then we
+      // can delete the wal file. For WALProcedureStore, the assumption is that, if all the
+      // procedures recorded in a proc wal file are modified or deleted in a new proc wal file, then
+      // we are safe to delete it. So here if there are too many proc wal files, we will find out
+      // the procedure ids in the oldest file, which are neither modified nor deleted in newer proc
+      // wal files, and tell upper layer to update the state of these procedures to the newest proc
+      // wal file(by calling ProcedureStore.update), then we are safe to delete the oldest proc wal
+      // file.
+      sendForceUpdateSignal(holdingCleanupTracker.getAllActiveProcIds());
     }
 
     LOG.info("Rolled new Procedure Store WAL, id={}", logId);
