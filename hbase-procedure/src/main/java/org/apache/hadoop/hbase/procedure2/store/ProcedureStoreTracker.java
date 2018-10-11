@@ -23,9 +23,10 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
-
+import java.util.stream.LongStream;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
@@ -333,6 +334,16 @@ public class ProcedureStoreTracker {
       }
     }
     return true;
+  }
+
+  /**
+   * Will be used when there are too many proc wal files. We will rewrite the states of the active
+   * procedures in the oldest proc wal file so that we can delete it.
+   * @return all the active procedure ids in this tracker.
+   */
+  public long[] getAllActiveProcIds() {
+    return map.values().stream().map(BitSetNode::getActiveProcIds).filter(p -> p.length > 0)
+      .flatMapToLong(LongStream::of).toArray();
   }
 
   /**

@@ -217,54 +217,8 @@ public class TestProcedureStoreTracker {
     }
   }
 
-  boolean isDeleted(ProcedureStoreTracker n, long procId) {
-    return n.isDeleted(procId) == ProcedureStoreTracker.DeleteState.YES;
-  }
-
-  boolean isDeleted(BitSetNode n, long procId) {
-    return n.isDeleted(procId) == ProcedureStoreTracker.DeleteState.YES;
-  }
-
-  /**
-   * @param active list of active proc ids. To mark them as non-deleted, since by default a proc
-   *               id is always marked deleted.
-   */
-  ProcedureStoreTracker buildTracker(long[] active, long[] updated, long[] deleted) {
-    ProcedureStoreTracker tracker = new ProcedureStoreTracker();
-    for (long i : active) {
-      tracker.insert(i);
-    }
-    tracker.resetModified();
-    for (long i : updated) {
-      tracker.update(i);
-    }
-    for (long i : deleted) {
-      tracker.delete(i);
-    }
-    return tracker;
-  }
-
-  /**
-   * @param active list of active proc ids. To mark them as non-deleted, since by default a proc
-   *               id is always marked deleted.
-   */
-  BitSetNode buildBitSetNode(long[] active, long[] updated, long[] deleted) {
-    BitSetNode bitSetNode = new BitSetNode(0L, false);
-    for (long i : active) {
-      bitSetNode.insertOrUpdate(i);
-    }
-    bitSetNode.resetModified();
-    for (long i : updated) {
-      bitSetNode.insertOrUpdate(i);
-    }
-    for (long i : deleted) {
-      bitSetNode.delete(i);
-    }
-    return bitSetNode;
-  }
-
   @Test
-  public void testSetDeletedIfSet() {
+  public void testSetDeletedIfModified() {
     final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
     final long[] procIds = new long[] { 1, 3, 7, 152, 512, 1024, 1025 };
 
@@ -290,5 +244,21 @@ public class TestProcedureStoreTracker {
 
     tracker.setDeletedIfModified(procIds);
     assertEquals(true, tracker.isEmpty());
+  }
+
+  @Test
+  public void testGetActiveProcIds() {
+    ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+    for (int i = 0; i < 10000; i++) {
+      tracker.insert(i * 10);
+    }
+    for (int i = 0; i < 10000; i += 2) {
+      tracker.delete(i * 10);
+    }
+    long[] activeProcIds = tracker.getAllActiveProcIds();
+    assertEquals(5000, activeProcIds.length);
+    for (int i = 0; i < 5000; i++) {
+      assertEquals((2 * i + 1) * 10, activeProcIds[i]);
+    }
   }
 }
