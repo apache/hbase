@@ -1385,15 +1385,20 @@ public class TestSplitTransactionOnCluster {
       regionServer.kill();
       cluster.getRegionServerThreads().get(serverWith).join();
       // Wait until finish processing of shutdown
-      while (cluster.getMaster().getServerManager().areDeadServersInProgress()) {
-        Thread.sleep(10);
-      }
-      AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      while(am.getRegionStates().isRegionsInTransition()) {
-        Thread.sleep(10);
-      }
-      assertEquals(am.getRegionStates().getRegionsInTransition().toString(), 0, am
-          .getRegionStates().getRegionsInTransition().size());
+      TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return !cluster.getMaster().getServerManager().areDeadServersInProgress();
+        }
+      });
+      // Wait until there are no more regions in transition
+      TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return !cluster.getMaster().getAssignmentManager().
+              getRegionStates().isRegionsInTransition();
+        }
+      });
       regionDirs =
           FSUtils.getRegionDirs(tableDir.getFileSystem(cluster.getConfiguration()), tableDir);
       assertEquals(1,regionDirs.size());

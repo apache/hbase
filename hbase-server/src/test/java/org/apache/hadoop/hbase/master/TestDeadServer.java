@@ -116,7 +116,6 @@ public class TestDeadServer {
 
     DeadServer d = new DeadServer();
 
-
     d.add(hostname123);
     mee.incValue(1);
     d.add(hostname1234);
@@ -149,6 +148,5 @@ public class TestDeadServer {
     d.cleanPreviousInstance(hostname123_2);
     Assert.assertTrue(d.isEmpty());
   }
-
 }
 
