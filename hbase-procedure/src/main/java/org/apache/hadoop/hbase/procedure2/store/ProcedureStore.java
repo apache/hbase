@@ -34,19 +34,37 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 public interface ProcedureStore {
   /**
    * Store listener interface.
+   * <p/>
    * The main process should register a listener and respond to the store events.
    */
   public interface ProcedureStoreListener {
+
     /**
      * triggered when the store sync is completed.
      */
-    void postSync();
+    default void postSync() {
+    }
 
     /**
-     * triggered when the store is not able to write out data.
-     * the main process should abort.
+     * triggered when the store is not able to write out data. the main process should abort.
      */
-    void abortProcess();
+    default void abortProcess() {
+    }
+
+    /**
+     * Suggest that the upper layer should update the state of some procedures. Ignore this call
+     * will not effect correctness but performance.
+     * <p/>
+     * For a WAL based ProcedureStore implementation, if all the procedures stored in a WAL file
+     * have been deleted, or updated later in another WAL file, then we can delete the WAL file. If
+     * there are old procedures in a WAL file which are never deleted or updated, then we can not
+     * delete the WAL file and this will cause we hold lots of WAL file and slow down the master
+     * restarts. So here we introduce this method to tell the upper layer that please update the
+     * states of these procedures so that we can delete the old WAL file.
+     * @param procIds the id for the procedures
+     */
+    default void forceUpdate(long[] procIds) {
+    }
   }
 
   /**

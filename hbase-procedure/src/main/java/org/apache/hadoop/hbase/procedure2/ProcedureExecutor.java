@@ -30,6 +30,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,6 +45,7 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.Procedure.LockState;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureStoreListener;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -55,6 +58,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
@@ -339,6 +343,9 @@ public class ProcedureExecutor<TEnvironment> {
    */
   private final ProcedureScheduler scheduler;
 
+  private final Executor forceUpdateExecutor = Executors.newSingleThreadExecutor(
+    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Force-Update-PEWorker-%d").build());
+
   private final AtomicLong lastProcId = new AtomicLong(-1);
   private final AtomicLong workerId = new AtomicLong(0);
   private final AtomicInteger activeExecutorCount = new AtomicInteger(0);
@@ -361,6 +368,25 @@ public class ProcedureExecutor<TEnvironment> {
     this(conf, environment, store, new SimpleProcedureScheduler());
   }
 
+  private void forceUpdateProcedure(long procId) throws IOException {
+    IdLock.Entry lockEntry = procExecutionLock.getLockEntry(procId);
+    try {
+      Procedure<TEnvironment> proc = procedures.get(procId);
+      if (proc == null) {
+        LOG.debug("No pending procedure with id = {}, skip force updating.", procId);
+        return;
+      }
+      if (proc.isFinished()) {
+        LOG.debug("Procedure {} has already been finished, skip force updating.", proc);
+        return;
+      }
+      LOG.debug("Force update procedure {}", proc);
+      store.update(proc);
+    } finally {
+      procExecutionLock.releaseLockEntry(lockEntry);
+    }
+  }
+
   public ProcedureExecutor(final Configuration conf, final TEnvironment environment,
       final ProcedureStore store, final ProcedureScheduler scheduler) {
     this.environment = environment;
@@ -369,7 +395,19 @@ public class ProcedureExecutor<TEnvironment> {
     this.conf = conf;
     this.checkOwnerSet = conf.getBoolean(CHECK_OWNER_SET_CONF_KEY, DEFAULT_CHECK_OWNER_SET);
     refreshConfiguration(conf);
+    store.registerListener(new ProcedureStoreListener() {
 
+      @Override
+      public void forceUpdate(long[] procIds) {
+        Arrays.stream(procIds).forEach(procId -> forceUpdateExecutor.execute(() -> {
+          try {
+            forceUpdateProcedure(procId);
+          } catch (IOException e) {
+            LOG.warn("Failed to force update procedure with pid={}", procId);
+          }
+        }));
+      }
+    });
   }
 
   private void load(final boolean abortOnCorruption) throws IOException {
@@ -1073,7 +1111,7 @@ public class ProcedureExecutor<TEnvironment> {
       // Now, the procedure is not finished, and no one can execute it since we take the lock now
       // And we can be sure that its ancestor is not running too, since their child has not
       // finished yet
-      Procedure current = procedure;
+      Procedure<TEnvironment> current = procedure;
       while (current != null) {
         LOG.info("Bypassing {}", current);
         current.bypass(getEnvironment());
@@ -2001,7 +2039,6 @@ public class ProcedureExecutor<TEnvironment> {
     public void sendStopSignal() {
       scheduler.signalAll();
     }
-
     @Override
     public void run() {
       long lastUpdate = EnvironmentEdgeManager.currentTime();
