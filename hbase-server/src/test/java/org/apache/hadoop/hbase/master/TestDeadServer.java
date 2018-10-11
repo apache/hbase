@@ -116,7 +116,6 @@ public class TestDeadServer {
 
     DeadServer d = new DeadServer();
 
-
     d.add(hostname123);
     mee.incValue(1);
     d.add(hostname1234);
@@ -157,14 +156,17 @@ public class TestDeadServer {
     d.add(hostname1234);
     Assert.assertEquals(2, d.size());
 
+    d.finish(hostname123);
     d.removeDeadServer(hostname123);
     Assert.assertEquals(1, d.size());
+    d.finish(hostname1234);
     d.removeDeadServer(hostname1234);
     Assert.assertTrue(d.isEmpty());
 
     d.add(hostname1234);
     Assert.assertFalse(d.removeDeadServer(hostname123_2));
     Assert.assertEquals(1, d.size());
+    d.finish(hostname1234);
     Assert.assertTrue(d.removeDeadServer(hostname1234));
     Assert.assertTrue(d.isEmpty());
   }
