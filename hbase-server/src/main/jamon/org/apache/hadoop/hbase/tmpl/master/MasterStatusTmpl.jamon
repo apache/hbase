@@ -479,18 +479,24 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 <table id="userTables" class="tablesorter table table-striped">
 <thead>
     <tr>
-        <th>Namespace</th>
-        <th>Name</th>
+        <th style="vertical-align: middle;" rowspan="2">Namespace</th>
+        <th style="vertical-align: middle;" rowspan="2">Name</th>
         <%if (frags != null) %>
             <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
         </%if>
-        <th>State</th>
-        <th>Open Regions</th>
-        <th>Offline Regions</th>
-        <th>Failed Regions</th>
-        <th>Split Regions</th>
-        <th>Other (CLOSED, etc.)</th>
-        <th>Description</th>
+        <th style="vertical-align:middle;" rowspan="2">State</th>
+        <th style="text-align: center" colspan="8">Regions</th>
+        <th style="vertical-align:middle;" rowspan="2">Description</th>
+    </tr>
+    <tr>
+        <th>OPEN</th>
+        <th>OPENING</th>
+        <th>CLOSED</th>
+        <th>CLOSING</th>
+        <th>OFFLINE</th>
+        <th>FAILED</th>
+        <th>SPLIT</th>
+        <th>Other</th>
     </tr>
 </thead>
 <tbody>
@@ -503,6 +509,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           master.getAssignmentManager().getRegionStates()
             .getRegionByStateOfTable(tableName);
       int openRegionsCount = tableRegions.get(RegionState.State.OPEN).size();
+      int openingRegionsCount = tableRegions.get(RegionState.State.OPENING).size();
+      int closedRegionsCount = tableRegions.get(RegionState.State.CLOSED).size();
+      int closingRegionsCount = tableRegions.get(RegionState.State.CLOSING).size();
       int offlineRegionsCount = tableRegions.get(RegionState.State.OFFLINE).size();
       int splitRegionsCount = tableRegions.get(RegionState.State.SPLIT).size();
       int failedRegionsCount = tableRegions.get(RegionState.State.FAILED_OPEN).size()
@@ -514,7 +523,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
       // now subtract known states
       otherRegionsCount = otherRegionsCount - openRegionsCount
                      - failedRegionsCount - offlineRegionsCount
-                     - splitRegionsCount;
+                     - splitRegionsCount - openingRegionsCount
+                     - closedRegionsCount - closingRegionsCount;
     </%java>
     <tr>
         <td><% tableName.getNamespaceAsString() %></td>
@@ -524,6 +534,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         </%if>
         <td><% tableState.getState() %></td>
         <td><% openRegionsCount %></td>
+        <td><% openingRegionsCount %></td>
+        <td><% closedRegionsCount %></td>
+        <td><% closingRegionsCount %></td>
         <td><% offlineRegionsCount %></td>
         <td><% failedRegionsCount %></td>
         <td><% splitRegionsCount %></td>
