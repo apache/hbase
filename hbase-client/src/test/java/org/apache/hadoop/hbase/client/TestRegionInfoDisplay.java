@@ -34,6 +34,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import static org.junit.Assert.assertTrue;
+
 @Category({MasterTests.class, SmallTests.class})
 public class TestRegionInfoDisplay {
 
@@ -92,7 +94,16 @@ public class TestRegionInfoDisplay {
         origDesc.indexOf(Bytes.toStringBinary(startKey)) +
             Bytes.toStringBinary(startKey).length());
     assert(firstPart.equals(firstPartOrig));
-    assert(secondPart.equals(secondPartOrig));
+    // The elapsed time may be different in the two Strings since they were calculated at different
+    // times... so, don't include that portion when we compare. It starts with a '('.
+    // Second part looks like this:
+    // ",1539385518431.9d15487c60247dc3876b8b2a842929ed. state=OPEN,
+    //   ts=Fri Oct 12 16:05:18 PDT 2018 (PT0S ago), server=null"
+    int indexOfElapsedTime = secondPart.indexOf("(");
+    assertTrue(indexOfElapsedTime > 0);
+    assertTrue(secondPart + " " + secondPartOrig,
+        secondPart.substring(0, indexOfElapsedTime).equals(secondPartOrig.
+            substring(0, indexOfElapsedTime)));
   }
 
   private void checkEquality(RegionInfo ri, Configuration conf) throws IOException {
