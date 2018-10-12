@@ -1466,6 +1466,7 @@
     <audience-annotations.version>0.5.0</audience-annotations.version>
     <avro.version>1.7.7</avro.version>
     <commons-codec.version>1.10</commons-codec.version>
+    <commons-validator.version>1.6</commons-validator.version>
     <!-- pretty outdated -->
     <commons-io.version>2.5</commons-io.version>
     <commons-lang3.version>3.6</commons-lang3.version>
@@ -1918,6 +1919,11 @@
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
         <version>${commons-codec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-validator</groupId>
+        <artifactId>commons-validator</artifactId>
+        <version>${commons-validator.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>

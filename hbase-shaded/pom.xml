@@ -339,6 +339,10 @@
 
                                     <!-- org.apache.commons not including logging -->
                                     <relocation>
+                                        <pattern>org.apache.commons.validator</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.validator</shadedPattern>
+                                    </relocation>
+                                    <relocation>
                                         <pattern>org.apache.commons.beanutils</pattern>
                                         <shadedPattern>${shaded.prefix}.org.apache.commons.beanutils</shadedPattern>
                                     </relocation>
