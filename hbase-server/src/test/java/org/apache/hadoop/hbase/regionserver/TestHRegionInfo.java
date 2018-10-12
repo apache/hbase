@@ -339,12 +339,7 @@ public class TestHRegionInfo {
         origDesc.indexOf(Bytes.toStringBinary(startKey)) +
         Bytes.toStringBinary(startKey).length());
     assert(firstPart.equals(firstPartOrig));
-    // The elapsed time may be different in the two Strings since they were calculated at different
-    // times... so, don't include that portion when we compare. It starts with a '('.
-    int indexOfElapsedTime = secondPart.indexOf("(");
-    assertTrue(indexOfElapsedTime > 0);
-    assert(secondPart.substring(0, indexOfElapsedTime).
-        equals(secondPartOrig.substring(0, indexOfElapsedTime)));
+    assert(secondPart.equals(secondPartOrig));
   }
 
   private void checkEquality(HRegionInfo h, Configuration conf) throws IOException {
