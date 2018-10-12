@@ -1,6 +1,28 @@
 HBase Change Log
 
 
+Release Notes - HBase - Version 1.2.8
+
+** Sub-task
+    * [HBASE-21189] - flaky job should gather machine stats
+
+** Bug
+    * [HBASE-20307] - LoadTestTool prints too much zookeeper logging
+    * [HBASE-21158] - Empty qualifier cell is always returned when using QualifierFilter
+    * [HBASE-21166] - Creating a CoprocessorHConnection re-retrieves the cluster id from ZK
+    * [HBASE-21179] - Fix the number of actions in responseTooSlow log
+    * [HBASE-21203] - TestZKMainServer#testCommandLineWorks won't pass with default 4lw whitelist
+    * [HBASE-21228] - Memory leak since AbstractFSWAL caches Thread object and never clean later
+
+** Improvement
+    * [HBASE-21103] - nightly test cache of yetus install needs to be more thorough in verification
+    * [HBASE-21185] - WALPrettyPrinter: Additional useful info to be printed by wal printer tool, for debugability purposes
+
+** Task
+    * [HBASE-21168] - BloomFilterUtil uses hardcoded randomness
+    * [HBASE-21302] - Release 1.2.8
+
+
 Release Notes - HBase - Version 1.2.7 2018/09/16
 
 ** Sub-task
