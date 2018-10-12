@@ -296,7 +296,6 @@ public class TestHRegionInfo {
 
     assertEquals(expectedHri, convertedHri);
   }
-<<<<<<< Updated upstream
   @Test
   public void testRegionDetailsForDisplay() throws IOException {
     byte[] startKey = new byte[] {0x01, 0x01, 0x02, 0x03};
@@ -363,7 +362,5 @@ public class TestHRegionInfo {
       }
     }
   }
-=======
->>>>>>> Stashed changes
 }
 
