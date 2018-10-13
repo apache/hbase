@@ -160,13 +160,13 @@ public class TestProcedurePriority {
     rsWithMetaThread.join();
     FAIL = false;
     // verify that the cluster is back
-    UTIL.waitUntilNoRegionsInTransition(60000);
+    UTIL.waitUntilNoRegionsInTransition(480000);
     for (int i = 0; i < TABLE_COUNT; i++) {
       try (Table table = UTIL.getConnection().getTable(TableName.valueOf(TABLE_NAME_PREFIX + i))) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
     }
-    UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
+    UTIL.waitFor(60000, new ExplainingPredicate<Exception>() {
 
       @Override
       public boolean evaluate() throws Exception {
