@@ -174,8 +174,8 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     long procId = procExec.submitProcedure(
       new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
 
-    int numberOfSteps = 0; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 2; // failing before CLONE_SNAPSHOT_WRITE_FS_LAYOUT
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     MasterProcedureTestingUtility.validateTableDeletion(
       UTIL.getHBaseCluster().getMaster(), clonedTableName);

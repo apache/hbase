@@ -363,7 +363,7 @@ public class MasterProcedureTestingUtility {
    */
   public static void testRecoveryAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
-      final int numSteps, final boolean expectExecRunning) throws Exception {
+      final int lastStep, final boolean expectExecRunning) throws Exception {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
 
@@ -381,10 +381,13 @@ public class MasterProcedureTestingUtility {
     // fix would be get all visited states by the procedure and then check if user speccified
     // state is in that list. Current assumption of sequential proregression of steps/ states is
     // made at multiple places so we can keep while condition below for simplicity.
-    Procedure proc = procExec.getProcedure(procId);
+    Procedure<?> proc = procExec.getProcedure(procId);
     int stepNum = proc instanceof StateMachineProcedure ?
         ((StateMachineProcedure) proc).getCurrentStateId() : 0;
-    while (stepNum < numSteps) {
+    for (;;) {
+      if (stepNum == lastStep) {
+        break;
+      }
       LOG.info("Restart " + stepNum + " exec state=" + proc);
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
       restartMasterProcedureExecutor(procExec);
