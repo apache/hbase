@@ -186,8 +186,8 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     long procId = procExec.submitProcedure(
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
-    int numberOfSteps = 0; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 2; // failing before CREATE_TABLE_WRITE_FS_LAYOUT
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     TableName tableName = htd.getTableName();
     MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
@@ -239,7 +239,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testOnHDFSFailure() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 

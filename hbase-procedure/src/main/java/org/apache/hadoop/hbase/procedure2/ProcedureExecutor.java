@@ -1594,7 +1594,19 @@ public class ProcedureExecutor<TEnvironment> {
     int stackTail = subprocStack.size();
     while (stackTail-- > 0) {
       Procedure<TEnvironment> proc = subprocStack.get(stackTail);
-
+      // For the sub procedures which are successfully finished, we do not rollback them.
+      // Typically, if we want to rollback a procedure, we first need to rollback it, and then
+      // recursively rollback its ancestors. The state changes which are done by sub procedures
+      // should be handled by parent procedures when rolling back. For example, when rolling back a
+      // MergeTableProcedure, we will schedule new procedures to bring the offline regions online,
+      // instead of rolling back the original procedures which offlined the regions(in fact these
+      // procedures can not be rolled back...).
+      if (proc.isSuccess()) {
+        // Just do the cleanup work, without actually executing the rollback
+        subprocStack.remove(stackTail);
+        cleanupAfterRollbackOneStep(proc);
+        continue;
+      }
       LockState lockState = acquireLock(proc);
       if (lockState != LockState.LOCK_ACQUIRED) {
         // can't take a lock on the procedure, add the root-proc back on the
@@ -1633,6 +1645,31 @@ public class ProcedureExecutor<TEnvironment> {
     return LockState.LOCK_ACQUIRED;
   }
 
+  private void cleanupAfterRollbackOneStep(Procedure<TEnvironment> proc) {
+    if (proc.removeStackIndex()) {
+      if (!proc.isSuccess()) {
+        proc.setState(ProcedureState.ROLLEDBACK);
+      }
+
+      // update metrics on finishing the procedure (fail)
+      proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), false);
+
+      if (proc.hasParent()) {
+        store.delete(proc.getProcId());
+        procedures.remove(proc.getProcId());
+      } else {
+        final long[] childProcIds = rollbackStack.get(proc.getProcId()).getSubprocedureIds();
+        if (childProcIds != null) {
+          store.delete(proc, childProcIds);
+        } else {
+          store.update(proc);
+        }
+      }
+    } else {
+      store.update(proc);
+    }
+  }
+
   /**
    * Execute the rollback of the procedure step.
    * It updates the store with the new state (stack index)
@@ -1661,26 +1698,7 @@ public class ProcedureExecutor<TEnvironment> {
       throw new RuntimeException(msg);
     }
 
-    if (proc.removeStackIndex()) {
-      proc.setState(ProcedureState.ROLLEDBACK);
-
-      // update metrics on finishing the procedure (fail)
-      proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), false);
-
-      if (proc.hasParent()) {
-        store.delete(proc.getProcId());
-        procedures.remove(proc.getProcId());
-      } else {
-        final long[] childProcIds = rollbackStack.get(proc.getProcId()).getSubprocedureIds();
-        if (childProcIds != null) {
-          store.delete(proc, childProcIds);
-        } else {
-          store.update(proc);
-        }
-      }
-    } else {
-      store.update(proc);
-    }
+    cleanupAfterRollbackOneStep(proc);
 
     return LockState.LOCK_ACQUIRED;
   }

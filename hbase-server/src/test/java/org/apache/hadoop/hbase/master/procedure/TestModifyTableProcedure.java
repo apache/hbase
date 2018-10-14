@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -288,11 +287,10 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     // Modify multiple properties of the table.
-    final HTableDescriptor htd =
-        new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
-    boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
-    htd.setCompactionEnabled(newCompactionEnableOption);
-    htd.addFamily(new HColumnDescriptor(cf2));
+    TableDescriptor td = UTIL.getAdmin().getDescriptor(tableName);
+    TableDescriptor newTd =
+        TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(!td.isCompactionEnabled())
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf2)).build();
 
     PerClientRandomNonceGenerator nonceGenerator = PerClientRandomNonceGenerator.get();
     long nonceGroup = nonceGenerator.getNonceGroup();
@@ -302,7 +300,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Modify procedure && kill the executor
     final long procId = procExec
-        .submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceKey);
+        .submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), newTd), nonceKey);
 
     // Restart the executor after MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR and try to add column family
     // as nonce are there , we should not fail
@@ -328,11 +326,11 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     }
 
     // Validate descriptor
-    HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
-    assertEquals(newCompactionEnableOption, currentHtd.isCompactionEnabled());
-    assertEquals(3, currentHtd.getFamiliesKeys().size());
-    assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf2)));
-    assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf3)));
+    TableDescriptor currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    assertEquals(!td.isCompactionEnabled(), currentHtd.isCompactionEnabled());
+    assertEquals(3, currentHtd.getColumnFamilyCount());
+    assertTrue(currentHtd.hasColumnFamily(Bytes.toBytes(cf2)));
+    assertTrue(currentHtd.hasColumnFamily(Bytes.toBytes(cf3)));
 
     // cf2 should be added
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
@@ -351,17 +349,17 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
-    boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
-    htd.setCompactionEnabled(newCompactionEnableOption);
-    htd.addFamily(new HColumnDescriptor(familyName));
+    TableDescriptor td = UTIL.getAdmin().getDescriptor(tableName);
+    TableDescriptor newTd =
+      TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(!td.isCompactionEnabled())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName)).build();
 
     // Start the Modify procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd));
+    long procId =
+      procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), newTd));
 
-    int numberOfSteps = 0; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 3; // failing before MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     // cf2 should not be present
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
@@ -382,19 +380,19 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
-    boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
-    htd.setCompactionEnabled(newCompactionEnableOption);
-    htd.addFamily(new HColumnDescriptor(familyName));
-    htd.setRegionReplication(3);
+    TableDescriptor td = UTIL.getAdmin().getDescriptor(tableName);
+    TableDescriptor newTd =
+      TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(!td.isCompactionEnabled())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName)).setRegionReplication(3)
+        .build();
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd));
+      new ModifyTableProcedure(procExec.getEnvironment(), newTd));
 
     // Restart the executor and rollback the step twice
-    int numberOfSteps = 0; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 3; // failing before MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     // cf2 should not be present
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),

@@ -24,7 +24,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,8 +66,6 @@ public class TestMergeTableRegionsProcedure {
   public final TestName name = new TestName();
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
 
   private static final int initialRegionCount = 4;
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
@@ -108,9 +106,8 @@ public class TestMergeTableRegionsProcedure {
   @Before
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
+    MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
+    MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
     // Turn off balancer so it doesn't cut in and mess up our placements.
     admin.balancerSwitch(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
@@ -265,12 +262,15 @@ public class TestMergeTableRegionsProcedure {
     long procId = procExec.submitProcedure(
       new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true));
 
-    // Failing before MERGE_TABLE_REGIONS_CREATE_MERGED_REGION we should trigger the rollback
-    // NOTE: the 5 (number before MERGE_TABLE_REGIONS_CREATE_MERGED_REGION step) is
+    // Failing before MERGE_TABLE_REGIONS_UPDATE_META we should trigger the rollback
+    // NOTE: the 8 (number of MERGE_TABLE_REGIONS_UPDATE_META step) is
     // hardcoded, so you have to look at this test at least once when you add a new step.
-    int numberOfSteps = 5;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps,
-        true);
+    int lastStep = 8;
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep, true);
+    assertEquals(initialRegionCount, UTIL.getAdmin().getRegions(tableName).size());
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+    List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+    assertEquals(initialRegionCount, regions.size());
   }
 
   @Test
