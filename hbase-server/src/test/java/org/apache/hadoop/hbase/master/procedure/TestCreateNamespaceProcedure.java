@@ -215,8 +215,8 @@ public class TestCreateNamespaceProcedure {
     long procId = procExec.submitProcedure(
       new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
 
-    int numberOfSteps = 0; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 2; // failing before CREATE_NAMESPACE_CREATE_DIRECTORY
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     // Validate the non-existence of namespace
     try {
