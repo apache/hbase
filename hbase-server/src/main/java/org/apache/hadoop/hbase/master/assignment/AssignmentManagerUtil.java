@@ -140,26 +140,45 @@ final class AssignmentManagerUtil {
     return procs;
   }
 
+  /**
+   * Create assign procedures for the give regions, according to the {@code regionReplication}.
+   * <p/>
+   * For rolling back, we will submit procedures directly to the {@code ProcedureExecutor}, so it is
+   * possible that we persist the newly scheduled procedures, and then crash before persisting the
+   * rollback state, so when we arrive here the second time, it is possible that some regions have
+   * already been associated with a TRSP.
+   * @param ignoreIfInTransition if true, will skip creating TRSP for the given region if it is
+   *          already in transition, otherwise we will add an assert that it should not in
+   *          transition.
+   */
   private static TransitRegionStateProcedure[] createAssignProcedures(MasterProcedureEnv env,
-      List<RegionInfo> regions, int regionReplication, ServerName targetServer) {
+      List<RegionInfo> regions, int regionReplication, ServerName targetServer,
+      boolean ignoreIfInTransition) {
     // create the assign procs only for the primary region using the targetServer
-    TransitRegionStateProcedure[] primaryRegionProcs = regions.stream()
-        .map(env.getAssignmentManager().getRegionStates()::getOrCreateRegionStateNode)
+    TransitRegionStateProcedure[] primaryRegionProcs =
+      regions.stream().map(env.getAssignmentManager().getRegionStates()::getOrCreateRegionStateNode)
         .map(regionNode -> {
           TransitRegionStateProcedure proc =
-              TransitRegionStateProcedure.assign(env, regionNode.getRegionInfo(), targetServer);
+            TransitRegionStateProcedure.assign(env, regionNode.getRegionInfo(), targetServer);
           regionNode.lock();
           try {
-            // should never fail, as we have the exclusive region lock, and the region is newly
-            // created, or has been successfully closed so should not be on any servers, so SCP will
-            // not process it either.
-            assert !regionNode.isInTransition();
+            if (ignoreIfInTransition) {
+              if (regionNode.isInTransition()) {
+                return null;
+              }
+            } else {
+              // should never fail, as we have the exclusive region lock, and the region is newly
+              // created, or has been successfully closed so should not be on any servers, so SCP
+              // will
+              // not process it either.
+              assert !regionNode.isInTransition();
+            }
             regionNode.setProcedure(proc);
           } finally {
             regionNode.unlock();
           }
           return proc;
-        }).toArray(TransitRegionStateProcedure[]::new);
+        }).filter(p -> p != null).toArray(TransitRegionStateProcedure[]::new);
     if (regionReplication == DEFAULT_REGION_REPLICA) {
       // this is the default case
       return primaryRegionProcs;
@@ -184,14 +203,16 @@ final class AssignmentManagerUtil {
   static TransitRegionStateProcedure[] createAssignProceduresForOpeningNewRegions(
       MasterProcedureEnv env, List<RegionInfo> regions, int regionReplication,
       ServerName targetServer) {
-    return createAssignProcedures(env, regions, regionReplication, targetServer);
+    return createAssignProcedures(env, regions, regionReplication, targetServer, false);
   }
 
   static void reopenRegionsForRollback(MasterProcedureEnv env, List<RegionInfo> regions,
       int regionReplication, ServerName targetServer) {
     TransitRegionStateProcedure[] procs =
-        createAssignProcedures(env, regions, regionReplication, targetServer);
-    env.getMasterServices().getMasterProcedureExecutor().submitProcedures(procs);
+        createAssignProcedures(env, regions, regionReplication, targetServer, true);
+    if (procs.length > 0) {
+      env.getMasterServices().getMasterProcedureExecutor().submitProcedures(procs);
+    }
   }
 
   static void removeNonDefaultReplicas(MasterProcedureEnv env, Stream<RegionInfo> regions,
