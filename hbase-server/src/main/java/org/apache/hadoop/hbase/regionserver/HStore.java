@@ -324,10 +324,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       confPrintThreshold = 10;
     }
     this.parallelPutCountPrintThreshold = confPrintThreshold;
-    LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, " +
-            "parallelPutCountPrintThreshold={}", getColumnFamilyName(),
-        this.memstore.getClass().getSimpleName(), policyName,
-        this.verifyBulkLoads, this.parallelPutCountPrintThreshold);
+    LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
+            + "parallelPutCountPrintThreshold={}, encoding={}, compression={}",
+        getColumnFamilyName(), memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
+        parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
+        family.getCompressionType());
   }
 
   /**
