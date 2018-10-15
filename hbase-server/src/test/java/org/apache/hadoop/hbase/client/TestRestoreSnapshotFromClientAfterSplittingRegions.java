@@ -17,46 +17,37 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
-public class TestRestoreSnapshotFromClientWithRegionReplicas
-    extends RestoreSnapshotFromClientTestBase {
+public class TestRestoreSnapshotFromClientAfterSplittingRegions
+    extends RestoreSnapshotFromClientAfterSplittingRegionsTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRestoreSnapshotFromClientWithRegionReplicas.class);
+    HBaseClassTestRule.forClass(TestRestoreSnapshotFromClientAfterSplittingRegions.class);
+
+  @Parameter
+  public int numReplicas;
+
+  @Parameters(name = "{index}: regionReplication={0}")
+  public static List<Object[]> params() {
+    return Arrays.asList(new Object[] { 1 }, new Object[] { 3 });
+  }
 
   @Override
   protected int getNumReplicas() {
-    return 3;
-  }
-
-  @Test
-  public void testOnlineSnapshotAfterSplittingRegions() throws IOException, InterruptedException {
-    List<RegionInfo> regionInfos = admin.getRegions(tableName);
-    RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
-
-    // Split a region
-    splitRegion(regionInfos.get(0));
-
-    // Take a online snapshot
-    admin.snapshot(snapshotName1, tableName);
-
-    // Clone the snapshot to another table
-    TableName clonedTableName =
-      TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
-    admin.cloneSnapshot(snapshotName1, clonedTableName);
-
-    verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
+    return numReplicas;
   }
 }
