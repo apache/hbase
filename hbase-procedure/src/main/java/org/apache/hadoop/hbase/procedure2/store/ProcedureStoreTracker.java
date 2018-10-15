@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.LongStream;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -278,9 +279,8 @@ public class ProcedureStoreTracker {
   }
 
   public long getActiveMinProcId() {
-    // TODO: Cache?
     Map.Entry<Long, BitSetNode> entry = map.firstEntry();
-    return entry == null ? 0 : entry.getValue().getActiveMinProcId();
+    return entry == null ? Procedure.NO_PROC_ID : entry.getValue().getActiveMinProcId();
   }
 
   public void setKeepDeletes(boolean keepDeletes) {

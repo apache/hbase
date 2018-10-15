@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.procedure2.store;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker.DeleteState;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -346,12 +347,12 @@ class BitSetNode {
     long minProcId = start;
     for (int i = 0; i < deleted.length; ++i) {
       if (deleted[i] == 0) {
-        return (minProcId);
+        return minProcId;
       }
 
       if (deleted[i] != WORD_MASK) {
         for (int j = 0; j < BITS_PER_WORD; ++j) {
-          if ((deleted[i] & (1L << j)) != 0) {
+          if ((deleted[i] & (1L << j)) == 0) {
             return minProcId + j;
           }
         }
@@ -359,7 +360,7 @@ class BitSetNode {
 
       minProcId += BITS_PER_WORD;
     }
-    return minProcId;
+    return Procedure.NO_PROC_ID;
   }
 
   public long getActiveMaxProcId() {
@@ -378,7 +379,7 @@ class BitSetNode {
       }
       maxProcId -= BITS_PER_WORD;
     }
-    return maxProcId;
+    return Procedure.NO_PROC_ID;
   }
 
   // ========================================================================
