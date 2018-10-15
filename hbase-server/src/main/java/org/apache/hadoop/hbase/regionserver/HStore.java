@@ -305,9 +305,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
     cryptoContext = EncryptionUtil.createEncryptionContext(conf, family);
 
-    LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}",
+    LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
+            + "encoding={}, compression={}",
         getColumnFamilyName(), this.memstore.getClass().getSimpleName(), policyName,
-        this.verifyBulkLoads);
+        this.verifyBulkLoads, family.getDataBlockEncoding(),
+        family.getCompressionType());
   }
 
   /**
