@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.test;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
@@ -35,7 +37,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -56,20 +57,18 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionConfiguration;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -77,6 +76,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
@@ -85,8 +86,10 @@ import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.regionserver.FlushLargeStoresPolicy;
 import org.apache.hadoop.hbase.regionserver.FlushPolicyFactory;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Random64;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.io.BytesWritable;
@@ -118,8 +121,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Sets;
 
 /**
  * This is an integration test borrowed from goraci, written by Keith Turner,
@@ -268,6 +269,15 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     public static final String MULTIPLE_UNEVEN_COLUMNFAMILIES_KEY =
         "generator.multiple.columnfamilies";
 
+    /**
+     * Set this configuration if you want to scale up the size of test data quickly.
+     * <p>
+     * $ ./bin/hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList
+     * -Dgenerator.big.family.value.size=1024 generator 1 10 output
+     */
+    public static final String BIG_FAMILY_VALUE_SIZE_KEY = "generator.big.family.value.size";
+
+
     public static enum Counts {
       SUCCESS, TERMINATING, UNDEFINED, IOEXCEPTION
     }
@@ -301,7 +311,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       static class GeneratorRecordReader extends RecordReader<BytesWritable,NullWritable> {
         private long count;
         private long numNodes;
-        private Random rand;
+        private Random64 rand;
 
         @Override
         public void close() throws IOException {
@@ -328,8 +338,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         public void initialize(InputSplit arg0, TaskAttemptContext context)
             throws IOException, InterruptedException {
           numNodes = context.getConfiguration().getLong(GENERATOR_NUM_ROWS_PER_MAP_KEY, 25000000);
-          // Use SecureRandom to avoid issue described in HBASE-13382.
-          rand = new SecureRandom();
+          // Use Random64 to avoid issue described in HBASE-21256.
+          rand = new Random64();
         }
 
         @Override
@@ -439,6 +449,36 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         this.numWalkers = context.getConfiguration().getInt(CONCURRENT_WALKER_KEY, CONCURRENT_WALKER_DEFAULT);
         this.walkersStop = false;
         this.conf = context.getConfiguration();
+
+        if (multipleUnevenColumnFamilies) {
+          int n = context.getConfiguration().getInt(BIG_FAMILY_VALUE_SIZE_KEY, 256);
+          int limit = context.getConfiguration().getInt(
+            ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY,
+            ConnectionConfiguration.MAX_KEYVALUE_SIZE_DEFAULT);
+
+          Preconditions.checkArgument(
+            n <= limit,
+            "%s(%s) > %s(%s)",
+            BIG_FAMILY_VALUE_SIZE_KEY, n, ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, limit);
+
+          bigValue = new byte[n];
+          ThreadLocalRandom.current().nextBytes(bigValue);
+          LOG.info("Create a bigValue with " + n + " bytes.");
+        }
+
+        Preconditions.checkArgument(
+          numNodes > 0,
+          "numNodes(%s) <= 0",
+          numNodes);
+        Preconditions.checkArgument(
+          numNodes % width == 0,
+          "numNodes(%s) mod width(%s) != 0",
+          numNodes, width);
+        Preconditions.checkArgument(
+          numNodes % wrap == 0,
+          "numNodes(%s) mod wrap(%s) != 0",
+          numNodes, wrap
+        );
       }
 
       protected void instantiateHTable() throws IOException {
@@ -459,8 +499,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         current[i] = new byte[key.getLength()];
         System.arraycopy(key.getBytes(), 0, current[i], 0, key.getLength());
         if (++i == current.length) {
-          LOG.info("Persisting current.length=" + current.length + ", count=" + count + ", id=" +
-            Bytes.toStringBinary(id) + ", current=" + Bytes.toStringBinary(current[0]) +
+          LOG.debug("Persisting current.length=" + current.length + ", count=" + count +
+            ", id=" + Bytes.toStringBinary(id) + ", current=" + Bytes.toStringBinary(current[0]) +
             ", i=" + i);
           persist(output, count, prev, current, id);
           i = 0;
@@ -528,11 +568,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           if (this.multipleUnevenColumnFamilies) {
             // Use any column name.
             put.addColumn(TINY_FAMILY_NAME, TINY_FAMILY_NAME, this.tinyValue);
-            // If we've not allocated bigValue, do it now. Reuse same value each time.
-            if (this.bigValue == null) {
-              this.bigValue = new byte[current[i].length * 10];
-              ThreadLocalRandom.current().nextBytes(this.bigValue);
-            }
             // Use any column name.
             put.addColumn(BIG_FAMILY_NAME, BIG_FAMILY_NAME, this.bigValue);
           }
@@ -752,6 +787,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       FileOutputFormat.setOutputPath(job, tmpOutput);
       job.setOutputFormatClass(SequenceFileOutputFormat.class);
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(), Random64.class);
 
       boolean success = jobCompletion(job);
 
@@ -783,7 +819,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
       TableMapReduceUtil.addDependencyJars(job);
       TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-                                                     AbstractHBaseTool.class);
+          AbstractHBaseTool.class);
       TableMapReduceUtil.initCredentials(job);
 
       boolean success = jobCompletion(job);
@@ -1144,13 +1180,14 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
         // TODO check for more than one def, should not happen
         StringBuilder refsSb = null;
-        String keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
         if (defCount == 0 || refs.size() != 1) {
+          String keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
           refsSb = dumpExtraInfoOnRefs(key, context, refs);
           LOG.error("LinkedListError: key=" + keyString + ", reference(s)=" +
             (refsSb != null? refsSb.toString(): ""));
         }
         if (lostFamilies) {
+          String keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
           LOG.error("LinkedListError: key=" + keyString + ", lost big or tiny families");
           context.getCounter(Counts.LOST_FAMILIES).increment(1);
           context.write(key, LOSTFAM);
@@ -1177,6 +1214,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             // was added which can help a little debugging. This info is only available in mapper
             // output -- the 'Linked List error Key...' log message above. What we emit here is
             // useless for debugging.
+            String keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
             context.getCounter("undef", keyString).increment(1);
           }
         } else if (defCount > 0 && refs.size() == 0) {
@@ -1184,6 +1222,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           context.write(key, UNREF);
           context.getCounter(Counts.UNREFERENCED).increment(1);
           if (rows.addAndGet(1) < MISSING_ROWS_TO_LOG) {
+            String keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
             context.getCounter("unref", keyString).increment(1);
           }
         } else {
@@ -1296,7 +1335,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       TableMapReduceUtil.initTableMapperJob(getTableName(getConf()).getName(), scan,
           VerifyMapper.class, BytesWritable.class, BytesWritable.class, job);
       TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
-                                                     AbstractHBaseTool.class);
+          AbstractHBaseTool.class);
 
       job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
 
