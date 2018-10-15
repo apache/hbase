@@ -129,6 +129,7 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.jetty.webapp.WebAppContext;
 import org.mortbay.thread.QueuedThreadPool;
 
 import com.google.common.base.Joiner;
@@ -421,8 +422,9 @@ public class ThriftServerRunner implements Runnable {
 
     httpServer = new Server();
     // Context handler
-    Context context = new Context(httpServer, "/", Context.SESSIONS);
+    Context context = new WebAppContext();
     context.setContextPath("/");
+    context.setResourceBase("hbase-webapps/");
     String httpPath = "/*";
     httpServer.setHandler(context);
     context.addServlet(new ServletHolder(thriftHttpServlet), httpPath);
