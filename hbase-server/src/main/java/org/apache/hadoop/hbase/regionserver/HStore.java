@@ -292,6 +292,7 @@ public class HStore implements Store {
           "hbase.hstore.flush.retries.number must be > 0, not "
               + flushRetriesNumber);
     }
+
     // Crypto context for new store files
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {
@@ -348,6 +349,12 @@ public class HStore implements Store {
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
     }
+
+    LOG.info("Store=" + getColumnFamilyName() +
+      ", memstore type=" + this.memstore.getClass().getSimpleName() +
+      ", storagePolicy=" + policyName + ", verifyBulkLoads=" + verifyBulkLoads +
+      ", encoding=" + family.getDataBlockEncoding() +
+      ", compression=" + family.getCompressionType());
   }
 
   /**
