@@ -21,7 +21,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
@@ -31,15 +30,13 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-/**
- * Test restore snapshots from the client
- */
-@Category({ClientTests.class, LargeTests.class})
-public class TestMobRestoreSnapshotFromClient extends TestRestoreSnapshotFromClient {
+@Category({ LargeTests.class, ClientTests.class })
+public class TestMobRestoreSnapshotFromClientAfterTruncate
+    extends RestoreSnapshotFromClientAfterTruncateTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobRestoreSnapshotFromClient.class);
+    HBaseClassTestRule.forClass(TestMobRestoreSnapshotFromClientAfterTruncate.class);
 
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -48,7 +45,7 @@ public class TestMobRestoreSnapshotFromClient extends TestRestoreSnapshotFromCli
   }
 
   protected static void setupConf(Configuration conf) {
-    TestRestoreSnapshotFromClient.setupConf(conf);
+    RestoreSnapshotFromClientTestBase.setupConf(conf);
     TEST_UTIL.getConfiguration().setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
   }
 
@@ -58,21 +55,13 @@ public class TestMobRestoreSnapshotFromClient extends TestRestoreSnapshotFromCli
   }
 
   @Override
-  protected HColumnDescriptor getTestRestoreSchemaChangeHCD() {
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(3L);
-    return hcd;
-  }
-
-  @Override
-  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
-      long expectedRows) throws IOException {
+  protected void verifyRowCount(HBaseTestingUtility util, TableName tableName, long expectedRows)
+      throws IOException {
     MobSnapshotTestingUtils.verifyMobRowCount(util, tableName, expectedRows);
   }
 
   @Override
-  protected int countRows(final Table table, final byte[]... families) throws IOException {
+  protected int countRows(Table table, byte[]... families) throws IOException {
     return MobSnapshotTestingUtils.countMobRows(table, families);
   }
 }
