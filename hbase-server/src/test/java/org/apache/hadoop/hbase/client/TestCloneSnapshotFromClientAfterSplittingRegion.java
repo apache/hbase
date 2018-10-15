@@ -17,22 +17,37 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
-@Category({LargeTests.class, ClientTests.class})
-public class TestCloneSnapshotFromClientWithRegionReplicas extends
-    TestCloneSnapshotFromClient {
+@RunWith(Parameterized.class)
+@Category({ LargeTests.class, ClientTests.class })
+public class TestCloneSnapshotFromClientAfterSplittingRegion
+    extends CloneSnapshotFromClientAfterSplittingRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCloneSnapshotFromClientWithRegionReplicas.class);
+    HBaseClassTestRule.forClass(TestCloneSnapshotFromClientAfterSplittingRegion.class);
+
+  @Parameter
+  public int numReplicas;
+
+  @Parameters(name = "{index}: regionReplication={0}")
+  public static List<Object[]> params() {
+    return Arrays.asList(new Object[] { 1 }, new Object[] { 3 });
+  }
 
   @Override
   protected int getNumReplicas() {
-    return 3;
+    return numReplicas;
   }
 }
