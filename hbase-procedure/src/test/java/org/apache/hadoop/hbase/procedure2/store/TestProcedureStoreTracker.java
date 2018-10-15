@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -260,5 +261,19 @@ public class TestProcedureStoreTracker {
     for (int i = 0; i < 5000; i++) {
       assertEquals((2 * i + 1) * 10, activeProcIds[i]);
     }
+  }
+
+  @Test
+  public void testGetActiveMinProcId() {
+    ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+    assertEquals(Procedure.NO_PROC_ID, tracker.getActiveMinProcId());
+    for (int i = 100; i < 1000; i = 2 * i + 1) {
+      tracker.insert(i);
+    }
+    for (int i = 100; i < 1000; i = 2 * i + 1) {
+      assertEquals(i, tracker.getActiveMinProcId());
+      tracker.delete(i);
+    }
+    assertEquals(Procedure.NO_PROC_ID, tracker.getActiveMinProcId());
   }
 }
