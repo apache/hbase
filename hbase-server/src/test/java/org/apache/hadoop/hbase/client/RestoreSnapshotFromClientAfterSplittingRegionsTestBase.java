@@ -19,43 +19,35 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
+import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
-@Category({ LargeTests.class, ClientTests.class })
-public class TestRestoreSnapshotFromClientWithRegionReplicas
+public class RestoreSnapshotFromClientAfterSplittingRegionsTestBase
     extends RestoreSnapshotFromClientTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRestoreSnapshotFromClientWithRegionReplicas.class);
-
-  @Override
-  protected int getNumReplicas() {
-    return 3;
-  }
-
   @Test
-  public void testOnlineSnapshotAfterSplittingRegions() throws IOException, InterruptedException {
+  public void testRestoreSnapshotAfterSplittingRegions() throws IOException, InterruptedException {
     List<RegionInfo> regionInfos = admin.getRegions(tableName);
     RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
 
-    // Split a region
+    // Split the first region
     splitRegion(regionInfos.get(0));
 
-    // Take a online snapshot
+    // Take a snapshot
     admin.snapshot(snapshotName1, tableName);
 
-    // Clone the snapshot to another table
-    TableName clonedTableName =
-      TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
-    admin.cloneSnapshot(snapshotName1, clonedTableName);
+    // Load more data
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
 
-    verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
+    // Split the second region
+    splitRegion(regionInfos.get(1));
+
+    // Restore the snapshot
+    admin.disableTable(tableName);
+    admin.restoreSnapshot(snapshotName1);
+    admin.enableTable(tableName);
+
+    verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
   }
 }

@@ -18,44 +18,49 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.List;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ LargeTests.class, ClientTests.class })
-public class TestRestoreSnapshotFromClientWithRegionReplicas
-    extends RestoreSnapshotFromClientTestBase {
+public class TestMobRestoreSnapshotFromClientClone extends RestoreSnapshotFromClientCloneTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRestoreSnapshotFromClientWithRegionReplicas.class);
+    HBaseClassTestRule.forClass(TestMobRestoreSnapshotFromClientClone.class);
 
-  @Override
-  protected int getNumReplicas() {
-    return 3;
+  @BeforeClass
+  public static void setupCluster() throws Exception {
+    setupConf(TEST_UTIL.getConfiguration());
+    TEST_UTIL.startMiniCluster(3);
   }
 
-  @Test
-  public void testOnlineSnapshotAfterSplittingRegions() throws IOException, InterruptedException {
-    List<RegionInfo> regionInfos = admin.getRegions(tableName);
-    RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
+  protected static void setupConf(Configuration conf) {
+    RestoreSnapshotFromClientTestBase.setupConf(conf);
+    TEST_UTIL.getConfiguration().setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
+  }
 
-    // Split a region
-    splitRegion(regionInfos.get(0));
+  @Override
+  protected void createTable() throws Exception {
+    MobSnapshotTestingUtils.createMobTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
+  }
 
-    // Take a online snapshot
-    admin.snapshot(snapshotName1, tableName);
+  @Override
+  protected void verifyRowCount(HBaseTestingUtility util, TableName tableName, long expectedRows)
+      throws IOException {
+    MobSnapshotTestingUtils.verifyMobRowCount(util, tableName, expectedRows);
+  }
 
-    // Clone the snapshot to another table
-    TableName clonedTableName =
-      TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
-    admin.cloneSnapshot(snapshotName1, clonedTableName);
-
-    verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
+  @Override
+  protected int countRows(Table table, byte[]... families) throws IOException {
+    return MobSnapshotTestingUtils.countMobRows(table, families);
   }
 }
