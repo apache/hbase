@@ -293,10 +293,11 @@ public class TestChecksum {
                                dataSize + HConstants.HFILEBLOCK_HEADER_SIZE,
                                bytesPerChecksum);
         LOG.info("testChecksumChunks: pread=" + pread +
-                   ", bytesPerChecksum=" + bytesPerChecksum +
-                   ", fileSize=" + totalSize +
-                   ", dataSize=" + dataSize +
-                   ", expectedChunks=" + expectedChunks);
+          ", bytesPerChecksum=" + bytesPerChecksum +
+          ", fileSize=" + totalSize + 
+          ", dataSize=" + dataSize +
+          ", expectedChunks=" + expectedChunks +
+          ", compression=" + algo);
 
         // Verify hbase checksums. 
         assertEquals(true, hfs.useHBaseChecksum());

@@ -366,6 +366,8 @@ public class TestHFileBlock {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
         for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+          LOG.info("testDataBlockEncoding: Compression algorithm=" + algo + ", pread=" + pread +
+            ", dataBlockEncoder=" + encoding);
           Path path = new Path(TEST_UTIL.getDataTestDir(), "blocks_v2_"
               + algo + "_" + encoding.toString());
           FSDataOutputStream os = fs.create(path);
@@ -522,9 +524,8 @@ public class TestHFileBlock {
       for (boolean pread : BOOLEAN_VALUES) {
         for (boolean cacheOnWrite : BOOLEAN_VALUES) {
           Random rand = defaultRandom();
-          LOG.info("testPreviousOffset:Compression algorithm: " + algo +
-                   ", pread=" + pread +
-                   ", cacheOnWrite=" + cacheOnWrite);
+          LOG.info("testPreviousOffset: Compression algorithm=" + algo + ", pread=" + pread +
+            ", cacheOnWrite=" + cacheOnWrite);
           Path path = new Path(TEST_UTIL.getDataTestDir(), "prev_offset");
           List<Long> expectedOffsets = new ArrayList<Long>();
           List<Long> expectedPrevOffsets = new ArrayList<Long>();

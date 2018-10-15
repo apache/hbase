@@ -331,6 +331,12 @@ public class HStore implements Store {
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
     }
+
+    LOG.info("Store=" + getColumnFamilyName() +
+      ", memstore type=" + this.memstore.getClass().getSimpleName() +
+      ", verifyBulkLoads=" + verifyBulkLoads +
+      ", encoding=" + family.getDataBlockEncoding() +
+      ", compression=" + family.getCompressionType());
   }
 
   /**

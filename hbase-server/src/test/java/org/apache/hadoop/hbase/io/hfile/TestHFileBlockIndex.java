@@ -189,7 +189,7 @@ public class TestHFileBlockIndex {
 
   private void readIndex(boolean useTags) throws IOException {
     long fileSize = fs.getFileStatus(path).getLen();
-    LOG.info("Size of " + path + ": " + fileSize);
+    LOG.info("Size of " + path + ": " + fileSize + ", compression=" + compr);
 
     FSDataInputStream istream = fs.open(path);
     HFileContext meta = new HFileContextBuilder()

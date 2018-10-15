@@ -174,6 +174,7 @@ public abstract class Compactor {
           ", bloomtype=" + r.getBloomFilterType().toString() +
           ", size=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1) +
           ", encoding=" + r.getHFileReader().getDataBlockEncoding() +
+          ", compression=" + compactionCompression +
           ", seqNum=" + seqNum +
           (allFiles ? ", earliestPutTs=" + earliestPutTs: ""));
       }
