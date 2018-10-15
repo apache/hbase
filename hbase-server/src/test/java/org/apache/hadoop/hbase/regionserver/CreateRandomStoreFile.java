@@ -209,7 +209,7 @@ public class CreateRandomStoreFile {
 
     Path storeFilePath = sfw.getPath();
     long fileSize = fs.getFileStatus(storeFilePath).getLen();
-    LOG.info("Created " + storeFilePath + ", " + fileSize + " bytes");
+    LOG.info("Created " + storeFilePath + ", " + fileSize + " bytes, compression=" + compr);
 
     return true;
   }
