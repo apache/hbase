@@ -400,6 +400,46 @@ public class ProcedureTestingUtility {
     }
   }
 
+  public static class NoopStateMachineProcedure<TEnv, TState>
+      extends StateMachineProcedure<TEnv, TState> {
+    private TState initialState;
+    private TEnv env;
+
+    public NoopStateMachineProcedure() {
+    }
+
+    public NoopStateMachineProcedure(TEnv env, TState initialState) {
+      this.env = env;
+      this.initialState = initialState;
+    }
+
+    @Override
+    protected Flow executeFromState(TEnv env, TState tState)
+        throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      return null;
+    }
+
+    @Override
+    protected void rollbackState(TEnv env, TState tState) throws IOException, InterruptedException {
+
+    }
+
+    @Override
+    protected TState getState(int stateId) {
+      return null;
+    }
+
+    @Override
+    protected int getStateId(TState tState) {
+      return 0;
+    }
+
+    @Override
+    protected TState getInitialState() {
+      return initialState;
+    }
+  }
+
   public static class TestProcedure extends NoopProcedure<Void> {
     private byte[] data = null;
 
