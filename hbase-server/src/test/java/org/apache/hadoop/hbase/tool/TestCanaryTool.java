@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -120,11 +121,11 @@ public class TestCanaryTool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
     Canary canary = new Canary(executor, sink);
-    String[] args = { "-writeSniffing", "-t", "10000", name.getMethodName() };
+    String[] args = { "-writeSniffing", "-t", "10000", tableName.getNameAsString() };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
     assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
-    verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class),
+    verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),
       isA(ColumnFamilyDescriptor.class), anyLong());
   }
 
@@ -150,7 +151,8 @@ public class TestCanaryTool {
     Canary canary = new Canary(executor, sink);
     String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + "," +
       tableNames[1].getNameAsString() + "=0";
-    String[] args = { "-readTableTimeouts", configuredTimeoutStr, name.getMethodName() + "1", name.getMethodName() + "2"};
+    String[] args = {"-readTableTimeouts", configuredTimeoutStr, name.getMethodName() + "1",
+      name.getMethodName() + "2"};
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     verify(sink, times(tableNames.length)).initializeAndGetReadLatencyForTable(isA(String.class));
     for (int i=0; i<2; i++) {
@@ -237,7 +239,7 @@ public class TestCanaryTool {
     conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
     assertEquals(0, ToolRunner.run(conf, canary, args));
     verify(sink, atLeastOnce())
-        .publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class),
+        .publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),
         isA(ColumnFamilyDescriptor.class), anyLong());
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
   }

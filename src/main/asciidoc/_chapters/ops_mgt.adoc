@@ -82,45 +82,54 @@ Others, such as `hbase shell` (<<shell>>), `hbase upgrade` (<<upgrading>>), and 
 
 === Canary
 
-There is a Canary class can help users to canary-test the HBase cluster status, with every column-family for every regions or RegionServer's granularity.
-To see the usage, use the `-help` parameter.
+The Canary tool can help users "canary-test" the HBase cluster status.
+The default "region mode" fetches a row from every column-family of every regions.
+In "regionserver mode", the Canary tool will fetch a row from a random
+region on each of the cluster's RegionServers. In "zookeeper mode", the
+Canary will read the root znode on each member of the zookeeper ensemble.
+
+To see usage, pass the `-help` parameter (if you pass no
+parameters, the Canary tool starts executing in the default
+region "mode" fetching a row from every region in the cluster).
 
 ----
-$ ${HBASE_HOME}/bin/hbase canary -help
+2018-10-16 13:11:27,037 INFO  [main] tool.Canary: Execution thread count=16
+Usage: canary [OPTIONS] [<TABLE1> [<TABLE2]...] | [<REGIONSERVER1> [<REGIONSERVER2]..]
+Where [OPTIONS] are:
+ -h,-help        show this help and exit.
+ -regionserver   set 'regionserver mode'; gets row from random region on server
+ -allRegions     get from ALL regions when 'regionserver mode', not just random one.
+ -zookeeper      set 'zookeeper mode'; grab zookeeper.znode.parent on each ensemble member
+ -daemon         continuous check at defined intervals.
+ -interval <N>   interval between checks in seconds
+ -e              consider table/regionserver argument as regular expression
+ -f <B>          exit on first error; default=true
+ -failureAsError treat read/write failure as error
+ -t <N>          timeout for canary-test run; default=600000ms
+ -writeSniffing  enable write sniffing
+ -writeTable     the table used for write sniffing; default=hbase:canary
+ -writeTableTimeout <N>  timeout for writeTable; default=600000ms
+ -readTableTimeouts <tableName>=<read timeout>,<tableName>=<read timeout>,...
+                comma-separated list of table read timeouts (no spaces);
+                logs 'ERROR' if takes longer. default=600000ms
+ -permittedZookeeperFailures <N>  Ignore first N failures attempting to
+                connect to individual zookeeper nodes in ensemble
 
-Usage: hbase canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
- where [opts] are:
-   -help          Show this help and exit.
-   -regionserver  replace the table argument to regionserver,
-      which means to enable regionserver mode
-   -allRegions    Tries all regions on a regionserver,
-      only works in regionserver mode.
-   -zookeeper    Tries to grab zookeeper.znode.parent
-      on each zookeeper instance
-   -daemon        Continuous check at defined intervals.
-   -interval <N>  Interval between checks (sec)
-   -e             Use table/regionserver as regular expression
-      which means the table/regionserver is regular expression pattern
-   -f <B>         stop whole program if first error occurs, default is true
-   -t <N>         timeout for a check, default is 600000 (millisecs)
-   -writeTableTimeout <N>         write timeout for the writeTable, default is 600000 (millisecs)
-   -readTableTimeouts <tableName>=<read timeout>,<tableName>=<read timeout>, ...    comma-separated list of read timeouts per table (no spaces), default is 600000 (millisecs)
-   -writeSniffing enable the write sniffing in canary
-   -treatFailureAsError treats read / write failure as error
-   -writeTable    The table used for write sniffing. Default is hbase:canary
-   -Dhbase.canary.read.raw.enabled=<true/false> Use this flag to enable or disable raw scan during read canary test Default is false and raw is not enabled during scan
-   -D<configProperty>=<value> assigning or override the configuration params
+ -D<configProperty>=<value> to assign or override configuration params
+ -Dhbase.canary.read.raw.enabled=<true/false> Set to enable/disable raw scan; default=false
+
+Canary runs in one of three modes: region (default), regionserver, or zookeeper.
+To sniff/probe all regions, pass no arguments.
+To sniff/probe all regions of a table, pass tablename.
+To sniff/probe regionservers, pass -regionserver, etc.
+See http://hbase.apache.org/book.html#_canary for Canary documentation.
 ----
 
 [NOTE]
-The `Sink` class is instantiated using the `hbase.canary.sink.class` configuration property which
-will also determine the used Monitor class. In the absence of this property RegionServerStdOutSink
-will be used. You need to use the Sink according to the passed parameters to the _canary_ command.
-As an example you have to set `hbase.canary.sink.class` property to
-`org.apache.hadoop.hbase.tool.Canary$RegionStdOutSink` for using table parameters.
+The `Sink` class is instantiated using the `hbase.canary.sink.class` configuration property.
 
-This tool will return non zero error codes to user for collaborating with other monitoring tools, such as Nagios.
-The error code definitions are:
+This tool will return non zero error codes to user for collaborating with other monitoring tools,
+such as Nagios.  The error code definitions are:
 
 [source,java]
 ----
@@ -131,9 +140,9 @@ private static final int ERROR_EXIT_CODE = 4;
 private static final int FAILURE_EXIT_CODE = 5;
 ----
 
-Here are some examples based on the following given case.
-There are two Table objects called test-01 and test-02, they have two column family cf1 and cf2 respectively, and deployed on the 3 RegionServers.
-see following table.
+Here are some examples based on the following given case: given two Table objects called test-01
+and test-02 each with two column family cf1 and cf2 respectively, deployed on 3 RegionServers.
+See the following table.
 
 [cols="1,1,1", options="header"]
 |===
@@ -145,7 +154,7 @@ see following table.
 | rs3 | r2 | r1
 |===
 
-Following are some examples based on the previous given case.
+Following are some example outputs based on the previous given case.
 
 ==== Canary test for every column family (store) of every region of every table
 
@@ -163,12 +172,13 @@ $ ${HBASE_HOME}/bin/hbase canary
 13/12/09 03:26:32 INFO tool.Canary: read from region test-02,0004883,1386559511167.cbda32d5e2e276520712d84eaaa29d84. column family cf2 in 8ms
 ----
 
-So you can see, table test-01 has two regions and two column families, so the Canary tool will pick 4 small piece of data from 4 (2 region * 2 store) different stores.
-This is a default behavior of the this tool does.
+So you can see, table test-01 has two regions and two column families, so the Canary tool in the
+default "region mode" will pick 4 small piece of data from 4 (2 region * 2 store) different stores.
+This is a default behavior.
 
-==== Canary test for every column family (store) of every region of specific table(s)
+==== Canary test for every column family (store) of every region of a specific table(s)
 
-You can also test one or more specific tables.
+You can also test one or more specific tables by passing table names.
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary test-01 test-02
@@ -176,7 +186,9 @@ $ ${HBASE_HOME}/bin/hbase canary test-01 test-02
 
 ==== Canary test with RegionServer granularity
 
-This will pick one small piece of data from each RegionServer, and can also put your RegionServer name as input options for canary-test specific RegionServer.
+In "regionserver mode", the Canary tool will pick one small piece of data
+from each RegionServer (You can also pass one or more RegionServer names as arguments
+to the canary-test when in "regionserver mode").
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -regionserver
@@ -188,22 +200,25 @@ $ ${HBASE_HOME}/bin/hbase canary -regionserver
 
 ==== Canary test with regular expression pattern
 
-This will test both table test-01 and test-02.
+You can pass regexes for table names when in "region mode" or for servernames when
+in "regionserver mode". The below will test both table test-01 and test-02.
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -e test-0[1-2]
 ----
 
-==== Run canary test as daemon mode
+==== Run canary test as a "daemon"
 
-Run repeatedly with interval defined in option `-interval` whose default value is 60 seconds.
-This daemon will stop itself and return non-zero error code if any error occurs, due to the default value of option -f is true.
+Run repeatedly with an interval defined via the option `-interval` (default value is 60 seconds).
+This daemon will stop itself and return non-zero error code if any error occur. To have
+the daemon keep running across errors, pass the -f flag with its value set to false
+(see usage above).
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -daemon
 ----
 
-Run repeatedly with 5 second intervals and will not stop itself even if errors occur in the test.
+To run repeatedly with 5 second intervals and not stop on errors, do the following.
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -daemon -interval 5 -f false
@@ -211,9 +226,11 @@ $ ${HBASE_HOME}/bin/hbase canary -daemon -interval 5 -f false
 
 ==== Force timeout if canary test stuck
 
-In some cases the request is stuck and no response is sent back to the client. This can happen with dead RegionServers which the master has not yet noticed.
-Because of this we provide a timeout option to kill the canary test and return a non-zero error code.
-This run sets the timeout value to 60 seconds, the default value is 600 seconds.
+In some cases the request is stuck and no response is sent back to the client. This
+can happen with dead RegionServers which the master has not yet noticed.
+Because of this we provide a timeout option to kill the canary test and return a
+non-zero error code. The below sets the timeout value to 60 seconds (the default value
+is 600 seconds).
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -t 60000
@@ -221,36 +238,37 @@ $ ${HBASE_HOME}/bin/hbase canary -t 60000
 
 ==== Enable write sniffing in canary
 
-By default, the canary tool only check the read operations, it's hard to find the problem in the
-write path. To enable the write sniffing, you can run canary with the `-writeSniffing` option.
-When the write sniffing is enabled, the canary tool will create an hbase table and make sure the
-regions of the table distributed on all region servers. In each sniffing period, the canary will
-try to put data to these regions to check the write availability of each region server.
+By default, the canary tool only checks read operations. To enable the write sniffing,
+you can run the canary with the `-writeSniffing` option set.  When write sniffing is
+enabled, the canary tool will create an hbase table and make sure the
+regions of the table are distributed to all region servers. In each sniffing period,
+the canary will try to put data to these regions to check the write availability of
+each region server.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -writeSniffing
 ----
 
-The default write table is `hbase:canary` and can be specified by the option `-writeTable`.
+The default write table is `hbase:canary` and can be specified with the option `-writeTable`.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -writeSniffing -writeTable ns:canary
 ----
 
-The default value size of each put is 10 bytes and you can set it by the config key:
+The default value size of each put is 10 bytes. You can set it via the config key:
 `hbase.canary.write.value.size`.
 
 ==== Treat read / write failure as error
 
-By default, the canary tool only logs read failure, due to e.g. RetriesExhaustedException,
-while returning normal exit code. To treat read / write failure as error, you can run canary
-with the `-treatFailureAsError` option. When enabled, read / write failure would result in error
-exit code.
+By default, the canary tool only logs read failures -- due to e.g. RetriesExhaustedException, etc. --
+and will return the 'normal' exit code. To treat read/write failure as errors, you can run canary
+with the `-treatFailureAsError` option. When enabled, read/write failures will result in an
+error exit code.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -treatFailureAsError
 ----
 
 ==== Running Canary in a Kerberos-enabled Cluster
 
-To run Canary in a Kerberos-enabled cluster, configure the following two properties in _hbase-site.xml_:
+To run the Canary in a Kerberos-enabled cluster, configure the following two properties in _hbase-site.xml_:
 
 * `hbase.client.keytab.file`
 * `hbase.client.kerberos.principal`
