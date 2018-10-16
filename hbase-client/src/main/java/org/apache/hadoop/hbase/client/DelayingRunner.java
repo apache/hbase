@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import java.util.List;
@@ -40,7 +40,7 @@ import java.util.Map;
  */
 @InterfaceAudience.Private
 public class DelayingRunner implements Runnable {
-  private static final Log LOG = LogFactory.getLog(DelayingRunner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DelayingRunner.class);
 
   private final Object sleepLock = new Object();
   private boolean triggerWake = false;

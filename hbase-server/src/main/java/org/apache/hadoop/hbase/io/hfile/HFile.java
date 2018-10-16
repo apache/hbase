@@ -31,14 +31,13 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -49,7 +48,9 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.MetricsIO;
@@ -59,7 +60,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair;
@@ -69,8 +70,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * File format for hbase.
@@ -139,7 +140,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class HFile {
   // LOG is being used in HFileBlock and CheckSumUtil
-  static final Log LOG = LogFactory.getLog(HFile.class);
+  static final Logger LOG = LoggerFactory.getLogger(HFile.class);
 
   /**
    * Maximum length of key in HFile.
@@ -274,8 +275,7 @@ public class HFile {
     protected FileSystem fs;
     protected Path path;
     protected FSDataOutputStream ostream;
-    protected CellComparator comparator =
-        CellComparator.COMPARATOR;
+    protected CellComparator comparator = CellComparator.getInstance();
     protected InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
     protected boolean shouldDropBehind = false;
@@ -332,8 +332,8 @@ public class HFile {
         try {
           ostream.setDropBehind(shouldDropBehind && cacheConf.shouldDropBehindCompaction());
         } catch (UnsupportedOperationException uoe) {
-          if (LOG.isTraceEnabled()) LOG.trace("Unable to set drop behind on " + path, uoe);
-          else if (LOG.isDebugEnabled()) LOG.debug("Unable to set drop behind on " + path);
+          LOG.trace("Unable to set drop behind on {}", path, uoe);
+          LOG.debug("Unable to set drop behind on {}", path.getName());
         }
       }
       return new HFileWriterImpl(conf, cacheConf, path, ostream, comparator, fileContext);
@@ -434,21 +434,21 @@ public class HFile {
 
     Map<byte[], byte[]> loadFileInfo() throws IOException;
 
-    Cell getLastKey();
+    Optional<Cell> getLastKey();
 
-    Cell midkey() throws IOException;
+    Optional<Cell> midKey() throws IOException;
 
     long length();
 
     long getEntries();
 
-    Cell getFirstKey();
+    Optional<Cell> getFirstKey();
 
     long indexSize();
 
-    byte[] getFirstRowKey();
+    Optional<byte[]> getFirstRowKey();
 
-    byte[] getLastRowKey();
+    Optional<byte[]> getLastRowKey();
 
     FixedFileTrailer getTrailer();
 
@@ -488,9 +488,9 @@ public class HFile {
 
     boolean isPrimaryReplicaReader();
 
-    boolean shouldIncludeMemstoreTS();
+    boolean shouldIncludeMemStoreTS();
 
-    boolean isDecodeMemstoreTS();
+    boolean isDecodeMemStoreTS();
 
     DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
 

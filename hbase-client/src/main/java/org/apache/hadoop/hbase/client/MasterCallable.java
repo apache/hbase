@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * A RetryingCallable for Master RPC operations.
@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * it has to deal with Coprocessor Endpoints.
  * @param <V> return type
  */
+@InterfaceAudience.Private
 abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   protected final ClusterConnection connection;
   protected MasterKeepAliveConnection master;
@@ -53,7 +54,7 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
 
   @Override
   public void prepare(boolean reload) throws IOException {
-    this.master = this.connection.getKeepAliveMasterService();
+    this.master = this.connection.getMaster();
   }
 
   @Override
@@ -137,7 +138,7 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   }
 
   private static boolean isMetaRegion(final byte[] regionName) {
-    return Bytes.equals(regionName, HRegionInfo.FIRST_META_REGIONINFO.getRegionName())
-        || Bytes.equals(regionName, HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
+    return Bytes.equals(regionName, RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()) ||
+      Bytes.equals(regionName, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
   }
 }

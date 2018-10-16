@@ -23,21 +23,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SingleResponse;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
@@ -55,10 +59,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCata
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.util.StringUtils;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 
@@ -68,7 +68,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
  */
 @InterfaceAudience.Private
 public final class ResponseConverter {
-  private static final Log LOG = LogFactory.getLog(ResponseConverter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ResponseConverter.class);
 
   private ResponseConverter() {
   }
@@ -89,7 +89,8 @@ public final class ResponseConverter {
   /**
    * Get the results from a protocol buffer MultiResponse
    *
-   * @param request the protocol buffer MultiResponse to convert
+   * @param request the original protocol buffer MultiRequest
+   * @param response the protocol buffer MultiResponse to convert
    * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
    * @return the results that were in the MultiResponse (a Result or an Exception).
    * @throws IOException
@@ -97,6 +98,22 @@ public final class ResponseConverter {
   public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
       final MultiResponse response, final CellScanner cells)
   throws IOException {
+    return getResults(request, null, response, cells);
+  }
+
+  /**
+   * Get the results from a protocol buffer MultiResponse
+   *
+   * @param request the original protocol buffer MultiRequest
+   * @param rowMutationsIndexMap Used to support RowMutations in batch
+   * @param response the protocol buffer MultiResponse to convert
+   * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
+   * @return the results that were in the MultiResponse (a Result or an Exception).
+   * @throws IOException
+   */
+  public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
+      final Map<Integer, Integer> rowMutationsIndexMap, final MultiResponse response,
+      final CellScanner cells) throws IOException {
     int requestRegionActionCount = request.getRegionActionCount();
     int responseRegionActionResultCount = response.getRegionActionResultCount();
     if (requestRegionActionCount != responseRegionActionResultCount) {
@@ -130,8 +147,24 @@ public final class ResponseConverter {
             actionResult.getResultOrExceptionCount() + " for region " + actions.getRegion());
       }
 
+      Object responseValue;
+
+      // For RowMutations action, if there is an exception, the exception is set
+      // at the RegionActionResult level and the ResultOrException is null at the original index
+      Integer rowMutationsIndex =
+          (rowMutationsIndexMap == null ? null : rowMutationsIndexMap.get(i));
+      if (rowMutationsIndex != null) {
+        // This RegionAction is from a RowMutations in a batch.
+        // If there is an exception from the server, the exception is set at
+        // the RegionActionResult level, which has been handled above.
+        responseValue = response.getProcessed() ?
+            ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
+            ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+        results.add(regionName, rowMutationsIndex, responseValue);
+        continue;
+      }
+
       for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
-        Object responseValue;
         if (roe.hasException()) {
           responseValue = ProtobufUtil.toException(roe.getException());
         } else if (roe.hasResult()) {
@@ -196,6 +229,15 @@ public final class ResponseConverter {
     return parameterBuilder.build();
   }
 
+  /**
+   * Builds a protocol buffer HasPermissionResponse
+   */
+  public static HasPermissionResponse buildHasPermissionResponse(boolean hasPermission) {
+    HasPermissionResponse.Builder builder = HasPermissionResponse.newBuilder();
+    builder.setHasPermission(hasPermission);
+    return builder.build();
+  }
+
 // End utilities for Client
 // Start utilities for Admin
 
@@ -205,39 +247,9 @@ public final class ResponseConverter {
    * @param proto the GetOnlineRegionResponse
    * @return the list of region info
    */
-  public static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
+  public static List<RegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
     if (proto == null || proto.getRegionInfoCount() == 0) return null;
     return ProtobufUtil.getRegionInfos(proto);
-  }
-
-  /**
-   * Get the region opening state from a OpenRegionResponse
-   *
-   * @param proto the OpenRegionResponse
-   * @return the region opening state
-   */
-  public static RegionOpeningState getRegionOpeningState
-      (final OpenRegionResponse proto) {
-    if (proto == null || proto.getOpeningStateCount() != 1) return null;
-    return RegionOpeningState.valueOf(
-      proto.getOpeningState(0).name());
-  }
-
-  /**
-   * Get a list of region opening state from a OpenRegionResponse
-   *
-   * @param proto the OpenRegionResponse
-   * @return the list of region opening state
-   */
-  public static List<RegionOpeningState> getRegionOpeningStateList(
-      final OpenRegionResponse proto) {
-    if (proto == null) return null;
-    List<RegionOpeningState> regionOpeningStates = new ArrayList<>(proto.getOpeningStateCount());
-    for (int i = 0; i < proto.getOpeningStateCount(); i++) {
-      regionOpeningStates.add(RegionOpeningState.valueOf(
-          proto.getOpeningState(i).name()));
-    }
-    return regionOpeningStates;
   }
 
   /**
@@ -278,10 +290,10 @@ public final class ResponseConverter {
    * @return the response
    */
   public static GetOnlineRegionResponse buildGetOnlineRegionResponse(
-      final List<HRegionInfo> regions) {
+      final List<RegionInfo> regions) {
     GetOnlineRegionResponse.Builder builder = GetOnlineRegionResponse.newBuilder();
-    for (HRegionInfo region: regions) {
-      builder.addRegionInfo(HRegionInfo.convert(region));
+    for (RegionInfo region: regions) {
+      builder.addRegionInfo(ProtobufUtil.toRegionInfo(region));
     }
     return builder.build();
   }
@@ -414,7 +426,7 @@ public final class ResponseConverter {
 
   public static Map<String, Long> getScanMetrics(ScanResponse response) {
     Map<String, Long> metricMap = new HashMap<>();
-    if (response == null || !response.hasScanMetrics() || response.getScanMetrics() == null) {
+    if (response == null || !response.hasScanMetrics()) {
       return metricMap;
     }
 
@@ -432,5 +444,15 @@ public final class ResponseConverter {
     }
 
     return metricMap;
+  }
+
+  /**
+   * Creates a protocol buffer ClearRegionBlockCacheResponse
+   *
+   * @return a ClearRegionBlockCacheResponse
+   */
+  public static AdminProtos.ClearRegionBlockCacheResponse buildClearRegionBlockCacheResponse(final HBaseProtos.CacheEvictionStats
+                                                                                   cacheEvictionStats) {
+    return AdminProtos.ClearRegionBlockCacheResponse.newBuilder().setStats(cacheEvictionStats).build();
   }
 }

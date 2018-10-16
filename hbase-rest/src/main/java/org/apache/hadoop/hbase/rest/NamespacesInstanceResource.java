@@ -34,11 +34,11 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.model.NamespacesInstanceModel;
 import org.apache.hadoop.hbase.rest.model.TableListModel;
@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.rest.model.TableModel;
 @InterfaceAudience.Private
 public class NamespacesInstanceResource extends ResourceBase {
 
-  private static final Log LOG = LogFactory.getLog(NamespacesInstanceResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NamespacesInstanceResource.class);
   String namespace;
   boolean queryTables = false;
 

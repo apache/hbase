@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
 
 
 /**
@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.security.User;
  */
 @InterfaceAudience.Private
 public abstract class CompactionContext {
-  protected CompactionRequest request = null;
+  protected CompactionRequestImpl request = null;
 
   /**
    * Called before coprocessor preCompactSelection and should filter the candidates
@@ -44,7 +44,7 @@ public abstract class CompactionContext {
    * @param filesCompacting files currently compacting
    * @return the list of files that can theoretically be compacted.
    */
-  public abstract List<StoreFile> preSelect(final List<StoreFile> filesCompacting);
+  public abstract List<HStoreFile> preSelect(List<HStoreFile> filesCompacting);
 
   /**
    * Called to select files for compaction. Must fill in the request field if successful.
@@ -54,22 +54,21 @@ public abstract class CompactionContext {
    * @param forceMajor Whether to force major compaction.
    * @return Whether the selection succeeded. Selection may be empty and lead to no compaction.
    */
-  public abstract boolean select(
-      final List<StoreFile> filesCompacting, final boolean isUserCompaction,
-      final boolean mayUseOffPeak, final boolean forceMajor) throws IOException;
+  public abstract boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
+      boolean mayUseOffPeak, boolean forceMajor) throws IOException;
 
   /**
    * Forces external selection to be applied for this compaction.
    * @param request The pre-cooked request with selection and other settings.
    */
-  public void forceSelect(CompactionRequest request) {
+  public void forceSelect(CompactionRequestImpl request) {
     this.request = request;
   }
 
   public abstract List<Path> compact(ThroughputController throughputController, User user)
       throws IOException;
 
-  public CompactionRequest getRequest() {
+  public CompactionRequestImpl getRequest() {
     assert hasSelection();
     return this.request;
   }

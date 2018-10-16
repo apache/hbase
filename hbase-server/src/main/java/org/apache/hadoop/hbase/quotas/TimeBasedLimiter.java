@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.quotas;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
@@ -110,47 +110,50 @@ public class TimeBasedLimiter implements QuotaLimiter {
   }
 
   @Override
-  public void checkQuota(long writeSize, long readSize) throws ThrottlingException {
-    if (!reqsLimiter.canExecute()) {
-      ThrottlingException.throwNumRequestsExceeded(reqsLimiter.waitInterval());
+  public void checkQuota(long writeReqs, long estimateWriteSize, long readReqs,
+      long estimateReadSize) throws RpcThrottlingException {
+    if (!reqsLimiter.canExecute(writeReqs + readReqs)) {
+      RpcThrottlingException.throwNumRequestsExceeded(reqsLimiter.waitInterval());
     }
-    if (!reqSizeLimiter.canExecute(writeSize + readSize)) {
-      ThrottlingException.throwRequestSizeExceeded(reqSizeLimiter
-          .waitInterval(writeSize + readSize));
-    }
-
-    if (writeSize > 0) {
-      if (!writeReqsLimiter.canExecute()) {
-        ThrottlingException.throwNumWriteRequestsExceeded(writeReqsLimiter.waitInterval());
-      }
-      if (!writeSizeLimiter.canExecute(writeSize)) {
-        ThrottlingException.throwWriteSizeExceeded(writeSizeLimiter.waitInterval(writeSize));
-      }
+    if (!reqSizeLimiter.canExecute(estimateWriteSize + estimateReadSize)) {
+      RpcThrottlingException.throwRequestSizeExceeded(
+          reqSizeLimiter.waitInterval(estimateWriteSize + estimateReadSize));
     }
 
-    if (readSize > 0) {
-      if (!readReqsLimiter.canExecute()) {
-        ThrottlingException.throwNumReadRequestsExceeded(readReqsLimiter.waitInterval());
+    if (estimateWriteSize > 0) {
+      if (!writeReqsLimiter.canExecute(writeReqs)) {
+        RpcThrottlingException.throwNumWriteRequestsExceeded(writeReqsLimiter.waitInterval());
       }
-      if (!readSizeLimiter.canExecute(readSize)) {
-        ThrottlingException.throwReadSizeExceeded(readSizeLimiter.waitInterval(readSize));
+      if (!writeSizeLimiter.canExecute(estimateWriteSize)) {
+        RpcThrottlingException.throwWriteSizeExceeded(
+            writeSizeLimiter.waitInterval(estimateWriteSize));
+      }
+    }
+
+    if (estimateReadSize > 0) {
+      if (!readReqsLimiter.canExecute(readReqs)) {
+        RpcThrottlingException.throwNumReadRequestsExceeded(readReqsLimiter.waitInterval());
+      }
+      if (!readSizeLimiter.canExecute(estimateReadSize)) {
+        RpcThrottlingException.throwReadSizeExceeded(
+            readSizeLimiter.waitInterval(estimateReadSize));
       }
     }
   }
 
   @Override
-  public void grabQuota(long writeSize, long readSize) {
+  public void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize) {
     assert writeSize != 0 || readSize != 0;
 
-    reqsLimiter.consume(1);
+    reqsLimiter.consume(writeReqs + readReqs);
     reqSizeLimiter.consume(writeSize + readSize);
 
     if (writeSize > 0) {
-      writeReqsLimiter.consume(1);
+      writeReqsLimiter.consume(writeReqs);
       writeSizeLimiter.consume(writeSize);
     }
     if (readSize > 0) {
-      readReqsLimiter.consume(1);
+      readReqsLimiter.consume(readReqs);
       readSizeLimiter.consume(readSize);
     }
   }

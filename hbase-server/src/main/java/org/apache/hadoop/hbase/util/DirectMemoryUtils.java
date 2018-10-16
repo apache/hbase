@@ -32,12 +32,15 @@ import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocatorMetric;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocatorMetricProvider;
+import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
 
-import com.google.common.base.Preconditions;
 
 /**
  * Utilities for interacting with and monitoring DirectByteBuffer allocations.
@@ -45,7 +48,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DirectMemoryUtils {
-  private static final Log LOG = LogFactory.getLog(DirectMemoryUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DirectMemoryUtils.class);
   private static final String MEMORY_USED = "MemoryUsed";
   private static final MBeanServer BEAN_SERVER;
   private static final ObjectName NIO_DIRECT_POOL;
@@ -123,6 +126,16 @@ public class DirectMemoryUtils {
       // should print further diagnostic information?
       return 0;
     }
+  }
+
+  /**
+   * @return the current amount of direct memory used by netty module.
+   */
+  public static long getNettyDirectMemoryUsage() {
+
+    ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider)
+        PooledByteBufAllocator.DEFAULT).metric();
+    return metric.usedDirectMemory();
   }
 
   /**

@@ -35,9 +35,9 @@ including the documentation.
 
 In HBase, documentation includes the following areas, and probably some others:
 
-* The link:http://hbase.apache.org/book.html[HBase Reference
+* The link:https://hbase.apache.org/book.html[HBase Reference
   Guide] (this book)
-* The link:http://hbase.apache.org/[HBase website]
+* The link:https://hbase.apache.org/[HBase website]
 * API documentation
 * Command-line utility output and help text
 * Web UI strings, explicit help text, context-sensitive strings, and others
@@ -55,7 +55,7 @@ see <<developer,developer>>.
 If you spot an error in a string in a UI, utility, script, log message, or elsewhere,
 or you think something could be made more clear, or you think text needs to be added
 where it doesn't currently exist, the first step is to file a JIRA. Be sure to set
-the component to `Documentation` in addition any other involved components. Most
+the component to `Documentation` in addition to any other involved components. Most
 components have one or more default owners, who monitor new issues which come into
 those queues. Regardless of whether you feel able to fix the bug, you should still
 file bugs where you see them.
@@ -119,14 +119,14 @@ JIRA and add a version number to the name of the new patch.
 
 === Editing the HBase Website
 
-The source for the HBase website is in the HBase source, in the _src/main/site/_ directory.
+The source for the HBase website is in the HBase source, in the _src/site/_ directory.
 Within this directory, source for the individual pages is in the _xdocs/_ directory,
 and images referenced in those pages are in the _resources/images/_ directory.
 This directory also stores images used in the HBase Reference Guide.
 
 The website's pages are written in an HTML-like XML dialect called xdoc, which
 has a reference guide at
-http://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html.
+https://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html.
 You can edit these files in a plain-text editor, an IDE, or an XML editor such
 as XML Mind XML Editor (XXE) or Oxygen XML Author.
 
@@ -138,23 +138,23 @@ When you are satisfied with your changes, follow the procedure in
 [[website_publish]]
 === Publishing the HBase Website and Documentation
 
-HBase uses the ASF's `gitpubsub` mechanism.
-. After generating the website and documentation
-artifacts using `mvn clean site site:stage`, check out the `asf-site` repository.
+HBase uses the ASF's `gitpubsub` mechanism. A Jenkins job runs the
+`dev-support/jenkins-scripts/generate-hbase-website.sh` script, which runs the
+`mvn clean site site:stage` against the `master` branch of the `hbase`
+repository and commits the built artifacts to the `asf-site` branch of the
+`hbase-site` repository. When the commit is pushed, the website is redeployed
+automatically. If the script encounters an error, an email is sent to the
+developer mailing list. You can run the script manually or examine it to see the
+steps involved.
 
-. Remove previously-generated content using the following command:
-+
-----
-rm -rf rm -rf *apidocs* *book* *.html *.pdf* css js
-----
-+
-WARNING: Do not remove the `0.94/` directory. To regenerate them, you must check out
-the 0.94 branch and run `mvn clean site site:stage` from there, and then copy the
-artifacts to the 0.94/ directory of the `asf-site` branch.
+[[website_check_links]]
+=== Checking the HBase Website for Broken Links
 
-. Copy the contents of `target/staging` to the branch.
-
-. Add and commit your changes, and submit a patch for review.
+A Jenkins job runs periodically to check HBase website for broken links, using
+the `dev-support/jenkins-scripts/check-website-links.sh` script. This script
+uses a tool called `linklint` to check for bad links and create a report. If
+broken links are found, an email is sent to the developer mailing list. You can
+run the script manually or examine it to see the steps involved.
 
 === HBase Reference Guide Style Guide and Cheat Sheet
 
@@ -216,7 +216,7 @@ link:http://www.google.com[Google]
 ----
 image::sunset.jpg[Alt Text]
 ----
-(put the image in the src/main/site/resources/images directory)
+(put the image in the src/site/resources/images directory)
 | An inline image | The image with alt text, as part of the text flow |
 ----
 image:sunset.jpg [Alt Text]
@@ -389,7 +389,7 @@ Inline images cannot have titles. They are generally small images like GUI butto
 image:sunset.jpg[Alt Text]
 ----
 
-When doing a local build, save the image to the _src/main/site/resources/images/_ directory.
+When doing a local build, save the image to the _src/site/resources/images/_ directory.
 When you link to the image, do not include the directory portion of the path.
 The image will be copied to the appropriate target location during the build of the output.
 

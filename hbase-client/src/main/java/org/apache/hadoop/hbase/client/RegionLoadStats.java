@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * POJO representing region server load
@@ -34,7 +34,16 @@ public class RegionLoadStats {
     this.compactionPressure = compactionPressure;
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #getMemStoreLoad()} instead
+   */
+  @Deprecated
   public int getMemstoreLoad() {
+    return this.memstoreLoad;
+  }
+
+  public int getMemStoreLoad() {
     return this.memstoreLoad;
   }
 

@@ -22,12 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
@@ -35,8 +33,9 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * A base class for tests that do something with the cluster while running
@@ -62,7 +61,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected static final int DEFAULT_NUM_READ_THREADS = 20;
 
   // Log is being used in IntegrationTestIngestWithEncryption, hence it is protected
-  protected static final Log LOG = LogFactory.getLog(IntegrationTestIngest.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestIngest.class);
   protected IntegrationTestingUtility util;
   protected HBaseCluster cluster;
   protected LoadTestTool loadTool;
@@ -70,7 +69,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected String[] LOAD_TEST_TOOL_INIT_ARGS = {
       LoadTestTool.OPT_COLUMN_FAMILIES,
       LoadTestTool.OPT_COMPRESSION,
-      LoadTestTool.OPT_DATA_BLOCK_ENCODING,
+      HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
       LoadTestTool.OPT_INMEMORY,
       LoadTestTool.OPT_ENCRYPTION,
       LoadTestTool.OPT_NUM_REGIONS_PER_SERVER,
@@ -138,7 +137,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
     String familiesString = getConf().get(
       String.format("%s.%s", clazz, LoadTestTool.OPT_COLUMN_FAMILIES));
     if (familiesString == null) {
-      for (byte[] family : LoadTestTool.DEFAULT_COLUMN_FAMILIES) {
+      for (byte[] family : HFileTestUtil.DEFAULT_COLUMN_FAMILIES) {
         families.add(Bytes.toString(family));
       }
     } else {
@@ -160,7 +159,8 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       int recordSize, int writeThreads, int readThreads) throws Exception {
 
     LOG.info("Running ingest");
-    LOG.info("Cluster size:" + util.getHBaseClusterInterface().getClusterStatus().getServersSize());
+    LOG.info("Cluster size:" + util.getHBaseClusterInterface()
+      .getClusterMetrics().getLiveServerMetrics().size());
 
     long start = System.currentTimeMillis();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
@@ -248,7 +248,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   /** Estimates a data size based on the cluster size */
   protected long getNumKeys(long keysPerServer)
       throws IOException {
-    int numRegionServers = cluster.getClusterStatus().getServersSize();
+    int numRegionServers = cluster.getClusterMetrics().getLiveServerMetrics().size();
     return keysPerServer * numRegionServers;
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
@@ -35,19 +32,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
@@ -62,14 +55,6 @@ import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -77,18 +62,31 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.codehaus.jackson.map.ObjectMapper;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * An RPC server that hosts protobuf described Services.
  *
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class RpcServer implements RpcServerInterface,
     ConfigurationObserver {
   // LOG is being used in CallRunner and the log level is being changed in tests
-  public static final Log LOG = LogFactory.getLog(RpcServer.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RpcServer.class);
   protected static final CallQueueTooBigException CALL_QUEUE_TOO_BIG_EXCEPTION
       = new CallQueueTooBigException();
 
@@ -112,10 +110,13 @@ public abstract class RpcServer implements RpcServerInterface,
 
   protected static final String AUTH_FAILED_FOR = "Auth failed for ";
   protected static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
-  protected static final Log AUDITLOG = LogFactory.getLog("SecurityLogger."
+  protected static final Logger AUDITLOG = LoggerFactory.getLogger("SecurityLogger."
       + Server.class.getName());
   protected SecretManager<TokenIdentifier> secretManager;
   protected final Map<String, String> saslProps;
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+      justification="Start is synchronized so authManager creation is single-threaded")
   protected ServiceAuthorizationManager authManager;
 
   /** This is set to Call object before Handler invokes an RPC and ybdie
@@ -190,6 +191,10 @@ public abstract class RpcServer implements RpcServerInterface,
   protected static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   protected static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
+  protected static final int DEFAULT_TRACE_LOG_MAX_LENGTH = 1000;
+  protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
+  protected static final String KEY_WORD_TRUNCATED = " <TRUNCATED>";
+
   protected static final ObjectMapper MAPPER = new ObjectMapper();
 
   protected final int maxRequestSize;
@@ -255,13 +260,13 @@ public abstract class RpcServer implements RpcServerInterface,
    * @param bindAddress Where to listen
    * @param conf
    * @param scheduler
+   * @param reservoirEnabled Enable ByteBufferPool or not.
    */
   public RpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
       final InetSocketAddress bindAddress, Configuration conf,
-      RpcScheduler scheduler)
-      throws IOException {
-    if (conf.getBoolean("hbase.ipc.server.reservoir.enabled", true)) {
+      RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
+    if (reservoirEnabled) {
       int poolBufSize = conf.getInt(ByteBufferPool.BUFFER_SIZE_KEY,
           ByteBufferPool.DEFAULT_BUFFER_SIZE);
       // The max number of buffers to be pooled in the ByteBufferPool. The default value been
@@ -357,10 +362,12 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   @Override
-  public synchronized void refreshAuthManager(PolicyProvider pp) {
+  public void refreshAuthManager(PolicyProvider pp) {
     // Ignore warnings that this should be accessed in a static way instead of via an instance;
     // it'll break if you go via static route.
-    this.authManager.refresh(this.conf, pp);
+    synchronized (authManager) {
+      authManager.refresh(this.conf, pp);
+    }
   }
 
   protected AuthenticationTokenSecretManager createSecretManager() {
@@ -493,7 +500,13 @@ public abstract class RpcServer implements RpcServerInterface,
     responseInfo.put("class", server == null? "": server.getClass().getSimpleName());
     responseInfo.put("method", methodName);
     responseInfo.put("call", call);
-    responseInfo.put("param", ProtobufUtil.getShortTextFormat(param));
+    // The params could be really big, make sure they don't kill us at WARN
+    String stringifiedParam = ProtobufUtil.getShortTextFormat(param);
+    if (stringifiedParam.length() > 150) {
+      // Truncate to 1000 chars if TRACE is on, else to 150 chars
+      stringifiedParam = truncateTraceLog(stringifiedParam);
+    }
+    responseInfo.put("param", stringifiedParam);
     if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
       ClientProtos.ScanRequest request = ((ClientProtos.ScanRequest) param);
       if (request.hasScannerId()) {
@@ -505,6 +518,24 @@ public abstract class RpcServer implements RpcServerInterface,
       }
     }
     LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
+  }
+
+  /**
+   * Truncate to number of chars decided by conf hbase.ipc.trace.log.max.length
+   * if TRACE is on else to 150 chars Refer to Jira HBASE-20826 and HBASE-20942
+   * @param strParam stringifiedParam to be truncated
+   * @return truncated trace log string
+   */
+  @VisibleForTesting
+  String truncateTraceLog(String strParam) {
+    if (LOG.isTraceEnabled()) {
+      int traceLogMaxLength = getConf().getInt(TRACE_LOG_MAX_LENGTH, DEFAULT_TRACE_LOG_MAX_LENGTH);
+      int truncatedLength =
+          strParam.length() < traceLogMaxLength ? strParam.length() : traceLogMaxLength;
+      String truncatedFlag = truncatedLength == strParam.length() ? "" : KEY_WORD_TRUNCATED;
+      return strParam.subSequence(0, truncatedLength) + truncatedFlag;
+    }
+    return strParam.subSequence(0, 150) + KEY_WORD_TRUNCATED;
   }
 
   /**
@@ -536,19 +567,18 @@ public abstract class RpcServer implements RpcServerInterface,
 
   /**
    * Authorize the incoming client connection.
-   *
    * @param user client user
    * @param connection incoming connection
    * @param addr InetAddress of incoming connection
-   * @throws org.apache.hadoop.security.authorize.AuthorizationException
-   *         when the client isn't authorized to talk the protocol
+   * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
-  public synchronized void authorize(UserGroupInformation user,
-      ConnectionHeader connection, InetAddress addr)
-      throws AuthorizationException {
+  public void authorize(UserGroupInformation user, ConnectionHeader connection,
+      InetAddress addr) throws AuthorizationException {
     if (authorize) {
       Class<?> c = getServiceInterface(services, connection.getServiceName());
-      this.authManager.authorize(user != null ? user : null, c, getConf(), addr);
+      synchronized (authManager) {
+        authManager.authorize(user, c, getConf(), addr);
+      }
     }
   }
 
@@ -583,9 +613,8 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   /**
-   * Helper for {@link #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)}
-   * and {@link #channelWrite(GatheringByteChannel, BufferChain)}. Only
-   * one of readCh or writeCh should be non-null.
+   * Helper for {@link #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)}.
+   * Only one of readCh or writeCh should be non-null.
    *
    * @param readCh read channel
    * @param writeCh write channel
@@ -593,7 +622,6 @@ public abstract class RpcServer implements RpcServerInterface,
    * @return bytes written
    * @throws java.io.IOException e
    * @see #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)
-   * @see #channelWrite(GatheringByteChannel, BufferChain)
    */
   private static int channelIO(ReadableByteChannel readCh,
                                WritableByteChannel writeCh,
@@ -678,8 +706,8 @@ public abstract class RpcServer implements RpcServerInterface,
    * call.
    * @return An RpcCallContext backed by the currently ongoing call (gotten from a thread local)
    */
-  public static RpcCall getCurrentCall() {
-    return CurCall.get();
+  public static Optional<RpcCall> getCurrentCall() {
+    return Optional.ofNullable(CurCall.get());
   }
 
   public static boolean isInRpcCallContext() {
@@ -687,13 +715,13 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   /**
-   * Returns the user credentials associated with the current RPC request or
-   * <code>null</code> if no credentials were provided.
+   * Returns the user credentials associated with the current RPC request or not present if no
+   * credentials were provided.
    * @return A User
    */
-  public static User getRequestUser() {
-    RpcCallContext ctx = getCurrentCall();
-    return ctx == null? null: ctx.getRequestUser();
+  public static Optional<User> getRequestUser() {
+    Optional<RpcCall> ctx = getCurrentCall();
+    return ctx.isPresent() ? ctx.get().getRequestUser() : Optional.empty();
   }
 
   /**
@@ -704,19 +732,17 @@ public abstract class RpcServer implements RpcServerInterface,
 
   /**
    * Returns the username for any user associated with the current RPC
-   * request or <code>null</code> if no user is set.
+   * request or not present if no user is set.
    */
-  public static String getRequestUserName() {
-    User user = getRequestUser();
-    return user == null? null: user.getShortName();
+  public static Optional<String> getRequestUserName() {
+    return getRequestUser().map(User::getShortName);
   }
 
   /**
    * @return Address of remote client if a request is ongoing, else null
    */
-  public static InetAddress getRemoteAddress() {
-    RpcCallContext ctx = getCurrentCall();
-    return ctx == null? null: ctx.getRemoteAddress();
+  public static Optional<InetAddress> getRemoteAddress() {
+    return getCurrentCall().map(RpcCall::getRemoteAddress);
   }
 
   /**

@@ -17,49 +17,51 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestWALRootDir {
-  private static final Log LOG = LogFactory.getLog(TestWALRootDir.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWALRootDir.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALRootDir.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
   private static FileSystem fs;
   private static FileSystem walFs;
-  static final TableName tableName = TableName.valueOf("TestWALWALDir");
+  private static final TableName tableName = TableName.valueOf("TestWALWALDir");
   private static final byte [] rowName = Bytes.toBytes("row");
   private static final byte [] family = Bytes.toBytes("column");
-  private static HTableDescriptor htd;
   private static Path walRootDir;
   private static Path rootDir;
   private static WALFactory wals;
@@ -77,8 +79,6 @@ public class TestWALRootDir {
     walRootDir = TEST_UTIL.createWALRootDir();
     fs = FSUtils.getRootDirFileSystem(conf);
     walFs = FSUtils.getWALFileSystem(conf);
-    htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(family));
   }
 
   @AfterClass
@@ -89,33 +89,39 @@ public class TestWALRootDir {
 
   @Test
   public void testWALRootDir() throws Exception {
-    HRegionInfo regionInfo = new HRegionInfo(tableName);
-    wals = new WALFactory(conf, null, "testWALRootDir");
-    WAL log = wals.getWAL(regionInfo.getEncodedNameAsBytes(), regionInfo.getTable().getNamespace());
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
+    wals = new WALFactory(conf, "testWALRootDir");
+    WAL log = wals.getWAL(regionInfo);
 
     assertEquals(1, getWALFiles(walFs, walRootDir).size());
     byte [] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
         System.currentTimeMillis(), value));
-    long txid = log.append(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 0), edit, true);
+    long txid = log.append(regionInfo,
+        getWalKey(System.currentTimeMillis(), regionInfo, 0), edit, true);
     log.sync(txid);
-    assertEquals("Expect 1 log have been created", 1, getWALFiles(walFs, walRootDir).size());
+    assertEquals("Expect 1 log have been created", 1,
+        getWALFiles(walFs, walRootDir).size());
     log.rollWriter();
     //Create 1 more WAL
-    assertEquals(2, getWALFiles(walFs, new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME)).size());
+    assertEquals(2, getWALFiles(walFs, new Path(walRootDir,
+        HConstants.HREGION_LOGDIR_NAME)).size());
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
         System.currentTimeMillis(), value));
-    txid = log.append(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 1), edit, true);
+    txid = log.append(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 1),
+        edit, true);
     log.sync(txid);
     log.rollWriter();
     log.shutdown();
 
-    assertEquals("Expect 3 logs in WALs dir", 3, getWALFiles(walFs, new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME)).size());
+    assertEquals("Expect 3 logs in WALs dir", 3, getWALFiles(walFs,
+        new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME)).size());
   }
 
-  protected WALKey getWalKey(final long time, HRegionInfo hri, final long startPoint) {
-    return new WALKey(hri.getEncodedNameAsBytes(), tableName, time, new MultiVersionConcurrencyControl(startPoint));
+  private WALKeyImpl getWalKey(final long time, RegionInfo hri, final long startPoint) {
+    return new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, time,
+        new MultiVersionConcurrencyControl(startPoint));
   }
 
   private List<FileStatus> getWALFiles(FileSystem fs, Path dir)

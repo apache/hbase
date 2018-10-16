@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * This is a {@link Tag} implementation in which value is backed by

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,19 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanceModel> {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNamespacesInstanceModel.class);
 
   public static final Map<String,String> NAMESPACE_PROPERTIES = new HashMap<>();
   public static final String NAMESPACE_NAME = "namespaceName";
@@ -53,6 +59,7 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
       "\"KEY_1\":\"VALUE_1\",\"KEY_2\":\"VALUE_2\"}}";
   }
 
+  @Override
   protected NamespacesInstanceModel buildTestModel() {
     return buildTestModel(NAMESPACE_NAME, NAMESPACE_PROPERTIES);
   }
@@ -65,6 +72,7 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
     return model;
   }
 
+  @Override
   protected void checkModel(NamespacesInstanceModel model) {
     checkModel(model, NAMESPACE_NAME, NAMESPACE_PROPERTIES);
   }
@@ -80,16 +88,19 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
     }
   }
 
+  @Override
   @Test
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Override
   @Test
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Override
   @Test
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));

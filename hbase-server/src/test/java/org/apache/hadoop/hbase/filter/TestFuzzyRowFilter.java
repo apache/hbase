@@ -17,17 +17,24 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({FilterTests.class, SmallTests.class})
 public class TestFuzzyRowFilter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFuzzyRowFilter.class);
+
   @Test
   public void testSatisfiesNoUnsafeForward() {
 
@@ -224,7 +231,7 @@ public class TestFuzzyRowFilter {
         0, 5,
         new byte[]{0, 1, 2},
         new byte[]{1, 0, 0}));
-  }  
+  }
   @Test
   public void testGetNextForFuzzyRuleForward() {
     assertNext(false,

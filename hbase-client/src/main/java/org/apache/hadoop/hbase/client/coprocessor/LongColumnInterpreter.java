@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg;
@@ -43,14 +43,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
                  EmptyMsg, LongMsg, LongMsg> {
 
+  @Override
   public Long getValue(byte[] colFamily, byte[] colQualifier, Cell kv)
       throws IOException {
     if (kv == null || kv.getValueLength() != Bytes.SIZEOF_LONG)
       return null;
-    return CellUtil.getValueAsLong(kv);
+    return PrivateCellUtil.getValueAsLong(kv);
   }
 
-   @Override
+  @Override
   public Long add(Long l1, Long l2) {
     if (l1 == null ^ l2 == null) {
       return (l1 == null) ? l2 : l1; // either of one is null.

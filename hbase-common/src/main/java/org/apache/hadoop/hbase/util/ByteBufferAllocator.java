@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Defines the way the ByteBuffers are created
@@ -31,9 +31,8 @@ public interface ByteBufferAllocator {
   /**
    * Allocates a bytebuffer
    * @param size the size of the bytebuffer
-   * @param directByteBuffer indicator to create a direct bytebuffer
    * @return the bytebuffer that is created
    * @throws IOException exception thrown if there is an error while creating the ByteBuffer
    */
-  ByteBuffer allocate(long size, boolean directByteBuffer) throws IOException;
+  ByteBuffer allocate(long size) throws IOException;
 }

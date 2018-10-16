@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 final class ClientIdGenerator {
-  private static final Log LOG = LogFactory.getLog(ClientIdGenerator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientIdGenerator.class);
 
   private ClientIdGenerator() {}
 
@@ -78,7 +78,7 @@ final class ClientIdGenerator {
 
   /**
    * @return Some IPv4/IPv6 address available on the current machine that is up, not virtual
-   *         and not a loopback address. Empty array if none can be found or error occured.
+   *         and not a loopback address. Empty array if none can be found or error occurred.
    */
   public static byte[] getIpAddressBytes() {
     try {

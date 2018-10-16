@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Implementors of this interface are the ones who needs to do some action when the

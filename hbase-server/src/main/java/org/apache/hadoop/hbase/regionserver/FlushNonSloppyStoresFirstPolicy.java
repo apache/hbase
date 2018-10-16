@@ -21,7 +21,7 @@ import java.util.Collection;
 import java.util.HashSet;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link FlushPolicy} that only flushes store larger than a given threshold. If no store is large
@@ -32,35 +32,40 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class FlushNonSloppyStoresFirstPolicy extends FlushLargeStoresPolicy {
 
-  private Collection<Store> regularStores = new HashSet<>();
-  private Collection<Store> sloppyStores = new HashSet<>();
+  private Collection<HStore> regularStores = new HashSet<>();
+  private Collection<HStore> sloppyStores = new HashSet<>();
 
   /**
    * @return the stores need to be flushed.
    */
-  @Override public Collection<Store> selectStoresToFlush() {
-    Collection<Store> specificStoresToFlush = new HashSet<>();
-    for(Store store : regularStores) {
-      if(shouldFlush(store) || region.shouldFlushStore(store)) {
+  @Override
+  public Collection<HStore> selectStoresToFlush() {
+    Collection<HStore> specificStoresToFlush = new HashSet<>();
+    for (HStore store : regularStores) {
+      if (shouldFlush(store) || region.shouldFlushStore(store)) {
         specificStoresToFlush.add(store);
       }
     }
-    if(!specificStoresToFlush.isEmpty()) return specificStoresToFlush;
-    for(Store store : sloppyStores) {
-      if(shouldFlush(store)) {
+    if (!specificStoresToFlush.isEmpty()) {
+      return specificStoresToFlush;
+    }
+    for (HStore store : sloppyStores) {
+      if (shouldFlush(store)) {
         specificStoresToFlush.add(store);
       }
     }
-    if(!specificStoresToFlush.isEmpty()) return specificStoresToFlush;
+    if (!specificStoresToFlush.isEmpty()) {
+      return specificStoresToFlush;
+    }
     return region.stores.values();
   }
 
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
-    this.flushSizeLowerBound = getFlushSizeLowerBound(region);
-    for(Store store : region.stores.values()) {
-      if(store.isSloppyMemstore()) {
+    setFlushSizeLowerBounds(region);
+    for (HStore store : region.stores.values()) {
+      if (store.isSloppyMemStore()) {
         sloppyStores.add(store);
       } else {
         regularStores.add(store);

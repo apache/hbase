@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown when an invalid HFile format is detected

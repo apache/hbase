@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Comparator;
@@ -31,6 +28,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentNavigableMap;
+
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A Map that keeps a sorted array in order to provide the concurrent map interface.
@@ -706,7 +706,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
   }
 
-  private final class ArrayKeyIterator<K, V> implements Iterator<K> {
+  private static final class ArrayKeyIterator<K, V> implements Iterator<K> {
     int index;
     private final ArrayHolder<K, V> holder;
 
@@ -732,7 +732,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
   }
 
-  private final class ArrayValueIterator<K, V> implements Iterator<V> {
+  private static final class ArrayValueIterator<K, V> implements Iterator<V> {
     int index;
     private final ArrayHolder<K, V> holder;
 
@@ -758,7 +758,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
   }
 
-  private final class ArrayEntryIterator<K, V> implements Iterator<Map.Entry<K, V>> {
+  private static final class ArrayEntryIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 
     int index;
     private final ArrayHolder<K, V> holder;
@@ -879,8 +879,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
      * Binary search for a given key
      * @param needle The key to look for in all of the entries
      * @return Same return value as Arrays.binarySearch.
-     * Positive numbers mean the index.
-     * Otherwise (-1 * insertion point) - 1
+     *         Positive numbers mean the index. Otherwise (-1 * insertion point) - 1
      */
     int find(K needle) {
       int begin = startIndex;

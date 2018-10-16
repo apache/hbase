@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hbase.security.visibility;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+
 import static org.apache.hadoop.hbase.HConstants.OperationStatusCode.SANITY_CHECK_FAILURE;
 import static org.apache.hadoop.hbase.HConstants.OperationStatusCode.SUCCESS;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_FAMILY;
@@ -26,30 +31,29 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -59,17 +63,18 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -78,9 +83,8 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
@@ -99,33 +103,32 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
-import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AccessController;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coprocessor that has both the MasterObserver and RegionObserver implemented that supports in
  * visibility labels
  */
+@CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class VisibilityController implements MasterObserver, RegionObserver,
-    VisibilityLabelsService.Interface, CoprocessorService {
+// TODO: break out Observer functions into separate class/sub-class.
+public class VisibilityController implements MasterCoprocessor, RegionCoprocessor,
+    VisibilityLabelsService.Interface, MasterObserver, RegionObserver {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityController.class);
-  private static final Log AUDITLOG = LogFactory.getLog("SecurityLogger."
+  private static final Logger LOG = LoggerFactory.getLogger(VisibilityController.class);
+  private static final Logger AUDITLOG = LoggerFactory.getLogger("SecurityLogger."
       + VisibilityController.class.getName());
   // flags if we are running on a region of the 'labels' table
   private boolean labelsRegion = false;
@@ -140,8 +143,8 @@ public class VisibilityController implements MasterObserver, RegionObserver,
 
   private VisibilityLabelService visibilityLabelService;
 
-  /** if we are active, usually true, only not true if "hbase.security.authorization"
-    has been set to false in site configuration */
+  /** if we are active, usually false, only true if "hbase.security.authorization"
+    has been set to true in site configuration */
   boolean authorizationEnabled;
 
   // Add to this list if there are any reserved tag types
@@ -152,19 +155,15 @@ public class VisibilityController implements MasterObserver, RegionObserver,
     RESERVED_VIS_TAG_TYPES.add(TagType.STRING_VIS_TAG_TYPE);
   }
 
-  public static boolean isAuthorizationSupported(Configuration conf) {
-    return conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
-  }
-
   public static boolean isCellAuthorizationSupported(Configuration conf) {
-    return isAuthorizationSupported(conf);
+    return AccessChecker.isAuthorizationSupported(conf);
   }
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     this.conf = env.getConfiguration();
 
-    authorizationEnabled = isAuthorizationSupported(conf);
+    authorizationEnabled = AccessChecker.isAuthorizationSupported(conf);
     if (!authorizationEnabled) {
       LOG.warn("The VisibilityController has been loaded with authorization checks disabled.");
     }
@@ -175,10 +174,6 @@ public class VisibilityController implements MasterObserver, RegionObserver,
         + " accordingly.");
     }
 
-    if (env instanceof RegionServerCoprocessorEnvironment) {
-      throw new RuntimeException("Visibility controller should not be configured as "
-          + "'hbase.coprocessor.regionserver.classes'.");
-    }
     // Do not create for master CPs
     if (!(env instanceof MasterCoprocessorEnvironment)) {
       visibilityLabelService = VisibilityLabelServiceManager.getInstance()
@@ -191,13 +186,29 @@ public class VisibilityController implements MasterObserver, RegionObserver,
 
   }
 
+  /**************************** Observer/Service Getters ************************************/
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Optional<MasterObserver> getMasterObserver() {
+    return Optional.of(this);
+  }
+
+  @Override
+  public Iterable<Service> getServices() {
+    return Collections.singleton(
+        VisibilityLabelsProtos.VisibilityLabelsService.newReflectiveService(this));
+  }
+
   /********************************* Master related hooks **********************************/
 
   @Override
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
     // Need to create the new system table for labels here
-    MasterServices master = ctx.getEnvironment().getMasterServices();
-    if (!MetaTableAccessor.tableExists(master.getConnection(), LABELS_TABLE_NAME)) {
+    if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getConnection(), LABELS_TABLE_NAME)) {
       HTableDescriptor labelsTable = new HTableDescriptor(LABELS_TABLE_NAME);
       HColumnDescriptor labelsColumn = new HColumnDescriptor(LABELS_TABLE_FAMILY);
       labelsColumn.setBloomFilterType(BloomType.NONE);
@@ -208,49 +219,15 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       // the system.
       labelsTable.setValue(HTableDescriptor.SPLIT_POLICY,
           DisabledRegionSplitPolicy.class.getName());
-      labelsTable.setValue(Bytes.toBytes(HConstants.DISALLOW_WRITES_IN_RECOVERING),
-          Bytes.toBytes(true));
-      master.createSystemTable(labelsTable);
+      try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+        admin.createTable(labelsTable);
+      }
     }
   }
 
   @Override
-  public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HTableDescriptor htd) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
-    if (LABELS_TABLE_NAME.equals(tableName)) {
-      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
-    }
-  }
-
-  @Override
-  public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 TableName tableName, HColumnDescriptor columnFamily)
-      throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
-    if (LABELS_TABLE_NAME.equals(tableName)) {
-      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
-    }
-  }
-
-  @Override
-  public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
-    if (LABELS_TABLE_NAME.equals(tableName)) {
-      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
-    }
-  }
-
-  @Override
-  public void preDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, byte[] columnFamily) throws IOException {
+  public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
+    TableDescriptor currentDescriptor, TableDescriptor newDescriptor) throws IOException {
     if (!authorizationEnabled) {
       return;
     }
@@ -281,22 +258,11 @@ public class VisibilityController implements MasterObserver, RegionObserver,
         this.accessControllerAvailable = CoprocessorHost.getLoadedCoprocessors()
           .contains(AccessController.class.getName());
       }
-      // Defer the init of VisibilityLabelService on labels region until it is in recovering state.
-      if (!e.getEnvironment().getRegion().isRecovering()) {
-        initVisibilityLabelService(e.getEnvironment());
-      }
+      initVisibilityLabelService(e.getEnvironment());
     } else {
       checkAuths = e.getEnvironment().getConfiguration()
           .getBoolean(VisibilityConstants.CHECK_AUTHS_FOR_MUTATION, false);
       initVisibilityLabelService(e.getEnvironment());
-    }
-  }
-
-  @Override
-  public void postLogReplay(ObserverContext<RegionCoprocessorEnvironment> e) {
-    if (this.labelsRegion) {
-      initVisibilityLabelService(e.getEnvironment());
-      LOG.debug("post labels region log replay");
     }
   }
 
@@ -308,12 +274,6 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       LOG.error("Error while initializing VisibilityLabelService..", ioe);
       throw new RuntimeException(ioe);
     }
-  }
-
-  @Override
-  public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final MasterSwitchType switchType) throws IOException {
-    return false;
   }
 
   @Override
@@ -357,7 +317,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
           Tag tag = pair.getSecond();
           if (cellVisibility == null && tag != null) {
             // May need to store only the first one
-            cellVisibility = new CellVisibility(TagUtil.getValueAsString(tag));
+            cellVisibility = new CellVisibility(Tag.getValueAsString(tag));
             modifiedTagFound = true;
           }
         }
@@ -384,13 +344,13 @@ public class VisibilityController implements MasterObserver, RegionObserver,
             List<Cell> updatedCells = new ArrayList<>();
             for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
               Cell cell = cellScanner.current();
-              List<Tag> tags = CellUtil.getTags(cell);
+              List<Tag> tags = PrivateCellUtil.getTags(cell);
               if (modifiedTagFound) {
                 // Rewrite the tags by removing the modified tags.
                 removeReplicationVisibilityTag(tags);
               }
               tags.addAll(visibilityTags);
-              Cell updatedCell = CellUtil.createCell(cell, tags);
+              Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
               updatedCells.add(updatedCell);
             }
             m.getFamilyCellMap().clear();
@@ -401,7 +361,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
                 p.add(cell);
               } else if (m instanceof Delete) {
                 Delete d = (Delete) m;
-                d.addDeleteMarker(cell);
+                d.add(cell);
               }
             }
           }
@@ -443,7 +403,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
 
     if (result.size() < get.getMaxVersions()) {
       // Nothing to delete
-      CellUtil.updateLatestStamp(cell, byteNow, 0);
+      PrivateCellUtil.updateLatestStamp(cell, byteNow);
       return;
     }
     if (result.size() > get.getMaxVersions()) {
@@ -451,7 +411,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
           + ". Results more than the max versions obtained.");
     }
     Cell getCell = result.get(get.getMaxVersions() - 1);
-    CellUtil.setTimestamp(cell, getCell.getTimestamp());
+    PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
 
     // We are bypassing here because in the HRegion.updateDeleteLatestVersionTimeStamp we would
     // update with the current timestamp after again doing a get. As the hook as already determined
@@ -487,7 +447,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       // cell visiblilty tags
       // have been modified
       Tag modifiedTag = null;
-      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+      Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {
         Tag tag = tagsIterator.next();
         if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
@@ -499,7 +459,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       pair.setSecond(modifiedTag);
       return pair;
     }
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
     while (tagsItr.hasNext()) {
       if (RESERVED_VIS_TAG_TYPES.contains(tagsItr.next().getType())) {
         return pair;
@@ -529,7 +489,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
     if (isSystemOrSuperUser()) {
       return true;
     }
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
     while (tagsItr.hasNext()) {
       if (RESERVED_VIS_TAG_TYPES.contains(tagsItr.next().getType())) {
         return false;
@@ -550,14 +510,14 @@ public class VisibilityController implements MasterObserver, RegionObserver,
   }
 
   @Override
-  public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
-      RegionScanner s) throws IOException {
+  public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
+      throws IOException {
     if (!initialized) {
       throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized!");
     }
     // Nothing to do if authorization is not enabled
     if (!authorizationEnabled) {
-      return s;
+      return;
     }
     Region region = e.getEnvironment().getRegion();
     Authorizations authorizations = null;
@@ -572,7 +532,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       // filtering. Checking visibility labels for META and NAMESPACE table is not needed.
       TableName table = region.getRegionInfo().getTable();
       if (table.isSystemTable() && !table.equals(LABELS_TABLE_NAME)) {
-        return s;
+        return;
       }
     }
 
@@ -586,7 +546,6 @@ public class VisibilityController implements MasterObserver, RegionObserver,
         scan.setFilter(visibilityLabelFilter);
       }
     }
-    return s;
   }
 
   @Override
@@ -607,7 +566,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
     // visibility tags per cell. The covering cells are determined not only
     // based on the delete type and ts
     // but also on the visibility expression matching.
-    return new VisibilityScanDeleteTracker();
+    return new VisibilityScanDeleteTracker(delTracker.getCellComparator());
   }
 
   @Override
@@ -648,7 +607,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
   private void requireScannerOwner(InternalScanner s) throws AccessDeniedException {
     if (!RpcServer.isInRpcCallContext())
       return;
-    String requestUName = RpcServer.getRequestUserName();
+    String requestUName = RpcServer.getRequestUserName().orElse(null);
     String owner = scannerOwners.get(s);
     if (authorizationEnabled && owner != null && !owner.equals(requestUName)) {
       throw new AccessDeniedException("User '" + requestUName + "' is not the scanner owner!");
@@ -746,7 +705,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
     tags.addAll(this.visibilityLabelService.createVisibilityExpTags(cellVisibility.getExpression(),
         true, authCheck));
     // Carry forward all other tags
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(newCell);
+    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(newCell);
     while (tagsItr.hasNext()) {
       Tag tag = tagsItr.next();
       if (tag.getType() != TagType.VISIBILITY_TAG_TYPE
@@ -755,13 +714,8 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       }
     }
 
-    Cell rewriteCell = CellUtil.createCell(newCell, tags);
+    Cell rewriteCell = PrivateCellUtil.createCell(newCell, tags);
     return rewriteCell;
-  }
-
-  @Override
-  public Service getService() {
-    return VisibilityLabelsProtos.VisibilityLabelsService.newReflectiveService(this);
   }
 
   @Override
@@ -800,8 +754,9 @@ public class VisibilityController implements MasterObserver, RegionObserver,
           logResult(true, "addLabels", "Adding labels allowed", null, labels, null);
           int i = 0;
           for (OperationStatus status : opStatus) {
-            while (response.getResult(i) != successResult)
+            while (!Objects.equals(response.getResult(i), successResult)) {
               i++;
+            }
             if (status.getOperationStatusCode() != SUCCESS) {
               RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
               failureResultBuilder.setException(buildException(new DoNotRetryIOException(
@@ -816,7 +771,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
         LOG.error("User is not having required permissions to add labels", e);
         setExceptionResults(visLabels.size(), e, response);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         setExceptionResults(visLabels.size(), e, response);
       }
     }
@@ -871,7 +826,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
         LOG.error("User is not having required permissions to set authorization", e);
         setExceptionResults(auths.size(), e, response);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         setExceptionResults(auths.size(), e, response);
       }
     }
@@ -882,7 +837,6 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       List<byte[]> labelAuths, String regex) {
     if (AUDITLOG.isTraceEnabled()) {
       // This is more duplicated code!
-      InetAddress remoteAddr = RpcServer.getRemoteAddress();
       List<String> labelAuthsStr = new ArrayList<>();
       if (labelAuths != null) {
         int labelAuthsSize = labelAuths.size();
@@ -899,11 +853,12 @@ public class VisibilityController implements MasterObserver, RegionObserver,
         LOG.warn("Failed to get active system user.");
         LOG.debug("Details on failure to get active system user.", e);
       }
-      AUDITLOG.trace("Access " + (isAllowed ? "allowed" : "denied") + " for user "
-          + (requestingUser != null ? requestingUser.getShortName() : "UNKNOWN") + "; reason: "
-          + reason + "; remote address: " + (remoteAddr != null ? remoteAddr : "") + "; request: "
-          + request + "; user: " + (user != null ? Bytes.toShort(user) : "null") + "; labels: "
-          + labelAuthsStr + "; regex: " + regex);
+      AUDITLOG.trace("Access " + (isAllowed ? "allowed" : "denied") + " for user " +
+          (requestingUser != null ? requestingUser.getShortName() : "UNKNOWN") + "; reason: " +
+          reason + "; remote address: " +
+          RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("") + "; request: " +
+          request + "; user: " + (user != null ? Bytes.toShort(user) : "null") + "; labels: " +
+          labelAuthsStr + "; regex: " + regex);
     }
   }
 
@@ -942,7 +897,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       response.setUser(request.getUser());
       if (labels != null) {
         for (String label : labels) {
-          response.addAuth(ByteStringer.wrap(Bytes.toBytes(label)));
+          response.addAuth(ByteString.copyFrom(Bytes.toBytes(label)));
         }
       }
     }
@@ -995,7 +950,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
         LOG.error("User is not having required permissions to clear authorization", e);
         setExceptionResults(auths.size(), e, response);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         setExceptionResults(auths.size(), e, response);
       }
     }
@@ -1030,7 +985,7 @@ public class VisibilityController implements MasterObserver, RegionObserver,
       }
       if (labels != null && !labels.isEmpty()) {
         for (String label : labels) {
-          response.addLabel(ByteStringer.wrap(Bytes.toBytes(label)));
+          response.addLabel(ByteString.copyFrom(Bytes.toBytes(label)));
         }
       }
     }
@@ -1070,43 +1025,36 @@ public class VisibilityController implements MasterObserver, RegionObserver,
     }
 
     @Override
-    public ReturnCode filterKeyValue(Cell cell) throws IOException {
+    public ReturnCode filterCell(final Cell cell) throws IOException {
       List<Tag> putVisTags = new ArrayList<>();
       Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
+      if (putVisTags.isEmpty() && deleteCellVisTags.isEmpty()) {
+        // Early out if there are no tags in the cell
+        return ReturnCode.INCLUDE;
+      }
       boolean matchFound = VisibilityLabelServiceManager
           .getInstance().getVisibilityLabelService()
           .matchVisibility(putVisTags, putCellVisTagsFormat, deleteCellVisTags,
               deleteCellVisTagsFormat);
       return matchFound ? ReturnCode.INCLUDE : ReturnCode.SKIP;
     }
-  }
-
-  /**
-   * A RegionServerObserver impl that provides the custom
-   * VisibilityReplicationEndpoint. This class should be configured as the
-   * 'hbase.coprocessor.regionserver.classes' for the visibility tags to be
-   * replicated as string.  The value for the configuration should be
-   * 'org.apache.hadoop.hbase.security.visibility.VisibilityController$VisibilityReplication'.
-   */
-  public static class VisibilityReplication implements RegionServerObserver {
-    private Configuration conf;
-    private VisibilityLabelService visibilityLabelService;
 
     @Override
-    public void start(CoprocessorEnvironment env) throws IOException {
-      this.conf = env.getConfiguration();
-      visibilityLabelService = VisibilityLabelServiceManager.getInstance()
-          .getVisibilityLabelService(this.conf);
+    public boolean equals(Object obj) {
+      if (!(obj instanceof DeleteVersionVisibilityExpressionFilter)) {
+        return false;
+      }
+      if (this == obj){
+        return true;
+      }
+      DeleteVersionVisibilityExpressionFilter f = (DeleteVersionVisibilityExpressionFilter)obj;
+      return this.deleteCellVisTags.equals(f.deleteCellVisTags) &&
+          this.deleteCellVisTagsFormat.equals(f.deleteCellVisTagsFormat);
     }
 
     @Override
-    public void stop(CoprocessorEnvironment env) throws IOException {
-    }
-
-    @Override
-    public ReplicationEndpoint postCreateReplicationEndPoint(
-        ObserverContext<RegionServerCoprocessorEnvironment> ctx, ReplicationEndpoint endpoint) {
-      return new VisibilityReplicationEndpoint(endpoint, visibilityLabelService);
+    public int hashCode() {
+      return Objects.hash(this.deleteCellVisTags, this.deleteCellVisTagsFormat);
     }
   }
 

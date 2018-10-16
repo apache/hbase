@@ -20,8 +20,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An interface for iterating through a sequence of cells. Similar to Java's Iterator, but without
@@ -47,8 +46,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * <p>Often used reading {@link org.apache.hadoop.hbase.Cell}s written by
  * {@link org.apache.hadoop.hbase.io.CellOutputStream}.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
 public interface CellScanner {
   /**
    * @return the current Cell which may be mutable

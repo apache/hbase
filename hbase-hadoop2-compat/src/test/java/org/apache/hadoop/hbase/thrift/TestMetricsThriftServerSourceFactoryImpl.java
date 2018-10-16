@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,35 +15,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
-
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MetricsTests;
-import org.apache.hadoop.hbase.thrift.MetricsThriftServerSourceFactory;
-import org.apache.hadoop.hbase.thrift.MetricsThriftServerSourceFactoryImpl;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 /**
- *   Test for hadoop 2's version of MetricsThriftServerSourceFactory
+ * Test for hadoop 2's version of MetricsThriftServerSourceFactory.
  */
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsThriftServerSourceFactoryImpl {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetricsThriftServerSourceFactoryImpl.class);
 
   @Test
-  public void testCompatabilityRegistered() throws Exception {
-    assertNotNull(CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class));
-    assertTrue(CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class) instanceof MetricsThriftServerSourceFactoryImpl);
+  public void testCompatabilityRegistered() {
+    assertNotNull(CompatibilitySingletonFactory.getInstance(
+            MetricsThriftServerSourceFactory.class));
+    assertTrue(CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class)
+            instanceof MetricsThriftServerSourceFactoryImpl);
   }
 
   @Test
-  public void testCreateThriftOneSource() throws Exception {
+  public void testCreateThriftOneSource() {
     //Make sure that the factory gives back a singleton.
     assertSame(new MetricsThriftServerSourceFactoryImpl().createThriftOneSource(),
         new MetricsThriftServerSourceFactoryImpl().createThriftOneSource());
@@ -51,7 +55,7 @@ public class TestMetricsThriftServerSourceFactoryImpl {
   }
 
   @Test
-  public void testCreateThriftTwoSource() throws Exception {
+  public void testCreateThriftTwoSource() {
     //Make sure that the factory gives back a singleton.
     assertSame(new MetricsThriftServerSourceFactoryImpl().createThriftTwoSource(),
         new MetricsThriftServerSourceFactoryImpl().createThriftTwoSource());

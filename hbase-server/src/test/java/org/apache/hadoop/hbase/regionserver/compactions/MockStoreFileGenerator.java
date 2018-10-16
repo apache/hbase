@@ -21,17 +21,17 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Objects;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 
 /**
  * Base class of objects that can create mock store files with a given size.
@@ -42,31 +42,31 @@ class MockStoreFileGenerator {
   /** The random number generator. */
   protected Random random;
 
-  MockStoreFileGenerator(Class klass) {
+  MockStoreFileGenerator(Class<?> klass) {
     random = new Random(klass.getSimpleName().hashCode());
   }
 
-  protected List<StoreFile> createStoreFileList(final int[] fs) {
-    List<StoreFile> storeFiles = new LinkedList<>();
+  protected List<HStoreFile> createStoreFileList(final int[] fs) {
+    List<HStoreFile> storeFiles = new LinkedList<>();
     for (int fileSize : fs) {
       storeFiles.add(createMockStoreFile(fileSize));
     }
     return storeFiles;
   }
 
-  protected StoreFile createMockStoreFile(final long size) {
+  protected HStoreFile createMockStoreFile(final long size) {
     return createMockStoreFile(size * 1024 * 1024, -1L);
   }
 
-  protected StoreFile createMockStoreFileBytes(final long size) {
+  protected HStoreFile createMockStoreFileBytes(final long size) {
     return createMockStoreFile(size, -1L);
   }
 
-  protected StoreFile createMockStoreFile(final long sizeInBytes, final long seqId) {
-    StoreFile mockSf = mock(StoreFile.class);
+  protected HStoreFile createMockStoreFile(final long sizeInBytes, final long seqId) {
+    HStoreFile mockSf = mock(HStoreFile.class);
     StoreFileReader reader = mock(StoreFileReader.class);
-    String stringPath = "/hbase/testTable/regionA/"
-        + RandomStringUtils.random(FILENAME_LENGTH, 0, 0, true, true, null, random);
+    String stringPath = "/hbase/testTable/regionA/" +
+        RandomStringUtils.random(FILENAME_LENGTH, 0, 0, true, true, null, random);
     Path path = new Path(stringPath);
 
 
@@ -79,7 +79,7 @@ class MockStoreFileGenerator {
     when(mockSf.isReference()).thenReturn(false); // TODO come back to
     // this when selection takes this into account
     when(mockSf.getReader()).thenReturn(reader);
-    String toString = Objects.toStringHelper("MockStoreFile")
+    String toString = MoreObjects.toStringHelper("MockStoreFile")
         .add("isReference", false)
         .add("fileSize", StringUtils.humanReadableInt(sizeInBytes))
         .add("seqId", seqId)

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.security;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 
 /**

@@ -26,7 +26,7 @@
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.TableName"
-  import="org.apache.hadoop.hbase.HBaseConfiguration" %>
+%>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -51,73 +51,29 @@
   }
 
   String action = request.getParameter("action");
-  String cloneName = request.getParameter("cloneName");
   boolean isActionResultPage = (!readOnly && action != null);
+  String pageTitle;
+  if (isActionResultPage) {
+    pageTitle = "HBase Master: " + master.getServerName();
+  } else {
+    pageTitle = "Snapshot: " + snapshotName;
+  }
+  pageContext.setAttribute("pageTitle", pageTitle);
 %>
-<!--[if IE]>
-<!DOCTYPE html>
-<![endif]-->
-<?xml version="1.0" encoding="UTF-8" ?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8">
-    <% if (isActionResultPage) { %>
-      <title>HBase Master: <%= master.getServerName() %></title>
-    <% } else { %>
-      <title>Snapshot: <%= snapshotName %></title>
-    <% } %>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="/static/css/hbase.css" rel="stylesheet">
-    <% if (isActionResultPage) { %>
-    <script type="text/javascript">
-    <!--
-        setTimeout("history.back()",5000);
-    -->
-    </script>
-    <% } %>
-  </head>
-<body>
-<div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-        </div>
-        <div class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
-        </div><!--/.nav-collapse -->
-    </div>
-</div>
+<jsp:include page="header.jsp">
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
+
+<div class="container-fluid content">
 <% if (snapshot == null) { %>
-  <div class="container-fluid content">
   <div class="row inner_header">
     <div class="page-header">
       <h1>Snapshot "<%= snapshotName %>" does not exist</h1>
     </div>
   </div>
-  <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+  <jsp:include page="redirect.jsp" />
 <% } else { %>
-  <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
           <h1>Snapshot: <%= snapshotName %></h1>
@@ -179,10 +135,6 @@
 <%
   } // end else
 %>
+</div>
 
-
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
-
-</body>
-</html>
+<jsp:include page="footer.jsp" />

@@ -22,7 +22,8 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 
 public class FaultyProtobufLogReader extends ProtobufLogReader {
 
@@ -43,10 +44,7 @@ public class FaultyProtobufLogReader extends ProtobufLogReader {
     if (nextQueue.isEmpty()) { // Read the whole thing at once and fake reading
       boolean b;
       do {
-        Entry e = new Entry(new WALKey(), new WALEdit());
-        if (compressionContext != null) {
-          e.setCompressionContext(compressionContext);
-        }
+        Entry e = new Entry();
         b = readNext(e);
         nextQueue.offer(e);
         numberOfFileEntries++;

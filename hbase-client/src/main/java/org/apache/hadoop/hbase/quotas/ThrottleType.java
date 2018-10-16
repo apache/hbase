@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Describe the Throttle Type.

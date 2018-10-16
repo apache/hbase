@@ -19,15 +19,15 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyNamespaceState;
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.M
 @InterfaceAudience.Private
 public class ModifyNamespaceProcedure
     extends AbstractStateMachineNamespaceProcedure<ModifyNamespaceState> {
-  private static final Log LOG = LogFactory.getLog(ModifyNamespaceProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ModifyNamespaceProcedure.class);
 
   private NamespaceDescriptor oldNsDescriptor;
   private NamespaceDescriptor newNsDescriptor;
@@ -51,7 +51,12 @@ public class ModifyNamespaceProcedure
 
   public ModifyNamespaceProcedure(final MasterProcedureEnv env,
       final NamespaceDescriptor newNsDescriptor) {
-    super(env);
+    this(env, newNsDescriptor, null);
+  }
+
+  public ModifyNamespaceProcedure(final MasterProcedureEnv env,
+      final NamespaceDescriptor newNsDescriptor, final ProcedurePrepareLatch latch) {
+    super(env, latch);
     this.oldNsDescriptor = null;
     this.newNsDescriptor = newNsDescriptor;
     this.traceEnabled = null;
@@ -67,7 +72,12 @@ public class ModifyNamespaceProcedure
     try {
       switch (state) {
       case MODIFY_NAMESPACE_PREPARE:
-        prepareModify(env);
+        boolean success = prepareModify(env);
+        releaseSyncLatch();
+        if (!success) {
+          assert isFailed() : "Modify namespace should have an exception here";
+          return Flow.NO_MORE_STATE;
+        }
         setNextState(ModifyNamespaceState.MODIFY_NAMESPACE_UPDATE_NS_TABLE);
         break;
       case MODIFY_NAMESPACE_UPDATE_NS_TABLE:
@@ -97,6 +107,7 @@ public class ModifyNamespaceProcedure
     if (state == ModifyNamespaceState.MODIFY_NAMESPACE_PREPARE) {
       // nothing to rollback, pre-modify is just checks.
       // TODO: coprocessor rollback semantic is still undefined.
+      releaseSyncLatch();
       return;
     }
 
@@ -130,8 +141,9 @@ public class ModifyNamespaceProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.ModifyNamespaceStateData.Builder modifyNamespaceMsg =
         MasterProcedureProtos.ModifyNamespaceStateData.newBuilder().setNamespaceDescriptor(
@@ -140,15 +152,16 @@ public class ModifyNamespaceProcedure
       modifyNamespaceMsg.setUnmodifiedNamespaceDescriptor(
         ProtobufUtil.toProtoNamespaceDescriptor(this.oldNsDescriptor));
     }
-    modifyNamespaceMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(modifyNamespaceMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.ModifyNamespaceStateData modifyNamespaceMsg =
-        MasterProcedureProtos.ModifyNamespaceStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.ModifyNamespaceStateData.class);
     newNsDescriptor =
         ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getNamespaceDescriptor());
     if (modifyNamespaceMsg.hasUnmodifiedNamespaceDescriptor()) {
@@ -172,14 +185,22 @@ public class ModifyNamespaceProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private void prepareModify(final MasterProcedureEnv env) throws IOException {
+  private boolean prepareModify(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(newNsDescriptor.getName()) == false) {
-      throw new NamespaceNotFoundException(newNsDescriptor.getName());
+      setFailure("master-modify-namespace", new NamespaceNotFoundException(
+            newNsDescriptor.getName()));
+      return false;
     }
-    getTableNamespaceManager(env).validateTableAndRegionCount(newNsDescriptor);
+    try {
+      getTableNamespaceManager(env).validateTableAndRegionCount(newNsDescriptor);
+    } catch (ConstraintException e) {
+      setFailure("master-modify-namespace", e);
+      return false;
+    }
 
     // This is used for rollback
     oldNsDescriptor = getTableNamespaceManager(env).get(newNsDescriptor.getName());
+    return true;
   }
 
   /**

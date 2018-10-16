@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.favored;
 
-import com.google.common.net.HostAndPort;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Addressing;
 
@@ -46,7 +46,7 @@ class StartcodeAgnosticServerName extends ServerName {
   }
 
   public static StartcodeAgnosticServerName valueOf(final HostAndPort hostnameAndPort, long startcode) {
-    return new StartcodeAgnosticServerName(hostnameAndPort.getHostText(),
+    return new StartcodeAgnosticServerName(hostnameAndPort.getHost(),
       hostnameAndPort.getPort(), startcode);
   }
 
@@ -63,4 +63,8 @@ class StartcodeAgnosticServerName extends ServerName {
   public int hashCode() {
     return getHostAndPort().hashCode();
   }
+
+  // Do not need @Override #equals() because super.equals() delegates to compareTo(), which ends
+  // up doing the right thing. We have a test for it, so the checkstyle warning here would be a
+  // false positive.
 }

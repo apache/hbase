@@ -33,10 +33,10 @@ The following projects offer some support for SQL over HBase.
 [[phoenix]]
 === Apache Phoenix
 
-link:http://phoenix.apache.org[Apache Phoenix]
+link:https://phoenix.apache.org[Apache Phoenix]
 
 === Trafodion
 
-link:http://trafodion.incubator.apache.org/[Trafodion: Transactional SQL-on-HBase]
+link:https://trafodion.incubator.apache.org/[Trafodion: Transactional SQL-on-HBase]
 
 :numbered:

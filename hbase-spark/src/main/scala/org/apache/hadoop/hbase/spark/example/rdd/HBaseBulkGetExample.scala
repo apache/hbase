@@ -16,17 +16,23 @@
  */
 package org.apache.hadoop.hbase.spark.example.rdd
 
-import org.apache.hadoop.hbase.client.{Result, Get}
-import org.apache.hadoop.hbase.{CellUtil, TableName, HBaseConfiguration}
+import org.apache.hadoop.hbase.client.Get
+import org.apache.hadoop.hbase.client.Result
 import org.apache.hadoop.hbase.spark.HBaseContext
-import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.spark.HBaseRDDFunctions._
-import org.apache.spark.{SparkContext, SparkConf}
+import org.apache.hadoop.hbase.util.Bytes
+import org.apache.hadoop.hbase.CellUtil
+import org.apache.hadoop.hbase.HBaseConfiguration
+import org.apache.hadoop.hbase.TableName
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import org.apache.yetus.audience.InterfaceAudience
 
 /**
  * This is a simple example of getting records from HBase
  * with the bulkGet function.
  */
+@InterfaceAudience.Private
 object HBaseBulkGetExample {
   def main(args: Array[String]) {
     if (args.length < 1) {

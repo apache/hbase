@@ -22,12 +22,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class SpaceQuotaRefresherChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(SpaceQuotaRefresherChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SpaceQuotaRefresherChore.class);
 
   static final String POLICY_REFRESHER_CHORE_PERIOD_KEY =
       "hbase.regionserver.quotas.policy.refresher.chore.period";
@@ -109,6 +109,17 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
             }
             getManager().disableViolationPolicyEnforcement(tableName);
           }
+        }
+      }
+
+      // Disable violation policy for all such tables which have been removed in new snapshot
+      for (TableName tableName : currentSnapshots.keySet()) {
+        // check whether table was removed in new snapshot
+        if (!newSnapshots.containsKey(tableName)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Removing quota violation policy on " + tableName);
+          }
+          getManager().disableViolationPolicyEnforcement(tableName);
         }
       }
 

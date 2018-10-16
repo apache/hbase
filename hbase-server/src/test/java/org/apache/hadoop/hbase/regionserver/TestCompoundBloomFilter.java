@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -31,18 +29,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -58,8 +54,11 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests writing Bloom filter blocks in the same part of the file as data
@@ -68,10 +67,14 @@ import org.junit.experimental.categories.Category;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestCompoundBloomFilter {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompoundBloomFilter.class);
+
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestCompoundBloomFilter.class);
 
   private static final int NUM_TESTS = 9;
@@ -121,7 +124,7 @@ public class TestCompoundBloomFilter {
   private FileSystem fs;
   private BlockCache blockCache;
 
-  /** A message of the form "in test#<number>:" to include in logging. */
+  /** A message of the form "in test#&lt;number>:" to include in logging. */
   private String testIdMsg;
 
   private static final int GENERATION_SEED = 2319;
@@ -145,7 +148,7 @@ public class TestCompoundBloomFilter {
     List<KeyValue> kvList = new ArrayList<>(n);
     for (int i = 0; i < n; ++i)
       kvList.add(RandomKeyValueUtil.randomKeyValue(rand));
-    Collections.sort(kvList, CellComparator.COMPARATOR);
+    Collections.sort(kvList, CellComparatorImpl.COMPARATOR);
     return kvList;
   }
 
@@ -200,7 +203,7 @@ public class TestCompoundBloomFilter {
 
   private void readStoreFile(int t, BloomType bt, List<KeyValue> kvs,
       Path sfPath) throws IOException {
-    StoreFile sf = new HStoreFile(fs, sfPath, conf, cacheConf, bt, true);
+    HStoreFile sf = new HStoreFile(fs, sfPath, conf, cacheConf, bt, true);
     sf.initReader();
     StoreFileReader r = sf.getReader();
     final boolean pread = true; // does not really matter
@@ -222,7 +225,9 @@ public class TestCompoundBloomFilter {
     // Test for false positives (some percentage allowed). We test in two modes:
     // "fake lookup" which ignores the key distribution, and production mode.
     for (boolean fakeLookupEnabled : new boolean[] { true, false }) {
-      BloomFilterUtil.setFakeLookupMode(fakeLookupEnabled);
+      if (fakeLookupEnabled) {
+        BloomFilterUtil.setRandomGeneratorForTest(new Random(283742987L));
+      }
       try {
         String fakeLookupModeStr = ", fake lookup is " + (fakeLookupEnabled ?
             "enabled" : "disabled");
@@ -272,7 +277,7 @@ public class TestCompoundBloomFilter {
         validateFalsePosRate(falsePosRate, nTrials, -2.58, cbf,
             fakeLookupModeStr);
       } finally {
-        BloomFilterUtil.setFakeLookupMode(false);
+        BloomFilterUtil.setRandomGeneratorForTest(null);
       }
     }
 
@@ -288,10 +293,9 @@ public class TestCompoundBloomFilter {
       byte[] qualifier) {
     Scan scan = new Scan().withStartRow(row).withStopRow(row, true);
     scan.addColumn(Bytes.toBytes(RandomKeyValueUtil.COLUMN_FAMILY_NAME), qualifier);
-    Store store = mock(Store.class);
-    HColumnDescriptor hcd = mock(HColumnDescriptor.class);
-    when(hcd.getName()).thenReturn(Bytes.toBytes(RandomKeyValueUtil.COLUMN_FAMILY_NAME));
-    when(store.getFamily()).thenReturn(hcd);
+    HStore store = mock(HStore.class);
+    when(store.getColumnFamilyDescriptor())
+        .thenReturn(ColumnFamilyDescriptorBuilder.of(RandomKeyValueUtil.COLUMN_FAMILY_NAME));
     return scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
   }
 

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,8 +47,7 @@ public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
     super(compactionKVMax);
     // create the list of scanners to traverse over all the data
     // no dirty reads here as these are immutable segments
-    int order = segments.size();
-    AbstractMemStore.addToScanners(segments, Integer.MAX_VALUE, order, scanners);
+    AbstractMemStore.addToScanners(segments, Integer.MAX_VALUE, scanners);
     heap = new KeyValueHeap(scanners, comparator);
   }
 
@@ -76,6 +75,7 @@ public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
     return null;
   }
 
+  @Override
   public void close() {
     if (closed) {
       return;

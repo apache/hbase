@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,19 +17,24 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Set;
 import java.util.TreeSet;
-
-import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 @Category({SmallTests.class, ClientTests.class})
 public class TestConnectionUtils {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestConnectionUtils.class);
 
   @Test
   public void testRetryTimeJitter() {
@@ -53,26 +56,6 @@ public class TestConnectionUtils {
 
     //Make sure that most are unique.  some overlap will happen
     assertTrue(retyTimeSet.size() > (retries.length * 0.80));
-  }
-
-  @Test
-  public void testAddJitter() {
-    long basePause = 10000;
-    long maxTimeExpected = (long) (basePause * 1.25f);
-    long minTimeExpected = (long) (basePause * 0.75f);
-    int testTries = 100;
-
-    Set<Long> timeSet = new TreeSet<>();
-    for (int i = 0; i < testTries; i++) {
-      long withJitter = ConnectionUtils.addJitter(basePause, 0.5f);
-      assertTrue(withJitter >= minTimeExpected);
-      assertTrue(withJitter <= maxTimeExpected);
-      // Add the long to the set
-      timeSet.add(withJitter);
-    }
-
-    //Make sure that most are unique.  some overlap will happen
-    assertTrue(timeSet.size() > (testTries * 0.90));
   }
 
   @Test

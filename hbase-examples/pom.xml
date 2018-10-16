@@ -21,46 +21,54 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase</artifactId>
+    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
     <version>3.0.0-SNAPSHOT</version>
-    <relativePath>..</relativePath>
+    <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-examples</artifactId>
   <name>Apache HBase - Examples</name>
   <description>Examples of HBase usage</description>
-<!--REMOVE-->
+  <!--REMOVE-->
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
         <configuration>
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-        <plugin>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${surefire.version}</version>
-            <configuration>
-                <!-- Have to set the groups here because we only do
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- Have to set the groups here because we only do
                     split tests in this package, so groups on live in this module -->
-                <groups>${surefire.firstPartGroups}</groups>
-            </configuration>
-        </plugin>
-        <!-- Make a jar and put the sources in the jar -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-        </plugin>
+          <groups>${surefire.firstPartGroups}</groups>
+        </configuration>
+      </plugin>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
@@ -69,7 +77,6 @@
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
           <configuration>
             <lifecycleMappingMetadata>
               <pluginExecutions>
@@ -83,20 +90,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore></ignore>
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <versionRange>[3.2,)</versionRange>
-                    <goals>
-                      <goal>compile</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore></ignore>
+                    <ignore/>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
@@ -108,26 +102,32 @@
   </build>
   <dependencies>
     <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-miscellaneous</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-netty</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-annotations</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
+      <artifactId>hbase-common</artifactId>
     </dependency>
     <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-common</artifactId>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol</artifactId>
     </dependency>
     <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-protocol</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-client</artifactId>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -138,18 +138,25 @@
       <artifactId>hbase-thrift</artifactId>
     </dependency>
     <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-testing-util</artifactId>
-        <scope>test</scope>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-metrics-api</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-testing-util</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
@@ -159,152 +166,146 @@
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
     </dependency>
- </dependencies>
- <profiles>
-     <!-- Skip the tests in this module -->
-     <profile>
-         <id>skipExamplesTests</id>
-         <activation>
-             <property>
-                 <name>skipExamplesTests</name>
-             </property>
-         </activation>
-         <properties>
-             <surefire.skipFirstPart>true</surefire.skipFirstPart>
-             <surefire.skipSecondPart>true</surefire.skipSecondPart>
-         </properties>
-     </profile>
-        <profile>
-          <id>compile-protobuf</id>
-          <activation>
-            <property>
-              <name>compile-protobuf</name>
-            </property>
-          </activation>
-          <build>
-            <plugins>
-              <plugin>
-                <groupId>org.xolstice.maven.plugins</groupId>
-                <artifactId>protobuf-maven-plugin</artifactId>
-                <executions>
-                  <execution>
-                    <id>compile-protoc</id>
-                    <phase>generate-sources</phase>
-                    <goals>
-                      <goal>compile</goal>
-                    </goals>
-                  </execution>
-                </executions>
-              </plugin>
-            </plugins>
-          </build>
-        </profile>
-
-     <!-- Profiles for building against different hadoop versions -->
-     <!-- There are a lot of common dependencies used here, should investigate
-if we can combine these profiles somehow -->
-
-     <!-- profile for building against Hadoop 2.x.  This is the default -->
-     <profile>
-         <id>hadoop-2.0</id>
-         <activation>
-             <property>
-            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-            <!--h2--><name>!hadoop.profile</name>
-             </property>
-         </activation>
-         <dependencies>
-             <dependency>
-                 <groupId>org.apache.hadoop</groupId>
-                 <artifactId>hadoop-mapreduce-client-core</artifactId>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.hadoop</groupId>
-                 <artifactId>hadoop-common</artifactId>
-             </dependency>
-         </dependencies>
-         <build>
-             <plugins>
-                 <plugin>
-                     <artifactId>maven-dependency-plugin</artifactId>
-                     <executions>
-                         <execution>
-                             <id>create-mrapp-generated-classpath</id>
-                             <phase>generate-test-resources</phase>
-                             <goals>
-                                 <goal>build-classpath</goal>
-                             </goals>
-                             <configuration>
-                                 <!-- needed to run the unit test for DS to generate
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-framework</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-recipes</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.stephenc.findbugs</groupId>
+      <artifactId>findbugs-annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-rest</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skipExamplesTests</id>
+      <activation>
+        <property>
+          <name>skipExamplesTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
+    <!-- Profiles for building against different hadoop versions -->
+    <!-- There are a lot of common dependencies used here, should investigate
+         if we can combine these profiles somehow -->
+    <!-- profile for building against Hadoop 2.x.  This is the default -->
+    <profile>
+      <id>hadoop-2.0</id>
+      <activation>
+        <property>
+          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+          <!--h2-->
+          <name>!hadoop.profile</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-core</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-mrapp-generated-classpath</id>
+                <phase>generate-test-resources</phase>
+                <goals>
+                  <goal>build-classpath</goal>
+                </goals>
+                <configuration>
+                  <!-- needed to run the unit test for DS to generate
                                  the required classpath that is required in the env
                                  of the launch container in the mini mr/yarn cluster
                                  -->
-                                 <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
-                             </configuration>
-                         </execution>
-                     </executions>
-                 </plugin>
-             </plugins>
-         </build>
-     </profile>
-     <!--
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!--
        profile for building against Hadoop 3.0.x. Activate using:
         mvn -Dhadoop.profile=3.0
      -->
-     <profile>
-         <id>hadoop-3.0</id>
-         <activation>
-             <property>
-                 <name>hadoop.profile</name>
-                 <value>3.0</value>
-             </property>
-         </activation>
-         <properties>
-             <hadoop.version>3.0-SNAPSHOT</hadoop.version>
-         </properties>
-         <dependencies>
-             <dependency>
-                 <groupId>org.apache.hadoop</groupId>
-                 <artifactId>hadoop-common</artifactId>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.hadoop</groupId>
-                 <artifactId>hadoop-annotations</artifactId>
-                 <exclusions>
-                   <exclusion>
-                     <groupId>jdk.tools</groupId>
-                     <artifactId>jdk.tools</artifactId>
-                   </exclusion>
-                 </exclusions>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.hadoop</groupId>
-                 <artifactId>hadoop-minicluster</artifactId>
-             </dependency>
-         </dependencies>
-         <build>
-             <plugins>
-                 <plugin>
-                     <artifactId>maven-dependency-plugin</artifactId>
-                     <executions>
-                         <execution>
-                             <id>create-mrapp-generated-classpath</id>
-                             <phase>generate-test-resources</phase>
-                             <goals>
-                                 <goal>build-classpath</goal>
-                             </goals>
-                             <configuration>
-                                 <!-- needed to run the unit test for DS to generate
+    <profile>
+      <id>hadoop-3.0</id>
+      <activation>
+        <property>
+          <name>hadoop.profile</name>
+          <value>3.0</value>
+        </property>
+      </activation>
+      <properties>
+        <hadoop.version>3.0-SNAPSHOT</hadoop.version>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-mrapp-generated-classpath</id>
+                <phase>generate-test-resources</phase>
+                <goals>
+                  <goal>build-classpath</goal>
+                </goals>
+                <configuration>
+                  <!-- needed to run the unit test for DS to generate
                                  the required classpath that is required in the env
                                  of the launch container in the mini mr/yarn cluster
                                  -->
-                                 <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
-                             </configuration>
-                         </execution>
-                     </executions>
-                 </plugin>
-             </plugins>
-         </build>
-     </profile>
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 </project>

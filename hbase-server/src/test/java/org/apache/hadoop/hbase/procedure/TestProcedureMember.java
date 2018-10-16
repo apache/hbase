@@ -32,14 +32,15 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadPoolExecutor;
-
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.TimeoutException;
 import org.apache.hadoop.hbase.procedure.Subprocedure.SubprocedureImpl;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.InOrder;
@@ -52,6 +53,11 @@ import org.mockito.stubbing.Answer;
  */
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureMember {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureMember.class);
+
   private static final long WAKE_FREQUENCY = 100;
   private static final long TIMEOUT = 100000;
   private static final long POOL_KEEP_ALIVE = 1;
@@ -117,13 +123,13 @@ public class TestProcedureMember {
         member.receivedReachedGlobalBarrier(op);
         return null;
       }
-    }).when(mockMemberComms).sendMemberAcquired(any(Subprocedure.class));
+    }).when(mockMemberComms).sendMemberAcquired(any());
   }
 
   /**
    * Test the normal sub procedure execution case.
    */
-  @Test(timeout = 500)
+  @Test
   public void testSimpleRun() throws Exception {
     member = buildCohortMember();
     EmptySubprocedure subproc = new EmptySubprocedure(member, mockListener);
@@ -147,14 +153,14 @@ public class TestProcedureMember {
     order.verify(spy).insideBarrier();
     order.verify(mockMemberComms).sendMemberCompleted(eq(spy), eq(data));
     order.verify(mockMemberComms, never()).sendMemberAborted(eq(spy),
-        any(ForeignException.class));
+        any());
   }
 
   /**
    * Make sure we call cleanup etc, when we have an exception during
    * {@link Subprocedure#acquireBarrier()}.
    */
-  @Test(timeout = 60000)
+  @Test
   public void testMemberPrepareException() throws Exception {
     buildCohortMemberPair();
 
@@ -182,14 +188,14 @@ public class TestProcedureMember {
     order.verify(spySub, never()).insideBarrier();
     order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
    * Make sure we call cleanup etc, when we have an exception during prepare.
    */
-  @Test(timeout = 60000)
+  @Test
   public void testSendMemberAcquiredCommsFailure() throws Exception {
     buildCohortMemberPair();
 
@@ -200,7 +206,7 @@ public class TestProcedureMember {
           public Void answer(InvocationOnMock invocation) throws Throwable {
             throw new IOException("Forced IOException in memeber prepare");
           }
-        }).when(mockMemberComms).sendMemberAcquired(any(Subprocedure.class));
+        }).when(mockMemberComms).sendMemberAcquired(any());
 
     // run the operation
     // build a new operation
@@ -218,8 +224,8 @@ public class TestProcedureMember {
     order.verify(spySub, never()).insideBarrier();
     order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
@@ -228,7 +234,7 @@ public class TestProcedureMember {
    * is checked.  Thus, the {@link Subprocedure#acquireBarrier()} should succeed but later get rolled back
    * via {@link Subprocedure#cleanup}.
    */
-  @Test(timeout = 60000)
+  @Test
   public void testCoordinatorAbort() throws Exception {
     buildCohortMemberPair();
 
@@ -261,8 +267,8 @@ public class TestProcedureMember {
     order.verify(spySub, never()).insideBarrier();
     order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
@@ -273,7 +279,7 @@ public class TestProcedureMember {
    * member.  Members are then responsible for reading its TX log.  This implementation actually
    * rolls back, and thus breaks the normal TX guarantees.
   */
-  @Test(timeout = 60000)
+  @Test
   public void testMemberCommitException() throws Exception {
     buildCohortMemberPair();
 
@@ -302,8 +308,8 @@ public class TestProcedureMember {
     // Later phases not run
     order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
@@ -314,7 +320,7 @@ public class TestProcedureMember {
    * member.  Members are then responsible for reading its TX log.  This implementation actually
    * rolls back, and thus breaks the normal TX guarantees.
   */
-  @Test(timeout = 60000)
+  @Test
   public void testMemberCommitCommsFailure() throws Exception {
     buildCohortMemberPair();
     final TimeoutException oate = new TimeoutException("bogus timeout",1,2,0);
@@ -328,7 +334,7 @@ public class TestProcedureMember {
             Thread.sleep(WAKE_FREQUENCY);
             return null;
           }
-        }).when(mockMemberComms).sendMemberCompleted(any(Subprocedure.class), eq(data));
+        }).when(mockMemberComms).sendMemberCompleted(any(), eq(data));
 
     // run the operation
     // build a new operation
@@ -344,15 +350,15 @@ public class TestProcedureMember {
     order.verify(spySub).insideBarrier();
     order.verify(mockMemberComms).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
    * Fail correctly on getting an external error while waiting for the prepared latch
    * @throws Exception on failure
    */
-  @Test(timeout = 60000)
+  @Test
   public void testPropagateConnectionErrorBackToManager() throws Exception {
     // setup the operation
     member = buildCohortMember();
@@ -369,7 +375,7 @@ public class TestProcedureMember {
     doThrow(new ForeignException("SRC", "prepare exception")).when(spy).acquireBarrier();
     // and throw a connection error when we try to tell the controller about it
     doThrow(new IOException("Controller is down!")).when(mockMemberComms)
-        .sendMemberAborted(eq(spy), any(ForeignException.class));
+        .sendMemberAborted(eq(spy), any());
 
 
     // run the operation
@@ -388,9 +394,9 @@ public class TestProcedureMember {
     // TODO Need to do another refactor to get this to propagate to the coordinator.
     // make sure we pass a remote exception back the controller
 //    order.verify(mockMemberComms).sendMemberAborted(eq(spy),
-//      any(ExternalException.class));
+//      any());
 //    order.verify(dispSpy).receiveError(anyString(),
-//        any(ExternalException.class), any());
+//        any(), any());
   }
 
   /**
@@ -427,7 +433,7 @@ public class TestProcedureMember {
     verifyZeroInteractions(pool);
     // get two abort requests
     // TODO Need to do another refactor to get this to propagate to the coordinator.
-    // verify(mockMemberComms, times(2)).sendMemberAborted(any(Subprocedure.class), any(ExternalException.class));
+    // verify(mockMemberComms, times(2)).sendMemberAborted(any(), any());
   }
 
   /**

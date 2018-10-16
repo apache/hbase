@@ -25,6 +25,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
 message DummyRequest {
+  optional uint64 value = 1;
 }
 
 message DummyResponse {

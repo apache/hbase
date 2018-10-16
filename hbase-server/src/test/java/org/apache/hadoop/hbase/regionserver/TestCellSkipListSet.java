@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,24 +17,31 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Iterator;
+import java.util.SortedSet;
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-
-import java.util.Iterator;
-import java.util.SortedSet;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestCellSkipListSet extends TestCase {
-  private final CellSet csls =
-    new CellSet(CellComparator.COMPARATOR);
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellSkipListSet.class);
+
+  private final CellSet csls =
+    new CellSet(CellComparatorImpl.COMPARATOR);
+
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     this.csls.clear();

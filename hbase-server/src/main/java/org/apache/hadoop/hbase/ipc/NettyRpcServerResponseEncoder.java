@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundHandlerAdapter;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Encoder for {@link RpcResponse}.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {

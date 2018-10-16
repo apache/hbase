@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -95,6 +95,48 @@ public class TableState {
 
   private final TableName tableName;
   private final State state;
+
+  /**
+   * @return True if table is {@link State#ENABLED}.
+   */
+  public boolean isEnabled() {
+    return isInStates(State.ENABLED);
+  }
+
+  /**
+   * @return True if table is {@link State#ENABLING}.
+   */
+  public boolean isEnabling() {
+    return isInStates(State.ENABLING);
+  }
+
+  /**
+   * @return True if {@link State#ENABLED} or {@link State#ENABLING}
+   */
+  public boolean isEnabledOrEnabling() {
+    return isInStates(State.ENABLED, State.ENABLING);
+  }
+
+  /**
+   * @return True if table is disabled.
+   */
+  public boolean isDisabled() {
+    return isInStates(State.DISABLED);
+  }
+
+  /**
+   * @return True if table is disabling.
+   */
+  public boolean isDisabling() {
+    return isInStates(State.DISABLING);
+  }
+
+  /**
+   * @return True if {@link State#DISABLED} or {@link State#DISABLED}
+   */
+  public boolean isDisabledOrDisabling() {
+    return isInStates(State.DISABLED, State.DISABLING);
+  }
 
   /**
    * Create instance of TableState.
@@ -177,14 +219,14 @@ public class TableState {
 
   /**
    * Static version of state checker
-   * @param state desired
    * @param target equals to any of
    * @return true if satisfies
    */
-  public static boolean isInStates(State state, State... target) {
+  public boolean isInStates(State... target) {
     for (State tableState : target) {
-      if (state.equals(tableState))
+      if (this.state.equals(tableState)) {
         return true;
+      }
     }
     return false;
   }
@@ -212,9 +254,6 @@ public class TableState {
 
   @Override
   public String toString() {
-    return "TableState{" +
-        ", tableName=" + tableName +
-        ", state=" + state +
-        '}';
+    return "tableName=" + tableName + ", state=" + state;
   }
 }

@@ -20,33 +20,29 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-
-import com.google.common.base.Predicate;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Filter a WAL Entry by namespaces and table-cfs config in the peer. It first filter entry
- * by namespaces config, then filter entry by table-cfs config.
+ * Filter a WAL Entry by the peer config: replicate_all flag, namespaces config, table-cfs config,
+ * exclude namespaces config, and exclude table-cfs config.
  *
- * 1. Set a namespace in peer config means that all tables in this namespace will be replicated.
- * 2. If the namespaces config is null, then the table-cfs config decide which table's edit
- *    can be replicated. If the table-cfs config is null, then the namespaces config decide
- *    which table's edit can be replicated.
+ * If replicate_all flag is true, it means all user tables will be replicated to peer cluster. But
+ * you can set exclude namespaces or exclude table-cfs which can't be replicated to peer cluster.
+ * Note: set a exclude namespace means that all tables in this namespace can't be replicated.
+ *
+ * If replicate_all flag is false, it means all user tables can't be replicated to peer cluster.
+ * But you can set namespaces or table-cfs which will be replicated to peer cluster.
+ * Note: set a namespace means that all tables in this namespace will be replicated.
  */
 @InterfaceAudience.Private
 public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFilter {
 
-  private static final Log LOG = LogFactory.getLog(NamespaceTableCfWALEntryFilter.class);
   private final ReplicationPeer peer;
   private BulkLoadCellFilter bulkLoadFilter = new BulkLoadCellFilter();
 
@@ -56,71 +52,82 @@ public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFi
 
   @Override
   public Entry filter(Entry entry) {
-    TableName tabName = entry.getKey().getTablename();
-    String namespace = tabName.getNamespaceAsString();
-    Set<String> namespaces = this.peer.getNamespaces();
-    Map<TableName, List<String>> tableCFs = getTableCfs();
-
-    // If null means user has explicitly not configured any namespaces and table CFs
-    // so all the tables data are applicable for replication
-    if (namespaces == null && tableCFs == null) {
+    if (ReplicationUtils.contains(this.peer.getPeerConfig(), entry.getKey().getTableName())) {
       return entry;
-    }
-
-    // First filter by namespaces config
-    // If table's namespace in peer config, all the tables data are applicable for replication
-    if (namespaces != null && namespaces.contains(namespace)) {
-      return entry;
-    }
-
-    // Then filter by table-cfs config
-    // return null(prevent replicating) if logKey's table isn't in this peer's
-    // replicaable namespace list and table list
-    if (tableCFs == null || !tableCFs.containsKey(tabName)) {
+    } else {
       return null;
     }
-
-    return entry;
   }
 
   @Override
   public Cell filterCell(final Entry entry, Cell cell) {
-    final Map<TableName, List<String>> tableCfs = getTableCfs();
-    if (tableCfs == null) return cell;
-    TableName tabName = entry.getKey().getTablename();
-    List<String> cfs = tableCfs.get(tabName);
-    // ignore(remove) kv if its cf isn't in the replicable cf list
-    // (empty cfs means all cfs of this table are replicable)
-    if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
-      cell = bulkLoadFilter.filterCell(cell, new Predicate<byte[]>() {
-        @Override
-        public boolean apply(byte[] fam) {
-          if (tableCfs != null) {
-            List<String> cfs = tableCfs.get(entry.getKey().getTablename());
-            if (cfs != null && !cfs.contains(Bytes.toString(fam))) {
-              return true;
-            }
-          }
-          return false;
-        }
-      });
-    } else {
-      if ((cfs != null) && !cfs.contains(
-        Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()))) {
-        return null;
+    ReplicationPeerConfig peerConfig = this.peer.getPeerConfig();
+    if (peerConfig.replicateAllUserTables()) {
+      // replicate all user tables, but filter by exclude table-cfs config
+      final Map<TableName, List<String>> excludeTableCfs = peerConfig.getExcludeTableCFsMap();
+      if (excludeTableCfs == null) {
+        return cell;
       }
+
+      if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
+        cell = bulkLoadFilter.filterCell(cell,
+          fam -> filterByExcludeTableCfs(entry.getKey().getTableName(), Bytes.toString(fam),
+            excludeTableCfs));
+      } else {
+        if (filterByExcludeTableCfs(entry.getKey().getTableName(),
+          Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()),
+          excludeTableCfs)) {
+          return null;
+        }
+      }
+
+      return cell;
+    } else {
+      // not replicate all user tables, so filter by table-cfs config
+      final Map<TableName, List<String>> tableCfs = peerConfig.getTableCFsMap();
+      if (tableCfs == null) {
+        return cell;
+      }
+
+      if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
+        cell = bulkLoadFilter.filterCell(cell,
+          fam -> filterByTableCfs(entry.getKey().getTableName(), Bytes.toString(fam), tableCfs));
+      } else {
+        if (filterByTableCfs(entry.getKey().getTableName(),
+          Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()),
+          tableCfs)) {
+          return null;
+        }
+      }
+
+      return cell;
     }
-    return cell;
   }
 
-  Map<TableName, List<String>> getTableCfs() {
-    Map<TableName, List<String>> tableCFs = null;
-    try {
-      tableCFs = this.peer.getTableCFs();
-    } catch (IllegalArgumentException e) {
-      LOG.error("should not happen: can't get tableCFs for peer " + peer.getId() +
-          ", degenerate as if it's not configured by keeping tableCFs==null");
+  private boolean filterByExcludeTableCfs(TableName tableName, String family,
+      Map<TableName, List<String>> excludeTableCfs) {
+    List<String> excludeCfs = excludeTableCfs.get(tableName);
+    if (excludeCfs != null) {
+      // empty cfs means all cfs of this table are excluded
+      if (excludeCfs.isEmpty()) {
+        return true;
+      }
+      // ignore(remove) kv if its cf is in the exclude cfs list
+      if (excludeCfs.contains(family)) {
+        return true;
+      }
     }
-    return tableCFs;
+    return false;
+  }
+
+  private boolean filterByTableCfs(TableName tableName, String family,
+      Map<TableName, List<String>> tableCfs) {
+    List<String> cfs = tableCfs.get(tableName);
+    // ignore(remove) kv if its cf isn't in the replicable cf list
+    // (empty cfs means all cfs of this table are replicable)
+    if (cfs != null && !cfs.contains(family)) {
+      return true;
+    }
+    return false;
   }
 }

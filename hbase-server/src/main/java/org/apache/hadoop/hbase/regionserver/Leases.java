@@ -18,12 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
-
+import java.io.IOException;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Map;
@@ -31,7 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
-import java.io.IOException;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Leases
@@ -54,7 +54,7 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class Leases extends HasThread {
-  private static final Log LOG = LogFactory.getLog(Leases.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(Leases.class.getName());
   public static final int MIN_WAIT_TIME = 100;
   private final Map<String, Lease> leases = new ConcurrentHashMap<>();
 
@@ -63,7 +63,7 @@ public class Leases extends HasThread {
 
   /**
    * Creates a lease monitor
-   * 
+   *
    * @param leaseCheckFrequency - how often the lease should be checked
    *          (milliseconds)
    */
@@ -98,7 +98,7 @@ public class Leases extends HasThread {
       } catch (ConcurrentModificationException e) {
         continue;
       } catch (Throwable e) {
-        LOG.fatal("Unexpected exception killed leases thread", e);
+        LOG.error(HBaseMarkers.FATAL, "Unexpected exception killed leases thread", e);
         break;
       }
 
@@ -144,10 +144,9 @@ public class Leases extends HasThread {
    * without any cancellation calls.
    */
   public void close() {
-    LOG.info(Thread.currentThread().getName() + " closing leases");
     this.stopRequested = true;
     leases.clear();
-    LOG.info(Thread.currentThread().getName() + " closed leases");
+    LOG.info("Closed leases");
   }
 
   /**
@@ -291,11 +290,13 @@ public class Leases extends HasThread {
       return this.leaseName.hashCode();
     }
 
+    @Override
     public long getDelay(TimeUnit unit) {
       return unit.convert(this.expirationTime - EnvironmentEdgeManager.currentTime(),
           TimeUnit.MILLISECONDS);
     }
 
+    @Override
     public int compareTo(Delayed o) {
       long delta = this.getDelay(TimeUnit.MILLISECONDS) -
         o.getDelay(TimeUnit.MILLISECONDS);

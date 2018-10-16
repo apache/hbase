@@ -31,42 +31,44 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
-import com.google.common.collect.Maps;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell.Type;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RackManager;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FavoredNodes;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 /**
  * Helper class for {@link FavoredNodeLoadBalancer} that has all the intelligence for racks,
  * meta scans, etc. Instantiated by the {@link FavoredNodeLoadBalancer} when needed (from
- * within calls like {@link FavoredNodeLoadBalancer#randomAssignment(HRegionInfo, List)}).
+ * within calls like {@link FavoredNodeLoadBalancer#randomAssignment(RegionInfo, List)}).
  * All updates to favored nodes should only be done from {@link FavoredNodesManager} and not
  * through this helper class (except for tests).
  */
 @InterfaceAudience.Private
 public class FavoredNodeAssignmentHelper {
-  private static final Log LOG = LogFactory.getLog(FavoredNodeAssignmentHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeAssignmentHelper.class);
   private RackManager rackManager;
   private Map<String, List<ServerName>> rackToRegionServerMap;
   private List<String> uniqueRackList;
@@ -105,7 +107,7 @@ public class FavoredNodeAssignmentHelper {
         this.rackToRegionServerMap.put(rackName, serverList);
       }
       for (ServerName serverName : serverList) {
-        if (ServerName.isSameHostnameAndPort(sn, serverName)) {
+        if (ServerName.isSameAddress(sn, serverName)) {
           // The server is already present, ignore.
           break;
         }
@@ -117,15 +119,15 @@ public class FavoredNodeAssignmentHelper {
 
   /**
    * Update meta table with favored nodes info
-   * @param regionToFavoredNodes map of HRegionInfo's to their favored nodes
+   * @param regionToFavoredNodes map of RegionInfo's to their favored nodes
    * @param connection connection to be used
    * @throws IOException
    */
   public static void updateMetaWithFavoredNodesInfo(
-      Map<HRegionInfo, List<ServerName>> regionToFavoredNodes,
+      Map<RegionInfo, List<ServerName>> regionToFavoredNodes,
       Connection connection) throws IOException {
     List<Put> puts = new ArrayList<>();
-    for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
+    for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
       Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
       if (put != null) {
         puts.add(put);
@@ -142,10 +144,10 @@ public class FavoredNodeAssignmentHelper {
    * @throws IOException
    */
   public static void updateMetaWithFavoredNodesInfo(
-      Map<HRegionInfo, List<ServerName>> regionToFavoredNodes,
+      Map<RegionInfo, List<ServerName>> regionToFavoredNodes,
       Configuration conf) throws IOException {
     List<Put> puts = new ArrayList<>();
-    for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
+    for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
       Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
       if (put != null) {
         puts.add(put);
@@ -165,22 +167,26 @@ public class FavoredNodeAssignmentHelper {
   }
 
   /**
-   * Generates and returns a Put containing the region info for the catalog table
-   * and the servers
-   * @param regionInfo
-   * @param favoredNodeList
+   * Generates and returns a Put containing the region info for the catalog table and the servers
    * @return Put object
    */
-  static Put makePutFromRegionInfo(HRegionInfo regionInfo, List<ServerName>favoredNodeList)
-  throws IOException {
+  private static Put makePutFromRegionInfo(RegionInfo regionInfo, List<ServerName> favoredNodeList)
+      throws IOException {
     Put put = null;
     if (favoredNodeList != null) {
-      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo);
+      long time = EnvironmentEdgeManager.currentTime();
+      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo, time);
       byte[] favoredNodes = getFavoredNodes(favoredNodeList);
-      put.addImmutable(HConstants.CATALOG_FAMILY, FAVOREDNODES_QUALIFIER,
-          EnvironmentEdgeManager.currentTime(), favoredNodes);
-      LOG.debug("Create the region " + regionInfo.getRegionNameAsString() +
-                 " with favored nodes " + favoredNodeList);
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setRow(put.getRow())
+          .setFamily(HConstants.CATALOG_FAMILY)
+          .setQualifier(FAVOREDNODES_QUALIFIER)
+          .setTimestamp(time)
+          .setType(Type.Put)
+          .setValue(favoredNodes)
+          .build());
+      LOG.debug("Create the region {} with favored nodes {}", regionInfo.getRegionNameAsString(),
+        favoredNodeList);
     }
     return put;
   }
@@ -226,8 +232,8 @@ public class FavoredNodeAssignmentHelper {
   // If there were fewer servers in one rack, say r3, which had 3 servers, one possible
   // placement could be r2:s5, <skip-r3>, r4:s5, r1:s5, r2:s6, <skip-r3> ...
   // The regions should be distributed proportionately to the racksizes
-  public void placePrimaryRSAsRoundRobin(Map<ServerName, List<HRegionInfo>> assignmentMap,
-      Map<HRegionInfo, ServerName> primaryRSMap, List<HRegionInfo> regions) {
+  public void placePrimaryRSAsRoundRobin(Map<ServerName, List<RegionInfo>> assignmentMap,
+      Map<RegionInfo, ServerName> primaryRSMap, List<RegionInfo> regions) {
     List<String> rackList = new ArrayList<>(rackToRegionServerMap.size());
     rackList.addAll(rackToRegionServerMap.keySet());
     int rackIndex = random.nextInt(rackList.size());
@@ -240,7 +246,7 @@ public class FavoredNodeAssignmentHelper {
     int numIterations = 0;
     // Initialize the current processing host index.
     int serverIndex = random.nextInt(maxRackSize);
-    for (HRegionInfo regionInfo : regions) {
+    for (RegionInfo regionInfo : regions) {
       List<ServerName> currentServerList;
       String rackName;
       while (true) {
@@ -265,7 +271,7 @@ public class FavoredNodeAssignmentHelper {
       // Place the current region with the current primary region server
       primaryRSMap.put(regionInfo, currentServer);
       if (assignmentMap != null) {
-        List<HRegionInfo> regionsForServer = assignmentMap.get(currentServer);
+        List<RegionInfo> regionsForServer = assignmentMap.get(currentServer);
         if (regionsForServer == null) {
           regionsForServer = new ArrayList<>();
           assignmentMap.put(currentServer, regionsForServer);
@@ -283,12 +289,12 @@ public class FavoredNodeAssignmentHelper {
     }
   }
 
-  public Map<HRegionInfo, ServerName[]> placeSecondaryAndTertiaryRS(
-      Map<HRegionInfo, ServerName> primaryRSMap) {
-    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap = new HashMap<>();
-    for (Map.Entry<HRegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
+  public Map<RegionInfo, ServerName[]> placeSecondaryAndTertiaryRS(
+      Map<RegionInfo, ServerName> primaryRSMap) {
+    Map<RegionInfo, ServerName[]> secondaryAndTertiaryMap = new HashMap<>();
+    for (Map.Entry<RegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
       // Get the target region and its primary region server rack
-      HRegionInfo regionInfo = entry.getKey();
+      RegionInfo regionInfo = entry.getKey();
       ServerName primaryRS = entry.getValue();
       try {
         // Create the secondary and tertiary region server pair object.
@@ -307,7 +313,7 @@ public class FavoredNodeAssignmentHelper {
     return secondaryAndTertiaryMap;
   }
 
-  public ServerName[] getSecondaryAndTertiary(HRegionInfo regionInfo, ServerName primaryRS)
+  public ServerName[] getSecondaryAndTertiary(RegionInfo regionInfo, ServerName primaryRS)
       throws IOException {
 
     ServerName[] favoredNodes;// Get the rack for the primary region server
@@ -321,11 +327,11 @@ public class FavoredNodeAssignmentHelper {
     return favoredNodes;
   }
 
-  private Map<ServerName, Set<HRegionInfo>> mapRSToPrimaries(
-      Map<HRegionInfo, ServerName> primaryRSMap) {
-    Map<ServerName, Set<HRegionInfo>> primaryServerMap = new HashMap<>();
-    for (Entry<HRegionInfo, ServerName> e : primaryRSMap.entrySet()) {
-      Set<HRegionInfo> currentSet = primaryServerMap.get(e.getValue());
+  private Map<ServerName, Set<RegionInfo>> mapRSToPrimaries(
+      Map<RegionInfo, ServerName> primaryRSMap) {
+    Map<ServerName, Set<RegionInfo>> primaryServerMap = new HashMap<>();
+    for (Entry<RegionInfo, ServerName> e : primaryRSMap.entrySet()) {
+      Set<RegionInfo> currentSet = primaryServerMap.get(e.getValue());
       if (currentSet == null) {
         currentSet = new HashSet<>();
       }
@@ -342,15 +348,15 @@ public class FavoredNodeAssignmentHelper {
    * @param primaryRSMap
    * @return the map of regions to the servers the region-files should be hosted on
    */
-  public Map<HRegionInfo, ServerName[]> placeSecondaryAndTertiaryWithRestrictions(
-      Map<HRegionInfo, ServerName> primaryRSMap) {
-    Map<ServerName, Set<HRegionInfo>> serverToPrimaries =
+  public Map<RegionInfo, ServerName[]> placeSecondaryAndTertiaryWithRestrictions(
+      Map<RegionInfo, ServerName> primaryRSMap) {
+    Map<ServerName, Set<RegionInfo>> serverToPrimaries =
         mapRSToPrimaries(primaryRSMap);
-    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap = new HashMap<>();
+    Map<RegionInfo, ServerName[]> secondaryAndTertiaryMap = new HashMap<>();
 
-    for (Entry<HRegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
+    for (Entry<RegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
       // Get the target region and its primary region server rack
-      HRegionInfo regionInfo = entry.getKey();
+      RegionInfo regionInfo = entry.getKey();
       ServerName primaryRS = entry.getValue();
       try {
         // Get the rack for the primary region server
@@ -379,9 +385,9 @@ public class FavoredNodeAssignmentHelper {
   }
 
   private ServerName[] multiRackCaseWithRestrictions(
-      Map<ServerName, Set<HRegionInfo>> serverToPrimaries,
-      Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap,
-      String primaryRack, ServerName primaryRS, HRegionInfo regionInfo) throws IOException {
+      Map<ServerName, Set<RegionInfo>> serverToPrimaries,
+      Map<RegionInfo, ServerName[]> secondaryAndTertiaryMap,
+      String primaryRack, ServerName primaryRS, RegionInfo regionInfo) throws IOException {
     // Random to choose the secondary and tertiary region server
     // from another rack to place the secondary and tertiary
     // Random to choose one rack except for the current rack
@@ -396,13 +402,13 @@ public class FavoredNodeAssignmentHelper {
       // Randomly pick up two servers from this secondary rack
       // Skip the secondary for the tertiary placement
       // skip the servers which share the primary already
-      Set<HRegionInfo> primaries = serverToPrimaries.get(primaryRS);
+      Set<RegionInfo> primaries = serverToPrimaries.get(primaryRS);
       Set<ServerName> skipServerSet = new HashSet<>();
       while (true) {
         ServerName[] secondaryAndTertiary = null;
         if (primaries.size() > 1) {
           // check where his tertiary and secondary are
-          for (HRegionInfo primary : primaries) {
+          for (RegionInfo primary : primaries) {
             secondaryAndTertiary = secondaryAndTertiaryMap.get(primary);
             if (secondaryAndTertiary != null) {
               if (getRackOfServer(secondaryAndTertiary[0]).equals(secondaryRack)) {
@@ -469,7 +475,7 @@ public class FavoredNodeAssignmentHelper {
     return favoredNodes;
   }
 
-  private ServerName[] singleRackCase(HRegionInfo regionInfo,
+  private ServerName[] singleRackCase(RegionInfo regionInfo,
       ServerName primaryRS,
       String primaryRack) throws IOException {
     // Single rack case: have to pick the secondary and tertiary
@@ -517,7 +523,7 @@ public class FavoredNodeAssignmentHelper {
    * @return Array containing secondary and tertiary favored nodes.
    * @throws IOException Signals that an I/O exception has occurred.
    */
-  private ServerName[] multiRackCase(HRegionInfo regionInfo, ServerName primaryRS,
+  private ServerName[] multiRackCase(RegionInfo regionInfo, ServerName primaryRS,
       String primaryRack) throws IOException {
 
     List<ServerName>favoredNodes = Lists.newArrayList(primaryRS);
@@ -622,7 +628,7 @@ public class FavoredNodeAssignmentHelper {
   }
 
   public static String getFavoredNodesAsString(List<ServerName> nodes) {
-    StringBuffer strBuf = new StringBuffer();
+    StringBuilder strBuf = new StringBuilder();
     int i = 0;
     for (ServerName node : nodes) {
       strBuf.append(node.getHostAndPort());
@@ -765,15 +771,15 @@ public class FavoredNodeAssignmentHelper {
    * Choose a random server as primary and then choose secondary and tertiary FN so its spread
    * across two racks.
    */
-  public List<ServerName> generateFavoredNodes(HRegionInfo hri) throws IOException {
+  public List<ServerName> generateFavoredNodes(RegionInfo hri) throws IOException {
 
     List<ServerName> favoredNodesForRegion = new ArrayList<>(FAVORED_NODES_NUM);
     ServerName primary = servers.get(random.nextInt(servers.size()));
     favoredNodesForRegion.add(ServerName.valueOf(primary.getHostAndPort(), ServerName.NON_STARTCODE));
 
-    Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<>(1);
+    Map<RegionInfo, ServerName> primaryRSMap = new HashMap<>(1);
     primaryRSMap.put(hri, primary);
-    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryRSMap =
+    Map<RegionInfo, ServerName[]> secondaryAndTertiaryRSMap =
         placeSecondaryAndTertiaryRS(primaryRSMap);
     ServerName[] secondaryAndTertiaryNodes = secondaryAndTertiaryRSMap.get(hri);
     if (secondaryAndTertiaryNodes != null && secondaryAndTertiaryNodes.length == 2) {
@@ -786,13 +792,13 @@ public class FavoredNodeAssignmentHelper {
     }
   }
 
-  public Map<HRegionInfo, List<ServerName>> generateFavoredNodesRoundRobin(
-      Map<ServerName, List<HRegionInfo>> assignmentMap, List<HRegionInfo> regions)
+  public Map<RegionInfo, List<ServerName>> generateFavoredNodesRoundRobin(
+      Map<ServerName, List<RegionInfo>> assignmentMap, List<RegionInfo> regions)
       throws IOException {
 
     if (regions.size() > 0) {
       if (canPlaceFavoredNodes()) {
-        Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<>();
+        Map<RegionInfo, ServerName> primaryRSMap = new HashMap<>();
         // Lets try to have an equal distribution for primary favored node
         placePrimaryRSAsRoundRobin(assignmentMap, primaryRSMap, regions);
         return generateFavoredNodes(primaryRSMap);
@@ -807,16 +813,16 @@ public class FavoredNodeAssignmentHelper {
   /*
    * Generate favored nodes for a set of regions when we know where they are currently hosted.
    */
-  private Map<HRegionInfo, List<ServerName>> generateFavoredNodes(
-      Map<HRegionInfo, ServerName> primaryRSMap) {
+  private Map<RegionInfo, List<ServerName>> generateFavoredNodes(
+      Map<RegionInfo, ServerName> primaryRSMap) {
 
-    Map<HRegionInfo, List<ServerName>> generatedFavNodes = new HashMap<>();
-    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryRSMap =
+    Map<RegionInfo, List<ServerName>> generatedFavNodes = new HashMap<>();
+    Map<RegionInfo, ServerName[]> secondaryAndTertiaryRSMap =
       placeSecondaryAndTertiaryRS(primaryRSMap);
 
-    for (Entry<HRegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
+    for (Entry<RegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
       List<ServerName> favoredNodesForRegion = new ArrayList<>(FAVORED_NODES_NUM);
-      HRegionInfo region = entry.getKey();
+      RegionInfo region = entry.getKey();
       ServerName primarySN = entry.getValue();
       favoredNodesForRegion.add(ServerName.valueOf(primarySN.getHostname(), primarySN.getPort(),
         NON_STARTCODE));

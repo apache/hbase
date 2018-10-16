@@ -27,12 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,15 +34,24 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.codehaus.jackson.map.ObjectMapper;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * WALPrettyPrinter prints the contents of a given WAL with a variety of
@@ -66,6 +69,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class WALPrettyPrinter {
+  private static final Logger LOG = LoggerFactory.getLogger(WALPrettyPrinter.class);
+
   private boolean outputValues;
   private boolean outputJSON;
   // The following enable filtering by sequence, region, and row, respectively
@@ -79,6 +84,8 @@ public class WALPrettyPrinter {
   private PrintStream out;
   // for JSON encoding
   private static final ObjectMapper MAPPER = new ObjectMapper();
+  //allows for jumping straight to a given portion of the file
+  private long position;
 
   /**
    * Basic constructor that simply initializes values to reasonable defaults.
@@ -197,6 +204,15 @@ public class WALPrettyPrinter {
   }
 
   /**
+   * sets the position to start seeking the WAL file
+   * @param position
+   *          initial position to start seeking the given WAL file
+   */
+  public void setPosition(long position) {
+    this.position = position;
+  }
+
+  /**
    * enables output as a single, persistent list. at present, only relevant in
    * the case of JSON output.
    */
@@ -269,6 +285,10 @@ public class WALPrettyPrinter {
       firstTxn = true;
     }
 
+    if (position > 0) {
+      log.seek(position);
+    }
+
     try {
       WAL.Entry entry;
       while ((entry = log.next()) != null) {
@@ -292,6 +312,7 @@ public class WALPrettyPrinter {
           if (row == null || ((String) op.get("row")).equals(row)) {
             actions.add(op);
           }
+          op.put("total_size_sum", PrivateCellUtil.estimatedSizeOfCell(cell));
         }
         if (actions.isEmpty())
           continue;
@@ -316,8 +337,11 @@ public class WALPrettyPrinter {
               out.println("    tag: " + op.get("tag"));
             }
             if (outputValues) out.println("    value: " + op.get("value"));
+            out.println("cell total size sum: " + op.get("total_size_sum"));
           }
         }
+        out.println("edit heap size: " + entry.getEdit().heapSize());
+        out.println("position: " + log.getPosition());
       }
     } finally {
       log.close();
@@ -340,10 +364,11 @@ public class WALPrettyPrinter {
     stringMap.put("vlen", cell.getValueLength());
     if (cell.getTagsLength() > 0) {
       List<String> tagsString = new ArrayList<>();
-      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+      Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {
         Tag tag = tagsIterator.next();
-        tagsString.add((tag.getType()) + ":" + Bytes.toStringBinary(TagUtil.cloneValue(tag)));
+        tagsString
+            .add((tag.getType()) + ":" + Bytes.toStringBinary(Tag.cloneValue(tag)));
       }
       stringMap.put("tag", tagsString);
     }
@@ -374,6 +399,7 @@ public class WALPrettyPrinter {
     options.addOption("s", "sequence", true,
         "Sequence to filter by. Pass sequence number.");
     options.addOption("w", "row", true, "Row to filter by. Pass row name.");
+    options.addOption("g", "goto", true, "Position to seek to in the file");
 
     WALPrettyPrinter printer = new WALPrettyPrinter();
     CommandLineParser parser = new PosixParser();
@@ -397,8 +423,11 @@ public class WALPrettyPrinter {
         printer.setSequenceFilter(Long.parseLong(cmd.getOptionValue("s")));
       if (cmd.hasOption("w"))
         printer.setRowFilter(cmd.getOptionValue("w"));
+      if (cmd.hasOption("g")) {
+        printer.setPosition(Long.parseLong(cmd.getOptionValue("g")));
+      }
     } catch (ParseException e) {
-      e.printStackTrace();
+      LOG.error("Failed to parse commandLine arguments", e);
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("HFile filename(s) ", options, true);
       System.exit(-1);

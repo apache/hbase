@@ -19,121 +19,115 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 @InterfaceAudience.Private
 public class ModifyTableProcedure
     extends AbstractStateMachineTableProcedure<ModifyTableState> {
-  private static final Log LOG = LogFactory.getLog(ModifyTableProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ModifyTableProcedure.class);
 
-  private HTableDescriptor unmodifiedHTableDescriptor = null;
-  private HTableDescriptor modifiedHTableDescriptor;
+  private TableDescriptor unmodifiedTableDescriptor = null;
+  private TableDescriptor modifiedTableDescriptor;
   private boolean deleteColumnFamilyInModify;
-
-  private List<HRegionInfo> regionInfoList;
-  private Boolean traceEnabled = null;
 
   public ModifyTableProcedure() {
     super();
     initilize();
   }
 
-  public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd) {
+  public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd)
+  throws HBaseIOException {
     this(env, htd, null);
   }
 
-  public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd,
-      final ProcedurePrepareLatch latch) {
+  public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd,
+      final ProcedurePrepareLatch latch)
+  throws HBaseIOException {
     super(env, latch);
     initilize();
-    this.modifiedHTableDescriptor = htd;
+    this.modifiedTableDescriptor = htd;
+    preflightChecks(env, null/*No table checks; if changing peers, table can be online*/);
   }
 
   private void initilize() {
-    this.unmodifiedHTableDescriptor = null;
-    this.regionInfoList = null;
-    this.traceEnabled = null;
+    this.unmodifiedTableDescriptor = null;
     this.deleteColumnFamilyInModify = false;
   }
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final ModifyTableState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
-
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
-      case MODIFY_TABLE_PREPARE:
-        prepareModify(env);
-        setNextState(ModifyTableState.MODIFY_TABLE_PRE_OPERATION);
-        break;
-      case MODIFY_TABLE_PRE_OPERATION:
-        preModify(env, state);
-        setNextState(ModifyTableState.MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR);
-        break;
-      case MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR:
-        updateTableDescriptor(env);
-        setNextState(ModifyTableState.MODIFY_TABLE_REMOVE_REPLICA_COLUMN);
-        break;
-      case MODIFY_TABLE_REMOVE_REPLICA_COLUMN:
-        updateReplicaColumnsIfNeeded(env, unmodifiedHTableDescriptor, modifiedHTableDescriptor);
-        if (deleteColumnFamilyInModify) {
-          setNextState(ModifyTableState.MODIFY_TABLE_DELETE_FS_LAYOUT);
-        } else {
+        case MODIFY_TABLE_PREPARE:
+          prepareModify(env);
+          setNextState(ModifyTableState.MODIFY_TABLE_PRE_OPERATION);
+          break;
+        case MODIFY_TABLE_PRE_OPERATION:
+          preModify(env, state);
+          setNextState(ModifyTableState.MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR);
+          break;
+        case MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR:
+          updateTableDescriptor(env);
+          setNextState(ModifyTableState.MODIFY_TABLE_REMOVE_REPLICA_COLUMN);
+          break;
+        case MODIFY_TABLE_REMOVE_REPLICA_COLUMN:
+          updateReplicaColumnsIfNeeded(env, unmodifiedTableDescriptor, modifiedTableDescriptor);
+          if (deleteColumnFamilyInModify) {
+            setNextState(ModifyTableState.MODIFY_TABLE_DELETE_FS_LAYOUT);
+          } else {
+            setNextState(ModifyTableState.MODIFY_TABLE_POST_OPERATION);
+          }
+          break;
+        case MODIFY_TABLE_DELETE_FS_LAYOUT:
+          deleteFromFs(env, unmodifiedTableDescriptor, modifiedTableDescriptor);
           setNextState(ModifyTableState.MODIFY_TABLE_POST_OPERATION);
-        }
-        break;
-      case MODIFY_TABLE_DELETE_FS_LAYOUT:
-        deleteFromFs(env, unmodifiedHTableDescriptor, modifiedHTableDescriptor);
-        setNextState(ModifyTableState.MODIFY_TABLE_POST_OPERATION);
-        break;
-      case MODIFY_TABLE_POST_OPERATION:
-        postModify(env, state);
-        setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
-        break;
-      case MODIFY_TABLE_REOPEN_ALL_REGIONS:
-        if (env.getAssignmentManager().isTableEnabled(getTableName())) {
-          addChildProcedure(env.getAssignmentManager()
-            .createReopenProcedures(getRegionInfoList(env)));
-        }
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
+          break;
+        case MODIFY_TABLE_POST_OPERATION:
+          postModify(env, state);
+          setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
+          break;
+        case MODIFY_TABLE_REOPEN_ALL_REGIONS:
+          if (env.getAssignmentManager().isTableEnabled(getTableName())) {
+            addChildProcedure(new ReopenTableRegionsProcedure(getTableName()));
+          }
+          return Flow.NO_MORE_STATE;
+        default:
+          throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
         setFailure("master-modify-table", e);
       } else {
-        LOG.warn("Retriable error trying to modify table=" + getTableName() +
-          " (in state=" + state + ")", e);
+        LOG.warn("Retriable error trying to modify table={} (in state={})", getTableName(), state,
+          e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -171,7 +165,7 @@ public class ModifyTableProcedure
 
   @Override
   protected ModifyTableState getState(final int stateId) {
-    return ModifyTableState.valueOf(stateId);
+    return ModifyTableState.forNumber(stateId);
   }
 
   @Override
@@ -185,42 +179,44 @@ public class ModifyTableProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.ModifyTableStateData.Builder modifyTableMsg =
         MasterProcedureProtos.ModifyTableStateData.newBuilder()
             .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-            .setModifiedTableSchema(ProtobufUtil.convertToTableSchema(modifiedHTableDescriptor))
+            .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor))
             .setDeleteColumnFamilyInModify(deleteColumnFamilyInModify);
 
-    if (unmodifiedHTableDescriptor != null) {
+    if (unmodifiedTableDescriptor != null) {
       modifyTableMsg
-          .setUnmodifiedTableSchema(ProtobufUtil.convertToTableSchema(unmodifiedHTableDescriptor));
+          .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
     }
 
-    modifyTableMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(modifyTableMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.ModifyTableStateData modifyTableMsg =
-        MasterProcedureProtos.ModifyTableStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.ModifyTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(modifyTableMsg.getUserInfo()));
-    modifiedHTableDescriptor = ProtobufUtil.convertToHTableDesc(modifyTableMsg.getModifiedTableSchema());
+    modifiedTableDescriptor = ProtobufUtil.toTableDescriptor(modifyTableMsg.getModifiedTableSchema());
     deleteColumnFamilyInModify = modifyTableMsg.getDeleteColumnFamilyInModify();
 
     if (modifyTableMsg.hasUnmodifiedTableSchema()) {
-      unmodifiedHTableDescriptor =
-          ProtobufUtil.convertToHTableDesc(modifyTableMsg.getUnmodifiedTableSchema());
+      unmodifiedTableDescriptor =
+          ProtobufUtil.toTableDescriptor(modifyTableMsg.getUnmodifiedTableSchema());
     }
   }
 
   @Override
   public TableName getTableName() {
-    return modifiedHTableDescriptor.getTableName();
+    return modifiedTableDescriptor.getTableName();
   }
 
   @Override
@@ -240,27 +236,27 @@ public class ModifyTableProcedure
     }
 
     // check that we have at least 1 CF
-    if (modifiedHTableDescriptor.getColumnFamilyCount() == 0) {
+    if (modifiedTableDescriptor.getColumnFamilyCount() == 0) {
       throw new DoNotRetryIOException("Table " + getTableName().toString() +
         " should have at least one column family.");
     }
 
     // In order to update the descriptor, we need to retrieve the old descriptor for comparison.
-    this.unmodifiedHTableDescriptor =
+    this.unmodifiedTableDescriptor =
         env.getMasterServices().getTableDescriptors().get(getTableName());
 
     if (env.getMasterServices().getTableStateManager()
         .isTableState(getTableName(), TableState.State.ENABLED)) {
-      if (modifiedHTableDescriptor.getRegionReplication() != unmodifiedHTableDescriptor
+      if (modifiedTableDescriptor.getRegionReplication() != unmodifiedTableDescriptor
           .getRegionReplication()) {
         throw new IOException("REGION_REPLICATION change is not supported for enabled tables");
       }
     }
 
-    // Find out whether all column families in unmodifiedHTableDescriptor also exists in
-    // the modifiedHTableDescriptor. This is to determine whether we are safe to rollback.
-    final Set<byte[]> oldFamilies = unmodifiedHTableDescriptor.getFamiliesKeys();
-    final Set<byte[]> newFamilies = modifiedHTableDescriptor.getFamiliesKeys();
+    // Find out whether all column families in unmodifiedTableDescriptor also exists in
+    // the modifiedTableDescriptor. This is to determine whether we are safe to rollback.
+    final Set<byte[]> oldFamilies = unmodifiedTableDescriptor.getColumnFamilyNames();
+    final Set<byte[]> newFamilies = modifiedTableDescriptor.getColumnFamilyNames();
     for (byte[] familyName : oldFamilies) {
       if (!newFamilies.contains(familyName)) {
         this.deleteColumnFamilyInModify = true;
@@ -287,23 +283,7 @@ public class ModifyTableProcedure
    * @throws IOException
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(modifiedHTableDescriptor);
-  }
-
-  /**
-   * Undo the descriptor change (for rollback)
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   **/
-  private void restoreTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(unmodifiedHTableDescriptor);
-
-    // delete any new column families from the modifiedHTableDescriptor.
-    deleteFromFs(env, modifiedHTableDescriptor, unmodifiedHTableDescriptor);
-
-    // Make sure regions are opened after table descriptor is updated.
-    //reOpenAllRegionsIfTableIsOnline(env);
-    // TODO: NUKE ROLLBACK!!!!
+    env.getMasterServices().getTableDescriptors().add(modifiedTableDescriptor);
   }
 
   /**
@@ -312,18 +292,17 @@ public class ModifyTableProcedure
    * @throws IOException
    */
   private void deleteFromFs(final MasterProcedureEnv env,
-      final HTableDescriptor oldHTableDescriptor, final HTableDescriptor newHTableDescriptor)
+      final TableDescriptor oldTableDescriptor, final TableDescriptor newTableDescriptor)
       throws IOException {
-    final Set<byte[]> oldFamilies = oldHTableDescriptor.getFamiliesKeys();
-    final Set<byte[]> newFamilies = newHTableDescriptor.getFamiliesKeys();
+    final Set<byte[]> oldFamilies = oldTableDescriptor.getColumnFamilyNames();
+    final Set<byte[]> newFamilies = newTableDescriptor.getColumnFamilyNames();
     for (byte[] familyName : oldFamilies) {
       if (!newFamilies.contains(familyName)) {
         MasterDDLOperationHelper.deleteColumnFamilyFromFileSystem(
           env,
           getTableName(),
           getRegionInfoList(env),
-          familyName,
-          oldHTableDescriptor.getFamily(familyName).isMobEnabled());
+          familyName, oldTableDescriptor.getColumnFamily(familyName).isMobEnabled());
       }
     }
   }
@@ -335,10 +314,10 @@ public class ModifyTableProcedure
    */
   private void updateReplicaColumnsIfNeeded(
     final MasterProcedureEnv env,
-    final HTableDescriptor oldHTableDescriptor,
-    final HTableDescriptor newHTableDescriptor) throws IOException {
-    final int oldReplicaCount = oldHTableDescriptor.getRegionReplication();
-    final int newReplicaCount = newHTableDescriptor.getRegionReplication();
+    final TableDescriptor oldTableDescriptor,
+    final TableDescriptor newTableDescriptor) throws IOException {
+    final int oldReplicaCount = oldTableDescriptor.getRegionReplication();
+    final int newReplicaCount = newTableDescriptor.getRegionReplication();
 
     if (newReplicaCount < oldReplicaCount) {
       Set<byte[]> tableRows = new HashSet<>();
@@ -358,13 +337,27 @@ public class ModifyTableProcedure
           connection);
       }
     }
-
-    // Setup replication for region replicas if needed
-    if (newReplicaCount > 1 && oldReplicaCount <= 1) {
-      ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
+    if (newReplicaCount > oldReplicaCount) {
+      Connection connection = env.getMasterServices().getConnection();
+      // Get the existing table regions
+      List<RegionInfo> existingTableRegions =
+          MetaTableAccessor.getTableRegions(connection, getTableName());
+      // add all the new entries to the meta table
+      addRegionsToMeta(env, newTableDescriptor, existingTableRegions);
+      if (oldReplicaCount <= 1) {
+        // The table has been newly enabled for replica. So check if we need to setup
+        // region replication
+        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
+      }
     }
   }
 
+  private static void addRegionsToMeta(final MasterProcedureEnv env,
+      final TableDescriptor tableDescriptor, final List<RegionInfo> regionInfos)
+      throws IOException {
+    MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(), regionInfos,
+      tableDescriptor.getRegionReplication());
+  }
   /**
    * Action after modifying table.
    * @param env MasterProcedureEnv
@@ -375,18 +368,6 @@ public class ModifyTableProcedure
   private void postModify(final MasterProcedureEnv env, final ModifyTableState state)
       throws IOException, InterruptedException {
     runCoprocessorAction(env, state);
-  }
-
-  /**
-   * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it.
-   * @return traceEnabled whether the trace is enabled
-   */
-  private Boolean isTraceEnabled() {
-    if (traceEnabled == null) {
-      traceEnabled = LOG.isTraceEnabled();
-    }
-    return traceEnabled;
   }
 
   /**
@@ -402,10 +383,12 @@ public class ModifyTableProcedure
     if (cpHost != null) {
       switch (state) {
         case MODIFY_TABLE_PRE_OPERATION:
-          cpHost.preModifyTableAction(getTableName(), modifiedHTableDescriptor, getUser());
+          cpHost.preModifyTableAction(getTableName(), unmodifiedTableDescriptor,
+            modifiedTableDescriptor, getUser());
           break;
         case MODIFY_TABLE_POST_OPERATION:
-          cpHost.postCompletedModifyTableAction(getTableName(), modifiedHTableDescriptor,getUser());
+          cpHost.postCompletedModifyTableAction(getTableName(), unmodifiedTableDescriptor,
+            modifiedTableDescriptor,getUser());
           break;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
@@ -413,11 +396,11 @@ public class ModifyTableProcedure
     }
   }
 
-  private List<HRegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {
-    if (regionInfoList == null) {
-      regionInfoList = env.getAssignmentManager().getRegionStates()
-          .getRegionsOfTable(getTableName());
-    }
-    return regionInfoList;
+  /**
+   * Fetches all Regions for a table. Cache the result of this method if you need to use it multiple
+   * times. Be aware that it may change over in between calls to this procedure.
+   */
+  private List<RegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {
+    return env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName());
   }
 }

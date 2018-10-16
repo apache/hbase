@@ -27,7 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -376,6 +376,7 @@ public class RowSpec {
     this.endTime = endTime;
   }
 
+  @Override
   public String toString() {
     StringBuilder result = new StringBuilder();
     result.append("{startRow => '");

@@ -18,16 +18,16 @@
 
 package org.apache.hadoop.hbase.security;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 
 /**
  * Unwrap messages with Crypto AES. Should be placed after a
- * {@link io.netty.handler.codec.LengthFieldBasedFrameDecoder}
+ * io.netty.handler.codec.LengthFieldBasedFrameDecoder
  */
 @InterfaceAudience.Private
 public class CryptoAESUnwrapHandler extends SimpleChannelInboundHandler<ByteBuf> {

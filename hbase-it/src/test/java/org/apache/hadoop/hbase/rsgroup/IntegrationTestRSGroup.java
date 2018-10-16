@@ -19,14 +19,16 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Runs all of the units tests defined in TestGroupBase as an integration test.
@@ -34,7 +36,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestRSGroup extends TestRSGroupsBase {
-  private final static Log LOG = LogFactory.getLog(IntegrationTestRSGroup.class);
+  private final static Logger LOG = LoggerFactory.getLogger(IntegrationTestRSGroup.class);
   private static boolean initialized = false;
 
   @Before
@@ -43,6 +45,10 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
       LOG.info("Setting up IntegrationTestRSGroup");
       LOG.info("Initializing cluster with " + NUM_SLAVES_BASE + " servers");
       TEST_UTIL = new IntegrationTestingUtility();
+      TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        RSGroupBasedLoadBalancer.class.getName());
+      TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+        RSGroupAdminEndpoint.class.getName());
       ((IntegrationTestingUtility)TEST_UTIL).initializeCluster(NUM_SLAVES_BASE);
       //set shared configs
       admin = TEST_UTIL.getAdmin();

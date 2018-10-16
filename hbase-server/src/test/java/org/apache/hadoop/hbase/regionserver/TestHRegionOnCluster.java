@@ -24,9 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -44,11 +42,13 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests that need to spin up a cluster testing an {@link HRegion}.  Use
@@ -58,18 +58,21 @@ import org.junit.rules.TestName;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestHRegionOnCluster {
 
-  private static final Log LOG = LogFactory.getLog(TestHRegionOnCluster.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHRegionOnCluster.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionOnCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
   public TestName name = new TestName();
 
-  @Test (timeout=300000)
+  @Test
   public void testDataCorrectnessReplayingRecoveredEdits() throws Exception {
-    final int NUM_MASTERS = 1;
     final int NUM_RS = 3;
     Admin hbaseAdmin = null;
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    TEST_UTIL.startMiniCluster(NUM_RS);
 
     try {
       final TableName tableName = TableName.valueOf(name.getMethodName());

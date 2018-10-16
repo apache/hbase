@@ -20,20 +20,22 @@ package org.apache.hadoop.hbase.constraint;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEdit;
 
 /***
  * Processes multiple {@link Constraint Constraints} on a given table.
@@ -42,13 +44,18 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * implemented on any given system by a coprocessor.
  */
 @InterfaceAudience.Private
-public class ConstraintProcessor implements RegionObserver {
+public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
 
-  private static final Log LOG = LogFactory.getLog(ConstraintProcessor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConstraintProcessor.class);
 
   private final ClassLoader classloader;
 
   private List<? extends Constraint> constraints = new ArrayList<>();
+
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(this);
+  }
 
   /**
    * Create the constraint processor.
@@ -67,7 +74,7 @@ public class ConstraintProcessor implements RegionObserver {
           "Constraints only act on regions - started in an environment that was not a region");
     }
     RegionCoprocessorEnvironment env = (RegionCoprocessorEnvironment) environment;
-    HTableDescriptor desc = env.getRegion().getTableDesc();
+    TableDescriptor desc = env.getRegion().getTableDescriptor();
     // load all the constraints from the HTD
     try {
       this.constraints = Constraints.getConstraints(desc, classloader);

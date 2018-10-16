@@ -26,27 +26,25 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MetricsMaster;
-import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Multimap;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
  * Reads the currently received Region filesystem-space use reports and acts on those which
@@ -54,7 +52,7 @@ import com.google.common.collect.Multimap;
  */
 @InterfaceAudience.Private
 public class QuotaObserverChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(QuotaObserverChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(QuotaObserverChore.class);
   static final String QUOTA_OBSERVER_CHORE_PERIOD_KEY =
       "hbase.master.quotas.observer.chore.period";
   static final int QUOTA_OBSERVER_CHORE_PERIOD_DEFAULT = 1000 * 60 * 1; // 1 minutes in millis
@@ -159,7 +157,7 @@ public class QuotaObserverChore extends ScheduledChore {
     }
 
     // The current "view" of region space use. Used henceforth.
-    final Map<HRegionInfo,Long> reportedRegionSpaceUse = quotaManager.snapshotRegionSizes();
+    final Map<RegionInfo,Long> reportedRegionSpaceUse = quotaManager.snapshotRegionSizes();
     if (LOG.isTraceEnabled()) {
       LOG.trace(
           "Using " + reportedRegionSpaceUse.size() + " region space use reports: " +
@@ -216,8 +214,8 @@ public class QuotaObserverChore extends ScheduledChore {
     processNamespacesWithQuotas(namespacesWithQuotas, tablesByNamespace);
   }
 
-  void initializeSnapshotStores(Map<HRegionInfo,Long> regionSizes) {
-    Map<HRegionInfo,Long> immutableRegionSpaceUse = Collections.unmodifiableMap(regionSizes);
+  void initializeSnapshotStores(Map<RegionInfo,Long> regionSizes) {
+    Map<RegionInfo,Long> immutableRegionSpaceUse = Collections.unmodifiableMap(regionSizes);
     if (tableSnapshotStore == null) {
       tableSnapshotStore = new TableQuotaSnapshotStore(conn, this, immutableRegionSpaceUse);
     } else {
@@ -388,7 +386,8 @@ public class QuotaObserverChore extends ScheduledChore {
         for (TableName tableInNS : tablesByNamespace.get(namespace)) {
           final SpaceQuotaSnapshot tableQuotaSnapshot =
                 tableSnapshotStore.getCurrentState(tableInNS);
-          final boolean hasTableQuota = QuotaSnapshotStore.NO_QUOTA != tableQuotaSnapshot;
+          final boolean hasTableQuota =
+              !Objects.equals(QuotaSnapshotStore.NO_QUOTA, tableQuotaSnapshot);
           if (hasTableQuota && tableQuotaSnapshot.getQuotaStatus().isInViolation()) {
             // Table-level quota violation policy is being applied here.
             if (LOG.isTraceEnabled()) {
@@ -729,7 +728,7 @@ public class QuotaObserverChore extends ScheduledChore {
      * Computes the total number of regions in a table.
      */
     int getNumRegions(TableName table) throws IOException {
-      List<HRegionInfo> regions = this.conn.getAdmin().getTableRegions(table);
+      List<RegionInfo> regions = this.conn.getAdmin().getRegions(table);
       if (regions == null) {
         return 0;
       }

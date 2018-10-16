@@ -15,21 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
  * Run the same test as TestReplicationKillMasterRS but with WAL compression enabled
  * Do not add other tests in this class.
  */
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationKillMasterRSCompressed extends TestReplicationKillMasterRS {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationKillMasterRSCompressed.class);
 
   /**
    * @throws java.lang.Exception

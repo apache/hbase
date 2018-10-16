@@ -26,7 +26,7 @@ notice here [9].
 1. http://hbase.apache.org
 2. http://research.google.com/archive/bigtable.html
 3. http://hadoop.apache.org
-4. http://www.apache.org/dyn/closer.cgi/hbase/
+4. http://www.apache.org/dyn/closer.lua/hbase/
 5. https://hbase.apache.org/source-repository.html
 6. https://hbase.apache.org/issue-tracking.html
 7. http://hbase.apache.org/license.html

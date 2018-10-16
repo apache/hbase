@@ -22,17 +22,17 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * NamespaceStateManager manages state (in terms of quota) of all the namespaces. It contains
@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 class NamespaceStateManager {
 
-  private static final Log LOG = LogFactory.getLog(NamespaceStateManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NamespaceStateManager.class);
   private ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;
   private MasterServices master;
   private volatile boolean initialized = false;
@@ -75,7 +75,7 @@ class NamespaceStateManager {
   /**
    * Check if adding a region violates namespace quota, if not update namespace cache.
    *
-   * @param TableName
+   * @param name
    * @param regionName
    * @param incr
    * @return true, if region can be added to table.
@@ -106,16 +106,16 @@ class NamespaceStateManager {
     }
     return true;
   }
-  
+
   /**
    * Check and update region count for an existing table. To handle scenarios like restore snapshot
-   * @param TableName name of the table for region count needs to be checked and updated
+   * @param name name of the table for region count needs to be checked and updated
    * @param incr count of regions
    * @throws QuotaExceededException if quota exceeds for the number of regions allowed in a
    *           namespace
    * @throws IOException Signals that an I/O exception has occurred.
    */
-  synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr) 
+  synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr)
       throws IOException {
     String namespace = name.getNamespaceAsString();
     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
@@ -221,7 +221,7 @@ class NamespaceStateManager {
         if (table.isSystemTable()) {
           continue;
         }
-        List<HRegionInfo> regions =
+        List<RegionInfo> regions =
             MetaTableAccessor.getTableRegions(this.master.getConnection(), table, true);
         addTable(table, regions.size());
       }
@@ -234,7 +234,7 @@ class NamespaceStateManager {
     return initialized;
   }
 
-  public synchronized void removeRegionFromTable(HRegionInfo hri) throws IOException {
+  public synchronized void removeRegionFromTable(RegionInfo hri) throws IOException {
     String namespace = hri.getTable().getNamespaceAsString();
     NamespaceTableAndRegionInfo nsInfo = nsStateCache.get(namespace);
     if (nsInfo != null) {

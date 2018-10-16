@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A more restricted interface for HStore. Only gives the caller access to information
@@ -35,7 +35,7 @@ public interface StoreConfigInformation {
    */
   // TODO: Why is this in here?  It should be in Store and it should return the Store flush size,
   // not the Regions.  St.Ack
-  long getMemstoreFlushSize();
+  long getMemStoreFlushSize();
 
   /**
    * @return Gets the cf-specific time-to-live for store files.

@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -35,6 +34,9 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Sample Uploader MapReduce
@@ -58,7 +60,9 @@ import org.apache.hadoop.util.ToolRunner;
  * <p>
  * This code was written against HBase 0.21 trunk.
  */
+@InterfaceAudience.Private
 public class SampleUploader extends Configured implements Tool {
+  private static final Logger LOG = LoggerFactory.getLogger(SampleUploader.class);
 
   private static final String NAME = "SampleUploader";
 
@@ -99,7 +103,8 @@ public class SampleUploader extends Configured implements Tool {
       try {
         context.write(new ImmutableBytesWritable(row), put);
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOG.error("Interrupted emitting put", e);
+        Thread.currentThread().interrupt();
       }
 
       // Set status every checkpoint lines

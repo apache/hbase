@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Implementer can return a CellScanner over its Cell content.
@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * CellScanner rather than say Iterator&lt;Cell&gt;.  See CellScanner class comment for why we go
  * dumber than java.util.Iterator.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public interface CellScannable {
   /**
    * @return A CellScanner over the contained {@link Cell}s

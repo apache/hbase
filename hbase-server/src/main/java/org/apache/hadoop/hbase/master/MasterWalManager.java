@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -27,24 +26,23 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class abstracts a bunch of operations the HMaster needs
@@ -52,7 +50,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class MasterWalManager {
-  private static final Log LOG = LogFactory.getLog(MasterWalManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterWalManager.class);
 
   final static PathFilter META_FILTER = new PathFilter() {
     @Override
@@ -84,7 +82,6 @@ public class MasterWalManager {
   // create the split log lock
   private final Lock splitLogLock = new ReentrantLock();
   private final SplitLogManager splitLogManager;
-  private final boolean distributedLogReplay;
 
   // Is the fileystem ok?
   private volatile boolean fsOk = true;
@@ -101,7 +98,6 @@ public class MasterWalManager {
     this.rootDir = rootDir;
     this.services = services;
     this.splitLogManager = new SplitLogManager(services, conf);
-    this.distributedLogReplay = this.splitLogManager.isLogReplaying();
 
     this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
@@ -148,10 +144,63 @@ public class MasterWalManager {
   }
 
   /**
+   * Get Servernames which are currently splitting; paths have a '-splitting' suffix.
+   * @return ServerName
+   * @throws IOException IOException
+   */
+  public Set<ServerName> getSplittingServersFromWALDir() throws  IOException {
+    return getServerNamesFromWALDirPath(
+      p -> p.getName().endsWith(AbstractFSWALProvider.SPLITTING_EXT));
+  }
+
+  /**
+   * Get Servernames that COULD BE 'alive'; excludes those that have a '-splitting' suffix as these
+   * are already being split -- they cannot be 'alive'.
+   * @return ServerName
+   * @throws IOException IOException
+   */
+  public Set<ServerName> getLiveServersFromWALDir() throws IOException {
+    return getServerNamesFromWALDirPath(
+      p -> !p.getName().endsWith(AbstractFSWALProvider.SPLITTING_EXT));
+  }
+
+  /**
+   * @return listing of ServerNames found by parsing WAL directory paths in FS.
+   *
+   */
+  public Set<ServerName> getServerNamesFromWALDirPath(final PathFilter filter) throws IOException {
+    FileStatus[] walDirForServerNames = getWALDirPaths(filter);
+    return Stream.of(walDirForServerNames).map(s -> {
+      ServerName serverName = AbstractFSWALProvider.getServerNameFromWALDirectoryName(s.getPath());
+      if (serverName == null) {
+        LOG.warn("Log folder {} doesn't look like its name includes a " +
+          "region server name; leaving in place. If you see later errors about missing " +
+          "write ahead logs they may be saved in this location.", s.getPath());
+        return null;
+      }
+      return serverName;
+    }).filter(s -> s != null).collect(Collectors.toSet());
+  }
+
+  /**
+   * @return List of all RegionServer WAL dirs; i.e. this.rootDir/HConstants.HREGION_LOGDIR_NAME.
+   */
+  public FileStatus[] getWALDirPaths(final PathFilter filter) throws IOException {
+    Path walDirPath = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
+    FileStatus[] walDirForServerNames = FSUtils.listStatus(fs, walDirPath, filter);
+    return walDirForServerNames == null? new FileStatus[0]: walDirForServerNames;
+  }
+
+  /**
    * Inspect the log directory to find dead servers which need recovery work
    * @return A set of ServerNames which aren't running but still have WAL files left in file system
+   * @deprecated With proc-v2, we can record the crash server with procedure store, so do not need
+   *             to scan the wal directory to find out the splitting wal directory any more. Leave
+   *             it here only because {@code RecoverMetaProcedure}(which is also deprecated) uses
+   *             it.
    */
-  Set<ServerName> getFailedServersFromLogFolders() {
+  @Deprecated
+  public Set<ServerName> getFailedServersFromLogFolders() {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 
@@ -245,6 +294,7 @@ public class MasterWalManager {
     boolean needReleaseLock = false;
     if (!this.services.isInitialized()) {
       // during master initialization, we could have multiple places splitting a same wal
+      // XXX: Does this still exist after we move to proc-v2?
       this.splitLogLock.lock();
       needReleaseLock = true;
     }
@@ -279,33 +329,8 @@ public class MasterWalManager {
     return logDirs;
   }
 
-  /**
-   * Mark regions in recovering state when distributedLogReplay are set true
-   * @param serverName Failed region server whose wals to be replayed
-   * @param regions Set of regions to be recovered
-   */
-  public void prepareLogReplay(ServerName serverName, Set<HRegionInfo> regions) throws IOException {
-    if (!this.distributedLogReplay) {
-      return;
-    }
-    // mark regions in recovering state
-    if (regions == null || regions.isEmpty()) {
-      return;
-    }
-    this.splitLogManager.markRegionsRecovering(serverName, regions);
-  }
-
   public void splitLog(final Set<ServerName> serverNames) throws IOException {
     splitLog(serverNames, NON_META_FILTER);
-  }
-
-  /**
-   * Wrapper function on {@link SplitLogManager#removeStaleRecoveringRegions(Set)}
-   * @param failedServers A set of known failed servers
-   */
-  void removeStaleRecoveringRegionsFromZK(final Set<ServerName> failedServers)
-      throws IOException, InterruptedIOException {
-    this.splitLogManager.removeStaleRecoveringRegions(failedServers);
   }
 
   /**

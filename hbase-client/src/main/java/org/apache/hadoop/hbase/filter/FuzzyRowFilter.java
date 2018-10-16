@@ -21,15 +21,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.PriorityQueue;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This is optimized version of a standard FuzzyRowFilter Filters data based on fuzzy row key.
@@ -76,22 +77,30 @@ public class FuzzyRowFilter extends FilterBase {
   private RowTracker tracker;
 
   public FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData) {
-    Pair<byte[], byte[]> p;
-    for (int i = 0; i < fuzzyKeysData.size(); i++) {
-      p = fuzzyKeysData.get(i);
-      if (p.getFirst().length != p.getSecond().length) {
+    List<Pair<byte[], byte[]>> fuzzyKeyDataCopy = new ArrayList<>(fuzzyKeysData.size());
+
+    for (Pair<byte[], byte[]> aFuzzyKeysData : fuzzyKeysData) {
+      if (aFuzzyKeysData.getFirst().length != aFuzzyKeysData.getSecond().length) {
         Pair<String, String> readable =
-            new Pair<>(Bytes.toStringBinary(p.getFirst()), Bytes.toStringBinary(p
-                .getSecond()));
+          new Pair<>(Bytes.toStringBinary(aFuzzyKeysData.getFirst()), Bytes.toStringBinary(aFuzzyKeysData.getSecond()));
         throw new IllegalArgumentException("Fuzzy pair lengths do not match: " + readable);
       }
+
+      Pair<byte[], byte[]> p = new Pair<>();
+      // create a copy of pair bytes so that they are not modified by the filter.
+      p.setFirst(Arrays.copyOf(aFuzzyKeysData.getFirst(), aFuzzyKeysData.getFirst().length));
+      p.setSecond(Arrays.copyOf(aFuzzyKeysData.getSecond(), aFuzzyKeysData.getSecond().length));
+
       // update mask ( 0 -> -1 (0xff), 1 -> 2)
       p.setSecond(preprocessMask(p.getSecond()));
       preprocessSearchKey(p);
+
+      fuzzyKeyDataCopy.add(p);
     }
-    this.fuzzyKeysData = fuzzyKeysData;
+    this.fuzzyKeysData = fuzzyKeyDataCopy;
     this.tracker = new RowTracker();
   }
+
 
   private void preprocessSearchKey(Pair<byte[], byte[]> p) {
     if (!UNSAFE_UNALIGNED) {
@@ -139,8 +148,14 @@ public class FuzzyRowFilter extends FilterBase {
     return true;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell c) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     final int startIndex = lastFoundIndex >= 0 ? lastFoundIndex : 0;
     final int size = fuzzyKeysData.size();
     for (int i = startIndex; i < size + startIndex; i++) {
@@ -173,7 +188,7 @@ public class FuzzyRowFilter extends FilterBase {
       return null;
     }
     byte[] nextRowKey = tracker.nextRow();
-    return CellUtil.createFirstOnRow(nextRowKey, 0, (short) nextRowKey.length);
+    return PrivateCellUtil.createFirstOnRow(nextRowKey, 0, (short) nextRowKey.length);
   }
 
   /**
@@ -226,8 +241,7 @@ public class FuzzyRowFilter extends FilterBase {
     }
 
     boolean lessThan(Cell currentCell, byte[] nextRowKey) {
-      int compareResult =
-          CellComparator.COMPARATOR.compareRows(currentCell, nextRowKey, 0, nextRowKey.length);
+      int compareResult = CellComparator.getInstance().compareRows(currentCell, nextRowKey, 0, nextRowKey.length);
       return (!isReversed() && compareResult < 0) || (isReversed() && compareResult > 0);
     }
 
@@ -250,6 +264,7 @@ public class FuzzyRowFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte[] toByteArray() {
     FilterProtos.FuzzyRowFilter.Builder builder = FilterProtos.FuzzyRowFilter.newBuilder();
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
@@ -444,45 +459,55 @@ public class FuzzyRowFilter extends FilterBase {
   /** Abstracts directional comparisons based on scan direction. */
   private enum Order {
     ASC {
+      @Override
       public boolean lt(int lhs, int rhs) {
         return lhs < rhs;
       }
 
+      @Override
       public boolean gt(int lhs, int rhs) {
         return lhs > rhs;
       }
 
+      @Override
       public byte inc(byte val) {
         // TODO: what about over/underflow?
         return (byte) (val + 1);
       }
 
+      @Override
       public boolean isMax(byte val) {
         return val == (byte) 0xff;
       }
 
+      @Override
       public byte min() {
         return 0;
       }
     },
     DESC {
+      @Override
       public boolean lt(int lhs, int rhs) {
         return lhs > rhs;
       }
 
+      @Override
       public boolean gt(int lhs, int rhs) {
         return lhs < rhs;
       }
 
+      @Override
       public byte inc(byte val) {
         // TODO: what about over/underflow?
         return (byte) (val - 1);
       }
 
+      @Override
       public boolean isMax(byte val) {
         return val == 0;
       }
 
+      @Override
       public byte min() {
         return (byte) 0xFF;
       }
@@ -605,6 +630,7 @@ public class FuzzyRowFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized are equal to the
    *         corresponding fields in other. Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof FuzzyRowFilter)) return false;
@@ -620,5 +646,15 @@ public class FuzzyRowFilter extends FilterBase {
       }
     }
     return true;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.fuzzyKeysData);
   }
 }

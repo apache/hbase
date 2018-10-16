@@ -18,18 +18,28 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Interface to get status of a Lock without getting access to acquire/release lock.
  * Currently used in MasterProcedureScheduler where we want to give Queues access to lock's
  * status for scheduling purposes, but not the ability to acquire/release it.
  */
+@InterfaceAudience.Private
 public interface LockStatus {
   boolean isLocked();
+
   boolean hasExclusiveLock();
+
   boolean isLockOwner(long procId);
-  boolean hasParentLock(final Procedure proc);
-  boolean hasLockAccess(final Procedure proc);
+
+  boolean hasParentLock(Procedure<?> proc);
+
+  boolean hasLockAccess(Procedure<?> proc);
+
   Procedure<?> getExclusiveLockOwnerProcedure();
+
   long getExclusiveLockProcIdOwner();
+
   int getSharedLockCount();
 }

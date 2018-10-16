@@ -21,11 +21,10 @@ package org.apache.hadoop.hbase;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * ScheduledChore is a task performed on a period in hbase. ScheduledChores become active once
@@ -42,7 +41,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Public
 public abstract class ScheduledChore implements Runnable {
-  private static final Log LOG = LogFactory.getLog(ScheduledChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ScheduledChore.class);
 
   private final String name;
 

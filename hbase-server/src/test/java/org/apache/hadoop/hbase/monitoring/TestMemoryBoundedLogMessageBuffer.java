@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,9 +22,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -37,14 +37,18 @@ import org.junit.experimental.categories.Category;
 @Category({MiscTests.class, SmallTests.class})
 public class TestMemoryBoundedLogMessageBuffer {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMemoryBoundedLogMessageBuffer.class);
+
   private static final long TEN_KB = 10 * 1024;
   private static final String JP_TEXT = "こんにちは";
-  
+
   @Test
   public void testBuffer() {
     MemoryBoundedLogMessageBuffer buf =
       new MemoryBoundedLogMessageBuffer(TEN_KB);
-    
+
     for (int i = 0; i < 1000; i++) {
       buf.add("hello " + i);
     }

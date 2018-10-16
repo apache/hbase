@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Indicates that we're trying to connect to a already known as dead server. We will want to

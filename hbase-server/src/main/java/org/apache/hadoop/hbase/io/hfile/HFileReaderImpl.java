@@ -23,10 +23,9 @@ import java.nio.ByteBuffer;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -35,11 +34,15 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -57,10 +60,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation that can handle all hfile versions of {@link HFile.Reader}.
@@ -72,7 +74,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   // one file.  Ditto for all the HFileReader.ScannerV? implementations. I was running up against
   // the MaxInlineLevel limit because too many tiers involved reading from an hfile. Was also hard
   // to navigate the source code when so many classes participating in read.
-  private static final Log LOG = LogFactory.getLog(HFileReaderImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileReaderImpl.class);
 
   /** Data block index reader keeping the root data index in memory */
   private HFileBlockIndex.CellBasedKeyBlockIndexReader dataBlockIndexReader;
@@ -103,7 +105,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   private int avgValueLen = -1;
 
   /** Key comparator */
-  private CellComparator comparator = CellComparator.COMPARATOR;
+  private CellComparator comparator = CellComparator.getInstance();
 
   /** Size of this file. */
   private final long fileSize;
@@ -235,7 +237,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     byte [] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
     includesMemstoreTS = keyValueFormatVersion != null &&
         Bytes.toInt(keyValueFormatVersion) == HFileWriterImpl.KEY_VALUE_VER_WITH_MEMSTORE;
-    fsBlockReader.setIncludesMemstoreTS(includesMemstoreTS);
+    fsBlockReader.setIncludesMemStoreTS(includesMemstoreTS);
     if (includesMemstoreTS) {
       decodeMemstoreTS = Bytes.toLong(fileInfo.get(HFileWriterImpl.MAX_MEMSTORE_TS_KEY)) > 0;
     }
@@ -253,6 +255,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // Prefetch file blocks upon open if requested
     if (cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
+        @Override
         public void run() {
           long offset = 0;
           long end = 0;
@@ -272,8 +275,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               // next header, will not have happened...so, pass in the onDiskSize gotten from the
               // cached block. This 'optimization' triggers extremely rarely I'd say.
               long onDiskSize = prevBlock != null? prevBlock.getNextBlockOnDiskSize(): -1;
-              HFileBlock block = readBlock(offset, onDiskSize, true, false, false, false,
-                  null, null);
+              HFileBlock block = readBlock(offset, onDiskSize, /*cacheBlock=*/true,
+                  /*pread=*/true, false, false, null, null);
               // Need not update the current block. Ideally here the readBlock won't find the
               // block in cache. We call this readBlock so that block data is read from FS and
               // cached in BC. So there is no reference count increment that happens here.
@@ -338,14 +341,12 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
   }
 
-  private String toStringFirstKey() {
-    if(getFirstKey() == null)
-      return null;
-    return CellUtil.getCellKeyAsString(getFirstKey());
+  private Optional<String> toStringFirstKey() {
+    return getFirstKey().map(CellUtil::getCellKeyAsString);
   }
 
-  private String toStringLastKey() {
-    return CellUtil.toString(getLastKey(), false);
+  private Optional<String> toStringLastKey() {
+    return getLastKey().map(CellUtil::getCellKeyAsString);
   }
 
   @Override
@@ -382,12 +383,12 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    *         first KeyValue.
    */
   @Override
-  public Cell getFirstKey() {
+  public Optional<Cell> getFirstKey() {
     if (dataBlockIndexReader == null) {
       throw new BlockIndexNotLoadedException();
     }
-    return dataBlockIndexReader.isEmpty() ? null
-        : dataBlockIndexReader.getRootBlockKey(0);
+    return dataBlockIndexReader.isEmpty() ? Optional.empty()
+        : Optional.of(dataBlockIndexReader.getRootBlockKey(0));
   }
 
   /**
@@ -397,10 +398,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return the first row key, or null if the file is empty.
    */
   @Override
-  public byte[] getFirstRowKey() {
-    Cell firstKey = getFirstKey();
+  public Optional<byte[]> getFirstRowKey() {
     // We have to copy the row part to form the row key alone
-    return firstKey == null? null: CellUtil.cloneRow(firstKey);
+    return getFirstKey().map(CellUtil::cloneRow);
   }
 
   /**
@@ -410,9 +410,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return the last row key, or null if the file is empty.
    */
   @Override
-  public byte[] getLastRowKey() {
-    Cell lastKey = getLastKey();
-    return lastKey == null? null: CellUtil.cloneRow(lastKey);
+  public Optional<byte[]> getLastRowKey() {
+    // We have to copy the row part to form the row key alone
+    return getLastKey().map(CellUtil::cloneRow);
   }
 
   /** @return number of KV entries in this HFile */
@@ -437,6 +437,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return the total heap size of data and meta block indexes in bytes. Does
    *         not take into account non-root blocks of a multilevel data index.
    */
+  @Override
   public long indexSize() {
     return (dataBlockIndexReader != null ? dataBlockIndexReader.heapSize() : 0)
         + ((metaBlockIndexReader != null) ? metaBlockIndexReader.heapSize()
@@ -647,8 +648,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      */
     protected void readMvccVersion(final int offsetFromPos) {
       // See if we even need to decode mvcc.
-      if (!this.reader.shouldIncludeMemstoreTS()) return;
-      if (!this.reader.isDecodeMemstoreTS()) {
+      if (!this.reader.shouldIncludeMemStoreTS()) return;
+      if (!this.reader.isDecodeMemStoreTS()) {
         currMemstoreTS = 0;
         currMemstoreTSLen = 1;
         return;
@@ -729,7 +730,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         offsetFromPos += Bytes.SIZEOF_LONG;
         blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
         bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen);
-        int comp = reader.getComparator().compareKeyIgnoresMvcc(key, bufBackedKeyOnlyKv);
+        int comp =
+            PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), key, bufBackedKeyOnlyKv);
         offsetFromPos += klen + vlen;
         if (this.reader.getFileContext().isIncludesTags()) {
           // Read short as unsigned, high byte first
@@ -743,7 +745,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           // add the two bytes read for the tags.
           offsetFromPos += tlen + (Bytes.SIZEOF_SHORT);
         }
-        if (this.reader.shouldIncludeMemstoreTS()) {
+        if (this.reader.shouldIncludeMemStoreTS()) {
           // Directly read the mvcc based on current position
           readMvccVersion(offsetFromPos);
         }
@@ -812,8 +814,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         } else {
           // The comparison with no_next_index_key has to be checked
           if (this.nextIndexedKey != null &&
-              (this.nextIndexedKey == KeyValueScanner.NO_NEXT_INDEXED_KEY || reader
-              .getComparator().compareKeyIgnoresMvcc(key, nextIndexedKey) < 0)) {
+              (this.nextIndexedKey == KeyValueScanner.NO_NEXT_INDEXED_KEY || PrivateCellUtil
+                  .compareKeyIgnoresMvcc(reader.getComparator(), key, nextIndexedKey) < 0)) {
             // The reader shall continue to scan the current data block instead
             // of querying the
             // block index as long as it knows the target key is strictly
@@ -866,8 +868,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         return false;
       }
       Cell firstKey = getFirstKeyCellInBlock(seekToBlock);
-      if (reader.getComparator()
-           .compareKeyIgnoresMvcc(firstKey, key) >= 0) {
+      if (PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), firstKey, key) >= 0) {
         long previousBlockOffset = seekToBlock.getPrevBlockOffset();
         // The key we are interested in
         if (previousBlockOffset == -1) {
@@ -875,7 +876,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           return false;
         }
 
-        // The first key in the current block 'seekToBlock' is greater than the given 
+        // The first key in the current block 'seekToBlock' is greater than the given
         // seekBefore key. We will go ahead by reading the next block that satisfies the
         // given key. Return the current block before reading the next one.
         reader.returnBlock(seekToBlock);
@@ -946,8 +947,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
       Cell ret;
       int cellBufSize = getKVBufSize();
-      long seqId = 0l;
-      if (this.reader.shouldIncludeMemstoreTS()) {
+      long seqId = 0L;
+      if (this.reader.shouldIncludeMemStoreTS()) {
         seqId = currMemstoreTS;
       }
       if (blockBuffer.hasArray()) {
@@ -989,7 +990,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             + keyPair.getSecond(), currKeyLen);
       } else {
         // Better to do a copy here instead of holding on to this BB so that
-        // we could release the blocks referring to this key. This key is specifically used 
+        // we could release the blocks referring to this key. This key is specifically used
         // in HalfStoreFileReader to get the firstkey and lastkey by creating a new scanner
         // every time. So holding onto the BB (incase of DBB) is not advised here.
         byte[] key = new byte[currKeyLen];
@@ -1231,7 +1232,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     public int compareKey(CellComparator comparator, Cell key) {
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, pair);
       this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen);
-      return comparator.compareKeyIgnoresMvcc(key, this.bufBackedKeyOnlyKv);
+      return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, this.bufBackedKeyOnlyKv);
     }
 
     @Override
@@ -1240,6 +1241,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
   }
 
+  @Override
   public Path getPath() {
     return path;
   }
@@ -1277,11 +1279,13 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   protected boolean decodeMemstoreTS = false;
 
 
-  public boolean isDecodeMemstoreTS() {
+  @Override
+  public boolean isDecodeMemStoreTS() {
     return this.decodeMemstoreTS;
   }
 
-  public boolean shouldIncludeMemstoreTS() {
+  @Override
+  public boolean shouldIncludeMemStoreTS() {
     return includesMemstoreTS;
   }
 
@@ -1404,8 +1408,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
       // Cache the block
       if (cacheBlock) {
-        cacheConf.getBlockCache().cacheBlock(cacheKey, metaBlock,
-            cacheConf.isInMemory(), this.cacheConf.isCacheDataInL1());
+        cacheConf.getBlockCache().cacheBlock(cacheKey, metaBlock, cacheConf.isInMemory());
       }
 
       return metaBlock;
@@ -1438,8 +1441,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
-    TraceScope traceScope = Trace.startSpan("HFileReaderImpl.readBlock");
-    try {
+    try (TraceScope traceScope = TraceUtil.createTrace("HFileReaderImpl.readBlock")) {
       while (true) {
         // Check cache for block. If found return.
         if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
@@ -1454,9 +1456,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             if (LOG.isTraceEnabled()) {
               LOG.trace("From Cache " + cachedBlock);
             }
-            if (Trace.isTracing()) {
-              traceScope.getSpan().addTimelineAnnotation("blockCacheHit");
-            }
+            TraceUtil.addTimelineAnnotation("blockCacheHit");
             assert cachedBlock.isUnpacked() : "Packed block leak.";
             if (cachedBlock.getBlockType().isData()) {
               if (updateCacheMetrics) {
@@ -1482,9 +1482,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           // Carry on, please load.
         }
 
-        if (Trace.isTracing()) {
-          traceScope.getSpan().addTimelineAnnotation("blockCacheMiss");
-        }
+        TraceUtil.addTimelineAnnotation("blockCacheMiss");
         // Load block from filesystem.
         HFileBlock hfileBlock =
             fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread, !isCompaction);
@@ -1496,7 +1494,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
           cacheConf.getBlockCache().cacheBlock(cacheKey,
             cacheConf.shouldCacheCompressed(category) ? hfileBlock : unpacked,
-            cacheConf.isInMemory(), this.cacheConf.isCacheDataInL1());
+            cacheConf.isInMemory());
         }
 
         if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {
@@ -1506,7 +1504,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         return unpacked;
       }
     } finally {
-      traceScope.close();
       if (lockEntry != null) {
         offsetLock.releaseLockEntry(lockEntry);
       }
@@ -1550,8 +1547,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    *         key
    */
   @Override
-  public Cell getLastKey() {
-    return dataBlockIndexReader.isEmpty() ? null : lastKeyCell;
+  public Optional<Cell> getLastKey() {
+    return dataBlockIndexReader.isEmpty() ? Optional.empty() : Optional.of(lastKeyCell);
   }
 
   /**
@@ -1560,8 +1557,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @throws IOException
    */
   @Override
-  public Cell midkey() throws IOException {
-    return dataBlockIndexReader.midkey();
+  public Optional<Cell> midKey() throws IOException {
+    return Optional.ofNullable(dataBlockIndexReader.midkey());
   }
 
   @Override
@@ -1569,6 +1566,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     close(cacheConf.shouldEvictOnClose());
   }
 
+  @Override
   public void close(boolean evictOnClose) throws IOException {
     PrefetchExecutor.cancel(path);
     if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
@@ -1581,11 +1579,13 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     fsBlockReader.closeStreams();
   }
 
+  @Override
   public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction) {
     return dataBlockEncoder.getEffectiveEncodingInCache(isCompaction);
   }
 
   /** For testing */
+  @Override
   public HFileBlock.FSReader getUncachedBlockReader() {
     return fsBlockReader;
   }
@@ -1613,6 +1613,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return curBlock != null;
     }
 
+    @Override
     public void setNonSeekedState() {
       reset();
     }
@@ -1714,6 +1715,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
     }
 
+    @Override
     protected Cell getFirstKeyCellInBlock(HFileBlock curBlock) {
       return dataBlockEncoder.getFirstKeyCellInBlock(getEncodedBuffer(curBlock));
     }
@@ -1731,6 +1733,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return seeker.seekToKeyInBlock(key, seekBefore);
     }
 
+    @Override
     public int compareKey(CellComparator comparator, Cell key) {
       return seeker.compareKey(comparator, key);
     }
@@ -1777,6 +1780,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * Returns false if block prefetching was requested for this file and has
    * not completed, true otherwise
    */
+  @Override
   @VisibleForTesting
   public boolean prefetchComplete() {
     return PrefetchExecutor.isCompleted(path);
@@ -1785,7 +1789,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   protected HFileContext createHFileContext(FSDataInputStreamWrapper fsdis, long fileSize,
       HFileSystem hfs, Path path, FixedFileTrailer trailer) throws IOException {
     HFileContextBuilder builder = new HFileContextBuilder()
-      .withIncludesMvcc(shouldIncludeMemstoreTS())
+      .withIncludesMvcc(shouldIncludeMemStoreTS())
       .withHBaseCheckSum(true)
       .withHFileName(this.getName())
       .withCompression(this.compressAlgo);

@@ -17,39 +17,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Receives {@link Result} for an asynchronous scan.
+ * <p>
+ * All results that match the given scan object will be passed to this class by calling
+ * {@link #onNext(Result)}. {@link #onComplete()} means the scan is finished, and
+ * {@link #onError(Throwable)} means we hit an unrecoverable error and the scan is terminated.
  */
 @InterfaceAudience.Public
-public interface ScanResultConsumer {
+public interface ScanResultConsumer extends ScanResultConsumerBase {
 
   /**
    * @param result the data fetched from HBase service.
    * @return {@code false} if you want to terminate the scan process. Otherwise {@code true}
    */
   boolean onNext(Result result);
-
-  /**
-   * Indicate that we hit an unrecoverable error and the scan operation is terminated.
-   * <p>
-   * We will not call {@link #onComplete()} after calling {@link #onError(Throwable)}.
-   */
-  void onError(Throwable error);
-
-  /**
-   * Indicate that the scan operation is completed normally.
-   */
-  void onComplete();
-
-  /**
-   * If {@code scan.isScanMetricsEnabled()} returns true, then this method will be called prior to
-   * all other methods in this interface to give you the {@link ScanMetrics} instance for this scan
-   * operation. The {@link ScanMetrics} instance will be updated on-the-fly during the scan, you can
-   * store it somewhere to get the metrics at any time if you want.
-   */
-  default void onScanMetricsCreated(ScanMetrics scanMetrics) {
-  }
 }

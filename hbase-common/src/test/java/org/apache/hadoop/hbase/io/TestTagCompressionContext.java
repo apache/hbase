@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import static org.junit.Assert.assertTrue;
@@ -25,24 +24,29 @@ import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.ByteBufferCell;
+import org.apache.hadoop.hbase.ByteBufferExtendedCell;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestTagCompressionContext {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTagCompressionContext.class);
 
   private static final byte[] ROW = Bytes.toBytes("r1");
   private static final byte[] CF = Bytes.toBytes("f");
@@ -80,10 +84,10 @@ public class TestTagCompressionContext {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream daos = new ByteBufferWriterDataOutputStream(baos);
     TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
-    ByteBufferCell kv1 = (ByteBufferCell)createOffheapKVWithTags(2);
+    ByteBufferExtendedCell kv1 = (ByteBufferExtendedCell)createOffheapKVWithTags(2);
     int tagsLength1 = kv1.getTagsLength();
     context.compressTags(daos, kv1.getTagsByteBuffer(), kv1.getTagsPosition(), tagsLength1);
-    ByteBufferCell kv2 = (ByteBufferCell)createOffheapKVWithTags(3);
+    ByteBufferExtendedCell kv2 = (ByteBufferExtendedCell)createOffheapKVWithTags(3);
     int tagsLength2 = kv2.getTagsLength();
     context.compressTags(daos, kv2.getTagsByteBuffer(), kv2.getTagsPosition(), tagsLength2);
 
@@ -129,10 +133,10 @@ public class TestTagCompressionContext {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream daos = new ByteBufferWriterDataOutputStream(baos);
     TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
-    ByteBufferCell kv1 = (ByteBufferCell)createOffheapKVWithTags(1);
+    ByteBufferExtendedCell kv1 = (ByteBufferExtendedCell)createOffheapKVWithTags(1);
     int tagsLength1 = kv1.getTagsLength();
     context.compressTags(daos, kv1.getTagsByteBuffer(), kv1.getTagsPosition(), tagsLength1);
-    ByteBufferCell kv2 = (ByteBufferCell)createOffheapKVWithTags(3);
+    ByteBufferExtendedCell kv2 = (ByteBufferExtendedCell)createOffheapKVWithTags(3);
     int tagsLength2 = kv2.getTagsLength();
     context.compressTags(daos, kv2.getTagsByteBuffer(), kv2.getTagsPosition(), tagsLength2);
 

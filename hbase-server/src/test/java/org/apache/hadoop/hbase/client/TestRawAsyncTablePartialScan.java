@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -31,11 +31,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestRawAsyncTablePartialScan {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRawAsyncTablePartialScan.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -44,13 +49,13 @@ public class TestRawAsyncTablePartialScan {
   private static byte[] FAMILY = Bytes.toBytes("cf");
 
   private static byte[][] CQS =
-      new byte[][] { Bytes.toBytes("cq1"), Bytes.toBytes("cq2"), Bytes.toBytes("cq3") };
+    new byte[][] { Bytes.toBytes("cq1"), Bytes.toBytes("cq2"), Bytes.toBytes("cq3") };
 
   private static int COUNT = 100;
 
   private static AsyncConnection CONN;
 
-  private static RawAsyncTable TABLE;
+  private static AsyncTable<?> TABLE;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -58,7 +63,7 @@ public class TestRawAsyncTablePartialScan {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    TABLE = CONN.getRawTable(TABLE_NAME);
+    TABLE = CONN.getTable(TABLE_NAME);
     TABLE
         .putAll(IntStream.range(0, COUNT)
             .mapToObj(i -> new Put(Bytes.toBytes(String.format("%02d", i)))
@@ -100,7 +105,7 @@ public class TestRawAsyncTablePartialScan {
     // we set batch to 2 and max result size to 1, then server will only returns one result per call
     // but we should get 2 + 1 for every row.
     List<Result> results =
-        TABLE.scanAll(new Scan().setBatch(2).setMaxResultSize(1).setReversed(true)).get();
+      TABLE.scanAll(new Scan().setBatch(2).setMaxResultSize(1).setReversed(true)).get();
     assertEquals(2 * COUNT, results.size());
     for (int i = 0; i < COUNT; i++) {
       int row = COUNT - i - 1;

@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * This is a very fast, non-cryptographic hash suitable for general hash-based
@@ -78,6 +78,8 @@ public class MurmurHash3 extends Hash {
       k1 = (k1 << 15) | (k1 >>> 17); // ROTL32(k1,15);
       k1 *= c2;
       h1 ^= k1;
+    default:
+      // fall out
     }
 
     // finalization

@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.MultiThreadedAction.DefaultDataGenerator;
+import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
 @InterfaceAudience.Private
 public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
@@ -74,7 +75,7 @@ public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
       List<Tag> tags;
       for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
         Cell cell = cellScanner.current();
-        byte[] tag = LoadTestTool.generateData(random,
+        byte[] tag = LoadTestDataGenerator.generateData(random,
             minTagLength + random.nextInt(maxTagLength - minTagLength));
         tags = new ArrayList<>();
         for (int n = 0; n < numTags; n++) {

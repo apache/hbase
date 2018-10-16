@@ -17,10 +17,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utilities for class manipulation.
@@ -31,7 +30,7 @@ public class Classes {
   /**
    * Equivalent of {@link Class#forName(String)} which also returns classes for
    * primitives like <code>boolean</code>, etc.
-   * 
+   *
    * @param className
    *          The name of the class to retrieve. Can be either a normal class or
    *          a primitive class.
@@ -64,10 +63,10 @@ public class Classes {
     return valueType;
   }
 
-  public static String stringify(Class[] classes) {
+  public static String stringify(Class<?>[] classes) {
     StringBuilder buf = new StringBuilder();
     if (classes != null) {
-      for (Class c : classes) {
+      for (Class<?> c : classes) {
         if (buf.length() > 0) {
           buf.append(",");
         }
@@ -77,5 +76,10 @@ public class Classes {
       buf.append("NULL");
     }
     return buf.toString();
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> Class<T> cast(Class<?> clazz) {
+    return (Class<T>) clazz;
   }
 }

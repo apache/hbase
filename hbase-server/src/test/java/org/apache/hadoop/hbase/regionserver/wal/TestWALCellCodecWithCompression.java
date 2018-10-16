@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,25 +25,30 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.codec.Codec.Decoder;
 import org.apache.hadoop.hbase.codec.Codec.Encoder;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestWALCellCodecWithCompression {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWALCellCodecWithCompression.class);
 
   @Test
   public void testEncodeDecodeKVsWithTags() throws Exception {
@@ -82,19 +86,19 @@ public class TestWALCellCodecWithCompression {
     Decoder decoder = codec.getDecoder(is);
     decoder.advance();
     KeyValue kv = (KeyValue) decoder.current();
-    List<Tag> tags = kv.getTags();
+    List<Tag> tags = PrivateCellUtil.getTags(kv);
     assertEquals(1, tags.size());
-    assertEquals("tagValue1", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
+    assertEquals("tagValue1", Bytes.toString(Tag.cloneValue(tags.get(0))));
     decoder.advance();
     kv = (KeyValue) decoder.current();
-    tags = kv.getTags();
+    tags = PrivateCellUtil.getTags(kv);
     assertEquals(0, tags.size());
     decoder.advance();
     kv = (KeyValue) decoder.current();
-    tags = kv.getTags();
+    tags = PrivateCellUtil.getTags(kv);
     assertEquals(2, tags.size());
-    assertEquals("tagValue1", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
-    assertEquals("tagValue2", Bytes.toString(TagUtil.cloneValue(tags.get(1))));
+    assertEquals("tagValue1", Bytes.toString(Tag.cloneValue(tags.get(0))));
+    assertEquals("tagValue2", Bytes.toString(Tag.cloneValue(tags.get(1))));
   }
 
   private KeyValue createKV(int noOfTags) {

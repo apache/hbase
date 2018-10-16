@@ -24,13 +24,13 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
 
-import com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Base permissions instance representing the ability to perform a given set
@@ -46,7 +46,7 @@ public class Permission extends VersionedWritable {
   public enum Action {
     READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A');
 
-    private byte code;
+    private final byte code;
     Action(char code) {
       this.code = (byte)code;
     }
@@ -54,7 +54,7 @@ public class Permission extends VersionedWritable {
     public byte code() { return code; }
   }
 
-  private static final Log LOG = LogFactory.getLog(Permission.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Permission.class);
   protected static final Map<Byte,Action> ACTION_BY_CODE = Maps.newHashMap();
 
   protected Action[] actions;
@@ -108,6 +108,12 @@ public class Permission extends VersionedWritable {
     }
 
     return false;
+  }
+
+  public void setActions(Action[] assigned) {
+    if (assigned != null && assigned.length > 0) {
+      actions = Arrays.copyOf(assigned, assigned.length);
+    }
   }
 
   @Override

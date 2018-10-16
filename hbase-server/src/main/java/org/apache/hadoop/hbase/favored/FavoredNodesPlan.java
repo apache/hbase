@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class contains the mapping information between each region name and
@@ -54,7 +54,7 @@ public class FavoredNodesPlan {
    * @param region
    * @param servers
    */
-  public void updateFavoredNodesMap(HRegionInfo region, List<ServerName> servers) {
+  public void updateFavoredNodesMap(RegionInfo region, List<ServerName> servers) {
     if (region == null || servers == null || servers.isEmpty()) {
       return;
     }
@@ -66,7 +66,7 @@ public class FavoredNodesPlan {
    * @param region region
    * @return the list of favored region server for this region based on the plan
    */
-  public List<ServerName> removeFavoredNodes(HRegionInfo region) {
+  public List<ServerName> removeFavoredNodes(RegionInfo region) {
     return favoredNodesMap.remove(region.getRegionNameAsString());
   }
 
@@ -74,7 +74,7 @@ public class FavoredNodesPlan {
    * @param region
    * @return the list of favored region server for this region based on the plan
    */
-  public List<ServerName> getFavoredNodes(HRegionInfo region) {
+  public List<ServerName> getFavoredNodes(RegionInfo region) {
     return favoredNodesMap.get(region.getRegionNameAsString());
   }
 
@@ -92,7 +92,7 @@ public class FavoredNodesPlan {
       return null;
     }
     for (Position p : Position.values()) {
-      if (ServerName.isSameHostnameAndPort(favoredNodes.get(p.ordinal()),server)) {
+      if (ServerName.isSameAddress(favoredNodes.get(p.ordinal()),server)) {
         return p;
       }
     }

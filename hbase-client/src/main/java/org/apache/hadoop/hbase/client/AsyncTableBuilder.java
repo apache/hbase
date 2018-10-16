@@ -21,17 +21,18 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * For creating {@link AsyncTable} or {@link RawAsyncTable}.
+ * For creating {@link AsyncTable}.
  * <p>
  * The implementation should have default configurations set before returning the builder to user.
  * So users are free to only set the configs they care about to create a new
  * AsyncTable/RawAsyncTable instance.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
-public interface AsyncTableBuilder<T extends AsyncTableBase> {
+public interface AsyncTableBuilder<C extends ScanResultConsumerBase> {
 
   /**
    * Set timeout for a whole operation such as get, put or delete. Notice that scan will not be
@@ -43,7 +44,7 @@ public interface AsyncTableBuilder<T extends AsyncTableBase> {
    * @see #setMaxRetries(int)
    * @see #setScanTimeout(long, TimeUnit)
    */
-  AsyncTableBuilder<T> setOperationTimeout(long timeout, TimeUnit unit);
+  AsyncTableBuilder<C> setOperationTimeout(long timeout, TimeUnit unit);
 
   /**
    * As now we have heartbeat support for scan, ideally a scan will never timeout unless the RS is
@@ -52,7 +53,7 @@ public interface AsyncTableBuilder<T extends AsyncTableBase> {
    * operation in a scan, such as openScanner or next.
    * @see #setScanTimeout(long, TimeUnit)
    */
-  AsyncTableBuilder<T> setScanTimeout(long timeout, TimeUnit unit);
+  AsyncTableBuilder<C> setScanTimeout(long timeout, TimeUnit unit);
 
   /**
    * Set timeout for each rpc request.
@@ -60,23 +61,23 @@ public interface AsyncTableBuilder<T extends AsyncTableBase> {
    * Notice that this will <strong>NOT</strong> change the rpc timeout for read(get, scan) request
    * and write request(put, delete).
    */
-  AsyncTableBuilder<T> setRpcTimeout(long timeout, TimeUnit unit);
+  AsyncTableBuilder<C> setRpcTimeout(long timeout, TimeUnit unit);
 
   /**
    * Set timeout for each read(get, scan) rpc request.
    */
-  AsyncTableBuilder<T> setReadRpcTimeout(long timeout, TimeUnit unit);
+  AsyncTableBuilder<C> setReadRpcTimeout(long timeout, TimeUnit unit);
 
   /**
    * Set timeout for each write(put, delete) rpc request.
    */
-  AsyncTableBuilder<T> setWriteRpcTimeout(long timeout, TimeUnit unit);
+  AsyncTableBuilder<C> setWriteRpcTimeout(long timeout, TimeUnit unit);
 
   /**
    * Set the base pause time for retrying. We use an exponential policy to generate sleep time when
    * retrying.
    */
-  AsyncTableBuilder<T> setRetryPause(long pause, TimeUnit unit);
+  AsyncTableBuilder<C> setRetryPause(long pause, TimeUnit unit);
 
   /**
    * Set the max retry times for an operation. Usually it is the max attempt times minus 1.
@@ -86,7 +87,7 @@ public interface AsyncTableBuilder<T extends AsyncTableBase> {
    * @see #setMaxAttempts(int)
    * @see #setOperationTimeout(long, TimeUnit)
    */
-  default AsyncTableBuilder<T> setMaxRetries(int maxRetries) {
+  default AsyncTableBuilder<C> setMaxRetries(int maxRetries) {
     return setMaxAttempts(retries2Attempts(maxRetries));
   }
 
@@ -97,15 +98,15 @@ public interface AsyncTableBuilder<T extends AsyncTableBase> {
    * @see #setMaxRetries(int)
    * @see #setOperationTimeout(long, TimeUnit)
    */
-  AsyncTableBuilder<T> setMaxAttempts(int maxAttempts);
+  AsyncTableBuilder<C> setMaxAttempts(int maxAttempts);
 
   /**
    * Set the number of retries that are allowed before we start to log.
    */
-  AsyncTableBuilder<T> setStartLogErrorsCnt(int startLogErrorsCnt);
+  AsyncTableBuilder<C> setStartLogErrorsCnt(int startLogErrorsCnt);
 
   /**
-   * Create the {@link AsyncTable} or {@link RawAsyncTable} instance.
+   * Create the {@link AsyncTable} instance.
    */
-  T build();
+  AsyncTable<C> build();
 }

@@ -22,37 +22,44 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * Test the restore/clone operation from a file-system point of view.
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestRestoreSnapshotHelper {
-  private static final Log LOG = LogFactory.getLog(TestRestoreSnapshotHelper.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRestoreSnapshotHelper.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRestoreSnapshotHelper.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final static String TEST_HFILE = "abc";
@@ -104,11 +111,11 @@ public class TestRestoreSnapshotHelper {
     builder.addRegionV2();
     builder.addRegionV1();
     Path snapshotDir = builder.commit();
-    HTableDescriptor htd = builder.getTableDescriptor();
+    TableDescriptor htd = builder.getTableDescriptor();
     SnapshotDescription desc = builder.getSnapshotDescription();
 
     // Test clone a snapshot
-    HTableDescriptor htdClone = snapshotMock.createHtd("testtb-clone");
+    TableDescriptor htdClone = snapshotMock.createHtd("testtb-clone");
     testRestore(snapshotDir, desc, htdClone);
     verifyRestore(rootDir, htd, htdClone);
 
@@ -118,13 +125,13 @@ public class TestRestoreSnapshotHelper {
         .setTable("testtb-clone")
         .build();
     Path cloneDir = FSUtils.getTableDir(rootDir, htdClone.getTableName());
-    HTableDescriptor htdClone2 = snapshotMock.createHtd("testtb-clone2");
+    TableDescriptor htdClone2 = snapshotMock.createHtd("testtb-clone2");
     testRestore(cloneDir, cloneDesc, htdClone2);
     verifyRestore(rootDir, htd, htdClone2);
   }
 
-  private void verifyRestore(final Path rootDir, final HTableDescriptor sourceHtd,
-      final HTableDescriptor htdClone) throws IOException {
+  private void verifyRestore(final Path rootDir, final TableDescriptor sourceHtd,
+      final TableDescriptor htdClone) throws IOException {
     List<String> files = SnapshotTestingUtils.listHFileNames(fs,
       FSUtils.getTableDir(rootDir, htdClone.getTableName()));
     assertEquals(12, files.size());
@@ -148,7 +155,7 @@ public class TestRestoreSnapshotHelper {
    * @param htdClone The HTableDescriptor of the table to restore/clone.
    */
   private void testRestore(final Path snapshotDir, final SnapshotDescription sd,
-      final HTableDescriptor htdClone) throws IOException {
+      final TableDescriptor htdClone) throws IOException {
     LOG.debug("pre-restore table=" + htdClone.getTableName() + " snapshot=" + snapshotDir);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
@@ -164,7 +171,7 @@ public class TestRestoreSnapshotHelper {
    * Initialize the restore helper, based on the snapshot and table information provided.
    */
   private RestoreSnapshotHelper getRestoreHelper(final Path rootDir, final Path snapshotDir,
-      final SnapshotDescription sd, final HTableDescriptor htdClone) throws IOException {
+      final SnapshotDescription sd, final TableDescriptor htdClone) throws IOException {
     ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
 

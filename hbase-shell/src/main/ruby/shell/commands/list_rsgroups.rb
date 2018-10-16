@@ -19,7 +19,7 @@ module Shell
   module Commands
     class ListRsgroups < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all RegionServer groups. Optional regular expression parameter can
 be used to filter the output.
 
@@ -32,15 +32,44 @@ EOF
       end
 
       def command(regex = '.*')
-        formatter.header(['GROUPS'])
+        formatter.header(['NAME', 'SERVER / TABLE'])
 
         regex = /#{regex}/ unless regex.is_a?(Regexp)
-        list = rsgroup_admin.list_rs_groups.grep(regex)
+        list = rsgroup_admin.list_rs_groups
+        groups = 0
+
         list.each do |group|
-          formatter.row([group])
+          next unless group.getName.match(regex)
+
+          groups += 1
+          group_name_printed = false
+
+          group.getServers.each do |server|
+            if group_name_printed
+              group_name = ''
+            else
+              group_name = group.getName
+              group_name_printed = true
+            end
+
+            formatter.row([group_name, 'server ' + server.toString])
+          end
+
+          group.getTables.each do |table|
+            if group_name_printed
+              group_name = ''
+            else
+              group_name = group.getName
+              group_name_printed = true
+            end
+
+            formatter.row([group_name, 'table ' + table.getNameAsString])
+          end
+
+          formatter.row([group.getName, '']) unless group_name_printed
         end
 
-        formatter.footer(list.size)
+        formatter.footer(groups)
       end
     end
   end

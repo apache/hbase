@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,7 +86,7 @@ public class ReversedScannerCallable extends ScannerCallable {
       // 2. the start row is empty which means we need to locate to the last region.
       if (scan.includeStartRow() && !isEmptyStartRow(getRow())) {
         // Just locate the region with the row
-        RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,
+        RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id,
             getConnection(), getTableName(), getRow());
         this.location = id < rl.size() ? rl.getRegionLocation(id) : null;
         if (location == null || location.getServerName() == null) {
@@ -140,7 +140,7 @@ public class ReversedScannerCallable extends ScannerCallable {
     List<HRegionLocation> regionList = new ArrayList<>();
     byte[] currentKey = startKey;
     do {
-      RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,
+      RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id,
           getConnection(), getTableName(), currentKey);
       HRegionLocation regionLocation = id < rl.size() ? rl.getRegionLocation(id) : null;
       if (regionLocation != null && regionLocation.getRegionInfo().containsRow(currentKey)) {

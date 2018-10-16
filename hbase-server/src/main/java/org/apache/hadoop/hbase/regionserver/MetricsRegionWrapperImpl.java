@@ -21,23 +21,25 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.OptionalLong;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics2.MetricsExecutor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable {
 
-  private static final Log LOG = LogFactory.getLog(MetricsRegionWrapperImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionWrapperImpl.class);
 
   public static final int PERIOD = 45;
   public static final String UNKNOWN = "unknown";
@@ -52,6 +54,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long minStoreFileAge;
   private long avgStoreFileAge;
   private long numReferenceFiles;
+  private long maxFlushQueueSize;
+  private long maxCompactionQueueSize;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -65,7 +69,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public String getTableName() {
-    HTableDescriptor tableDesc = this.region.getTableDesc();
+    TableDescriptor tableDesc = this.region.getTableDescriptor();
     if (tableDesc == null) {
       return UNKNOWN;
     }
@@ -74,7 +78,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public String getNamespace() {
-    HTableDescriptor tableDesc = this.region.getTableDesc();
+    TableDescriptor tableDesc = this.region.getTableDescriptor();
     if (tableDesc == null) {
       return UNKNOWN;
     }
@@ -84,7 +88,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public String getRegionName() {
-    HRegionInfo regionInfo = this.region.getRegionInfo();
+    RegionInfo regionInfo = this.region.getRegionInfo();
     if (regionInfo == null) {
       return UNKNOWN;
     }
@@ -93,7 +97,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public long getNumStores() {
-    Map<byte[],Store> stores = this.region.stores;
+    Map<byte[], HStore> stores = this.region.stores;
     if (stores == null) {
       return 0;
     }
@@ -106,7 +110,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
-  public long getMemstoreSize() {
+  public long getMemStoreSize() {
     return memstoreSize;
   }
 
@@ -121,6 +125,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
+  public long getCpRequestCount() {
+    return this.region.getCpRequestsCount();
+  }
+
+  @Override
   public long getFilteredReadRequestCount() {
     return this.region.getFilteredReadRequestsCount();
   }
@@ -132,17 +141,17 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public long getNumFilesCompacted() {
-    return this.region.compactionNumFilesCompacted.get();
+    return this.region.compactionNumFilesCompacted.sum();
   }
 
   @Override
   public long getNumBytesCompacted() {
-    return this.region.compactionNumBytesCompacted.get();
+    return this.region.compactionNumBytesCompacted.sum();
   }
 
   @Override
   public long getNumCompactionsCompleted() {
-    return this.region.compactionsFinished.get();
+    return this.region.compactionsFinished.sum();
   }
 
   @Override
@@ -158,8 +167,33 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
+  public long getTotalRequestCount() {
+    return getReadRequestCount() + getWriteRequestCount();
+  }
+
+  @Override
   public long getNumCompactionsFailed() {
-    return this.region.compactionsFailed.get();
+    return this.region.compactionsFailed.sum();
+  }
+
+  @Override
+  public long getNumCompactionsQueued() {
+    return this.region.compactionsQueued.sum();
+  }
+
+  @Override
+  public long getNumFlushesQueued() {
+    return this.region.flushesQueued.sum();
+  }
+
+  @Override
+  public long getMaxCompactionQueueSize() {
+    return maxCompactionQueueSize;
+  }
+
+  @Override
+  public long getMaxFlushQueueSize() {
+    return maxFlushQueueSize;
   }
 
   @Override
@@ -197,27 +231,36 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempMaxStoreFileAge = 0;
       long tempMinStoreFileAge = Long.MAX_VALUE;
       long tempNumReferenceFiles = 0;
+      long tempMaxCompactionQueueSize = 0;
+      long tempMaxFlushQueueSize = 0;
 
       long avgAgeNumerator = 0;
       long numHFiles = 0;
       if (region.stores != null) {
         for (Store store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
-          tempMemstoreSize += store.getSizeOfMemStore().getDataSize();
+          tempMemstoreSize += store.getMemStoreSize().getDataSize();
           tempStoreFileSize += store.getStorefilesSize();
+          OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
+          if (storeMaxStoreFileAge.isPresent() &&
+              storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge) {
+            tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
+          }
 
-          long storeMaxStoreFileAge = store.getMaxStoreFileAge();
-          tempMaxStoreFileAge = (storeMaxStoreFileAge > tempMaxStoreFileAge) ?
-            storeMaxStoreFileAge : tempMaxStoreFileAge;
-
-          long storeMinStoreFileAge = store.getMinStoreFileAge();
-          tempMinStoreFileAge = (storeMinStoreFileAge < tempMinStoreFileAge) ?
-            storeMinStoreFileAge : tempMinStoreFileAge;
+          OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
+          if (storeMinStoreFileAge.isPresent() &&
+              storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge) {
+            tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
+          }
 
           long storeHFiles = store.getNumHFiles();
-          avgAgeNumerator += store.getAvgStoreFileAge() * storeHFiles;
           numHFiles += storeHFiles;
           tempNumReferenceFiles += store.getNumReferenceFiles();
+
+          OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
+          if (storeAvgStoreFileAge.isPresent()) {
+            avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
+          }
         }
       }
 
@@ -234,6 +277,14 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       }
 
       numReferenceFiles = tempNumReferenceFiles;
+      tempMaxCompactionQueueSize = getNumCompactionsQueued();
+      tempMaxFlushQueueSize = getNumFlushesQueued();
+      if (tempMaxCompactionQueueSize > maxCompactionQueueSize) {
+        maxCompactionQueueSize = tempMaxCompactionQueueSize;
+      }
+      if (tempMaxFlushQueueSize > maxFlushQueueSize) {
+        maxFlushQueueSize = tempMaxFlushQueueSize;
+      }
     }
   }
 

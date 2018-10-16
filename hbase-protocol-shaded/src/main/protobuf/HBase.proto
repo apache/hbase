@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 
 // This file contains protocol buffers that are shared throughout HBase
 package hbase.pb;
@@ -113,6 +114,11 @@ message RegionSpecifier {
  * specified, from = 0, and to = Long.MAX_VALUE
  */
 message TimeRange {
+  optional uint64 from = 1;
+  optional uint64 to = 2;
+}
+
+message TimeRangeTracker {
   optional uint64 from = 1;
   optional uint64 to = 2;
 }
@@ -234,4 +240,37 @@ message VersionInfo {
 message RegionServerInfo {
   optional int32 infoPort = 1;
   optional VersionInfo version_info = 2;
+}
+
+message RegionExceptionMessage {
+  required RegionSpecifier region = 1;
+  required NameBytesPair exception = 2;
+}
+
+message CacheEvictionStats {
+  optional int64 evicted_blocks = 1;
+  optional int64 bytes_evicted = 2;
+  optional int64 max_cache_size = 3;
+  repeated RegionExceptionMessage exception = 4;
+}
+
+message FlushedStoreSequenceId {
+  required bytes family = 1;
+  required uint64 seqId = 2;
+}
+
+message FlushedRegionSequenceId {
+  required bytes regionEncodedName = 1;
+  required uint64 seqId = 2;
+  repeated FlushedStoreSequenceId stores = 3;
+}
+
+message FlushedSequenceId {
+  repeated FlushedRegionSequenceId regionSequenceId = 1;
+}
+
+message RegionLocation {
+  required RegionInfo region_info = 1;
+  optional ServerName server_name = 2;
+  required int64 seq_num = 3;
 }

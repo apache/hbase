@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -34,16 +34,16 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.AsyncProcessTask.SubmittedRows;
 import org.apache.hadoop.hbase.client.RequestController.ReturnCode;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -65,17 +65,12 @@ import org.apache.hadoop.hbase.util.Bytes;
  * The class manages internally the retries.
  * </p>
  * <p>
- * The class can be constructed in regular mode, or "global error" mode. In global error mode,
- * AP tracks errors across all calls (each "future" also has global view of all errors). That
- * mode is necessary for backward compat with HTable behavior, where multiple submissions are
- * made and the errors can propagate using any put/flush call, from previous calls.
- * In "regular" mode, the errors are tracked inside the Future object that is returned.
+ * The errors are tracked inside the Future object that is returned.
  * The results are always tracked inside the Future object and can be retrieved when the call
  * has finished. Partial results can also be retrieved if some part of multi-request failed.
  * </p>
  * <p>
- * This class is thread safe in regular mode; in global error code, submitting operations and
- * retrieving errors from different threads may be not thread safe.
+ * This class is thread safe.
  * Internally, the class is thread safe enough to manage simultaneously new submission and results
  * arising from older operations.
  * </p>
@@ -87,7 +82,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class AsyncProcess {
-  private static final Log LOG = LogFactory.getLog(AsyncProcess.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncProcess.class);
   private static final AtomicLong COUNTER = new AtomicLong();
 
   public static final String PRIMARY_CALL_TIMEOUT_KEY = "hbase.client.primaryCallTimeout.multiget";
@@ -95,12 +90,12 @@ class AsyncProcess {
   /**
    * Configure the number of failures after which the client will start logging. A few failures
    * is fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
-   * heuristic for the number of errors we don't log. 9 was chosen because we wait for 1s at
+   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at
    * this stage.
    */
   public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
       "hbase.client.start.log.errors.counter";
-  public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 9;
+  public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 5;
 
   /**
    * Configuration to decide whether to log details for batch error
@@ -144,7 +139,6 @@ class AsyncProcess {
   final ClusterConnection connection;
   private final RpcRetryingCallerFactory rpcCallerFactory;
   final RpcControllerFactory rpcFactory;
-  final BatchErrors globalErrors;
 
   // Start configuration settings.
   final int startLogErrorsCnt;
@@ -153,7 +147,7 @@ class AsyncProcess {
   final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   final int numTries;
   @VisibleForTesting
-  int serverTrackerTimeout;
+  long serverTrackerTimeout;
   final long primaryCallTimeoutMicroseconds;
   /** Whether to log details for batch errors */
   final boolean logBatchErrorDetails;
@@ -168,14 +162,12 @@ class AsyncProcess {
   private static final int DEFAULT_LOG_DETAILS_PERIOD = 10000;
   private final int periodToLog;
   AsyncProcess(ClusterConnection hc, Configuration conf,
-      RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors,
-      RpcControllerFactory rpcFactory) {
+      RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory) {
     if (hc == null) {
       throw new IllegalArgumentException("ClusterConnection cannot be null.");
     }
 
     this.connection = hc;
-    this.globalErrors = useGlobalErrors ? new BatchErrors() : null;
 
     this.id = COUNTER.incrementAndGet();
 
@@ -204,9 +196,9 @@ class AsyncProcess {
     // If we keep hitting one server, the net effect will be the incremental backoff, and
     // essentially the same number of retries as planned. If we have to do faster retries,
     // we will do more retries in aggregate, but the user will be none the wiser.
-    this.serverTrackerTimeout = 0;
+    this.serverTrackerTimeout = 0L;
     for (int i = 0; i < this.numTries; ++i) {
-      serverTrackerTimeout += ConnectionUtils.getPauseTime(this.pause, i);
+      serverTrackerTimeout = serverTrackerTimeout + ConnectionUtils.getPauseTime(this.pause, i);
     }
 
     this.rpcCallerFactory = rpcCaller;
@@ -291,7 +283,12 @@ class AsyncProcess {
           LOG.error("Failed to get region location ", ex);
           // This action failed before creating ars. Retain it, but do not add to submit list.
           // We will then add it to ars in an already-failed state.
-          retainedActions.add(new Action(r, ++posInList));
+
+          int priority = HConstants.NORMAL_QOS;
+          if (r instanceof Mutation) {
+            priority = ((Mutation) r).getPriority();
+          }
+          retainedActions.add(new Action(r, ++posInList, priority));
           locationErrors.add(ex);
           locationErrorRows.add(posInList);
           it.remove();
@@ -302,7 +299,11 @@ class AsyncProcess {
           break;
         }
         if (code == ReturnCode.INCLUDE) {
-          Action action = new Action(r, ++posInList);
+          int priority = HConstants.NORMAL_QOS;
+          if (r instanceof Mutation) {
+            priority = ((Mutation) r).getPriority();
+          }
+          Action action = new Action(r, ++posInList, priority);
           setNonce(ng, r, action);
           retainedActions.add(action);
           // TODO: replica-get is not supported on this path
@@ -372,6 +373,7 @@ class AsyncProcess {
     // The position will be used by the processBatch to match the object array returned.
     int posInList = -1;
     NonceGenerator ng = this.connection.getNonceGenerator();
+    int highestPriority = HConstants.PRIORITY_UNSET;
     for (Row r : rows) {
       posInList++;
       if (r instanceof Put) {
@@ -379,8 +381,9 @@ class AsyncProcess {
         if (put.isEmpty()) {
           throw new IllegalArgumentException("No columns to insert for #" + (posInList+1)+ " item");
         }
+        highestPriority = Math.max(put.getPriority(), highestPriority);
       }
-      Action action = new Action(r, posInList);
+      Action action = new Action(r, posInList, highestPriority);
       setNonce(ng, r, action);
       actions.add(action);
     }
@@ -434,10 +437,10 @@ class AsyncProcess {
 
   private Consumer<Long> getLogger(TableName tableName, long max) {
     return (currentInProgress) -> {
-      LOG.info("#" + id + (max < 0 ? ", waiting for any free slot"
-      : ", waiting for some tasks to finish. Expected max="
-      + max) + ", tasksInProgress=" + currentInProgress +
-      " hasError=" + hasError() + tableName == null ? "" : ", tableName=" + tableName);
+      LOG.info("#" + id + (max < 0 ?
+          ", waiting for any free slot" :
+          ", waiting for some tasks to finish. Expected max=" + max) + ", tasksInProgress="
+          + currentInProgress + (tableName == null ? "" : ", tableName=" + tableName));
     };
   }
 
@@ -448,38 +451,6 @@ class AsyncProcess {
 
   void decTaskCounters(Collection<byte[]> regions, ServerName sn) {
     requestController.decTaskCounters(regions, sn);
-  }
-  /**
-   * Only used w/useGlobalErrors ctor argument, for HTable backward compat.
-   * @return Whether there were any errors in any request since the last time
-   *          {@link #waitForAllPreviousOpsAndReset(List, TableName)} was called, or AP was created.
-   */
-  public boolean hasError() {
-    return globalErrors != null && globalErrors.hasErrors();
-  }
-
-  /**
-   * Only used w/useGlobalErrors ctor argument, for HTable backward compat.
-   * Waits for all previous operations to finish, and returns errors and (optionally)
-   * failed operations themselves.
-   * @param failedRows an optional list into which the rows that failed since the last time
-   *        {@link #waitForAllPreviousOpsAndReset(List, TableName)} was called, or AP was created, are saved.
-   * @param tableName name of the table
-   * @return all the errors since the last time {@link #waitForAllPreviousOpsAndReset(List, TableName)}
-   *          was called, or AP was created.
-   */
-  public RetriesExhaustedWithDetailsException waitForAllPreviousOpsAndReset(
-      List<Row> failedRows, TableName tableName) throws InterruptedIOException {
-    waitForMaximumCurrentTasks(0, tableName);
-    if (globalErrors == null || !globalErrors.hasErrors()) {
-      return null;
-    }
-    if (failedRows != null) {
-      failedRows.addAll(globalErrors.actions);
-    }
-    RetriesExhaustedWithDetailsException result = globalErrors.makeException(logBatchErrorDetails);
-    globalErrors.clear();
-    return result;
   }
 
   /**

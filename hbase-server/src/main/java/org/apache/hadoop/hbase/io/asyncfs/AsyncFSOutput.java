@@ -20,15 +20,16 @@ package org.apache.hadoop.hbase.io.asyncfs;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.CompletionHandler;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 
 /**
  * Interface for asynchronous filesystem output stream.
+ * <p>
+ * The implementation is not required to be thread safe.
  */
 @InterfaceAudience.Private
 public interface AsyncFSOutput extends Closeable {
@@ -59,6 +60,11 @@ public interface AsyncFSOutput extends Closeable {
    * Return the current size of buffered data.
    */
   int buffered();
+
+  /**
+   * Whether the stream is broken.
+   */
+  boolean isBroken();
 
   /**
    * Return current pipeline. Empty array if no pipeline.

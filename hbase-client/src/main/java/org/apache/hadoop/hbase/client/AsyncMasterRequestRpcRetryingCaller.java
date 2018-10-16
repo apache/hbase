@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 /**
  * Retry caller for a request call to master.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
@@ -66,6 +67,7 @@ public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
     });
   }
 
+  @Override
   public CompletableFuture<T> call() {
     doCall();
     return future;

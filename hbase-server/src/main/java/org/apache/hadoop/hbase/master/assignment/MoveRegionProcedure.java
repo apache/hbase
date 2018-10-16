@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,62 +19,37 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionStateData;
 
 /**
- * Procedure that implements a RegionPlan.
- * It first runs an unassign subprocedure followed
- * by an assign subprocedure. It takes a lock on the region being moved.
- * It holds the lock for the life of the procedure.
+ * Leave here only for checking if we can successfully start the master.
+ * @deprecated Do not use any more.
+ * @see TransitRegionStateProcedure
  */
+@Deprecated
 @InterfaceAudience.Private
 public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<MoveRegionState> {
-  private static final Log LOG = LogFactory.getLog(MoveRegionProcedure.class);
   private RegionPlan plan;
 
   public MoveRegionProcedure() {
-    // Required by the Procedure framework to create the procedure on replay
     super();
-  }
-
-  public MoveRegionProcedure(final MasterProcedureEnv env, final RegionPlan plan) {
-    super(env, plan.getRegionInfo());
-    assert plan.getDestination() != null: plan.toString();
-    this.plan = plan;
   }
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final MoveRegionState state)
       throws InterruptedException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
-    switch (state) {
-      case MOVE_REGION_UNASSIGN:
-        addChildProcedure(new UnassignProcedure(plan.getRegionInfo(), plan.getSource(), true));
-        setNextState(MoveRegionState.MOVE_REGION_ASSIGN);
-        break;
-      case MOVE_REGION_ASSIGN:
-        addChildProcedure(new AssignProcedure(plan.getRegionInfo(), plan.getDestination()));
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
-    }
-    return Flow.HAS_MORE_STATE;
+    return Flow.NO_MORE_STATE;
   }
 
   @Override
@@ -108,7 +82,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
 
   @Override
   protected MoveRegionState getState(final int stateId) {
-    return MoveRegionState.valueOf(stateId);
+    return MoveRegionState.forNumber(stateId);
   }
 
   @Override
@@ -122,24 +96,30 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
   }
 
   @Override
-  protected void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     final MoveRegionStateData.Builder state = MoveRegionStateData.newBuilder()
-        // No need to serialize the HRegionInfo. The super class has the region.
-        .setSourceServer(ProtobufUtil.toServerName(plan.getSource()))
-        .setDestinationServer(ProtobufUtil.toServerName(plan.getDestination()));
-    state.build().writeDelimitedTo(stream);
+        // No need to serialize the RegionInfo. The super class has the region.
+        .setSourceServer(ProtobufUtil.toServerName(plan.getSource()));
+    if (plan.getDestination() != null) {
+      state.setDestinationServer(ProtobufUtil.toServerName(plan.getDestination()));
+    }
+
+    serializer.serialize(state.build());
   }
 
   @Override
-  protected void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
-    final MoveRegionStateData state = MoveRegionStateData.parseDelimitedFrom(stream);
-    final HRegionInfo regionInfo = getRegion(); // Get it from super class deserialization.
+    final MoveRegionStateData state = serializer.deserialize(MoveRegionStateData.class);
+    final RegionInfo regionInfo = getRegion(); // Get it from super class deserialization.
     final ServerName sourceServer = ProtobufUtil.toServerName(state.getSourceServer());
-    final ServerName destinationServer = ProtobufUtil.toServerName(state.getDestinationServer());
+    final ServerName destinationServer = state.hasDestinationServer() ?
+        ProtobufUtil.toServerName(state.getDestinationServer()) : null;
     this.plan = new RegionPlan(regionInfo, sourceServer, destinationServer);
   }
 }

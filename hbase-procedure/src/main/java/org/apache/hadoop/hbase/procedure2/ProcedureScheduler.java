@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import com.google.common.annotations.VisibleForTesting;
-
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Keep track of the runnable procedures
@@ -51,6 +51,11 @@ public interface ProcedureScheduler {
    * @param proc the Procedure to add
    */
   void addFront(Procedure proc);
+
+  /**
+   * Inserts all elements in the iterator at the front of this queue.
+   */
+  void addFront(Iterator<Procedure> procedureIterator);
 
   /**
    * Inserts the specified element at the end of this queue.
@@ -92,46 +97,16 @@ public interface ProcedureScheduler {
   Procedure poll(long timeout, TimeUnit unit);
 
   /**
-   * Mark the event as not ready.
-   * Procedures calling waitEvent() will be suspended.
-   * @param event the event to mark as suspended/not ready
-   */
-  void suspendEvent(ProcedureEvent event);
-
-  /**
-   * Wake every procedure waiting for the specified event
-   * (By design each event has only one "wake" caller)
-   * @param event the event to wait
-   */
-  void wakeEvent(ProcedureEvent event);
-
-  /**
-   * Wake every procedure waiting for the specified events.
-   * (By design each event has only one "wake" caller)
-   * @param count the number of events in the array to wake
-   * @param events the list of events to wake
-   */
-  void wakeEvents(int count, ProcedureEvent... events);
-
-  /**
-   * Suspend the procedure if the event is not ready yet.
-   * @param event the event to wait on
-   * @param procedure the procedure waiting on the event
-   * @return true if the procedure has to wait for the event to be ready, false otherwise.
-   */
-  boolean waitEvent(ProcedureEvent event, Procedure procedure);
-
-  /**
    * List lock queues.
    * @return the locks
    */
-  // TODO: This seems to be the wrong place to hang this method.
-  List<LockInfo> listLocks();
+  List<LockedResource> getLocks();
 
   /**
-   * @return {@link LockInfo} for resource of specified type & name. null if resource is not locked.
+   * @return {@link LockedResource} for resource of specified type & name. null if resource is not locked.
    */
-  LockInfo getLockInfoForResource(LockInfo.ResourceType resourceType, String resourceName);
+  LockedResource getLockResource(LockedResourceType resourceType, String resourceName);
+
   /**
    * Returns the number of elements in this queue.
    * @return the number of elements in this queue.

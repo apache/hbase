@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 
 /**
@@ -187,12 +187,12 @@ public class BloomFilterChunk implements BloomFilterBase {
     int hash1;
     int hash2;
     HashKey<Cell> hashKey;
-    if (this.bloomType == BloomType.ROW) {
-      hashKey = new RowBloomHashKey(cell);
+    if (this.bloomType == BloomType.ROWCOL) {
+      hashKey = new RowColBloomHashKey(cell);
       hash1 = this.hash.hash(hashKey, 0);
       hash2 = this.hash.hash(hashKey, hash1);
     } else {
-      hashKey = new RowColBloomHashKey(cell);
+      hashKey = new RowBloomHashKey(cell);
       hash1 = this.hash.hash(hashKey, 0);
       hash2 = this.hash.hash(hashKey, hash1);
     }

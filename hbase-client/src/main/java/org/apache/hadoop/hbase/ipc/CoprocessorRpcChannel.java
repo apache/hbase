@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcChannel;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Base interface which provides clients with an RPC connection to

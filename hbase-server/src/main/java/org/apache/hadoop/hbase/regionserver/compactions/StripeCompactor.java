@@ -20,19 +20,20 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the placeholder for stripe compactor. The implementation, as well as the proper javadoc,
@@ -40,9 +41,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFileWriter> {
-  private static final Log LOG = LogFactory.getLog(StripeCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeCompactor.class);
 
-  public StripeCompactor(Configuration conf, Store store) {
+  public StripeCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 
@@ -58,7 +59,7 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
     }
 
     @Override
-    public ScanType getScanType(CompactionRequest request) {
+    public ScanType getScanType(CompactionRequestImpl request) {
       // If majorRangeFromRow and majorRangeToRow are not null, then we will not use the return
       // value to create InternalScanner. See the createScanner method below. The return value is
       // also used when calling coprocessor hooks.
@@ -66,17 +67,17 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
     }
 
     @Override
-    public InternalScanner createScanner(List<StoreFileScanner> scanners, ScanType scanType,
-        FileDetails fd, long smallestReadPoint) throws IOException {
+    public InternalScanner createScanner(ScanInfo scanInfo, List<StoreFileScanner> scanners,
+        ScanType scanType, FileDetails fd, long smallestReadPoint) throws IOException {
       return (majorRangeFromRow == null)
-          ? StripeCompactor.this.createScanner(store, scanners, scanType, smallestReadPoint,
-            fd.earliestPutTs)
-          : StripeCompactor.this.createScanner(store, scanners, smallestReadPoint, fd.earliestPutTs,
-            majorRangeFromRow, majorRangeToRow);
+          ? StripeCompactor.this.createScanner(store, scanInfo, scanners, scanType,
+            smallestReadPoint, fd.earliestPutTs)
+          : StripeCompactor.this.createScanner(store, scanInfo, scanners, smallestReadPoint,
+            fd.earliestPutTs, majorRangeFromRow, majorRangeToRow);
     }
   }
 
-  public List<Path> compact(CompactionRequest request, final List<byte[]> targetBoundaries,
+  public List<Path> compact(CompactionRequestImpl request, final List<byte[]> targetBoundaries,
       final byte[] majorRangeFromRow, final byte[] majorRangeToRow,
       ThroughputController throughputController, User user) throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -101,7 +102,7 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
       }, throughputController, user);
   }
 
-  public List<Path> compact(CompactionRequest request, final int targetCount, final long targetSize,
+  public List<Path> compact(CompactionRequestImpl request, final int targetCount, final long targetSize,
       final byte[] left, final byte[] right, byte[] majorRangeFromRow, byte[] majorRangeToRow,
       ThroughputController throughputController, User user) throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -125,7 +126,7 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
 
   @Override
   protected List<Path> commitWriter(StripeMultiFileWriter writer, FileDetails fd,
-      CompactionRequest request) throws IOException {
+      CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = writer.commitWriters(fd.maxSeqId, request.isMajor());
     assert !newFiles.isEmpty() : "Should have produced an empty file to preserve metadata.";
     return newFiles;

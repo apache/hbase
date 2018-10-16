@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,11 +30,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -52,7 +54,7 @@ public final class Constraints {
   private Constraints() {
   }
 
-  private static final Log LOG = LogFactory.getLog(Constraints.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Constraints.class);
   private static final String CONSTRAINT_HTD_KEY_PREFIX = "constraint $";
   private static final Pattern CONSTRAINT_HTD_ATTR_KEY_PATTERN = Pattern
       .compile(CONSTRAINT_HTD_KEY_PREFIX, Pattern.LITERAL);
@@ -555,7 +557,7 @@ public final class Constraints {
    * @throws IOException
    *           if any part of reading/arguments fails
    */
-  static List<? extends Constraint> getConstraints(HTableDescriptor desc,
+  static List<? extends Constraint> getConstraints(TableDescriptor desc,
       ClassLoader classloader) throws IOException {
     List<Constraint> constraints = new ArrayList<>();
     // loop through all the key, values looking for constraints
@@ -592,14 +594,11 @@ public final class Constraints {
           // add the constraint, now that we expect it to be valid.
           Class<? extends Constraint> clazz = classloader.loadClass(key)
               .asSubclass(Constraint.class);
-          Constraint constraint = clazz.newInstance();
+          Constraint constraint = clazz.getDeclaredConstructor().newInstance();
           constraint.setConf(conf);
           constraints.add(constraint);
-        } catch (ClassNotFoundException e1) {
-          throw new IOException(e1);
-        } catch (InstantiationException e1) {
-          throw new IOException(e1);
-        } catch (IllegalAccessException e1) {
+        } catch (InvocationTargetException | NoSuchMethodException | ClassNotFoundException |
+            InstantiationException | IllegalAccessException e1) {
           throw new IOException(e1);
         }
       }
@@ -613,8 +612,8 @@ public final class Constraints {
     @Override
     public int compare(Constraint c1, Constraint c2) {
       // compare the priorities of the constraints stored in their configuration
-      return Long.valueOf(c1.getConf().getLong(PRIORITY_KEY, DEFAULT_PRIORITY))
-          .compareTo(c2.getConf().getLong(PRIORITY_KEY, DEFAULT_PRIORITY));
+      return Long.compare(c1.getConf().getLong(PRIORITY_KEY, DEFAULT_PRIORITY),
+          c2.getConf().getLong(PRIORITY_KEY, DEFAULT_PRIORITY));
     }
   };
 

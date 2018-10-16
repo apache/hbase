@@ -23,14 +23,14 @@ import static org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Regi
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -52,7 +52,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
  */
 @InterfaceAudience.Private
 public final class CoprocessorRpcUtils {
-  private static final Log LOG = LogFactory.getLog(CoprocessorRpcUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorRpcUtils.class);
   /**
    * We assume that all HBase protobuf services share a common package name
    * (defined in the .proto files).
@@ -98,12 +98,12 @@ public final class CoprocessorRpcUtils {
   private static CoprocessorServiceCall getCoprocessorServiceCall(
       final Descriptors.MethodDescriptor method, final Message request, final byte [] row) {
     return CoprocessorServiceCall.newBuilder()
-    .setRow(org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
+    .setRow(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
     .setServiceName(CoprocessorRpcUtils.getServiceName(method.getService()))
     .setMethodName(method.getName())
     // TODO!!!!! Come back here after!!!!! This is a double copy of the request if I read
     // it right copying from non-shaded to shaded version!!!!!! FIXXXXX!!!!!
-    .setRequest(org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.
+    .setRequest(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.
         unsafeWrap(request.toByteArray())).build();
   }
 
@@ -120,7 +120,7 @@ public final class CoprocessorRpcUtils {
 
   public static Message getRequest(Service service,
       Descriptors.MethodDescriptor methodDesc,
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString shadedRequest)
+      org.apache.hbase.thirdparty.com.google.protobuf.ByteString shadedRequest)
   throws IOException {
     Message.Builder builderForType =
         service.getRequestPrototype(methodDesc).newBuilderForType();
@@ -159,7 +159,7 @@ public final class CoprocessorRpcUtils {
       regionName));
     // TODO: UGLY COPY IN HERE!!!!
     builder.setValue(builder.getValueBuilder().setName(result.getClass().getName())
-        .setValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.
+        .setValue(org.apache.hbase.thirdparty.com.google.protobuf.ByteString.
             copyFrom(result.toByteArray())));
     return builder.build();
   }

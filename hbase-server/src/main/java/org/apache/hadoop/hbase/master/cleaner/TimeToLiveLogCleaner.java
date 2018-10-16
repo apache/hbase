@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -31,17 +32,26 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class TimeToLiveLogCleaner extends BaseLogCleanerDelegate {
-  private static final Log LOG = LogFactory.getLog(TimeToLiveLogCleaner.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TimeToLiveLogCleaner.class.getName());
+  public static final String TTL_CONF_KEY = "hbase.master.logcleaner.ttl";
+  // default ttl = 10 minutes
+  public static final long DEFAULT_TTL = 600_000L;
   // Configured time a log can be kept after it was closed
   private long ttl;
   private boolean stopped = false;
 
   @Override
-  public boolean isLogDeletable(FileStatus fStat) {
+  public boolean isFileDeletable(FileStatus fStat) {
+    // Files are validated for the second time here,
+    // if it causes a bottleneck this logic needs refactored
+    if (!AbstractFSWALProvider.validateWALFilename(fStat.getPath().getName())) {
+      return true;
+    }
+
     long currentTime = EnvironmentEdgeManager.currentTime();
     long time = fStat.getModificationTime();
     long life = currentTime - time;
-    
+
     if (LOG.isTraceEnabled()) {
       LOG.trace("Log life:" + life + ", ttl:" + ttl + ", current:" + currentTime + ", from: "
           + time);
@@ -57,9 +67,8 @@ public class TimeToLiveLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
-    this.ttl = conf.getLong("hbase.master.logcleaner.ttl", 600000);
+    this.ttl = conf.getLong(TTL_CONF_KEY, DEFAULT_TTL);
   }
-
 
   @Override
   public void stop(String why) {

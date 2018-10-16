@@ -18,11 +18,15 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -31,8 +35,10 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Private
 public class FailedServers {
-  private final LinkedList<Pair<Long, String>> failedServers = new LinkedList<>();
+  private final Map<String, Long> failedServers = new HashMap<String, Long>();
+  private long latestExpiry = 0;
   private final int recheckServersTimeout;
+  private static final Logger LOG = LoggerFactory.getLogger(FailedServers.class);
 
   public FailedServers(Configuration conf) {
     this.recheckServersTimeout = conf.getInt(
@@ -42,9 +48,15 @@ public class FailedServers {
   /**
    * Add an address to the list of the failed servers list.
    */
-  public synchronized void addToFailedServers(InetSocketAddress address) {
+  public synchronized void addToFailedServers(InetSocketAddress address, Throwable throwable) {
     final long expiry = EnvironmentEdgeManager.currentTime() + recheckServersTimeout;
-    failedServers.addFirst(new Pair<>(expiry, address.toString()));
+    this.failedServers.put(address.toString(), expiry);
+    this.latestExpiry = expiry;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+        "Added failed server with address " + address.toString() + " to list caused by "
+            + throwable.toString());
+    }
   }
 
   /**
@@ -56,23 +68,21 @@ public class FailedServers {
     if (failedServers.isEmpty()) {
       return false;
     }
-
-    final String lookup = address.toString();
     final long now = EnvironmentEdgeManager.currentTime();
-
-    // iterate, looking for the search entry and cleaning expired entries
-    Iterator<Pair<Long, String>> it = failedServers.iterator();
-    while (it.hasNext()) {
-      Pair<Long, String> cur = it.next();
-      if (cur.getFirst() < now) {
-        it.remove();
-      } else {
-        if (lookup.equals(cur.getSecond())) {
-          return true;
-        }
-      }
+    if (now > this.latestExpiry) {
+      failedServers.clear();
+      return false;
     }
-
+    String key = address.toString();
+    Long expiry = this.failedServers.get(key);
+    if (expiry == null) {
+      return false;
+    }
+    if (expiry >= now) {
+      return true;
+    } else {
+      this.failedServers.remove(key);
+    }
     return false;
   }
 }

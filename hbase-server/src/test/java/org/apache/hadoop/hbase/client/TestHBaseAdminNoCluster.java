@@ -21,12 +21,11 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.ArrayList;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,6 +36,23 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.mockito.Matchers;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
@@ -47,25 +63,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.mockito.Matchers;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import com.google.protobuf.ServiceException;
 
 @Category({SmallTests.class, ClientTests.class})
 public class TestHBaseAdminNoCluster {
 
-  private static final Log LOG = LogFactory.getLog(TestHBaseAdminNoCluster.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHBaseAdminNoCluster.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseAdminNoCluster.class);
 
   @Rule
   public TestName name = new TestName();
@@ -73,11 +79,6 @@ public class TestHBaseAdminNoCluster {
   /**
    * Verify that PleaseHoldException gets retried.
    * HBASE-8764
-   * @throws IOException
-   * @throws ZooKeeperConnectionException
-   * @throws MasterNotRunningException
-   * @throws ServiceException
-   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException 
    */
   //TODO: Clean up, with Procedure V2 and nonce to prevent the same procedure to call mulitple
   // time, this test is invalid anymore. Just keep the test around for some time before
@@ -85,8 +86,8 @@ public class TestHBaseAdminNoCluster {
   @Ignore
   @Test
   public void testMasterMonitorCallableRetries()
-  throws MasterNotRunningException, ZooKeeperConnectionException, IOException, 
-  org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  throws MasterNotRunningException, ZooKeeperConnectionException, IOException,
+  org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     Configuration configuration = HBaseConfiguration.create();
     // Set the pause and retry count way down.
     configuration.setLong(HConstants.HBASE_CLIENT_PAUSE, 1);
@@ -101,7 +102,7 @@ public class TestHBaseAdminNoCluster {
     Mockito.when(masterAdmin.createTable((RpcController)Mockito.any(),
       (CreateTableRequest)Mockito.any())).
         thenThrow(new ServiceException("Test fail").initCause(new PleaseHoldException("test")));
-    Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
+    Mockito.when(connection.getMaster()).thenReturn(masterAdmin);
     Admin admin = new HBaseAdmin(connection);
     try {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
@@ -303,7 +304,7 @@ public class TestHBaseAdminNoCluster {
             throw new MasterNotRunningException(); // all methods will throw an exception
           }
         });
-    Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
+    Mockito.when(connection.getMaster()).thenReturn(masterAdmin);
     RpcControllerFactory rpcControllerFactory = Mockito.mock(RpcControllerFactory.class);
     Mockito.when(connection.getRpcControllerFactory()).thenReturn(rpcControllerFactory);
     Mockito.when(rpcControllerFactory.newController()).thenReturn(

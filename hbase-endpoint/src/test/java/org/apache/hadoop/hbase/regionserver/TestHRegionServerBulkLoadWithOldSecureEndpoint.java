@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,11 +21,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.TableName;
@@ -36,20 +35,24 @@ import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 
 /**
  * Tests bulk loading of HFiles with old secure Endpoint client for backward compatibility. Will be
@@ -59,12 +62,16 @@ import com.google.common.collect.Lists;
 @Category({RegionServerTests.class, LargeTests.class})
 @Ignore // BROKEN. FIX OR REMOVE.
 public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionServerBulkLoad {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
+
   public TestHRegionServerBulkLoadWithOldSecureEndpoint(int duration) {
     super(duration);
   }
 
-  private static final Log LOG =
-      LogFactory.getLog(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws IOException {
@@ -78,8 +85,8 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
     final AtomicLong numCompactions = new AtomicLong();
     private TableName tableName;
 
-    public AtomicHFileLoader(TableName tableName, TestContext ctx,
-        byte targetFamilies[][]) throws IOException {
+    public AtomicHFileLoader(TableName tableName, TestContext ctx, byte[][] targetFamilies)
+            throws IOException {
       super(ctx);
       this.tableName = tableName;
     }
@@ -106,19 +113,19 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       final String bulkToken = new SecureBulkLoadEndpointClient(table).prepareBulkLoad(tableName);
       RpcControllerFactory rpcControllerFactory = new RpcControllerFactory(UTIL.getConfiguration());
       ClientServiceCallable<Void> callable =
-          new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
-              rpcControllerFactory.newController()) {
-            @Override
-            protected Void rpcCall() throws Exception {
-              LOG.debug("Going to connect to server " + getLocation() + " for row " +
-                  Bytes.toStringBinary(getRow()));
-              try (Table table = conn.getTable(getTableName())) {
-                boolean loaded = new SecureBulkLoadEndpointClient(table).bulkLoadHFiles(famPaths,
-                    null, bulkToken, getLocation().getRegionInfo().getStartKey());
-              }
-              return null;
+        new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
+            rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            LOG.debug("Going to connect to server " + getLocation() + " for row " +
+                Bytes.toStringBinary(getRow()));
+            try (Table table = conn.getTable(getTableName())) {
+              boolean loaded = new SecureBulkLoadEndpointClient(table).bulkLoadHFiles(famPaths,
+                  null, bulkToken, getLocation().getRegionInfo().getStartKey());
             }
-          };
+            return null;
+          }
+        };
       RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(conf);
       RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
       caller.callWithRetries(callable, Integer.MAX_VALUE);
@@ -127,7 +134,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       if (numBulkLoads.get() % 5 == 0) {
         // 5 * 50 = 250 open file handles!
         callable = new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
-            rpcControllerFactory.newController()) {
+            rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
           @Override
           protected Void rpcCall() throws Exception {
             LOG.debug("compacting " + getLocation() + " for row "
@@ -148,7 +155,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
   }
 
   void runAtomicBulkloadTest(TableName tableName, int millisToRun, int numScanners)
-      throws Exception {
+          throws Exception {
     setupTable(tableName, 10);
 
     TestContext ctx = new TestContext(UTIL.getConfiguration());

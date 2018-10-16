@@ -19,52 +19,56 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
 public class RestoreSnapshotProcedure
     extends AbstractStateMachineTableProcedure<RestoreSnapshotState> {
-  private static final Log LOG = LogFactory.getLog(RestoreSnapshotProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestoreSnapshotProcedure.class);
 
-  private HTableDescriptor modifiedHTableDescriptor;
-  private List<HRegionInfo> regionsToRestore = null;
-  private List<HRegionInfo> regionsToRemove = null;
-  private List<HRegionInfo> regionsToAdd = null;
+  private TableDescriptor modifiedTableDescriptor;
+  private List<RegionInfo> regionsToRestore = null;
+  private List<RegionInfo> regionsToRemove = null;
+  private List<RegionInfo> regionsToAdd = null;
   private Map<String, Pair<String, String>> parentsToChildrenPairMap = new HashMap<>();
 
   private SnapshotDescription snapshot;
@@ -82,24 +86,27 @@ public class RestoreSnapshotProcedure
   }
 
   public RestoreSnapshotProcedure(final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor, final SnapshotDescription snapshot) {
-    this(env, hTableDescriptor, snapshot, false);
+      final TableDescriptor tableDescriptor, final SnapshotDescription snapshot)
+  throws HBaseIOException {
+    this(env, tableDescriptor, snapshot, false);
   }
   /**
    * Constructor
    * @param env MasterProcedureEnv
-   * @param hTableDescriptor the table to operate on
+   * @param tableDescriptor the table to operate on
    * @param snapshot snapshot to restore from
    * @throws IOException
    */
   public RestoreSnapshotProcedure(
       final MasterProcedureEnv env,
-      final HTableDescriptor hTableDescriptor,
+      final TableDescriptor tableDescriptor,
       final SnapshotDescription snapshot,
-      final boolean restoreAcl) {
+      final boolean restoreAcl)
+  throws HBaseIOException {
     super(env);
     // This is the new schema we are going to write out as this modification.
-    this.modifiedHTableDescriptor = hTableDescriptor;
+    this.modifiedTableDescriptor = tableDescriptor;
+    preflightChecks(env, null/*Table can be online when restore is called?*/);
     // Snapshot information
     this.snapshot = snapshot;
     this.restoreAcl = restoreAcl;
@@ -204,7 +211,7 @@ public class RestoreSnapshotProcedure
 
   @Override
   public TableName getTableName() {
-    return modifiedHTableDescriptor.getTableName();
+    return modifiedTableDescriptor.getTableName();
   }
 
   @Override
@@ -229,28 +236,29 @@ public class RestoreSnapshotProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.RestoreSnapshotStateData.Builder restoreSnapshotMsg =
       MasterProcedureProtos.RestoreSnapshotStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setSnapshot(this.snapshot)
-        .setModifiedTableSchema(ProtobufUtil.convertToTableSchema(modifiedHTableDescriptor));
+        .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor));
 
     if (regionsToRestore != null) {
-      for (HRegionInfo hri: regionsToRestore) {
-        restoreSnapshotMsg.addRegionInfoForRestore(HRegionInfo.convert(hri));
+      for (RegionInfo hri: regionsToRestore) {
+        restoreSnapshotMsg.addRegionInfoForRestore(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (regionsToRemove != null) {
-      for (HRegionInfo hri: regionsToRemove) {
-        restoreSnapshotMsg.addRegionInfoForRemove(HRegionInfo.convert(hri));
+      for (RegionInfo hri: regionsToRemove) {
+        restoreSnapshotMsg.addRegionInfoForRemove(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (regionsToAdd != null) {
-      for (HRegionInfo hri: regionsToAdd) {
-        restoreSnapshotMsg.addRegionInfoForAdd(HRegionInfo.convert(hri));
+      for (RegionInfo hri: regionsToAdd) {
+        restoreSnapshotMsg.addRegionInfoForAdd(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (!parentsToChildrenPairMap.isEmpty()) {
@@ -267,26 +275,27 @@ public class RestoreSnapshotProcedure
         restoreSnapshotMsg.addParentToChildRegionsPairList (parentToChildrenPair);
       }
     }
-    restoreSnapshotMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(restoreSnapshotMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.RestoreSnapshotStateData restoreSnapshotMsg =
-      MasterProcedureProtos.RestoreSnapshotStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.RestoreSnapshotStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(restoreSnapshotMsg.getUserInfo()));
     snapshot = restoreSnapshotMsg.getSnapshot();
-    modifiedHTableDescriptor =
-      ProtobufUtil.convertToHTableDesc(restoreSnapshotMsg.getModifiedTableSchema());
+    modifiedTableDescriptor =
+      ProtobufUtil.toTableDescriptor(restoreSnapshotMsg.getModifiedTableSchema());
 
     if (restoreSnapshotMsg.getRegionInfoForRestoreCount() == 0) {
       regionsToRestore = null;
     } else {
       regionsToRestore = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForRestoreCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForRestoreList()) {
-        regionsToRestore.add(HRegionInfo.convert(hri));
+        regionsToRestore.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (restoreSnapshotMsg.getRegionInfoForRemoveCount() == 0) {
@@ -294,7 +303,7 @@ public class RestoreSnapshotProcedure
     } else {
       regionsToRemove = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForRemoveCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForRemoveList()) {
-        regionsToRemove.add(HRegionInfo.convert(hri));
+        regionsToRemove.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (restoreSnapshotMsg.getRegionInfoForAddCount() == 0) {
@@ -302,7 +311,7 @@ public class RestoreSnapshotProcedure
     } else {
       regionsToAdd = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForAddCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForAddList()) {
-        regionsToAdd.add(HRegionInfo.convert(hri));
+        regionsToAdd.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (restoreSnapshotMsg.getParentToChildRegionsPairListCount() > 0) {
@@ -333,7 +342,7 @@ public class RestoreSnapshotProcedure
     env.getMasterServices().checkTableModifiable(tableName);
 
     // Check that we have at least 1 CF
-    if (modifiedHTableDescriptor.getColumnFamilyCount() == 0) {
+    if (modifiedTableDescriptor.getColumnFamilyCount() == 0) {
       throw new DoNotRetryIOException("Table " + getTableName().toString() +
         " should have at least one column family.");
     }
@@ -363,7 +372,7 @@ public class RestoreSnapshotProcedure
    * @throws IOException
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(modifiedHTableDescriptor);
+    env.getMasterServices().getTableDescriptors().add(modifiedTableDescriptor);
   }
 
   /**
@@ -386,7 +395,7 @@ public class RestoreSnapshotProcedure
         env.getMasterServices().getConfiguration(),
         fs,
         manifest,
-        modifiedHTableDescriptor,
+        modifiedTableDescriptor,
         rootDir,
         monitorException,
         getMonitorStatus());
@@ -414,12 +423,13 @@ public class RestoreSnapshotProcedure
   private void updateMETA(final MasterProcedureEnv env) throws IOException {
     try {
       Connection conn = env.getMasterServices().getConnection();
+      int regionReplication = modifiedTableDescriptor.getRegionReplication();
 
       // 1. Prepare to restore
       getMonitorStatus().setStatus("Preparing to restore each region");
 
-      // 2. Applies changes to hbase:meta
-      // (2.1). Removes the current set of regions from META
+      // 2. Applies changes to hbase:meta and in-memory states
+      // (2.1). Removes the current set of regions from META and in-memory states
       //
       // By removing also the regions to restore (the ones present both in the snapshot
       // and in the current state) we ensure that no extra fields are present in META
@@ -428,31 +438,30 @@ public class RestoreSnapshotProcedure
       // that are not correct after the restore.
       if (regionsToRemove != null) {
         MetaTableAccessor.deleteRegions(conn, regionsToRemove);
+        deleteRegionsFromInMemoryStates(regionsToRemove, env, regionReplication);
       }
 
-      // (2.2). Add the new set of regions to META
+      // (2.2). Add the new set of regions to META and in-memory states
       //
       // At this point the old regions are no longer present in META.
       // and the set of regions present in the snapshot will be written to META.
       // All the information in hbase:meta are coming from the .regioninfo of each region present
       // in the snapshot folder.
       if (regionsToAdd != null) {
-        MetaTableAccessor.addRegionsToMeta(
-          conn,
-          regionsToAdd,
-          modifiedHTableDescriptor.getRegionReplication());
+        MetaTableAccessor.addRegionsToMeta(conn, regionsToAdd, regionReplication);
+        addRegionsToInMemoryStates(regionsToAdd, env, regionReplication);
       }
 
       if (regionsToRestore != null) {
-        MetaTableAccessor.overwriteRegions(
-          conn,
-          regionsToRestore,
-          modifiedHTableDescriptor.getRegionReplication());
+        MetaTableAccessor.overwriteRegions(conn, regionsToRestore, regionReplication);
+
+        deleteRegionsFromInMemoryStates(regionsToRestore, env, regionReplication);
+        addRegionsToInMemoryStates(regionsToRestore, env, regionReplication);
       }
 
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
         new RestoreSnapshotHelper.RestoreMetaChanges(
-          modifiedHTableDescriptor, parentsToChildrenPairMap);
+                modifiedTableDescriptor, parentsToChildrenPairMap);
       metaChanges.updateMetaParentRegions(conn, regionsToAdd);
 
       // At this point the restore is complete.
@@ -472,6 +481,63 @@ public class RestoreSnapshotProcedure
     MetricsSnapshot metricsSnapshot = new MetricsSnapshot();
     metricsSnapshot.addSnapshotRestore(
       monitorStatus.getCompletionTimestamp() - monitorStatus.getStartTime());
+  }
+
+  /**
+   * Delete regions from in-memory states
+   * @param regionInfos regions to delete
+   * @param env MasterProcedureEnv
+   * @param regionReplication the number of region replications
+   */
+  private void deleteRegionsFromInMemoryStates(List<RegionInfo> regionInfos,
+      MasterProcedureEnv env, int regionReplication) {
+    FavoredNodesManager fnm = env.getMasterServices().getFavoredNodesManager();
+
+    env.getAssignmentManager().getRegionStates().deleteRegions(regionInfos);
+    env.getMasterServices().getServerManager().removeRegions(regionInfos);
+    if (fnm != null) {
+      fnm.deleteFavoredNodesForRegions(regionInfos);
+    }
+
+    // For region replicas
+    if (regionReplication > 1) {
+      for (RegionInfo regionInfo : regionInfos) {
+        for (int i = 1; i < regionReplication; i++) {
+          RegionInfo regionInfoForReplica =
+              RegionReplicaUtil.getRegionInfoForReplica(regionInfo, i);
+          env.getAssignmentManager().getRegionStates().deleteRegion(regionInfoForReplica);
+          env.getMasterServices().getServerManager().removeRegion(regionInfoForReplica);
+          if (fnm != null) {
+            fnm.deleteFavoredNodesForRegion(regionInfoForReplica);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Add regions to in-memory states
+   * @param regionInfos regions to add
+   * @param env MasterProcedureEnv
+   * @param regionReplication the number of region replications
+   */
+  private void addRegionsToInMemoryStates(List<RegionInfo> regionInfos, MasterProcedureEnv env,
+      int regionReplication) {
+    AssignmentManager am = env.getAssignmentManager();
+    for (RegionInfo regionInfo : regionInfos) {
+      if (regionInfo.isSplit()) {
+        am.getRegionStates().updateRegionState(regionInfo, RegionState.State.SPLIT);
+      } else {
+        am.getRegionStates().updateRegionState(regionInfo, RegionState.State.CLOSED);
+
+        // For region replicas
+        for (int i = 1; i < regionReplication; i++) {
+          RegionInfo regionInfoForReplica =
+              RegionReplicaUtil.getRegionInfoForReplica(regionInfo, i);
+          am.getRegionStates().updateRegionState(regionInfoForReplica, RegionState.State.CLOSED);
+        }
+      }
+    }
   }
 
   private void restoreSnapshotAcl(final MasterProcedureEnv env) throws IOException {

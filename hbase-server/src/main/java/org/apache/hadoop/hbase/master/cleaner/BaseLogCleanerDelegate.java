@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
 
 /**
- * Base class for the log cleaning function inside the master. By default, two
- * cleaners: <code>TimeToLiveLogCleaner</code> and
+ * Base class for the log cleaning function inside the master. By default, three
+ * cleaners: <code>TimeToLiveLogCleaner</code>,
+ * <code>TimeToLiveProcedureWALCleaner</code> and
  * <code>ReplicationLogCleaner</code> are called in order. So if other effects
  * are needed, implement your own LogCleanerDelegate and add it to the
  * configuration "hbase.master.logcleaner.plugins", which is a comma-separated
@@ -40,18 +41,6 @@ public abstract class BaseLogCleanerDelegate extends BaseFileCleanerDelegate {
 
   @Override
   public boolean isFileDeletable(FileStatus fStat) {
-    return isLogDeletable(fStat);
-  }
-
-  /**
-   * Should the master delete the log or keep it?
-   * <p>
-   * Implementing classes should override {@link #isFileDeletable(FileStatus)} instead.
-   * @param fStat file status of the file
-   * @return true if the log is deletable, false (default) if not
-   */
-  @Deprecated
-  public boolean isLogDeletable(FileStatus fStat) {
     return false;
   }
 }

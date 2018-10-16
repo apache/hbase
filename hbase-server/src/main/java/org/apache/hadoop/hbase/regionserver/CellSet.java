@@ -18,7 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -29,7 +30,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link java.util.Set} of {@link Cell}s, where an add will overwrite the entry if already
@@ -40,6 +41,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class CellSet implements NavigableSet<Cell>  {
+
+  public static final int UNKNOWN_NUM_UNIQUES = -1;
   // Implemented on top of a {@link java.util.concurrent.ConcurrentSkipListMap}
   // Differ from CSLS in one respect, where CSLS does "Adds the specified element to this set if it
   // is not already present.", this implementation "Adds the specified element to this set EVEN
@@ -47,12 +50,22 @@ public class CellSet implements NavigableSet<Cell>  {
   // Otherwise, has same attributes as ConcurrentSkipListSet
   private final NavigableMap<Cell, Cell> delegatee; ///
 
+  private final int numUniqueKeys;
+
   CellSet(final CellComparator c) {
-    this.delegatee = new ConcurrentSkipListMap<>(c);
+    this.delegatee = new ConcurrentSkipListMap<>(c.getSimpleComparator());
+    this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
 
+  CellSet(final NavigableMap<Cell, Cell> m, int numUniqueKeys) {
+    this.delegatee = m;
+    this.numUniqueKeys = numUniqueKeys;
+  }
+
+  @VisibleForTesting
   CellSet(final NavigableMap<Cell, Cell> m) {
     this.delegatee = m;
+    this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
 
   @VisibleForTesting
@@ -60,133 +73,164 @@ public class CellSet implements NavigableSet<Cell>  {
     return delegatee;
   }
 
+  @Override
   public Cell ceiling(Cell e) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Iterator<Cell> descendingIterator() {
     return this.delegatee.descendingMap().values().iterator();
   }
 
+  @Override
   public NavigableSet<Cell> descendingSet() {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Cell floor(Cell e) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public SortedSet<Cell> headSet(final Cell toElement) {
     return headSet(toElement, false);
   }
 
+  @Override
   public NavigableSet<Cell> headSet(final Cell toElement,
       boolean inclusive) {
-    return new CellSet(this.delegatee.headMap(toElement, inclusive));
+    return new CellSet(this.delegatee.headMap(toElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
+  @Override
   public Cell higher(Cell e) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Iterator<Cell> iterator() {
     return this.delegatee.values().iterator();
   }
 
+  @Override
   public Cell lower(Cell e) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Cell pollFirst() {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Cell pollLast() {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public SortedSet<Cell> subSet(Cell fromElement, Cell toElement) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public NavigableSet<Cell> subSet(Cell fromElement,
       boolean fromInclusive, Cell toElement, boolean toInclusive) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public SortedSet<Cell> tailSet(Cell fromElement) {
     return tailSet(fromElement, true);
   }
 
+  @Override
   public NavigableSet<Cell> tailSet(Cell fromElement, boolean inclusive) {
-    return new CellSet(this.delegatee.tailMap(fromElement, inclusive));
+    return new CellSet(this.delegatee.tailMap(fromElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
+  @Override
   public Comparator<? super Cell> comparator() {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
-  // TODO: why do we have a double traversing through map? Recall we have Cell to Cell mapping...
-  // First for first/last key, which actually returns Cell and then get for the same Cell?
-  // TODO: Consider just return the first/lastKey(), should be twice more effective...
+  @Override
   public Cell first() {
-    return this.delegatee.get(this.delegatee.firstKey());
+    return this.delegatee.firstEntry().getValue();
   }
 
+  @Override
   public Cell last() {
-    return this.delegatee.get(this.delegatee.lastKey());
+    return this.delegatee.lastEntry().getValue();
   }
 
+  @Override
   public boolean add(Cell e) {
     return this.delegatee.put(e, e) == null;
   }
 
+  @Override
   public boolean addAll(Collection<? extends Cell> c) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public void clear() {
     this.delegatee.clear();
   }
 
+  @Override
   public boolean contains(Object o) {
     //noinspection SuspiciousMethodCalls
     return this.delegatee.containsKey(o);
   }
 
+  @Override
   public boolean containsAll(Collection<?> c) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public boolean isEmpty() {
     return this.delegatee.isEmpty();
   }
 
+  @Override
   public boolean remove(Object o) {
     return this.delegatee.remove(o) != null;
   }
 
+  @Override
   public boolean removeAll(Collection<?> c) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public boolean retainAll(Collection<?> c) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
   public Cell get(Cell kv) {
     return this.delegatee.get(kv);
   }
 
+  @Override
   public int size() {
     return this.delegatee.size();
   }
 
+  @Override
   public Object[] toArray() {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public <T> T[] toArray(T[] a) {
-    throw new UnsupportedOperationException("Not implemented");
+    throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+  }
+
+  public int getNumUniqueKeys() {
+    return numUniqueKeys;
   }
 }

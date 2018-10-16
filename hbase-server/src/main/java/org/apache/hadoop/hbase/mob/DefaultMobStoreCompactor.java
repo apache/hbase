@@ -23,35 +23,35 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Compact passed set of files in the mob-enabled column family.
@@ -59,25 +59,23 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 public class DefaultMobStoreCompactor extends DefaultCompactor {
 
-  private static final Log LOG = LogFactory.getLog(DefaultMobStoreCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultMobStoreCompactor.class);
   private long mobSizeThreshold;
   private HMobStore mobStore;
 
   private final InternalScannerFactory scannerFactory = new InternalScannerFactory() {
 
     @Override
-    public ScanType getScanType(CompactionRequest request) {
+    public ScanType getScanType(CompactionRequestImpl request) {
       // retain the delete markers until they are expired.
       return ScanType.COMPACT_RETAIN_DELETES;
     }
 
     @Override
-    public InternalScanner createScanner(List<StoreFileScanner> scanners,
+    public InternalScanner createScanner(ScanInfo scanInfo, List<StoreFileScanner> scanners,
         ScanType scanType, FileDetails fd, long smallestReadPoint) throws IOException {
-      Scan scan = new Scan();
-      scan.setMaxVersions(store.getFamily().getMaxVersions());
-      return new StoreScanner(store, store.getScanInfo(), scan, scanners, scanType,
-          smallestReadPoint, fd.earliestPutTs);
+      return new StoreScanner(store, scanInfo, scanners, scanType, smallestReadPoint,
+          fd.earliestPutTs);
     }
   };
 
@@ -93,7 +91,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         }
       };
 
-  public DefaultMobStoreCompactor(Configuration conf, Store store) {
+  public DefaultMobStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
     // The mob cells reside in the mob-enabled column family which is held by HMobStore.
     // During the compaction, the compactor reads the cells from the mob files and
@@ -103,11 +101,11 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       throw new IllegalArgumentException("The store " + store + " is not a HMobStore");
     }
     mobStore = (HMobStore) store;
-    mobSizeThreshold = store.getFamily().getMobThreshold();
+    mobSizeThreshold = store.getColumnFamilyDescriptor().getMobThreshold();
   }
 
   @Override
-  public List<Path> compact(CompactionRequest request, ThroughputController throughputController,
+  public List<Path> compact(CompactionRequestImpl request, ThroughputController throughputController,
       User user) throws IOException {
     return compact(request, scannerFactory, writerFactory, throughputController, user);
   }
@@ -195,7 +193,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner)? (KeyValueScanner)scanner : null;
-    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getFamily().getBlocksize();
+    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
       try {
         // If the mob file writer could not be created, directly write the cell to the store file.
@@ -251,7 +249,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 Cell mobCell = mobStore.resolve(c, false);
                 if (mobCell.getValueLength() != 0) {
                   // put the mob data back to the store file
-                  CellUtil.setSequenceId(mobCell, c.getSequenceId());
+                  PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
                   writer.append(mobCell);
                   cellsCountCompactedFromMob++;
                   cellsSizeCompactedFromMob += mobCell.getValueLength();

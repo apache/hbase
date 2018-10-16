@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.conf;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This extension to ConfigurationObserver allows the configuration to propagate to the children of

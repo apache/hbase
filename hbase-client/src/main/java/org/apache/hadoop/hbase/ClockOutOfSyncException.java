@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This exception is thrown by the master when a region server clock skew is

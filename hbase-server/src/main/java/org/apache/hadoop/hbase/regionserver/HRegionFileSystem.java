@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
@@ -25,11 +23,9 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -40,13 +36,12 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,8 +49,11 @@ import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 
@@ -65,7 +63,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
  */
 @InterfaceAudience.Private
 public class HRegionFileSystem {
-  private static final Log LOG = LogFactory.getLog(HRegionFileSystem.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionFileSystem.class);
 
   /** Name of the region info file that resides just under the region directory. */
   public final static String REGION_INFO_FILE = ".regioninfo";
@@ -77,14 +75,15 @@ public class HRegionFileSystem {
   public static final String REGION_SPLITS_DIR = ".splits";
 
   /** Temporary subdirectory of the region directory used for compaction output. */
-  private static final String REGION_TEMP_DIR = ".tmp";
+  @VisibleForTesting static final String REGION_TEMP_DIR = ".tmp";
 
-  private final HRegionInfo regionInfo;
+  private final RegionInfo regionInfo;
   //regionInfo for interacting with FS (getting encodedName, etc)
-  private final HRegionInfo regionInfoForFs;
+  private final RegionInfo regionInfoForFs;
   private final Configuration conf;
   private final Path tableDir;
   private final FileSystem fs;
+  private final Path regionDir;
 
   /**
    * In order to handle NN connectivity hiccups, one need to retry non-idempotent operation at the
@@ -100,15 +99,16 @@ public class HRegionFileSystem {
    * @param conf the {@link Configuration} to use
    * @param fs {@link FileSystem} that contains the region
    * @param tableDir {@link Path} to where the table is being stored
-   * @param regionInfo {@link HRegionInfo} for region
+   * @param regionInfo {@link RegionInfo} for region
    */
   HRegionFileSystem(final Configuration conf, final FileSystem fs, final Path tableDir,
-      final HRegionInfo regionInfo) {
+      final RegionInfo regionInfo) {
     this.fs = fs;
     this.conf = conf;
-    this.tableDir = tableDir;
-    this.regionInfo = regionInfo;
+    this.tableDir = Objects.requireNonNull(tableDir, "tableDir is null");
+    this.regionInfo = Objects.requireNonNull(regionInfo, "regionInfo is null");
     this.regionInfoForFs = ServerRegionReplicaUtil.getRegionInfoForFs(regionInfo);
+    this.regionDir = FSUtils.getRegionDir(tableDir, regionInfo);
     this.hdfsClientRetriesNumber = conf.getInt("hdfs.client.retries.number",
       DEFAULT_HDFS_CLIENT_RETRIES_NUMBER);
     this.baseSleepBeforeRetries = conf.getInt("hdfs.client.sleep.before.retries",
@@ -120,12 +120,12 @@ public class HRegionFileSystem {
     return this.fs;
   }
 
-  /** @return the {@link HRegionInfo} that describe this on-disk region view */
-  public HRegionInfo getRegionInfo() {
+  /** @return the {@link RegionInfo} that describe this on-disk region view */
+  public RegionInfo getRegionInfo() {
     return this.regionInfo;
   }
 
-  public HRegionInfo getRegionInfoForFS() {
+  public RegionInfo getRegionInfoForFS() {
     return this.regionInfoForFs;
   }
 
@@ -136,7 +136,7 @@ public class HRegionFileSystem {
 
   /** @return {@link Path} to the region directory. */
   public Path getRegionDir() {
-    return new Path(this.tableDir, this.regionInfoForFs.getEncodedName());
+    return regionDir;
   }
 
   // ===========================================================================
@@ -340,8 +340,8 @@ public class HRegionFileSystem {
    * @return true if region has reference file
    * @throws IOException
    */
-  public boolean hasReferences(final HTableDescriptor htd) throws IOException {
-    for (HColumnDescriptor family : htd.getFamilies()) {
+  public boolean hasReferences(final TableDescriptor htd) throws IOException {
+    for (ColumnFamilyDescriptor family : htd.getColumnFamilies()) {
       if (hasReferences(family.getNameAsString())) {
         return true;
       }
@@ -461,7 +461,7 @@ public class HRegionFileSystem {
       throw new FileNotFoundException(buildPath.toString());
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Committing store file " + buildPath + " as " + dstPath);
+      LOG.debug("Committing " + buildPath + " as " + dstPath);
     }
     return dstPath;
   }
@@ -482,20 +482,6 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Moves multiple store files to the relative region's family store directory.
-   * @param storeFiles list of store files divided by family
-   * @throws IOException
-   */
-  void commitStoreFiles(final Map<byte[], List<StoreFile>> storeFiles) throws IOException {
-    for (Map.Entry<byte[], List<StoreFile>> es: storeFiles.entrySet()) {
-      String familyName = Bytes.toString(es.getKey());
-      for (StoreFile sf: es.getValue()) {
-        commitStoreFile(familyName, sf.getPath());
-      }
-    }
-  }
-
-  /**
    * Archives the specified store file from the specified family.
    * @param familyName Family that contains the store files
    * @param filePath {@link Path} to the store file to remove
@@ -513,7 +499,7 @@ public class HRegionFileSystem {
    * @param storeFiles set of store files to remove
    * @throws IOException if the archiving fails
    */
-  public void removeStoreFiles(final String familyName, final Collection<StoreFile> storeFiles)
+  public void removeStoreFiles(String familyName, Collection<HStoreFile> storeFiles)
       throws IOException {
     HFileArchiver.archiveStoreFiles(this.conf, this.fs, this.regionInfoForFs,
         this.tableDir, Bytes.toBytes(familyName), storeFiles);
@@ -561,7 +547,7 @@ public class HRegionFileSystem {
     return new Path(getRegionDir(), REGION_SPLITS_DIR);
   }
 
-  public Path getSplitsDir(final HRegionInfo hri) {
+  public Path getSplitsDir(final RegionInfo hri) {
     return new Path(getSplitsDir(), hri.getEncodedName());
   }
 
@@ -603,10 +589,10 @@ public class HRegionFileSystem {
 
   /**
    * Remove daughter region
-   * @param regionInfo daughter {@link HRegionInfo}
+   * @param regionInfo daughter {@link RegionInfo}
    * @throws IOException
    */
-  void cleanupDaughterRegion(final HRegionInfo regionInfo) throws IOException {
+  void cleanupDaughterRegion(final RegionInfo regionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
     if (this.fs.exists(regionDir) && !deleteDir(regionDir)) {
       throw new IOException("Failed delete of " + regionDir);
@@ -617,10 +603,10 @@ public class HRegionFileSystem {
    * Commit a daughter region, moving it from the split temporary directory
    * to the proper location in the filesystem.
    *
-   * @param regionInfo                 daughter {@link org.apache.hadoop.hbase.HRegionInfo}
+   * @param regionInfo daughter {@link org.apache.hadoop.hbase.client.RegionInfo}
    * @throws IOException
    */
-  public Path commitDaughterRegion(final HRegionInfo regionInfo)
+  public Path commitDaughterRegion(final RegionInfo regionInfo)
       throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
     Path daughterTmpDir = this.getSplitsDir(regionInfo);
@@ -662,18 +648,19 @@ public class HRegionFileSystem {
   /**
    * Write out a split reference. Package local so it doesnt leak out of
    * regionserver.
-   * @param hri {@link HRegionInfo} of the destination
+   * @param hri {@link RegionInfo} of the destination
    * @param familyName Column Family Name
    * @param f File to split.
    * @param splitRow Split Row
    * @param top True if we are referring to the top half of the hfile.
-   * @param splitPolicy
+   * @param splitPolicy A split policy instance; be careful! May not be full populated; e.g. if
+   *                    this method is invoked on the Master side, then the RegionSplitPolicy will
+   *                    NOT have a reference to a Region.
    * @return Path to created reference.
    * @throws IOException
    */
-  public Path splitStoreFile(final HRegionInfo hri, final String familyName, final StoreFile f,
-      final byte[] splitRow, final boolean top, RegionSplitPolicy splitPolicy)
-          throws IOException {
+  public Path splitStoreFile(RegionInfo hri, String familyName, HStoreFile f, byte[] splitRow,
+      boolean top, RegionSplitPolicy splitPolicy) throws IOException {
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
@@ -681,29 +668,29 @@ public class HRegionFileSystem {
       try {
         if (top) {
           //check if larger than last key.
-          Cell splitKey = CellUtil.createFirstOnRow(splitRow);
-          Cell lastKey = f.getLastKey();
+          Cell splitKey = PrivateCellUtil.createFirstOnRow(splitRow);
+          Optional<Cell> lastKey = f.getLastKey();
           // If lastKey is null means storefile is empty.
-          if (lastKey == null) {
+          if (!lastKey.isPresent()) {
             return null;
           }
-          if (f.getComparator().compare(splitKey, lastKey) > 0) {
+          if (f.getComparator().compare(splitKey, lastKey.get()) > 0) {
             return null;
           }
         } else {
           //check if smaller than first key
-          Cell splitKey = CellUtil.createLastOnRow(splitRow);
-          Cell firstKey = f.getFirstKey();
+          Cell splitKey = PrivateCellUtil.createLastOnRow(splitRow);
+          Optional<Cell> firstKey = f.getFirstKey();
           // If firstKey is null means storefile is empty.
-          if (firstKey == null) {
+          if (!firstKey.isPresent()) {
             return null;
           }
-          if (f.getComparator().compare(splitKey, firstKey) < 0) {
+          if (f.getComparator().compare(splitKey, firstKey.get()) < 0) {
             return null;
           }
         }
       } finally {
-        f.closeReader(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
+        f.closeStoreFile(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
       }
     }
 
@@ -730,7 +717,7 @@ public class HRegionFileSystem {
     return new Path(getRegionDir(), REGION_MERGES_DIR);
   }
 
-  Path getMergesDir(final HRegionInfo hri) {
+  Path getMergesDir(final RegionInfo hri) {
     return new Path(getMergesDir(), hri.getEncodedName());
   }
 
@@ -743,10 +730,10 @@ public class HRegionFileSystem {
 
   /**
    * Remove merged region
-   * @param mergedRegion {@link HRegionInfo}
+   * @param mergedRegion {@link RegionInfo}
    * @throws IOException
    */
-  public void cleanupMergedRegion(final HRegionInfo mergedRegion) throws IOException {
+  public void cleanupMergedRegion(final RegionInfo mergedRegion) throws IOException {
     Path regionDir = new Path(this.tableDir, mergedRegion.getEncodedName());
     if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
       throw new IOException("Failed delete of " + regionDir);
@@ -784,16 +771,15 @@ public class HRegionFileSystem {
   /**
    * Write out a merge reference under the given merges directory. Package local
    * so it doesnt leak out of regionserver.
-   * @param mergedRegion {@link HRegionInfo} of the merged region
+   * @param mergedRegion {@link RegionInfo} of the merged region
    * @param familyName Column Family Name
    * @param f File to create reference.
    * @param mergedDir
    * @return Path to created reference.
    * @throws IOException
    */
-  public Path mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
-      final StoreFile f, final Path mergedDir)
-      throws IOException {
+  public Path mergeStoreFile(RegionInfo mergedRegion, String familyName, HStoreFile f,
+      Path mergedDir) throws IOException {
     Path referenceDir = new Path(new Path(mergedDir,
         mergedRegion.getEncodedName()), familyName);
     // A whole reference to the store file.
@@ -813,10 +799,10 @@ public class HRegionFileSystem {
   /**
    * Commit a merged region, moving it from the merges temporary directory to
    * the proper location in the filesystem.
-   * @param mergedRegionInfo merged region {@link HRegionInfo}
+   * @param mergedRegionInfo merged region {@link RegionInfo}
    * @throws IOException
    */
-  public void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException {
+  public void commitMergedRegion(final RegionInfo mergedRegionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, mergedRegionInfo.getEncodedName());
     Path mergedRegionTmpDir = this.getMergesDir(mergedRegionInfo);
     // Move the tmp dir in the expected location
@@ -836,7 +822,7 @@ public class HRegionFileSystem {
    * @param LOG log to output information
    * @throws IOException if an unexpected exception occurs
    */
-  void logFileSystemState(final Log LOG) throws IOException {
+  void logFileSystemState(final Logger LOG) throws IOException {
     FSUtils.logFileSystemState(fs, this.getRegionDir(), LOG);
   }
 
@@ -845,22 +831,22 @@ public class HRegionFileSystem {
    * @return Content of the file we write out to the filesystem under a region
    * @throws IOException
    */
-  private static byte[] getRegionInfoFileContent(final HRegionInfo hri) throws IOException {
-    return hri.toDelimitedByteArray();
+  private static byte[] getRegionInfoFileContent(final RegionInfo hri) throws IOException {
+    return RegionInfo.toDelimitedByteArray(hri);
   }
 
   /**
-   * Create a {@link HRegionInfo} from the serialized version on-disk.
+   * Create a {@link RegionInfo} from the serialized version on-disk.
    * @param fs {@link FileSystem} that contains the Region Info file
    * @param regionDir {@link Path} to the Region Directory that contains the Info file
-   * @return An {@link HRegionInfo} instance gotten from the Region Info file.
+   * @return An {@link RegionInfo} instance gotten from the Region Info file.
    * @throws IOException if an error occurred during file open/read operation.
    */
-  public static HRegionInfo loadRegionInfoFileContent(final FileSystem fs, final Path regionDir)
+  public static RegionInfo loadRegionInfoFileContent(final FileSystem fs, final Path regionDir)
       throws IOException {
     FSDataInputStream in = fs.open(new Path(regionDir, REGION_INFO_FILE));
     try {
-      return HRegionInfo.parseFrom(in);
+      return RegionInfo.parseFrom(in);
     } finally {
       in.close();
     }
@@ -893,9 +879,19 @@ public class HRegionFileSystem {
     // only should be sufficient. I don't want to read the file every time to check if it pb
     // serialized.
     byte[] content = getRegionInfoFileContent(regionInfoForFs);
+
+    // Verify if the region directory exists before opening a region. We need to do this since if
+    // the region directory doesn't exist we will re-create the region directory and a new HRI
+    // when HRegion.openHRegion() is called.
+    try {
+      FileStatus status = fs.getFileStatus(getRegionDir());
+    } catch (FileNotFoundException e) {
+      LOG.warn(getRegionDir() + " doesn't exist for region: " + regionInfoForFs.getEncodedName() +
+          " on table " + regionInfo.getTable());
+    }
+
     try {
       Path regionInfoFile = new Path(getRegionDir(), REGION_INFO_FILE);
-
       FileStatus status = fs.getFileStatus(regionInfoFile);
       if (status != null && status.getLen() == content.length) {
         // Then assume the content good and move on.
@@ -927,7 +923,7 @@ public class HRegionFileSystem {
 
   /**
    * Write out an info file under the region directory. Useful recovering mangled regions.
-   * @param regionInfoContent serialized version of the {@link HRegionInfo}
+   * @param regionInfoContent serialized version of the {@link RegionInfo}
    * @param useTempDir indicate whether or not using the region .tmp dir for a safer file creation.
    */
   private void writeRegionInfoOnFilesystem(final byte[] regionInfoContent,
@@ -968,27 +964,33 @@ public class HRegionFileSystem {
    * @param conf the {@link Configuration} to use
    * @param fs {@link FileSystem} from which to add the region
    * @param tableDir {@link Path} to where the table is being stored
-   * @param regionInfo {@link HRegionInfo} for region to be added
+   * @param regionInfo {@link RegionInfo} for region to be added
    * @throws IOException if the region creation fails due to a FileSystem exception.
    */
   public static HRegionFileSystem createRegionOnFileSystem(final Configuration conf,
-      final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
+      final FileSystem fs, final Path tableDir, final RegionInfo regionInfo) throws IOException {
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, regionInfo);
-    Path regionDir = regionFs.getRegionDir();
 
-    if (fs.exists(regionDir)) {
-      LOG.warn("Trying to create a region that already exists on disk: " + regionDir);
-      throw new IOException("The specified region already exists on disk: " + regionDir);
+    // We only create a .regioninfo and the region directory if this is the default region replica
+    if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
+      Path regionDir = regionFs.getRegionDir();
+      if (fs.exists(regionDir)) {
+        LOG.warn("Trying to create a region that already exists on disk: " + regionDir);
+        throw new IOException("The specified region already exists on disk: " + regionDir);
+      }
+
+      // Create the region directory
+      if (!createDirOnFileSystem(fs, conf, regionDir)) {
+        LOG.warn("Unable to create the region directory: " + regionDir);
+        throw new IOException("Unable to create region directory: " + regionDir);
+      }
+
+      // Write HRI to a file in case we need to recover hbase:meta
+      regionFs.writeRegionInfoOnFilesystem(false);
+    } else {
+      if (LOG.isDebugEnabled())
+        LOG.debug("Skipping creation of .regioninfo file for " + regionInfo);
     }
-
-    // Create the region directory
-    if (!createDirOnFileSystem(fs, conf, regionDir)) {
-      LOG.warn("Unable to create the region directory: " + regionDir);
-      throw new IOException("Unable to create region directory: " + regionDir);
-    }
-
-    // Write HRI to a file in case we need to recover hbase:meta
-    regionFs.writeRegionInfoOnFilesystem(false);
     return regionFs;
   }
 
@@ -997,12 +999,12 @@ public class HRegionFileSystem {
    * @param conf the {@link Configuration} to use
    * @param fs {@link FileSystem} from which to add the region
    * @param tableDir {@link Path} to where the table is being stored
-   * @param regionInfo {@link HRegionInfo} for region to be added
+   * @param regionInfo {@link RegionInfo} for region to be added
    * @param readOnly True if you don't want to edit the region data
    * @throws IOException if the region creation fails due to a FileSystem exception.
    */
   public static HRegionFileSystem openRegionFromFileSystem(final Configuration conf,
-      final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo, boolean readOnly)
+      final FileSystem fs, final Path tableDir, final RegionInfo regionInfo, boolean readOnly)
       throws IOException {
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, regionInfo);
     Path regionDir = regionFs.getRegionDir();
@@ -1018,8 +1020,15 @@ public class HRegionFileSystem {
       regionFs.cleanupSplitsDir();
       regionFs.cleanupMergesDir();
 
-      // if it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
-      regionFs.checkRegionInfoOnFilesystem();
+      // If it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
+      // Only create HRI if we are the default replica
+      if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
+        regionFs.checkRegionInfoOnFilesystem();
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping creation of .regioninfo file for " + regionInfo);
+        }
+      }
     }
 
     return regionFs;
@@ -1030,11 +1039,11 @@ public class HRegionFileSystem {
    * @param conf the {@link Configuration} to use
    * @param fs {@link FileSystem} from which to remove the region
    * @param tableDir {@link Path} to where the table is being stored
-   * @param regionInfo {@link HRegionInfo} for region to be deleted
+   * @param regionInfo {@link RegionInfo} for region to be deleted
    * @throws IOException if the request cannot be completed
    */
   public static void deleteRegionFromFileSystem(final Configuration conf,
-      final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
+      final FileSystem fs, final Path tableDir, final RegionInfo regionInfo) throws IOException {
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, regionInfo);
     Path regionDir = regionFs.getRegionDir();
 

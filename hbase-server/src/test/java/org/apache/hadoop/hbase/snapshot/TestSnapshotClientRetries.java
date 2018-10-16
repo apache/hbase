@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,30 +20,38 @@ package org.apache.hadoop.hbase.snapshot;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.MasterObserver;
+import org.apache.hadoop.hbase.TestTableName;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.TestTableName;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MediumTests.class })
 public class TestSnapshotClientRetries {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotClientRetries.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestSnapshotClientRetries.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotClientRetries.class);
 
   @Rule public TestTableName TEST_TABLE = new TestTableName();
 
@@ -60,7 +67,7 @@ public class TestSnapshotClientRetries {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000, expected=SnapshotExistsException.class)
+  @Test(expected=SnapshotExistsException.class)
   public void testSnapshotAlreadyExist() throws Exception {
     final String snapshotName = "testSnapshotAlreadyExist";
     TEST_UTIL.createTable(TEST_TABLE.getTableName(), "f");
@@ -68,19 +75,24 @@ public class TestSnapshotClientRetries {
     snapshotAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());
   }
 
-  @Test(timeout = 60000, expected=SnapshotDoesNotExistException.class)
+  @Test(expected=SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws Exception {
     final String snapshotName = "testCloneNonExistentSnapshot";
     cloneAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());
   }
 
-  public static class MasterSyncObserver implements MasterObserver {
+  public static class MasterSyncObserver implements MasterCoprocessor, MasterObserver {
     volatile AtomicInteger snapshotCount = null;
     volatile AtomicInteger cloneCount = null;
 
     @Override
+    public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
     public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       if (snapshotCount != null) {
         snapshotCount.incrementAndGet();
@@ -89,7 +101,7 @@ public class TestSnapshotClientRetries {
 
     @Override
     public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
         throws IOException {
       if (cloneCount != null) {
         cloneCount.incrementAndGet();

@@ -123,6 +123,7 @@ In case the table goes out of date, the unit tests which check for accuracy of p
 |        | getReplicationPeerConfig | superuser\|global(A)
 |        | updateReplicationPeerConfig | superuser\|global(A)
 |        | listReplicationPeers | superuser\|global(A)
+|        | getClusterStatus | any user
 | Region | openRegion | superuser\|global(A)
 |        | closeRegion | superuser\|global(A)
 |        | flush | superuser\|global(A)\|global\(C)\|TableOwner\|table(A)\|table\(C)
@@ -159,10 +160,22 @@ In case the table goes out of date, the unit tests which check for accuracy of p
 |                  | getUserPermissions(global level) | global(A)
 |                  | getUserPermissions(namespace level) | global(A)\|NS(A)
 |                  | getUserPermissions(table level) | global(A)\|NS(A)\|TableOwner\|table(A)\|CF(A)\|CQ(A)
+|                  | hasPermission(table level) | global(A)\|SelfUserCheck
 | RegionServer | stopRegionServer | superuser\|global(A)
 |              | mergeRegions | superuser\|global(A)
 |              | rollWALWriterRequest | superuser\|global(A)
 |              | replicateLogEntries | superuser\|global(W)
+|RSGroup |addRSGroup           |superuser\|global(A)
+|        |balanceRSGroup       |superuser\|global(A)
+|        |getRSGroupInfo       |superuser\|global(A)
+|        |getRSGroupInfoOfTable|superuser\|global(A)
+|        |getRSGroupOfServer   |superuser\|global(A)
+|        |listRSGroups         |superuser\|global(A)
+|        |moveServers          |superuser\|global(A)
+|        |moveServersAndTables |superuser\|global(A)
+|        |moveTables           |superuser\|global(A)
+|        |removeRSGroup        |superuser\|global(A)
+|        |removeServers        |superuser\|global(A)
 |===
 
 :numbered:

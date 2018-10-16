@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,40 +23,46 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test minor compactions
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestMinorCompaction {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMinorCompaction.class);
+
   @Rule public TestName name = new TestName();
-  private static final Log LOG = LogFactory.getLog(TestMinorCompaction.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TestMinorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
-  
-  private Region r = null;
+
+  private HRegion r = null;
   private HTableDescriptor htd = null;
   private int compactionThreshold;
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
@@ -77,7 +82,8 @@ public class TestMinorCompaction {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
-    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    thirdRowBytes[START_KEY_BYTES.length - 1] =
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
     col1 = Bytes.toBytes("column1");
     col2 = Bytes.toBytes("column2");
   }
@@ -205,7 +211,7 @@ public class TestMinorCompaction {
     assertEquals(compactionThreshold, result.size());
 
     // do a compaction
-    Store store2 = r.getStore(fam2);
+    HStore store2 = r.getStore(fam2);
     int numFiles1 = store2.getStorefiles().size();
     assertTrue("Was expecting to see 4 store files", numFiles1 > compactionThreshold); // > 3
     ((HStore)store2).compactRecentForTestingAssumingDefaultPolicy(compactionThreshold);   // = 3

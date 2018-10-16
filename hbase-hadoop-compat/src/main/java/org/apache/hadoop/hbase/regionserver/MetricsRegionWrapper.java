@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Interface of class that will wrap an HRegion and export numbers so they can be
  * used in MetricsRegionSource
  */
+@InterfaceAudience.Private
 public interface MetricsRegionWrapper {
 
   /**
@@ -57,7 +60,7 @@ public interface MetricsRegionWrapper {
   /**
    * Get the size of the memstore on this region server.
    */
-  long getMemstoreSize();
+  long getMemStoreSize();
 
   /**
    * Get the total size of the store files this region server is serving from.
@@ -68,6 +71,11 @@ public interface MetricsRegionWrapper {
    * Get the total number of read requests that have been issued against this region
    */
   long getReadRequestCount();
+
+  /**
+   * Get the total number of CoprocessorService requests that have been issued against this region
+   */
+  long getCpRequestCount();
 
   /**
    * Get the total number of filtered read requests that have been issued against this region
@@ -99,6 +107,8 @@ public interface MetricsRegionWrapper {
    */
   long getWriteRequestCount();
 
+  long getTotalRequestCount();
+
   long getNumFilesCompacted();
 
   long getNumBytesCompacted();
@@ -116,6 +126,32 @@ public interface MetricsRegionWrapper {
    * is thrown in the processing after {@code HRegion.compact()}.
    */
   long getNumCompactionsFailed();
+
+  /**
+   * @return the total number of compactions that are currently queued(or being executed) at point
+   *         in time
+   */
+  long getNumCompactionsQueued();
+
+  /**
+   * @return the total number of flushes currently queued(being executed) for this region at point
+   *         in time
+   */
+  long getNumFlushesQueued();
+
+  /**
+   * Note that this metric is updated periodically and hence might miss some data points.
+   *
+   * @return the max number of compactions queued for this region
+   */
+  long getMaxCompactionQueueSize();
+
+  /**
+   * Note that this metric is updated periodically and hence might miss some data points.
+   *
+   * @return the max number of flushes queued for this region
+   */
+  long getMaxFlushQueueSize();
 
   int getRegionHashCode();
 

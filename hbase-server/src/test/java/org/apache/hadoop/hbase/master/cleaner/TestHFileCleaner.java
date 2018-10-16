@@ -22,10 +22,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -33,26 +31,36 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestHFileCleaner {
-  private static final Log LOG = LogFactory.getLog(TestHFileCleaner.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileCleaner.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileCleaner.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -60,6 +68,7 @@ public class TestHFileCleaner {
   public static void setupCluster() throws Exception {
     // have to use a minidfs cluster because the localfs doesn't modify file times correctly
     UTIL.startMiniDFSCluster(1);
+    CleanerChore.initChorePool(UTIL.getConfiguration());
   }
 
   @AfterClass
@@ -95,7 +104,7 @@ public class TestHFileCleaner {
         + status.getAccessTime();
   }
 
-  @Test(timeout = 60 *1000)
+  @Test
   public void testHFileCleaning() throws Exception {
     final EnvironmentEdge originalEdge = EnvironmentEdgeManager.getDelegate();
     String prefix = "someHFileThatWouldBeAUUID";
@@ -198,16 +207,15 @@ public class TestHFileCleaner {
   }
 
   static class DummyServer implements Server {
-
     @Override
     public Configuration getConfiguration() {
       return UTIL.getConfiguration();
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       try {
-        return new ZooKeeperWatcher(getConfiguration(), "dummy server", this);
+        return new ZKWatcher(getConfiguration(), "dummy server", this);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -260,6 +268,21 @@ public class TestHFileCleaner {
     @Override
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
       return null;
     }
   }
@@ -318,7 +341,7 @@ public class TestHFileCleaner {
     Assert.assertEquals(SMALL_FILE_NUM, cleaner.getNumOfDeletedSmallFiles());
   }
 
-  @Test(timeout = 60 * 1000)
+  @Test
   public void testOnConfigurationChange() throws Exception {
     // constants
     final int ORIGINAL_THROTTLE_POINT = 512 * 1024;
@@ -327,6 +350,10 @@ public class TestHFileCleaner {
     final int UPDATE_QUEUE_INIT_SIZE = 1024;
     final int LARGE_FILE_NUM = 5;
     final int SMALL_FILE_NUM = 20;
+    final int LARGE_THREAD_NUM = 2;
+    final int SMALL_THREAD_NUM = 4;
+    final long THREAD_TIMEOUT_MSEC = 30 * 1000L;
+    final long THREAD_CHECK_INTERVAL_MSEC = 500L;
 
     Configuration conf = UTIL.getConfiguration();
     // no cleaner policies = delete all files
@@ -344,6 +371,10 @@ public class TestHFileCleaner {
     Assert.assertEquals(ORIGINAL_THROTTLE_POINT, cleaner.getThrottlePoint());
     Assert.assertEquals(ORIGINAL_QUEUE_INIT_SIZE, cleaner.getLargeQueueInitSize());
     Assert.assertEquals(ORIGINAL_QUEUE_INIT_SIZE, cleaner.getSmallQueueInitSize());
+    Assert.assertEquals(HFileCleaner.DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC,
+        cleaner.getCleanerThreadTimeoutMsec());
+    Assert.assertEquals(HFileCleaner.DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC,
+        cleaner.getCleanerThreadCheckIntervalMsec());
 
     // clean up archive directory and create files for testing
     fs.delete(archivedHfileDir, true);
@@ -369,6 +400,12 @@ public class TestHFileCleaner {
     newConf.setInt(HFileCleaner.HFILE_DELETE_THROTTLE_THRESHOLD, UPDATE_THROTTLE_POINT);
     newConf.setInt(HFileCleaner.LARGE_HFILE_QUEUE_INIT_SIZE, UPDATE_QUEUE_INIT_SIZE);
     newConf.setInt(HFileCleaner.SMALL_HFILE_QUEUE_INIT_SIZE, UPDATE_QUEUE_INIT_SIZE);
+    newConf.setInt(HFileCleaner.LARGE_HFILE_DELETE_THREAD_NUMBER, LARGE_THREAD_NUM);
+    newConf.setInt(HFileCleaner.SMALL_HFILE_DELETE_THREAD_NUMBER, SMALL_THREAD_NUM);
+    newConf.setLong(HFileCleaner.HFILE_DELETE_THREAD_TIMEOUT_MSEC, THREAD_TIMEOUT_MSEC);
+    newConf.setLong(HFileCleaner.HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC,
+        THREAD_CHECK_INTERVAL_MSEC);
+
     LOG.debug("File deleted from large queue: " + cleaner.getNumOfDeletedLargeFiles()
         + "; from small queue: " + cleaner.getNumOfDeletedSmallFiles());
     cleaner.onConfigurationChange(newConf);
@@ -377,7 +414,15 @@ public class TestHFileCleaner {
     Assert.assertEquals(UPDATE_THROTTLE_POINT, cleaner.getThrottlePoint());
     Assert.assertEquals(UPDATE_QUEUE_INIT_SIZE, cleaner.getLargeQueueInitSize());
     Assert.assertEquals(UPDATE_QUEUE_INIT_SIZE, cleaner.getSmallQueueInitSize());
-    Assert.assertEquals(2, cleaner.getCleanerThreads().size());
+    Assert.assertEquals(LARGE_THREAD_NUM + SMALL_THREAD_NUM, cleaner.getCleanerThreads().size());
+    Assert.assertEquals(THREAD_TIMEOUT_MSEC, cleaner.getCleanerThreadTimeoutMsec());
+    Assert.assertEquals(THREAD_CHECK_INTERVAL_MSEC, cleaner.getCleanerThreadCheckIntervalMsec());
+
+    // make sure no cost when onConfigurationChange called with no change
+    List<Thread> oldThreads = cleaner.getCleanerThreads();
+    cleaner.onConfigurationChange(newConf);
+    List<Thread> newThreads = cleaner.getCleanerThreads();
+    Assert.assertArrayEquals(oldThreads.toArray(), newThreads.toArray());
 
     // wait until clean done and check
     t.join();

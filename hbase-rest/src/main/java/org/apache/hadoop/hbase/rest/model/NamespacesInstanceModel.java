@@ -31,7 +31,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf
@@ -129,11 +129,11 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
     sb.append(namespaceName);
     sb.append("\'");
     if(properties != null){
-      for(String key: properties.keySet()){
+      for (Map.Entry<String, String> entry : properties.entrySet()) {
         sb.append(", ");
-        sb.append(key);
+        sb.append(entry.getKey());
         sb.append(" => '");
-        sb.append(properties.get(key));
+        sb.append(entry.getValue());
         sb.append("\'");
       }
     }
@@ -145,10 +145,11 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
   public byte[] createProtobufOutput() {
     NamespaceProperties.Builder builder = NamespaceProperties.newBuilder();
     if(properties != null){
-      for(String key: properties.keySet()){
+      for (Map.Entry<String, String> entry : properties.entrySet()) {
+        String key = entry.getKey();
         NamespaceProperties.Property.Builder property = NamespaceProperties.Property.newBuilder();
         property.setKey(key);
-        property.setValue(properties.get(key));
+        property.setValue(entry.getValue());
         builder.addProps(property);
       }
     }

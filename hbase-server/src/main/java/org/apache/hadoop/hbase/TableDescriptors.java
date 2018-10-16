@@ -20,7 +20,8 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 
 /**
  * Get, remove and modify table descriptors.
@@ -33,7 +34,7 @@ public interface TableDescriptors {
    * @return TableDescriptor for tablename
    * @throws IOException
    */
-  HTableDescriptor get(final TableName tableName)
+  TableDescriptor get(final TableName tableName)
       throws IOException;
 
   /**
@@ -41,16 +42,7 @@ public interface TableDescriptors {
    * @return Map of all descriptors.
    * @throws IOException
    */
-  Map<String, HTableDescriptor> getByNamespace(String name)
-  throws IOException;
-
-  /**
-   * Get Map of all HTableDescriptors. Populates the descriptor cache as a
-   * side effect.
-   * @return Map of all descriptors.
-   * @throws IOException
-   */
-  Map<String, HTableDescriptor> getAll()
+  Map<String, TableDescriptor> getByNamespace(String name)
   throws IOException;
 
   /**
@@ -59,15 +51,15 @@ public interface TableDescriptors {
    * @return Map of all descriptors.
    * @throws IOException
    */
-  Map<String, HTableDescriptor> getAllDescriptors()
-      throws IOException;
+  Map<String, TableDescriptor> getAll()
+  throws IOException;
 
   /**
    * Add or update descriptor
    * @param htd Descriptor to set into TableDescriptors
    * @throws IOException
    */
-  void add(final HTableDescriptor htd)
+  void add(final TableDescriptor htd)
   throws IOException;
 
   /**
@@ -75,7 +67,7 @@ public interface TableDescriptors {
    * @return Instance of table descriptor or null if none found.
    * @throws IOException
    */
-  HTableDescriptor remove(final TableName tablename)
+  TableDescriptor remove(final TableName tablename)
   throws IOException;
 
   /**

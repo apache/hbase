@@ -17,25 +17,28 @@
 # limitations under the License.
 #
 
+require 'json'
+
 module Shell
   module Commands
     class ListProcedures < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all procedures in hbase. For example:
 
   hbase> list_procedures
 EOF
       end
 
-      def command()
-        formatter.header([ "Id", "Name", "State", "Submitted_Time", "Last_Update" ])
+      def command
+        formatter.header(%w[Id Name State Submitted_Time Last_Update Parameters])
 
-        list = admin.list_procedures()
+        list = JSON.parse(admin.list_procedures)
         list.each do |proc|
-          submitted_time = Time.at(proc.getSubmittedTime / 1000).to_s
-          last_update = Time.at(proc.getLastUpdate / 1000).to_s
-          formatter.row([ proc.getProcId, proc.getProcName, proc.getProcState, submitted_time, last_update ])
+          submitted_time = Time.at(Integer(proc['submittedTime']) / 1000).to_s
+          last_update = Time.at(Integer(proc['lastUpdate']) / 1000).to_s
+          formatter.row([proc['procId'], proc['className'], proc['state'],
+                         submitted_time, last_update, proc['stateMessage']])
         end
 
         formatter.footer(list.size)

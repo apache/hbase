@@ -29,9 +29,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang.math.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -49,12 +47,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /** Creates multiple threads that write key/values into the */
 public class MultiThreadedUpdater extends MultiThreadedWriterBase {
-  private static final Log LOG = LogFactory.getLog(MultiThreadedUpdater.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedUpdater.class);
 
   protected Set<HBaseUpdaterThread> updaters = new HashSet<>();
 
@@ -139,7 +138,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         StringBuilder buf = new StringBuilder();
         byte[][] columnFamilies = dataGenerator.getColumnFamilies();
         while ((rowKeyBase = getNextKeyToUpdate()) < endKey) {
-          if (RandomUtils.nextInt(100) < updatePercent) {
+          if (RandomUtils.nextInt(0, 100) < updatePercent) {
             byte[] rowKey = dataGenerator.getDeterministicUniqueKey(rowKeyBase);
             Increment inc = new Increment(rowKey);
             Append app = new Append(rowKey);
@@ -151,7 +150,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
               buf.setLength(0); // Clear the buffer
               buf.append("#").append(Bytes.toString(INCREMENT));
               buf.append(":").append(MutationType.INCREMENT.getNumber());
-              app.add(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
+              app.addColumn(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
               ++columnCount;
               if (!isBatchUpdate) {
                 mutate(table, inc, rowKeyBase);
@@ -167,7 +166,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                 get = dataGenerator.beforeGet(rowKeyBase, get);
               } catch (Exception e) {
                 // Ideally wont happen
-                LOG.warn("Failed to modify the get from the load generator  = [" + get.getRow()
+                LOG.warn("Failed to modify the get from the load generator  = [" + Bytes.toString(get.getRow())
                     + "], column family = [" + Bytes.toString(cf) + "]", e);
               }
               Result result = getRow(get, rowKeyBase, cf);
@@ -189,7 +188,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                     continue;
                   }
                   MutationType mt = MutationType
-                      .valueOf(RandomUtils.nextInt(MutationType.values().length));
+                      .valueOf(RandomUtils.nextInt(0, MutationType.values().length));
                   long columnHash = Arrays.hashCode(column);
                   long hashCode = cfHash + columnHash;
                   byte[] hashCodeBytes = Bytes.toBytes(hashCode);
@@ -220,9 +219,9 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                     break;
                   default:
                     buf.append(MutationType.APPEND.getNumber());
-                    app.add(cf, column, hashCodeBytes);
+                    app.addColumn(cf, column, hashCodeBytes);
                   }
-                  app.add(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
+                  app.addColumn(cf, MUTATE_INFO, Bytes.toBytes(buf.toString()));
                   if (!isBatchUpdate) {
                     mutate(table, app, rowKeyBase);
                     numCols.addAndGet(1);
@@ -234,7 +233,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
             if (isBatchUpdate) {
               if (verbose) {
                 LOG.debug("Preparing increment and append for key = ["
-                  + rowKey + "], " + columnCount + " columns");
+                  + Bytes.toString(rowKey) + "], " + columnCount + " columns");
               }
               mutate(table, inc, rowKeyBase);
               mutate(table, app, rowKeyBase);
@@ -267,7 +266,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         result = table.get(get);
       } catch (IOException ie) {
         LOG.warn(
-            "Failed to get the row for key = [" + get.getRow() + "], column family = ["
+            "Failed to get the row for key = [" + Bytes.toString(get.getRow()) + "], column family = ["
                 + Bytes.toString(cf) + "]", ie);
       }
       return result;
@@ -287,9 +286,9 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         } else if (m instanceof Append) {
           table.append((Append)m);
         } else if (m instanceof Put) {
-          table.checkAndPut(row, cf, q, v, (Put)m);
+          table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenPut((Put)m);
         } else if (m instanceof Delete) {
-          table.checkAndDelete(row, cf, q, v, (Delete)m);
+          table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete)m);
         } else {
           throw new IllegalArgumentException(
             "unsupported mutation " + m.getClass().getSimpleName());
@@ -340,9 +339,9 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       } else if (m instanceof Append) {
         table.append((Append)m);
       } else if (m instanceof Put) {
-        table.checkAndPut(row, cf, q, v, (Put)m);
+        table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenPut((Put)m);
       } else if (m instanceof Delete) {
-        table.checkAndDelete(row, cf, q, v, (Delete)m);
+        table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete)m);
       } else {
         throw new IllegalArgumentException(
           "unsupported mutation " + m.getClass().getSimpleName());

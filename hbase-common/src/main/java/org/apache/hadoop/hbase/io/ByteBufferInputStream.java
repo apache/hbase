@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.io;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Not thread safe!

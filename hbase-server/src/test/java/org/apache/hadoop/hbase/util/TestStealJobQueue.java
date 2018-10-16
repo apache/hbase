@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,31 +17,36 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.StealJobQueue;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.Assert.*;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestStealJobQueue {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStealJobQueue.class);
 
   StealJobQueue<Integer> stealJobQueue;
   BlockingQueue<Integer> stealFromQueue;
 
   @Before
   public void setup() {
-    stealJobQueue = new StealJobQueue<>();
+    stealJobQueue = new StealJobQueue<>(Integer::compare);
     stealFromQueue = stealJobQueue.getStealFromQueue();
 
   }
@@ -170,7 +174,8 @@ public class TestStealJobQueue {
 
   @Test
   public void testInteractWithThreadPool() throws InterruptedException {
-    StealJobQueue<Runnable> stealTasksQueue = new StealJobQueue<>();
+    StealJobQueue<Runnable> stealTasksQueue =
+        new StealJobQueue<>((r1, r2) -> ((TestTask) r1).compareTo((TestTask) r2));
     final CountDownLatch stealJobCountDown = new CountDownLatch(3);
     final CountDownLatch stealFromCountDown = new CountDownLatch(3);
     ThreadPoolExecutor stealPool = new ThreadPoolExecutor(3, 3, 1, TimeUnit.DAYS, stealTasksQueue) {

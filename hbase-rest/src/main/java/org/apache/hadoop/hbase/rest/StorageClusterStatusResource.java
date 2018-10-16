@@ -20,7 +20,8 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
+import java.util.EnumSet;
+import java.util.Map;
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.CacheControl;
@@ -28,21 +29,21 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ServerLoad;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class StorageClusterStatusResource extends ResourceBase {
-  private static final Log LOG =
-    LogFactory.getLog(StorageClusterStatusResource.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(StorageClusterStatusResource.class);
 
   static CacheControl cacheControl;
   static {
@@ -68,28 +69,36 @@ public class StorageClusterStatusResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      ClusterStatus status = servlet.getAdmin().getClusterStatus();
+      ClusterMetrics status = servlet.getAdmin().getClusterMetrics(
+        EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS));
       StorageClusterStatusModel model = new StorageClusterStatusModel();
-      model.setRegions(status.getRegionsCount());
-      model.setRequests(status.getRequestsCount());
+      model.setRegions(status.getRegionCount());
+      model.setRequests(status.getRequestCount());
       model.setAverageLoad(status.getAverageLoad());
-      for (ServerName info: status.getServers()) {
-        ServerLoad load = status.getLoad(info);
+      for (Map.Entry<ServerName, ServerMetrics> entry: status.getLiveServerMetrics().entrySet()) {
+        ServerName sn = entry.getKey();
+        ServerMetrics load = entry.getValue();
         StorageClusterStatusModel.Node node =
           model.addLiveNode(
-            info.getHostname() + ":" +
-            Integer.toString(info.getPort()),
-            info.getStartcode(), load.getUsedHeapMB(),
-            load.getMaxHeapMB());
-        node.setRequests(load.getNumberOfRequests());
-        for (RegionLoad region: load.getRegionsLoad().values()) {
-          node.addRegion(region.getName(), region.getStores(),
-            region.getStorefiles(), region.getStorefileSizeMB(),
-            region.getMemStoreSizeMB(), region.getStorefileIndexSizeMB(),
-            region.getReadRequestsCount(), region.getWriteRequestsCount(),
-            region.getRootIndexSizeKB(), region.getTotalStaticIndexSizeKB(),
-            region.getTotalStaticBloomSizeKB(), region.getTotalCompactingKVs(),
-            region.getCurrentCompactedKVs());
+            sn.getHostname() + ":" +
+            Integer.toString(sn.getPort()),
+            sn.getStartcode(), (int) load.getUsedHeapSize().get(Size.Unit.MEGABYTE),
+            (int) load.getMaxHeapSize().get(Size.Unit.MEGABYTE));
+        node.setRequests(load.getRequestCount());
+        for (RegionMetrics region: load.getRegionMetrics().values()) {
+          node.addRegion(region.getRegionName(), region.getStoreCount(),
+            region.getStoreFileCount(),
+            (int) region.getStoreFileSize().get(Size.Unit.MEGABYTE),
+            (int) region.getMemStoreSize().get(Size.Unit.MEGABYTE),
+            (long) region.getStoreFileIndexSize().get(Size.Unit.KILOBYTE),
+            region.getReadRequestCount(),
+            region.getCpRequestCount(),
+            region.getWriteRequestCount(),
+            (int) region.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE),
+            (int) region.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE),
+            (int) region.getBloomFilterSize().get(Size.Unit.KILOBYTE),
+            region.getCompactingCellCount(),
+            region.getCompactedCellCount());
         }
       }
       for (ServerName name: status.getDeadServerNames()) {

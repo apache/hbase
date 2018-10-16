@@ -1,28 +1,32 @@
-/*
- * Copyright The Apache Software Foundation
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -36,28 +40,32 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.assertFalse;
-import org.junit.Rule;
 import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Start the HBase Thrift HTTP server on a random port through the command-line
  * interface and talk to it from client side.
  */
 @Category({ClientTests.class, LargeTests.class})
-
 public class TestThriftHttpServer {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestThriftHttpServer.class);
 
-  private static final Log LOG =
-      LogFactory.getLog(TestThriftHttpServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestThriftHttpServer.class);
 
-  private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private Thread httpServerThread;
   private volatile Exception httpServerException;
@@ -65,7 +73,7 @@ public class TestThriftHttpServer {
   private Exception clientSideException;
 
   private ThriftServer thriftServer;
-  private int port;
+  int port;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -83,68 +91,85 @@ public class TestThriftHttpServer {
     EnvironmentEdgeManager.reset();
   }
 
+  @Test
+  public void testExceptionThrownWhenMisConfigured() throws Exception {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set("hbase.thrift.security.qop", "privacy");
+    conf.setBoolean("hbase.thrift.ssl.enabled", false);
+
+    ThriftServerRunner runner = null;
+    ExpectedException thrown = ExpectedException.none();
+    try {
+      thrown.expect(IllegalArgumentException.class);
+      thrown.expectMessage("Thrift HTTP Server's QoP is privacy, " +
+          "but hbase.thrift.ssl.enabled is false");
+      runner = new ThriftServerRunner(conf);
+      fail("Thrift HTTP Server starts up even with wrong security configurations.");
+    } catch (Exception e) {
+    }
+
+    assertNull(runner);
+  }
+
   private void startHttpServerThread(final String[] args) {
     LOG.info("Starting HBase Thrift server with HTTP server: " + Joiner.on(" ").join(args));
 
     httpServerException = null;
-    httpServerThread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          thriftServer.doMain(args);
-        } catch (Exception e) {
-          httpServerException = e;
-        }
+    httpServerThread = new Thread(() -> {
+      try {
+        thriftServer.doMain(args);
+      } catch (Exception e) {
+        httpServerException = e;
       }
     });
-    httpServerThread.setName(ThriftServer.class.getSimpleName() +
-        "-httpServer");
+    httpServerThread.setName(ThriftServer.class.getSimpleName() + "-httpServer");
     httpServerThread.start();
   }
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Test(timeout=600000)
+  @Test
   public void testRunThriftServerWithHeaderBufferLength() throws Exception {
 
     // Test thrift server with HTTP header length less than 64k
     try {
       runThriftServer(1024 * 63);
     } catch (TTransportException tex) {
-      assertFalse(tex.getMessage().equals("HTTP Response code: 413"));
+      assertFalse(tex.getMessage().equals("HTTP Response code: 431"));
     }
 
     // Test thrift server with HTTP header length more than 64k, expect an exception
     exception.expect(TTransportException.class);
-    exception.expectMessage("HTTP Response code: 413");
+    exception.expectMessage("HTTP Response code: 431");
     runThriftServer(1024 * 64);
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testRunThriftServer() throws Exception {
     runThriftServer(0);
   }
 
-  private void runThriftServer(int customHeaderSize) throws Exception {
+  void runThriftServer(int customHeaderSize) throws Exception {
     List<String> args = new ArrayList<>(3);
     port = HBaseTestingUtility.randomFreePort();
     args.add("-" + ThriftServer.PORT_OPTION);
     args.add(String.valueOf(port));
+    args.add("-" + ThriftServer.INFOPORT_OPTION);
+    int infoPort = HBaseTestingUtility.randomFreePort();
+    args.add(String.valueOf(infoPort));
     args.add("start");
 
     thriftServer = new ThriftServer(TEST_UTIL.getConfiguration());
     startHttpServerThread(args.toArray(new String[args.size()]));
 
     // wait up to 10s for the server to start
-    for (int i = 0; i < 100
-        && ( thriftServer.serverRunner == null ||  thriftServer.serverRunner.httpServer ==
-        null); i++) {
-      Thread.sleep(100);
-    }
+    HBaseTestingUtility.waitForHostPort(HConstants.LOCALHOST, port);
 
+    String url = "http://" + HConstants.LOCALHOST + ":" + port;
     try {
-      talkToThriftServer(customHeaderSize);
+      checkHttpMethods(url);
+      talkToThriftServer(url, customHeaderSize);
     } catch (Exception ex) {
       clientSideException = ex;
     } finally {
@@ -153,7 +178,7 @@ public class TestThriftHttpServer {
 
     if (clientSideException != null) {
       LOG.error("Thrift client threw an exception " + clientSideException);
-      if (clientSideException instanceof  TTransportException) {
+      if (clientSideException instanceof TTransportException) {
         throw clientSideException;
       } else {
         throw new Exception(clientSideException);
@@ -161,11 +186,19 @@ public class TestThriftHttpServer {
     }
   }
 
-  private static volatile boolean tableCreated = false;
+  private void checkHttpMethods(String url) throws Exception {
+    // HTTP TRACE method should be disabled for security
+    // See https://www.owasp.org/index.php/Cross_Site_Tracing
+    HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+    conn.setRequestMethod("TRACE");
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
+  }
 
-  private void talkToThriftServer(int customHeaderSize) throws Exception {
-    THttpClient httpClient = new THttpClient(
-        "http://"+ HConstants.LOCALHOST + ":" + port);
+  static volatile boolean tableCreated = false;
+
+  void talkToThriftServer(String url, int customHeaderSize) throws Exception {
+    THttpClient httpClient = new THttpClient(url);
     httpClient.open();
 
     if (customHeaderSize > 0) {

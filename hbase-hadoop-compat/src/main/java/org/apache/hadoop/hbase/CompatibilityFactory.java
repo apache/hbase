@@ -18,18 +18,20 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.util.Iterator;
 import java.util.ServiceLoader;
+
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class that will create many instances of classes provided by the hbase-hadoop{1|2}-compat jars.
  */
+@InterfaceAudience.Private
 public class CompatibilityFactory {
 
-  private static final Log LOG = LogFactory.getLog(CompatibilitySingletonFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompatibilitySingletonFactory.class);
   public static final String EXCEPTION_START = "Could not create  ";
   public static final String EXCEPTION_END = " Is the hadoop compatibility jar on the classpath?";
 
@@ -54,7 +56,7 @@ public class CompatibilityFactory {
           msg.append(it.next()).append(" ");
         }
         msg.append("}");
-        LOG.warn(msg);
+        LOG.warn(msg.toString());
       }
     } catch (Exception e) {
       throw new RuntimeException(createExceptionString(klass), e);

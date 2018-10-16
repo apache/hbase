@@ -26,24 +26,30 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.io.CountingInputStream;
-import com.google.common.io.CountingOutputStream;
+import org.apache.hbase.thirdparty.com.google.common.io.CountingInputStream;
+import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestCellMessageCodec {
-  private static final Log LOG = LogFactory.getLog(TestCellMessageCodec.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellMessageCodec.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCellMessageCodec.class);
 
   @Test
   public void testEmptyWorks() throws IOException {

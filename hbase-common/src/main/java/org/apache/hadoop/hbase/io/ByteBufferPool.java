@@ -22,11 +22,11 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Like Hadoops' ByteBufferPool only you do not specify desired size when getting a ByteBuffer. This
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ByteBufferPool {
-  private static final Log LOG = LogFactory.getLog(ByteBufferPool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ByteBufferPool.class);
   // TODO better config names?
   // hbase.ipc.server.reservoir.initial.max -> hbase.ipc.server.reservoir.max.buffer.count
   // hbase.ipc.server.reservoir.initial.buffer.size -> hbase.ipc.server.reservoir.buffer.size
@@ -80,8 +80,9 @@ public class ByteBufferPool {
     this.maxPoolSize = maxPoolSize;
     this.directByteBuffer = directByteBuffer;
     // TODO can add initialPoolSize config also and make those many BBs ready for use.
-    LOG.info("Created ByteBufferPool with bufferSize : " + bufferSize + " and maxPoolSize : "
-        + maxPoolSize);
+    LOG.info("Created with bufferSize={} and maxPoolSize={}",
+        org.apache.hadoop.util.StringUtils.byteDesc(bufferSize),
+        org.apache.hadoop.util.StringUtils.byteDesc(maxPoolSize));
     this.count = new AtomicInteger(0);
   }
 

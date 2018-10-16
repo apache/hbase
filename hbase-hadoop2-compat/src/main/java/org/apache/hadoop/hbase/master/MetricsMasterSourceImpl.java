@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.hbase.metrics.OperationMetrics;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop2 implementation of MetricsMasterSource.
@@ -61,9 +62,9 @@ public class MetricsMasterSourceImpl
   @Override
   public void init() {
     super.init();
-    clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0l);
+    clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0L);
 
-    /**
+    /*
      * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is
      * moving away from using Hadoop's metric2 to having independent HBase specific Metrics. Use
      * {@link BaseSourceImpl#registry} to register the new metrics.
@@ -83,6 +84,10 @@ public class MetricsMasterSourceImpl
 
     // masterWrapper can be null because this function is called inside of init.
     if (masterWrapper != null) {
+
+      // Pair<online region number, offline region number>
+      PairOfSameType<Integer> regionNumberPair = masterWrapper.getRegionCounts();
+
       metricsRecordBuilder
           .addGauge(Interns.info(MERGE_PLAN_COUNT_NAME, MERGE_PLAN_COUNT_DESC),
               masterWrapper.getMergePlanCount())
@@ -92,8 +97,15 @@ public class MetricsMasterSourceImpl
               MASTER_ACTIVE_TIME_DESC), masterWrapper.getActiveTime())
           .addGauge(Interns.info(MASTER_START_TIME_NAME,
               MASTER_START_TIME_DESC), masterWrapper.getStartTime())
+          .addGauge(Interns.info(MASTER_FINISHED_INITIALIZATION_TIME_NAME,
+                  MASTER_FINISHED_INITIALIZATION_TIME_DESC),
+                  masterWrapper.getMasterInitializationTime())
           .addGauge(Interns.info(AVERAGE_LOAD_NAME, AVERAGE_LOAD_DESC),
               masterWrapper.getAverageLoad())
+          .addGauge(Interns.info(ONLINE_REGION_COUNT_NAME, ONLINE_REGION_COUNT_DESC),
+              regionNumberPair.getFirst())
+          .addGauge(Interns.info(OFFLINE_REGION_COUNT_NAME, OFFLINE_REGION_COUNT_DESC),
+              regionNumberPair.getSecond())
           .tag(Interns.info(LIVE_REGION_SERVERS_NAME, LIVE_REGION_SERVERS_DESC),
                 masterWrapper.getRegionServers())
           .addGauge(Interns.info(NUM_REGION_SERVERS_NAME,
@@ -107,8 +119,7 @@ public class MetricsMasterSourceImpl
               masterWrapper.getZookeeperQuorum())
           .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), masterWrapper.getServerName())
           .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), masterWrapper.getClusterId())
-          .tag(Interns.info(IS_ACTIVE_MASTER_NAME,
-              IS_ACTIVE_MASTER_DESC),
+          .tag(Interns.info(IS_ACTIVE_MASTER_NAME, IS_ACTIVE_MASTER_DESC),
               String.valueOf(masterWrapper.getIsActiveMaster()));
     }
 

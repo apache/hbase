@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,9 +22,9 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,21 +34,27 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestSeekBeforeWithReverseScan {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSeekBeforeWithReverseScan.class);
+
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
-  private Region region;
+  private HRegion region;
 
   private byte[] cfName = Bytes.toBytes("a");
   private byte[] cqName = Bytes.toBytes("b");
@@ -97,12 +103,12 @@ public class TestSeekBeforeWithReverseScan {
     while (scanner.next(res)) {
       count++;
     }
-    assertEquals(Bytes.toString(res.get(0).getRowArray(), res.get(0).getRowOffset(), res.get(0)
-        .getRowLength()), "b");
-    assertEquals(Bytes.toString(res.get(1).getRowArray(), res.get(1).getRowOffset(), res.get(1)
-        .getRowLength()), "ab");
-    assertEquals(Bytes.toString(res.get(2).getRowArray(), res.get(2).getRowOffset(), res.get(2)
-        .getRowLength()), "a");
+    assertEquals("b", Bytes.toString(res.get(0).getRowArray(), res.get(0).getRowOffset(),
+        res.get(0).getRowLength()));
+    assertEquals("ab", Bytes.toString(res.get(1).getRowArray(), res.get(1).getRowOffset(),
+        res.get(1).getRowLength()));
+    assertEquals("a", Bytes.toString(res.get(2).getRowArray(), res.get(2).getRowOffset(),
+        res.get(2).getRowLength()));
     assertEquals(3, count);
   }
 

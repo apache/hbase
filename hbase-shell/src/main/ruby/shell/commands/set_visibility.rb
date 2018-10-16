@@ -19,7 +19,7 @@ module Shell
   module Commands
     class SetVisibility < Command
       def help
-        return <<-EOF
+        <<-EOF
 Set the visibility expression on one or more existing cells.
 
 Pass table name, visibility expression, and a dictionary containing
@@ -67,7 +67,6 @@ EOF
         end
         formatter.footer(count)
       end
-
     end
   end
 end

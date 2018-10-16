@@ -18,16 +18,14 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORED_NODES_NUM;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,11 +38,14 @@ import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-
-import com.google.common.collect.Sets;
 import org.junit.After;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /*
  * This case tests a scenario when a cluster with tables is moved from Stochastic Load Balancer
@@ -53,7 +54,11 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestFavoredNodeTableImport {
 
-  private static final Log LOG = LogFactory.getLog(TestFavoredNodeTableImport.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFavoredNodeTableImport.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestFavoredNodeTableImport.class);
 
   private static final int SLAVES = 3;
   private static final int REGION_NUM = 20;

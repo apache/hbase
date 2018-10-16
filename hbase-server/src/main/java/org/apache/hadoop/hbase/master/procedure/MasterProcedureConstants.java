@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public final class MasterProcedureConstants {
   private MasterProcedureConstants() {}
-
-  /** Used to construct the name of the log directory for master procedures */
-  public static final String MASTER_PROCEDURE_LOGDIR = "MasterProcWALs";
 
   /** Number of threads used by the procedure executor */
   public static final String MASTER_PROCEDURE_THREADS = "hbase.master.procedure.threads";

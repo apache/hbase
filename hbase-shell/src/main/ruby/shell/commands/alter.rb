@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Alter < Command
       def help
-        return <<-EOF
+        <<-EOF
 Alter a table. Tables can be altered without disabling them first.
 Altering enabled tables has caused problems
 in the past, so use caution and test it before using in production.
@@ -47,7 +47,8 @@ To delete the 'f1' column family in table 'ns1:t1', use one of:
   hbase> alter 'ns1:t1', 'delete' => 'f1'
 
 You can also change table-scope attributes like MAX_FILESIZE, READONLY,
-MEMSTORE_FLUSHSIZE, DURABILITY, etc. These can be put at the end;
+MEMSTORE_FLUSHSIZE, NORMALIZATION_ENABLED, NORMALIZER_TARGET_REGION_COUNT,
+NORMALIZER_TARGET_REGION_SIZE(MB), DURABILITY, etc. These can be put at the end;
 for example, to change the max size of a region to 128MB, do:
 
   hbase> alter 't1', MAX_FILESIZE => '134217728'
@@ -70,6 +71,10 @@ You can also set configuration settings specific to this table or column family:
 
   hbase> alter 't1', CONFIGURATION => {'hbase.hregion.scan.loadColumnFamiliesOnDemand' => 'true'}
   hbase> alter 't1', {NAME => 'f2', CONFIGURATION => {'hbase.hstore.blockingStoreFiles' => '10'}}
+
+You can also unset configuration settings specific to this table:
+
+  hbase> alter 't1', METHOD => 'table_conf_unset', NAME => 'hbase.hregion.majorcompaction'
 
 You can also remove a table-scope attribute:
 

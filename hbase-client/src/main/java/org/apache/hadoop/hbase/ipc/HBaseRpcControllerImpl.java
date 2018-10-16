@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Optionally carries Cells across the proxy/service interface down into ipc. On its way out it
@@ -56,7 +56,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
    * This is the ordained way of setting priorities going forward. We will be undoing the old
    * annotation-based mechanism.
    */
-  private int priority = PRIORITY_UNSET;
+  private int priority = HConstants.PRIORITY_UNSET;
 
   /**
    * They are optionally set on construction, cleared after we make the call, and then optionally
@@ -95,7 +95,8 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   @Override
   public void setPriority(int priority) {
-    this.priority = priority;
+    this.priority = Math.max(this.priority, priority);
+
   }
 
   @Override
@@ -106,7 +107,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   @Override
   public int getPriority() {
-    return priority;
+    return priority < 0 ? HConstants.NORMAL_QOS : priority;
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",

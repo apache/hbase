@@ -24,10 +24,11 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * TableDescriptor contains the details about an HBase table such as the descriptors of
@@ -39,8 +40,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 public interface TableDescriptor {
 
   @InterfaceAudience.Private
-  static final Comparator<TableDescriptor> COMPARATOR
-    = (TableDescriptor lhs, TableDescriptor rhs) -> {
+  Comparator<TableDescriptor> COMPARATOR = getComparator(ColumnFamilyDescriptor.COMPARATOR);
+
+  @InterfaceAudience.Private
+  Comparator<TableDescriptor> COMPARATOR_IGNORE_REPLICATION =
+      getComparator(ColumnFamilyDescriptor.COMPARATOR_IGNORE_REPLICATION);
+
+  static Comparator<TableDescriptor>
+      getComparator(Comparator<ColumnFamilyDescriptor> cfComparator) {
+    return (TableDescriptor lhs, TableDescriptor rhs) -> {
       int result = lhs.getTableName().compareTo(rhs.getTableName());
       if (result != 0) {
         return result;
@@ -52,20 +60,17 @@ public interface TableDescriptor {
         return result;
       }
 
-      for (Iterator<ColumnFamilyDescriptor> it = lhsFamilies.iterator(),
-              it2 = rhsFamilies.iterator(); it.hasNext();) {
-        result = ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next());
+      for (Iterator<ColumnFamilyDescriptor> it = lhsFamilies.iterator(), it2 =
+          rhsFamilies.iterator(); it.hasNext();) {
+        result = cfComparator.compare(it.next(), it2.next());
         if (result != 0) {
           return result;
         }
       }
       // punt on comparison for ordering, just calculate difference
-      result = Integer.compare(lhs.getValues().hashCode(), rhs.getValues().hashCode());
-      if (result != 0) {
-        return result;
-      }
-      return Integer.compare(lhs.getConfiguration().hashCode(), rhs.getConfiguration().hashCode());
-  };
+      return Integer.compare(lhs.getValues().hashCode(), rhs.getValues().hashCode());
+    };
+  }
 
   /**
    * Returns the count of the column families of the table.
@@ -75,28 +80,11 @@ public interface TableDescriptor {
   int getColumnFamilyCount();
 
   /**
-   * Getter for fetching an unmodifiable map.
+   * Return the list of attached co-processor represented
    *
-   * @return an unmodifiable map
+   * @return The list of CoprocessorDescriptor
    */
-  Map<String, String> getConfiguration();
-
-  /**
-   * Getter for accessing the configuration value by key
-   *
-   * @param key the key whose associated value is to be returned
-   * @return the value to which the specified key is mapped, or {@code null} if
-   * this map contains no mapping for the key
-   */
-  String getConfigurationValue(String key);
-
-  /**
-   * Return the list of attached co-processor represented by their name
-   * className
-   *
-   * @return The list of co-processors classNames
-   */
-  Collection<String> getCoprocessors();
+  Collection<CoprocessorDescriptor> getCoprocessorDescriptors();
 
   /**
    * Returns the durability setting for the table.
@@ -208,6 +196,14 @@ public interface TableDescriptor {
   byte[] getValue(byte[] key);
 
   /**
+   * Getter for accessing the metadata associated with the key.
+   *
+   * @param key The key.
+   * @return Null if no mapping for the key
+   */
+  String getValue(String key);
+
+  /**
    * @return Getter for fetching an unmodifiable map.
    */
   Map<Bytes, Bytes> getValues();
@@ -232,13 +228,7 @@ public interface TableDescriptor {
   /**
    * @return true if the read-replicas memstore replication is enabled.
    */
-  boolean hasRegionMemstoreReplication();
-
-  /**
-   * @return true if there are at least one cf whose replication scope is
-   * serial.
-   */
-  boolean hasSerialReplicationScope();
+  boolean hasRegionMemStoreReplication();
 
   /**
    * Check if the compaction enable flag of the table is true. If flag is false
@@ -271,6 +261,22 @@ public interface TableDescriptor {
   boolean isNormalizationEnabled();
 
   /**
+   * Check if there is the target region count. If so, the normalize plan will
+   * be calculated based on the target region count.
+   *
+   * @return target region count after normalize done
+   */
+  int getNormalizerTargetRegionCount();
+
+  /**
+   * Check if there is the target region size. If so, the normalize plan will
+   * be calculated based on the target region size.
+   *
+   * @return target region size after normalize done
+   */
+  long getNormalizerTargetRegionSize();
+
+  /**
    * Check if the readOnly flag of the table is set. If the readOnly flag is set
    * then the contents of the table can only be read from but not modified.
    *
@@ -278,4 +284,39 @@ public interface TableDescriptor {
    */
   boolean isReadOnly();
 
+  /**
+   * Check if any of the table's cfs' replication scope are set to
+   * {@link HConstants#REPLICATION_SCOPE_GLOBAL}.
+   * @return {@code true} if we have, otherwise {@code false}.
+   */
+  default boolean hasGlobalReplicationScope() {
+    return Stream.of(getColumnFamilies())
+      .anyMatch(cf -> cf.getScope() == HConstants.REPLICATION_SCOPE_GLOBAL);
+  }
+
+  /**
+   * Check if the table's cfs' replication scope matched with the replication state
+   * @param enabled replication state
+   * @return true if matched, otherwise false
+   */
+  default boolean matchReplicationScope(boolean enabled) {
+    boolean hasEnabled = false;
+    boolean hasDisabled = false;
+
+    for (ColumnFamilyDescriptor cf : getColumnFamilies()) {
+      if (cf.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL) {
+        hasDisabled = true;
+      } else {
+        hasEnabled = true;
+      }
+    }
+
+    if (hasEnabled && hasDisabled) {
+      return false;
+    }
+    if (hasEnabled) {
+      return enabled;
+    }
+    return !enabled;
+  }
 }

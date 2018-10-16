@@ -20,33 +20,59 @@
 
 module Shell
   module Commands
-    class ListPeers< Command
+    class ListPeers < Command
       def help
-        return <<-EOF
-List all replication peer clusters.
+        <<-EOF
+  List all replication peer clusters.
+
+  If replicate_all flag is false, the namespaces and table-cfs in peer config
+  will be replicated to peer cluster.
+
+  If replicate_all flag is true, all user tables will be replicate to peer
+  cluster, except that the namespaces and table-cfs in peer config.
 
   hbase> list_peers
 EOF
       end
 
-      def command()
+      def command
         peers = replication_admin.list_peers
 
-        formatter.header(["PEER_ID", "CLUSTER_KEY", "ENDPOINT_CLASSNAME",
-          "STATE", "NAMESPACES", "TABLE_CFS", "BANDWIDTH"])
+        formatter.header(%w[PEER_ID CLUSTER_KEY ENDPOINT_CLASSNAME
+                            REMOTE_ROOT_DIR SYNC_REPLICATION_STATE STATE
+                            REPLICATE_ALL NAMESPACES TABLE_CFS BANDWIDTH
+                            SERIAL])
 
         peers.each do |peer|
           id = peer.getPeerId
-          state = peer.isEnabled ? "ENABLED" : "DISABLED"
+          state = peer.isEnabled ? 'ENABLED' : 'DISABLED'
           config = peer.getPeerConfig
-          namespaces = replication_admin.show_peer_namespaces(config)
-          tableCFs = replication_admin.show_peer_tableCFs(id)
-          formatter.row([ id, config.getClusterKey,
-            config.getReplicationEndpointImpl, state, namespaces, tableCFs,
-            config.getBandwidth ])
+          if config.replicateAllUserTables
+            namespaces = replication_admin.show_peer_exclude_namespaces(config)
+            tableCFs = replication_admin.show_peer_exclude_tableCFs(config)
+          else
+            namespaces = replication_admin.show_peer_namespaces(config)
+            tableCFs = replication_admin.show_peer_tableCFs_by_config(config)
+          end
+          cluster_key = 'nil'
+          unless config.getClusterKey.nil?
+            cluster_key = config.getClusterKey
+          end
+          endpoint_classname = 'nil'
+          unless config.getReplicationEndpointImpl.nil?
+            endpoint_classname = config.getReplicationEndpointImpl
+          end
+          remote_root_dir = 'nil'
+          unless config.getRemoteWALDir.nil?
+            remote_root_dir = config.getRemoteWALDir
+          end
+          formatter.row([id, cluster_key, endpoint_classname,
+                         remote_root_dir, peer.getSyncReplicationState, state,
+                         config.replicateAllUserTables, namespaces, tableCFs,
+                         config.getBandwidth, config.isSerial])
         end
 
-        formatter.footer()
+        formatter.footer
         peers
       end
     end

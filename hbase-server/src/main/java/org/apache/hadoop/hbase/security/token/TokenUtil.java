@@ -24,9 +24,8 @@ import java.security.PrivilegedExceptionAction;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -36,14 +35,15 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.token.Token;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods for obtaining authentication tokens.
@@ -51,7 +51,16 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Public
 public class TokenUtil {
   // This class is referenced indirectly by User out in common; instances are created by reflection
-  private static final Log LOG = LogFactory.getLog(TokenUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TokenUtil.class);
+
+  // Set in TestTokenUtil via reflection
+  private static ServiceException injectedException;
+
+  private static void injectFault() throws ServiceException {
+    if (injectedException != null) {
+      throw injectedException;
+    }
+  }
 
   /**
    * Obtain and return an authentication token for the current user.
@@ -63,6 +72,8 @@ public class TokenUtil {
       Connection conn) throws IOException {
     Table meta = null;
     try {
+      injectFault();
+
       meta = conn.getTable(TableName.META_TABLE_NAME);
       CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
       AuthenticationProtos.AuthenticationService.BlockingInterface service =
@@ -89,8 +100,8 @@ public class TokenUtil {
    */
   public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
     AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
-    builder.setIdentifier(ByteStringer.wrap(token.getIdentifier()));
-    builder.setPassword(ByteStringer.wrap(token.getPassword()));
+    builder.setIdentifier(ByteString.copyFrom(token.getIdentifier()));
+    builder.setPassword(ByteString.copyFrom(token.getPassword()));
     if (token.getService() != null) {
       builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
     }
@@ -290,7 +301,7 @@ public class TokenUtil {
    */
   private static Token<AuthenticationTokenIdentifier> getAuthToken(Configuration conf, User user)
       throws IOException, InterruptedException {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "TokenUtil-getAuthToken", null);
+    ZKWatcher zkw = new ZKWatcher(conf, "TokenUtil-getAuthToken", null);
     try {
       String clusterId = ZKClusterId.readClusterIdZNode(zkw);
       if (clusterId == null) {

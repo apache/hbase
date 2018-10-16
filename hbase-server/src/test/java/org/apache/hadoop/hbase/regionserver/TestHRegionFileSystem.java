@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -29,9 +27,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,32 +34,43 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestHRegionFileSystem {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHRegionFileSystem.class);
+
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestHRegionFileSystem.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionFileSystem.class);
+
+  public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
   private static final byte[][] FAMILIES = {
-    Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A")),
-    Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B")) };
+    Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")),
+    Bytes.add(FAMILY_NAME, Bytes.toBytes("-B")) };
   private static final TableName TABLE_NAME = TableName.valueOf("TestTable");
 
   @Rule
@@ -181,19 +187,19 @@ public class TestHRegionFileSystem {
     assertEquals(1, regionDirs.size());
     List<Path> familyDirs = FSUtils.getFamilyDirs(fs, regionDirs.get(0));
     assertEquals(2, familyDirs.size());
-    HRegionInfo hri = table.getRegionLocator().getAllRegionLocations().get(0).getRegionInfo();
+    RegionInfo hri = table.getRegionLocator().getAllRegionLocations().get(0).getRegionInfo();
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, new HFileSystem(fs), tableDir, hri);
     return regionFs;
   }
 
   @Test
   public void testOnDiskRegionCreation() throws IOException {
-    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS("testOnDiskRegionCreation");
+    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS(name.getMethodName());
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Create a Region
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
         FSUtils.getTableDir(rootDir, hri.getTable()), hri);
 
@@ -202,7 +208,7 @@ public class TestHRegionFileSystem {
     assertTrue("The region folder should be created", fs.exists(regionDir));
 
     // Verify the .regioninfo
-    HRegionInfo hriVerify = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+    RegionInfo hriVerify = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
     assertEquals(hri, hriVerify);
 
     // Open the region
@@ -220,28 +226,24 @@ public class TestHRegionFileSystem {
 
   @Test
   public void testNonIdempotentOpsWithRetries() throws IOException {
-    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS("testOnDiskRegionCreation");
+    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS(name.getMethodName());
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Create a Region
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
     assertTrue(fs.exists(regionFs.getRegionDir()));
 
-    regionFs = new HRegionFileSystem(conf, new MockFileSystemForCreate(),
-        null, null);
-    // HRegionFileSystem.createRegionOnFileSystem(conf, new MockFileSystemForCreate(), rootDir,
-    // hri);
+    regionFs = new HRegionFileSystem(conf, new MockFileSystemForCreate(), rootDir, hri);
     boolean result = regionFs.createDir(new Path("/foo/bar"));
     assertTrue("Couldn't create the directory", result);
 
-
-    regionFs = new HRegionFileSystem(conf, new MockFileSystem(), null, null);
+    regionFs = new HRegionFileSystem(conf, new MockFileSystem(), rootDir, hri);
     result = regionFs.rename(new Path("/foo/bar"), new Path("/foo/bar2"));
     assertTrue("Couldn't rename the directory", result);
 
-    regionFs = new HRegionFileSystem(conf, new MockFileSystem(), null, null);
+    regionFs = new HRegionFileSystem(conf, new MockFileSystem(), rootDir, hri);
     result = regionFs.deleteDir(new Path("/foo/bar"));
     assertTrue("Couldn't delete the directory", result);
     fs.delete(rootDir, true);
@@ -350,7 +352,8 @@ public class TestHRegionFileSystem {
 
     // Create a Region
     String familyName = "cf";
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
 
     // New region, no store files

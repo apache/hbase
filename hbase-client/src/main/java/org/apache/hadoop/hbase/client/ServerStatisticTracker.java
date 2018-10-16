@@ -19,14 +19,14 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 
 /**

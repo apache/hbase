@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,14 +27,20 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestConcatenatedLists {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestConcatenatedLists.class);
+
   @Test
   public void testUnsupportedOps() {
     // If adding support, add tests.
@@ -67,7 +72,7 @@ public class TestConcatenatedLists {
     } catch (UnsupportedOperationException ex) {
     }
     try {
-      c.retainAll(Arrays.asList(0L, 1L));
+      c.retainAll(Arrays.asList(0L, 2L));
       fail("Should throw");
     } catch (UnsupportedOperationException ex) {
     }
@@ -118,9 +123,13 @@ public class TestConcatenatedLists {
     verify(c, 7);
   }
 
+  @SuppressWarnings("ModifyingCollectionWithItself")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DMI_VACUOUS_SELF_COLLECTION_CALL",
+    justification="Intended vacuous containsAll call on 'c'")
   private void verify(ConcatenatedLists<Long> c, int last) {
     assertEquals((last == -1), c.isEmpty());
     assertEquals(last + 1, c.size());
+    // This check is O(n^2), test with care
     assertTrue(c.containsAll(c));
     Long[] array = c.toArray(new Long[c.size()]);
     List<Long> all = new ArrayList<>();

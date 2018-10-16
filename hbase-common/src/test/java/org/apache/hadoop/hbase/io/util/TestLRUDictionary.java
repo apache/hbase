@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.util;
 
 import static org.junit.Assert.assertEquals;
@@ -25,12 +24,13 @@ import static org.junit.Assert.assertTrue;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Random;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -39,6 +39,11 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestLRUDictionary {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestLRUDictionary.class);
+
   LRUDictionary testee;
 
   @Before
@@ -81,7 +86,7 @@ public class TestLRUDictionary {
     rand.nextBytes(testBytes);
 
     // Verify that our randomly generated array doesn't exist in the dictionary
-    assertEquals(testee.findEntry(testBytes, 0, testBytes.length), -1);
+    assertEquals(-1, testee.findEntry(testBytes, 0, testBytes.length));
 
     // now since we looked up an entry, we should have added it to the
     // dictionary, so it isn't empty

@@ -40,11 +40,14 @@ any quoted values by ~10 to get what works for HBase: e.g. where it says individ
 to go smaller if you can -- and where it says a maximum of 100 column families in Cloud Bigtable, think ~10 when
 modeling on HBase.
 
+See also Robert Yokota's link:https://blogs.apache.org/hbase/entry/hbase-application-archetypes-redux[HBase Application Archetypes]
+(an update on work done by other HBasers), for a helpful categorization of use cases that do well on top of the HBase model.
+
 
 [[schema.creation]]
 ==  Schema Creation
 
-HBase schemas can be created or updated using the <<shell>> or by using link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin] in the Java API.
+HBase schemas can be created or updated using the <<shell>> or by using link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin] in the Java API.
 
 Tables must be disabled when making ColumnFamily modifications, for example:
 
@@ -220,7 +223,7 @@ You could also optimize things so that certain pairs of keys were always in the 
 A third common trick for preventing hotspotting is to reverse a fixed-width or numeric row key so that the part that changes the most often (the least significant digit) is first.
 This effectively randomizes row keys, but sacrifices row ordering properties.
 
-See https://communities.intel.com/community/itpeernetwork/datastack/blog/2013/11/10/discussion-on-designing-hbase-tables, and link:http://phoenix.apache.org/salted.html[article on Salted Tables] from the Phoenix project, and the discussion in the comments of link:https://issues.apache.org/jira/browse/HBASE-11682[HBASE-11682] for more information about avoiding hotspotting.
+See https://communities.intel.com/community/itpeernetwork/datastack/blog/2013/11/10/discussion-on-designing-hbase-tables, and link:https://phoenix.apache.org/salted.html[article on Salted Tables] from the Phoenix project, and the discussion in the comments of link:https://issues.apache.org/jira/browse/HBASE-11682[HBASE-11682] for more information about avoiding hotspotting.
 
 [[timeseries]]
 ===  Monotonically Increasing Row Keys/Timeseries Data
@@ -335,7 +338,7 @@ This is the main trade-off.
 ====
 link:https://issues.apache.org/jira/browse/HBASE-4811[HBASE-4811] implements an API to scan a table or a range within a table in reverse, reducing the need to optimize your schema for forward or reverse scanning.
 This feature is available in HBase 0.98 and later.
-See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed%28boolean for more information.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed-boolean-[Scan.setReversed()] for more information.
 ====
 
 A common problem in database processing is quickly finding the most recent version of a value.
@@ -430,7 +433,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
 [[schema.versions.max]]
 === Maximum Number of Versions
 
-The maximum number of row versions to store is configured per column family via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+The maximum number of row versions to store is configured per column family via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 The default for max versions is 1.
 This is an important parameter because as described in <<datamodel>> section HBase does _not_ overwrite row values, but rather stores different values per row by time (and qualifier). Excess versions are removed during major compactions.
 The number of max versions may need to be increased or decreased depending on application needs.
@@ -440,14 +443,14 @@ It is not recommended setting the number of max versions to an exceedingly high 
 [[schema.minversions]]
 ===  Minimum Number of Versions
 
-Like maximum number of row versions, the minimum number of row versions to keep is configured per column family via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+Like maximum number of row versions, the minimum number of row versions to keep is configured per column family via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 The default for min versions is 0, which means the feature is disabled.
 The minimum number of row versions parameter is used together with the time-to-live parameter and can be combined with the number of row versions parameter to allow configurations such as "keep the last T minutes worth of data, at most N versions, _but keep at least M versions around_" (where M is the value for minimum number of row versions, M<N). This parameter should only be set when time-to-live is enabled for a column family and must be less than the number of row versions.
 
 [[supported.datatypes]]
 ==  Supported Datatypes
 
-HBase supports a "bytes-in/bytes-out" interface via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html[Result], so anything that can be converted to an array of bytes can be stored as a value.
+HBase supports a "bytes-in/bytes-out" interface via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] and link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html[Result], so anything that can be converted to an array of bytes can be stored as a value.
 Input could be strings, numbers, complex objects, or even images as long as they can rendered as bytes.
 
 There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask); search the mailing list for conversations on this topic.
@@ -456,7 +459,7 @@ Take that into consideration when making your design, as well as block size for 
 
 === Counters
 
-One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers). See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#increment%28org.apache.hadoop.hbase.client.Increment%29[Increment] in `Table`.
+One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers). See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#increment%28org.apache.hadoop.hbase.client.Increment%29[Increment] in `Table`.
 
 Synchronization on counters are done on the RegionServer, not in the client.
 
@@ -476,7 +479,7 @@ Store files which contains only expired rows are deleted on minor compaction.
 Setting `hbase.store.delete.expired.storefile` to `false` disables this feature.
 Setting minimum number of versions to other than 0 also disables this.
 
-See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] for more information.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] for more information.
 
 Recent versions of HBase also support setting time to live on a per cell basis.
 See link:https://issues.apache.org/jira/browse/HBASE-10560[HBASE-10560] for more information.
@@ -491,7 +494,7 @@ There are two notable differences between cell TTL handling and ColumnFamily TTL
 ==  Keeping Deleted Cells
 
 By default, delete markers extend back to the beginning of time.
-Therefore, link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] operations will not see a deleted cell (row or column), even when the Get or Scan operation indicates a time range before the delete marker was placed.
+Therefore, link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] operations will not see a deleted cell (row or column), even when the Get or Scan operation indicates a time range before the delete marker was placed.
 
 ColumnFamilies can optionally keep deleted cells.
 In this case, deleted cells can still be retrieved, as long as these operations specify a time range that ends before the timestamp of any delete that would affect the cells.
@@ -501,11 +504,9 @@ Deleted cells are still subject to TTL and there will never be more than "maximu
 A new "raw" scan options returns all deleted rows and the delete markers.
 
 .Change the Value of `KEEP_DELETED_CELLS` Using HBase Shell
-====
 ----
 hbase> hbase> alter ‘t1′, NAME => ‘f1′, KEEP_DELETED_CELLS => true
 ----
-====
 
 .Change the Value of `KEEP_DELETED_CELLS` Using the API
 ====
@@ -681,7 +682,7 @@ in the table (e.g. make sure values are in the range 1-10). Constraints could
 also be used to enforce referential integrity, but this is strongly discouraged
 as it will dramatically decrease the write throughput of the tables where integrity
 checking is enabled. Extensive documentation on using Constraints can be found at
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/constraint/Constraint.html[Constraint]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/constraint/Constraint.html[Constraint]
 since version 0.94.
 
 [[schema.casestudies]]
@@ -748,7 +749,7 @@ This approach would be useful if scanning by hostname was a priority.
 [[schema.casestudies.log_timeseries.revts]]
 ==== Timestamp, or Reverse Timestamp?
 
-If the most important access path is to pull most recent events, then storing the timestamps as reverse-timestamps (e.g., `timestamp = Long.MAX_VALUE – timestamp`) will create the property of being able to do a Scan on `[hostname][log-event]` to obtain the quickly obtain the most recently captured events.
+If the most important access path is to pull most recent events, then storing the timestamps as reverse-timestamps (e.g., `timestamp = Long.MAX_VALUE – timestamp`) will create the property of being able to do a Scan on `[hostname][log-event]` to obtain the most recently captured events.
 
 Neither approach is wrong, it just depends on what is most appropriate for the situation.
 
@@ -757,7 +758,7 @@ Neither approach is wrong, it just depends on what is most appropriate for the s
 ====
 link:https://issues.apache.org/jira/browse/HBASE-4811[HBASE-4811] implements an API to scan a table or a range within a table in reverse, reducing the need to optimize your schema for forward or reverse scanning.
 This feature is available in HBase 0.98 and later.
-See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed%28boolean for more information.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed-boolean-[Scan.setReversed()] for more information.
 ====
 
 [[schema.casestudies.log_timeseries.varkeys]]
@@ -786,8 +787,7 @@ The rowkey of LOG_TYPES would be:
 * `[bytes]` variable length bytes for raw hostname or event-type.
 
 A column for this rowkey could be a long with an assigned number, which could be obtained
-by using an
-+++<a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue%28byte[],%20byte[],%20byte[],%20long%29">HBase counter</a>+++.
+by using an link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue-byte:A-byte:A-byte:A-long-[HBase counter]
 
 So the resulting composite rowkey would be:
 
@@ -803,7 +803,7 @@ In either the Hash or Numeric substitution approach, the raw values for hostname
 This effectively is the OpenTSDB approach.
 What OpenTSDB does is re-write data and pack rows into columns for certain time-periods.
 For a detailed explanation, see: http://opentsdb.net/schema.html, and
-+++<a href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</a>+++
+link:https://www.slideshare.net/cloudera/4-opentsdb-hbasecon[Lessons Learned from OpenTSDB]
 from HBaseCon2012.
 
 But this is how the general concept works: data is ingested, for example, in this manner...
@@ -1093,7 +1093,7 @@ The tl;dr version is that you should probably go with one row per user+value, an
 
 Your two options mirror a common question people have when designing HBase schemas: should I go "tall" or "wide"? Your first schema is "tall": each row represents one value for one user, and so there are many rows in the table for each user; the row key is user + valueid, and there would be (presumably) a single column qualifier that means "the value". This is great if you want to scan over rows in sorted order by row key (thus my question above, about whether these ids are sorted correctly). You can start a scan at any user+valueid, read the next 30, and be done.
 What you're giving up is the ability to have transactional guarantees around all the rows for one user, but it doesn't sound like you need that.
-Doing it this way is generally recommended (see here http://hbase.apache.org/book.html#schema.smackdown).
+Doing it this way is generally recommended (see here https://hbase.apache.org/book.html#schema.smackdown).
 
 Your second option is "wide": you store a bunch of values in one row, using different qualifiers (where the qualifier is the valueid). The simple way to do that would be to just store ALL values for one user in a single row.
 I'm guessing you jumped to the "paginated" version because you're assuming that storing millions of columns in a single row would be bad for performance, which may or may not be true; as long as you're not trying to do too much in a single request, or do things like scanning over and returning all of the cells in the row, it shouldn't be fundamentally worse.
@@ -1110,7 +1110,7 @@ If you don't have time to build it both ways and compare, my advice would be to 
 [[schema.ops]]
 == Operational and Performance Configuration Options
 
-====  Tune HBase Server RPC Handling
+===  Tune HBase Server RPC Handling
 
 * Set `hbase.regionserver.handler.count` (in `hbase-site.xml`) to cores x spindles for concurrency.
 * Optionally, split the call queues into separate read and write queues for differentiated service. The parameter `hbase.ipc.server.callqueue.handler.factor` specifies the number of call queues:
@@ -1126,7 +1126,7 @@ If you don't have time to build it both ways and compare, my advice would be to 
 - `< 0.5` for more short-read
 - `> 0.5` for more long-read
 
-====  Disable Nagle for RPC
+===  Disable Nagle for RPC
 
 Disable Nagle’s algorithm. Delayed ACKs can add up to ~200ms to RPC round trip time. Set the following parameters:
 
@@ -1137,7 +1137,7 @@ Disable Nagle’s algorithm. Delayed ACKs can add up to ~200ms to RPC round trip
 - `hbase.ipc.client.tcpnodelay = true`
 - `hbase.ipc.server.tcpnodelay = true`
 
-====  Limit Server Failure Impact
+===  Limit Server Failure Impact
 
 Detect regionserver failure as fast as reasonable. Set the following parameters:
 
@@ -1146,15 +1146,40 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 - `dfs.namenode.avoid.read.stale.datanode = true`
 - `dfs.namenode.avoid.write.stale.datanode = true`
 
-====  Optimize on the Server Side for Low Latency
+[[shortcircuit.reads]]
+===  Optimize on the Server Side for Low Latency
+Skip the network for local blocks when the RegionServer goes to read from HDFS by exploiting HDFS's
+link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html[Short-Circuit Local Reads] facility.
+Note how setup must be done both at the datanode and on the dfsclient ends of the conneciton -- i.e. at the RegionServer
+and how both ends need to have loaded the hadoop native `.so` library.
+After configuring your hadoop setting _dfs.client.read.shortcircuit_ to _true_ and configuring
+the _dfs.domain.socket.path_ path for the datanode and dfsclient to share and restarting, next configure
+the regionserver/dfsclient side.
 
-* Skip the network for local blocks. In `hbase-site.xml`, set the following parameters:
+* In `hbase-site.xml`, set the following parameters:
 - `dfs.client.read.shortcircuit = true`
-- `dfs.client.read.shortcircuit.buffer.size = 131072` (Important to avoid OOME)
+- `dfs.client.read.shortcircuit.skip.checksum = true` so we don't double checksum (HBase does its own checksumming to save on i/os. See <<hbase.regionserver.checksum.verify.performance>> for more on this. 
+- `dfs.domain.socket.path` to match what was set for the datanodes.
+- `dfs.client.read.shortcircuit.buffer.size = 131072` Important to avoid OOME -- hbase has a default it uses if unset, see `hbase.dfs.client.read.shortcircuit.buffer.size`; its default is 131072.
 * Ensure data locality. In `hbase-site.xml`, set `hbase.hstore.min.locality.to.skip.major.compact = 0.7` (Meaning that 0.7 \<= n \<= 1)
-* Make sure DataNodes have enough handlers for block transfers. In `hdfs-site`.xml``, set the following parameters:
+* Make sure DataNodes have enough handlers for block transfers. In `hdfs-site.xml`, set the following parameters:
 - `dfs.datanode.max.xcievers >= 8192`
 - `dfs.datanode.handler.count =` number of spindles
+
+Check the RegionServer logs after restart. You should only see complaint if misconfiguration.
+Otherwise, shortcircuit read operates quietly in background. It does not provide metrics so
+no optics on how effective it is but read latencies should show a marked improvement, especially if
+good data locality, lots of random reads, and dataset is larger than available cache.
+
+Other advanced configurations that you might play with, especially if shortcircuit functionality
+is complaining in the logs,  include `dfs.client.read.shortcircuit.streams.cache.size` and
+`dfs.client.socketcache.capacity`. Documentation is sparse on these options. You'll have to
+read source code.
+
+For more on short-circuit reads, see Colin's old blog on rollout,
+link:http://blog.cloudera.com/blog/2013/08/how-improved-short-circuit-local-reads-bring-better-performance-and-security-to-hadoop/[How Improved Short-Circuit Local Reads Bring Better Performance and Security to Hadoop].
+The link:https://issues.apache.org/jira/browse/HDFS-347[HDFS-347] issue also makes for an
+interesting read showing the HDFS community at its best (caveat a few comments).
 
 ===  JVM Tuning
 
@@ -1184,7 +1209,7 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 
 ==  Special Cases
 
-====  For applications where failing quickly is better than waiting
+===  For applications where failing quickly is better than waiting
 
 *  In `hbase-site.xml` on the client side, set the following parameters:
 - Set `hbase.client.pause = 1000`
@@ -1193,7 +1218,7 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 - Set the RecoverableZookeeper retry count: `zookeeper.recovery.retry = 1` (no retry)
 * In `hbase-site.xml` on the server side, set the Zookeeper session timeout for detecting server failures: `zookeeper.session.timeout` <= 30 seconds (20-30 is good).
 
-====  For applications that can tolerate slightly out of date information
+===  For applications that can tolerate slightly out of date information
 
 **HBase timeline consistency (HBASE-10070) **
 With read replicas enabled, read-only copies of regions (replicas) are distributed over the cluster. One RegionServer services the default or primary replica, which is the only replica that can service writes. Other RegionServers serve the secondary replicas, follow the primary RegionServer, and only see committed updates. The secondary replicas are read-only, but can serve reads immediately while the primary is failing over, cutting read availability blips from seconds to milliseconds. Phoenix supports timeline consistency as of 4.4.0

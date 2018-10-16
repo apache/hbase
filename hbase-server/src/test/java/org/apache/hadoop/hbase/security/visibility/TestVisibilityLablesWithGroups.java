@@ -23,14 +23,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -49,15 +50,18 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.protobuf.ByteString;
-
 @Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLablesWithGroups {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVisibilityLablesWithGroups.class);
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -96,6 +100,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Set up for the test
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.addLabels(conn, new String[] { SECRET, CONFIDENTIAL });
@@ -116,6 +121,7 @@ public class TestVisibilityLablesWithGroups {
     TEST_UTIL.createTable(tableName, CF);
     // put the data.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
@@ -137,6 +143,7 @@ public class TestVisibilityLablesWithGroups {
 
     // 'admin' user is part of 'supergroup', thus can see all the cells.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
@@ -178,6 +185,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Get testgroup's labels.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         GetAuthsResponse authsResponse = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -197,6 +205,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Test that test user can see what 'testgroup' has been authorized to.
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
@@ -281,6 +290,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Clear 'testgroup' of CONFIDENTIAL label.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         VisibilityLabelsResponse response = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -295,6 +305,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Get testgroup's labels.  No label is returned.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         GetAuthsResponse authsResponse = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -313,6 +324,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Test that test user cannot see the cells with the labels anymore.
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {

@@ -17,17 +17,20 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
+import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Handle connection preamble.
+ * @since 2.0.0`
  */
 @InterfaceAudience.Private
 class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf> {
@@ -40,7 +43,7 @@ class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf>
 
   @Override
   protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-    NettyServerRpcConnection conn = new NettyServerRpcConnection(rpcServer, ctx.channel());
+    NettyServerRpcConnection conn = createNettyServerRpcConnection(ctx.channel());
     ByteBuffer buf = ByteBuffer.allocate(msg.readableBytes());
     msg.readBytes(buf);
     buf.flip();
@@ -49,9 +52,14 @@ class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf>
       return;
     }
     ChannelPipeline p = ctx.pipeline();
+    ((NettyRpcFrameDecoder) p.get("frameDecoder")).setConnection(conn);
     ((NettyRpcServerRequestDecoder) p.get("decoder")).setConnection(conn);
     p.remove(this);
     p.remove("preambleDecoder");
   }
 
+  @VisibleForTesting
+  protected NettyServerRpcConnection createNettyServerRpcConnection(Channel channel) {
+    return new NettyServerRpcConnection(rpcServer, channel);
+  }
 }

@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ChecksumType;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class CacheTestUtils {
 
@@ -287,6 +287,7 @@ public class CacheTestUtils {
         return deserializerIdentifier;
       }
 
+
       @Override
       public Cacheable deserialize(ByteBuff b, boolean reuse, MemoryType memType)
           throws IOException {
@@ -302,7 +303,7 @@ public class CacheTestUtils {
 
     @Override
     public long heapSize() {
-      return 4 + buf.length;
+      return 4L + buf.length;
     }
 
     @Override
@@ -311,7 +312,7 @@ public class CacheTestUtils {
     }
 
     @Override
-    public void serialize(ByteBuffer destination) {
+    public void serialize(ByteBuffer destination, boolean includeNextBlockMetadata) {
       destination.putInt(buf.length);
       Thread.yield();
       destination.put(buf);
@@ -373,9 +374,10 @@ public class CacheTestUtils {
 
       String strKey;
       /* No conflicting keys */
-      for (strKey = new Long(rand.nextLong()).toString(); !usedStrings
-          .add(strKey); strKey = new Long(rand.nextLong()).toString())
-        ;
+      strKey = Long.toString(rand.nextLong());
+      while (!usedStrings.add(strKey)) {
+        strKey = Long.toString(rand.nextLong());
+      }
 
       returnedBlocks[i] = new HFileBlockPair();
       returnedBlocks[i].blockName = new BlockCacheKey(strKey, 0);
@@ -396,5 +398,16 @@ public class CacheTestUtils {
     public HFileBlock getBlock() {
       return this.block;
     }
+  }
+
+  public static void getBlockAndAssertEquals(BlockCache cache, BlockCacheKey key,
+                                             Cacheable blockToCache, ByteBuffer destBuffer,
+                                             ByteBuffer expectedBuffer) {
+    destBuffer.clear();
+    cache.cacheBlock(key, blockToCache);
+    Cacheable actualBlock = cache.getBlock(key, false, false, false);
+    actualBlock.serialize(destBuffer, true);
+    assertEquals(expectedBuffer, destBuffer);
+    cache.returnBlock(key, actualBlock);
   }
 }

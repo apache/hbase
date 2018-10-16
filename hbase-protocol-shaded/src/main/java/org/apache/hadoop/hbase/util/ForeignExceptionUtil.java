@@ -23,8 +23,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.Sta
  * (see ErrorHandling.proto for the internal of the proto messages)
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public final class ForeignExceptionUtil {
   private ForeignExceptionUtil() { }
 
@@ -95,7 +93,10 @@ public final class ForeignExceptionUtil {
     GenericExceptionMessage payload = gemBuilder.build();
     ForeignExceptionMessage.Builder exception = ForeignExceptionMessage.newBuilder();
     exception.setGenericException(payload);
-    if (source != null) exception.setSource(source);
+    if (source != null) {
+      exception.setSource(source);
+    }
+
     return exception.build();
   }
 
@@ -106,7 +107,10 @@ public final class ForeignExceptionUtil {
    */
   public static List<StackTraceElementMessage> toProtoStackTraceElement(StackTraceElement[] trace) {
     // if there is no stack trace, ignore it and just return the message
-    if (trace == null) return null;
+    if (trace == null) {
+      return null;
+    }
+
     // build the stack trace for the message
     List<StackTraceElementMessage> pbTrace = new ArrayList<>(trace.length);
     for (StackTraceElement elem : trace) {

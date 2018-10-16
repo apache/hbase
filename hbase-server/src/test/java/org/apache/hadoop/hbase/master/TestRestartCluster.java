@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,33 +21,38 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestRestartCluster {
-  private static final Log LOG = LogFactory.getLog(TestRestartCluster.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRestartCluster.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRestartCluster.class);
   private HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final TableName[] TABLES = {
@@ -56,13 +60,13 @@ public class TestRestartCluster {
       TableName.valueOf("restartTableTwo"),
       TableName.valueOf("restartTableThree")
   };
-  private static final byte [] FAMILY = Bytes.toBytes("family");
+  private static final byte[] FAMILY = Bytes.toBytes("family");
 
   @After public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout=300000)
+  @Test
   public void testClusterRestart() throws Exception {
     UTIL.startMiniCluster(3);
     while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
@@ -76,7 +80,7 @@ public class TestRestartCluster {
       UTIL.waitTableEnabled(TABLE);
     }
 
-    List<HRegionInfo> allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
+    List<RegionInfo> allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
     assertEquals(4, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
@@ -108,21 +112,16 @@ public class TestRestartCluster {
   /**
    * This tests retaining assignments on a cluster restart
    */
-  @Test (timeout=300000)
-  @Ignore // Does not work in new AMv2 currently.
+  @Test
   public void testRetainAssignmentOnRestart() throws Exception {
     UTIL.startMiniCluster(2);
-    while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
-      Threads.sleep(1);
-    }
     // Turn off balancer
-    UTIL.getMiniHBaseCluster().getMaster().
-      getMasterRpcServices().synchronousBalanceSwitch(false);
+    UTIL.getMiniHBaseCluster().getMaster().getMasterRpcServices().synchronousBalanceSwitch(false);
     LOG.info("\n\nCreating tables");
-    for(TableName TABLE : TABLES) {
+    for (TableName TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
     }
-    for(TableName TABLE : TABLES) {
+    for (TableName TABLE : TABLES) {
       UTIL.waitTableEnabled(TABLE);
     }
 
@@ -134,7 +133,7 @@ public class TestRestartCluster {
     SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
       master.getConnection());
     snapshot.initialize();
-    Map<HRegionInfo, ServerName> regionToRegionServerMap
+    Map<RegionInfo, ServerName> regionToRegionServerMap
       = snapshot.getRegionToRegionServerMap();
 
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
@@ -154,6 +153,7 @@ public class TestRestartCluster {
     }
 
     LOG.info("\n\nShutting down HBase cluster");
+    cluster.stopMaster(0);
     cluster.shutdown();
     cluster.waitUntilShutDown();
 
@@ -163,7 +163,7 @@ public class TestRestartCluster {
     LOG.info("\n\nStarting cluster the second time with the same ports");
     try {
       cluster.getConf().setInt(
-        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 4);
+          ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
       master = cluster.startMaster().getMaster();
       for (int i = 0; i < 3; i++) {
         cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, rsPorts[i]);
@@ -178,7 +178,7 @@ public class TestRestartCluster {
 
     // Make sure live regionservers are on the same host/port
     List<ServerName> localServers = master.getServerManager().getOnlineServersList();
-    assertEquals(4, localServers.size());
+    assertEquals(3, localServers.size());
     for (int i = 0; i < 3; i++) {
       boolean found = false;
       for (ServerName serverName: localServers) {
@@ -191,25 +191,52 @@ public class TestRestartCluster {
     }
 
     // Wait till master is initialized and all regions are assigned
-    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-    int expectedRegions = regionToRegionServerMap.size() + 1;
-    while (!master.isInitialized()
-        || regionStates.getRegionAssignments().size() != expectedRegions) {
-      Threads.sleep(100);
+    for (TableName TABLE : TABLES) {
+      UTIL.waitTableAvailable(TABLE);
     }
 
     snapshot = new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
     snapshot.initialize();
-    Map<HRegionInfo, ServerName> newRegionToRegionServerMap =
+    Map<RegionInfo, ServerName> newRegionToRegionServerMap =
       snapshot.getRegionToRegionServerMap();
     assertEquals(regionToRegionServerMap.size(), newRegionToRegionServerMap.size());
-    for (Map.Entry<HRegionInfo, ServerName> entry: newRegionToRegionServerMap.entrySet()) {
-      if (TableName.NAMESPACE_TABLE_NAME.equals(entry.getKey().getTable())) continue;
+    for (Map.Entry<RegionInfo, ServerName> entry : newRegionToRegionServerMap.entrySet()) {
+      if (TableName.NAMESPACE_TABLE_NAME.equals(entry.getKey().getTable())) {
+        continue;
+      }
       ServerName oldServer = regionToRegionServerMap.get(entry.getKey());
       ServerName currentServer = entry.getValue();
-      LOG.info("Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
+      LOG.info(
+        "Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
       assertEquals(entry.getKey().toString(), oldServer.getAddress(), currentServer.getAddress());
       assertNotEquals(oldServer.getStartcode(), currentServer.getStartcode());
+    }
+  }
+
+  @Test
+  public void testNewStartedRegionServerVersion() throws Exception {
+    UTIL.startMiniCluster(1);
+
+    // Start 3 new region server
+    Thread t = new Thread(() -> {
+      for (int i = 0; i < 3; i++) {
+        try {
+          JVMClusterUtil.RegionServerThread newRS = UTIL.getMiniHBaseCluster().startRegionServer();
+          newRS.waitForServerOnline();
+        } catch (IOException e) {
+          LOG.error("Failed to start a new RS", e);
+        }
+      }
+    });
+    t.start();
+
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    while (t.isAlive()) {
+      List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
+      for (ServerName serverName : serverNames) {
+        assertNotEquals(0, master.getServerManager().getVersionNumber(serverName));
+      }
+      Thread.sleep(100);
     }
   }
 }

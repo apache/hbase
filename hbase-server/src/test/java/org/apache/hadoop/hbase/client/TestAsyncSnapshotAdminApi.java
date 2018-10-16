@@ -15,47 +15,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncSnapshotAdminApi.class);
+
+  private static final Pattern MATCH_ALL = Pattern.compile(".*");
 
   String snapshotName1 = "snapshotName1";
   String snapshotName2 = "snapshotName2";
   String snapshotName3 = "snapshotName3";
 
-  @Rule
-  public TestName testName = new TestName();
-  TableName tableName;
-
-  @Before
-  public void setup() {
-    tableName = TableName.valueOf(testName.getMethodName());
-  }
-
   @After
   public void cleanup() throws Exception {
-    admin.deleteSnapshots(".*").get();
-    admin.disableTables(".*").get();
-    admin.deleteTables(".*").get();
+    admin.deleteSnapshots(MATCH_ALL).get();
+    admin.listTableNames().get().forEach(t -> admin.disableTable(t).join());
+    admin.listTableNames().get().forEach(t -> admin.deleteTable(t).join());
   }
 
   @Test
@@ -72,19 +73,19 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     admin.snapshot(snapshotName2, tableName).get();
     List<SnapshotDescription> snapshots = syncAdmin.listSnapshots();
     Collections.sort(snapshots, (snap1, snap2) -> {
-      Assert.assertNotNull(snap1);
-      Assert.assertNotNull(snap1.getName());
-      Assert.assertNotNull(snap2);
-      Assert.assertNotNull(snap2.getName());
+      assertNotNull(snap1);
+      assertNotNull(snap1.getName());
+      assertNotNull(snap2);
+      assertNotNull(snap2.getName());
       return snap1.getName().compareTo(snap2.getName());
     });
 
-    Assert.assertEquals(snapshotName1, snapshots.get(0).getName());
-    Assert.assertEquals(tableName, snapshots.get(0).getTableName());
-    Assert.assertEquals(SnapshotType.FLUSH, snapshots.get(0).getType());
-    Assert.assertEquals(snapshotName2, snapshots.get(1).getName());
-    Assert.assertEquals(tableName, snapshots.get(1).getTableName());
-    Assert.assertEquals(SnapshotType.FLUSH, snapshots.get(1).getType());
+    assertEquals(snapshotName1, snapshots.get(0).getName());
+    assertEquals(tableName, snapshots.get(0).getTableName());
+    assertEquals(SnapshotType.FLUSH, snapshots.get(0).getType());
+    assertEquals(snapshotName2, snapshots.get(1).getName());
+    assertEquals(tableName, snapshots.get(1).getTableName());
+    assertEquals(SnapshotType.FLUSH, snapshots.get(1).getType());
   }
 
   @Test
@@ -100,10 +101,10 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
 
     admin.snapshot(snapshotName1, tableName).get();
     List<SnapshotDescription> snapshots = syncAdmin.listSnapshots();
-    Assert.assertEquals(snapshots.size(), 1);
-    Assert.assertEquals(snapshotName1, snapshots.get(0).getName());
-    Assert.assertEquals(tableName, snapshots.get(0).getTableName());
-    Assert.assertEquals(SnapshotType.FLUSH, snapshots.get(0).getType());
+    assertEquals(1, snapshots.size());
+    assertEquals(snapshotName1, snapshots.get(0).getName());
+    assertEquals(tableName, snapshots.get(0).getTableName());
+    assertEquals(SnapshotType.FLUSH, snapshots.get(0).getType());
 
     // cloneSnapshot into a existed table.
     boolean failed = false;
@@ -112,10 +113,10 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     } catch (Exception e) {
       failed = true;
     }
-    Assert.assertTrue(failed);
+    assertTrue(failed);
 
     // cloneSnapshot into a new table.
-    Assert.assertTrue(!syncAdmin.tableExists(tableName2));
+    assertTrue(!syncAdmin.tableExists(tableName2));
     admin.cloneSnapshot(snapshotName1, tableName2).get();
     syncAdmin.tableExists(tableName2);
   }
@@ -127,12 +128,12 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
         Result result;
         int rowCount = 0;
         while ((result = scanner.next()) != null) {
-          Assert.assertArrayEquals(result.getRow(), Bytes.toBytes(rowCount));
-          Assert.assertArrayEquals(result.getValue(Bytes.toBytes("f1"), Bytes.toBytes("cq")),
+          assertArrayEquals(result.getRow(), Bytes.toBytes(rowCount));
+          assertArrayEquals(result.getValue(Bytes.toBytes("f1"), Bytes.toBytes("cq")),
             Bytes.toBytes(rowCount));
           rowCount += 1;
         }
-        Assert.assertEquals(rowCount, expectedRowCount);
+        assertEquals(rowCount, expectedRowCount);
       }
     }
   }
@@ -144,11 +145,11 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
       table.put(new Put(Bytes.toBytes(i)).addColumn(Bytes.toBytes("f1"), Bytes.toBytes("cq"),
         Bytes.toBytes(i)));
     }
-    Assert.assertEquals(admin.listSnapshots().get().size(), 0);
+    assertEquals(0, admin.listSnapshots().get().size());
 
     admin.snapshot(snapshotName1, tableName).get();
     admin.snapshot(snapshotName2, tableName).get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 2);
+    assertEquals(2, admin.listSnapshots().get().size());
 
     admin.disableTable(tableName).get();
     admin.restoreSnapshot(snapshotName1, true).get();
@@ -168,20 +169,23 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
       table.put(new Put(Bytes.toBytes(i)).addColumn(Bytes.toBytes("f1"), Bytes.toBytes("cq"),
         Bytes.toBytes(i)));
     }
-    Assert.assertEquals(admin.listSnapshots().get().size(), 0);
+    assertEquals(0, admin.listSnapshots().get().size());
 
     admin.snapshot(snapshotName1, tableName).get();
     admin.snapshot(snapshotName2, tableName).get();
     admin.snapshot(snapshotName3, tableName).get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 3);
+    assertEquals(3, admin.listSnapshots().get().size());
 
-    Assert.assertEquals(admin.listSnapshots("(.*)").get().size(), 3);
-    Assert.assertEquals(admin.listSnapshots("snapshotName(\\d+)").get().size(), 3);
-    Assert.assertEquals(admin.listSnapshots("snapshotName[1|3]").get().size(), 2);
-    Assert.assertEquals(admin.listSnapshots(Pattern.compile("snapshot(.*)")).get().size(), 3);
-    Assert.assertEquals(admin.listTableSnapshots("testListSnapshots", "s(.*)").get().size(), 3);
-    Assert.assertEquals(admin.listTableSnapshots("fakeTableName", "snap(.*)").get().size(), 0);
-    Assert.assertEquals(admin.listTableSnapshots("test(.*)", "snap(.*)[1|3]").get().size(), 2);
+    assertEquals(3, admin.listSnapshots(Pattern.compile("(.*)")).get().size());
+    assertEquals(3, admin.listSnapshots(Pattern.compile("snapshotName(\\d+)")).get().size());
+    assertEquals(2, admin.listSnapshots(Pattern.compile("snapshotName[1|3]")).get().size());
+    assertEquals(3, admin.listSnapshots(Pattern.compile("snapshot(.*)")).get().size());
+    assertEquals(3, admin.listTableSnapshots(Pattern.compile("testListSnapshots"),
+        Pattern.compile("s(.*)")).get().size());
+    assertEquals(0, admin.listTableSnapshots(Pattern.compile("fakeTableName"),
+            Pattern.compile("snap(.*)")).get().size());
+    assertEquals(2, admin.listTableSnapshots(Pattern.compile("test(.*)"),
+            Pattern.compile("snap(.*)[1|3]")).get().size());
   }
 
   @Test
@@ -191,29 +195,29 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
       table.put(new Put(Bytes.toBytes(i)).addColumn(Bytes.toBytes("f1"), Bytes.toBytes("cq"),
         Bytes.toBytes(i)));
     }
-    Assert.assertEquals(admin.listSnapshots().get().size(), 0);
+    assertEquals(0, admin.listSnapshots().get().size());
 
     admin.snapshot(snapshotName1, tableName).get();
     admin.snapshot(snapshotName2, tableName).get();
     admin.snapshot(snapshotName3, tableName).get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 3);
+    assertEquals(3, admin.listSnapshots().get().size());
 
     admin.deleteSnapshot(snapshotName1).get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 2);
+    assertEquals(2, admin.listSnapshots().get().size());
 
-    admin.deleteSnapshots("(.*)abc").get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 2);
+    admin.deleteSnapshots(Pattern.compile("(.*)abc")).get();
+    assertEquals(2, admin.listSnapshots().get().size());
 
-    admin.deleteSnapshots("(.*)1").get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 2);
+    admin.deleteSnapshots(Pattern.compile("(.*)1")).get();
+    assertEquals(2, admin.listSnapshots().get().size());
 
-    admin.deleteTableSnapshots("(.*)", "(.*)1").get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 2);
+    admin.deleteTableSnapshots(Pattern.compile("(.*)"), Pattern.compile("(.*)1")).get();
+    assertEquals(2, admin.listSnapshots().get().size());
 
-    admin.deleteTableSnapshots("(.*)", "(.*)2").get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 1);
+    admin.deleteTableSnapshots(Pattern.compile("(.*)"), Pattern.compile("(.*)2")).get();
+    assertEquals(1, admin.listSnapshots().get().size());
 
-    admin.deleteTableSnapshots("(.*)", "(.*)3").get();
-    Assert.assertEquals(admin.listSnapshots().get().size(), 0);
+    admin.deleteTableSnapshots(Pattern.compile("(.*)"), Pattern.compile("(.*)3")).get();
+    assertEquals(0, admin.listSnapshots().get().size());
   }
 }

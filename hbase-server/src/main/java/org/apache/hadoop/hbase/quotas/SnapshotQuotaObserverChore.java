@@ -17,49 +17,32 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MetricsMaster;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.FamilyFiles;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 /**
  * A Master-invoked {@code Chore} that computes the size of each snapshot which was created from
@@ -67,7 +50,7 @@ import com.google.common.collect.Multimap;
  */
 @InterfaceAudience.Private
 public class SnapshotQuotaObserverChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(SnapshotQuotaObserverChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotQuotaObserverChore.class);
   static final String SNAPSHOT_QUOTA_CHORE_PERIOD_KEY =
       "hbase.master.quotas.snapshot.chore.period";
   static final int SNAPSHOT_QUOTA_CHORE_PERIOD_DEFAULT = 1000 * 60 * 5; // 5 minutes in millis
@@ -128,11 +111,11 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
     }
 
     // For each table, compute the size of each snapshot
-    Multimap<TableName,SnapshotWithSize> snapshotsWithSize = computeSnapshotSizes(
-        snapshotsToComputeSize);
+    Map<String,Long> namespaceSnapshotSizes = computeSnapshotSizes(snapshotsToComputeSize);
 
-    // Write the size data to the quota table.
-    persistSnapshotSizes(snapshotsWithSize);
+    // Write the size data by namespaces to the quota table.
+    // We need to do this "globally" since each FileArchiverNotifier is limited to its own Table.
+    persistSnapshotSizesForNamespaces(namespaceSnapshotSizes);
   }
 
   /**
@@ -188,321 +171,50 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
    * @param snapshotsToComputeSize The snapshots to compute the size of
    * @return A mapping of table to snapshot created from that table and the snapshot's size.
    */
-  Multimap<TableName,SnapshotWithSize> computeSnapshotSizes(
+  Map<String,Long> computeSnapshotSizes(
       Multimap<TableName,String> snapshotsToComputeSize) throws IOException {
-    Multimap<TableName,SnapshotWithSize> snapshotSizes = HashMultimap.create();
+    final Map<String,Long> snapshotSizesByNamespace = new HashMap<>();
+    final long start = System.nanoTime();
     for (Entry<TableName,Collection<String>> entry : snapshotsToComputeSize.asMap().entrySet()) {
       final TableName tn = entry.getKey();
-      final List<String> snapshotNames = new ArrayList<>(entry.getValue());
-      // Sort the snapshots so we process them in lexicographic order. This ensures that multiple
-      // invocations of this Chore do not more the size ownership of some files between snapshots
-      // that reference the file (prevents size ownership from moving between snapshots).
-      Collections.sort(snapshotNames);
-      final Path rootDir = FSUtils.getRootDir(conf);
-      // Get the map of store file names to store file path for this table
-      // TODO is the store-file name unique enough? Does this need to be region+family+storefile?
-      final Set<String> tableReferencedStoreFiles;
-      try {
-        tableReferencedStoreFiles = FSUtils.getTableStoreFilePathMap(fs, rootDir).keySet();
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        return null;
-      }
+      final Collection<String> snapshotNames = entry.getValue();
 
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Paths for " + tn + ": " + tableReferencedStoreFiles);
-      }
+      // Get our notifier instance, this is tracking archivals that happen out-of-band of this chore
+      FileArchiverNotifier notifier = getNotifierForTable(tn);
 
-      // For each snapshot on this table, get the files which the snapshot references which
-      // the table does not.
-      Set<String> snapshotReferencedFiles = new HashSet<>();
-      for (String snapshotName : snapshotNames) {
-        final long start = System.nanoTime();
-        Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-        SnapshotDescription sd = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-        SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
-
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Files referenced by other snapshots: " + snapshotReferencedFiles);
-        }
-
-        // Get the set of files from the manifest that this snapshot references which are not also
-        // referenced by the originating table.
-        Set<StoreFileReference> unreferencedStoreFileNames = getStoreFilesFromSnapshot(
-            manifest, (sfn) -> !tableReferencedStoreFiles.contains(sfn)
-                && !snapshotReferencedFiles.contains(sfn));
-
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Snapshot " + snapshotName + " solely references the files: "
-              + unreferencedStoreFileNames);
-        }
-
-        // Compute the size of the store files for this snapshot
-        long size = getSizeOfStoreFiles(tn, unreferencedStoreFileNames);
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Computed size of " + snapshotName + " to be " + size);
-        }
-
-        // Persist this snapshot's size into the map
-        snapshotSizes.put(tn, new SnapshotWithSize(snapshotName, size));
-
-        // Make sure that we don't double-count the same file
-        for (StoreFileReference ref : unreferencedStoreFileNames) {
-          for (String fileName : ref.getFamilyToFilesMapping().values()) {
-            snapshotReferencedFiles.add(fileName);
-          }
-        }
-        // Update the amount of time it took to compute the snapshot's size
-        if (null != metrics) {
-          metrics.incrementSnapshotSizeComputationTime((System.nanoTime() - start) / 1_000_000);
-        }
-      }
+      // The total size consumed by all snapshots against this table
+      long totalSnapshotSize = notifier.computeAndStoreSnapshotSizes(snapshotNames);
+      // Bucket that size into the appropriate namespace
+      snapshotSizesByNamespace.merge(tn.getNamespaceAsString(), totalSnapshotSize, Long::sum);
     }
-    return snapshotSizes;
-  }
 
-  /**
-   * Extracts the names of the store files referenced by this snapshot which satisfy the given
-   * predicate (the predicate returns {@code true}).
-   */
-  Set<StoreFileReference> getStoreFilesFromSnapshot(
-      SnapshotManifest manifest, Predicate<String> filter) {
-    Set<StoreFileReference> references = new HashSet<>();
-    // For each region referenced by the snapshot
-    for (SnapshotRegionManifest rm : manifest.getRegionManifests()) {
-      StoreFileReference regionReference = new StoreFileReference(
-          HRegionInfo.convert(rm.getRegionInfo()).getEncodedName());
-
-      // For each column family in this region
-      for (FamilyFiles ff : rm.getFamilyFilesList()) {
-        final String familyName = ff.getFamilyName().toStringUtf8();
-        // And each store file in that family
-        for (StoreFile sf : ff.getStoreFilesList()) {
-          String storeFileName = sf.getName();
-          // A snapshot only "inherits" a files size if it uniquely refers to it (no table
-          // and no other snapshot references it).
-          if (filter.test(storeFileName)) {
-            regionReference.addFamilyStoreFile(familyName, storeFileName);
-          }
-        }
-      }
-      // Only add this Region reference if we retained any files.
-      if (!regionReference.getFamilyToFilesMapping().isEmpty()) {
-        references.add(regionReference);
-      }
+    // Update the amount of time it took to compute the size of the snapshots for a table
+    if (metrics != null) {
+      metrics.incrementSnapshotSizeComputationTime((System.nanoTime() - start) / 1_000_000);
     }
-    return references;
+
+    return snapshotSizesByNamespace;
   }
 
   /**
-   * Calculates the directory in HDFS for a table based on the configuration.
-   */
-  Path getTableDir(TableName tn) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
-    return FSUtils.getTableDir(rootDir, tn);
-  }
-
-  /**
-   * Computes the size of each store file in {@code storeFileNames}
-   */
-  long getSizeOfStoreFiles(TableName tn, Set<StoreFileReference> storeFileNames) {
-    return storeFileNames.stream()
-        .collect(Collectors.summingLong((sfr) -> getSizeOfStoreFile(tn, sfr)));
-  }
-
-  /**
-   * Computes the size of the store files for a single region.
-   */
-  long getSizeOfStoreFile(TableName tn, StoreFileReference storeFileName) {
-    String regionName = storeFileName.getRegionName();
-    return storeFileName.getFamilyToFilesMapping()
-        .entries().stream()
-        .collect(Collectors.summingLong((e) ->
-            getSizeOfStoreFile(tn, regionName, e.getKey(), e.getValue())));
-  }
-
-  /**
-   * Computes the size of the store file given its name, region and family name in
-   * the archive directory.
-   */
-  long getSizeOfStoreFile(
-      TableName tn, String regionName, String family, String storeFile) {
-    Path familyArchivePath;
-    try {
-      familyArchivePath = HFileArchiveUtil.getStoreArchivePath(conf, tn, regionName, family);
-    } catch (IOException e) {
-      LOG.warn("Could not compute path for the archive directory for the region", e);
-      return 0L;
-    }
-    Path fileArchivePath = new Path(familyArchivePath, storeFile);
-    try {
-      if (fs.exists(fileArchivePath)) {
-        FileStatus[] status = fs.listStatus(fileArchivePath);
-        if (1 != status.length) {
-          LOG.warn("Expected " + fileArchivePath +
-              " to be a file but was a directory, ignoring reference");
-          return 0L;
-        }
-        return status[0].getLen();
-      }
-    } catch (IOException e) {
-      LOG.warn("Could not obtain the status of " + fileArchivePath, e);
-      return 0L;
-    }
-    LOG.warn("Expected " + fileArchivePath + " to exist but does not, ignoring reference.");
-    return 0L;
-  }
-
-  /**
-   * Writes the snapshot sizes to the {@code hbase:quota} table.
+   * Returns the correct instance of {@link FileArchiverNotifier} for the given table name.
    *
-   * @param snapshotsWithSize The snapshot sizes to write.
+   * @param tn The table name
+   * @return A {@link FileArchiverNotifier} instance
    */
-  void persistSnapshotSizes(
-      Multimap<TableName,SnapshotWithSize> snapshotsWithSize) throws IOException {
-    try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
-      // Write each snapshot size for the table
-      persistSnapshotSizes(quotaTable, snapshotsWithSize);
-      // Write a size entry for all snapshots in a namespace
-      persistSnapshotSizesByNS(quotaTable, snapshotsWithSize);
-    }
+  FileArchiverNotifier getNotifierForTable(TableName tn) {
+    return FileArchiverNotifierFactoryImpl.getInstance().get(conn, conf, fs, tn);
   }
 
   /**
-   * Writes the snapshot sizes to the provided {@code table}.
+   * Writes the size used by snapshots for each namespace to the quota table.
    */
-  void persistSnapshotSizes(
-      Table table, Multimap<TableName,SnapshotWithSize> snapshotsWithSize) throws IOException {
-    // Convert each entry in the map to a Put and write them to the quota table
-    table.put(snapshotsWithSize.entries()
-        .stream()
-        .map(e -> QuotaTableUtil.createPutForSnapshotSize(
-            e.getKey(), e.getValue().getName(), e.getValue().getSize()))
-        .collect(Collectors.toList()));
-  }
-
-  /**
-   * Rolls up the snapshot sizes by namespace and writes a single record for each namespace
-   * which is the size of all snapshots in that namespace.
-   */
-  void persistSnapshotSizesByNS(
-      Table quotaTable, Multimap<TableName,SnapshotWithSize> snapshotsWithSize) throws IOException {
-    Map<String,Long> namespaceSnapshotSizes = groupSnapshotSizesByNamespace(snapshotsWithSize);
-    quotaTable.put(namespaceSnapshotSizes.entrySet().stream()
-        .map(e -> QuotaTableUtil.createPutForNamespaceSnapshotSize(
-            e.getKey(), e.getValue()))
-        .collect(Collectors.toList()));
-  }
-
-  /**
-   * Sums the snapshot sizes for each namespace.
-   */
-  Map<String,Long> groupSnapshotSizesByNamespace(
-      Multimap<TableName,SnapshotWithSize> snapshotsWithSize) {
-    return snapshotsWithSize.entries().stream()
-        .collect(Collectors.groupingBy(
-            // Convert TableName into the namespace string
-            (e) -> e.getKey().getNamespaceAsString(),
-            // Sum the values for namespace
-            Collectors.mapping(
-                Map.Entry::getValue, Collectors.summingLong((sws) -> sws.getSize()))));
-  }
-
-  /**
-   * A struct encapsulating the name of a snapshot and its "size" on the filesystem. This size is
-   * defined as the amount of filesystem space taken by the files the snapshot refers to which
-   * the originating table no longer refers to.
-   */
-  static class SnapshotWithSize {
-    private final String name;
-    private final long size;
-
-    SnapshotWithSize(String name, long size) {
-      this.name = Objects.requireNonNull(name);
-      this.size = size;
-    }
-
-    String getName() {
-      return name;
-    }
-
-    long getSize() {
-      return size;
-    }
-
-    @Override
-    public int hashCode() {
-      return new HashCodeBuilder().append(name).append(size).toHashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-
-      if (!(o instanceof SnapshotWithSize)) {
-        return false;
-      }
-
-      SnapshotWithSize other = (SnapshotWithSize) o;
-      return name.equals(other.name) && size == other.size;
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder(32);
-      return sb.append("SnapshotWithSize:[").append(name).append(" ")
-          .append(StringUtils.byteDesc(size)).append("]").toString();
-    }
-  }
-
-  /**
-   * A reference to a collection of files in the archive directory for a single region.
-   */
-  static class StoreFileReference {
-    private final String regionName;
-    private final Multimap<String,String> familyToFiles;
-
-    StoreFileReference(String regionName) {
-      this.regionName = Objects.requireNonNull(regionName);
-      familyToFiles = HashMultimap.create();
-    }
-
-    String getRegionName() {
-      return regionName;
-    }
-
-    Multimap<String,String> getFamilyToFilesMapping() {
-      return familyToFiles;
-    }
-
-    void addFamilyStoreFile(String family, String storeFileName) {
-      familyToFiles.put(family, storeFileName);
-    }
-
-    @Override
-    public int hashCode() {
-      return new HashCodeBuilder().append(regionName).append(familyToFiles).toHashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (!(o instanceof StoreFileReference)) {
-        return false;
-      }
-      StoreFileReference other = (StoreFileReference) o;
-      return regionName.equals(other.regionName) && familyToFiles.equals(other.familyToFiles);
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      return sb.append("StoreFileReference[region=").append(regionName).append(", files=")
-          .append(familyToFiles).append("]").toString();
+  void persistSnapshotSizesForNamespaces(
+      Map<String,Long> snapshotSizesByNamespace) throws IOException {
+    try (Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
+      quotaTable.put(snapshotSizesByNamespace.entrySet().stream()
+          .map(e -> QuotaTableUtil.createPutForNamespaceSnapshotSize(e.getKey(), e.getValue()))
+          .collect(Collectors.toList()));
     }
   }
 

@@ -19,21 +19,20 @@
 
 include Java
 
-java_import org.apache.hadoop.hbase.client.replication.ReplicationAdmin
-java_import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper
+java_import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil
+java_import org.apache.hadoop.hbase.replication.SyncReplicationState
 java_import org.apache.hadoop.hbase.replication.ReplicationPeerConfig
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.zookeeper.ZKConfig
 java_import org.apache.hadoop.hbase.TableName
 
-# Wrapper for org.apache.hadoop.hbase.client.replication.ReplicationAdmin
+# Used for replication administrative operations.
 
 module Hbase
   class RepAdmin
     include HBaseConstants
 
     def initialize(configuration)
-      @replication_admin = ReplicationAdmin.new(configuration)
       @configuration = configuration
       @admin = ConnectionFactory.createConnection(configuration).getAdmin
     end
@@ -43,7 +42,7 @@ module Hbase
     def add_peer(id, args = {}, peer_tableCFs = nil)
       if args.is_a?(Hash)
         unless peer_tableCFs.nil?
-          raise(ArgumentError, "peer_tableCFs should be specified as TABLE_CFS in args")
+          raise(ArgumentError, 'peer_tableCFs should be specified as TABLE_CFS in args')
         end
 
         endpoint_classname = args.fetch(ENDPOINT_CLASSNAME, nil)
@@ -51,12 +50,12 @@ module Hbase
 
         # Handle cases where custom replication endpoint and cluster key are either both provided
         # or neither are provided
-        if endpoint_classname.nil? and cluster_key.nil?
-          raise(ArgumentError, "Either ENDPOINT_CLASSNAME or CLUSTER_KEY must be specified.")
+        if endpoint_classname.nil? && cluster_key.nil?
+          raise(ArgumentError, 'Either ENDPOINT_CLASSNAME or CLUSTER_KEY must be specified.')
         end
 
         # Cluster Key is required for ReplicationPeerConfig for a custom replication endpoint
-        if !endpoint_classname.nil? and cluster_key.nil?
+        if !endpoint_classname.nil? && cluster_key.nil?
           cluster_key = ZKConfig.getZooKeeperClusterKey(@configuration)
         end
 
@@ -65,25 +64,30 @@ module Hbase
         data = args.fetch(DATA, nil)
         table_cfs = args.fetch(TABLE_CFS, nil)
         namespaces = args.fetch(NAMESPACES, nil)
+        peer_state = args.fetch(STATE, nil)
+        remote_wal_dir = args.fetch(REMOTE_WAL_DIR, nil)
 
         # Create and populate a ReplicationPeerConfig
-        replication_peer_config = ReplicationPeerConfig.new
-        replication_peer_config.set_cluster_key(cluster_key)
+        builder = ReplicationPeerConfig.newBuilder()
+        builder.set_cluster_key(cluster_key)
 
         unless endpoint_classname.nil?
-          replication_peer_config.set_replication_endpoint_impl(endpoint_classname)
+          builder.set_replication_endpoint_impl(endpoint_classname)
+        end
+
+        unless remote_wal_dir.nil?
+          builder.setRemoteWALDir(remote_wal_dir)
         end
 
         unless config.nil?
-          replication_peer_config.get_configuration.put_all(config)
+          builder.putAllConfiguration(config)
         end
 
         unless data.nil?
           # Convert Strings to Bytes for peer_data
-          peer_data = replication_peer_config.get_peer_data
-          data.each{|key, val|
-            peer_data.put(Bytes.to_bytes(key), Bytes.to_bytes(val))
-          }
+          data.each do |key, val|
+            builder.putPeerData(Bytes.to_bytes(key), Bytes.to_bytes(val))
+          end
         end
 
         unless namespaces.nil?
@@ -91,20 +95,27 @@ module Hbase
           namespaces.each do |n|
             ns_set.add(n)
           end
-          replication_peer_config.set_namespaces(ns_set)
+          builder.setReplicateAllUserTables(false)
+          builder.set_namespaces(ns_set)
         end
 
         unless table_cfs.nil?
           # convert table_cfs to TableName
           map = java.util.HashMap.new
-          table_cfs.each{|key, val|
+          table_cfs.each do |key, val|
             map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
-          }
-          replication_peer_config.set_table_cfs_map(map)
+          end
+          builder.setReplicateAllUserTables(false)
+          builder.set_table_cfs_map(map)
         end
-        @admin.addReplicationPeer(id, replication_peer_config)
+
+        enabled = true
+        unless peer_state.nil?
+          enabled = false if peer_state == 'DISABLED'
+        end
+        @admin.addReplicationPeer(id, builder.build, enabled)
       else
-        raise(ArgumentError, "args must be a Hash")
+        raise(ArgumentError, 'args must be a Hash')
       end
     end
 
@@ -116,10 +127,10 @@ module Hbase
 
     #---------------------------------------------------------------------------------------------
     # Show replcated tables/column families, and their ReplicationType
-    def list_replicated_tables(regex = ".*")
+    def list_replicated_tables(regex = '.*')
       pattern = java.util.regex.Pattern.compile(regex)
-      list = @admin.listReplicatedTableCFs()
-      list.select {|t| pattern.match(t.getTable().getNameAsString())}
+      list = @admin.listReplicatedTableCFs
+      list.select { |t| pattern.match(t.getTable.getNameAsString) }
     end
 
     #----------------------------------------------------------------------------------------------
@@ -144,7 +155,11 @@ module Hbase
     # Show the current tableCFs config for the specified peer
     def show_peer_tableCFs(id)
       rpc = @admin.getReplicationPeerConfig(id)
-      ReplicationSerDeHelper.convertToString(rpc.getTableCFsMap())
+      show_peer_tableCFs_by_config(rpc)
+    end
+
+    def show_peer_tableCFs_by_config(peer_config)
+      ReplicationPeerConfigUtil.convertToString(peer_config.getTableCFsMap)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -153,9 +168,9 @@ module Hbase
       unless tableCFs.nil?
         # convert tableCFs to TableName
         map = java.util.HashMap.new
-        tableCFs.each{|key, val|
+        tableCFs.each do |key, val|
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
-        }
+        end
         rpc = get_peer_config(id)
         unless rpc.nil?
           rpc.setTableCFsMap(map)
@@ -170,9 +185,9 @@ module Hbase
       unless tableCFs.nil?
         # convert tableCFs to TableName
         map = java.util.HashMap.new
-        tableCFs.each{|key, val|
+        tableCFs.each do |key, val|
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
-        }
+        end
       end
       @admin.appendReplicationPeerTableCFs(id, map)
     end
@@ -183,9 +198,9 @@ module Hbase
       unless tableCFs.nil?
         # convert tableCFs to TableName
         map = java.util.HashMap.new
-        tableCFs.each{|key, val|
+        tableCFs.each do |key, val|
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
-        }
+        end
       end
       @admin.removeReplicationPeerTableCFs(id, map)
     end
@@ -210,15 +225,17 @@ module Hbase
       unless namespaces.nil?
         rpc = get_peer_config(id)
         unless rpc.nil?
-          ns_set = rpc.getNamespaces()
-          if ns_set.nil?
+          if rpc.getNamespaces.nil?
             ns_set = java.util.HashSet.new
+          else
+            ns_set = java.util.HashSet.new(rpc.getNamespaces)
           end
           namespaces.each do |n|
             ns_set.add(n)
           end
-          rpc.setNamespaces(ns_set)
-          @admin.updateReplicationPeerConfig(id, rpc)
+          builder = ReplicationPeerConfig.newBuilder(rpc)
+          builder.setNamespaces(ns_set)
+          @admin.updateReplicationPeerConfig(id, builder.build)
         end
       end
     end
@@ -228,14 +245,16 @@ module Hbase
       unless namespaces.nil?
         rpc = get_peer_config(id)
         unless rpc.nil?
-          ns_set = rpc.getNamespaces()
+          ns_set = rpc.getNamespaces
           unless ns_set.nil?
+            ns_set = java.util.HashSet.new(ns_set)
             namespaces.each do |n|
               ns_set.remove(n)
             end
           end
-          rpc.setNamespaces(ns_set)
-          @admin.updateReplicationPeerConfig(id, rpc)
+          builder = ReplicationPeerConfig.newBuilder(rpc)
+          builder.setNamespaces(ns_set)
+          @admin.updateReplicationPeerConfig(id, builder.build)
         end
       end
     end
@@ -261,6 +280,79 @@ module Hbase
       end
     end
 
+    def set_peer_replicate_all(id, replicate_all)
+      rpc = get_peer_config(id)
+      return if rpc.nil?
+      rpc.setReplicateAllUserTables(replicate_all)
+      @admin.updateReplicationPeerConfig(id, rpc)
+    end
+
+    def set_peer_serial(id, peer_serial)
+      rpc = get_peer_config(id)
+      return if rpc.nil?
+      rpc_builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
+                       .newBuilder(rpc)
+      new_rpc = rpc_builder.setSerial(peer_serial).build
+      @admin.updateReplicationPeerConfig(id, new_rpc)
+    end
+
+    # Set exclude namespaces config for the specified peer
+    def set_peer_exclude_namespaces(id, exclude_namespaces)
+      return if exclude_namespaces.nil?
+      exclude_ns_set = java.util.HashSet.new
+      exclude_namespaces.each do |n|
+        exclude_ns_set.add(n)
+      end
+      rpc = get_peer_config(id)
+      return if rpc.nil?
+      rpc.setExcludeNamespaces(exclude_ns_set)
+      @admin.updateReplicationPeerConfig(id, rpc)
+    end
+
+    # Show the exclude namespaces config for the specified peer
+    def show_peer_exclude_namespaces(peer_config)
+      namespaces = peer_config.getExcludeNamespaces
+      return nil if namespaces.nil?
+      namespaces = java.util.ArrayList.new(namespaces)
+      java.util.Collections.sort(namespaces)
+      '!' + namespaces.join(';')
+    end
+
+    # Set exclude tableCFs config for the specified peer
+    def set_peer_exclude_tableCFs(id, exclude_tableCFs)
+      return if exclude_tableCFs.nil?
+      # convert tableCFs to TableName
+      map = java.util.HashMap.new
+      exclude_tableCFs.each do |key, val|
+        map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
+      end
+      rpc = get_peer_config(id)
+      return if rpc.nil?
+      rpc.setExcludeTableCFsMap(map)
+      @admin.updateReplicationPeerConfig(id, rpc)
+    end
+
+    # Show the exclude tableCFs config for the specified peer
+    def show_peer_exclude_tableCFs(peer_config)
+      tableCFs = peer_config.getExcludeTableCFsMap
+      return nil if tableCFs.nil?
+      '!' + ReplicationPeerConfigUtil.convertToString(tableCFs)
+    end
+
+    # Transit current cluster to a new state in the specified synchronous
+    # replication peer
+    def transit_peer_sync_replication_state(id, state)
+      if 'ACTIVE'.eql?(state)
+        @admin.transitReplicationPeerSyncReplicationState(id, SyncReplicationState::ACTIVE)
+      elsif 'DOWNGRADE_ACTIVE'.eql?(state)
+        @admin.transitReplicationPeerSyncReplicationState(id, SyncReplicationState::DOWNGRADE_ACTIVE)
+      elsif 'STANDBY'.eql?(state)
+        @admin.transitReplicationPeerSyncReplicationState(id, SyncReplicationState::STANDBY)
+      else
+        raise(ArgumentError, 'synchronous replication state must be ACTIVE, DOWNGRADE_ACTIVE or STANDBY')
+      end
+    end
+
     #----------------------------------------------------------------------------------------------
     # Enables a table's replication switch
     def enable_tablerep(table_name)
@@ -281,33 +373,34 @@ module Hbase
       peers.each do |peer|
         map.put(peer.getPeerId, peer.getPeerConfig)
       end
-      return map
+      map
     end
 
     def get_peer_config(id)
       @admin.getReplicationPeerConfig(id)
     end
 
-    def update_peer_config(id, args={})
+    def update_peer_config(id, args = {})
       # Optional parameters
       config = args.fetch(CONFIG, nil)
       data = args.fetch(DATA, nil)
 
       # Create and populate a ReplicationPeerConfig
       replication_peer_config = get_peer_config(id)
+      builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
+                   .newBuilder(replication_peer_config)
       unless config.nil?
-        replication_peer_config.get_configuration.put_all(config)
+        builder.putAllConfiguration(config)
       end
 
       unless data.nil?
         # Convert Strings to Bytes for peer_data
-        peer_data = replication_peer_config.get_peer_data
-        data.each{|key, val|
-          peer_data.put(Bytes.to_bytes(key), Bytes.to_bytes(val))
-        }
+        data.each do |key, val|
+          builder.putPeerData(Bytes.to_bytes(key), Bytes.to_bytes(val))
+        end
       end
 
-      @admin.updateReplicationPeerConfig(id, replication_peer_config)
+      @admin.updateReplicationPeerConfig(id, builder.build)
     end
   end
 end

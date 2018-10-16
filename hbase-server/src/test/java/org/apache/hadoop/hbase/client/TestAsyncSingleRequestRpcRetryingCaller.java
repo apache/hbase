@@ -29,8 +29,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -40,11 +40,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncSingleRequestRpcRetryingCaller {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncSingleRequestRpcRetryingCaller.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -63,7 +68,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(2);
-    TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
@@ -81,15 +86,15 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
   public void testRegionMove() throws InterruptedException, ExecutionException, IOException {
     // This will leave a cached entry in location cache
     HRegionLocation loc = CONN.getRegionLocator(TABLE_NAME).getRegionLocation(ROW).get();
-    int index = TEST_UTIL.getHBaseCluster().getServerWith(loc.getRegionInfo().getRegionName());
-    TEST_UTIL.getAdmin().move(loc.getRegionInfo().getEncodedNameAsBytes(), Bytes.toBytes(
+    int index = TEST_UTIL.getHBaseCluster().getServerWith(loc.getRegion().getRegionName());
+    TEST_UTIL.getAdmin().move(loc.getRegion().getEncodedNameAsBytes(), Bytes.toBytes(
       TEST_UTIL.getHBaseCluster().getRegionServer(1 - index).getServerName().getServerName()));
-    RawAsyncTable table = CONN.getRawTableBuilder(TABLE_NAME)
+    AsyncTable<?> table = CONN.getTableBuilder(TABLE_NAME)
         .setRetryPause(100, TimeUnit.MILLISECONDS).setMaxRetries(30).build();
     table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
 
     // move back
-    TEST_UTIL.getAdmin().move(loc.getRegionInfo().getEncodedNameAsBytes(),
+    TEST_UTIL.getAdmin().move(loc.getRegion().getEncodedNameAsBytes(),
       Bytes.toBytes(loc.getServerName().getServerName()));
     Result result = table.get(new Get(ROW).addColumn(FAMILY, QUALIFIER)).get();
     assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
@@ -166,7 +171,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
         return mockedLocator;
       }
     }) {
-      RawAsyncTable table = mockedConn.getRawTableBuilder(TABLE_NAME)
+      AsyncTable<?> table = mockedConn.getTableBuilder(TABLE_NAME)
           .setRetryPause(100, TimeUnit.MILLISECONDS).setMaxRetries(5).build();
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
       assertTrue(errorTriggered.get());

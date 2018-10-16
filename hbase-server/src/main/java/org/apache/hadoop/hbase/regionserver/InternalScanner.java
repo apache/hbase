@@ -24,8 +24,8 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Internal scanners differ from client-side scanners in that they operate on
@@ -46,11 +46,13 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 public interface InternalScanner extends Closeable {
   /**
    * Grab the next row's worth of values.
-   * @param results return output array
+   * @param result return output array
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean next(List<Cell> results) throws IOException;
+  default boolean next(List<Cell> result) throws IOException {
+    return next(result, NoLimitScannerContext.getInstance());
+  }
 
   /**
    * Grab the next row's worth of values.
@@ -65,5 +67,6 @@ public interface InternalScanner extends Closeable {
    * Closes the scanner and releases any resources it has allocated
    * @throws IOException
    */
+  @Override
   void close() throws IOException;
 }

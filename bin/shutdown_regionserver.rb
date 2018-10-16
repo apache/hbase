@@ -27,24 +27,24 @@ java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
 
-def usage(msg=nil)
+def usage(msg = nil)
   $stderr.puts 'Usage: shutdown_regionserver.rb <host:port>..'
   $stderr.puts
   $stderr.puts 'Stops the specified regionservers via RPC'
-  $stderr.puts 'Error: %s' % msg if msg
+  $stderr.puts format('Error: %s', msg) if msg
   abort
 end
 
-usage if ARGV.length < 1
+usage if ARGV.empty?
 
 ARGV.each do |x|
-  usage 'Invalid host:port: %s' % x unless x.include? ':'
+  usage format('Invalid host:port: %s', x) unless x.include? ':'
 end
 
-config = HBaseConfiguration.create()
+config = HBaseConfiguration.create
 connection = ConnectionFactory.createConnection(config)
 begin
-  admin = connection.getAdmin()
+  admin = connection.getAdmin
 rescue
   abort "Error: Couldn't instantiate HBaseAdmin"
 end
@@ -52,5 +52,5 @@ end
 ARGV.each do |hostport|
   admin.stopRegionServer(hostport)
 end
-admin.close()
-connection.close()
+admin.close
+connection.close

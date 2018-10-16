@@ -30,7 +30,7 @@ import org.apache.avro.SchemaBuilder.FieldDefault
 import org.apache.avro.SchemaBuilder.RecordBuilder
 import org.apache.avro.io._
 import org.apache.commons.io.output.ByteArrayOutputStream
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes
 
 import scala.collection.JavaConversions._

@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import java.io.IOException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Special procedure used as a chore.
@@ -58,12 +56,12 @@ public abstract class ProcedureInMemoryChore<TEnvironment> extends Procedure<TEn
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) {
-    throw new UnsupportedOperationException();
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) {
-    throw new UnsupportedOperationException();
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
   }
 }

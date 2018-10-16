@@ -21,18 +21,18 @@ package org.apache.hadoop.metrics2.lib;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MsInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * An optional metrics registry class for creating and maintaining a
@@ -47,7 +47,7 @@ import com.google.common.collect.Maps;
  */
 @InterfaceAudience.Private
 public class DynamicMetricsRegistry {
-  private static final Log LOG = LogFactory.getLog(DynamicMetricsRegistry.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DynamicMetricsRegistry.class);
 
   private final ConcurrentMap<String, MutableMetric> metricsMap =
       Maps.newConcurrentMap();
@@ -56,14 +56,14 @@ public class DynamicMetricsRegistry {
   private final MetricsInfo metricsInfo;
   private final DefaultMetricsSystemHelper helper = new DefaultMetricsSystemHelper();
   private final static String[] histogramSuffixes = new String[]{
-      "_num_ops",
-      "_min",
-      "_max",
-      "_median",
-      "_75th_percentile",
-      "_90th_percentile",
-      "_95th_percentile",
-      "_99th_percentile"};
+    "_num_ops",
+    "_min",
+    "_max",
+    "_median",
+    "_75th_percentile",
+    "_90th_percentile",
+    "_95th_percentile",
+    "_99th_percentile"};
 
   /**
    * Construct the registry with a record name
@@ -215,7 +215,10 @@ public class DynamicMetricsRegistry {
     if (returnExisting) {
       MutableMetric rate = metricsMap.get(name);
       if (rate != null) {
-        if (rate instanceof MutableRate) return (MutableRate) rate;
+        if (rate instanceof MutableRate) {
+          return (MutableRate) rate;
+        }
+
         throw new MetricsException("Unexpected metrics type "+ rate.getClass()
                                    +" for "+ name);
       }
@@ -230,7 +233,7 @@ public class DynamicMetricsRegistry {
    * @return A new MutableHistogram
    */
   public MutableHistogram newHistogram(String name) {
-     return newHistogram(name, "");
+    return newHistogram(name, "");
   }
 
   /**
@@ -250,7 +253,7 @@ public class DynamicMetricsRegistry {
    * @return A new MutableTimeHistogram
    */
   public MutableTimeHistogram newTimeHistogram(String name) {
-     return newTimeHistogram(name, "");
+    return newTimeHistogram(name, "");
   }
 
   /**
@@ -270,7 +273,7 @@ public class DynamicMetricsRegistry {
    * @return A new MutableSizeHistogram
    */
   public MutableSizeHistogram newSizeHistogram(String name) {
-     return newSizeHistogram(name, "");
+    return newSizeHistogram(name, "");
   }
 
   /**
@@ -394,7 +397,7 @@ public class DynamicMetricsRegistry {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("info", metricsInfo).add("tags", tags()).add("metrics", metrics())
         .toString();
   }
@@ -497,10 +500,8 @@ public class DynamicMetricsRegistry {
     return (MutableHistogram) histo;
   }
 
-  private<T extends MutableMetric> T
-  addNewMetricIfAbsent(String name,
-                       T ret,
-                       Class<T> metricClass) {
+  private<T extends MutableMetric> T addNewMetricIfAbsent(String name, T ret,
+      Class<T> metricClass) {
     //If the value we get back is null then the put was successful and we will
     // return that. Otherwise metric should contain the thing that was in
     // before the put could be completed.

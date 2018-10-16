@@ -17,30 +17,34 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
-import org.apache.hadoop.hbase.util.Threads;
-
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+import java.io.IOException;
+import java.util.Set;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class AssignmentTestingUtil {
-  private static final Log LOG = LogFactory.getLog(AssignmentTestingUtil.class);
+public final class AssignmentTestingUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(AssignmentTestingUtil.class);
 
   private AssignmentTestingUtil() {}
 
   public static void waitForRegionToBeInTransition(final HBaseTestingUtility util,
-      final HRegionInfo hri) throws Exception {
+      final RegionInfo hri) throws Exception {
     while (!getMaster(util).getAssignmentManager().getRegionStates().isRegionInTransition(hri)) {
       Threads.sleep(10);
     }
@@ -85,14 +89,14 @@ public abstract class AssignmentTestingUtil {
   }
 
   public static ServerName crashRsWithRegion(final HBaseTestingUtility util,
-      final HRegionInfo hri, final boolean kill) throws Exception {
+      final RegionInfo hri, final boolean kill) throws Exception {
     ServerName serverName = getServerHoldingRegion(util, hri);
     crashRs(util, serverName, kill);
     return serverName;
   }
 
   public static ServerName getServerHoldingRegion(final HBaseTestingUtility util,
-      final HRegionInfo hri) throws Exception {
+      final RegionInfo hri) throws Exception {
     ServerName serverName = util.getMiniHBaseCluster().getServerHoldingRegion(
       hri.getTable(), hri.getRegionName());
     ServerName amServerName = getMaster(util).getAssignmentManager().getRegionStates()
@@ -107,7 +111,7 @@ public abstract class AssignmentTestingUtil {
 
   public static boolean isServerHoldingMeta(final HBaseTestingUtility util,
       final ServerName serverName) throws Exception {
-    for (HRegionInfo hri: getMetaRegions(util)) {
+    for (RegionInfo hri: getMetaRegions(util)) {
       if (serverName.equals(getServerHoldingRegion(util, hri))) {
         return true;
       }
@@ -115,11 +119,37 @@ public abstract class AssignmentTestingUtil {
     return false;
   }
 
-  public static Set<HRegionInfo> getMetaRegions(final HBaseTestingUtility util) {
+  public static Set<RegionInfo> getMetaRegions(final HBaseTestingUtility util) {
     return getMaster(util).getAssignmentManager().getMetaRegionSet();
   }
 
   private static HMaster getMaster(final HBaseTestingUtility util) {
     return util.getMiniHBaseCluster().getMaster();
+  }
+
+  public static boolean waitForAssignment(AssignmentManager am, RegionInfo regionInfo)
+      throws IOException {
+    // This method can be called before the regionInfo has made it into the regionStateMap
+    // so wait around here a while.
+    Waiter.waitFor(am.getConfiguration(), 10000,
+      () -> am.getRegionStates().getRegionStateNode(regionInfo) != null);
+    RegionStateNode regionNode = am.getRegionStates().getRegionStateNode(regionInfo);
+    // Wait until the region has already been open, or we have a TRSP along with it.
+    Waiter.waitFor(am.getConfiguration(), 30000,
+      () -> regionNode.isInState(State.OPEN) || regionNode.isInTransition());
+    TransitRegionStateProcedure proc = regionNode.getProcedure();
+    regionNode.lock();
+    try {
+      if (regionNode.isInState(State.OPEN)) {
+        return true;
+      }
+      proc = regionNode.getProcedure();
+    } finally {
+      regionNode.unlock();
+    }
+    assertNotNull(proc);
+    ProcedureSyncWait.waitForProcedureToCompleteIOE(am.getMaster().getMasterProcedureExecutor(),
+      proc, 5L * 60 * 1000);
+    return true;
   }
 }

@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.metrics;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Common interface for metrics source implementations which need to track individual exception
  * types thrown or received.
  */
+@InterfaceAudience.Private
 public interface ExceptionTrackingSource extends BaseSource {
   String EXCEPTIONS_NAME="exceptions";
   String EXCEPTIONS_DESC="Exceptions caused by requests";

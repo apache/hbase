@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class to pick which files if any to compact together.
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
  */
 @InterfaceAudience.Private
 public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
-  private static final Log LOG = LogFactory.getLog(ExploringCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExploringCompactionPolicy.class);
 
   /**
    * Constructor for ExploringCompactionPolicy.
@@ -51,21 +51,20 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
   }
 
   @Override
-  protected final ArrayList<StoreFile> applyCompactionPolicy(final ArrayList<StoreFile> candidates,
-    final boolean mayUseOffPeak, final boolean mightBeStuck) throws IOException {
-    return new ArrayList<>(applyCompactionPolicy(candidates, mightBeStuck,
-        mayUseOffPeak, comConf.getMinFilesToCompact(), comConf.getMaxFilesToCompact()));
+  protected final ArrayList<HStoreFile> applyCompactionPolicy(ArrayList<HStoreFile> candidates,
+      boolean mayUseOffPeak, boolean mightBeStuck) throws IOException {
+    return new ArrayList<>(applyCompactionPolicy(candidates, mightBeStuck, mayUseOffPeak,
+      comConf.getMinFilesToCompact(), comConf.getMaxFilesToCompact()));
   }
 
-  public List<StoreFile> applyCompactionPolicy(final List<StoreFile> candidates,
-       boolean mightBeStuck, boolean mayUseOffPeak, int minFiles, int maxFiles) {
-
+  public List<HStoreFile> applyCompactionPolicy(List<HStoreFile> candidates, boolean mightBeStuck,
+      boolean mayUseOffPeak, int minFiles, int maxFiles) {
     final double currentRatio = mayUseOffPeak
         ? comConf.getCompactionRatioOffPeak() : comConf.getCompactionRatio();
 
     // Start off choosing nothing.
-    List<StoreFile> bestSelection = new ArrayList<>(0);
-    List<StoreFile> smallest = mightBeStuck ? new ArrayList<>(0) : null;
+    List<HStoreFile> bestSelection = new ArrayList<>(0);
+    List<HStoreFile> smallest = mightBeStuck ? new ArrayList<>(0) : null;
     long bestSize = 0;
     long smallestSize = Long.MAX_VALUE;
 
@@ -75,7 +74,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
       // Consider every different sub list permutation in between start and end with min files.
       for (int currentEnd = start + minFiles - 1;
           currentEnd < candidates.size(); currentEnd++) {
-        List<StoreFile> potentialMatchFiles = candidates.subList(start, currentEnd + 1);
+        List<HStoreFile> potentialMatchFiles = candidates.subList(start, currentEnd + 1);
 
         // Sanity checks
         if (potentialMatchFiles.size() < minFiles) {
@@ -119,14 +118,14 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
           + " files of size "+ smallestSize + " because the store might be stuck");
       return new ArrayList<>(smallest);
     }
-    LOG.debug("Exploring compaction algorithm has selected " + bestSelection.size()
-        + " files of size " + bestSize + " starting at candidate #" + bestStart +
-        " after considering " + opts + " permutations with " + optsInRatio + " in ratio");
+    LOG.debug("Exploring compaction algorithm has selected {}  files of size {} starting at " +
+      "candidate #{} after considering {} permutations with {} in ratio", bestSelection.size(),
+      bestSize, bestSize, opts, optsInRatio);
     return new ArrayList<>(bestSelection);
   }
 
-  private boolean isBetterSelection(List<StoreFile> bestSelection,
-      long bestSize, List<StoreFile> selection, long size, boolean mightBeStuck) {
+  private boolean isBetterSelection(List<HStoreFile> bestSelection, long bestSize,
+      List<HStoreFile> selection, long size, boolean mightBeStuck) {
     if (mightBeStuck && bestSize > 0 && size > 0) {
       // Keep the selection that removes most files for least size. That penaltizes adding
       // large files to compaction, but not small files, so we don't become totally inefficient
@@ -146,13 +145,8 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
    * @param potentialMatchFiles StoreFile list.
    * @return Sum of StoreFile.getReader().length();
    */
-  private long getTotalStoreSize(final List<StoreFile> potentialMatchFiles) {
-    long size = 0;
-
-    for (StoreFile s:potentialMatchFiles) {
-      size += s.getReader().length();
-    }
-    return size;
+  private long getTotalStoreSize(List<HStoreFile> potentialMatchFiles) {
+    return potentialMatchFiles.stream().mapToLong(sf -> sf.getReader().length()).sum();
   }
 
   /**
@@ -163,14 +157,14 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
    * @param currentRatio The ratio to use.
    * @return a boolean if these files satisfy the ratio constraints.
    */
-  private boolean filesInRatio(final List<StoreFile> files, final double currentRatio) {
+  private boolean filesInRatio(List<HStoreFile> files, double currentRatio) {
     if (files.size() < 2) {
       return true;
     }
 
     long totalFileSize = getTotalStoreSize(files);
 
-    for (StoreFile file : files) {
+    for (HStoreFile file : files) {
       long singleFileSize = file.getReader().length();
       long sumAllOtherFileSizes = totalFileSize - singleFileSize;
 

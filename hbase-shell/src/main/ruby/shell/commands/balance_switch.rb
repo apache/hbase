@@ -21,7 +21,7 @@ module Shell
   module Commands
     class BalanceSwitch < Command
       def help
-        return <<-EOF
+        <<-EOF
 Enable/Disable balancer. Returns previous balancer state.
 Examples:
 
@@ -31,7 +31,7 @@ EOF
       end
 
       def command(enableDisable)
-        prev_state = admin.balance_switch(enableDisable)? "true" : "false"
+        prev_state = admin.balance_switch(enableDisable) ? 'true' : 'false'
         formatter.row(["Previous balancer state : #{prev_state}"])
         prev_state
       end

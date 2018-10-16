@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.client;
 
 import java.lang.reflect.Constructor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory implementation to provide the {@link ConnectionImplementation} with
@@ -35,8 +35,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 class RetryingCallerInterceptorFactory {
-  private static final Log LOG = LogFactory
-      .getLog(RetryingCallerInterceptorFactory.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RetryingCallerInterceptorFactory.class);
   private Configuration conf;
   private final boolean failFast;
   public static final RetryingCallerInterceptor NO_OP_INTERCEPTOR =

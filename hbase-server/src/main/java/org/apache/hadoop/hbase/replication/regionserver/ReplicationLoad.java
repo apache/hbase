@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Strings;
@@ -64,11 +64,12 @@ public class ReplicationLoad {
     ClusterStatusProtos.ReplicationLoadSink.Builder rLoadSinkBuild =
         ClusterStatusProtos.ReplicationLoadSink.newBuilder();
     rLoadSinkBuild.setAgeOfLastAppliedOp(sinkMetrics.getAgeOfLastAppliedOp());
-    rLoadSinkBuild.setTimeStampsOfLastAppliedOp(sinkMetrics.getTimeStampOfLastAppliedOp());
+    rLoadSinkBuild.setTimeStampsOfLastAppliedOp(sinkMetrics.getTimestampOfLastAppliedOp());
     this.replicationLoadSink = rLoadSinkBuild.build();
 
     // build the SourceLoad List
-    Map<String, ClusterStatusProtos.ReplicationLoadSource> replicationLoadSourceMap = new HashMap<>();
+    Map<String, ClusterStatusProtos.ReplicationLoadSource> replicationLoadSourceMap =
+        new HashMap<>();
     for (MetricsSource sm : this.sourceMetricsList) {
       // Get the actual peer id
       String peerId = sm.getPeerID();
@@ -77,20 +78,9 @@ public class ReplicationLoad {
 
       long ageOfLastShippedOp = sm.getAgeOfLastShippedOp();
       int sizeOfLogQueue = sm.getSizeOfLogQueue();
-      long timeStampOfLastShippedOp = sm.getTimeStampOfLastShippedOp();
-      long replicationLag;
-      long timePassedAfterLastShippedOp =
-          EnvironmentEdgeManager.currentTime() - timeStampOfLastShippedOp;
-      if (sizeOfLogQueue != 0) {
-        // err on the large side
-        replicationLag = Math.max(ageOfLastShippedOp, timePassedAfterLastShippedOp);
-      } else if (timePassedAfterLastShippedOp < 2 * ageOfLastShippedOp) {
-        replicationLag = ageOfLastShippedOp; // last shipped happen recently
-      } else {
-        // last shipped may happen last night,
-        // so NO real lag although ageOfLastShippedOp is non-zero
-        replicationLag = 0;
-      }
+      long timeStampOfLastShippedOp = sm.getTimestampOfLastShippedOp();
+      long replicationLag =
+          calculateReplicationDelay(ageOfLastShippedOp, timeStampOfLastShippedOp, sizeOfLogQueue);
 
       ClusterStatusProtos.ReplicationLoadSource rLoadSource = replicationLoadSourceMap.get(peerId);
       if (rLoadSource != null) {
@@ -113,6 +103,29 @@ public class ReplicationLoad {
     this.replicationLoadSourceList = new ArrayList<>(replicationLoadSourceMap.values());
   }
 
+  static long calculateReplicationDelay(long ageOfLastShippedOp,
+      long timeStampOfLastShippedOp, int sizeOfLogQueue) {
+    long replicationLag;
+    long timePassedAfterLastShippedOp;
+    if (timeStampOfLastShippedOp == 0) { //replication not start yet, set to Long.MAX_VALUE
+      return Long.MAX_VALUE;
+    } else {
+      timePassedAfterLastShippedOp =
+          EnvironmentEdgeManager.currentTime() - timeStampOfLastShippedOp;
+    }
+    if (sizeOfLogQueue > 1) {
+      // err on the large side
+      replicationLag = Math.max(ageOfLastShippedOp, timePassedAfterLastShippedOp);
+    } else if (timePassedAfterLastShippedOp < 2 * ageOfLastShippedOp) {
+      replicationLag = ageOfLastShippedOp; // last shipped happen recently
+    } else {
+      // last shipped may happen last night,
+      // so NO real lag although ageOfLastShippedOp is non-zero
+      replicationLag = 0;
+    }
+    return replicationLag;
+  }
+
   /**
    * sourceToString
    * @return a string contains sourceReplicationLoad information
@@ -128,7 +141,7 @@ public class ReplicationLoad {
       sb = Strings.appendKeyValue(sb, "AgeOfLastShippedOp", rls.getAgeOfLastShippedOp());
       sb = Strings.appendKeyValue(sb, "SizeOfLogQueue", rls.getSizeOfLogQueue());
       sb =
-          Strings.appendKeyValue(sb, "TimeStampsOfLastShippedOp",
+          Strings.appendKeyValue(sb, "TimestampsOfLastShippedOp",
             (new Date(rls.getTimeStampOfLastShippedOp()).toString()));
       sb = Strings.appendKeyValue(sb, "Replication Lag", rls.getReplicationLag());
     }
@@ -148,7 +161,7 @@ public class ReplicationLoad {
         Strings.appendKeyValue(sb, "AgeOfLastAppliedOp",
           this.replicationLoadSink.getAgeOfLastAppliedOp());
     sb =
-        Strings.appendKeyValue(sb, "TimeStampsOfLastAppliedOp",
+        Strings.appendKeyValue(sb, "TimestampsOfLastAppliedOp",
           (new Date(this.replicationLoadSink.getTimeStampsOfLastAppliedOp()).toString()));
 
     return sb.toString();

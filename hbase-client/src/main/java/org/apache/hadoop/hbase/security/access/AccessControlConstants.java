@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public interface AccessControlConstants {

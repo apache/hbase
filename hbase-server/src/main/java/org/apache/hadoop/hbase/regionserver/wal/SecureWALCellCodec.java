@@ -25,10 +25,10 @@ import java.io.OutputStream;
 import java.security.SecureRandom;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
@@ -208,19 +208,19 @@ public class SecureWALCellCodec extends WALCellCodec {
       // Write row, qualifier, and family
       short rowLength = cell.getRowLength();
       StreamUtils.writeRawVInt32(bos, rowLength);
-      CellUtil.writeRow(bos, cell, rowLength);
+      PrivateCellUtil.writeRow(bos, cell, rowLength);
       byte familyLength = cell.getFamilyLength();
       StreamUtils.writeRawVInt32(bos, familyLength);
-      CellUtil.writeFamily(bos, cell, familyLength);
+      PrivateCellUtil.writeFamily(bos, cell, familyLength);
       int qualifierLength = cell.getQualifierLength();
       StreamUtils.writeRawVInt32(bos, qualifierLength);
-      CellUtil.writeQualifier(bos, cell, qualifierLength);
+      PrivateCellUtil.writeQualifier(bos, cell, qualifierLength);
       // Write the rest ie. ts, type, value and tags parts
       StreamUtils.writeLong(bos, cell.getTimestamp());
       bos.write(cell.getTypeByte());
-      CellUtil.writeValue(bos, cell, cell.getValueLength());
+      PrivateCellUtil.writeValue(bos, cell, cell.getValueLength());
       if (tlen > 0) {
-        CellUtil.writeTags(bos, cell, tlen);
+        PrivateCellUtil.writeTags(bos, cell, tlen);
       }
       bos.close();
 

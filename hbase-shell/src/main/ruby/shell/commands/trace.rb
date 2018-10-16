@@ -16,15 +16,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-HTrace = org.apache.htrace.Trace
-java_import org.apache.htrace.Sampler
+
 java_import org.apache.hadoop.hbase.trace.SpanReceiverHost
 
 module Shell
   module Commands
     class Trace < Command
+      @@conf = org.apache.htrace.core.HTraceConfiguration.fromKeyValuePairs(
+        'sampler.classes', 'org.apache.htrace.core.AlwaysSampler'
+      )
+      @@tracer = org.apache.htrace.core.Tracer::Builder.new('HBaseShell').conf(@@conf).build()
+      @@tracescope = nil
+
       def help
-        return <<-EOF
+        <<-EOF
 Start or Stop tracing using HTrace.
 Always returns true if tracing is running, otherwise false.
 If the first argument is 'start', new span is started.
@@ -47,28 +52,28 @@ Examples:
 EOF
       end
 
-      def command(startstop="status", spanname="HBaseShell")
+      def command(startstop = 'status', spanname = 'HBaseShell')
         trace(startstop, spanname)
       end
 
       def trace(startstop, spanname)
         @@receiver ||= SpanReceiverHost.getInstance(@shell.hbase.configuration)
-        if startstop == "start"
-          if not tracing?
-            @@tracescope = HTrace.startSpan(spanname, Sampler.ALWAYS)
+        if startstop == 'start'
+          unless tracing?
+            @@tracescope = @@tracer.newScope(spanname)
           end
-        elsif startstop == "stop"
+        elsif startstop == 'stop'
           if tracing?
-            @@tracescope.close()
+            @@tracescope.close
+            @@tracescope = nil
           end
         end
         tracing?
       end
 
-      def tracing?()
-        HTrace.isTracing()
+      def tracing?
+        @@tracescope != nil
       end
-
     end
   end
 end

@@ -23,37 +23,36 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonProperty;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @InterfaceAudience.Private
 public class TableScanResource  extends ResourceBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TableScanResource.class);
 
-  private static final Log LOG = LogFactory.getLog(TableScanResource.class);
   TableResource tableResource;
   ResultScanner results;
   int userRequestedLimit;
@@ -67,28 +66,22 @@ public class TableScanResource  extends ResourceBase {
   @GET
   @Produces({ Constants.MIMETYPE_XML, Constants.MIMETYPE_JSON })
   public CellSetModelStream get(final @Context UriInfo uriInfo) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath());
+    }
     servlet.getMetrics().incrementRequests(1);
     final int rowsToSend = userRequestedLimit;
     servlet.getMetrics().incrementSucessfulScanRequests(1);
     final Iterator<Result> itr = results.iterator();
     return new CellSetModelStream(new ArrayList<RowModel>() {
+      @Override
       public Iterator<RowModel> iterator() {
         return new Iterator<RowModel>() {
           int count = rowsToSend;
 
           @Override
           public boolean hasNext() {
-            if (count > 0) {
-              return itr.hasNext();
-            } else {
-              return false;
-            }
-          }
-
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException(
-                "Remove method cannot be used in CellSetModelStream");
+            return count > 0 && itr.hasNext();
           }
 
           @Override
@@ -105,6 +98,9 @@ public class TableScanResource  extends ResourceBase {
                   kv.getTimestamp(), CellUtil.cloneValue(kv)));
             }
             count--;
+            if (count == 0) {
+              results.close();
+            }
             return rModel;
           }
         };
@@ -116,21 +112,15 @@ public class TableScanResource  extends ResourceBase {
   @Produces({ Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF })
   public Response getProtobuf(
       final @Context UriInfo uriInfo,
-      final @PathParam("scanspec") String scanSpec,
-      final @HeaderParam("Accept") String contentType,
-      @DefaultValue(Integer.MAX_VALUE + "") @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
-      @DefaultValue("") @QueryParam(Constants.SCAN_START_ROW) String startRow,
-      @DefaultValue("") @QueryParam(Constants.SCAN_END_ROW) String endRow,
-      @DefaultValue("column") @QueryParam(Constants.SCAN_COLUMN) List<String> column,
-      @DefaultValue("1") @QueryParam(Constants.SCAN_MAX_VERSIONS) int maxVersions,
-      @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
-      @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
-      @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
-      @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks) {
+      final @HeaderParam("Accept") String contentType) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("GET " + uriInfo.getAbsolutePath() + " as " +
+              MIMETYPE_BINARY);
+    }
     servlet.getMetrics().incrementRequests(1);
     try {
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
-      ProtobufStreamingUtil stream = new ProtobufStreamingUtil(this.results, contentType,
+      StreamingOutput stream = new ProtobufStreamingOutput(this.results, contentType,
           userRequestedLimit, fetchSize);
       servlet.getMetrics().incrementSucessfulScanRequests(1);
       ResponseBuilder response = Response.ok(stream);
@@ -139,7 +129,7 @@ public class TableScanResource  extends ResourceBase {
     } catch (Exception exp) {
       servlet.getMetrics().incrementFailedScanRequests(1);
       processException(exp);
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       return null;
     }
   }

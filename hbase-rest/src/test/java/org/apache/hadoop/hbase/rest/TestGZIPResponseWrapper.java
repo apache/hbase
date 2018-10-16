@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,23 +25,27 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.hadoop.hbase.testclassification.RestTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.rest.filter.GZIPResponseStream;
 import org.apache.hadoop.hbase.rest.filter.GZIPResponseWrapper;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestGZIPResponseWrapper {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestGZIPResponseWrapper.class);
+
   private final HttpServletResponse response = mock(HttpServletResponse.class);
   private final GZIPResponseWrapper wrapper = new GZIPResponseWrapper(response);
-  
+
   /**
    * wrapper should set all headers except "content-length"
    */
@@ -67,7 +70,7 @@ public class TestGZIPResponseWrapper {
 
     wrapper.sendRedirect("location");
     verify(response).sendRedirect("location");
-    
+
     wrapper.flushBuffer();
     verify(response).flushBuffer();
   }

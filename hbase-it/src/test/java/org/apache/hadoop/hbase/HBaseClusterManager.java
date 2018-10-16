@@ -23,10 +23,7 @@ import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseClusterManager.CommandProvider.Operation;
@@ -35,6 +32,9 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.util.Shell;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A default cluster manager for HBase. Uses SSH, and hbase shell scripts
@@ -49,7 +49,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   private static final String SIGSTOP = "SIGSTOP";
   private static final String SIGCONT = "SIGCONT";
 
-  protected static final Log LOG = LogFactory.getLog(HBaseClusterManager.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(HBaseClusterManager.class);
   private String sshUserName;
   private String sshOptions;
 
@@ -101,6 +101,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     Configuration conf = getConf();
     switch (service) {
       case HADOOP_DATANODE:
+      case HADOOP_NAMENODE:
         return conf.get("hbase.it.clustermanager.hadoop.hdfs.user", "hdfs");
       case ZOOKEEPER_SERVER:
         return conf.get("hbase.it.clustermanager.zookeeper.user", "zookeeper");
@@ -282,6 +283,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   protected CommandProvider getCommandProvider(ServiceType service) throws IOException {
     switch (service) {
       case HADOOP_DATANODE:
+      case HADOOP_NAMENODE:
         return new HadoopShellCommandProvider(getConf());
       case ZOOKEEPER_SERVER:
         return new ZookeeperShellCommandProvider(getConf());

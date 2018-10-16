@@ -19,23 +19,22 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
@@ -45,10 +44,9 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -56,7 +54,13 @@ import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * A handler for taking snapshots from the master.
@@ -68,7 +72,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public abstract class TakeSnapshotHandler extends EventHandler implements SnapshotSentinel,
     ForeignExceptionSnare {
-  private static final Log LOG = LogFactory.getLog(TakeSnapshotHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TakeSnapshotHandler.class);
 
   private volatile boolean finished;
 
@@ -77,7 +81,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   protected final MetricsSnapshot metricsSnapshot = new MetricsSnapshot();
   protected final SnapshotDescription snapshot;
   protected final Configuration conf;
-  protected final FileSystem fs;
+  protected final FileSystem rootFs;
+  protected final FileSystem workingDirFs;
   protected final Path rootDir;
   private final Path snapshotDir;
   protected final Path workingDir;
@@ -89,51 +94,61 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   protected final SnapshotManifest snapshotManifest;
   protected final SnapshotManager snapshotManager;
 
-  protected HTableDescriptor htd;
+  protected TableDescriptor htd;
 
   /**
    * @param snapshot descriptor of the snapshot to take
    * @param masterServices master services provider
+   * @throws IllegalArgumentException if the working snapshot directory set from the
+   *   configuration is the same as the completed snapshot directory
+   * @throws IOException if the file system of the working snapshot directory cannot be
+   *   determined
    */
   public TakeSnapshotHandler(SnapshotDescription snapshot, final MasterServices masterServices,
-                             final SnapshotManager snapshotManager) {
+                             final SnapshotManager snapshotManager) throws IOException {
     super(masterServices, EventType.C_M_SNAPSHOT_TABLE);
     assert snapshot != null : "SnapshotDescription must not be nul1";
     assert masterServices != null : "MasterServices must not be nul1";
-
     this.master = masterServices;
+    this.conf = this.master.getConfiguration();
+    this.rootDir = this.master.getMasterFileSystem().getRootDir();
+    this.workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
+    Preconditions.checkArgument(!SnapshotDescriptionUtils.isSubDirectoryOf(workingDir, rootDir) ||
+            SnapshotDescriptionUtils.isWithinDefaultWorkingDir(workingDir, conf),
+        "The working directory " + workingDir + " cannot be in the root directory unless it is "
+            + "within the default working directory");
+
     this.snapshot = snapshot;
     this.snapshotManager = snapshotManager;
     this.snapshotTable = TableName.valueOf(snapshot.getTable());
-    this.conf = this.master.getConfiguration();
-    this.fs = this.master.getMasterFileSystem().getFileSystem();
-    this.rootDir = this.master.getMasterFileSystem().getRootDir();
+    this.rootFs = this.master.getMasterFileSystem().getFileSystem();
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
-    this.workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+    this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.monitor = new ForeignExceptionDispatcher(snapshot.getName());
-    this.snapshotManifest = SnapshotManifest.create(conf, fs, workingDir, snapshot, monitor);
+    this.snapshotManifest = SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor);
 
     this.tableLock = master.getLockManager().createMasterLock(
-        snapshotTable, LockProcedure.LockType.EXCLUSIVE,
+        snapshotTable, LockType.EXCLUSIVE,
         this.getClass().getName() + ": take snapshot " + snapshot.getName());
 
     // prepare the verify
-    this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, rootDir);
+    this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, workingDirFs);
     // update the running tasks
     this.status = TaskMonitor.get().createStatus(
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
   }
 
-  private HTableDescriptor loadTableDescriptor()
+  private TableDescriptor loadTableDescriptor()
       throws FileNotFoundException, IOException {
-    HTableDescriptor htd =
+    TableDescriptor htd =
       this.master.getTableDescriptors().get(snapshotTable);
     if (htd == null) {
-      throw new IOException("HTableDescriptor missing for " + snapshotTable);
+      throw new IOException("TableDescriptor missing for " + snapshotTable);
     }
     return htd;
   }
 
+  @Override
   public TakeSnapshotHandler prepare() throws Exception {
     super.prepare();
     // after this, you should ensure to release this lock in case of exceptions
@@ -165,11 +180,11 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       // an external exception that gets captured here.
 
       // write down the snapshot info in the working directory
-      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, fs);
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFs);
       snapshotManifest.addTableDescriptor(this.htd);
       monitor.rethrowException();
 
-      List<Pair<HRegionInfo, ServerName>> regionsAndLocations;
+      List<Pair<RegionInfo, ServerName>> regionsAndLocations;
       if (TableName.META_TABLE_NAME.equals(snapshotTable)) {
         regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
           server.getZooKeeper());
@@ -184,9 +199,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
       // extract each pair to separate lists
       Set<String> serverNames = new HashSet<>();
-      for (Pair<HRegionInfo, ServerName> p : regionsAndLocations) {
+      for (Pair<RegionInfo, ServerName> p : regionsAndLocations) {
         if (p != null && p.getFirst() != null && p.getSecond() != null) {
-          HRegionInfo hri = p.getFirst();
+          RegionInfo hri = p.getFirst();
           if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
           serverNames.add(p.getSecond().toString());
         }
@@ -201,7 +216,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       verifier.verifySnapshot(this.workingDir, serverNames);
 
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
-      completeSnapshot(this.snapshotDir, this.workingDir, this.fs);
+      completeSnapshot(this.snapshotDir, this.workingDir, this.rootFs, this.workingDirFs);
       msg = "Snapshot " + snapshot.getName() + " of table " + snapshotTable + " completed";
       status.markComplete(msg);
       LOG.info(msg);
@@ -221,7 +236,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       try {
         // if the working dir is still present, the snapshot has failed.  it is present we delete
         // it.
-        if (fs.exists(workingDir) && !this.fs.delete(workingDir, true)) {
+        if (!workingDirFs.delete(workingDir, true)) {
           LOG.error("Couldn't delete snapshot working directory:" + workingDir);
         }
       } catch (IOException e) {
@@ -233,20 +248,35 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   }
 
   /**
-   * Reset the manager to allow another snapshot to proceed
+   * Reset the manager to allow another snapshot to proceed.
+   * Commits the snapshot process by moving the working snapshot
+   * to the finalized filepath
    *
-   * @param snapshotDir final path of the snapshot
-   * @param workingDir directory where the in progress snapshot was built
-   * @param fs {@link FileSystem} where the snapshot was built
+   * @param snapshotDir The file path of the completed snapshots
+   * @param workingDir  The file path of the in progress snapshots
+   * @param fs The file system of the completed snapshots
+   * @param workingDirFs The file system of the in progress snapshots
+   *
    * @throws SnapshotCreationException if the snapshot could not be moved
    * @throws IOException the filesystem could not be reached
    */
-  public void completeSnapshot(Path snapshotDir, Path workingDir, FileSystem fs)
-      throws SnapshotCreationException, IOException {
+  public void completeSnapshot(Path snapshotDir, Path workingDir, FileSystem fs,
+      FileSystem workingDirFs) throws SnapshotCreationException, IOException {
     LOG.debug("Sentinel is done, just moving the snapshot from " + workingDir + " to "
         + snapshotDir);
-    if (!fs.rename(workingDir, snapshotDir)) {
-      throw new SnapshotCreationException("Failed to move working directory(" + workingDir
+    // If the working and completed snapshot directory are on the same file system, attempt
+    // to rename the working snapshot directory to the completed location. If that fails,
+    // or the file systems differ, attempt to copy the directory over, throwing an exception
+    // if this fails
+    URI workingURI = workingDirFs.getUri();
+    URI rootURI = fs.getUri();
+    if ((!workingURI.getScheme().equals(rootURI.getScheme()) ||
+        !workingURI.getAuthority().equals(rootURI.getAuthority()) ||
+        workingURI.getUserInfo() == null ||
+        !workingURI.getUserInfo().equals(rootURI.getUserInfo()) ||
+        !fs.rename(workingDir, snapshotDir)) && !FileUtil.copy(workingDirFs, workingDir, fs,
+        snapshotDir, true, true, this.conf)) {
+      throw new SnapshotCreationException("Failed to copy working directory(" + workingDir
           + ") to completed directory(" + snapshotDir + ").");
     }
     finished = true;
@@ -255,13 +285,13 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   /**
    * Snapshot the specified regions
    */
-  protected abstract void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regions)
+  protected abstract void snapshotRegions(List<Pair<RegionInfo, ServerName>> regions)
       throws IOException, KeeperException;
 
   /**
    * Take a snapshot of the specified disabled region
    */
-  protected void snapshotDisabledRegion(final HRegionInfo regionInfo)
+  protected void snapshotDisabledRegion(final RegionInfo regionInfo)
       throws IOException {
     snapshotManifest.addRegion(FSUtils.getTableDir(rootDir, snapshotTable), regionInfo);
     monitor.rethrowException();

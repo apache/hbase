@@ -24,7 +24,7 @@ import java.util.Collection;
 import java.util.function.Consumer;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An interface for client request scheduling algorithm.

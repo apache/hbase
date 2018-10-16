@@ -32,7 +32,7 @@ module Hbase
     def setup
       setup_hbase
       # Create test table if it does not exist
-      @test_name = "hbase_shell_tests_table"
+      @test_name = "hbase_shell_quota_tests_table"
       create_test_table(@test_name)
     end
 
@@ -108,6 +108,33 @@ module Hbase
       command(:set_quota, TYPE => SPACE, LIMIT => NONE, TABLE => @test_name)
       output = capture_stdout{ command(:list_quotas) }
       assert(output.include?("0 row(s)"))
+    end
+
+    define_test 'can view size of snapshots' do
+      snapshot1 = "#{@test_name}_1"
+      snapshot2 = "#{@test_name}_2"
+      # Set a quota on our table
+      command(:set_quota, TYPE => SPACE, LIMIT => '1G', POLICY => NO_INSERTS, TABLE => @test_name)
+      (1..10).each{|i| command(:put, @test_name, 'a', "x:#{i}", "#{i}")}
+      command(:flush, @test_name)
+      command(:snapshot, @test_name, snapshot1)
+      (1..10).each{|i| command(:put, @test_name, 'b', "x:#{i}", "#{i}")}
+      command(:flush, @test_name)
+      command(:snapshot, @test_name, snapshot2)
+      duration_to_check = 1000 * 30
+      start = current = Time.now.to_i
+      # Poor man's Waiter from Java test classes
+      while current - start < duration_to_check
+        output = capture_stdout{ command(:list_snapshot_sizes) }
+        if output.include? snapshot1 and output.include? snapshot2
+          break
+        end
+        sleep 5
+        current = Time.now.to_i
+      end
+      output = capture_stdout{ command(:list_snapshot_sizes) }
+      assert(output.include? snapshot1)
+      assert(output.include? snapshot2)
     end
   end
 end

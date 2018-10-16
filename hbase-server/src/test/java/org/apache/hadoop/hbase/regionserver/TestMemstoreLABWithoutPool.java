@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,10 +25,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -37,11 +36,19 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+@Ignore // See HBASE-19742 for issue on reenabling.
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestMemstoreLABWithoutPool {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMemstoreLABWithoutPool.class);
+
   private final static Configuration conf = new Configuration();
 
   private static final byte[] rk = Bytes.toBytes("r1");
@@ -140,7 +147,8 @@ public class TestMemstoreLABWithoutPool {
       mslab[i].close();
     }
     // all of the chunkIds would have been returned back
-    assertTrue("All the chunks must have been cleared", ChunkCreator.INSTANCE.size() == 0);
+    assertTrue("All the chunks must have been cleared",
+        ChunkCreator.instance.numberOfMappedChunks() == 0);
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,

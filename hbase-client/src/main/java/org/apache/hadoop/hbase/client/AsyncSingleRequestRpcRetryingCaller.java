@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,7 +68,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
     } catch (IOException e) {
       onError(e,
         () -> "Get async stub to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row)
-            + "' in " + loc.getRegionInfo().getEncodedName() + " of " + tableName + " failed",
+            + "' in " + loc.getRegion().getEncodedName() + " of " + tableName + " failed",
         err -> conn.getLocator().updateCachedLocation(loc, err));
       return;
     }
@@ -78,7 +78,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
         if (error != null) {
           onError(error,
             () -> "Call to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row) + "' in "
-                + loc.getRegionInfo().getEncodedName() + " of " + tableName + " failed",
+                + loc.getRegion().getEncodedName() + " of " + tableName + " failed",
             err -> conn.getLocator().updateCachedLocation(loc, err));
           return;
         }

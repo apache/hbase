@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -36,6 +36,15 @@ public interface IOEngine {
    * @return true if persistent storage is supported for the cache when shutdown
    */
   boolean isPersistent();
+
+  /**
+   * IOEngine uses shared memory means, when reading Cacheable from it, those refers to the same
+   * memory area as used by the Engine for caching it.
+   * @return true when IOEngine using shared memory.
+   */
+  default boolean usesSharedMemory() {
+    return false;
+  }
 
   /**
    * Transfers data from IOEngine to a Cacheable object.

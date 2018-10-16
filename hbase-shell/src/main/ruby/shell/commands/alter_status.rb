@@ -21,7 +21,7 @@ module Shell
   module Commands
     class AlterStatus < Command
       def help
-        return <<-EOF
+        <<-EOF
 Get the status of the alter command. Indicates the number of regions of the
 table that have received the updated schema
 Pass table name.
@@ -30,6 +30,7 @@ hbase> alter_status 't1'
 hbase> alter_status 'ns1:t1'
 EOF
       end
+
       def command(table)
         admin.alter_status(table)
       end

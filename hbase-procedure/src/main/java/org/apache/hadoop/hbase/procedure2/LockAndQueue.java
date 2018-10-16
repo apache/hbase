@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Locking for mutual exclusion between procedures. Used only by procedure framework internally.
  * {@link LockAndQueue} has two purposes:
@@ -42,7 +46,9 @@ package org.apache.hadoop.hbase.procedure2;
  * <br>
  * We do not use ReentrantReadWriteLock directly because of its high memory overhead.
  */
-public class LockAndQueue extends ProcedureDeque implements LockStatus {
+@InterfaceAudience.Private
+public class LockAndQueue implements LockStatus {
+  private final ProcedureDeque queue = new ProcedureDeque();
   private Procedure<?> exclusiveLockOwnerProcedure = null;
   private int sharedLock = 0;
 
@@ -66,12 +72,14 @@ public class LockAndQueue extends ProcedureDeque implements LockStatus {
   }
 
   @Override
-  public boolean hasParentLock(final Procedure proc) {
-    return proc.hasParent() && (isLockOwner(proc.getParentProcId()) || isLockOwner(proc.getRootProcId()));
+  public boolean hasParentLock(Procedure<?> proc) {
+    // TODO: need to check all the ancestors
+    return proc.hasParent() &&
+      (isLockOwner(proc.getParentProcId()) || isLockOwner(proc.getRootProcId()));
   }
 
   @Override
-  public boolean hasLockAccess(final Procedure proc) {
+  public boolean hasLockAccess(Procedure<?> proc) {
     return isLockOwner(proc.getProcId()) || hasParentLock(proc);
   }
 
@@ -98,37 +106,87 @@ public class LockAndQueue extends ProcedureDeque implements LockStatus {
   //  try/release Shared/Exclusive lock
   // ======================================================================
 
-  public boolean trySharedLock() {
-    if (hasExclusiveLock()) return false;
+  /**
+   * @return whether we have succesfully acquired the shared lock.
+   */
+  public boolean trySharedLock(Procedure<?> proc) {
+    if (hasExclusiveLock() && !hasLockAccess(proc)) {
+      return false;
+    }
+    // If no one holds the xlock, then we are free to hold the sharedLock
+    // If the parent proc or we have already held the xlock, then we return true here as
+    // xlock is more powerful then shared lock.
     sharedLock++;
     return true;
   }
 
+  /**
+   * @return whether we should wake the procedures waiting on the lock here.
+   */
   public boolean releaseSharedLock() {
-    return --sharedLock == 0;
+    // hasExclusiveLock could be true, it usually means we acquire shared lock while we or our
+    // parent have held the xlock. And since there is still an exclusive lock, we do not need to
+    // wake any procedures.
+    return --sharedLock == 0 && !hasExclusiveLock();
   }
 
-  public boolean tryExclusiveLock(final Procedure proc) {
-    if (isLocked()) return hasLockAccess(proc);
+  public boolean tryExclusiveLock(Procedure<?> proc) {
+    if (isLocked()) {
+      return hasLockAccess(proc);
+    }
     exclusiveLockOwnerProcedure = proc;
     return true;
   }
 
   /**
-   * @return True if we released a lock.
+   * @return whether we should wake the procedures waiting on the lock here.
    */
-  public boolean releaseExclusiveLock(final Procedure proc) {
-    if (isLockOwner(proc.getProcId())) {
-      exclusiveLockOwnerProcedure = null;
-      return true;
+  public boolean releaseExclusiveLock(Procedure<?> proc) {
+    if (!isLockOwner(proc.getProcId())) {
+      // We are not the lock owner, it is probably inherited from the parent procedures.
+      return false;
     }
-    return false;
+    exclusiveLockOwnerProcedure = null;
+    // This maybe a bit strange so let me explain. We allow acquiring shared lock while the parent
+    // proc or we have already held the xlock, and also allow releasing the locks in any order, so
+    // it could happen that the xlock is released but there are still some procs holding the shared
+    // lock.
+    // In HBase, this could happen when a proc which holdLock is false and schedules sub procs which
+    // acquire the shared lock on the same lock. This is because we will schedule the sub proces
+    // before releasing the lock, so the sub procs could call acquire lock before we releasing the
+    // xlock.
+    return sharedLock == 0;
+  }
+
+  public boolean isWaitingQueueEmpty() {
+    return queue.isEmpty();
+  }
+
+  public Procedure<?> removeFirst() {
+    return queue.removeFirst();
+  }
+
+  public void addLast(Procedure<?> proc) {
+    queue.addLast(proc);
+  }
+
+  public int wakeWaitingProcedures(ProcedureScheduler scheduler) {
+    int count = queue.size();
+    // wakeProcedure adds to the front of queue, so we start from last in the waitQueue' queue, so
+    // that the procedure which was added first goes in the front for the scheduler queue.
+    scheduler.addFront(queue.descendingIterator());
+    queue.clear();
+    return count;
+  }
+
+  @SuppressWarnings("rawtypes")
+  public Stream<Procedure> filterWaitingQueue(Predicate<Procedure> predicate) {
+    return queue.stream().filter(predicate);
   }
 
   @Override
   public String toString() {
-    return "exclusiveLockOwner=" + (hasExclusiveLock()? getExclusiveLockProcIdOwner(): "NONE") +
-      ", sharedLockCount=" + getSharedLockCount() +
-      ", waitingProcCount=" + size();
+    return "exclusiveLockOwner=" + (hasExclusiveLock() ? getExclusiveLockProcIdOwner() : "NONE") +
+      ", sharedLockCount=" + getSharedLockCount() + ", waitingProcCount=" + queue.size();
   }
 }

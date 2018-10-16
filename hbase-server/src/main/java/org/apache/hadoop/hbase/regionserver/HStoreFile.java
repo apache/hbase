@@ -20,20 +20,20 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -41,7 +41,13 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -57,11 +63,56 @@ import com.google.common.annotations.VisibleForTesting;
  * writer and a reader is that we write once but read a lot more.
  */
 @InterfaceAudience.Private
-public class HStoreFile implements StoreFile {
+public class HStoreFile implements StoreFile, StoreFileReader.Listener {
 
-  private static final Log LOG = LogFactory.getLog(HStoreFile.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(HStoreFile.class.getName());
+
+  public static final String STORE_FILE_READER_NO_READAHEAD = "hbase.store.reader.no-readahead";
 
   private static final boolean DEFAULT_STORE_FILE_READER_NO_READAHEAD = false;
+
+  // Keys for fileinfo values in HFile
+
+  /** Max Sequence ID in FileInfo */
+  public static final byte[] MAX_SEQ_ID_KEY = Bytes.toBytes("MAX_SEQ_ID_KEY");
+
+  /** Major compaction flag in FileInfo */
+  public static final byte[] MAJOR_COMPACTION_KEY = Bytes.toBytes("MAJOR_COMPACTION_KEY");
+
+  /** Minor compaction flag in FileInfo */
+  public static final byte[] EXCLUDE_FROM_MINOR_COMPACTION_KEY =
+      Bytes.toBytes("EXCLUDE_FROM_MINOR_COMPACTION");
+
+  /** Bloom filter Type in FileInfo */
+  public static final byte[] BLOOM_FILTER_TYPE_KEY = Bytes.toBytes("BLOOM_FILTER_TYPE");
+
+  /** Bloom filter param in FileInfo */
+  public static final byte[] BLOOM_FILTER_PARAM_KEY = Bytes.toBytes("BLOOM_FILTER_PARAM");
+
+  /** Delete Family Count in FileInfo */
+  public static final byte[] DELETE_FAMILY_COUNT = Bytes.toBytes("DELETE_FAMILY_COUNT");
+
+  /** Last Bloom filter key in FileInfo */
+  public static final byte[] LAST_BLOOM_KEY = Bytes.toBytes("LAST_BLOOM_KEY");
+
+  /** Key for Timerange information in metadata */
+  public static final byte[] TIMERANGE_KEY = Bytes.toBytes("TIMERANGE");
+
+  /** Key for timestamp of earliest-put in metadata */
+  public static final byte[] EARLIEST_PUT_TS = Bytes.toBytes("EARLIEST_PUT_TS");
+
+  /** Key for the number of mob cells in metadata */
+  public static final byte[] MOB_CELLS_COUNT = Bytes.toBytes("MOB_CELLS_COUNT");
+
+  /** Meta key set when store file is a result of a bulk load */
+  public static final byte[] BULKLOAD_TASK_KEY = Bytes.toBytes("BULKLOAD_SOURCE_TASK");
+  public static final byte[] BULKLOAD_TIME_KEY = Bytes.toBytes("BULKLOAD_TIMESTAMP");
+
+  /**
+   * Key for skipping resetting sequence id in metadata. For bulk loaded hfiles, the scanner resets
+   * the cell seqId with the latest one, if this metadata is set as true, the reset is skipped.
+   */
+  public static final byte[] SKIP_RESET_SEQ_ID = Bytes.toBytes("SKIP_RESET_SEQ_ID");
 
   private final StoreFileInfo fileInfo;
   private final FileSystem fs;
@@ -73,6 +124,9 @@ public class HStoreFile implements StoreFile {
   // store file. It is decremented when the scan on the store file is
   // done.
   private final AtomicInteger refCount = new AtomicInteger(0);
+
+  // Set implementation must be of concurrent type
+  private final Set<StoreFileReader> streamReaders;
 
   private final boolean noReadahead;
 
@@ -90,34 +144,33 @@ public class HStoreFile implements StoreFile {
   private long maxMemstoreTS = -1;
 
   // firstKey, lastkey and cellComparator will be set when openReader.
-  private Cell firstKey;
+  private Optional<Cell> firstKey;
 
-  private Cell lastKey;
+  private Optional<Cell> lastKey;
 
-  private Comparator<Cell> comparator;
+  private CellComparator comparator;
 
-  @Override
   public CacheConfig getCacheConf() {
     return cacheConf;
   }
 
   @Override
-  public Cell getFirstKey() {
+  public Optional<Cell> getFirstKey() {
     return firstKey;
   }
 
   @Override
-  public Cell getLastKey() {
+  public Optional<Cell> getLastKey() {
     return lastKey;
   }
 
   @Override
-  public Comparator<Cell> getComparator() {
+  public CellComparator getComparator() {
     return comparator;
   }
 
   @Override
-  public long getMaxMemstoreTS() {
+  public long getMaxMemStoreTS() {
     return maxMemstoreTS;
   }
 
@@ -155,54 +208,12 @@ public class HStoreFile implements StoreFile {
    *          configuration. This may or may not be the same as the Bloom filter type actually
    *          present in the HFile, because column family configuration might change. If this is
    *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @deprecated Now we will specific whether the StoreFile is for primary replica when
-   *             constructing, so please use {@link #HStoreFile(FileSystem, Path, Configuration,
-   *             CacheConfig, BloomType, boolean)} directly.
-   */
-  @Deprecated
-  public HStoreFile(final FileSystem fs, final Path p, final Configuration conf,
-      final CacheConfig cacheConf, final BloomType cfBloomType) throws IOException {
-    this(fs, new StoreFileInfo(conf, fs, p), conf, cacheConf, cfBloomType);
-  }
-
-  /**
-   * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
-   * depending on the underlying files (10-20MB?).
-   * @param fs The current file system to use.
-   * @param p The path of the file.
-   * @param conf The current configuration.
-   * @param cacheConf The cache configuration and block cache reference.
-   * @param cfBloomType The bloom type to use for this store file as specified by column family
-   *          configuration. This may or may not be the same as the Bloom filter type actually
-   *          present in the HFile, because column family configuration might change. If this is
-   *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
    * @param primaryReplica true if this is a store file for primary replica, otherwise false.
    * @throws IOException
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
       BloomType cfBloomType, boolean primaryReplica) throws IOException {
     this(fs, new StoreFileInfo(conf, fs, p), conf, cacheConf, cfBloomType, primaryReplica);
-  }
-
-  /**
-   * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
-   * depending on the underlying files (10-20MB?).
-   * @param fs The current file system to use.
-   * @param fileInfo The store file information.
-   * @param conf The current configuration.
-   * @param cacheConf The cache configuration and block cache reference.
-   * @param cfBloomType The bloom type to use for this store file as specified by column family
-   *          configuration. This may or may not be the same as the Bloom filter type actually
-   *          present in the HFile, because column family configuration might change. If this is
-   *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
-   * @deprecated Now we will specific whether the StoreFile is for primary replica when
-   *             constructing, so please use {@link #HStoreFile(FileSystem, StoreFileInfo,
-   *             Configuration, CacheConfig, BloomType, boolean)} directly.
-   */
-  @Deprecated
-  public HStoreFile(final FileSystem fs, final StoreFileInfo fileInfo, final Configuration conf,
-      final CacheConfig cacheConf, final BloomType cfBloomType) throws IOException {
-    this(fs, fileInfo, conf, cacheConf, cfBloomType, true);
   }
 
   /**
@@ -220,6 +231,7 @@ public class HStoreFile implements StoreFile {
    */
   public HStoreFile(FileSystem fs, StoreFileInfo fileInfo, Configuration conf, CacheConfig cacheConf,
       BloomType cfBloomType, boolean primaryReplica) {
+    this.streamReaders = ConcurrentHashMap.newKeySet();
     this.fs = fs;
     this.fileInfo = fileInfo;
     this.cacheConf = cacheConf;
@@ -235,7 +247,10 @@ public class HStoreFile implements StoreFile {
     this.primaryReplica = primaryReplica;
   }
 
-  @Override
+  /**
+   * @return the StoreFile object associated to this StoreFile. null if the StoreFile is not a
+   *         reference.
+   */
   public StoreFileInfo getFileInfo() {
     return this.fileInfo;
   }
@@ -280,10 +295,19 @@ public class HStoreFile implements StoreFile {
 
   @Override
   public long getModificationTimeStamp() throws IOException {
-    return fileInfo.getModificationTime();
+    return getModificationTimestamp();
   }
 
   @Override
+  public long getModificationTimestamp() throws IOException {
+    return fileInfo.getModificationTime();
+  }
+
+  /**
+   * Only used by the Striped Compaction Policy
+   * @param key
+   * @return value associated with the metadata key
+   */
   public byte[] getMetadataValue(byte[] key) {
     return metadataMap.get(key);
   }
@@ -299,7 +323,6 @@ public class HStoreFile implements StoreFile {
     return bulkLoadedHFile || (metadataMap != null && metadataMap.containsKey(BULKLOAD_TIME_KEY));
   }
 
-  @Override
   public boolean isCompactedAway() {
     return compactedAway;
   }
@@ -309,7 +332,9 @@ public class HStoreFile implements StoreFile {
     return refCount.get();
   }
 
-  @Override
+  /**
+   * @return true if the file is still used in reads
+   */
   public boolean isReferencedInReads() {
     int rc = refCount.get();
     assert rc >= 0; // we should not go negative.
@@ -323,7 +348,10 @@ public class HStoreFile implements StoreFile {
         : OptionalLong.of(Bytes.toLong(bulkLoadTimestamp));
   }
 
-  @Override
+  /**
+   * @return the cached value of HDFS blocks distribution. The cached value is calculated when store
+   *         file is opened.
+   */
   public HDFSBlocksDistribution getHDFSBlockDistribution() {
     return this.fileInfo.getHDFSBlockDistribution();
   }
@@ -331,7 +359,7 @@ public class HStoreFile implements StoreFile {
   /**
    * Opens reader on this store file. Called by Constructor.
    * @throws IOException
-   * @see #closeReader(boolean)
+   * @see #closeStoreFile(boolean)
    */
   private void open() throws IOException {
     if (this.reader != null) {
@@ -428,7 +456,8 @@ public class HStoreFile implements StoreFile {
     reader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
 
     try {
-      this.reader.timeRange = TimeRangeTracker.getTimeRange(metadataMap.get(TIMERANGE_KEY));
+      byte[] data = metadataMap.get(TIMERANGE_KEY);
+      this.reader.timeRange = data == null ? null : TimeRangeTracker.parseFrom(data).toTimeRange();
     } catch (IllegalArgumentException e) {
       LOG.error("Error reading timestamp range data from meta -- " +
           "proceeding without", e);
@@ -440,7 +469,9 @@ public class HStoreFile implements StoreFile {
     comparator = reader.getComparator();
   }
 
-  @Override
+  /**
+   * Initialize the reader used for pread.
+   */
   public void initReader() throws IOException {
     if (reader == null) {
       try {
@@ -448,7 +479,7 @@ public class HStoreFile implements StoreFile {
       } catch (Exception e) {
         try {
           boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
-          this.closeReader(evictOnClose);
+          this.closeStoreFile(evictOnClose);
         } catch (IOException ee) {
           LOG.warn("failed to close reader", ee);
         }
@@ -465,46 +496,78 @@ public class HStoreFile implements StoreFile {
     return reader;
   }
 
-  @Override
+  /**
+   * Get a scanner which uses pread.
+   * <p>
+   * Must be called after initReader.
+   */
   public StoreFileScanner getPreadScanner(boolean cacheBlocks, long readPt, long scannerOrder,
       boolean canOptimizeForNonNullColumn) {
     return getReader().getStoreFileScanner(cacheBlocks, true, false, readPt, scannerOrder,
       canOptimizeForNonNullColumn);
   }
 
-  @Override
+  /**
+   * Get a scanner which uses streaming read.
+   * <p>
+   * Must be called after initReader.
+   */
   public StoreFileScanner getStreamScanner(boolean canUseDropBehind, boolean cacheBlocks,
       boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn)
       throws IOException {
-    return createStreamReader(canUseDropBehind).getStoreFileScanner(cacheBlocks, false,
+    StoreFileReader reader = createStreamReader(canUseDropBehind);
+    reader.setListener(this);
+    StoreFileScanner sfScanner = reader.getStoreFileScanner(cacheBlocks, false,
       isCompaction, readPt, scannerOrder, canOptimizeForNonNullColumn);
+    //Add reader once the scanner is created
+    streamReaders.add(reader);
+    return sfScanner;
   }
 
-  @Override
+  /**
+   * @return Current reader. Must call initReader first else returns null.
+   * @see #initReader()
+   */
   public StoreFileReader getReader() {
     return this.reader;
   }
 
-  @Override
-  public synchronized void closeReader(boolean evictOnClose)
-      throws IOException {
+  /**
+   * @param evictOnClose whether to evict blocks belonging to this file
+   * @throws IOException
+   */
+  public synchronized void closeStoreFile(boolean evictOnClose) throws IOException {
     if (this.reader != null) {
       this.reader.close(evictOnClose);
       this.reader = null;
     }
+    closeStreamReaders(evictOnClose);
   }
 
-  @Override
+  public void closeStreamReaders(boolean evictOnClose) throws IOException {
+    synchronized (this) {
+      for (StoreFileReader entry : streamReaders) {
+        //closing the reader will remove itself from streamReaders thanks to the Listener
+        entry.close(evictOnClose);
+      }
+      int size = streamReaders.size();
+      Preconditions.checkState(size == 0,
+          "There are still streamReaders post close: " + size);
+    }
+  }
+
+  /**
+   * Delete this file
+   * @throws IOException
+   */
+  public void deleteStoreFile() throws IOException {
+    boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
+    closeStoreFile(evictOnClose);
+    this.fs.delete(getPath(), true);
+  }
+
   public void markCompactedAway() {
     this.compactedAway = true;
-  }
-
-  @Override
-  public void deleteReader() throws IOException {
-    boolean evictOnClose =
-        cacheConf != null? cacheConf.shouldEvictOnClose(): true;
-    closeReader(evictOnClose);
-    this.fs.delete(getPath(), true);
   }
 
   @Override
@@ -556,5 +619,10 @@ public class HStoreFile implements StoreFile {
   public OptionalLong getMaximumTimestamp() {
     TimeRange tr = getReader().timeRange;
     return tr != null ? OptionalLong.of(tr.getMax()) : OptionalLong.empty();
+  }
+
+  @Override
+  public void storeFileReaderClosed(StoreFileReader reader) {
+    streamReaders.remove(reader);
   }
 }

@@ -1,6 +1,4 @@
-/*
- * Copyright The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,22 +17,23 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -47,13 +46,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
-import static org.junit.Assert.*;
-
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test if the FilterWrapper retains the same semantics defined in the
@@ -61,7 +60,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category({FilterTests.class, MediumTests.class})
 public class TestFilterWrapper {
-  private static final Log LOG = LogFactory.getLog(TestFilterWrapper.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFilterWrapper.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestFilterWrapper.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = null;
@@ -78,7 +82,7 @@ public class TestFilterWrapper {
       List<Filter> fs = new ArrayList<>();
 
       DependentColumnFilter f1 = new DependentColumnFilter(Bytes.toBytes("f1"),
-          Bytes.toBytes("c5"), true, CompareFilter.CompareOp.EQUAL,
+          Bytes.toBytes("c5"), true, CompareOperator.EQUAL,
           new SubstringComparator("c5"));
       PageFilter f2 = new PageFilter(2);
       fs.add(f1);

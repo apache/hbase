@@ -23,12 +23,14 @@ import java.io.OutputStream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Basic Cell codec that just writes out all the individual elements of a Cell.  Uses ints
@@ -77,6 +79,7 @@ public class CellCodec implements Codec {
   }
 
   static class CellDecoder extends BaseDecoder {
+    private final ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     public CellDecoder(final InputStream in) {
       super(in);
     }
@@ -95,7 +98,15 @@ public class CellCodec implements Codec {
       byte[] memstoreTSArray = new byte[Bytes.SIZEOF_LONG];
       IOUtils.readFully(this.in, memstoreTSArray);
       long memstoreTS = Bytes.toLong(memstoreTSArray);
-      return CellUtil.createCell(row, family, qualifier, timestamp, type, value, memstoreTS);
+      return cellBuilder.clear()
+              .setRow(row)
+              .setFamily(family)
+              .setQualifier(qualifier)
+              .setTimestamp(timestamp)
+              .setType(type)
+              .setValue(value)
+              .setSequenceId(memstoreTS)
+              .build();
     }
 
     /**

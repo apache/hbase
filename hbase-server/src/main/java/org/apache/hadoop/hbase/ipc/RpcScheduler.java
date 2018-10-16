@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 import java.io.IOException;
@@ -35,6 +35,8 @@ public abstract class RpcScheduler {
       "hbase.ipc.server.max.callqueue.length";
   public static final String IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH =
       "hbase.ipc.server.priority.max.callqueue.length";
+  public static final String IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH =
+      "hbase.ipc.server.replication.max.callqueue.length";
 
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
   public static abstract class Context {
@@ -65,6 +67,9 @@ public abstract class RpcScheduler {
    */
   public abstract boolean dispatch(CallRunner task) throws IOException, InterruptedException;
 
+  /** Get call queue information **/
+  public abstract CallQueueInfo getCallQueueInfo();
+
   /** Retrieves length of the general queue for metrics. */
   public abstract int getGeneralQueueLength();
 
@@ -74,8 +79,17 @@ public abstract class RpcScheduler {
   /** Retrieves length of the replication queue for metrics. */
   public abstract int getReplicationQueueLength();
 
-  /** Retrieves the number of active handler. */
+  /** Retrieves the total number of active handler. */
   public abstract int getActiveRpcHandlerCount();
+
+  /** Retrieves the number of active general handler. */
+  public abstract int getActiveGeneralRpcHandlerCount();
+
+  /** Retrieves the number of active priority handler. */
+  public abstract int getActivePriorityRpcHandlerCount();
+
+  /** Retrieves the number of active replication handler. */
+  public abstract int getActiveReplicationRpcHandlerCount();
 
   /**
    * If CoDel-based RPC executors are used, retrieves the number of Calls that were dropped

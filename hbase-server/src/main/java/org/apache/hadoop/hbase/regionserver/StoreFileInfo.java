@@ -25,14 +25,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 public class StoreFileInfo {
-  private static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreFileInfo.class);
 
   /**
    * A non-capture group, for hfiles, so that this can be embedded.
@@ -157,13 +157,12 @@ public class StoreFileInfo {
 
   /**
    * Create a Store File Info from an HFileLink
-   * @param conf the {@link Configuration} to use
-   * @param fs The current file system to use.
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
    * @param fileStatus The {@link FileStatus} of the file
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final HFileLink link)
-      throws IOException {
+      final HFileLink link) {
     this.fs = fs;
     this.conf = conf;
     // initialPath can be null only if we get a link.
@@ -175,21 +174,37 @@ public class StoreFileInfo {
 
   /**
    * Create a Store File Info from an HFileLink
-   * @param conf
-   * @param fs
-   * @param fileStatus
-   * @param reference
-   * @throws IOException
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference The reference instance
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final Reference reference)
-      throws IOException {
+      final Reference reference) {
     this.fs = fs;
     this.conf = conf;
     this.initialPath = fileStatus.getPath();
     this.createdTimestamp = fileStatus.getModificationTime();
     this.reference = reference;
     this.link = null;
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink and a Reference
+   * @param conf The {@link Configuration} to use
+   * @param fs The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference The reference instance
+   * @param link The link instance
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+      final Reference reference, final HFileLink link) {
+    this.fs = fs;
+    this.conf = conf;
+    this.initialPath = fileStatus.getPath();
+    this.createdTimestamp = fileStatus.getModificationTime();
+    this.reference = reference;
+    this.link = link;
   }
 
   /**
@@ -552,8 +567,7 @@ public class StoreFileInfo {
     if (link != o.link && link != null && !link.equals(o.link)) return false;
 
     return true;
-  };
-
+  }
 
   @Override
   public int hashCode() {

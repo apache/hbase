@@ -20,25 +20,24 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * A Callable for flushRegion() RPC.
  */
 @InterfaceAudience.Private
 public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionResponse> {
-  private static final Log LOG = LogFactory.getLog(FlushRegionCallable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushRegionCallable.class);
   private final byte[] regionName;
   private final boolean writeFlushWalMarker;
   private boolean reload;
@@ -52,7 +51,7 @@ public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionR
   }
 
   public FlushRegionCallable(ClusterConnection connection,
-      RpcControllerFactory rpcControllerFactory, HRegionInfo regionInfo,
+      RpcControllerFactory rpcControllerFactory, RegionInfo regionInfo,
       boolean writeFlushWalMarker) {
     this(connection, rpcControllerFactory, regionInfo.getTable(), regionInfo.getRegionName(),
       regionInfo.getStartKey(), writeFlushWalMarker);

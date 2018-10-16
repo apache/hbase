@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -27,13 +28,14 @@ import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class SaslUtil {
-  private static final Log LOG = LogFactory.getLog(SaslUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SaslUtil.class);
   public static final String SASL_DEFAULT_REALM = "default";
   public static final int SWITCH_TO_SIMPLE_AUTH = -88;
 
@@ -68,15 +70,15 @@ public class SaslUtil {
   }
 
   static String encodeIdentifier(byte[] identifier) {
-    return new String(Base64.encodeBase64(identifier));
+    return new String(Base64.encodeBase64(identifier), StandardCharsets.UTF_8);
   }
 
   static byte[] decodeIdentifier(String identifier) {
-    return Base64.decodeBase64(identifier.getBytes());
+    return Base64.decodeBase64(Bytes.toBytes(identifier));
   }
 
   static char[] encodePassword(byte[] password) {
-    return new String(Base64.encodeBase64(password)).toCharArray();
+    return new String(Base64.encodeBase64(password), StandardCharsets.UTF_8).toCharArray();
   }
 
   /**

@@ -19,18 +19,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.Store;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A chore service that periodically cleans up the compacted files when there are no active readers
@@ -39,7 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class CompactedHFilesDischarger extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(CompactedHFilesDischarger.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompactedHFilesDischarger.class);
   private RegionServerServices regionServerServices;
   // Default is to use executor
   @VisibleForTesting
@@ -89,18 +85,17 @@ public class CompactedHFilesDischarger extends ScheduledChore {
     // Noop if rss is null. This will never happen in a normal condition except for cases
     // when the test case is not spinning up a cluster
     if (regionServerServices == null) return;
-    List<Region> onlineRegions = regionServerServices.getOnlineRegions();
+    List<HRegion> onlineRegions = (List<HRegion>) regionServerServices.getRegions();
     if (onlineRegions == null) return;
-    for (Region region : onlineRegions) {
+    for (HRegion region : onlineRegions) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Started compacted hfiles cleaner on " + region.getRegionInfo());
       }
-      for (Store store : region.getStores()) {
+      for (HStore store : region.getStores()) {
         try {
           if (useExecutor && regionServerServices != null) {
             CompactedHFilesDischargeHandler handler = new CompactedHFilesDischargeHandler(
-                (Server) regionServerServices, EventType.RS_COMPACTED_FILES_DISCHARGER,
-                (HStore) store);
+                (Server) regionServerServices, EventType.RS_COMPACTED_FILES_DISCHARGER, store);
             regionServerServices.getExecutorService().submit(handler);
           } else {
             // call synchronously if the RegionServerServices are not

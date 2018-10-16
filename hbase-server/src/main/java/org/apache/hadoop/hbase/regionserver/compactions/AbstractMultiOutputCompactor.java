@@ -19,18 +19,18 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.AbstractMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.AbstractMultiFileWriter.WriterFactory;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for implementing a Compactor which will generate multiple output files after
@@ -40,9 +40,9 @@ import org.apache.hadoop.hbase.regionserver.StoreScanner;
 public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWriter>
     extends Compactor<T> {
 
-  private static final Log LOG = LogFactory.getLog(AbstractMultiOutputCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractMultiOutputCompactor.class);
 
-  public AbstractMultiOutputCompactor(Configuration conf, Store store) {
+  public AbstractMultiOutputCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 

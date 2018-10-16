@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,13 +21,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -39,22 +37,30 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Performs coprocessor loads for variuos paths and malformed strings
+ * Performs coprocessor loads for various paths and malformed strings
  */
-@Category({SecurityTests.class, MediumTests.class})
+@Category({SecurityTests.class, LargeTests.class})
 public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
-  private static final Log LOG = LogFactory.getLog(TestCoprocessorWhitelistMasterObserver.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCoprocessorWhitelistMasterObserver.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCoprocessorWhitelistMasterObserver.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final TableName TEST_TABLE = TableName.valueOf("testTable");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("fam1");
@@ -77,10 +83,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     UTIL.shutdownMiniCluster();
   }
 
-  @ClassRule
-  public static TestRule timeout =
-      CategoryBasedTimeout.forClass(TestCoprocessorWhitelistMasterObserver.class);
-
   /**
    * Test a table modification adding a coprocessor path
    * which is not whitelisted
@@ -101,7 +103,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
         CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
         whitelistedPaths);
     // set retries low to raise exception quickly
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
     UTIL.createTable(TEST_TABLE, new byte[][] { TEST_FAMILY });
     UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
@@ -135,7 +137,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   private static void negativeTestCase(String[] whitelistedPaths,
       String coprocessorPath) throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt("hbase.client.retries.number", 5);
     // load coprocessor under test
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         CoprocessorWhitelistMasterObserver.class.getName());
@@ -267,7 +269,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     conf.setStrings(CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
         new String[]{});
     // set retries low to raise exception quickly
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
@@ -290,7 +292,13 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
       admin.listTables("^" + TEST_TABLE.getNameAsString() + "$"));
   }
 
-  public static class TestRegionObserver implements RegionObserver {}
+  public static class TestRegionObserver implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
+  }
 
   /**
    * Test a table creation including a coprocessor path
@@ -306,7 +314,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     conf.setStrings(CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
         new String[]{});
     // set retries low to raise exception quickly
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);

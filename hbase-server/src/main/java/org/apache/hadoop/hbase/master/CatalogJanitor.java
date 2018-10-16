@@ -27,25 +27,21 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.GCMergedRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,8 +50,9 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A janitor for the catalog tables.  Scans the <code>hbase:meta</code> catalog
@@ -63,7 +60,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(CatalogJanitor.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class.getName());
 
   private final AtomicBoolean alreadyRunning = new AtomicBoolean(false);
   private final AtomicBoolean enabled = new AtomicBoolean(true);
@@ -114,17 +111,14 @@ public class CatalogJanitor extends ScheduledChore {
   protected void chore() {
     try {
       AssignmentManager am = this.services.getAssignmentManager();
-      if (this.enabled.get()
-          && !this.services.isInMaintenanceMode()
-          && am != null
-          && am.isFailoverCleanupDone()
-          && !am.hasRegionsInTransition()) {
+      if (this.enabled.get() && !this.services.isInMaintenanceMode() && am != null &&
+        am.isMetaLoaded() && !am.hasRegionsInTransition()) {
         scan();
       } else {
         LOG.warn("CatalogJanitor is disabled! Enabled=" + this.enabled.get() +
-            ", maintenanceMode=" + this.services.isInMaintenanceMode() +
-            ", am=" + am + ", failoverCleanupDone=" + (am != null && am.isFailoverCleanupDone()) +
-            ", hasRIT=" + (am != null && am.hasRegionsInTransition()));
+          ", maintenanceMode=" + this.services.isInMaintenanceMode() + ", am=" + am +
+          ", metaLoaded=" + (am != null && am.isMetaLoaded()) + ", hasRIT=" +
+          (am != null && am.hasRegionsInTransition()));
       }
     } catch (IOException e) {
       LOG.warn("Failed scan of catalog table", e);
@@ -138,7 +132,7 @@ public class CatalogJanitor extends ScheduledChore {
    *         parent regioninfos
    * @throws IOException
    */
-  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>
+  Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>>
     getMergedRegionsAndSplitParents() throws IOException {
     return getMergedRegionsAndSplitParents(null);
   }
@@ -153,15 +147,15 @@ public class CatalogJanitor extends ScheduledChore {
    *         parent regioninfos
    * @throws IOException
    */
-  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>
+  Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>>
     getMergedRegionsAndSplitParents(final TableName tableName) throws IOException {
     final boolean isTableSpecified = (tableName != null);
     // TODO: Only works with single hbase:meta region currently.  Fix.
     final AtomicInteger count = new AtomicInteger(0);
     // Keep Map of found split parents.  There are candidates for cleanup.
     // Use a comparator that has split parents come before its daughters.
-    final Map<HRegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
-    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<>();
+    final Map<RegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
+    final Map<RegionInfo, Result> mergedRegions = new TreeMap<>(RegionInfo.COMPARATOR);
     // This visitor collects split parents and counts rows in the hbase:meta table
 
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
@@ -169,7 +163,7 @@ public class CatalogJanitor extends ScheduledChore {
       public boolean visit(Result r) throws IOException {
         if (r == null || r.isEmpty()) return true;
         count.incrementAndGet();
-        HRegionInfo info = MetaTableAccessor.getHRegionInfo(r);
+        RegionInfo info = MetaTableAccessor.getRegionInfo(r);
         if (info == null) return true; // Keep scanning
         if (isTableSpecified
             && info.getTable().compareTo(tableName) > 0) {
@@ -201,12 +195,12 @@ public class CatalogJanitor extends ScheduledChore {
    *         the files on the file system
    * @throws IOException
    */
-  boolean cleanMergeRegion(final HRegionInfo mergedRegion,
-      final HRegionInfo regionA, final HRegionInfo regionB) throws IOException {
+  boolean cleanMergeRegion(final RegionInfo mergedRegion,
+      final RegionInfo regionA, final RegionInfo regionB) throws IOException {
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
-    HTableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
+    TableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
     HRegionFileSystem regionFs = null;
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
@@ -221,6 +215,11 @@ public class CatalogJanitor extends ScheduledChore {
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
       pe.submitProcedure(new GCMergedRegionsProcedure(pe.getEnvironment(),
           mergedRegion, regionA, regionB));
+      // Remove from in-memory states
+      this.services.getAssignmentManager().getRegionStates().deleteRegion(regionA);
+      this.services.getAssignmentManager().getRegionStates().deleteRegion(regionB);
+      this.services.getServerManager().removeRegion(regionA);
+      this.services.getServerManager().removeRegion(regionB);
       return true;
     }
     return false;
@@ -234,26 +233,27 @@ public class CatalogJanitor extends ScheduledChore {
    */
   int scan() throws IOException {
     int result = 0;
+
     try {
       if (!alreadyRunning.compareAndSet(false, true)) {
         LOG.debug("CatalogJanitor already running");
         return result;
       }
-      Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> scanTriple =
+      Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>> scanTriple =
         getMergedRegionsAndSplitParents();
       /**
        * clean merge regions first
        */
-      Map<HRegionInfo, Result> mergedRegions = scanTriple.getSecond();
-      for (Map.Entry<HRegionInfo, Result> e : mergedRegions.entrySet()) {
+      Map<RegionInfo, Result> mergedRegions = scanTriple.getSecond();
+      for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
           break;
         }
 
-        PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(e.getValue());
-        HRegionInfo regionA = p.getFirst();
-        HRegionInfo regionB = p.getSecond();
+        PairOfSameType<RegionInfo> p = MetaTableAccessor.getMergeRegions(e.getValue());
+        RegionInfo regionA = p.getFirst();
+        RegionInfo regionB = p.getSecond();
         if (regionA == null || regionB == null) {
           LOG.warn("Unexpected references regionA="
               + (regionA == null ? "null" : regionA.getShortNameToLog())
@@ -269,24 +269,24 @@ public class CatalogJanitor extends ScheduledChore {
       /**
        * clean split parents
        */
-      Map<HRegionInfo, Result> splitParents = scanTriple.getThird();
+      Map<RegionInfo, Result> splitParents = scanTriple.getThird();
 
       // Now work on our list of found parents. See if any we can clean up.
       // regions whose parents are still around
       HashSet<String> parentNotCleaned = new HashSet<>();
-      for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
+      for (Map.Entry<RegionInfo, Result> e : splitParents.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
           break;
         }
 
         if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
-              cleanParent(e.getKey(), e.getValue())) {
-            result++;
+            cleanParent(e.getKey(), e.getValue())) {
+          result++;
         } else {
           // We could not clean the parent, so it's daughters should not be
           // cleaned either (HBASE-6160)
-          PairOfSameType<HRegionInfo> daughters =
+          PairOfSameType<RegionInfo> daughters =
               MetaTableAccessor.getDaughterRegions(e.getValue());
           parentNotCleaned.add(daughters.getFirst().getEncodedName());
           parentNotCleaned.add(daughters.getSecond().getEncodedName());
@@ -302,11 +302,11 @@ public class CatalogJanitor extends ScheduledChore {
    * Compare HRegionInfos in a way that has split parents sort BEFORE their
    * daughters.
    */
-  static class SplitParentFirstComparator implements Comparator<HRegionInfo> {
+  static class SplitParentFirstComparator implements Comparator<RegionInfo> {
     Comparator<byte[]> rowEndKeyComparator = new Bytes.RowEndKeyComparator();
     @Override
-    public int compare(HRegionInfo left, HRegionInfo right) {
-      // This comparator differs from the one HRegionInfo in that it sorts
+    public int compare(RegionInfo left, RegionInfo right) {
+      // This comparator differs from the one RegionInfo in that it sorts
       // parent before daughters.
       if (left == null) return -1;
       if (right == null) return 1;
@@ -325,14 +325,14 @@ public class CatalogJanitor extends ScheduledChore {
 
   /**
    * If daughters no longer hold reference to the parents, delete the parent.
-   * @param parent HRegionInfo of split offlined parent
+   * @param parent RegionInfo of split offlined parent
    * @param rowContent Content of <code>parent</code> row in
    * <code>metaRegionName</code>
    * @return True if we removed <code>parent</code> from meta table and from
    * the filesystem.
    * @throws IOException
    */
-  boolean cleanParent(final HRegionInfo parent, Result rowContent)
+  boolean cleanParent(final RegionInfo parent, Result rowContent)
   throws IOException {
     // Check whether it is a merged region and not clean reference
     // No necessary to check MERGEB_QUALIFIER because these two qualifiers will
@@ -342,7 +342,7 @@ public class CatalogJanitor extends ScheduledChore {
       return false;
     }
     // Run checks on each daughter split.
-    PairOfSameType<HRegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
+    PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
     Pair<Boolean, Boolean> a = checkDaughterInFs(parent, daughters.getFirst());
     Pair<Boolean, Boolean> b = checkDaughterInFs(parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
@@ -355,6 +355,9 @@ public class CatalogJanitor extends ScheduledChore {
         " -- no longer hold references");
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
       pe.submitProcedure(new GCRegionProcedure(pe.getEnvironment(), parent));
+      // Remove from in-memory states
+      this.services.getAssignmentManager().getRegionStates().deleteRegion(parent);
+      this.services.getServerManager().removeRegion(parent);
       return true;
     }
     return false;
@@ -380,7 +383,7 @@ public class CatalogJanitor extends ScheduledChore {
    * whether the daughter has references to the parent.
    * @throws IOException
    */
-  Pair<Boolean, Boolean> checkDaughterInFs(final HRegionInfo parent, final HRegionInfo daughter)
+  Pair<Boolean, Boolean> checkDaughterInFs(final RegionInfo parent, final RegionInfo daughter)
   throws IOException {
     if (daughter == null)  {
       return new Pair<>(Boolean.FALSE, Boolean.FALSE);
@@ -405,12 +408,12 @@ public class CatalogJanitor extends ScheduledChore {
     }
 
     boolean references = false;
-    HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
+    TableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
           this.services.getConfiguration(), fs, tabledir, daughter, true);
 
-      for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
+      for (ColumnFamilyDescriptor family: parentDescriptor.getColumnFamilies()) {
         if ((references = regionFs.hasReferences(family.getNameAsString()))) {
           break;
         }
@@ -423,7 +426,7 @@ public class CatalogJanitor extends ScheduledChore {
     return new Pair<>(Boolean.TRUE, Boolean.valueOf(references));
   }
 
-  private HTableDescriptor getTableDescriptor(final TableName tableName)
+  private TableDescriptor getTableDescriptor(final TableName tableName)
       throws FileNotFoundException, IOException {
     return this.services.getTableDescriptors().get(tableName);
   }
@@ -435,11 +438,11 @@ public class CatalogJanitor extends ScheduledChore {
    * @return true if the specified region doesn't have merge qualifier now
    * @throws IOException
    */
-  public boolean cleanMergeQualifier(final HRegionInfo region)
+  public boolean cleanMergeQualifier(final RegionInfo region)
       throws IOException {
     // Get merge regions if it is a merged region and already has merge
     // qualifier
-    Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaTableAccessor
+    Pair<RegionInfo, RegionInfo> mergeRegions = MetaTableAccessor
         .getRegionsFromMergeQualifier(this.services.getConnection(),
           region.getRegionName());
     if (mergeRegions == null

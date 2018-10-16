@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.visibility.expression;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class LeafExpressionNode implements ExpressionNode {
@@ -58,6 +58,7 @@ public class LeafExpressionNode implements ExpressionNode {
     return true;
   }
 
+  @Override
   public LeafExpressionNode deepClone() {
     LeafExpressionNode clone = new LeafExpressionNode(this.identifier);
     return clone;

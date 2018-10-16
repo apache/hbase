@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,24 +17,27 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+
+import static junit.framework.TestCase.assertTrue;
 
 /**
  * Tests the default table lock manager
@@ -44,43 +45,50 @@ import org.junit.rules.TestName;
 @Category({ MasterTests.class, LargeTests.class })
 public class TestTableStateManager {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableStateManager.class);
+
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
   public TestName name = new TestName();
 
+  @Before
+  public void before() throws Exception {
+    TEST_UTIL.startMiniCluster();
+  }
+
   @After
-  public void tearDown() throws Exception {
+  public void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000)
-  public void testUpgradeFromZk() throws Exception {
+  @Test
+  public void testMigration() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.startMiniCluster(2, 1);
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    ZooKeeperWatcher watcher = TEST_UTIL.getZooKeeperWatcher();
-    setTableStateInZK(watcher, tableName, ZooKeeperProtos.DeprecatedTableState.State.DISABLED);
-    TEST_UTIL.restartHBaseCluster(1);
-
-    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    Assert.assertEquals(
-        master.getTableStateManager().getTableState(tableName),
-        TableState.State.DISABLED);
-  }
-
-  private void setTableStateInZK(ZooKeeperWatcher watcher, final TableName tableName,
-      final ZooKeeperProtos.DeprecatedTableState.State state)
-      throws KeeperException, IOException {
-    String znode = ZKUtil.joinZNode(watcher.znodePaths.tableZNode, tableName.getNameAsString());
-    if (ZKUtil.checkExists(watcher, znode) == -1) {
-      ZKUtil.createAndFailSilent(watcher, znode);
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY_STR);
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    // Table is disabled. Now remove the DISABLED column from the hbase:meta for this table's
+    // region. We want to see if Master will read the DISABLED from zk and make use of it as
+    // though it were reading the zk table state written by a hbase-1.x cluster.
+    TableState state = MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), tableName);
+    assertTrue("State=" + state, state.getState().equals(TableState.State.DISABLED));
+    MetaTableAccessor.deleteTableState(TEST_UTIL.getConnection(), tableName);
+    assertTrue(MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), tableName) == null);
+    // Now kill Master so a new one can come up and run through the zk migration.
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    master.stop("Restarting");
+    while (!master.isStopped()) {
+      Threads.sleep(1);
     }
-    ZooKeeperProtos.DeprecatedTableState.Builder builder =
-        ZooKeeperProtos.DeprecatedTableState.newBuilder();
-    builder.setState(state);
-    byte[] data = ProtobufUtil.prependPBMagic(builder.build().toByteArray());
-    ZKUtil.setData(watcher, znode, data);
+    assertTrue(master.isStopped());
+    JVMClusterUtil.MasterThread newMasterThread = TEST_UTIL.getMiniHBaseCluster().startMaster();
+    master = newMasterThread.getMaster();
+    while (!master.isInitialized()) {
+      Threads.sleep(1);
+    }
+    assertTrue(MetaTableAccessor.getTableState(TEST_UTIL.getConnection(),
+        tableName).getState().equals(TableState.State.DISABLED));
   }
-
 }

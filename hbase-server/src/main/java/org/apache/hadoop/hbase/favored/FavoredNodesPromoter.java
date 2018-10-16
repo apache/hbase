@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.favored;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 
 @InterfaceAudience.Private
@@ -31,8 +31,8 @@ public interface FavoredNodesPromoter {
   String FAVORED_ALWAYS_ASSIGN_REGIONS = "hbase.favored.assignment.always.assign";
 
   void generateFavoredNodesForDaughter(List<ServerName> servers,
-      HRegionInfo parent, HRegionInfo hriA, HRegionInfo hriB) throws IOException;
+      RegionInfo parent, RegionInfo hriA, RegionInfo hriB) throws IOException;
 
-  void generateFavoredNodesForMergedRegion(HRegionInfo merged, HRegionInfo hriA,
-      HRegionInfo hriB) throws IOException;
+  void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo hriA,
+      RegionInfo hriB) throws IOException;
 }

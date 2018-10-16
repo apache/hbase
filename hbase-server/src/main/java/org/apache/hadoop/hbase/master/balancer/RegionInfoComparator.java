@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Comparator;
 
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 
 /**
  * The following comparator assumes that RegionId from HRegionInfo can represent
@@ -27,9 +27,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
  * comparator is used in balanceCluster() to account for the out-of-band regions
  * which were assigned to the server after some other region server crashed.
  */
-class RegionInfoComparator implements Comparator<HRegionInfo> {
+class RegionInfoComparator implements Comparator<RegionInfo> {
   @Override
-  public int compare(HRegionInfo l, HRegionInfo r) {
+  public int compare(RegionInfo l, RegionInfo r) {
     long diff = r.getRegionId() - l.getRegionId();
     if (diff < 0) return -1;
     if (diff > 0) return 1;

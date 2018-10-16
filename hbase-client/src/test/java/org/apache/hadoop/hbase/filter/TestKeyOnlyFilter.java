@@ -20,20 +20,20 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyByteBufferCell;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyByteBufferExtendedCell;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyCell;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -44,20 +44,16 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestKeyOnlyFilter {
 
-  private final boolean lenAsVal;
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeyOnlyFilter.class);
+
+  @Parameterized.Parameter
+  public boolean lenAsVal;
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<>(2);
-    {
-      paramList.add(new Object[] { false });
-      paramList.add(new Object[] { true });
-    }
-    return paramList;
-  }
-
-  public TestKeyOnlyFilter(boolean lenAsVal) {
-    this.lenAsVal = lenAsVal;
+    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
   }
 
   @Test
@@ -89,7 +85,7 @@ public class TestKeyOnlyFilter {
     KeyValue KeyOnlyKeyValue = new KeyValue(newBuffer);
 
     KeyOnlyCell keyOnlyCell = new KeyOnlyCell(kv, lenAsVal);
-    KeyOnlyByteBufferCell keyOnlyByteBufferedCell = new KeyOnlyByteBufferCell(
+    KeyOnlyByteBufferExtendedCell keyOnlyByteBufferedCell = new KeyOnlyByteBufferExtendedCell(
         bbCell, lenAsVal);
 
     assertTrue(CellUtil.matchingRows(KeyOnlyKeyValue, keyOnlyCell));

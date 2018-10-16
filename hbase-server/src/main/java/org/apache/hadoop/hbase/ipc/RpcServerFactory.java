@@ -21,19 +21,19 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.ServiceDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 @InterfaceAudience.Private
 public class RpcServerFactory {
 
-  public static final Log LOG = LogFactory.getLog(RpcServerFactory.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RpcServerFactory.class);
 
   public static final String CUSTOM_RPC_SERVER_IMPL_CONF_KEY = "hbase.rpc.server.impl";
 
@@ -44,12 +44,18 @@ public class RpcServerFactory {
   }
 
   public static RpcServer createRpcServer(final Server server, final String name,
+      final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
+      Configuration conf, RpcScheduler scheduler) throws IOException {
+    return createRpcServer(server, name, services, bindAddress, conf, scheduler, true);
+  }
+
+  public static RpcServer createRpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
       final InetSocketAddress bindAddress, Configuration conf,
-      RpcScheduler scheduler) throws IOException {
+      RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
     String rpcServerClass = conf.get(CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        SimpleRpcServer.class.getName());
-    StringBuffer servicesList = new StringBuffer();
+        NettyRpcServer.class.getName());
+    StringBuilder servicesList = new StringBuilder();
     for (BlockingServiceAndInterface s: services) {
       ServiceDescriptor sd = s.getBlockingService().getDescriptorForType();
       if (sd == null) continue; // Can be null for certain tests like TestTokenAuthentication
@@ -59,7 +65,7 @@ public class RpcServerFactory {
     LOG.info("Creating " + rpcServerClass + " hosting " + servicesList);
     return ReflectionUtils.instantiateWithCustomCtor(rpcServerClass,
         new Class[] { Server.class, String.class, List.class,
-            InetSocketAddress.class, Configuration.class, RpcScheduler.class },
-        new Object[] { server, name, services, bindAddress, conf, scheduler });
+          InetSocketAddress.class, Configuration.class, RpcScheduler.class, boolean.class },
+        new Object[] { server, name, services, bindAddress, conf, scheduler, reservoirEnabled });
   }
 }

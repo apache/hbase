@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,19 +18,24 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.jruby.embed.PathType;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestShell extends AbstractTestShell {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestShell.class);
+
   @Test
   public void testRunShellTests() throws IOException {
-    System.setProperty("shell.test.exclude", "replication_admin_test.rb,rsgroup_shell_test.rb");
+    System.setProperty("shell.test.exclude", "replication_admin_test.rb,rsgroup_shell_test.rb," +
+      "admin_test.rb,table_test.rb,quotas_test.rb");
     // Start all ruby tests
     jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,24 +32,21 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.RowProcessorClient;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorRequest;
@@ -68,16 +65,18 @@ import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcesso
 import org.apache.hadoop.hbase.regionserver.BaseRowProcessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.Message;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Verifies ProcessEndpoint works.
@@ -85,8 +84,11 @@ import org.apache.commons.logging.LogFactory;
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestRowProcessorEndpoint {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRowProcessorEndpoint.class);
 
-  private static final Log LOG = LogFactory.getLog(TestRowProcessorEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRowProcessorEndpoint.class);
 
   private static final TableName TABLE = TableName.valueOf("testtable");
   private final static byte[] ROW = Bytes.toBytes("testrow");
@@ -216,8 +218,7 @@ public class TestRowProcessorEndpoint {
     return result;
   }
 
-  private void concurrentExec(
-      final Runnable task, final int numThreads) throws Throwable {
+  private void concurrentExec(final Runnable task, final int numThreads) throws Throwable {
     startSignal = new CountDownLatch(numThreads);
     doneSignal = new CountDownLatch(numThreads);
     for (int i = 0; i < numThreads; ++i) {
@@ -310,10 +311,10 @@ public class TestRowProcessorEndpoint {
    * So they can be loaded with the endpoint on the coprocessor.
    */
   public static class RowProcessorEndpoint<S extends Message,T extends Message>
-  extends BaseRowProcessorEndpoint<S,T> implements CoprocessorService {
+          extends BaseRowProcessorEndpoint<S,T> {
     public static class IncrementCounterProcessor extends
-        BaseRowProcessor<IncrementCounterProcessorTestProtos.IncCounterProcessorRequest,
-        IncrementCounterProcessorTestProtos.IncCounterProcessorResponse> {
+            BaseRowProcessor<IncrementCounterProcessorTestProtos.IncCounterProcessorRequest,
+                    IncrementCounterProcessorTestProtos.IncCounterProcessorResponse> {
       int counter = 0;
       byte[] row = new byte[0];
 
@@ -394,7 +395,7 @@ public class TestRowProcessorEndpoint {
     }
 
     public static class FriendsOfFriendsProcessor extends
-        BaseRowProcessor<FriendsOfFriendsProcessorRequest, FriendsOfFriendsProcessorResponse> {
+            BaseRowProcessor<FriendsOfFriendsProcessorRequest, FriendsOfFriendsProcessorResponse> {
       byte[] row = null;
       byte[] person = null;
       final Set<String> result = new HashSet<>();
@@ -417,7 +418,7 @@ public class TestRowProcessorEndpoint {
 
       @Override
       public FriendsOfFriendsProcessorResponse getResult() {
-        FriendsOfFriendsProcessorResponse.Builder builder = 
+        FriendsOfFriendsProcessorResponse.Builder builder =
             FriendsOfFriendsProcessorResponse.newBuilder();
         builder.addAllResult(result);
         return builder.build();
@@ -469,7 +470,7 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void initialize(FriendsOfFriendsProcessorRequest request) 
+      public void initialize(FriendsOfFriendsProcessorRequest request)
           throws IOException {
         this.person = request.getPerson().toByteArray();
         this.row = request.getRow().toByteArray();
@@ -479,7 +480,7 @@ public class TestRowProcessorEndpoint {
     }
 
     public static class RowSwapProcessor extends
-        BaseRowProcessor<RowSwapProcessorRequest, RowSwapProcessorResponse> {
+            BaseRowProcessor<RowSwapProcessorRequest, RowSwapProcessorResponse> {
       byte[] row1 = new byte[0];
       byte[] row2 = new byte[0];
 
@@ -546,9 +547,9 @@ public class TestRowProcessorEndpoint {
             // Delete from the current row and add to the other row
             Delete d = new Delete(rows[i]);
             KeyValue kvDelete =
-                new KeyValue(rows[i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), 
+                new KeyValue(rows[i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
                     kv.getTimestamp(), KeyValue.Type.Delete);
-            d.addDeleteMarker(kvDelete);
+            d.add(kvDelete);
             Put p = new Put(rows[1 - i]);
             KeyValue kvAdd =
                 new KeyValue(rows[1 - i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
@@ -583,8 +584,7 @@ public class TestRowProcessorEndpoint {
     }
 
     public static class TimeoutProcessor extends
-        BaseRowProcessor<TimeoutProcessorRequest, TimeoutProcessorResponse> {
-
+            BaseRowProcessor<TimeoutProcessorRequest, TimeoutProcessorResponse> {
       byte[] row = new byte[0];
 
       /**
@@ -640,8 +640,7 @@ public class TestRowProcessorEndpoint {
       }
     }
 
-    public static void doScan(
-        HRegion region, Scan scan, List<Cell> result) throws IOException {
+    public static void doScan(HRegion region, Scan scan, List<Cell> result) throws IOException {
       InternalScanner scanner = null;
       try {
         scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
@@ -649,7 +648,9 @@ public class TestRowProcessorEndpoint {
         result.clear();
         scanner.next(result);
       } finally {
-        if (scanner != null) scanner.close();
+        if (scanner != null) {
+          scanner.close();
+        }
       }
     }
   }
@@ -673,5 +674,4 @@ public class TestRowProcessorEndpoint {
     out.append("]");
     return out.toString();
   }
-
 }

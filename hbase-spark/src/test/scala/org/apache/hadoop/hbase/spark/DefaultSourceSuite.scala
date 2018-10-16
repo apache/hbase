@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.spark
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData
 import org.apache.hadoop.hbase.client.{ConnectionFactory, Put}
-import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
+import org.apache.hadoop.hbase.spark.datasources.{HBaseSparkConf, HBaseTableCatalog}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{HBaseTestingUtility, TableName}
-import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{Logging, SparkConf, SparkContext}
+import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
+import org.xml.sax.SAXParseException
 
 case class HBaseRecord(
   col0: String,
@@ -377,8 +377,8 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     assert(results.length == 2)
 
-    assert(executionRules.dynamicLogicExpression.toExpressionString.
-      equals("( KEY_FIELD <= 0 AND KEY_FIELD >= 1 )"))
+    val expr = executionRules.dynamicLogicExpression.toExpressionString
+    assert(expr.equals("( ( KEY_FIELD isNotNull AND KEY_FIELD <= 0 ) AND KEY_FIELD >= 1 )"), expr)
 
     assert(executionRules.rowKeyFilter.points.size == 0)
     assert(executionRules.rowKeyFilter.ranges.size == 1)
@@ -653,8 +653,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     assert(localResult(0).getInt(2) == 8)
 
     val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
-    assert(executionRules.dynamicLogicExpression.toExpressionString.
-      equals("( I_FIELD > 0 AND I_FIELD < 1 )"))
+    val expr = executionRules.dynamicLogicExpression.toExpressionString
+    logInfo(expr)
+    assert(expr.equals("( ( I_FIELD isNotNull AND I_FIELD > 0 ) AND I_FIELD < 1 )"), expr)
 
   }
 
@@ -1036,5 +1037,27 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
       .select("col0", "col1.favorite_color", "col1.favorite_number")
     s.show()
     assert(s.count() == 7)
+  }
+
+  test("test create HBaseRelation with new context throws SAXParseException") {
+    val catalog = s"""{
+                     |"table":{"namespace":"default", "name":"t1NotThere"},
+                     |"rowkey":"key",
+                     |"columns":{
+                     |"KEY_FIELD":{"cf":"rowkey", "col":"key", "type":"string"},
+                     |"A_FIELD":{"cf":"c", "col":"a", "type":"string"},
+                     |"B_FIELD":{"cf":"c", "col":"c", "type":"string"}
+                     |}
+                     |}""".stripMargin
+    try {
+      HBaseRelation(Map(HBaseTableCatalog.tableCatalog -> catalog,
+        HBaseSparkConf.USE_HBASECONTEXT -> "false"), None)(sqlContext)
+    } catch {
+        case e: Throwable => if(e.getCause.isInstanceOf[SAXParseException]) {
+          fail("SAXParseException due to configuration loading empty resource")
+        } else {
+          println("Failed due to some other exception, ignore " + e.getMessage)
+        }
+    }
   }
 }

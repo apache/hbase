@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,21 +20,30 @@ package org.apache.hadoop.hbase.quotas;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 /**
  * Test class for {@link SpaceLimitSettings}.
  */
 @Category({SmallTests.class})
 public class TestSpaceLimitSettings {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSpaceLimitSettings.class);
 
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidTableQuotaSizeLimit() {
@@ -115,5 +125,27 @@ public class TestSpaceLimitSettings {
     SpaceLimitSettings copy = new SpaceLimitSettings(namespace, sizeLimit, policy);
     assertEquals(settings, copy);
     assertEquals(settings.hashCode(), copy.hashCode());
+  }
+
+  @Test
+  public void testQuotaMerging() throws IOException {
+    TableName tn = TableName.valueOf("foo");
+    QuotaSettings originalSettings = QuotaSettingsFactory.limitTableSpace(
+        tn, 1024L * 1024L, SpaceViolationPolicy.DISABLE);
+    QuotaSettings largerSizeLimit = QuotaSettingsFactory.limitTableSpace(
+        tn, 5L * 1024L * 1024L, SpaceViolationPolicy.DISABLE);
+    QuotaSettings differentPolicy = QuotaSettingsFactory.limitTableSpace(
+        tn, 1024L * 1024L, SpaceViolationPolicy.NO_WRITES);
+    QuotaSettings incompatibleSettings = QuotaSettingsFactory.limitNamespaceSpace(
+        "ns1", 5L * 1024L * 1024L, SpaceViolationPolicy.NO_WRITES);
+
+    assertEquals(originalSettings.merge(largerSizeLimit), largerSizeLimit);
+    assertEquals(originalSettings.merge(differentPolicy), differentPolicy);
+    try {
+      originalSettings.merge(incompatibleSettings);
+      fail("Should not be able to merge a Table space quota with a namespace space quota.");
+    } catch (IllegalArgumentException e) {
+      //pass
+    }
   }
 }

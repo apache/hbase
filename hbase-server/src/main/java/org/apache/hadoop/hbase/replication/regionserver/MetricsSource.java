@@ -21,13 +21,15 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class is for maintaining the various replication statistics for a source and publishing them
@@ -36,16 +38,17 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class MetricsSource implements BaseSource {
 
-  private static final Log LOG = LogFactory.getLog(MetricsSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsSource.class);
 
   // tracks last shipped timestamp for each wal group
-  private Map<String, Long> lastTimeStamps = new HashMap<>();
+  private Map<String, Long> lastTimestamps = new HashMap<>();
+  private Map<String, Long> ageOfLastShippedOp = new HashMap<>();
   private long lastHFileRefsQueueSize = 0;
   private String id;
 
   private final MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
-
+  private Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable;
 
   /**
    * Constructor used to register the metrics
@@ -58,6 +61,7 @@ public class MetricsSource implements BaseSource {
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
     globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    singleSourceSourceByTable = new HashMap<>();
   }
 
   /**
@@ -67,10 +71,12 @@ public class MetricsSource implements BaseSource {
    * @param globalSourceSource Class to monitor global-scoped metrics
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
-                       MetricsReplicationSourceSource globalSourceSource) {
+                       MetricsReplicationSourceSource globalSourceSource,
+                       Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
     this.globalSourceSource = globalSourceSource;
+    this.singleSourceSourceByTable = singleSourceSourceByTable;
   }
 
   /**
@@ -82,7 +88,39 @@ public class MetricsSource implements BaseSource {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
     singleSourceSource.setLastShippedAge(age);
     globalSourceSource.setLastShippedAge(age);
-    this.lastTimeStamps.put(walGroup, timestamp);
+    this.ageOfLastShippedOp.put(walGroup, age);
+    this.lastTimestamps.put(walGroup, timestamp);
+  }
+
+  /**
+   * Set the age of the last edit that was shipped group by table
+   * @param timestamp write time of the edit
+   * @param tableName String as group and tableName
+   */
+  public void setAgeOfLastShippedOpByTable(long timestamp, String tableName) {
+    long age = EnvironmentEdgeManager.currentTime() - timestamp;
+    this.getSingleSourceSourceByTable().computeIfAbsent(
+        tableName, t -> CompatibilitySingletonFactory
+            .getInstance(MetricsReplicationSourceFactory.class).getSource(t))
+            .setLastShippedAge(age);
+  }
+
+  /**
+   * get the last timestamp of given wal group. If the walGroup is null, return 0.
+   * @param walGroup which group we are getting
+   * @return timeStamp
+   */
+  public long getLastTimeStampOfWalGroup(String walGroup) {
+    return this.lastTimestamps.get(walGroup) == null ? 0 : lastTimestamps.get(walGroup);
+  }
+
+  /**
+   * get age of last shipped op of given wal group. If the walGroup is null, return 0
+   * @param walGroup which group we are getting
+   * @return age
+   */
+  public long getAgeofLastShippedOp(String walGroup) {
+    return this.ageOfLastShippedOp.get(walGroup) == null ? 0 : ageOfLastShippedOp.get(walGroup);
   }
 
   /**
@@ -91,9 +129,9 @@ public class MetricsSource implements BaseSource {
    * @param walGroupId id of the group to update
    */
   public void refreshAgeOfLastShippedOp(String walGroupId) {
-    Long lastTimestamp = this.lastTimeStamps.get(walGroupId);
+    Long lastTimestamp = this.lastTimestamps.get(walGroupId);
     if (lastTimestamp == null) {
-      this.lastTimeStamps.put(walGroupId, 0L);
+      this.lastTimestamps.put(walGroupId, 0L);
       lastTimestamp = 0L;
     }
     if (lastTimestamp > 0) {
@@ -185,7 +223,7 @@ public class MetricsSource implements BaseSource {
     singleSourceSource.decrSizeOfLogQueue(lastQueueSize);
     singleSourceSource.clear();
     globalSourceSource.decrSizeOfHFileRefsQueue(lastHFileRefsQueueSize);
-    lastTimeStamps.clear();
+    lastTimestamps.clear();
     lastHFileRefsQueueSize = 0;
   }
 
@@ -208,10 +246,21 @@ public class MetricsSource implements BaseSource {
   /**
    * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one
    * @return lastTimestampForAge
+   * @deprecated Since 2.0.0. Removed in 3.0.0.
+   * @see #getTimestampOfLastShippedOp()
    */
+  @Deprecated
   public long getTimeStampOfLastShippedOp() {
+    return getTimestampOfLastShippedOp();
+  }
+
+  /**
+   * Get the timestampsOfLastShippedOp, if there are multiple groups, return the latest one
+   * @return lastTimestampForAge
+   */
+  public long getTimestampOfLastShippedOp() {
     long lastTimestamp = 0L;
-    for (long ts : lastTimeStamps.values()) {
+    for (long ts : lastTimestamps.values()) {
       if (ts > lastTimestamp) {
         lastTimestamp = ts;
       }
@@ -277,6 +326,10 @@ public class MetricsSource implements BaseSource {
     globalSourceSource.incrCompletedRecoveryQueue();
   }
 
+  public void incrFailedRecoveryQueue() {
+    globalSourceSource.incrFailedRecoveryQueue();
+  }
+
   @Override
   public void init() {
     singleSourceSource.init();
@@ -337,5 +390,10 @@ public class MetricsSource implements BaseSource {
   @Override
   public String getMetricsName() {
     return globalSourceSource.getMetricsName();
+  }
+
+  @VisibleForTesting
+  public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
+    return singleSourceSourceByTable;
   }
 }

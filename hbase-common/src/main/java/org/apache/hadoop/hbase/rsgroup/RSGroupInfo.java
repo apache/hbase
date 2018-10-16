@@ -24,8 +24,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Stores the group information of region server groups.
@@ -47,13 +47,12 @@ public class RSGroupInfo {
 
   RSGroupInfo(String name, SortedSet<Address> servers, SortedSet<TableName> tables) {
     this.name = name;
-    this.servers = servers == null? new TreeSet<>(): servers;
-    this.servers.addAll(servers);
-    this.tables = new TreeSet<>(tables);
+    this.servers = (servers == null) ? new TreeSet<>() : new TreeSet<>(servers);
+    this.tables  = (tables  == null) ? new TreeSet<>() : new TreeSet<>(tables);
   }
 
   public RSGroupInfo(RSGroupInfo src) {
-    this(src.getName(), src.servers, src.tables);
+    this(src.name, src.servers, src.tables);
   }
 
   /**
@@ -124,7 +123,7 @@ public class RSGroupInfo {
 
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("Name:");
     sb.append(this.name);
     sb.append(", ");

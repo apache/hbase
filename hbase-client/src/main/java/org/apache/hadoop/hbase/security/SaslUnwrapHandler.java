@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 
 import javax.security.sasl.SaslClient;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Unwrap sasl messages. Should be placed after a
- * {@link io.netty.handler.codec.LengthFieldBasedFrameDecoder}
+ * io.netty.handler.codec.LengthFieldBasedFrameDecoder
  */
 @InterfaceAudience.Private
 public class SaslUnwrapHandler extends SimpleChannelInboundHandler<ByteBuf> {

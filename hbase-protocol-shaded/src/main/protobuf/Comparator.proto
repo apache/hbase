@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 
 // This file contains protocol buffers that are used for filters
 package hbase.pb;
@@ -71,4 +72,8 @@ message RegexStringComparator {
 
 message SubstringComparator {
   required string substr = 1;
+}
+
+message BigDecimalComparator {
+  required ByteArrayComparable comparable = 1;
 }

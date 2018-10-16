@@ -17,27 +17,28 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message.Builder;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.util.concurrent.PromiseCombiner;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufInputStream;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
+import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateEvent;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.PromiseCombiner;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
@@ -48,11 +49,12 @@ import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * The netty rpc handler.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyRpcDuplexHandler extends ChannelDuplexHandler {
 
-  private static final Log LOG = LogFactory.getLog(NettyRpcDuplexHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NettyRpcDuplexHandler.class);
 
   private final NettyRpcConnection conn;
 
@@ -91,21 +93,22 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
         : sizeWithoutCellBlock;
     ByteBuf buf = ctx.alloc().buffer(sizeWithoutCellBlock + 4);
     buf.writeInt(totalSize);
-    ByteBufOutputStream bbos = new ByteBufOutputStream(buf);
-    requestHeader.writeDelimitedTo(bbos);
-    if (call.param != null) {
-      call.param.writeDelimitedTo(bbos);
-    }
-    if (cellBlock != null) {
-      ChannelPromise withoutCellBlockPromise = ctx.newPromise();
-      ctx.write(buf, withoutCellBlockPromise);
-      ChannelPromise cellBlockPromise = ctx.newPromise();
-      ctx.write(cellBlock, cellBlockPromise);
-      PromiseCombiner combiner = new PromiseCombiner();
-      combiner.addAll(withoutCellBlockPromise, cellBlockPromise);
-      combiner.finish(promise);
-    } else {
-      ctx.write(buf, promise);
+    try (ByteBufOutputStream bbos = new ByteBufOutputStream(buf)) {
+      requestHeader.writeDelimitedTo(bbos);
+      if (call.param != null) {
+        call.param.writeDelimitedTo(bbos);
+      }
+      if (cellBlock != null) {
+        ChannelPromise withoutCellBlockPromise = ctx.newPromise();
+        ctx.write(buf, withoutCellBlockPromise);
+        ChannelPromise cellBlockPromise = ctx.newPromise();
+        ctx.write(cellBlock, cellBlockPromise);
+        PromiseCombiner combiner = new PromiseCombiner();
+        combiner.addAll(withoutCellBlockPromise, cellBlockPromise);
+        combiner.finish(promise);
+      } else {
+        ctx.write(buf, promise);
+      }
     }
   }
 
@@ -205,7 +208,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     if (!id2Call.isEmpty()) {
-      cleanupCalls(ctx, new IOException("Connection closed"));
+      cleanupCalls(ctx, new ConnectionClosedException("Connection closed"));
     }
     conn.shutdown();
     ctx.fireChannelInactive();

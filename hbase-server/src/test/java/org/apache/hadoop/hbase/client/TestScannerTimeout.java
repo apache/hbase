@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,9 +20,8 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -35,8 +33,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test various scanner timeout issues.
@@ -44,10 +45,14 @@ import org.junit.experimental.categories.Category;
 @Category({LargeTests.class, ClientTests.class})
 public class TestScannerTimeout {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScannerTimeout.class);
+
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(TestScannerTimeout.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannerTimeout.class);
   private final static byte[] SOME_BYTES = Bytes.toBytes("f");
   private final static TableName TABLE_NAME = TableName.valueOf("t");
   private final static int NB_ROWS = 10;
@@ -97,7 +102,7 @@ public class TestScannerTimeout {
    * from failed. Before 2772, it reused the same scanner id.
    * @throws Exception
    */
-  @Test(timeout=300000)
+  @Test
   public void test2772() throws Exception {
     LOG.info("START************ test2772");
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
@@ -128,7 +133,7 @@ public class TestScannerTimeout {
    * from failed. Before 3686, it would skip rows in the scan.
    * @throws Exception
    */
-  @Test(timeout=300000)
+  @Test
   public void test3686a() throws Exception {
     LOG.info("START ************ TEST3686A---1");
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
@@ -174,7 +179,7 @@ public class TestScannerTimeout {
    * client.
    * @throws Exception
    */
-  @Test(timeout=300000)
+  @Test
   public void test3686b() throws Exception {
     LOG.info("START ************ test3686b");
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 public class SystemTableWALEntryFilter implements WALEntryFilter {
   @Override
   public Entry filter(Entry entry) {
-    if (entry.getKey().getTablename().isSystemTable()) {
+    if (entry.getKey().getTableName().isSystemTable()) {
       return null;
     }
     return entry;

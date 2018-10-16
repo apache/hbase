@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@code long} of 64-bits using a fixed-length encoding. Built on
@@ -33,16 +32,24 @@ public class OrderedInt64 extends OrderedBytesBase<Long> {
   public static final OrderedInt64 ASCENDING = new OrderedInt64(Order.ASCENDING);
   public static final OrderedInt64 DESCENDING = new OrderedInt64(Order.DESCENDING);
 
-  protected OrderedInt64(Order order) { super(order); }
+  protected OrderedInt64(Order order) {
+    super(order);
+  }
 
   @Override
-  public boolean isNullable() { return false; }
+  public boolean isNullable() {
+    return false;
+  }
 
   @Override
-  public int encodedLength(Long val) { return 9; }
+  public int encodedLength(Long val) {
+    return 9;
+  }
 
   @Override
-  public Class<Long> encodedClass() { return Long.class; }
+  public Class<Long> encodedClass() {
+    return Long.class;
+  }
 
   @Override
   public Long decode(PositionedByteRange src) {
@@ -51,7 +58,9 @@ public class OrderedInt64 extends OrderedBytesBase<Long> {
 
   @Override
   public int encode(PositionedByteRange dst, Long val) {
-    if (null == val) throw new IllegalArgumentException("Null values not supported.");
+    if (null == val) {
+      throw new IllegalArgumentException("Null values not supported.");
+    }
     return OrderedBytes.encodeInt64(dst, val, order);
   }
 

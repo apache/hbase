@@ -20,8 +20,8 @@ module Shell
   module Commands
     class CloneSnapshot < Command
       def help
-        return <<-EOF
-Create a new table by cloning the snapshot content. 
+        <<-EOF
+Create a new table by cloning the snapshot content.
 There're no copies of data involved.
 And writing on the newly created table will not influence the snapshot data.
 
@@ -37,15 +37,19 @@ EOF
       end
 
       def command(snapshot_name, table, args = {})
-        raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+        raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
         restore_acl = args.delete(RESTORE_ACL) || false
         admin.clone_snapshot(snapshot_name, table, restore_acl)
       end
 
       def handle_exceptions(cause, *args)
-        if cause.kind_of?(org.apache.hadoop.hbase.TableExistsException) then
+        if cause.is_a?(org.apache.hadoop.hbase.TableExistsException)
           tableName = args[1]
           raise "Table already exists: #{tableName}!"
+        end
+        if cause.is_a?(org.apache.hadoop.hbase.NamespaceNotFoundException)
+          namespace_name = args[1].split(':')[0]
+          raise "Unknown namespace: #{namespace_name}!"
         end
       end
     end

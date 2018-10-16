@@ -23,18 +23,23 @@ import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ SmallTests.class, ClientTests.class })
 public class TestAllowPartialScanResultCache {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAllowPartialScanResultCache.class);
 
   private static byte[] CF = Bytes.toBytes("cf");
 

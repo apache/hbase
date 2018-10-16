@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +17,26 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -43,33 +58,24 @@ import org.apache.hadoop.hbase.security.visibility.ScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.SimpleScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 @Category({RestTests.class, MediumTests.class})
 public class TestScannersWithLabels {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScannersWithLabels.class);
+
   private static final TableName TABLE = TableName.valueOf("TestScannersWithLabels");
   private static final String CFA = "a";
   private static final String CFB = "b";
@@ -92,7 +98,7 @@ public class TestScannersWithLabels {
 
   private static int insertData(TableName tableName, String column, double prob) throws IOException {
     byte[] k = new byte[3];
-    byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
+    byte[][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
 
     List<Put> puts = new ArrayList<>(9);
     for (int i = 0; i < 9; i++) {
@@ -130,10 +136,8 @@ public class TestScannersWithLabels {
     conf = TEST_UTIL.getConfiguration();
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS,
         SimpleScanLabelGenerator.class, ScanLabelGenerator.class);
-    conf.setInt("hfile.format.version", 3);
     conf.set("hbase.superuser", SUPERUSER.getShortName());
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     TEST_UTIL.startMiniCluster(1);
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
@@ -165,6 +169,7 @@ public class TestScannersWithLabels {
 
   private static void createLabels() throws IOException, InterruptedException {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -199,14 +204,14 @@ public class TestScannersWithLabels {
     // recall previous put operation with read-only off
     conf.set("hbase.rest.readonly", "false");
     Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     // Respond with 204 as there are no cells to be retrieved
-    assertEquals(response.getCode(), 204);
+    assertEquals(204, response.getCode());
     // With no content in the payload, the 'Content-Type' header is not echo back
   }
 
@@ -224,18 +229,18 @@ public class TestScannersWithLabels {
     // recall previous put operation with read-only off
     conf.set("hbase.rest.readonly", "false");
     Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     // Respond with 204 as there are no cells to be retrieved
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response
         .getBody()));
-    assertEquals(countCellSet(cellSet), 5);
+    assertEquals(5, countCellSet(cellSet));
   }
 
 }

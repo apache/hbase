@@ -23,10 +23,10 @@ import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;
@@ -35,14 +35,14 @@ import sun.nio.ch.DirectBuffer;
 @InterfaceStability.Evolving
 public final class UnsafeAccess {
 
-  private static final Log LOG = LogFactory.getLog(UnsafeAccess.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UnsafeAccess.class);
 
-  static final Unsafe theUnsafe;
+  public static final Unsafe theUnsafe;
 
   /** The offset to the first element in a byte array. */
   public static final long BYTE_ARRAY_BASE_OFFSET;
 
-  static final boolean littleEndian = ByteOrder.nativeOrder()
+  public static final boolean LITTLE_ENDIAN = ByteOrder.nativeOrder()
       .equals(ByteOrder.LITTLE_ENDIAN);
 
   // This number limits the number of bytes to copy per call to Unsafe's
@@ -81,7 +81,7 @@ public final class UnsafeAccess {
    * @return the short value
    */
   public static short toShort(byte[] bytes, int offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Short.reverseBytes(theUnsafe.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
       return theUnsafe.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
@@ -95,7 +95,7 @@ public final class UnsafeAccess {
    * @return the int value
    */
   public static int toInt(byte[] bytes, int offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Integer.reverseBytes(theUnsafe.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
       return theUnsafe.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
@@ -109,7 +109,7 @@ public final class UnsafeAccess {
    * @return the long value
    */
   public static long toLong(byte[] bytes, int offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Long.reverseBytes(theUnsafe.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
       return theUnsafe.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
@@ -125,7 +125,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putShort(byte[] bytes, int offset, short val) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       val = Short.reverseBytes(val);
     }
     theUnsafe.putShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
@@ -140,7 +140,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putInt(byte[] bytes, int offset, int val) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       val = Integer.reverseBytes(val);
     }
     theUnsafe.putInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
@@ -155,7 +155,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putLong(byte[] bytes, int offset, long val) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       val = Long.reverseBytes(val);
     }
     theUnsafe.putLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
@@ -172,7 +172,7 @@ public final class UnsafeAccess {
    * @return short value at offset
    */
   public static short toShort(ByteBuffer buf, int offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Short.reverseBytes(getAsShort(buf, offset));
     }
     return getAsShort(buf, offset);
@@ -186,7 +186,7 @@ public final class UnsafeAccess {
    * @return short value at offset
    */
   public static short toShort(Object ref, long offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Short.reverseBytes(theUnsafe.getShort(ref, offset));
     }
     return theUnsafe.getShort(ref, offset);
@@ -214,7 +214,7 @@ public final class UnsafeAccess {
    * @return int value at offset
    */
   public static int toInt(ByteBuffer buf, int offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Integer.reverseBytes(getAsInt(buf, offset));
     }
     return getAsInt(buf, offset);
@@ -228,7 +228,7 @@ public final class UnsafeAccess {
    * @return int value at offset
    */
   public static int toInt(Object ref, long offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Integer.reverseBytes(theUnsafe.getInt(ref, offset));
     }
     return theUnsafe.getInt(ref, offset);
@@ -256,7 +256,7 @@ public final class UnsafeAccess {
    * @return long value at offset
    */
   public static long toLong(ByteBuffer buf, int offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Long.reverseBytes(getAsLong(buf, offset));
     }
     return getAsLong(buf, offset);
@@ -270,7 +270,7 @@ public final class UnsafeAccess {
    * @return long value at offset
    */
   public static long toLong(Object ref, long offset) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       return Long.reverseBytes(theUnsafe.getLong(ref, offset));
     }
     return theUnsafe.getLong(ref, offset);
@@ -297,7 +297,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putInt(ByteBuffer buf, int offset, int val) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       val = Integer.reverseBytes(val);
     }
     if (buf.isDirect()) {
@@ -381,7 +381,7 @@ public final class UnsafeAccess {
     if (src.isDirect()) {
       srcAddress = srcOffset + ((DirectBuffer) src).address();
     } else {
-      srcAddress = srcOffset +  src.arrayOffset() + BYTE_ARRAY_BASE_OFFSET;
+      srcAddress = (long) srcOffset +  src.arrayOffset() + BYTE_ARRAY_BASE_OFFSET;
       srcBase = src.array();
     }
     if (dest.isDirect()) {
@@ -402,7 +402,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putShort(ByteBuffer buf, int offset, short val) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       val = Short.reverseBytes(val);
     }
     if (buf.isDirect()) {
@@ -421,7 +421,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putLong(ByteBuffer buf, int offset, long val) {
-    if (littleEndian) {
+    if (LITTLE_ENDIAN) {
       val = Long.reverseBytes(val);
     }
     if (buf.isDirect()) {

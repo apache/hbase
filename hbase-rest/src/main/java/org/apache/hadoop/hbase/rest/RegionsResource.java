@@ -19,34 +19,32 @@
 
 package org.apache.hadoop.hbase.rest;
 
-import java.io.IOException;
-import java.util.Map;
-
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import javax.ws.rs.core.UriInfo;
+import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.rest.model.TableInfoModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RegionsResource extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(RegionsResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionsResource.class);
 
   static CacheControl cacheControl;
   static {
@@ -81,11 +79,11 @@ public class RegionsResource extends ResourceBase {
 
       Connection connection = ConnectionFactory.createConnection(servlet.getConfiguration());
       @SuppressWarnings("deprecation")
-      Map<HRegionInfo, ServerName> regions = MetaTableAccessor
+      Map<RegionInfo, ServerName> regions = MetaTableAccessor
           .allTableRegions(connection, tableName);
       connection.close();
-      for (Map.Entry<HRegionInfo,ServerName> e: regions.entrySet()) {
-        HRegionInfo hri = e.getKey();
+      for (Map.Entry<RegionInfo,ServerName> e: regions.entrySet()) {
+        RegionInfo hri = e.getKey();
         ServerName addr = e.getValue();
         model.add(
           new TableRegionModel(tableName.getNameAsString(), hri.getRegionId(),

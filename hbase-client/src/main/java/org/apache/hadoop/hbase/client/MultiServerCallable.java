@@ -19,28 +19,27 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Callable that handles the <code>multi</code> method call going against a single
@@ -55,8 +54,8 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
 
   MultiServerCallable(final ClusterConnection connection, final TableName tableName,
       final ServerName location, final MultiAction multi, RpcController rpcController,
-      int rpcTimeout, RetryingTimeTracker tracker) {
-    super(connection, tableName, null, rpcController, rpcTimeout, tracker);
+      int rpcTimeout, RetryingTimeTracker tracker, int priority) {
+    super(connection, tableName, null, rpcController, rpcTimeout, tracker, priority);
     this.multiAction = multi;
     // RegionServerCallable has HRegionLocation field, but this is a multi-region request.
     // Using region info from parent HRegionLocation would be a mistake for this class; so
@@ -93,30 +92,36 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
     RegionAction.Builder regionActionBuilder = RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
-    List<CellScannable> cells = null;
-    // The multi object is a list of Actions by region.  Iterate by region.
+
+    // Pre-size. Presume at least a KV per Action. There are likely more.
+    List<CellScannable> cells =
+        (this.cellBlock ? new ArrayList<CellScannable>(countOfActions) : null);
+
     long nonceGroup = multiAction.getNonceGroup();
-    if (nonceGroup != HConstants.NO_NONCE) {
-      multiRequestBuilder.setNonceGroup(nonceGroup);
-    }
+
+    // Map from a created RegionAction to the original index for a RowMutations within
+    // the original list of actions. This will be used to process the results when there
+    // is RowMutations in the action list.
+    Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
+    // The multi object is a list of Actions by region. Iterate by region.
     for (Map.Entry<byte[], List<Action>> e: this.multiAction.actions.entrySet()) {
       final byte [] regionName = e.getKey();
       final List<Action> actions = e.getValue();
-      regionActionBuilder.clear();
-      regionActionBuilder.setRegion(RequestConverter.buildRegionSpecifier(
-          HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName));
       if (this.cellBlock) {
-        // Pre-size. Presume at least a KV per Action.  There are likely more.
-        if (cells == null) cells = new ArrayList<>(countOfActions);
-        // Send data in cellblocks. The call to buildNoDataMultiRequest will skip RowMutations.
-        // They have already been handled above. Guess at count of cells
-        regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells,
-          regionActionBuilder, actionBuilder, mutationBuilder);
-      } else {
-        regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions,
-          regionActionBuilder, actionBuilder, mutationBuilder);
+        // Send data in cellblocks.
+        // multiRequestBuilder will be populated with region actions.
+        // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
+        // action list.
+        RequestConverter.buildNoDataRegionActions(regionName, actions, cells, multiRequestBuilder,
+          regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup, rowMutationsIndexMap);
       }
-      multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+      else {
+        // multiRequestBuilder will be populated with region actions.
+        // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
+        // action list.
+        RequestConverter.buildRegionActions(regionName, actions, multiRequestBuilder,
+          regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup, rowMutationsIndexMap);
+      }
     }
 
     if (cells != null) {
@@ -125,7 +130,8 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
     ClientProtos.MultiRequest requestProto = multiRequestBuilder.build();
     ClientProtos.MultiResponse responseProto = getStub().multi(getRpcController(), requestProto);
     if (responseProto == null) return null; // Occurs on cancel
-    return ResponseConverter.getResults(requestProto, responseProto, getRpcControllerCellScanner());
+    return ResponseConverter.getResults(requestProto, rowMutationsIndexMap, responseProto,
+      getRpcControllerCellScanner());
   }
 
   /**

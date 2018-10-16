@@ -21,8 +21,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 
 /**
@@ -65,8 +65,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
-    int maxPriorityQueueLength =
-        conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH, maxQueueLength);
+    int maxPriorityQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH,
+      priorityHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+    int maxReplicationQueueLength =
+        conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH,
+          replicationHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
 
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
@@ -94,9 +97,12 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     this.priorityExecutor = priorityHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
         "priority.FPBQ", priorityHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
         maxPriorityQueueLength, priority, conf, abortable) : null;
-    this.replicationExecutor = replicationHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
-        "replication.FPBQ", replicationHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
-        maxQueueLength, priority, conf, abortable) : null;
+    this.replicationExecutor =
+        replicationHandlerCount > 0
+            ? new FastPathBalancedQueueRpcExecutor("replication.FPBQ", replicationHandlerCount,
+                RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxReplicationQueueLength, priority,
+                conf, abortable)
+            : null;
   }
 
 
@@ -154,7 +160,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   @Override
   public boolean dispatch(CallRunner callTask) throws InterruptedException {
     RpcCall call = callTask.getRpcCall();
-    int level = priority.getPriority(call.getHeader(), call.getParam(), call.getRequestUser());
+    int level = priority.getPriority(call.getHeader(), call.getParam(),
+        call.getRequestUser().orElse(null));
+    if (level == HConstants.PRIORITY_UNSET) {
+      level = HConstants.NORMAL_QOS;
+    }
     if (priorityExecutor != null && level > highPriorityLevel) {
       return priorityExecutor.dispatch(callTask);
     } else if (replicationExecutor != null && level == HConstants.REPLICATION_QOS) {
@@ -181,9 +191,23 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
   @Override
   public int getActiveRpcHandlerCount() {
-    return callExecutor.getActiveHandlerCount() +
-           (priorityExecutor == null ? 0 : priorityExecutor.getActiveHandlerCount()) +
-           (replicationExecutor == null ? 0 : replicationExecutor.getActiveHandlerCount());
+    return callExecutor.getActiveHandlerCount() + getActivePriorityRpcHandlerCount()
+        + getActiveReplicationRpcHandlerCount();
+  }
+
+  @Override
+  public int getActiveGeneralRpcHandlerCount() {
+    return callExecutor.getActiveHandlerCount();
+  }
+
+  @Override
+  public int getActivePriorityRpcHandlerCount() {
+    return (priorityExecutor == null ? 0 : priorityExecutor.getActiveHandlerCount());
+  }
+
+  @Override
+  public int getActiveReplicationRpcHandlerCount() {
+    return (replicationExecutor == null ? 0 : replicationExecutor.getActiveHandlerCount());
   }
 
   @Override
@@ -225,5 +249,33 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public int getActiveScanRpcHandlerCount() {
     return callExecutor.getActiveScanHandlerCount();
   }
+
+  @Override
+  public CallQueueInfo getCallQueueInfo() {
+    String queueName;
+
+    CallQueueInfo callQueueInfo = new CallQueueInfo();
+
+    if(null!=callExecutor) {
+      queueName = "Call Queue";
+      callQueueInfo.setCallMethodCount(queueName, callExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, callExecutor.getCallQueueSizeSummary());
+    }
+
+    if(null!=priorityExecutor) {
+      queueName = "Priority Queue";
+      callQueueInfo.setCallMethodCount(queueName, priorityExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, priorityExecutor.getCallQueueSizeSummary());
+    }
+
+    if(null!=replicationExecutor) {
+      queueName = "Replication Queue";
+      callQueueInfo.setCallMethodCount(queueName, replicationExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, replicationExecutor.getCallQueueSizeSummary());
+    }
+
+    return callQueueInfo;
+  }
+
 }
 

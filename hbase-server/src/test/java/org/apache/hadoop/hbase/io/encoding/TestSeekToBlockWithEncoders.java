@@ -1,18 +1,19 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -23,13 +24,13 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -46,12 +48,17 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestSeekToBlockWithEncoders {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSeekToBlockWithEncoders.class);
+
   static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
   private final boolean useOffheapData;
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
   }
 
   public TestSeekToBlockWithEncoders(boolean useOffheapData) {
@@ -154,7 +161,7 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv4 = new KeyValue(Bytes.toBytes("row11baa"), Bytes.toBytes("f1"),
         Bytes.toBytes("q1"), Bytes.toBytes("val"));
     sampleKv.add(kv4);
-    Cell toSeek = CellUtil.createLastOnRow(kv3);
+    Cell toSeek = PrivateCellUtil.createLastOnRow(kv3);
     seekToTheKey(kv3, sampleKv, toSeek);
   }
 
@@ -272,10 +279,9 @@ public class TestSeekToBlockWithEncoders {
     // create all seekers
     List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      if (encoding.getEncoder() == null || encoding == DataBlockEncoding.PREFIX_TREE) {
+      if (encoding.getEncoder() == null) {
         continue;
       }
-
       DataBlockEncoder encoder = encoding.getEncoder();
       HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
           .withIncludesMvcc(false).withIncludesTags(false)
@@ -284,7 +290,7 @@ public class TestSeekToBlockWithEncoders {
           HFILEBLOCK_DUMMY_HEADER, meta);
       ByteBuffer encodedBuffer = TestDataBlockEncoders.encodeKeyValues(encoding, kvs,
           encodingContext, this.useOffheapData);
-      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
+      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparatorImpl.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);

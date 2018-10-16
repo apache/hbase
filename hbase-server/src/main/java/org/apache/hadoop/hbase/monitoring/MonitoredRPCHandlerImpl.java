@@ -22,11 +22,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * A MonitoredTask implementation designed for use with RPC Handlers 
@@ -74,6 +74,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * monitored Handler.
    * @return the queue timestamp or -1 if there is no RPC currently running.
    */
+  @Override
   public long getRPCQueueTime() {
     if (getState() != State.RUNNING) {
       return -1;
@@ -86,6 +87,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * monitored Handler.
    * @return the start timestamp or -1 if there is no RPC currently running.
    */
+  @Override
   public long getRPCStartTime() {
     if (getState() != State.RUNNING) {
       return -1;
@@ -98,6 +100,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * by this Handler.
    * @return a string representing the method call without parameters
    */
+  @Override
   public synchronized String getRPC() {
     return getRPC(false);
   }
@@ -108,6 +111,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @param withParams toggle inclusion of parameters in the RPC String
    * @return A human-readable string representation of the method call.
    */
+  @Override
   public synchronized String getRPC(boolean withParams) {
     if (getState() != State.RUNNING) {
       // no RPC is currently running
@@ -132,6 +136,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * by this Handler.
    * @return A human-readable string representation of the method call.
    */
+  @Override
   public long getRPCPacketLength() {
     if (getState() != State.RUNNING || packet == null) {
       // no RPC is currently running, or we don't have an RPC's packet info
@@ -146,6 +151,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @return A human-readable string representation of the address and port 
    *  of the client.
    */
+  @Override
   public String getClient() {
     return clientAddress + ":" + remotePort;
   }
@@ -155,6 +161,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * RPC call.
    * @return true if the monitored handler is currently servicing an RPC call.
    */
+  @Override
   public boolean isRPCRunning() {
     return getState() == State.RUNNING;
   }
@@ -166,6 +173,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @return true if the monitored handler is currently servicing an RPC call
    * to a database command.
    */
+  @Override
   public synchronized boolean isOperationRunning() {
     if(!isRPCRunning()) {
       return false;
@@ -183,6 +191,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @param methodName The name of the method that will be called by the RPC.
    * @param params The parameters that will be passed to the indicated method.
    */
+  @Override
   public synchronized void setRPC(String methodName, Object [] params, 
       long queueTime) {
     this.methodName = methodName;
@@ -197,6 +206,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * that it can later compute its size if asked for it.
    * @param param The protobuf received by the RPC for this call
    */
+  @Override
   public void setRPCPacket(Message param) {
     this.packet = param;
   }
@@ -206,6 +216,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @param clientAddress the address of the current client
    * @param remotePort the port from which the client connected
    */
+  @Override
   public void setConnection(String clientAddress, int remotePort) {
     this.clientAddress = clientAddress;
     this.remotePort = remotePort;
@@ -218,6 +229,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
     this.packet = null;
   }
 
+  @Override
   public synchronized Map<String, Object> toMap() {
     // only include RPC info if the Handler is actively servicing an RPC call
     Map<String, Object> map = super.toMap();
@@ -251,6 +263,12 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
     if (getState() != State.RUNNING) {
       return super.toString();
     }
-    return super.toString() + ", rpcMethod=" + getRPC();
+    return super.toString()
+        + ", queuetimems=" + getRPCQueueTime()
+        + ", starttimems=" + getRPCStartTime()
+        + ", clientaddress=" + clientAddress
+        + ", remoteport=" + remotePort
+        + ", packetlength=" + getRPCPacketLength()
+        + ", rpcMethod=" + getRPC();
   }
 }

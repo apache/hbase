@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.google.protobuf.BlockingService;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
@@ -30,25 +35,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
@@ -58,15 +57,11 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
-import org.apache.hadoop.hbase.metrics.MetricRegistry;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.ServiceDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -77,7 +72,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
@@ -86,16 +81,20 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * Tests for authentication token creation and usage
@@ -108,35 +107,36 @@ import com.google.protobuf.ServiceException;
 @RunWith(Parameterized.class)
 @Category({SecurityTests.class, MediumTests.class})
 public class TestTokenAuthentication {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTokenAuthentication.class);
+
   static {
     // Setting whatever system properties after recommendation from
     // http://docs.oracle.com/javase/6/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html
     System.setProperty("java.security.krb5.realm", "hbase");
     System.setProperty("java.security.krb5.kdc", "blah");
   }
-  private static final Log LOG = LogFactory.getLog(TestTokenAuthentication.class);
-
-  public interface AuthenticationServiceSecurityInfo {}
 
   /**
    * Basic server process for RPC authentication testing
    */
   private static class TokenServer extends TokenProvider implements
       AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
-    private static final Log LOG = LogFactory.getLog(TokenServer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TokenServer.class);
     private Configuration conf;
     private HBaseTestingUtility TEST_UTIL;
     private RpcServerInterface rpcServer;
     private InetSocketAddress isa;
-    private ZooKeeperWatcher zookeeper;
+    private ZKWatcher zookeeper;
     private Sleeper sleeper;
     private boolean started = false;
     private boolean aborted = false;
     private boolean stopped = false;
     private long startcode;
 
-    public TokenServer(Configuration conf, HBaseTestingUtility TEST_UTIL)
-        throws IOException {
+    public TokenServer(Configuration conf, HBaseTestingUtility TEST_UTIL) throws IOException {
       this.conf = conf;
       this.TEST_UTIL = TEST_UTIL;
       this.startcode = EnvironmentEdgeManager.currentTime();
@@ -156,47 +156,47 @@ public class TestTokenAuthentication {
       // worked fine before we shaded PB. Now we need these proxies.
       final BlockingService service =
         AuthenticationProtos.AuthenticationService.newReflectiveBlockingService(this);
-      final org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService proxy =
-          new org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService() {
-        @Override
-        public Message callBlockingMethod(MethodDescriptor md,
-            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
-            Message param)
-                throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
-          com.google.protobuf.Descriptors.MethodDescriptor methodDescriptor =
+      final org.apache.hbase.thirdparty.com.google.protobuf.BlockingService proxy =
+        new org.apache.hbase.thirdparty.com.google.protobuf.BlockingService() {
+          @Override
+          public Message callBlockingMethod(MethodDescriptor md,
+              org.apache.hbase.thirdparty.com.google.protobuf.RpcController controller,
+              Message param)
+              throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+            com.google.protobuf.Descriptors.MethodDescriptor methodDescriptor =
               service.getDescriptorForType().findMethodByName(md.getName());
-          com.google.protobuf.Message request = service.getRequestPrototype(methodDescriptor);
-          // TODO: Convert rpcController
-          com.google.protobuf.Message response = null;
-          try {
-            response = service.callBlockingMethod(methodDescriptor, null, request);
-          } catch (ServiceException e) {
-            throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException(e);
+            com.google.protobuf.Message request = service.getRequestPrototype(methodDescriptor);
+            // TODO: Convert rpcController
+            com.google.protobuf.Message response = null;
+            try {
+              response = service.callBlockingMethod(methodDescriptor, null, request);
+            } catch (ServiceException e) {
+              throw new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(e);
+            }
+            return null;// Convert 'response'.
           }
-          return null;// Convert 'response'.
-        }
 
-        @Override
-        public ServiceDescriptor getDescriptorForType() {
-          return null;
-        }
+          @Override
+          public ServiceDescriptor getDescriptorForType() {
+            return null;
+          }
 
-        @Override
-        public Message getRequestPrototype(MethodDescriptor arg0) {
-          // TODO Auto-generated method stub
-          return null;
-        }
+          @Override
+          public Message getRequestPrototype(MethodDescriptor arg0) {
+            // TODO Auto-generated method stub
+            return null;
+          }
 
-        @Override
-        public Message getResponsePrototype(MethodDescriptor arg0) {
-          // TODO Auto-generated method stub
-          return null;
-        }
-      };
+          @Override
+          public Message getResponsePrototype(MethodDescriptor arg0) {
+            // TODO Auto-generated method stub
+            return null;
+          }
+        };
       sai.add(new BlockingServiceAndInterface(proxy,
         AuthenticationProtos.AuthenticationService.BlockingInterface.class));
-      this.rpcServer = RpcServerFactory.createRpcServer(this, "tokenServer", sai,
-          initialIsa, conf, new FifoRpcScheduler(conf, 1));
+      this.rpcServer = RpcServerFactory.createRpcServer(this, "tokenServer", sai, initialIsa, conf,
+          new FifoRpcScheduler(conf, 1));
       InetSocketAddress address = rpcServer.getListenerAddress();
       if (address == null) {
         throw new IOException("Listener channel is closed");
@@ -221,7 +221,7 @@ public class TestTokenAuthentication {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return zookeeper;
     }
 
@@ -241,8 +241,18 @@ public class TestTokenAuthentication {
     }
 
     @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return this.stopped;
+    }
+
+    @Override
     public void abort(String reason, Throwable error) {
-      LOG.fatal("Aborting on: "+reason, error);
+      LOG.error(HBaseMarkers.FATAL, "Aborting on: "+reason, error);
       this.aborted = true;
       this.stopped = true;
       sleeper.skipSleepCycle();
@@ -252,73 +262,26 @@ public class TestTokenAuthentication {
       // ZK configuration must _not_ have hbase.security.authentication or it will require SASL auth
       Configuration zkConf = new Configuration(conf);
       zkConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
-      this.zookeeper = new ZooKeeperWatcher(zkConf, TokenServer.class.getSimpleName(),
+      this.zookeeper = new ZKWatcher(zkConf, TokenServer.class.getSimpleName(),
           this, true);
       this.rpcServer.start();
 
-      // mock RegionServerServices to provide to coprocessor environment
-      final RegionServerServices mockServices = TEST_UTIL.createMockRegionServerService(rpcServer);
+      // Mock up region coprocessor environment
+      RegionCoprocessorEnvironment mockRegionCpEnv = mock(RegionCoprocessorEnvironment.class,
+          Mockito.withSettings().extraInterfaces(HasRegionServerServices.class));
+      when(mockRegionCpEnv.getConfiguration()).thenReturn(conf);
+      when(mockRegionCpEnv.getClassLoader()).then(
+          (var1) -> Thread.currentThread().getContextClassLoader());
+      RegionServerServices mockRss = mock(RegionServerServices.class);
+      when(mockRss.getRpcServer()).thenReturn(rpcServer);
+      when(((HasRegionServerServices) mockRegionCpEnv).getRegionServerServices())
+          .thenReturn(mockRss);
 
-      // mock up coprocessor environment
-      super.start(new RegionCoprocessorEnvironment() {
-        @Override
-        public HRegion getRegion() { return null; }
-
-        @Override
-        public RegionServerServices getRegionServerServices() {
-          return mockServices;
-        }
-
-        @Override
-        public ConcurrentMap<String, Object> getSharedData() { return null; }
-
-        @Override
-        public MetricRegistry getMetricRegistryForRegionServer() {
-          return null;
-        }
-
-        @Override
-        public int getVersion() { return 0; }
-
-        @Override
-        public String getHBaseVersion() { return null; }
-
-        @Override
-        public Coprocessor getInstance() { return null; }
-
-        @Override
-        public int getPriority() { return 0; }
-
-        @Override
-        public int getLoadSequence() { return 0; }
-
-        @Override
-        public Configuration getConfiguration() { return conf; }
-
-        @Override
-        public Table getTable(TableName tableName) throws IOException
-          { return null; }
-
-        @Override
-        public Table getTable(TableName tableName, ExecutorService service)
-            throws IOException {
-          return null;
-        }
-
-        @Override
-        public ClassLoader getClassLoader() {
-          return Thread.currentThread().getContextClassLoader();
-        }
-
-        @Override
-        public HRegionInfo getRegionInfo() {
-          return null;
-        }
-      });
-
+      super.start(mockRegionCpEnv);
       started = true;
     }
 
+    @Override
     public void run() {
       try {
         initialize();
@@ -359,12 +322,12 @@ public class TestTokenAuthentication {
     public AuthenticationProtos.GetAuthenticationTokenResponse getAuthenticationToken(
         RpcController controller, AuthenticationProtos.GetAuthenticationTokenRequest request)
       throws ServiceException {
-      LOG.debug("Authentication token request from " + RpcServer.getRequestUserName());
+      LOG.debug("Authentication token request from " + RpcServer.getRequestUserName().orElse(null));
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
       final NonShadedBlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse>
         callback = new NonShadedBlockingRpcCallback<>();
-      getAuthenticationToken((RpcController)null, request, callback);
+      getAuthenticationToken(null, request, callback);
       try {
         serverController.checkFailed();
         return callback.get();
@@ -377,7 +340,7 @@ public class TestTokenAuthentication {
     public AuthenticationProtos.WhoAmIResponse whoAmI(
         RpcController controller, AuthenticationProtos.WhoAmIRequest request)
       throws ServiceException {
-      LOG.debug("whoAmI() request from " + RpcServer.getRequestUserName());
+      LOG.debug("whoAmI() request from " + RpcServer.getRequestUserName().orElse(null));
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
       NonShadedBlockingRpcCallback<AuthenticationProtos.WhoAmIResponse> callback =
@@ -399,6 +362,11 @@ public class TestTokenAuthentication {
     @Override
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
       return null;
     }
   }
@@ -502,7 +470,7 @@ public class TestTokenAuthentication {
 //          // non-shaded controller this CPEP is providing. This is because this test does a neat
 //          // little trick of testing the CPEP Service by inserting it as RpcServer Service. This
 //          // worked fine before we shaded PB. Now we need these proxies.
-//          final org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel channel =
+//          final org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel channel =
 //              rpcClient.createBlockingRpcChannel(sn, User.getCurrent(), HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 //          AuthenticationProtos.AuthenticationService.BlockingInterface stub =
 //              AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
@@ -550,7 +518,7 @@ public class TestTokenAuthentication {
   /**
    * A copy of the BlockingRpcCallback class for use locally. Only difference is that it makes
    * use of non-shaded protobufs; i.e. refers to com.google.protobuf.* rather than to
-   * org.apache.hadoop.hbase.shaded.com.google.protobuf.*
+   * org.apache.hbase.thirdparty.com.google.protobuf.*
    */
   private static class NonShadedBlockingRpcCallback<R> implements
       com.google.protobuf.RpcCallback<R> {

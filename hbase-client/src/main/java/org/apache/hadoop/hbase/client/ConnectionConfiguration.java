@@ -13,9 +13,9 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Configuration parameters for the connection.
@@ -30,10 +30,18 @@ public class ConnectionConfiguration {
 
   public static final String WRITE_BUFFER_SIZE_KEY = "hbase.client.write.buffer";
   public static final long WRITE_BUFFER_SIZE_DEFAULT = 2097152;
+  public static final String WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS =
+          "hbase.client.write.buffer.periodicflush.timeout.ms";
+  public static final String WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS =
+          "hbase.client.write.buffer.periodicflush.timertick.ms";
+  public static final long WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT = 0; // 0 == Disabled
+  public static final long WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS_DEFAULT = 1000L; // 1 second
   public static final String MAX_KEYVALUE_SIZE_KEY = "hbase.client.keyvalue.maxsize";
-  public static final int MAX_KEYVALUE_SIZE_DEFAULT = -1;
+  public static final int MAX_KEYVALUE_SIZE_DEFAULT = 10485760;
 
   private final long writeBufferSize;
+  private final long writeBufferPeriodicFlushTimeoutMs;
+  private final long writeBufferPeriodicFlushTimerTickMs;
   private final int metaOperationTimeout;
   private final int operationTimeout;
   private final int scannerCaching;
@@ -55,6 +63,14 @@ public class ConnectionConfiguration {
    */
   ConnectionConfiguration(Configuration conf) {
     this.writeBufferSize = conf.getLong(WRITE_BUFFER_SIZE_KEY, WRITE_BUFFER_SIZE_DEFAULT);
+
+    this.writeBufferPeriodicFlushTimeoutMs = conf.getLong(
+            WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS,
+            WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT);
+
+    this.writeBufferPeriodicFlushTimerTickMs = conf.getLong(
+            WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS,
+            WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS_DEFAULT);
 
     this.metaOperationTimeout = conf.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
@@ -105,6 +121,8 @@ public class ConnectionConfiguration {
   @VisibleForTesting
   protected ConnectionConfiguration() {
     this.writeBufferSize = WRITE_BUFFER_SIZE_DEFAULT;
+    this.writeBufferPeriodicFlushTimeoutMs = WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT;
+    this.writeBufferPeriodicFlushTimerTickMs = WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS_DEFAULT;
     this.metaOperationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.operationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.scannerCaching = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING;
@@ -131,6 +149,14 @@ public class ConnectionConfiguration {
 
   public long getWriteBufferSize() {
     return writeBufferSize;
+  }
+
+  public long getWriteBufferPeriodicFlushTimeoutMs() {
+    return writeBufferPeriodicFlushTimeoutMs;
+  }
+
+  public long getWriteBufferPeriodicFlushTimerTickMs() {
+    return writeBufferPeriodicFlushTimerTickMs;
   }
 
   public int getMetaOperationTimeout() {

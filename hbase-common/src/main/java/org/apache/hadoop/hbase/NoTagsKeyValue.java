@@ -22,11 +22,11 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An extension of the KeyValue where the tags length is always 0 
+ * An extension of the KeyValue where the tags length is always 0
  */
 @InterfaceAudience.Private
 public class NoTagsKeyValue extends KeyValue {
@@ -51,7 +51,7 @@ public class NoTagsKeyValue extends KeyValue {
   }
 
   @Override
-  public Cell deepClone() {
+  public ExtendedCell deepClone() {
     byte[] copy = Bytes.copy(this.bytes, this.offset, this.length);
     KeyValue kv = new NoTagsKeyValue(copy, 0, copy.length);
     kv.setSequenceId(this.getSequenceId());

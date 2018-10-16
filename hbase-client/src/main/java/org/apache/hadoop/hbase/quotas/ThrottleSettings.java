@@ -17,19 +17,23 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class ThrottleSettings extends QuotaSettings {
-  private final QuotaProtos.ThrottleRequest proto;
+  final QuotaProtos.ThrottleRequest proto;
 
   ThrottleSettings(final String userName, final TableName tableName,
       final String namespace, final QuotaProtos.ThrottleRequest proto) {
@@ -43,6 +47,14 @@ class ThrottleSettings extends QuotaSettings {
 
   public long getSoftLimit() {
     return proto.hasTimedQuota() ? proto.getTimedQuota().getSoftLimit() : -1;
+  }
+
+  /**
+   * Returns a copy of the internal state of <code>this</code>
+   */
+  @VisibleForTesting
+  QuotaProtos.ThrottleRequest getProto() {
+    return proto.toBuilder().build();
   }
 
   public TimeUnit getTimeUnit() {
@@ -97,6 +109,48 @@ class ThrottleSettings extends QuotaSettings {
       builder.append(", LIMIT => NONE");
     }
     return builder.toString();
+  }
+
+  @Override
+  protected ThrottleSettings merge(QuotaSettings other) throws IOException {
+    if (other instanceof ThrottleSettings) {
+      ThrottleSettings otherThrottle = (ThrottleSettings) other;
+
+      // Make sure this and the other target the same "subject"
+      validateQuotaTarget(other);
+
+      QuotaProtos.ThrottleRequest.Builder builder = proto.toBuilder();
+      if (!otherThrottle.proto.hasType()) {
+        return null;
+      }
+
+      QuotaProtos.ThrottleRequest otherProto = otherThrottle.proto;
+      if (otherProto.hasTimedQuota()) {
+        if (otherProto.hasTimedQuota()) {
+          validateTimedQuota(otherProto.getTimedQuota());
+        }
+
+        if (!proto.getType().equals(otherProto.getType())) {
+          throw new IllegalArgumentException(
+              "Cannot merge a ThrottleRequest for " + proto.getType() + " with " +
+                  otherProto.getType());
+        }
+        QuotaProtos.TimedQuota.Builder timedQuotaBuilder = proto.getTimedQuota().toBuilder();
+        timedQuotaBuilder.mergeFrom(otherProto.getTimedQuota());
+
+        QuotaProtos.ThrottleRequest mergedReq = builder.setTimedQuota(
+            timedQuotaBuilder.build()).build();
+        return new ThrottleSettings(getUserName(), getTableName(), getNamespace(), mergedReq);
+      }
+    }
+    return this;
+  }
+
+  private void validateTimedQuota(final TimedQuota timedQuota) throws IOException {
+    if (timedQuota.getSoftLimit() < 1) {
+      throw new DoNotRetryIOException(new UnsupportedOperationException(
+          "The throttle limit must be greater then 0, got " + timedQuota.getSoftLimit()));
+    }
   }
 
   static ThrottleSettings fromTimedQuota(final String userName,

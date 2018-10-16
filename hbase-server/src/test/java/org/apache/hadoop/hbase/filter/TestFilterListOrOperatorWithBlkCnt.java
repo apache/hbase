@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,10 +22,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -40,10 +38,13 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * This test is for the optimization added in HBASE-15243.
@@ -52,8 +53,13 @@ import org.junit.rules.TestName;
 @Category(MediumTests.class)
 public class TestFilterListOrOperatorWithBlkCnt {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFilterListOrOperatorWithBlkCnt.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestFilterListOrOperatorWithBlkCnt.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFilterListOrOperatorWithBlkCnt.class);
   private byte[] family = Bytes.toBytes("family");
   private byte[] qf = Bytes.toBytes("qf");
   private byte[] value = Bytes.toBytes("val");

@@ -36,6 +36,15 @@
 
 personality_plugins "all"
 
+if ! declare -f "yetus_info" >/dev/null; then
+
+  function yetus_info
+  {
+    echo "[$(date) INFO]: $*" 1>&2
+  }
+
+fi
+
 ## @description  Globals specific to this personality
 ## @audience     private
 ## @stability    evolving
@@ -51,22 +60,42 @@ function personality_globals
   #shellcheck disable=SC2034
   GITHUB_REPO="apache/hbase"
 
-  # TODO use PATCH_BRANCH to select hadoop versions to use.
-  # All supported Hadoop versions that we want to test the compilation with
-  HBASE_MASTER_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_MASTER_HADOOP3_VERSIONS="3.0.0-alpha3"
-
-  HBASE_BRANCH2_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_BRANCH2_HADOOP3_VERSIONS="3.0.0-alpha3"
-
-  HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_HADOOP3_VERSIONS=""
-
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
   # Override the maven options
   MAVEN_OPTS="${MAVEN_OPTS:-"-Xmx3100M"}"
 
+  # Yetus 0.7.0 enforces limits. Default proclimit is 1000.
+  # Up it. See HBASE-19902 for how we arrived at this number.
+  #shellcheck disable=SC2034
+  PROCLIMIT=10000
+
+  # Set docker container to run with 20g. Default is 4g in yetus.
+  # See HBASE-19902 for how we arrived at 20g.
+  #shellcheck disable=SC2034
+  DOCKERMEMLIMIT=20g
+}
+
+## @description  Parse extra arguments required by personalities, if any.
+## @audience     private
+## @stability    evolving
+function personality_parse_args
+{
+  declare i
+
+  for i in "$@"; do
+    case ${i} in
+      --exclude-tests-url=*)
+        EXCLUDE_TESTS_URL=${i#*=}
+      ;;
+      --include-tests-url=*)
+        INCLUDE_TESTS_URL=${i#*=}
+      ;;
+      --hadoop-profile=*)
+        HADOOP_PROFILE=${i#*=}
+      ;;
+    esac
+  done
 }
 
 ## @description  Queue up modules for this personality
@@ -79,21 +108,49 @@ function personality_modules
   local repostatus=$1
   local testtype=$2
   local extra=""
+  local MODULES=("${CHANGED_MODULES[@]}")
 
-  yetus_debug "Personality: ${repostatus} ${testtype}"
+  yetus_info "Personality: ${repostatus} ${testtype}"
 
   clear_personality_queue
 
   extra="-DHBasePatchProcess"
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    extra="${extra} -Dhttps.protocols=TLSv1.2"
+  fi
 
-  if [[ ${repostatus} == branch
-     && ${testtype} == mvninstall ]] ||
-     [[ "${BUILDMODE}" == full ]];then
+  if [[ -n "${HADOOP_PROFILE}" ]]; then
+    extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
+  fi
+
+  # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
+  # full source code instead. In this case, do full compiles, tests, etc instead of per
+  # module.
+  # Used in nightly runs.
+  # If BUILDMODE is 'patch', for unit and compile testtypes, there is no need to run individual
+  # modules if root is included. HBASE-18505
+  if [[ "${BUILDMODE}" == "full" ]] || \
+     ( ( [[ "${testtype}" == unit ]] || [[ "${testtype}" == compile ]] || [[ "${testtype}" == checkstyle ]] ) && \
+     [[ "${MODULES[*]}" =~ \. ]] ); then
+    MODULES=(.)
+  fi
+
+  # If the checkstyle configs change, check everything.
+  if [[ "${testtype}" == checkstyle ]] && [[ "${MODULES[*]}" =~ hbase-checkstyle ]]; then
+    MODULES=(.)
+  fi
+
+  if [[ ${testtype} == mvninstall ]]; then
+    # shellcheck disable=SC2086
     personality_enqueue_module . ${extra}
     return
   fi
 
-  if [[ ${testtype} = findbugs ]]; then
+  if [[ ${testtype} == findbugs ]]; then
+    # Run findbugs on each module individually to diff pre-patch and post-patch results and
+    # report new warnings for changed modules only.
+    # For some reason, findbugs on root is not working, but running on individual modules is
+    # working. For time being, let it run on original list of CHANGED_MODULES. HBASE-19491
     for module in "${CHANGED_MODULES[@]}"; do
       # skip findbugs on hbase-shell and hbase-it. hbase-it has nothing
       # in src/main/java where findbugs goes to look
@@ -109,48 +166,113 @@ function personality_modules
     return
   fi
 
+  if [[ ${testtype} == compile ]]; then
+    extra="${extra} -PerrorProne"
+  fi
+
   # If EXCLUDE_TESTS_URL/INCLUDE_TESTS_URL is set, fetches the url
   # and sets -Dtest.exclude.pattern/-Dtest to exclude/include the
   # tests respectively.
-  if [[ ${testtype} = unit ]]; then
-    extra="${extra} -PrunAllTests"
-    if [[ -n "$EXCLUDE_TESTS_URL" ]]; then
-        wget "$EXCLUDE_TESTS_URL" -O "excludes"
-        if [[ $? -eq 0 ]]; then
-          excludes=$(cat excludes)
-          if [[ -n "${excludes}" ]]; then
-            extra="${extra} -Dtest.exclude.pattern=${excludes}"
-          fi
-          rm excludes
-        else
-          echo "Wget error $? in fetching excludes file from url" \
-               "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
-        fi
-    elif [[ -n "$INCLUDE_TESTS_URL" ]]; then
-        wget "$INCLUDE_TESTS_URL" -O "includes"
-        if [[ $? -eq 0 ]]; then
-          includes=$(cat includes)
-          if [[ -n "${includes}" ]]; then
-            extra="${extra} -Dtest=${includes}"
-          fi
-          rm includes
-        else
-          echo "Wget error $? in fetching includes file from url" \
-               "${INCLUDE_TESTS_URL}. Ignoring and proceeding."
-        fi
-    fi
+  if [[ ${testtype} == unit ]]; then
+    local tests_arg=""
+    get_include_exclude_tests_arg tests_arg
+    extra="${extra} -PrunAllTests ${tests_arg}"
 
     # Inject the jenkins build-id for our surefire invocations
     # Used by zombie detection stuff, even though we're not including that yet.
     if [ -n "${BUILD_ID}" ]; then
       extra="${extra} -Dbuild.id=${BUILD_ID}"
     fi
+
+    # If the set of changed files includes CommonFSUtils then add the hbase-server
+    # module to the set of modules (if not already included) to be tested
+    for f in "${CHANGED_FILES[@]}"
+    do
+      if [[ "${f}" =~ CommonFSUtils ]]; then
+        if [[ ! "${MODULES[*]}" =~ hbase-server ]] && [[ ! "${MODULES[*]}" =~ \. ]]; then
+          MODULES+=("hbase-server")
+        fi
+        break
+      fi
+    done
   fi
 
-  for module in "${CHANGED_MODULES[@]}"; do
+  for module in "${MODULES[@]}"; do
     # shellcheck disable=SC2086
     personality_enqueue_module ${module} ${extra}
   done
+}
+
+## @description places where we override the built in assumptions about what tests to run
+## @audience    private
+## @stability   evolving
+## @param       filename of changed file
+function personality_file_tests
+{
+  local filename=$1
+  yetus_debug "HBase specific personality_file_tests"
+  # If the change is to the refguide, then we don't need any builtin yetus tests
+  # the refguide test (below) will suffice for coverage.
+  if [[ ${filename} =~ src/main/asciidoc ]] ||
+     [[ ${filename} =~ src/main/xslt ]]; then
+    yetus_debug "Skipping builtin yetus checks for ${filename}. refguide test should pick it up."
+  else
+    # If we change our asciidoc, rebuild mvnsite
+    if [[ ${BUILDTOOL} = maven ]]; then
+      if [[ ${filename} =~ src/site || ${filename} =~ src/main/asciidoc ]]; then
+        yetus_debug "tests/mvnsite: ${filename}"
+        add_test mvnsite
+      fi
+    fi
+    # If we change checkstyle configs, run checkstyle
+    if [[ ${filename} =~ checkstyle.*\.xml ]]; then
+      yetus_debug "tests/checkstyle: ${filename}"
+      add_test checkstyle
+    fi
+    # fallback to checking which tests based on what yetus would do by default
+    if declare -f "${BUILDTOOL}_builtin_personality_file_tests" >/dev/null; then
+      "${BUILDTOOL}_builtin_personality_file_tests" "${filename}"
+    elif declare -f builtin_personality_file_tests >/dev/null; then
+      builtin_personality_file_tests "${filename}"
+    fi
+  fi
+}
+
+## @description  Uses relevant include/exclude env variable to fetch list of included/excluded
+#                tests and sets given variable to arguments to be passes to maven command.
+## @audience     private
+## @stability    evolving
+## @param        name of variable to set with maven arguments
+function get_include_exclude_tests_arg
+{
+  local  __resultvar=$1
+  yetus_info "EXCLUDE_TESTS_URL=${EXCLUDE_TESTS_URL}"
+  yetus_info "INCLUDE_TESTS_URL=${INCLUDE_TESTS_URL}"
+  if [[ -n "${EXCLUDE_TESTS_URL}" ]]; then
+      if wget "${EXCLUDE_TESTS_URL}" -O "excludes"; then
+        excludes=$(cat excludes)
+        yetus_debug "excludes=${excludes}"
+        if [[ -n "${excludes}" ]]; then
+          eval "${__resultvar}='-Dtest.exclude.pattern=${excludes}'"
+        fi
+        rm excludes
+      else
+        yetus_error "Wget error $? in fetching excludes file from url" \
+             "${EXCLUDE_TESTS_URL}. Ignoring and proceeding."
+      fi
+  elif [[ -n "$INCLUDE_TESTS_URL" ]]; then
+      if wget "$INCLUDE_TESTS_URL" -O "includes"; then
+        includes=$(cat includes)
+        yetus_debug "includes=${includes}"
+        if [[ -n "${includes}" ]]; then
+          eval "${__resultvar}='-Dtest=${includes}'"
+        fi
+        rm includes
+      else
+        yetus_error "Wget error $? in fetching includes file from url" \
+             "${INCLUDE_TESTS_URL}. Ignoring and proceeding."
+      fi
+  fi
 }
 
 ###################################################
@@ -158,6 +280,143 @@ function personality_modules
 # TODO break them into individual files so it's easier to maintain them?
 
 # TODO line length check? could ignore all java files since checkstyle gets them.
+
+###################################################
+
+add_test_type refguide
+
+function refguide_initialize
+{
+  maven_add_install refguide
+}
+
+function refguide_filefilter
+{
+  local filename=$1
+
+  if [[ ${filename} =~ src/main/asciidoc ]] ||
+     [[ ${filename} =~ src/main/xslt ]] ||
+     [[ ${filename} =~ hbase-common/src/main/resources/hbase-default.xml ]]; then
+    add_test refguide
+  fi
+}
+
+function refguide_rebuild
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/${repostatus}-refguide.log"
+  declare -i count
+  declare pdf_output
+
+  if ! verify_needed_test refguide; then
+    return 0
+  fi
+
+  big_console_header "Checking we can create the ref guide on ${repostatus}"
+
+  start_clock
+
+  # disabled because "maven_executor" needs to return both command and args
+  # shellcheck disable=2046
+  echo_and_redirect "${logfile}" \
+    $(maven_executor) clean site --batch-mode \
+      -pl . \
+      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+
+  count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 refguide "${repostatus} has ${count} errors when building the reference guide."
+    add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
+    return 1
+  fi
+
+  if ! mv target/site "${PATCH_DIR}/${repostatus}-site"; then
+    add_vote_table -1 refguide "${repostatus} failed to produce a site directory."
+    add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
+    return 1
+  fi
+
+  if [[ ! -f "${PATCH_DIR}/${repostatus}-site/book.html" ]]; then
+    add_vote_table -1 refguide "${repostatus} failed to produce the html version of the reference guide."
+    add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
+    return 1
+  fi
+
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    pdf_output="book.pdf"
+  else
+    pdf_output="apache_hbase_reference_guide.pdf"
+  fi
+
+  if [[ ! -f "${PATCH_DIR}/${repostatus}-site/${pdf_output}" ]]; then
+    add_vote_table -1 refguide "${repostatus} failed to produce the pdf version of the reference guide."
+    add_footer_table refguide "@@BASE@@/${repostatus}-refguide.log"
+    return 1
+  fi
+
+  add_vote_table 0 refguide "${repostatus} has no errors when building the reference guide. See footer for rendered docs, which you should manually inspect."
+  add_footer_table refguide "@@BASE@@/${repostatus}-site/book.html"
+  return 0
+}
+
+add_test_type shadedjars
+
+
+function shadedjars_initialize
+{
+  yetus_debug "initializing shaded client checks."
+  maven_add_install shadedjars
+}
+
+## @description  only run the test if java changes.
+## @audience     private
+## @stability    evolving
+## @param        filename
+function shadedjars_filefilter
+{
+  local filename=$1
+
+  if [[ ${filename} =~ \.java$ ]] || [[ ${filename} =~ pom.xml$ ]]; then
+    add_test shadedjars
+  fi
+}
+
+## @description test the shaded client artifacts
+## @audience private
+## @stability evolving
+## @param repostatus
+function shadedjars_rebuild
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/${repostatus}-shadedjars.txt"
+
+  if ! verify_needed_test shadedjars; then
+    return 0
+  fi
+
+  big_console_header "Checking shaded client builds on ${repostatus}"
+
+  start_clock
+
+  # disabled because "maven_executor" needs to return both command and args
+  # shellcheck disable=2046
+  echo_and_redirect "${logfile}" \
+    $(maven_executor) clean verify -fae --batch-mode \
+      -pl hbase-shaded/hbase-shaded-check-invariants -am \
+      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+
+  count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 shadedjars "${repostatus} has ${count} errors when building our shaded downstream artifacts."
+    add_footer_table shadedjars "@@BASE@@/${repostatus}-shadedjars.txt"
+    return 1
+  fi
+
+  add_vote_table +1 shadedjars "${repostatus} has no errors when building our shaded downstream artifacts."
+  return 0
+}
 
 ###################################################
 
@@ -171,9 +430,33 @@ function hadoopcheck_filefilter
 {
   local filename=$1
 
-  if [[ ${filename} =~ \.java$ ]]; then
+  if [[ ${filename} =~ \.java$ ]] || [[ ${filename} =~ pom.xml$ ]]; then
     add_test hadoopcheck
   fi
+}
+
+## @description  Parse args to detect if QUICK_HADOOPCHECK mode is enabled.
+## @audience     private
+## @stability    evolving
+function hadoopcheck_parse_args
+{
+  declare i
+
+  for i in "$@"; do
+    case ${i} in
+      --quick-hadoopcheck)
+        QUICK_HADOOPCHECK=true
+      ;;
+    esac
+  done
+}
+
+## @description  Adds QUICK_HADOOPCHECK env variable to DOCKER_EXTRAARGS.
+## @audience     private
+## @stability    evolving
+function hadoopcheck_docker_support
+{
+  DOCKER_EXTRAARGS=("${DOCKER_EXTRAARGS[@]}" "--env=QUICK_HADOOPCHECK=${QUICK_HADOOPCHECK}")
 }
 
 ## @description  hadoopcheck test
@@ -194,43 +477,74 @@ function hadoopcheck_rebuild
     return 0
   fi
 
+  if ! verify_needed_test hadoopcheck; then
+    return 0
+  fi
+
   big_console_header "Compiling against various Hadoop versions"
 
-  if [[ "${PATCH_BRANCH}" = "master" ]]; then
-    hbase_hadoop2_versions=${HBASE_MASTER_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_MASTER_HADOOP3_VERSIONS}
-  elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
-    hbase_hadoop2_versions=${HBASE_BRANCH2_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_BRANCH2_HADOOP3_VERSIONS}
+  start_clock
+
+  # All supported Hadoop versions that we want to test the compilation with
+  # See the Hadoop section on prereqs in the HBase Reference Guide
+  hbase_common_hadoop2_versions="2.7.1 2.7.2 2.7.3 2.7.4"
+  if [[ "${PATCH_BRANCH}" = branch-1.* ]] && [[ "${PATCH_BRANCH#branch-1.}" -lt "5" ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on before-branch-1.5 rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.4.1 2.5.2 2.6.5 2.7.4"
+    else
+      hbase_hadoop2_versions="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 ${hbase_common_hadoop2_versions}"
+    fi
+  elif [[ "${PATCH_BRANCH}" = branch-2.0 ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.0 rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.6.5 2.7.4"
+    else
+      hbase_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 ${hbase_common_hadoop2_versions}"
+    fi
   else
-    hbase_hadoop2_versions=${HBASE_HADOOP2_VERSIONS}
-    hbase_hadoop3_versions=${HBASE_HADOOP3_VERSIONS}
+    yetus_info "Setting Hadoop 2 versions to test based on branch-1.5+/branch-2.1+/master/feature branch rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.7.4"
+    else
+      hbase_hadoop2_versions="${hbase_common_hadoop2_versions}"
+    fi
+  fi
+  hbase_hadoop3_versions="3.0.0"
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    hbase_hadoop3_versions=""
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
   for hadoopver in ${hbase_hadoop2_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    # disabled because "maven_executor" needs to return both command and args
+    # shellcheck disable=2046
     echo_and_redirect "${logfile}" \
-      "${MAVEN}" clean install \
+      $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-two.version="${hadoopver}"
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
+      add_footer_table hadoopcheck "@@BASE@@/patch-javac-${hadoopver}.txt"
       ((result=result+1))
     fi
   done
 
   for hadoopver in ${hbase_hadoop3_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    # disabled because "maven_executor" needs to return both command and args
+    # shellcheck disable=2046
     echo_and_redirect "${logfile}" \
-      "${MAVEN}" clean install \
+      $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
-        -Dhadoop-three.version="${hadoopver} \
-        -Dhadoop.profile=3.0"
+        -Dhadoop-three.version="${hadoopver}" \
+        -Dhadoop.profile=3.0
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
+      add_footer_table hadoopcheck "@@BASE@@/patch-javac-${hadoopver}.txt"
       ((result=result+1))
     fi
   done
@@ -265,7 +579,7 @@ function hbaseprotoc_filefilter
   fi
 }
 
-## @description  hadoopcheck test
+## @description  check hbase proto compilation
 ## @audience     private
 ## @stability    evolving
 ## @param        repostatus
@@ -295,7 +609,7 @@ function hbaseprotoc_rebuild
   # Need to run 'install' instead of 'compile' because shading plugin
   # is hooked-up to 'install'; else hbase-protocol-shaded is left with
   # half of its process done.
-  modules_workers patch hbaseprotoc install -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
+  modules_workers patch hbaseprotoc install -DskipTests -X -DHBasePatchProcess
 
   # shellcheck disable=SC2153
   until [[ $i -eq "${#MODULE[@]}" ]]; do
@@ -364,15 +678,9 @@ function hbaseanti_patchfile
 
   start_clock
 
-  warnings=$(${GREP} 'new TreeMap<byte.*()' "${patchfile}")
+  warnings=$(${GREP} -c 'new TreeMap<byte.*()' "${patchfile}")
   if [[ ${warnings} -gt 0 ]]; then
-    add_vote_table -1 hbaseanti "" "The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted: ${warnings}."
-    ((result=result+1))
-  fi
-
-  warnings=$(${GREP} 'import org.apache.hadoop.classification' "${patchfile}")
-  if [[ ${warnings} -gt 0 ]]; then
-    add_vote_table -1 hbaseanti "" "The patch appears use Hadoop classification instead of HBase: ${warnings}."
+    add_vote_table -1 hbaseanti "" "The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted."
     ((result=result+1))
   fi
 
@@ -382,23 +690,6 @@ function hbaseanti_patchfile
 
   add_vote_table +1 hbaseanti "" "Patch does not have any anti-patterns."
   return 0
-}
-
-
-## @description  hbase custom mvnsite file filter.  See HBASE-15042
-## @audience     private
-## @stability    evolving
-## @param        filename
-function mvnsite_filefilter
-{
-  local filename=$1
-
-  if [[ ${BUILDTOOL} = maven ]]; then
-    if [[ ${filename} =~ src/main/site || ${filename} =~ src/main/asciidoc ]]; then
-      yetus_debug "tests/mvnsite: ${filename}"
-      add_test mvnsite
-    fi
-  fi
 }
 
 ## This is named so that yetus will check us right after running tests.

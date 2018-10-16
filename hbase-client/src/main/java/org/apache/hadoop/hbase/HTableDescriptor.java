@@ -20,14 +20,17 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptor;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -35,8 +38,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDesc
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
@@ -44,7 +46,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableCo
  * if the table is read only, the maximum size of the memstore,
  * when the region split should occur, coprocessors associated with it etc...
  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
- *             use {@link TableDescriptorBuilder} to build {@link HTableDescriptor}.
+ *             Use {@link TableDescriptorBuilder} to build {@link HTableDescriptor}.
  */
 @Deprecated
 @InterfaceAudience.Public
@@ -63,6 +65,10 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final String REGION_REPLICATION = TableDescriptorBuilder.REGION_REPLICATION;
   public static final String REGION_MEMSTORE_REPLICATION = TableDescriptorBuilder.REGION_MEMSTORE_REPLICATION;
   public static final String NORMALIZATION_ENABLED = TableDescriptorBuilder.NORMALIZATION_ENABLED;
+  public static final String NORMALIZER_TARGET_REGION_COUNT =
+      TableDescriptorBuilder.NORMALIZER_TARGET_REGION_COUNT;
+  public static final String NORMALIZER_TARGET_REGION_SIZE =
+      TableDescriptorBuilder.NORMALIZER_TARGET_REGION_SIZE;
   public static final String PRIORITY = TableDescriptorBuilder.PRIORITY;
   public static final boolean DEFAULT_READONLY = TableDescriptorBuilder.DEFAULT_READONLY;
   public static final boolean DEFAULT_COMPACTION_ENABLED = TableDescriptorBuilder.DEFAULT_COMPACTION_ENABLED;
@@ -147,17 +153,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   @Override
   public boolean isMetaTable() {
     return delegatee.isMetaTable();
-  }
-
-  /**
-   * Getter for accessing the metadata associated with the key
-   *
-   * @param key The key.
-   * @return The value.
-   */
-  public String getValue(String key) {
-    byte[] value = getValue(Bytes.toBytes(key));
-    return value == null ? null : Bytes.toString(value);
   }
 
   /**
@@ -294,6 +289,26 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    */
   public HTableDescriptor setNormalizationEnabled(final boolean isEnable) {
     getDelegateeForModification().setNormalizationEnabled(isEnable);
+    return this;
+  }
+
+  @Override
+  public int getNormalizerTargetRegionCount() {
+    return getDelegateeForModification().getNormalizerTargetRegionCount();
+  }
+
+  public HTableDescriptor setNormalizerTargetRegionCount(final int regionCount) {
+    getDelegateeForModification().setNormalizerTargetRegionCount(regionCount);
+    return this;
+  }
+
+  @Override
+  public long getNormalizerTargetRegionSize() {
+    return getDelegateeForModification().getNormalizerTargetRegionSize();
+  }
+
+  public HTableDescriptor setNormalizerTargetRegionSize(final long regionSize) {
+    getDelegateeForModification().setNormalizerTargetRegionSize(regionSize);
     return this;
   }
 
@@ -444,7 +459,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param family HColumnDescriptor of family to add.
    */
   public HTableDescriptor addFamily(final HColumnDescriptor family) {
-    getDelegateeForModification().addColumnFamily(family);
+    getDelegateeForModification().setColumnFamily(family);
     return this;
   }
 
@@ -506,13 +521,10 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
-      return false;
+    if (obj instanceof HTableDescriptor) {
+      return delegatee.equals(((HTableDescriptor) obj).delegatee);
     }
-    if (!(obj instanceof HTableDescriptor)) {
-      return false;
-    }
-    return compareTo((HTableDescriptor)obj) == 0;
+    return false;
   }
 
   /**
@@ -534,7 +546,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    */
   @Override
   public int compareTo(final HTableDescriptor other) {
-    return delegatee.compareTo(other.delegatee);
+    return TableDescriptor.COMPARATOR.compare(this, other);
   }
 
   /**
@@ -549,14 +561,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     return Stream.of(delegatee.getColumnFamilies())
             .map(this::toHColumnDescriptor)
             .collect(Collectors.toList());
-  }
-
-  /**
-   * Return true if there are at least one cf whose replication scope is serial.
-   */
-  @Override
-  public boolean hasSerialReplicationScope() {
-    return delegatee.hasSerialReplicationScope();
   }
 
   /**
@@ -577,11 +581,29 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #hasRegionMemStoreReplication()} instead
+   */
+  @Deprecated
+  public boolean hasRegionMemstoreReplication() {
+    return hasRegionMemStoreReplication();
+  }
+
+  /**
    * @return true if the read-replicas memstore replication is enabled.
    */
   @Override
-  public boolean hasRegionMemstoreReplication() {
-    return delegatee.hasRegionMemstoreReplication();
+  public boolean hasRegionMemStoreReplication() {
+    return delegatee.hasRegionMemStoreReplication();
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #setRegionMemStoreReplication(boolean)} instead
+   */
+  @Deprecated
+  public HTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
+    return setRegionMemStoreReplication(memstoreReplication);
   }
 
   /**
@@ -593,8 +615,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    *                            false if the secondaries can tollerate to have new
    *                                  data only when the primary flushes the memstore.
    */
-  public HTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
-    getDelegateeForModification().setRegionMemstoreReplication(memstoreReplication);
+  public HTableDescriptor setRegionMemStoreReplication(boolean memstoreReplication) {
+    getDelegateeForModification().setRegionMemStoreReplication(memstoreReplication);
     return this;
   }
 
@@ -613,9 +635,13 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * HTableDescriptor contains mapping of family name to HColumnDescriptors.
    * This returns all the keys of the family map which represents the column
    * family names of the table.
+   *
    * @return Immutable sorted set of the keys of the families.
-   * @deprecated Use {@link #getColumnFamilyNames()}.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18008">HBASE-18008</a>).
+   *             Use {@link #getColumnFamilyNames()}.
    */
+  @Deprecated
   public Set<byte[]> getFamiliesKeys() {
     return delegatee.getColumnFamilyNames();
   }
@@ -691,8 +717,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
-   * or Endpoint.
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
    * a region is opened.
@@ -700,14 +725,13 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @throws IOException
    */
   public HTableDescriptor addCoprocessor(String className) throws IOException {
-    getDelegateeForModification().addCoprocessor(className);
+    getDelegateeForModification().setCoprocessor(className);
     return this;
   }
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
-   * or Endpoint.
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
    * a region is opened.
@@ -721,14 +745,18 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public HTableDescriptor addCoprocessor(String className, Path jarFilePath,
                              int priority, final Map<String, String> kvs)
   throws IOException {
-    getDelegateeForModification().addCoprocessor(className, jarFilePath, priority, kvs);
+    getDelegateeForModification().setCoprocessor(
+      CoprocessorDescriptorBuilder.newBuilder(className)
+        .setJarPath(jarFilePath == null ? null : jarFilePath.toString())
+        .setPriority(priority)
+        .setProperties(kvs == null ? Collections.emptyMap() : kvs)
+        .build());
     return this;
   }
 
   /**
    * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionObserver
-   * or Endpoint.
+   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
    * It won't check if the class can be loaded or not.
    * Whether a coprocessor is loadable or not will be determined when
    * a region is opened.
@@ -737,7 +765,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @throws IOException
    */
   public HTableDescriptor addCoprocessorWithSpec(final String specStr) throws IOException {
-    getDelegateeForModification().addCoprocessorWithSpec(specStr);
+    getDelegateeForModification().setCoprocessorWithSpec(specStr);
     return this;
   }
 
@@ -752,14 +780,19 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     return delegatee.hasCoprocessor(classNameToMatch);
   }
 
+  @Override
+  public Collection<CoprocessorDescriptor> getCoprocessorDescriptors() {
+    return delegatee.getCoprocessorDescriptors();
+  }
+
   /**
    * Return the list of attached co-processor represented by their name className
    *
    * @return The list of co-processors classNames
    */
-  @Override
   public List<String> getCoprocessors() {
-    return delegatee.getCoprocessors();
+    return getCoprocessorDescriptors().stream().map(CoprocessorDescriptor::getClassName)
+      .collect(Collectors.toList());
   }
 
   /**
@@ -825,17 +858,19 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   /**
    * Getter for accessing the configuration value by key
    */
-  @Override
   public String getConfigurationValue(String key) {
-    return delegatee.getConfigurationValue(key);
+    return delegatee.getValue(key);
   }
 
   /**
    * Getter for fetching an unmodifiable map.
    */
-  @Override
   public Map<String, String> getConfiguration() {
-    return delegatee.getConfiguration();
+    return delegatee.getValues().entrySet().stream()
+            .collect(Collectors.toMap(
+                    e -> Bytes.toString(e.getKey().get(), e.getKey().getOffset(), e.getKey().getLength()),
+                    e -> Bytes.toString(e.getValue().get(), e.getValue().getOffset(), e.getValue().getLength())
+            ));
   }
 
   /**
@@ -844,7 +879,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param value String value. If null, removes the setting.
    */
   public HTableDescriptor setConfiguration(String key, String value) {
-    getDelegateeForModification().setConfiguration(key, value);
+    getDelegateeForModification().setValue(key, value);
     return this;
   }
 
@@ -852,11 +887,16 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * Remove a config setting represented by the key from the map
    */
   public void removeConfiguration(final String key) {
-    getDelegateeForModification().removeConfiguration(key);
+    getDelegateeForModification().removeValue(Bytes.toBytes(key));
   }
 
   @Override
   public Bytes getValue(Bytes key) {
+    return delegatee.getValue(key);
+  }
+
+  @Override
+  public String getValue(String key) {
     return delegatee.getValue(key);
   }
 

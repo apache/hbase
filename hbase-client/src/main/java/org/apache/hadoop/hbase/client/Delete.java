@@ -20,20 +20,17 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to perform Delete operations on a single row.
@@ -68,7 +65,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * timestamp.  The constructor timestamp is not referenced.
  */
 @InterfaceAudience.Public
-public class Delete extends Mutation implements Comparable<Row> {
+public class Delete extends Mutation {
   /**
    * Create a Delete operation for the specified row.
    * <p>
@@ -137,46 +134,49 @@ public class Delete extends Mutation implements Comparable<Row> {
   }
 
   /**
-   * @param d Delete to clone.
+   * @param deleteToCopy delete to copy
    */
-  public Delete(final Delete d) {
-    this.row = d.getRow();
-    this.ts = d.getTimeStamp();
-    this.familyMap.putAll(d.getFamilyCellMap());
-    this.durability = d.durability;
-    for (Map.Entry<String, byte[]> entry : d.getAttributesMap().entrySet()) {
-      this.setAttribute(entry.getKey(), entry.getValue());
-    }
+  public Delete(final Delete deleteToCopy) {
+    super(deleteToCopy);
   }
 
   /**
-   * Advanced use only.
-   * Add an existing delete marker to this Delete object.
+   * Construct the Delete with user defined data. NOTED:
+   * 1) all cells in the familyMap must have the delete type.
+   * see {@link org.apache.hadoop.hbase.Cell.Type}
+   * 2) the row of each cell must be same with passed row.
+   * @param row row. CAN'T be null
+   * @param ts timestamp
+   * @param familyMap the map to collect all cells internally. CAN'T be null
+   */
+  public Delete(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+    super(row, ts, familyMap);
+  }
+
+  /**
+   * Advanced use only. Add an existing delete marker to this Delete object.
    * @param kv An existing KeyValue of type "delete".
    * @return this for invocation chaining
    * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link #add(Cell)}
+   *             instead
    */
   @SuppressWarnings("unchecked")
+  @Deprecated
   public Delete addDeleteMarker(Cell kv) throws IOException {
-    // TODO: Deprecate and rename 'add' so it matches how we add KVs to Puts.
-    if (!CellUtil.isDelete(kv)) {
-      throw new IOException("The recently added KeyValue is not of type "
-          + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
-    }
-    if (!CellUtil.matchingRow(kv, this.row)) {
-      throw new WrongRowIOException("The row in " + kv.toString() +
-        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
-    }
-    byte [] family = CellUtil.cloneFamily(kv);
-    List<Cell> list = familyMap.get(family);
-    if (list == null) {
-      list = new ArrayList<>(1);
-    }
-    list.add(kv);
-    familyMap.put(family, list);
-    return this;
+    return this.add(kv);
   }
 
+  /**
+   * Add an existing delete marker to this Delete object.
+   * @param cell An existing cell of type "delete".
+   * @return this for invocation chaining
+   * @throws IOException
+   */
+  public Delete add(Cell cell) throws IOException {
+    super.add(cell);
+    return this;
+  }
 
   /**
    * Delete all versions of all columns of the specified family.
@@ -205,15 +205,12 @@ public class Delete extends Mutation implements Comparable<Row> {
     if (timestamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
     }
-    List<Cell> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<>(1);
-    } else if(!list.isEmpty()) {
+    List<Cell> list = getCellList(family);
+    if(!list.isEmpty()) {
       list.clear();
     }
     KeyValue kv = new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamily);
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -225,13 +222,9 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @return this for invocation chaining
    */
   public Delete addFamilyVersion(final byte [] family, final long timestamp) {
-    List<Cell> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<>(1);
-    }
+    List<Cell> list = getCellList(family);
     list.add(new KeyValue(row, family, null, timestamp,
           KeyValue.Type.DeleteFamilyVersion));
-    familyMap.put(family, list);
     return this;
   }
 
@@ -258,13 +251,9 @@ public class Delete extends Mutation implements Comparable<Row> {
     if (timestamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
     }
-    List<Cell> list = familyMap.get(family);
-    if (list == null) {
-      list = new ArrayList<>(1);
-    }
+    List<Cell> list = getCellList(family);
     list.add(new KeyValue(this.row, family, qualifier, timestamp,
         KeyValue.Type.DeleteColumn));
-    familyMap.put(family, list);
     return this;
   }
 
@@ -293,36 +282,16 @@ public class Delete extends Mutation implements Comparable<Row> {
     if (timestamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
     }
-    List<Cell> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<>(1);
-    }
+    List<Cell> list = getCellList(family);
     KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, KeyValue.Type.Delete);
     list.add(kv);
-    familyMap.put(family, list);
-    return this;
-  }
-
-  /**
-   * Set the timestamp of the delete.
-   *
-   * @param timestamp
-   */
-  public Delete setTimestamp(long timestamp) {
-    if (timestamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
-    }
-    this.ts = timestamp;
     return this;
   }
 
   @Override
-  public Map<String, Object> toMap(int maxCols) {
-    // we start with the fingerprint map and build on top of it.
-    Map<String, Object> map = super.toMap(maxCols);
-    // why is put not doing this?
-    map.put("ts", this.ts);
-    return map;
+  public Delete setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
+    return this;
   }
 
   @Override
@@ -340,6 +309,12 @@ public class Delete extends Mutation implements Comparable<Row> {
     return (Delete) super.setDurability(d);
   }
 
+  /**
+   * Method for setting the Delete's familyMap
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Delete#Delete(byte[], long, NavigableMap)} instead
+   */
+  @Deprecated
   @Override
   public Delete setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Delete) super.setFamilyCellMap(map);
@@ -368,5 +343,10 @@ public class Delete extends Mutation implements Comparable<Row> {
   @Override
   public Delete setTTL(long ttl) {
     throw new UnsupportedOperationException("Setting TTLs on Deletes is not supported");
+  }
+
+  @Override
+  public Delete setPriority(int priority) {
+    return (Delete) super.setPriority(priority);
   }
 }

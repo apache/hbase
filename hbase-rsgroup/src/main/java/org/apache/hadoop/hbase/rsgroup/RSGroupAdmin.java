@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Group user API interface used between client and server.
@@ -84,8 +84,18 @@ public interface RSGroupAdmin {
    * @param servers set of servers to move
    * @param tables set of tables to move
    * @param targetGroup the target group name
-   * @throws IOException
+   * @throws IOException if moving the server and tables fail
    */
   void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
                             String targetGroup) throws IOException;
+
+  /**
+   * Remove decommissioned servers from rsgroup.
+   * 1. Sometimes we may find the server aborted due to some hardware failure and we must offline
+   * the server for repairing. Or we need to move some servers to join other clusters.
+   * So we need to remove these servers from the rsgroup.
+   * 2. Dead/recovering/live servers will be disallowed.
+   * @param servers set of servers to remove
+   */
+  void removeServers(Set<Address> servers) throws IOException;
 }

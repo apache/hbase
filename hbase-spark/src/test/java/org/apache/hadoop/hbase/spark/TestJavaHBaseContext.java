@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,19 +21,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -44,31 +42,37 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.spark.example.hbasecontext.JavaHBaseBulkDeleteExample;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.Tuple2;
-import com.google.common.io.Files;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Files;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestJavaHBaseContext implements Serializable {
+
+  @ClassRule
+  public static final HBaseClassTestRule TIMEOUT =
+      HBaseClassTestRule.forClass(TestJavaHBaseContext.class);
+
   private transient JavaSparkContext jsc;
   HBaseTestingUtility htu;
-  protected static final Log LOG = LogFactory.getLog(TestJavaHBaseContext.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(TestJavaHBaseContext.class);
 
 
 
@@ -95,7 +99,7 @@ public class TestJavaHBaseContext implements Serializable {
       LOG.info("starting minicluster");
 
       htu.startMiniZKCluster();
-      htu.startMiniHBaseCluster(1, 1);
+      htu.startMiniHBaseCluster();
 
       LOG.info(" - minicluster started");
 
@@ -190,6 +194,7 @@ public class TestJavaHBaseContext implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Override
     public Put call(String v) throws Exception {
       String[] cells = v.split(",");
       Put put = new Put(Bytes.toBytes(cells[0]));
@@ -317,10 +322,12 @@ public class TestJavaHBaseContext implements Serializable {
 
 
 
-    hbaseContext.bulkLoad(rdd, TableName.valueOf(tableName), new BulkLoadFunction(), output.toUri().getPath(),
-        new HashMap<byte[], FamilyHFileWriteOptions>(), false, HConstants.DEFAULT_MAX_FILE_SIZE);
+    hbaseContext.bulkLoad(rdd, TableName.valueOf(tableName), new BulkLoadFunction(),
+            output.toUri().getPath(), new HashMap<byte[], FamilyHFileWriteOptions>(), false,
+            HConstants.DEFAULT_MAX_FILE_SIZE);
 
-    try (Connection conn = ConnectionFactory.createConnection(conf); Admin admin = conn.getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+         Admin admin = conn.getAdmin()) {
       Table table = conn.getTable(TableName.valueOf(tableName));
       // Do bulk load
       LoadIncrementalHFiles load = new LoadIncrementalHFiles(conf);
@@ -387,11 +394,13 @@ public class TestJavaHBaseContext implements Serializable {
     Configuration conf = htu.getConfiguration();
     JavaHBaseContext hbaseContext = new JavaHBaseContext(jsc, conf);
 
-    hbaseContext.bulkLoadThinRows(rdd, TableName.valueOf(tableName), new BulkLoadThinRowsFunction(), output.toString(),
-        new HashMap<byte[], FamilyHFileWriteOptions>(), false, HConstants.DEFAULT_MAX_FILE_SIZE);
+    hbaseContext.bulkLoadThinRows(rdd, TableName.valueOf(tableName), new BulkLoadThinRowsFunction(),
+            output.toString(), new HashMap<byte[], FamilyHFileWriteOptions>(), false,
+            HConstants.DEFAULT_MAX_FILE_SIZE);
 
 
-    try (Connection conn = ConnectionFactory.createConnection(conf); Admin admin = conn.getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+         Admin admin = conn.getAdmin()) {
       Table table = conn.getTable(TableName.valueOf(tableName));
       // Do bulk load
       LoadIncrementalHFiles load = new LoadIncrementalHFiles(conf);
@@ -429,25 +438,31 @@ public class TestJavaHBaseContext implements Serializable {
     }
 
   }
-  public static class BulkLoadFunction implements Function<String, Pair<KeyFamilyQualifier, byte[]>> {
-
+  public static class BulkLoadFunction
+          implements Function<String, Pair<KeyFamilyQualifier, byte[]>> {
     @Override public Pair<KeyFamilyQualifier, byte[]> call(String v1) throws Exception {
-      if (v1 == null)
+      if (v1 == null) {
         return null;
+      }
+
       String[] strs = v1.split(",");
-      if(strs.length != 4)
+      if(strs.length != 4) {
         return null;
-      KeyFamilyQualifier kfq = new KeyFamilyQualifier(Bytes.toBytes(strs[0]), Bytes.toBytes(strs[1]),
-          Bytes.toBytes(strs[2]));
+      }
+
+      KeyFamilyQualifier kfq = new KeyFamilyQualifier(Bytes.toBytes(strs[0]),
+              Bytes.toBytes(strs[1]), Bytes.toBytes(strs[2]));
       return new Pair(kfq, Bytes.toBytes(strs[3]));
     }
   }
 
-  public static class BulkLoadThinRowsFunction implements Function<List<String>, Pair<ByteArrayWrapper, FamiliesQualifiersValues>> {
-
-    @Override public Pair<ByteArrayWrapper, FamiliesQualifiersValues> call(List<String> list) throws Exception {
-      if (list == null)
+  public static class BulkLoadThinRowsFunction
+          implements Function<List<String>, Pair<ByteArrayWrapper, FamiliesQualifiersValues>> {
+    @Override public Pair<ByteArrayWrapper, FamiliesQualifiersValues> call(List<String> list) {
+      if (list == null) {
         return null;
+      }
+
       ByteArrayWrapper rowKey = null;
       FamiliesQualifiersValues fqv = new FamiliesQualifiersValues();
       for (String cell : list) {
@@ -465,6 +480,7 @@ public class TestJavaHBaseContext implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Override
     public Get call(byte[] v) throws Exception {
       return new Get(v);
     }
@@ -474,6 +490,7 @@ public class TestJavaHBaseContext implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Override
     public String call(Result result) throws Exception {
       Iterator<Cell> it = result.listCells().iterator();
       StringBuilder b = new StringBuilder();

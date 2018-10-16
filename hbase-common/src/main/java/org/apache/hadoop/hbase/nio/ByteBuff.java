@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An abstract class that abstracts out as to how the byte buffers are used,
@@ -527,7 +527,7 @@ public abstract class ByteBuff {
     int high = toIndex - 1;
 
     while (low <= high) {
-      int mid = (low + high) >>> 1;
+      int mid = low + ((high - low) >> 1);
       int midVal = a.get(mid) & 0xff;
 
       if (midVal < unsignedKey) {

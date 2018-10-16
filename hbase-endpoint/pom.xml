@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!--
+  <!--
     /**
      * Licensed to the Apache Software Foundation (ASF) under one
      * or more contributor license agreements.  See the NOTICE file
@@ -19,193 +19,242 @@
      * limitations under the License.
      */
     -->
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <artifactId>hbase</artifactId>
-        <groupId>org.apache.hbase</groupId>
-        <version>3.0.0-SNAPSHOT</version>
-        <relativePath>..</relativePath>
-    </parent>
-
-    <artifactId>hbase-endpoint</artifactId>
-    <name>Apache HBase - Coprocessor Endpoint</name>
-    <description>HBase Coprocessor Endpoint implementations</description>
-<!--REMOVE-->
-
-    <properties>
-      <maven.javadoc.skip>true</maven.javadoc.skip>
-    </properties>
-
-    <build>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-site-plugin</artifactId>
-          <configuration>
-            <skip>true</skip>
-          </configuration>
-        </plugin>
-        <!-- Make a jar and put the sources in the jar -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-        </plugin>
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>hbase-build-configuration</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>3.0.0-SNAPSHOT</version>
+    <relativePath>../hbase-build-configuration</relativePath>
+  </parent>
+  <artifactId>hbase-endpoint</artifactId>
+  <name>Apache HBase - Coprocessor Endpoint</name>
+  <description>HBase Coprocessor Endpoint implementations</description>
+  <!--REMOVE-->
+  <properties>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+  </properties>
+  <build>
+    <plugins>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
         <configuration>
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-      </plugins>
-      <pluginManagement>
-        <plugins>
-          <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-          <plugin>
-            <groupId>org.eclipse.m2e</groupId>
-            <artifactId>lifecycle-mapping</artifactId>
-            <version>1.0.0</version>
-            <configuration>
-              <lifecycleMappingMetadata>
-                <pluginExecutions>
-                  <pluginExecution>
-                    <pluginExecutionFilter>
-                      <groupId>org.apache.hadoop</groupId>
-                      <artifactId>hadoop-maven-plugins</artifactId>
-                      <versionRange>[2.0.5-alpha,)</versionRange>
-                      <goals>
-                        <goal>protoc</goal>
-                      </goals>
-                    </pluginExecutionFilter>
-                    <action>
-                      <ignore></ignore>
-                    </action>
-                  </pluginExecution>
-                </pluginExecutions>
-              </lifecycleMappingMetadata>
-            </configuration>
-          </plugin>
-         </plugins>
-      </pluginManagement>
-    </build>
-
-    <dependencies>
-      <!-- Intra-project dependencies -->
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-annotations</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-common</artifactId>
-      </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-hadoop-compat</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-hadoop-compat</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>${compat.module}</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>${compat.module}</artifactId>
-      <version>${project.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-protocol</artifactId>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-client</artifactId>
-      </dependency>
-      <!--Some of the CPEPs use hbase server-side internals; they shouldn't!
-           -->
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-server</artifactId>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-server</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <!-- General dependencies -->
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-      </dependency>
-    </dependencies>
-
-    <profiles>
-        <!-- Skip the tests in this module -->
-        <profile>
-            <id>skipRpcTests</id>
-            <activation>
-                <property>
-                    <name>skipRpcTests</name>
-                </property>
-            </activation>
-            <properties>
-                <surefire.skipFirstPart>true</surefire.skipFirstPart>
-                <surefire.skipSecondPart>true</surefire.skipSecondPart>
-            </properties>
-        </profile>
-        <profile>
-          <id>compile-protobuf</id>
-          <activation>
-            <property>
-              <name>compile-protobuf</name>
-            </property>
-          </activation>
-          <build>
-            <plugins>
-              <plugin>
-                <groupId>org.xolstice.maven.plugins</groupId>
-                <artifactId>protobuf-maven-plugin</artifactId>
-                <executions>
-                  <execution>
-                    <id>compile-protoc</id>
-                    <phase>generate-sources</phase>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+             <configuration>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>${basedir}/../hbase-protocol/src/main/protobuf</additionalProtoPathElement>
+              </additionalProtoPathElements>
+             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+            <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+    </plugins>
+    <pluginManagement>
+      <plugins>
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-maven-plugins</artifactId>
+                    <versionRange>[2.0.5-alpha,)</versionRange>
                     <goals>
-                      <goal>compile</goal>
+                      <goal>protoc</goal>
                     </goals>
-                    <configuration>
-                      <additionalProtoPathElements>
-                        <additionalProtoPathElement>${basedir}/../hbase-protocol/src/main/protobuf</additionalProtoPathElement>
-                      </additionalProtoPathElements>
-                    </configuration>
-                  </execution>
-                </executions>
-              </plugin>
-            </plugins>
-          </build>
-        </profile>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore/>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-protobuf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-miscellaneous</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-annotations</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-common</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>${compat.module}</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>${compat.module}</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol-shaded</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+    </dependency>
+    <!--Some of the CPEPs use hbase server-side internals; they shouldn't!-->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-zookeeper</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-zookeeper</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-http</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <!-- The coprocessor.Export needs mapreduce.Import and mapreduce.Export to run the unit tests -->
+    <!-- see org.apache.hadoop.hbase.coprocessor.TestImportExport -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minikdc</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- General dependencies -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skipRpcTests</id>
+      <activation>
+        <property>
+          <name>skipRpcTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
     <!-- Profiles for building against different hadoop versions -->
     <!-- There are a lot of common dependencies used here, should investigate
     if we can combine these profiles somehow -->
-
     <!-- profile for building against Hadoop 2.x.  This is the default.  -->
     <profile>
       <id>hadoop-2.0</id>
       <activation>
         <property>
-            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-            <!--h2--><name>!hadoop.profile</name>
+          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+          <!--h2-->
+          <name>!hadoop.profile</name>
         </property>
       </activation>
       <dependencies>
@@ -220,6 +269,12 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-client</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -235,6 +290,16 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
           <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.zookeeper</groupId>
+              <artifactId>zookeeper</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
         <dependency>
@@ -268,6 +333,12 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
         <dependency>
@@ -278,5 +349,5 @@
         </dependency>
       </dependencies>
     </profile>
-    </profiles>
+  </profiles>
 </project>

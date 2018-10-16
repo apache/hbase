@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,13 +21,13 @@ import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.protobuf.BlockingRpcChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,25 +41,33 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ListMultimap;
-import com.google.protobuf.BlockingRpcChannel;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestNamespaceCommands extends SecureTestUtil {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNamespaceCommands.class);
+
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestNamespaceCommands.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceCommands.class);
   private static String TEST_NAMESPACE = "ns1";
   private static String TEST_NAMESPACE2 = "ns2";
   private static Configuration conf;
@@ -145,13 +153,20 @@ public class TestNamespaceCommands extends SecureTestUtil {
         User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
     // TODO: other table perms
 
+    UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     UTIL.startMiniCluster();
     // Wait for the ACL table to become available
     UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME.getName(), 30 * 1000);
 
-    ACCESS_CONTROLLER = (AccessController) UTIL.getMiniHBaseCluster().getMaster()
-      .getRegionServerCoprocessorHost()
-        .findCoprocessor(AccessController.class.getName());
+    // Find the Access Controller CP. Could be on master or if master is not serving regions, is
+    // on an arbitrary server.
+    for (JVMClusterUtil.RegionServerThread rst:
+        UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
+      ACCESS_CONTROLLER = rst.getRegionServer().getRegionServerCoprocessorHost().
+        findCoprocessor(AccessController.class);
+      if (ACCESS_CONTROLLER != null) break;
+    }
+    if (ACCESS_CONTROLLER == null) throw new NullPointerException();
 
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE).build());
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE2).build());
@@ -196,7 +211,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
       perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
       for (Map.Entry<String, TablePermission> entry : perms.entries()) {
-        LOG.debug(entry);
+        LOG.debug(Objects.toString(entry));
       }
       assertEquals(6, perms.size());
 
@@ -234,7 +249,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction modifyNamespace = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preModifyNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preModifyNamespace(ObserverContextImpl.createAndPrepare(CP_ENV),
+          null, // not needed by AccessController
           NamespaceDescriptor.create(TEST_NAMESPACE).addConfiguration("abc", "156").build());
         return null;
       }
@@ -252,7 +268,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction createNamespace = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCreateNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preCreateNamespace(ObserverContextImpl.createAndPrepare(CP_ENV),
           NamespaceDescriptor.create(TEST_NAMESPACE2).build());
         return null;
       }
@@ -261,7 +277,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction deleteNamespace = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDeleteNamespace(ObserverContextImpl.createAndPrepare(CP_ENV),
           TEST_NAMESPACE2);
         return null;
       }
@@ -286,7 +302,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction getNamespaceAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preGetNamespaceDescriptor(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preGetNamespaceDescriptor(ObserverContextImpl.createAndPrepare(CP_ENV),
           TEST_NAMESPACE);
         return null;
       }
@@ -476,7 +492,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
       public Object run() throws Exception {
         HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_TABLE));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContext.createAndPrepare(CP_ENV, null), htd, null);
+        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
         return null;
       }
     };

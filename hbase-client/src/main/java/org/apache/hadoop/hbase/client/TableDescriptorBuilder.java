@@ -27,28 +27,33 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
-import java.util.stream.Stream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
+import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.util.Bytes;
 
+/**
+ * @since 2.0.0
+ */
 @InterfaceAudience.Public
 public class TableDescriptorBuilder {
-  public static final Log LOG = LogFactory.getLog(TableDescriptorBuilder.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TableDescriptorBuilder.class);
   @InterfaceAudience.Private
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
   private static final Bytes SPLIT_POLICY_KEY = new Bytes(Bytes.toBytes(SPLIT_POLICY));
@@ -133,6 +138,8 @@ public class TableDescriptorBuilder {
   private static final Bytes REGION_MEMSTORE_REPLICATION_KEY
           = new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
 
+  private static final Bytes REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY
+          = new Bytes(Bytes.toBytes(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY));
   /**
    * Used by shell/rest interface to access this metadata
    * attribute which denotes if the table should be treated by region
@@ -142,6 +149,17 @@ public class TableDescriptorBuilder {
   public static final String NORMALIZATION_ENABLED = "NORMALIZATION_ENABLED";
   private static final Bytes NORMALIZATION_ENABLED_KEY
           = new Bytes(Bytes.toBytes(NORMALIZATION_ENABLED));
+
+  @InterfaceAudience.Private
+  public static final String NORMALIZER_TARGET_REGION_COUNT =
+      "NORMALIZER_TARGET_REGION_COUNT";
+  private static final Bytes NORMALIZER_TARGET_REGION_COUNT_KEY =
+      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_COUNT));
+
+  @InterfaceAudience.Private
+  public static final String NORMALIZER_TARGET_REGION_SIZE = "NORMALIZER_TARGET_REGION_SIZE";
+  private static final Bytes NORMALIZER_TARGET_REGION_SIZE_KEY =
+      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE));
 
   /**
    * Default durability for HTD is USE_DEFAULT, which defaults to HBase-global
@@ -175,8 +193,8 @@ public class TableDescriptorBuilder {
   public static final boolean DEFAULT_NORMALIZATION_ENABLED = false;
 
   /**
-   * Constant that denotes the maximum default size of the memstore after which
-   * the contents are flushed to the store files
+   * Constant that denotes the maximum default size of the memstore in bytes after which
+   * the contents are flushed to the store files.
    */
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024 * 1024 * 128L;
 
@@ -210,21 +228,39 @@ public class TableDescriptorBuilder {
   public final static byte[] NAMESPACE_COL_DESC_BYTES = Bytes.toBytes("d");
 
   /**
+   * <pre>
+   * Pattern that matches a coprocessor specification. Form is:
+   * {@code <coprocessor jar file location> '|' <class name> ['|' <priority> ['|' <arguments>]]}
+   * where arguments are {@code <KEY> '=' <VALUE> [,...]}
+   * For example: {@code hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2}
+   * </pre>
+   */
+  private static final Pattern CP_HTD_ATTR_VALUE_PATTERN =
+    Pattern.compile("(^[^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?$");
+
+  private static final String CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN = "[^=,]+";
+  private static final String CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN = "[^,]+";
+  private static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
+    "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
+      CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
+  private static final Pattern CP_HTD_ATTR_KEY_PATTERN =
+    Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
+  /**
    * Table descriptor for namespace table
    */
+  // TODO We used to set CacheDataInL1 for NS table. When we have BucketCache in file mode, now the
+  // NS data goes to File mode BC only. Test how that affect the system. If too much, we have to
+  // rethink about adding back the setCacheDataInL1 for NS table.
   public static final TableDescriptor NAMESPACE_TABLEDESC
     = TableDescriptorBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME)
-                            .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(NAMESPACE_FAMILY_INFO_BYTES)
-                              // Ten is arbitrary number.  Keep versions to help debugging.
-                              .setMaxVersions(10)
-                              .setInMemory(true)
-                              .setBlocksize(8 * 1024)
-                              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                              // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                              // e.g. if using CombinedBlockCache (BucketCache).
-                              .setCacheDataInL1(true)
-                              .build())
-                            .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(NAMESPACE_FAMILY_INFO_BYTES)
+        // Ten is arbitrary number.  Keep versions to help debugging.
+        .setMaxVersions(10)
+        .setInMemory(true)
+        .setBlocksize(8 * 1024)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        .build())
+      .build();
   private final ModifyableTableDescriptor desc;
 
   /**
@@ -252,12 +288,16 @@ public class TableDescriptorBuilder {
     return new TableDescriptorBuilder(name);
   }
 
-  public static TableDescriptor copy(TableDescriptor desc) throws DeserializationException {
+  public static TableDescriptor copy(TableDescriptor desc) {
     return new ModifyableTableDescriptor(desc);
   }
 
+  public static TableDescriptor copy(TableName name, TableDescriptor desc) {
+    return new ModifyableTableDescriptor(name, desc);
+  }
+
   /**
-   * Copy all configuration, values, families, and name from the input.
+   * Copy all values, families, and name from the input.
    * @param desc The desciptor to copy
    * @return A clone of input
    */
@@ -273,28 +313,36 @@ public class TableDescriptorBuilder {
     this.desc = new ModifyableTableDescriptor(desc);
   }
 
-  public TableDescriptorBuilder addCoprocessor(String className) throws IOException {
-    return addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
+  public TableDescriptorBuilder setCoprocessor(String className) throws IOException {
+    return setCoprocessor(CoprocessorDescriptorBuilder.of(className));
   }
 
-  public TableDescriptorBuilder addCoprocessor(String className, Path jarFilePath,
-          int priority, final Map<String, String> kvs) throws IOException {
-    desc.addCoprocessor(className, jarFilePath, priority, kvs);
+  public TableDescriptorBuilder setCoprocessor(CoprocessorDescriptor cpDesc) throws IOException {
+    desc.setCoprocessor(Objects.requireNonNull(cpDesc));
     return this;
   }
 
-  public TableDescriptorBuilder addCoprocessorWithSpec(final String specStr) throws IOException {
-    desc.addCoprocessorWithSpec(specStr);
+  public TableDescriptorBuilder setCoprocessors(Collection<CoprocessorDescriptor> cpDescs)
+    throws IOException {
+    for (CoprocessorDescriptor cpDesc : cpDescs) {
+      desc.setCoprocessor(cpDesc);
+    }
     return this;
   }
 
-  public TableDescriptorBuilder addColumnFamily(final ColumnFamilyDescriptor family) {
-    desc.addColumnFamily(family);
+  public TableDescriptorBuilder setColumnFamily(final ColumnFamilyDescriptor family) {
+    desc.setColumnFamily(Objects.requireNonNull(family));
+    return this;
+  }
+
+  public TableDescriptorBuilder setColumnFamilies(
+    final Collection<ColumnFamilyDescriptor> families) {
+    families.forEach(desc::setColumnFamily);
     return this;
   }
 
   public TableDescriptorBuilder modifyColumnFamily(final ColumnFamilyDescriptor family) {
-    desc.modifyColumnFamily(family);
+    desc.modifyColumnFamily(Objects.requireNonNull(family));
     return this;
   }
 
@@ -305,11 +353,6 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder removeValue(byte[] key) {
     desc.removeValue(key);
-    return this;
-  }
-
-  public TableDescriptorBuilder removeConfiguration(final String key) {
-    desc.removeConfiguration(key);
     return this;
   }
 
@@ -325,11 +368,6 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setCompactionEnabled(final boolean isEnable) {
     desc.setCompactionEnabled(isEnable);
-    return this;
-  }
-
-  public TableDescriptorBuilder setConfiguration(String key, String value) {
-    desc.setConfiguration(key, value);
     return this;
   }
 
@@ -350,6 +388,16 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setMemStoreFlushSize(long memstoreFlushSize) {
     desc.setMemStoreFlushSize(memstoreFlushSize);
+    return this;
+  }
+
+  public TableDescriptorBuilder setNormalizerTargetRegionCount(final int regionCount) {
+    desc.setNormalizerTargetRegionCount(regionCount);
+    return this;
+  }
+
+  public TableDescriptorBuilder setNormalizerTargetRegionSize(final long regionSize) {
+    desc.setNormalizerTargetRegionSize(regionSize);
     return this;
   }
 
@@ -380,8 +428,8 @@ public class TableDescriptorBuilder {
     return this;
   }
 
-  public TableDescriptorBuilder setRegionMemstoreReplication(boolean memstoreReplication) {
-    desc.setRegionMemstoreReplication(memstoreReplication);
+  public TableDescriptorBuilder setRegionMemStoreReplication(boolean memstoreReplication) {
+    desc.setRegionMemStoreReplication(memstoreReplication);
     return this;
   }
 
@@ -395,6 +443,11 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder setValue(final String key, final String value) {
+    desc.setValue(key, value);
+    return this;
+  }
+
   public TableDescriptorBuilder setValue(final Bytes key, final Bytes value) {
     desc.setValue(key, value);
     return this;
@@ -402,6 +455,24 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setValue(final byte[] key, final byte[] value) {
     desc.setValue(key, value);
+    return this;
+  }
+
+  /**
+   * Sets replication scope all & only the columns already in the builder. Columns added later won't
+   * be backfilled with replication scope.
+   * @param scope replication scope
+   * @return a TableDescriptorBuilder
+   */
+  public TableDescriptorBuilder setReplicationScope(int scope) {
+    Map<byte[], ColumnFamilyDescriptor> newFamilies = new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
+    newFamilies.putAll(desc.families);
+    newFamilies
+        .forEach((cf, cfDesc) -> {
+          desc.removeColumnFamily(cf);
+          desc.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfDesc).setScope(scope)
+              .build());
+        });
     return this;
   }
 
@@ -426,13 +497,6 @@ public class TableDescriptorBuilder {
     private final Map<Bytes, Bytes> values = new HashMap<>();
 
     /**
-     * A map which holds the configuration specific to the table. The keys of
-     * the map have the same names as config keys and override the defaults with
-     * table-specific settings. Example usage may be for compactions, etc.
-     */
-    private final Map<String, String> configuration = new HashMap<>();
-
-    /**
      * Maps column family name to the respective FamilyDescriptors
      */
     private final Map<byte[], ColumnFamilyDescriptor> families
@@ -446,11 +510,11 @@ public class TableDescriptorBuilder {
      */
     @InterfaceAudience.Private
     public ModifyableTableDescriptor(final TableName name) {
-      this(name, Collections.EMPTY_LIST, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
+      this(name, Collections.EMPTY_LIST, Collections.EMPTY_MAP);
     }
 
     private ModifyableTableDescriptor(final TableDescriptor desc) {
-      this(desc.getTableName(), Arrays.asList(desc.getColumnFamilies()), desc.getValues(), desc.getConfiguration());
+      this(desc.getTableName(), Arrays.asList(desc.getColumnFamilies()), desc.getValues());
     }
 
     /**
@@ -465,15 +529,14 @@ public class TableDescriptorBuilder {
     @InterfaceAudience.Private
     @Deprecated // only used by HTableDescriptor. remove this method if HTD is removed
     public ModifyableTableDescriptor(final TableName name, final TableDescriptor desc) {
-      this(name, Arrays.asList(desc.getColumnFamilies()), desc.getValues(), desc.getConfiguration());
+      this(name, Arrays.asList(desc.getColumnFamilies()), desc.getValues());
     }
 
     private ModifyableTableDescriptor(final TableName name, final Collection<ColumnFamilyDescriptor> families,
-            Map<Bytes, Bytes> values, Map<String, String> configuration) {
+            Map<Bytes, Bytes> values) {
       this.name = name;
       families.forEach(c -> this.families.put(c.getName(), ColumnFamilyDescriptorBuilder.copy(c)));
       this.values.putAll(values);
-      this.configuration.putAll(configuration);
       this.values.put(IS_META_KEY,
         new Bytes(Bytes.toBytes(Boolean.toString(name.equals(TableName.META_TABLE_NAME)))));
     }
@@ -500,13 +563,20 @@ public class TableDescriptorBuilder {
 
     @Override
     public Bytes getValue(Bytes key) {
-      return values.get(key);
+      Bytes rval = values.get(key);
+      return rval == null ? null : new Bytes(rval.copyBytes());
+    }
+
+    @Override
+    public String getValue(String key) {
+      Bytes rval = values.get(new Bytes(Bytes.toBytes(key)));
+      return rval == null ? null : Bytes.toString(rval.get(), rval.getOffset(), rval.getLength());
     }
 
     @Override
     public byte[] getValue(byte[] key) {
       Bytes value = values.get(new Bytes(key));
-      return value == null ? null : value.get();
+      return value == null ? null : value.copyBytes();
     }
 
     private <T> T getOrDefault(Bytes key, Function<String, T> function, T defaultValue) {
@@ -541,6 +611,11 @@ public class TableDescriptorBuilder {
     public ModifyableTableDescriptor setValue(byte[] key, byte[] value) {
       return setValue(toBytesOrNull(key, v -> v),
               toBytesOrNull(value, v -> v));
+    }
+
+    public ModifyableTableDescriptor setValue(String key, String value) {
+      return setValue(toBytesOrNull(key, Bytes::toBytes),
+              toBytesOrNull(value, Bytes::toBytes));
     }
 
     /*
@@ -656,6 +731,27 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Check if there is the target region count. If so, the normalize plan will be calculated based
+     * on the target region count.
+     * @return target region count after normalize done
+     */
+    @Override
+    public int getNormalizerTargetRegionCount() {
+      return getOrDefault(NORMALIZER_TARGET_REGION_COUNT_KEY, Integer::valueOf,
+        Integer.valueOf(-1));
+    }
+
+    /**
+     * Check if there is the target region size. If so, the normalize plan will be calculated based
+     * on the target region size.
+     * @return target region size after normalize done
+     */
+    @Override
+    public long getNormalizerTargetRegionSize() {
+      return getOrDefault(NORMALIZER_TARGET_REGION_SIZE_KEY, Long::valueOf, Long.valueOf(-1));
+    }
+
+    /**
      * Setting the table normalization enable flag.
      *
      * @param isEnable True if enable normalization.
@@ -663,6 +759,24 @@ public class TableDescriptorBuilder {
      */
     public ModifyableTableDescriptor setNormalizationEnabled(final boolean isEnable) {
       return setValue(NORMALIZATION_ENABLED_KEY, Boolean.toString(isEnable));
+    }
+
+    /**
+     * Setting the target region count of table normalization .
+     * @param regionCount the target region count.
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor setNormalizerTargetRegionCount(final int regionCount) {
+      return setValue(NORMALIZER_TARGET_REGION_COUNT_KEY, Integer.toString(regionCount));
+    }
+
+    /**
+     * Setting the target region size of table normalization.
+     * @param regionSize the target region size.
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor setNormalizerTargetRegionSize(final long regionSize) {
+      return setValue(NORMALIZER_TARGET_REGION_SIZE_KEY, Long.toString(regionSize));
     }
 
     /**
@@ -813,7 +927,7 @@ public class TableDescriptorBuilder {
      * @param family to add.
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor addColumnFamily(final ColumnFamilyDescriptor family) {
+    public ModifyableTableDescriptor setColumnFamily(final ColumnFamilyDescriptor family) {
       if (family.getName() == null || family.getName().length <= 0) {
         throw new IllegalArgumentException("Family name cannot be null or empty");
       }
@@ -921,7 +1035,7 @@ public class TableDescriptorBuilder {
 
       // early exit optimization
       boolean hasAttributes = !reservedKeys.isEmpty() || !userKeys.isEmpty();
-      if (!hasAttributes && configuration.isEmpty()) {
+      if (!hasAttributes) {
         return s;
       }
 
@@ -945,7 +1059,7 @@ public class TableDescriptorBuilder {
         }
 
         if (!userKeys.isEmpty()) {
-          // print all non-reserved, advanced config keys as a separate subset
+          // print all non-reserved as a separate subset
           if (printCommaForAttr) {
             s.append(", ");
           }
@@ -967,25 +1081,6 @@ public class TableDescriptorBuilder {
         }
       }
 
-      // step 3: printing all configuration:
-      if (!configuration.isEmpty()) {
-        if (hasAttributes) {
-          s.append(", ");
-        }
-        s.append(HConstants.CONFIGURATION).append(" => ");
-        s.append('{');
-        boolean printCommaForConfig = false;
-        for (Map.Entry<String, String> e : configuration.entrySet()) {
-          if (printCommaForConfig) {
-            s.append(", ");
-          }
-          printCommaForConfig = true;
-          s.append('\'').append(e.getKey()).append('\'');
-          s.append(" => ");
-          s.append('\'').append(e.getValue()).append('\'');
-        }
-        s.append("}");
-      }
       s.append("}"); // end METHOD
       return s;
     }
@@ -1005,13 +1100,10 @@ public class TableDescriptorBuilder {
       if (this == obj) {
         return true;
       }
-      if (obj == null) {
-        return false;
+      if (obj instanceof ModifyableTableDescriptor) {
+        return TableDescriptor.COMPARATOR.compare(this, (ModifyableTableDescriptor) obj) == 0;
       }
-      if (!(obj instanceof ModifyableTableDescriptor)) {
-        return false;
-      }
-      return compareTo((ModifyableTableDescriptor) obj) == 0;
+      return false;
     }
 
     /**
@@ -1026,7 +1118,6 @@ public class TableDescriptorBuilder {
         }
       }
       result ^= values.hashCode();
-      result ^= configuration.hashCode();
       return result;
     }
 
@@ -1051,16 +1142,6 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Return true if there are at least one cf whose replication scope is
-     * serial.
-     */
-    @Override
-    public boolean hasSerialReplicationScope() {
-      return Stream.of(getColumnFamilies())
-              .anyMatch(column -> column.getScope() == HConstants.REPLICATION_SCOPE_SERIAL);
-    }
-
-    /**
      * Returns the configured replicas per region
      */
     @Override
@@ -1082,7 +1163,7 @@ public class TableDescriptorBuilder {
      * @return true if the read-replicas memstore replication is enabled.
      */
     @Override
-    public boolean hasRegionMemstoreReplication() {
+    public boolean hasRegionMemStoreReplication() {
       return getOrDefault(REGION_MEMSTORE_REPLICATION_KEY, Boolean::valueOf, DEFAULT_REGION_MEMSTORE_REPLICATION);
     }
 
@@ -1096,11 +1177,11 @@ public class TableDescriptorBuilder {
      * have new data only when the primary flushes the memstore.
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
+    public ModifyableTableDescriptor setRegionMemStoreReplication(boolean memstoreReplication) {
       setValue(REGION_MEMSTORE_REPLICATION_KEY, Boolean.toString(memstoreReplication));
       // If the memstore replication is setup, we do not have to wait for observing a flush event
       // from primary before starting to serve reads, because gaps from replication is not applicable
-      return setConfiguration(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
+      return setValue(REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
               Boolean.toString(memstoreReplication));
     }
 
@@ -1161,8 +1242,10 @@ public class TableDescriptorBuilder {
      * @throws IOException
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor addCoprocessor(String className) throws IOException {
-      return addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
+    public ModifyableTableDescriptor setCoprocessor(String className) throws IOException {
+      return setCoprocessor(
+        CoprocessorDescriptorBuilder.newBuilder(className).setPriority(Coprocessor.PRIORITY_USER)
+          .build());
     }
 
     /**
@@ -1171,44 +1254,38 @@ public class TableDescriptorBuilder {
      * check if the class can be loaded or not. Whether a coprocessor is
      * loadable or not will be determined when a region is opened.
      *
-     * @param jarFilePath Path of the jar file. If it's null, the class will be
-     * loaded from default classloader.
-     * @param className Full class name.
-     * @param priority Priority
-     * @param kvs Arbitrary key-value parameter pairs passed into the
-     * coprocessor.
-     * @throws IOException
+     * @throws IOException any illegal parameter key/value
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor addCoprocessor(String className, Path jarFilePath,
-            int priority, final Map<String, String> kvs)
+    public ModifyableTableDescriptor setCoprocessor(CoprocessorDescriptor cp)
             throws IOException {
-      checkHasCoprocessor(className);
-
+      checkHasCoprocessor(cp.getClassName());
+      if (cp.getPriority() < 0) {
+        throw new IOException("Priority must be bigger than or equal with zero, current:"
+          + cp.getPriority());
+      }
       // Validate parameter kvs and then add key/values to kvString.
       StringBuilder kvString = new StringBuilder();
-      if (kvs != null) {
-        for (Map.Entry<String, String> e : kvs.entrySet()) {
-          if (!e.getKey().matches(HConstants.CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN)) {
-            throw new IOException("Illegal parameter key = " + e.getKey());
-          }
-          if (!e.getValue().matches(HConstants.CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN)) {
-            throw new IOException("Illegal parameter (" + e.getKey()
-                    + ") value = " + e.getValue());
-          }
-          if (kvString.length() != 0) {
-            kvString.append(',');
-          }
-          kvString.append(e.getKey());
-          kvString.append('=');
-          kvString.append(e.getValue());
+      for (Map.Entry<String, String> e : cp.getProperties().entrySet()) {
+        if (!e.getKey().matches(CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN)) {
+          throw new IOException("Illegal parameter key = " + e.getKey());
         }
+        if (!e.getValue().matches(CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN)) {
+          throw new IOException("Illegal parameter (" + e.getKey()
+                  + ") value = " + e.getValue());
+        }
+        if (kvString.length() != 0) {
+          kvString.append(',');
+        }
+        kvString.append(e.getKey());
+        kvString.append('=');
+        kvString.append(e.getValue());
       }
 
-      String value = ((jarFilePath == null) ? "" : jarFilePath.toString())
-              + "|" + className + "|" + Integer.toString(priority) + "|"
+      String value = cp.getJarPath().orElse("")
+              + "|" + cp.getClassName() + "|" + Integer.toString(cp.getPriority()) + "|"
               + kvString.toString();
-      return addCoprocessorToMap(value);
+      return setCoprocessorToMap(value);
     }
 
     /**
@@ -1218,18 +1295,19 @@ public class TableDescriptorBuilder {
      * loadable or not will be determined when a region is opened.
      *
      * @param specStr The Coprocessor specification all in in one String
-     * formatted so matches {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
      * @throws IOException
      * @return the modifyable TD
+     * @deprecated used by HTableDescriptor and admin.rb.
+     *                       As of release 2.0.0, this will be removed in HBase 3.0.0.
      */
-    public ModifyableTableDescriptor addCoprocessorWithSpec(final String specStr) throws IOException {
-      String className = getCoprocessorClassNameFromSpecStr(specStr);
-      if (className == null) {
-        throw new IllegalArgumentException("Format does not match "
-                + HConstants.CP_HTD_ATTR_VALUE_PATTERN + ": " + specStr);
-      }
-      checkHasCoprocessor(className);
-      return addCoprocessorToMap(specStr);
+    @Deprecated
+    public ModifyableTableDescriptor setCoprocessorWithSpec(final String specStr)
+      throws IOException {
+      CoprocessorDescriptor cpDesc = toCoprocessorDescriptor(specStr).orElseThrow(
+        () -> new IllegalArgumentException(
+          "Format does not match " + CP_HTD_ATTR_VALUE_PATTERN + ": " + specStr));
+      checkHasCoprocessor(cpDesc.getClassName());
+      return setCoprocessorToMap(specStr);
     }
 
     private void checkHasCoprocessor(final String className) throws IOException {
@@ -1240,12 +1318,10 @@ public class TableDescriptorBuilder {
 
     /**
      * Add coprocessor to values Map
-     *
      * @param specStr The Coprocessor specification all in in one String
-     * formatted so matches {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
      * @return Returns <code>this</code>
      */
-    private ModifyableTableDescriptor addCoprocessorToMap(final String specStr) {
+    private ModifyableTableDescriptor setCoprocessorToMap(final String specStr) {
       if (specStr == null) {
         return this;
       }
@@ -1253,7 +1329,7 @@ public class TableDescriptorBuilder {
       int maxCoprocessorNumber = 0;
       Matcher keyMatcher;
       for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
-        keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
+        keyMatcher = CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
         if (!keyMatcher.matches()) {
           continue;
         }
@@ -1273,24 +1349,8 @@ public class TableDescriptorBuilder {
      */
     @Override
     public boolean hasCoprocessor(String classNameToMatch) {
-      Matcher keyMatcher;
-      for (Map.Entry<Bytes, Bytes> e
-              : this.values.entrySet()) {
-        keyMatcher
-                = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(
-                        Bytes.toString(e.getKey().get()));
-        if (!keyMatcher.matches()) {
-          continue;
-        }
-        String className = getCoprocessorClassNameFromSpecStr(Bytes.toString(e.getValue().get()));
-        if (className == null) {
-          continue;
-        }
-        if (className.equals(classNameToMatch.trim())) {
-          return true;
-        }
-      }
-      return false;
+      return getCoprocessorDescriptors().stream().anyMatch(cp -> cp.getClassName()
+        .equals(classNameToMatch));
     }
 
     /**
@@ -1300,33 +1360,16 @@ public class TableDescriptorBuilder {
      * @return The list of co-processors classNames
      */
     @Override
-    public List<String> getCoprocessors() {
-      List<String> result = new ArrayList<>(this.values.entrySet().size());
-      Matcher keyMatcher;
-      for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
-        keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
-        if (!keyMatcher.matches()) {
-          continue;
+    public List<CoprocessorDescriptor> getCoprocessorDescriptors() {
+      List<CoprocessorDescriptor> result = new ArrayList<>();
+      for (Map.Entry<Bytes, Bytes> e: getValues().entrySet()) {
+        String key = Bytes.toString(e.getKey().get()).trim();
+        if (CP_HTD_ATTR_KEY_PATTERN.matcher(key).matches()) {
+          toCoprocessorDescriptor(Bytes.toString(e.getValue().get()).trim())
+            .ifPresent(result::add);
         }
-        String className = getCoprocessorClassNameFromSpecStr(Bytes.toString(e.getValue().get()));
-        if (className == null) {
-          continue;
-        }
-        result.add(className); // classname is the 2nd field
       }
       return result;
-    }
-
-    /**
-     * @param spec String formatted as per
-     * {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
-     * @return Class parsed from passed in <code>spec</code> or null if no match
-     * or classpath found
-     */
-    private static String getCoprocessorClassNameFromSpecStr(final String spec) {
-      Matcher matcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
-      // Classname is the 2nd field
-      return matcher != null && matcher.matches() ? matcher.group(2).trim() : null;
     }
 
     /**
@@ -1340,12 +1383,12 @@ public class TableDescriptorBuilder {
       Matcher valueMatcher;
       for (Map.Entry<Bytes, Bytes> e : this.values
               .entrySet()) {
-        keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e
+        keyMatcher = CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e
                 .getKey().get()));
         if (!keyMatcher.matches()) {
           continue;
         }
-        valueMatcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes
+        valueMatcher = CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes
                 .toString(e.getValue().get()));
         if (!valueMatcher.matches()) {
           continue;
@@ -1388,7 +1431,7 @@ public class TableDescriptorBuilder {
      * @return the bytes in pb format
      */
     private byte[] toByteArray() {
-      return ProtobufUtil.prependPBMagic(ProtobufUtil.convertToTableSchema(this).toByteArray());
+      return ProtobufUtil.prependPBMagic(ProtobufUtil.toTableSchema(this).toByteArray());
     }
 
     /**
@@ -1408,54 +1451,10 @@ public class TableDescriptorBuilder {
       HBaseProtos.TableSchema.Builder builder = HBaseProtos.TableSchema.newBuilder();
       try {
         ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
-        return ProtobufUtil.convertToTableDesc(builder.build());
+        return ProtobufUtil.toTableDescriptor(builder.build());
       } catch (IOException e) {
         throw new DeserializationException(e);
       }
-    }
-
-    /**
-     * Getter for accessing the configuration value by key
-     */
-    @Override
-    public String getConfigurationValue(String key) {
-      return configuration.get(key);
-    }
-
-    /**
-     * Getter for fetching an unmodifiable {@link #configuration} map.
-     */
-    @Override
-    public Map<String, String> getConfiguration() {
-      // shallow pointer copy
-      return Collections.unmodifiableMap(configuration);
-    }
-
-    /**
-     * Setter for storing a configuration setting in {@link #configuration} map.
-     *
-     * @param key Config key. Same as XML config key e.g.
-     * hbase.something.or.other.
-     * @param value String value. If null, removes the setting.
-     * @return the modifyable TD
-     */
-    public ModifyableTableDescriptor setConfiguration(String key, String value) {
-      if (value == null) {
-        configuration.remove(key);
-      } else {
-        configuration.put(key, value);
-      }
-      return this;
-    }
-
-    /**
-     * Remove a config setting represented by the key from the
-     * {@link #configuration} map
-     * @param key Config key.
-     * @return the modifyable TD
-     */
-    public ModifyableTableDescriptor removeConfiguration(final String key) {
-      return setConfiguration(key, null);
     }
 
     @Override
@@ -1464,4 +1463,40 @@ public class TableDescriptorBuilder {
     }
   }
 
+  private static Optional<CoprocessorDescriptor> toCoprocessorDescriptor(String spec) {
+    Matcher matcher = CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
+    if (matcher.matches()) {
+      // jar file path can be empty if the cp class can be loaded
+      // from class loader.
+      String path = matcher.group(1).trim().isEmpty() ?
+        null : matcher.group(1).trim();
+      String className = matcher.group(2).trim();
+      if (className.isEmpty()) {
+        return Optional.empty();
+      }
+      String priorityStr = matcher.group(3).trim();
+      int priority = priorityStr.isEmpty() ?
+        Coprocessor.PRIORITY_USER : Integer.parseInt(priorityStr);
+      String cfgSpec = null;
+      try {
+        cfgSpec = matcher.group(4);
+      } catch (IndexOutOfBoundsException ex) {
+        // ignore
+      }
+      Map<String, String> ourConf = new TreeMap<>();
+      if (cfgSpec != null && !cfgSpec.trim().equals("|")) {
+        cfgSpec = cfgSpec.substring(cfgSpec.indexOf('|') + 1);
+        Matcher m = CP_HTD_ATTR_VALUE_PARAM_PATTERN.matcher(cfgSpec);
+        while (m.find()) {
+          ourConf.put(m.group(1), m.group(2));
+        }
+      }
+      return Optional.of(CoprocessorDescriptorBuilder.newBuilder(className)
+        .setJarPath(path)
+        .setPriority(priority)
+        .setProperties(ourConf)
+        .build());
+    }
+    return Optional.empty();
+  }
 }

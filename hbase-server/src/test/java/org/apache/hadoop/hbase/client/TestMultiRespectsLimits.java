@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,10 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
+import static junit.framework.TestCase.assertEquals;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -35,16 +43,11 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
-
-import static junit.framework.TestCase.assertEquals;
 
 /**
  * This test sets the multi size WAAAAAY low and then checks to make sure that gets will still make
@@ -52,6 +55,11 @@ import static junit.framework.TestCase.assertEquals;
  */
 @Category({MediumTests.class, ClientTests.class})
 public class TestMultiRespectsLimits {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultiRespectsLimits.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final MetricsAssertHelper METRICS_ASSERT =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
@@ -149,7 +157,14 @@ public class TestMultiRespectsLimits {
 
     for (byte[] col:cols) {
       Put p = new Put(row);
-      p.addImmutable(FAMILY, col, value);
+      p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(row)
+              .setFamily(FAMILY)
+              .setQualifier(col)
+              .setTimestamp(p.getTimestamp())
+              .setType(Cell.Type.Put)
+              .setValue(value)
+              .build());
       t.put(p);
     }
 
@@ -159,7 +174,7 @@ public class TestMultiRespectsLimits {
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return regionServer.getOnlineRegions(tableName).get(0).getMaxFlushedSeqId() > 3;
+          return regionServer.getRegions(tableName).get(0).getMaxFlushedSeqId() > 3;
         }
       });
     }

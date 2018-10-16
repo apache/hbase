@@ -23,20 +23,20 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * RegionScanner describes iterators over rows in an HRegion.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface RegionScanner extends InternalScanner, Shipper {
+public interface RegionScanner extends InternalScanner {
   /**
    * @return The RegionInfo for this scanner.
    */
-  HRegionInfo getRegionInfo();
+  RegionInfo getRegionInfo();
 
   /**
    * @return True if a filter indicates that this scanner will return no further rows.
@@ -57,7 +57,7 @@ public interface RegionScanner extends InternalScanner, Shipper {
   boolean reseek(byte[] row) throws IOException;
 
   /**
-   * @return The preferred max buffersize. See 
+   * @return The preferred max buffersize. See
    * {@link org.apache.hadoop.hbase.client.Scan#setMaxResultSize(long)}
    */
   long getMaxResultSize();
@@ -83,7 +83,7 @@ public interface RegionScanner extends InternalScanner, Shipper {
    * @throws IOException e
    */
   boolean nextRaw(List<Cell> result) throws IOException;
-  
+
   /**
    * Grab the next row's worth of values. The {@link ScannerContext} is used to enforce and track
    * any limits associated with this call. Any progress that exists in the {@link ScannerContext}
@@ -115,13 +115,4 @@ public interface RegionScanner extends InternalScanner, Shipper {
    */
   boolean nextRaw(List<Cell> result, ScannerContext scannerContext)
       throws IOException;
-
-  /**
-   * Empty implementation to provide compatibility for user migrating from 1.X
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16626">HBASE-16626</a>
-   */
-  @Override
-  default void shipped() throws IOException {
-    // do nothing
-  }
 }

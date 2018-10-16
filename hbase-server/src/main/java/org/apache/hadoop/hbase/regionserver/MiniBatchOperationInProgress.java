@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEdit;
 
 /**
  * Wraps together the mutations which are applied as a batch to the region and their operation
@@ -30,7 +32,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
  * @param T Pair&lt;Mutation, Integer&gt; pair of Mutations and associated rowlock ids .
  */
-@InterfaceAudience.LimitedPrivate("Coprocessors")
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public class MiniBatchOperationInProgress<T> {
   private final T[] operations;
   private Mutation[][] operationsFromCoprocessors;
@@ -39,13 +41,22 @@ public class MiniBatchOperationInProgress<T> {
   private final int firstIndex;
   private final int lastIndexExclusive;
 
+  private int readyToWriteCount = 0;
+  private int cellCount = 0;
+  private int numOfPuts = 0;
+  private int numOfDeletes = 0;
+
+
   public MiniBatchOperationInProgress(T[] operations, OperationStatus[] retCodeDetails,
-      WALEdit[] walEditsFromCoprocessors, int firstIndex, int lastIndexExclusive) {
+      WALEdit[] walEditsFromCoprocessors, int firstIndex, int lastIndexExclusive,
+      int readyToWriteCount) {
+    Preconditions.checkArgument(readyToWriteCount <= (lastIndexExclusive - firstIndex));
     this.operations = operations;
     this.retCodeDetails = retCodeDetails;
     this.walEditsFromCoprocessors = walEditsFromCoprocessors;
     this.firstIndex = firstIndex;
     this.lastIndexExclusive = lastIndexExclusive;
+    this.readyToWriteCount = readyToWriteCount;
   }
 
   /**
@@ -125,5 +136,37 @@ public class MiniBatchOperationInProgress<T> {
   public Mutation[] getOperationsFromCoprocessors(int index) {
     return operationsFromCoprocessors == null ? null :
         operationsFromCoprocessors[getAbsoluteIndex(index)];
+  }
+
+  public int getReadyToWriteCount() {
+    return readyToWriteCount;
+  }
+
+  public int getLastIndexExclusive() {
+    return lastIndexExclusive;
+  }
+
+  public int getCellCount() {
+    return cellCount;
+  }
+
+  public void addCellCount(int cellCount) {
+    this.cellCount += cellCount;
+  }
+
+  public int getNumOfPuts() {
+    return numOfPuts;
+  }
+
+  public void incrementNumOfPuts() {
+    this.numOfPuts += 1;
+  }
+
+  public int getNumOfDeletes() {
+    return numOfDeletes;
+  }
+
+  public void incrementNumOfDeletes() {
+    this.numOfDeletes += 1;
   }
 }

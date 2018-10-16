@@ -18,21 +18,26 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Objects;
+import java.util.Optional;
 
-import org.apache.hadoop.hbase.ByteBufferCell;
+import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
 /**
  * A filter that will only return the key component of each KV (the value will
@@ -60,18 +65,24 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   private Cell createKeyOnlyCell(Cell c) {
-    if (c instanceof ByteBufferCell) {
-      return new KeyOnlyByteBufferCell((ByteBufferCell) c, lenAsVal);
+    if (c instanceof ByteBufferExtendedCell) {
+      return new KeyOnlyByteBufferExtendedCell((ByteBufferExtendedCell) c, lenAsVal);
     } else {
       return new KeyOnlyCell(c, lenAsVal);
     }
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+  public ReturnCode filterKeyValue(final Cell ignored) throws IOException {
+    return filterCell(ignored);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell ignored) throws IOException {
     return ReturnCode.INCLUDE;
   }
-  
+
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     Preconditions.checkArgument((filterArguments.isEmpty() || filterArguments.size() == 1),
                                 "Expected: 0 or 1 but got: %s", filterArguments.size());
@@ -85,6 +96,7 @@ public class KeyOnlyFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.KeyOnlyFilter.Builder builder =
       FilterProtos.KeyOnlyFilter.newBuilder();
@@ -110,16 +122,27 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof KeyOnlyFilter)) return false;
 
     KeyOnlyFilter other = (KeyOnlyFilter)o;
     return this.lenAsVal == other.lenAsVal;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.lenAsVal);
   }
 
   static class KeyOnlyCell implements Cell {
@@ -187,6 +210,12 @@ public class KeyOnlyFilter extends FilterBase {
     }
 
     @Override
+    public Type getType() {
+      return cell.getType();
+    }
+
+
+    @Override
     public long getSequenceId() {
       return 0;
     }
@@ -230,11 +259,13 @@ public class KeyOnlyFilter extends FilterBase {
     }
   }
 
-  static class KeyOnlyByteBufferCell extends ByteBufferCell {
-    private ByteBufferCell cell;
+  static class KeyOnlyByteBufferExtendedCell extends ByteBufferExtendedCell {
+    public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
+        + Bytes.SIZEOF_BOOLEAN;
+    private ByteBufferExtendedCell cell;
     private boolean lenAsVal;
 
-    public KeyOnlyByteBufferCell(ByteBufferCell c, boolean lenAsVal) {
+    public KeyOnlyByteBufferExtendedCell(ByteBufferExtendedCell c, boolean lenAsVal) {
       this.cell = c;
       this.lenAsVal = lenAsVal;
     }
@@ -295,8 +326,28 @@ public class KeyOnlyFilter extends FilterBase {
     }
 
     @Override
+    public void setSequenceId(long seqId) throws IOException {
+      cell.setSequenceId(seqId);
+    }
+
+    @Override
+    public void setTimestamp(long ts) throws IOException {
+      cell.setTimestamp(ts);
+    }
+
+    @Override
+    public void setTimestamp(byte[] ts) throws IOException {
+      cell.setTimestamp(ts);
+    }
+
+    @Override
     public long getSequenceId() {
       return 0;
+    }
+
+    @Override
+    public Type getType() {
+      return cell.getType();
     }
 
     @Override
@@ -389,6 +440,21 @@ public class KeyOnlyFilter extends FilterBase {
     @Override
     public int getTagsPosition() {
       return 0;
+    }
+
+    @Override
+    public Iterator<Tag> getTags() {
+      return Collections.emptyIterator();
+    }
+
+    @Override
+    public Optional<Tag> getTag(byte type) {
+      return Optional.empty();
+    }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(FIXED_OVERHEAD + cell.heapSize());
     }
   }
 

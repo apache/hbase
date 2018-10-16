@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Create < Command
       def help
-        return <<-EOF
+        <<-EOF
 Creates a table. Pass a table name, and a set of column family
 specifications (at least one), and, optionally, table configuration.
 Column specification can be a simple string (name), or a dictionary
@@ -65,9 +65,9 @@ EOF
       def command(table, *args)
         admin.create(table, *args)
         @end_time = Time.now
-        puts "Created table " + table.to_s
+        puts 'Created table ' + table.to_s
 
-        #and then return the table just created
+        # and then return the table just created
         table(table)
       end
     end

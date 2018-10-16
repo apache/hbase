@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,39 +19,36 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.List;
+import java.lang.reflect.InvocationTargetException;
 
-import org.apache.commons.lang.ClassUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.protobuf.Service;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.MetaMutationAnnotation;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SharedConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.coprocessor.SingletonCoprocessorService;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class RegionServerCoprocessorHost extends
-    CoprocessorHost<RegionServerCoprocessorHost.RegionServerEnvironment> {
+    CoprocessorHost<RegionServerCoprocessor, RegionServerCoprocessorEnvironment> {
 
-  private static final Log LOG = LogFactory.getLog(RegionServerCoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerCoprocessorHost.class);
 
   private RegionServerServices rsServices;
 
@@ -74,314 +71,206 @@ public class RegionServerCoprocessorHost extends
   }
 
   @Override
-  public RegionServerEnvironment createEnvironment(Class<?> implClass,
-      Coprocessor instance, int priority, int sequence, Configuration conf) {
-    return new RegionServerEnvironment(implClass, instance, priority,
-      sequence, conf, this.rsServices);
+  public RegionServerEnvironment createEnvironment(
+      RegionServerCoprocessor instance, int priority, int sequence, Configuration conf) {
+    // If a CoreCoprocessor, return a 'richer' environment, one laden with RegionServerServices.
+    return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)?
+      new RegionServerEnvironmentForCoreCoprocessors(instance, priority, sequence, conf,
+            this.rsServices):
+      new RegionServerEnvironment(instance, priority, sequence, conf, this.rsServices);
   }
+
+  @Override
+  public RegionServerCoprocessor checkAndGetInstance(Class<?> implClass)
+      throws InstantiationException, IllegalAccessException {
+    try {
+      if (RegionServerCoprocessor.class.isAssignableFrom(implClass)) {
+        return implClass.asSubclass(RegionServerCoprocessor.class).getDeclaredConstructor()
+            .newInstance();
+      } else if (SingletonCoprocessorService.class.isAssignableFrom(implClass)) {
+        // For backward compatibility with old CoprocessorService impl which don't extend
+        // RegionCoprocessor.
+        SingletonCoprocessorService tmp = implClass.asSubclass(SingletonCoprocessorService.class)
+            .getDeclaredConstructor().newInstance();
+        return new CoprocessorServiceBackwardCompatiblity.RegionServerCoprocessorService(tmp);
+      } else {
+        LOG.error("{} is not of type RegionServerCoprocessor. Check the configuration of {}",
+            implClass.getName(), CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+        return null;
+      }
+    } catch (NoSuchMethodException | InvocationTargetException e) {
+      throw (InstantiationException) new InstantiationException(implClass.getName()).initCause(e);
+    }
+  }
+
+  private ObserverGetter<RegionServerCoprocessor, RegionServerObserver> rsObserverGetter =
+      RegionServerCoprocessor::getRegionServerObserver;
+
+  abstract class RegionServerObserverOperation extends
+      ObserverOperationWithoutResult<RegionServerObserver> {
+    public RegionServerObserverOperation() {
+      super(rsObserverGetter);
+    }
+
+    public RegionServerObserverOperation(User user) {
+      super(rsObserverGetter, user);
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // RegionServerObserver operations
+  //////////////////////////////////////////////////////////////////////////////////////////////////
 
   public void preStop(String message, User user) throws IOException {
     // While stopping the region server all coprocessors method should be executed first then the
     // coprocessor should be cleaned up.
-    execShutdown(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+    if (coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execShutdown(new RegionServerObserverOperation(user) {
       @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preStopRegionServer(ctx);
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preStopRegionServer(this);
       }
+
       @Override
-      public void postEnvCall(RegionServerEnvironment env) {
+      public void postEnvCall() {
         // invoke coprocessor stop method
-        shutdown(env);
-      }
-    });
-  }
-
-  public boolean preMerge(final HRegion regionA, final HRegion regionB, final User user) throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preMerge(ctx, regionA, regionB);
-      }
-    });
-  }
-
-  public void postMerge(final HRegion regionA, final HRegion regionB, final HRegion mergedRegion,
-                        final User user)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postMerge(ctx, regionA, regionB, mergedRegion);
-      }
-    });
-  }
-
-  public boolean preMergeCommit(final HRegion regionA, final HRegion regionB,
-      final @MetaMutationAnnotation List<Mutation> metaEntries, final User user)
-      throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preMergeCommit(ctx, regionA, regionB, metaEntries);
-      }
-    });
-  }
-
-  public void postMergeCommit(final HRegion regionA, final HRegion regionB,
-      final HRegion mergedRegion, final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postMergeCommit(ctx, regionA, regionB, mergedRegion);
-      }
-    });
-  }
-
-  public void preRollBackMerge(final HRegion regionA, final HRegion regionB, final User user)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preRollBackMerge(ctx, regionA, regionB);
-      }
-    });
-  }
-
-  public void postRollBackMerge(final HRegion regionA, final HRegion regionB, final User user)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
-      @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postRollBackMerge(ctx, regionA, regionB);
+        shutdown(this.getEnvironment());
       }
     });
   }
 
   public void preRollWALWriterRequest() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
       @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preRollWALWriterRequest(ctx);
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preRollWALWriterRequest(this);
       }
     });
   }
 
   public void postRollWALWriterRequest() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
       @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postRollWALWriterRequest(ctx);
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postRollWALWriterRequest(this);
       }
     });
   }
 
-  public void preReplicateLogEntries(final List<WALEntry> entries, final CellScanner cells)
+  public void preReplicateLogEntries()
       throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
       @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preReplicateLogEntries(ctx, entries, cells);
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preReplicateLogEntries(this);
       }
     });
   }
 
-  public void postReplicateLogEntries(final List<WALEntry> entries, final CellScanner cells)
+  public void postReplicateLogEntries()
       throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
       @Override
-      public void call(RegionServerObserver oserver,
-          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postReplicateLogEntries(ctx, entries, cells);
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postReplicateLogEntries(this);
       }
     });
   }
 
   public ReplicationEndpoint postCreateReplicationEndPoint(final ReplicationEndpoint endpoint)
       throws IOException {
-    return execOperationWithResult(endpoint, coprocessors.isEmpty() ? null
-        : new CoprocessOperationWithResult<ReplicationEndpoint>() {
-          @Override
-          public void call(RegionServerObserver oserver,
-              ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-            setResult(oserver.postCreateReplicationEndPoint(ctx, getResult()));
-          }
-        });
+    if (this.coprocEnvironments.isEmpty()) {
+      return endpoint;
+    }
+    return execOperationWithResult(
+        new ObserverOperationWithResult<RegionServerObserver, ReplicationEndpoint>(
+            rsObserverGetter, endpoint) {
+      @Override
+      public ReplicationEndpoint call(RegionServerObserver observer) throws IOException {
+        return observer.postCreateReplicationEndPoint(this, getResult());
+      }
+    });
   }
 
   public void preClearCompactionQueues() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
       @Override
-      public void call(RegionServerObserver oserver,
-                       ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.preClearCompactionQueues(ctx);
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preClearCompactionQueues(this);
       }
     });
   }
 
   public void postClearCompactionQueues() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
       @Override
-      public void call(RegionServerObserver oserver,
-                       ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
-        oserver.postClearCompactionQueues(ctx);
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postClearCompactionQueues(this);
       }
     });
   }
 
-  private <T> T execOperationWithResult(final T defaultValue,
-      final CoprocessOperationWithResult<T> ctx) throws IOException {
-    if (ctx == null)
-      return defaultValue;
-    ctx.setResult(defaultValue);
-    execOperation(ctx);
-    return ctx.getResult();
-  }
-
-  private static abstract class CoprocessorOperation
-      extends ObserverContext<RegionServerCoprocessorEnvironment> {
-    public CoprocessorOperation() {
-      this(RpcServer.getRequestUser());
-    }
-
-    public CoprocessorOperation(User user) {
-      super(user);
-    }
-
-    public abstract void call(RegionServerObserver oserver,
-        ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException;
-
-    public void postEnvCall(RegionServerEnvironment env) {
-    }
-  }
-
-  private static abstract class CoprocessOperationWithResult<T> extends CoprocessorOperation {
-    private T result = null;
-
-    public void setResult(final T result) {
-      this.result = result;
-    }
-
-    public T getResult() {
-      return this.result;
-    }
-  }
-
-  private boolean execOperation(final CoprocessorOperation ctx) throws IOException {
-    if (ctx == null) return false;
-    boolean bypass = false;
-    List<RegionServerEnvironment> envs = coprocessors.get();
-    for (int i = 0; i < envs.size(); i++) {
-      RegionServerEnvironment env = envs.get(i);
-      if (env.getInstance() instanceof RegionServerObserver) {
-        ctx.prepare(env);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ctx.call((RegionServerObserver)env.getInstance(), ctx);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+  public void preExecuteProcedures() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preExecuteProcedures(this);
       }
-      ctx.postEnvCall(env);
-    }
-    return bypass;
+    });
   }
 
-  /**
-   * RegionServer coprocessor classes can be configured in any order, based on that priority is set
-   * and chained in a sorted order. For preStop(), coprocessor methods are invoked in call() and
-   * environment is shutdown in postEnvCall(). <br>
-   * Need to execute all coprocessor methods first then postEnvCall(), otherwise some coprocessors
-   * may remain shutdown if any exception occurs during next coprocessor execution which prevent
-   * RegionServer stop. (Refer:
-   * <a href="https://issues.apache.org/jira/browse/HBASE-16663">HBASE-16663</a>
-   * @param ctx CoprocessorOperation
-   * @return true if bypaas coprocessor execution, false if not.
-   * @throws IOException
-   */
-  private boolean execShutdown(final CoprocessorOperation ctx) throws IOException {
-    if (ctx == null) return false;
-    boolean bypass = false;
-    List<RegionServerEnvironment> envs = coprocessors.get();
-    int envsSize = envs.size();
-    // Iterate the coprocessors and execute CoprocessorOperation's call()
-    for (int i = 0; i < envsSize; i++) {
-      RegionServerEnvironment env = envs.get(i);
-      if (env.getInstance() instanceof RegionServerObserver) {
-        ctx.prepare(env);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ctx.call((RegionServerObserver) env.getInstance(), ctx);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+  public void postExecuteProcedures() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postExecuteProcedures(this);
       }
-    }
-
-    // Iterate the coprocessors and execute CoprocessorOperation's postEnvCall()
-    for (int i = 0; i < envsSize; i++) {
-      RegionServerEnvironment env = envs.get(i);
-      ctx.postEnvCall(env);
-    }
-    return bypass;
+    });
   }
 
   /**
    * Coprocessor environment extension providing access to region server
    * related services.
    */
-  static class RegionServerEnvironment extends CoprocessorHost.Environment
+  private static class RegionServerEnvironment extends BaseEnvironment<RegionServerCoprocessor>
       implements RegionServerCoprocessorEnvironment {
-    private final RegionServerServices regionServerServices;
     private final MetricRegistry metricRegistry;
+    private final RegionServerServices services;
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BC_UNCONFIRMED_CAST",
         justification="Intentional; FB has trouble detecting isAssignableFrom")
-    public RegionServerEnvironment(final Class<?> implClass,
-        final Coprocessor impl, final int priority, final int seq,
-        final Configuration conf, final RegionServerServices services) {
+    public RegionServerEnvironment(final RegionServerCoprocessor impl, final int priority,
+        final int seq, final Configuration conf, final RegionServerServices services) {
       super(impl, priority, seq, conf);
-      this.regionServerServices = services;
-      for (Object itf : ClassUtils.getAllInterfaces(implClass)) {
-        Class<?> c = (Class<?>) itf;
-        if (SingletonCoprocessorService.class.isAssignableFrom(c)) {// FindBugs: BC_UNCONFIRMED_CAST
-          this.regionServerServices.registerService(
-            ((SingletonCoprocessorService) impl).getService());
-          break;
-        }
+      // If coprocessor exposes any services, register them.
+      for (Service service : impl.getServices()) {
+        services.registerService(service);
       }
+      this.services = services;
       this.metricRegistry =
-          MetricsCoprocessor.createRegistryForRSCoprocessor(implClass.getName());
+          MetricsCoprocessor.createRegistryForRSCoprocessor(impl.getClass().getName());
     }
 
     @Override
-    public RegionServerServices getRegionServerServices() {
-      return regionServerServices;
+    public OnlineRegions getOnlineRegions() {
+      return this.services;
+    }
+
+    @Override
+    public ServerName getServerName() {
+      return this.services.getServerName();
+    }
+
+    @Override
+    public Connection getConnection() {
+      return new SharedConnection(this.services.getConnection());
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
+      return this.services.createConnection(conf);
     }
 
     @Override
@@ -390,32 +279,34 @@ public class RegionServerCoprocessorHost extends
     }
 
     @Override
-    protected void shutdown() {
+    public void shutdown() {
       super.shutdown();
       MetricsCoprocessor.removeRegistry(metricRegistry);
     }
   }
 
   /**
-   * Environment priority comparator. Coprocessors are chained in sorted
-   * order.
+   * Special version of RegionServerEnvironment that exposes RegionServerServices for Core
+   * Coprocessors only. Temporary hack until Core Coprocessors are integrated into Core.
    */
-  static class EnvironmentPriorityComparator implements
-      Comparator<CoprocessorEnvironment> {
+  private static class RegionServerEnvironmentForCoreCoprocessors extends RegionServerEnvironment
+      implements HasRegionServerServices {
+    final RegionServerServices regionServerServices;
+
+    public RegionServerEnvironmentForCoreCoprocessors(final RegionServerCoprocessor impl,
+          final int priority, final int seq, final Configuration conf,
+          final RegionServerServices services) {
+       super(impl, priority, seq, conf, services);
+       this.regionServerServices = services;
+    }
+
+    /**
+     * @return An instance of RegionServerServices, an object NOT for general user-space Coprocessor
+     * consumption.
+     */
     @Override
-    public int compare(final CoprocessorEnvironment env1,
-        final CoprocessorEnvironment env2) {
-      if (env1.getPriority() < env2.getPriority()) {
-        return -1;
-      } else if (env1.getPriority() > env2.getPriority()) {
-        return 1;
-      }
-      if (env1.getLoadSequence() < env2.getLoadSequence()) {
-        return -1;
-      } else if (env1.getLoadSequence() > env2.getLoadSequence()) {
-        return 1;
-      }
-      return 0;
+    public RegionServerServices getRegionServerServices() {
+      return this.regionServerServices;
     }
   }
 }

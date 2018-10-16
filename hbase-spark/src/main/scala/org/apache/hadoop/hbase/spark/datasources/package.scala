@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.util.Bytes
 
 import scala.math.Ordering
 
+// TODO: add @InterfaceAudience.Private if https://issues.scala-lang.org/browse/SI-3600 is resolved
 package object hbase {
   type HBaseType = Array[Byte]
   def bytesMin = new Array[Byte](0)

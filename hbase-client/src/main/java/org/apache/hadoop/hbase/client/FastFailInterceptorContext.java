@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 class FastFailInterceptorContext extends RetryingCallerInterceptorContext {
@@ -107,6 +107,7 @@ class FastFailInterceptorContext extends RetryingCallerInterceptorContext {
     this.tries = tries;
   }
 
+  @Override
   public void clear() {
     server = null;
     fInfo = null;
@@ -117,10 +118,12 @@ class FastFailInterceptorContext extends RetryingCallerInterceptorContext {
     tries = 0;
   }
 
+  @Override
   public FastFailInterceptorContext prepare(RetryingCallable<?> callable) {
     return prepare(callable, 0);
   }
 
+  @Override
   public FastFailInterceptorContext prepare(RetryingCallable<?> callable, int tries) {
     if (callable instanceof RegionServerCallable) {
       RegionServerCallable<?, ?> retryingCallable = (RegionServerCallable<?, ?>) callable;

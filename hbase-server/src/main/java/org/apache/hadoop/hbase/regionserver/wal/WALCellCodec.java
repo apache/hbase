@@ -26,9 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -44,7 +45,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.IOUtils;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 
 /**
@@ -61,12 +63,6 @@ public class WALCellCodec implements Codec {
   public static final String WAL_CELL_CODEC_CLASS_KEY = "hbase.regionserver.wal.codec";
 
   protected final CompressionContext compression;
-  protected final ByteStringUncompressor statelessUncompressor = new ByteStringUncompressor() {
-    @Override
-    public byte[] uncompress(ByteString data, Dictionary dict) throws IOException {
-      return WALCellCodec.uncompressByteString(data, dict);
-    }
-  };
 
   /**
    * <b>All subclasses must implement a no argument constructor</b>
@@ -131,17 +127,32 @@ public class WALCellCodec implements Codec {
   }
 
   public interface ByteStringCompressor {
-    ByteString compress(byte[] data, Dictionary dict) throws IOException;
+    ByteString compress(byte[] data, Enum dictIndex) throws IOException;
   }
 
   public interface ByteStringUncompressor {
-    byte[] uncompress(ByteString data, Dictionary dict) throws IOException;
+    byte[] uncompress(ByteString data, Enum dictIndex) throws IOException;
   }
 
-  // TODO: it sucks that compression context is in WAL.Entry. It'd be nice if it was here.
-  //       Dictionary could be gotten by enum; initially, based on enum, context would create
-  //       an array of dictionaries.
+  static class StatelessUncompressor implements ByteStringUncompressor {
+    CompressionContext compressionContext;
+
+    public StatelessUncompressor(CompressionContext compressionContext) {
+      this.compressionContext = compressionContext;
+    }
+
+    @Override
+    public byte[] uncompress(ByteString data, Enum dictIndex) throws IOException {
+      return WALCellCodec.uncompressByteString(data, compressionContext.getDictionary(dictIndex));
+    }
+  }
+
   static class BaosAndCompressor extends ByteArrayOutputStream implements ByteStringCompressor {
+    private CompressionContext compressionContext;
+
+    public BaosAndCompressor(CompressionContext compressionContext) {
+      this.compressionContext = compressionContext;
+    }
     public ByteString toByteString() {
       // We need this copy to create the ByteString as the byte[] 'buf' is not immutable. We reuse
       // them.
@@ -149,8 +160,8 @@ public class WALCellCodec implements Codec {
     }
 
     @Override
-    public ByteString compress(byte[] data, Dictionary dict) throws IOException {
-      writeCompressed(data, dict);
+    public ByteString compress(byte[] data, Enum dictIndex) throws IOException {
+      writeCompressed(data, dictIndex);
       // We need this copy to create the ByteString as the byte[] 'buf' is not immutable. We reuse
       // them.
       ByteString result = ByteString.copyFrom(this.buf, 0, this.count);
@@ -158,7 +169,8 @@ public class WALCellCodec implements Codec {
       return result;
     }
 
-    private void writeCompressed(byte[] data, Dictionary dict) throws IOException {
+    private void writeCompressed(byte[] data, Enum dictIndex) throws IOException {
+      Dictionary dict = compressionContext.getDictionary(dictIndex);
       assert dict != null;
       short dictIdx = dict.findEntry(data, 0, data.length);
       if (dictIdx == Dictionary.NOT_IN_DICTIONARY) {
@@ -168,6 +180,22 @@ public class WALCellCodec implements Codec {
       } else {
         StreamUtils.writeShort(this, dictIdx);
       }
+    }
+  }
+
+  static class NoneCompressor implements ByteStringCompressor {
+
+    @Override
+    public ByteString compress(byte[] data, Enum dictIndex) {
+      return UnsafeByteOperations.unsafeWrap(data);
+    }
+  }
+
+  static class NoneUncompressor implements ByteStringUncompressor {
+
+    @Override
+    public byte[] uncompress(ByteString data, Enum dictIndex) {
+      return data.toByteArray();
     }
   }
 
@@ -208,21 +236,24 @@ public class WALCellCodec implements Codec {
       // To support tags
       int tagsLength = cell.getTagsLength();
       StreamUtils.writeRawVInt32(out, tagsLength);
-      CellUtil.compressRow(out, cell, compression.rowDict);
-      CellUtil.compressFamily(out, cell, compression.familyDict);
-      CellUtil.compressQualifier(out, cell, compression.qualifierDict);
+      PrivateCellUtil.compressRow(out, cell,
+        compression.getDictionary(CompressionContext.DictionaryIndex.ROW));
+      PrivateCellUtil.compressFamily(out, cell,
+        compression.getDictionary(CompressionContext.DictionaryIndex.FAMILY));
+      PrivateCellUtil.compressQualifier(out, cell,
+        compression.getDictionary(CompressionContext.DictionaryIndex.QUALIFIER));
       // Write timestamp, type and value as uncompressed.
       StreamUtils.writeLong(out, cell.getTimestamp());
       out.write(cell.getTypeByte());
-      CellUtil.writeValue(out, cell, cell.getValueLength());
+      PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
       if (tagsLength > 0) {
         if (compression.tagCompressionContext != null) {
           // Write tags using Dictionary compression
-          CellUtil.compressTags(out, cell, compression.tagCompressionContext);
+          PrivateCellUtil.compressTags(out, cell, compression.tagCompressionContext);
         } else {
           // Tag compression is disabled within the WAL compression. Just write the tags bytes as
           // it is.
-          CellUtil.writeTags(out, cell, tagsLength);
+          PrivateCellUtil.writeTags(out, cell, tagsLength);
         }
       }
     }
@@ -254,19 +285,22 @@ public class WALCellCodec implements Codec {
       pos = Bytes.putInt(backingArray, pos, vlength);
 
       // the row
-      int elemLen = readIntoArray(backingArray, pos + Bytes.SIZEOF_SHORT, compression.rowDict);
+      int elemLen = readIntoArray(backingArray, pos + Bytes.SIZEOF_SHORT,
+        compression.getDictionary(CompressionContext.DictionaryIndex.ROW));
       checkLength(elemLen, Short.MAX_VALUE);
       pos = Bytes.putShort(backingArray, pos, (short)elemLen);
       pos += elemLen;
 
       // family
-      elemLen = readIntoArray(backingArray, pos + Bytes.SIZEOF_BYTE, compression.familyDict);
+      elemLen = readIntoArray(backingArray, pos + Bytes.SIZEOF_BYTE,
+        compression.getDictionary(CompressionContext.DictionaryIndex.FAMILY));
       checkLength(elemLen, Byte.MAX_VALUE);
       pos = Bytes.putByte(backingArray, pos, (byte)elemLen);
       pos += elemLen;
 
       // qualifier
-      elemLen = readIntoArray(backingArray, pos, compression.qualifierDict);
+      elemLen = readIntoArray(backingArray, pos,
+        compression.getDictionary(CompressionContext.DictionaryIndex.QUALIFIER));
       pos += elemLen;
 
       // timestamp, type and value
@@ -353,12 +387,18 @@ public class WALCellCodec implements Codec {
   }
 
   public ByteStringCompressor getByteStringCompressor() {
-    // TODO: ideally this should also encapsulate compressionContext
-    return new BaosAndCompressor();
+    return new BaosAndCompressor(compression);
   }
 
   public ByteStringUncompressor getByteStringUncompressor() {
-    // TODO: ideally this should also encapsulate compressionContext
-    return this.statelessUncompressor;
+    return new StatelessUncompressor(compression);
+  }
+
+  public static ByteStringCompressor getNoneCompressor() {
+    return new NoneCompressor();
+  }
+
+  public static ByteStringUncompressor getNoneUncompressor() {
+    return new NoneUncompressor();
   }
 }

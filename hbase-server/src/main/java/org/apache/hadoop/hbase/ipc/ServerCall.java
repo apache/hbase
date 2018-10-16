@@ -22,19 +22,20 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeade
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.TraceInfo;
 
 /**
  * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -78,11 +78,10 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
 
   protected final long size;                          // size of current call
   protected boolean isError;
-  protected final TraceInfo tinfo;
   protected ByteBufferListOutputStream cellBlockStream = null;
   protected CallCleanup reqCleanup = null;
 
-  protected User user;
+  protected final User user;
   protected final InetAddress remoteAddress;
   protected RpcCallback rpcCallback;
 
@@ -95,7 +94,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
       justification="Can't figure why this complaint is happening... see below")
   ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
-      Message param, CellScanner cellScanner, T connection, long size, TraceInfo tinfo,
+      Message param, CellScanner cellScanner, T connection, long size,
       InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
       CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     this.id = id;
@@ -109,11 +108,14 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
     this.response = null;
     this.isError = false;
     this.size = size;
-    this.tinfo = tinfo;
-    this.user = connection == null ? null : connection.user; // FindBugs: NP_NULL_ON_SOME_PATH
+    if (connection != null) {
+      this.user =  connection.user;
+      this.retryImmediatelySupported = connection.retryImmediatelySupported;
+    } else {
+      this.user = null;
+      this.retryImmediatelySupported = false;
+    }
     this.remoteAddress = remoteAddress;
-    this.retryImmediatelySupported =
-        connection == null ? false : connection.retryImmediatelySupported;
     this.timeout = timeout;
     this.deadline = this.timeout > 0 ? this.receiveTime + this.timeout : Long.MAX_VALUE;
     this.reservoir = reservoir;
@@ -432,14 +434,8 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   }
 
   @Override
-  public User getRequestUser() {
-    return user;
-  }
-
-  @Override
-  public String getRequestUserName() {
-    User user = getRequestUser();
-    return user == null? null: user.getShortName();
+  public Optional<User> getRequestUser() {
+    return Optional.ofNullable(user);
   }
 
   @Override
@@ -505,11 +501,6 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   @Override
   public int getRemotePort() {
     return connection.getRemotePort();
-  }
-
-  @Override
-  public TraceInfo getTraceInfo() {
-    return tinfo;
   }
 
   @Override

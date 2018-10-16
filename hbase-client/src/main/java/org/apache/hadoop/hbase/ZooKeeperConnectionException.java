@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown if the client can't connect to zookeeper
  */
 @InterfaceAudience.Public
 public class ZooKeeperConnectionException extends IOException {
-  private static final long serialVersionUID = 1L << 23 - 1L;
+  private static final long serialVersionUID = (1L << 23) - 1L;
   /** default constructor */
   public ZooKeeperConnectionException() {
     super();

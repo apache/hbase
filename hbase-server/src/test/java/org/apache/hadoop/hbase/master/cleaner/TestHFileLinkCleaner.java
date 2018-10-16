@@ -22,32 +22,32 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 
 /**
  * Test the HFileLink Cleaner.
@@ -55,8 +55,10 @@ import org.junit.rules.TestRule;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestHFileLinkCleaner {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileLinkCleaner.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -106,6 +108,7 @@ public class TestHFileLinkCleaner {
     final long ttl = 1000;
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
+    CleanerChore.initChorePool(conf);
     HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archiveDir);
 
     // Link backref cannot be removed
@@ -146,9 +149,9 @@ public class TestHFileLinkCleaner {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       try {
-        return new ZooKeeperWatcher(getConfiguration(), "dummy server", this);
+        return new ZKWatcher(getConfiguration(), "dummy server", this);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -199,6 +202,21 @@ public class TestHFileLinkCleaner {
     @Override
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
       return null;
     }
   }

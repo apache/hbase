@@ -27,11 +27,11 @@
 :icons: font
 :experimental:
 
-This is the official reference guide for the link:http://hbase.apache.org/[HBase] version it ships with.
+This is the official reference guide for the link:https://hbase.apache.org/[HBase] version it ships with.
 
 Herein you will find either the definitive documentation on an HBase topic as of its
 standing when the referenced HBase version shipped, or it will point to the location
-in link:http://hbase.apache.org/apidocs/index.html[Javadoc] or
+in link:https://hbase.apache.org/apidocs/index.html[Javadoc] or
 link:https://issues.apache.org/jira/browse/HBASE[JIRA] where the pertinent information can be found.
 
 .About This Guide
@@ -68,7 +68,7 @@ Yours, the HBase Community.
 
 Please use link:https://issues.apache.org/jira/browse/hbase[JIRA] to report non-security-related bugs.
 
-To protect existing HBase installations from new vulnerabilities, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
+To protect existing HBase installations from new vulnerabilities, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@hbase.apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
 
 [[hbase_supported_tested_definitions]]
 .Support and Testing Expectations
@@ -99,7 +99,7 @@ Tested::
 
 Not Tested::
   In the context of Apache HBase, /not tested/ means that a feature or use pattern
-  may or may notwork in a given way, and may or may not corrupt your data or cause
+  may or may not work in a given way, and may or may not corrupt your data or cause
   operational issues. It is an unknown, and there are no guarantees. If you can provide
   proof that a feature designated as /not tested/ does work in a given way, please
   submit the tests and/or the metrics so that other users can gain certainty about

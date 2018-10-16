@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.exceptions;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Exception thrown when a blocking operation times out.

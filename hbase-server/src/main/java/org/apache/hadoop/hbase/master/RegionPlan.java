@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.master;
 import java.io.Serializable;
 import java.util.Comparator;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Stores the plan for the move of an individual region.
@@ -38,20 +38,16 @@ import org.apache.hadoop.hbase.ServerName;
 @InterfaceAudience.LimitedPrivate("Coprocessors")
 @InterfaceStability.Evolving
 public class RegionPlan implements Comparable<RegionPlan> {
-  private final HRegionInfo hri;
+  private final RegionInfo hri;
   private final ServerName source;
   private ServerName dest;
 
   public static class RegionPlanComparator implements Comparator<RegionPlan>, Serializable {
-
     private static final long serialVersionUID = 4213207330485734853L;
 
     @Override
     public int compare(RegionPlan l, RegionPlan r) {
-      long diff = r.getRegionInfo().getRegionId() - l.getRegionInfo().getRegionId();
-      if (diff < 0) return -1;
-      if (diff > 0) return 1;
-      return 0;
+      return RegionPlan.compareTo(l, r);
     }
   }
 
@@ -66,7 +62,7 @@ public class RegionPlan implements Comparable<RegionPlan> {
    * @param source regionserver region should be moved from
    * @param dest regionserver region should be moved to
    */
-  public RegionPlan(final HRegionInfo hri, ServerName source, ServerName dest) {
+  public RegionPlan(final RegionInfo hri, ServerName source, ServerName dest) {
     this.hri = hri;
     this.source = source;
     this.dest = dest;
@@ -103,22 +99,56 @@ public class RegionPlan implements Comparable<RegionPlan> {
     return this.hri.getEncodedName();
   }
 
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return this.hri;
   }
 
   /**
    * Compare the region info.
-   * @param o region plan you are comparing against
+   * @param other region plan you are comparing against
    */
   @Override
-  public int compareTo(RegionPlan o) {
-    return getRegionName().compareTo(o.getRegionName());
+  public int compareTo(RegionPlan other) {
+    return compareTo(this, other);
+  }
+
+  private static int compareTo(RegionPlan left, RegionPlan right) {
+    int result = compareServerName(left.source, right.source);
+    if (result != 0) {
+      return result;
+    }
+    if (left.hri == null) {
+      if (right.hri != null) {
+        return -1;
+      }
+    } else if (right.hri == null) {
+      return +1;
+    } else {
+      result = RegionInfo.COMPARATOR.compare(left.hri, right.hri);
+    }
+    if (result != 0) {
+      return result;
+    }
+    return compareServerName(left.dest, right.dest);
+  }
+
+  private static int compareServerName(ServerName left, ServerName right) {
+    if (left == null) {
+      return right == null? 0: -1;
+    } else if (right == null) {
+      return +1;
+    }
+    return left.compareTo(right);
   }
 
   @Override
   public int hashCode() {
-    return getRegionName().hashCode();
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((dest == null) ? 0 : dest.hashCode());
+    result = prime * result + ((hri == null) ? 0 : hri.hashCode());
+    result = prime * result + ((source == null) ? 0 : source.hashCode());
+    return result;
   }
 
   @Override
@@ -126,16 +156,40 @@ public class RegionPlan implements Comparable<RegionPlan> {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
       return false;
     }
     RegionPlan other = (RegionPlan) obj;
-    return compareTo(other) == 0;
+    if (dest == null) {
+      if (other.dest != null) {
+        return false;
+      }
+    } else if (!dest.equals(other.dest)) {
+      return false;
+    }
+    if (hri == null) {
+      if (other.hri != null) {
+        return false;
+      }
+    } else if (!hri.equals(other.hri)) {
+      return false;
+    }
+    if (source == null) {
+      if (other.source != null) {
+        return false;
+      }
+    } else if (!source.equals(other.source)) {
+      return false;
+    }
+    return true;
   }
 
   @Override
   public String toString() {
-    return "hri=" + this.hri.getRegionNameAsString() + ", source=" +
+    return "hri=" + this.hri.getEncodedName() + ", source=" +
       (this.source == null? "": this.source.toString()) +
       ", destination=" + (this.dest == null? "": this.dest.toString());
   }

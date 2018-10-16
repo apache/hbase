@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * MobStoreEngine creates the mob specific compactor, and store flusher.
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 public class MobStoreEngine extends DefaultStoreEngine {
 
   @Override
-  protected void createStoreFlusher(Configuration conf, Store store) throws IOException {
+  protected void createStoreFlusher(Configuration conf, HStore store) throws IOException {
     // When using MOB, we use DefaultMobStoreFlusher always
     // Just use the compactor and compaction policy as that in DefaultStoreEngine. We can have MOB
     // specific compactor and policy when that is implemented.
@@ -42,7 +42,7 @@ public class MobStoreEngine extends DefaultStoreEngine {
    * Creates the DefaultMobCompactor.
    */
   @Override
-  protected void createCompactor(Configuration conf, Store store) throws IOException {
+  protected void createCompactor(Configuration conf, HStore store) throws IOException {
     compactor = new DefaultMobStoreCompactor(conf, store);
   }
 }

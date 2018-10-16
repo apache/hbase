@@ -15,13 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 /**
  * Class to create list of mock storefiles of specified length.
@@ -53,8 +52,8 @@ class ExplicitFileListGenerator extends StoreFileListGenerator {
   }
 
   @Override
-  public final Iterator<List<StoreFile>> iterator() {
-    return new Iterator<List<StoreFile>>() {
+  public final Iterator<List<HStoreFile>> iterator() {
+    return new Iterator<List<HStoreFile>>() {
       private int nextIndex = 0;
       @Override
       public boolean hasNext() {
@@ -62,8 +61,8 @@ class ExplicitFileListGenerator extends StoreFileListGenerator {
       }
 
       @Override
-      public List<StoreFile> next() {
-        List<StoreFile> files =  createStoreFileList(fileSizes[nextIndex]);
+      public List<HStoreFile> next() {
+        List<HStoreFile> files =  createStoreFileList(fileSizes[nextIndex]);
         nextIndex += 1;
         return files;
       }

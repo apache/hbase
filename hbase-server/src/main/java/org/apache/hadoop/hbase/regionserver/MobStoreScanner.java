@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Scanner scans both the memstore and the MOB Store. Coalesce KeyValue stream into
@@ -39,7 +39,7 @@ public class MobStoreScanner extends StoreScanner {
   private boolean readEmptyValueOnMobCellMiss = false;
   private final HMobStore mobStore;
 
-  public MobStoreScanner(Store store, ScanInfo scanInfo, Scan scan,
+  public MobStoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
       final NavigableSet<byte[]> columns, long readPt) throws IOException {
     super(store, scanInfo, scan, columns, readPt);
     cacheMobBlocks = MobUtils.isCacheMobBlocks(scan);

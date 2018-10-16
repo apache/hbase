@@ -17,40 +17,46 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-
-import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
-import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.quotas.ThrottlingException;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+
 @Category({MediumTests.class, ClientTests.class})
 public class TestMetaCache {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetaCache.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("test_table");
   private static final byte[] FAMILY = Bytes.toBytes("fam1");
@@ -103,7 +109,7 @@ public class TestMetaCache {
       put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(10));
       Get get = new Get(row);
       Append append = new Append(row);
-      append.add(FAMILY, QUALIFIER, Bytes.toBytes(11));
+      append.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(11));
       Increment increment = new Increment(row);
       increment.addColumn(FAMILY, QUALIFIER, 10);
       Delete delete = new Delete(row);
@@ -187,21 +193,21 @@ public class TestMetaCache {
 
   public static List<Throwable> metaCachePreservingExceptions() {
     return new ArrayList<Throwable>() {{
-      add(new RegionOpeningException(" "));
-      add(new RegionTooBusyException());
-      add(new ThrottlingException(" "));
-      add(new MultiActionResultTooLarge(" "));
-      add(new RetryImmediatelyException(" "));
-      add(new CallQueueTooBigException());
+        add(new RegionOpeningException(" "));
+        add(new RegionTooBusyException("Some old message"));
+        add(new RpcThrottlingException(" "));
+        add(new MultiActionResultTooLarge(" "));
+        add(new RetryImmediatelyException(" "));
+        add(new CallQueueTooBigException());
     }};
   }
 
   public static class RegionServerWithFakeRpcServices extends HRegionServer {
     private FakeRSRpcServices rsRpcServices;
 
-    public RegionServerWithFakeRpcServices(Configuration conf, CoordinatedStateManager cp)
+    public RegionServerWithFakeRpcServices(Configuration conf)
       throws IOException, InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     @Override
@@ -248,11 +254,6 @@ public class TestMetaCache {
       exceptions.throwOnScan(this, request);
       return super.scan(controller, request);
     }
-
-    public Region getRegion(
-        final HBaseProtos.RegionSpecifier regionSpecifier) throws IOException {
-      return super.getRegion(regionSpecifier);
-    }
   }
 
   public static abstract class ExceptionInjector {
@@ -260,7 +261,7 @@ public class TestMetaCache {
                                   HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
       try {
         return TABLE_NAME.equals(
-            rpcServices.getRegion(regionSpec).getTableDesc().getTableName());
+            rpcServices.getRegion(regionSpec).getTableDescriptor().getTableName());
       } catch (IOException ioe) {
         throw new ServiceException(ioe);
       }
@@ -285,16 +286,19 @@ public class TestMetaCache {
     private int expCount = -1;
     private List<Throwable> metaCachePreservingExceptions = metaCachePreservingExceptions();
 
+    @Override
     public void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request)
         throws ServiceException {
       throwSomeExceptions(rpcServices, request.getRegion());
     }
 
+    @Override
     public void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request)
         throws ServiceException {
       throwSomeExceptions(rpcServices, request.getRegion());
     }
 
+    @Override
     public void throwOnScan(FakeRSRpcServices rpcServices, ClientProtos.ScanRequest request)
         throws ServiceException {
       if (!request.hasScannerId()) {

@@ -26,15 +26,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
@@ -43,9 +39,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A Protobuf based WAL has the following structure:
@@ -61,7 +62,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
   HBaseInterfaceAudience.CONFIG})
 public class ProtobufLogReader extends ReaderBase {
-  private static final Log LOG = LogFactory.getLog(ProtobufLogReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufLogReader.class);
   // public for WALFactory until we move everything to o.a.h.h.wal
   @InterfaceAudience.Private
   public static final byte[] PB_WAL_MAGIC = Bytes.toBytes("PWAL");
@@ -101,10 +102,12 @@ public class ProtobufLogReader extends ReaderBase {
   public long trailerSize() {
     if (trailerPresent) {
       // sizeof PB_WAL_COMPLETE_MAGIC + sizof trailerSize + trailer
-      final long calculatedSize = PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT + trailer.getSerializedSize();
+      final long calculatedSize = (long) PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT
+          + trailer.getSerializedSize();
       final long expectedSize = fileLength - walEditsStopOffset;
       if (expectedSize != calculatedSize) {
-        LOG.warn("After parsing the trailer, we expect the total footer to be "+ expectedSize +" bytes, but we calculate it as being " + calculatedSize);
+        LOG.warn("After parsing the trailer, we expect the total footer to be {} bytes, but we "
+            + "calculate it as being {}", expectedSize, calculatedSize);
       }
       return expectedSize;
     } else {
@@ -309,6 +312,8 @@ public class ProtobufLogReader extends ReaderBase {
     this.cellDecoder = codec.getDecoder(this.inputStream);
     if (this.hasCompression) {
       this.byteStringUncompressor = codec.getByteStringUncompressor();
+    } else {
+      this.byteStringUncompressor = WALCellCodec.getNoneUncompressor();
     }
   }
 
@@ -350,7 +355,7 @@ public class ProtobufLogReader extends ReaderBase {
                 "inputStream.available()= " + this.inputStream.available() + ", " +
                 "entry size= " + size + " at offset = " + this.inputStream.getPos());
           }
-          ProtobufUtil.mergeFrom(builder, new LimitInputStream(this.inputStream, size),
+          ProtobufUtil.mergeFrom(builder, ByteStreams.limit(this.inputStream, size),
             (int)size);
         } catch (InvalidProtocolBufferException ipbe) {
           throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition=" +
@@ -367,7 +372,8 @@ public class ProtobufLogReader extends ReaderBase {
         entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
         if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset=" + this.inputStream.getPos());
+            LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset=" +
+                this.inputStream.getPos());
           }
           continue;
         }

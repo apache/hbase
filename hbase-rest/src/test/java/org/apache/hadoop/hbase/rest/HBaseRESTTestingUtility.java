@@ -18,12 +18,11 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.util.HttpServerUtil;
+import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.util.StringUtils;
 
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -32,18 +31,19 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
 
-import org.glassfish.jersey.jackson1.Jackson1Feature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.DispatcherType;
+import java.util.Arrays;
 import java.util.EnumSet;
 
 public class HBaseRESTTestingUtility {
 
-  private static final Log LOG = LogFactory.getLog(HBaseRESTTestingUtility.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseRESTTestingUtility.class);
 
   private int testServletPort;
   private Server server;
@@ -63,7 +63,7 @@ public class HBaseRESTTestingUtility {
 
     // set up the Jersey servlet container for Jetty
     ResourceConfig app = new ResourceConfig().
-        packages("org.apache.hadoop.hbase.rest").register(Jackson1Feature.class);
+        packages("org.apache.hadoop.hbase.rest").register(JacksonJaxbJsonProvider.class);
     ServletHolder sh = new ServletHolder(new ServletContainer(app));
 
     // set up Jetty and run the embedded server
@@ -88,19 +88,19 @@ public class HBaseRESTTestingUtility {
       filter = filter.trim();
       ctxHandler.addFilter(filter, "/*", EnumSet.of(DispatcherType.REQUEST));
     }
-    LOG.info("Loaded filter classes :" + filterClasses);
+    LOG.info("Loaded filter classes :" + Arrays.toString(filterClasses));
 
     conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
     RESTServer.addCSRFFilter(ctxHandler, conf);
 
-    HttpServerUtil.constrainHttpMethods(ctxHandler);
+    HttpServerUtil.constrainHttpMethods(ctxHandler, true);
 
     // start the server
     server.start();
     // get the port
     testServletPort = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
 
-    LOG.info("started " + server.getClass().getName() + " on port " + 
+    LOG.info("started " + server.getClass().getName() + " on port " +
       testServletPort);
   }
 

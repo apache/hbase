@@ -18,20 +18,23 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-
+import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utilty for aggregating counts in CachedBlocks and toString/toJSON CachedBlocks and BlockCaches.
@@ -40,6 +43,7 @@ import org.codehaus.jackson.map.SerializationConfig;
 @InterfaceAudience.Private
 public class BlockCacheUtil {
 
+  private static final Logger LOG = LoggerFactory.getLogger(BlockCacheUtil.class);
 
   public static final long NANOS_PER_SECOND = 1000000000;
 
@@ -48,9 +52,9 @@ public class BlockCacheUtil {
    */
   private static final ObjectMapper MAPPER = new ObjectMapper();
   static {
-    MAPPER.configure(SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false);
-    MAPPER.configure(SerializationConfig.Feature.FLUSH_AFTER_WRITE_VALUE, true);
-    MAPPER.configure(SerializationConfig.Feature.INDENT_OUTPUT, true);
+    MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    MAPPER.configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, true);
+    MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
   }
 
   /**
@@ -170,6 +174,79 @@ public class BlockCacheUtil {
       if (cbsbf.update(cb)) break;
     }
     return cbsbf;
+  }
+
+  private static int compareCacheBlock(Cacheable left, Cacheable right,
+                                       boolean includeNextBlockMetadata) {
+    ByteBuffer l = ByteBuffer.allocate(left.getSerializedLength());
+    left.serialize(l, includeNextBlockMetadata);
+    ByteBuffer r = ByteBuffer.allocate(right.getSerializedLength());
+    right.serialize(r, includeNextBlockMetadata);
+    return Bytes.compareTo(l.array(), l.arrayOffset(), l.limit(),
+	      r.array(), r.arrayOffset(), r.limit());
+  }
+
+  /**
+   * Validate that the existing and newBlock are the same without including the nextBlockMetadata,
+   * if not, throw an exception. If they are the same without the nextBlockMetadata,
+   * return the comparison.
+   *
+   * @param existing block that is existing in the cache.
+   * @param newBlock block that is trying to be cached.
+   * @param cacheKey the cache key of the blocks.
+   * @return comparison of the existing block to the newBlock.
+   */
+  public static int validateBlockAddition(Cacheable existing, Cacheable newBlock,
+                                          BlockCacheKey cacheKey) {
+    int comparison = compareCacheBlock(existing, newBlock, false);
+    if (comparison != 0) {
+      throw new RuntimeException("Cached block contents differ, which should not have happened."
+                                 + "cacheKey:" + cacheKey);
+    }
+    if ((existing instanceof HFileBlock) && (newBlock instanceof HFileBlock)) {
+      comparison = ((HFileBlock) existing).getNextBlockOnDiskSize()
+          - ((HFileBlock) newBlock).getNextBlockOnDiskSize();
+    }
+    return comparison;
+  }
+
+  /**
+   * Because of the region splitting, it's possible that the split key locate in the middle of a
+   * block. So it's possible that both the daughter regions load the same block from their parent
+   * HFile. When pread, we don't force the read to read all of the next block header. So when two
+   * threads try to cache the same block, it's possible that one thread read all of the next block
+   * header but the other one didn't. if the already cached block hasn't next block header but the
+   * new block to cache has, then we can replace the existing block with the new block for better
+   * performance.(HBASE-20447)
+   * @param blockCache BlockCache to check
+   * @param cacheKey the block cache key
+   * @param newBlock the new block which try to put into the block cache.
+   * @return true means need to replace existing block with new block for the same block cache key.
+   *         false means just keep the existing block.
+   */
+  public static boolean shouldReplaceExistingCacheBlock(BlockCache blockCache,
+      BlockCacheKey cacheKey, Cacheable newBlock) {
+    Cacheable existingBlock = blockCache.getBlock(cacheKey, false, false, false);
+    try {
+      int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, newBlock, cacheKey);
+      if (comparison < 0) {
+        LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the new block has "
+            + "nextBlockOnDiskSize set. Caching new block.");
+        return true;
+      } else if (comparison > 0) {
+        LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the existing block has "
+            + "nextBlockOnDiskSize set, Keeping cached block.");
+        return false;
+      } else {
+        LOG.warn("Caching an already cached block: {}. This is harmless and can happen in rare "
+            + "cases (see HBASE-8547)",
+          cacheKey);
+        return false;
+      }
+    } finally {
+      // return the block since we need to decrement the count
+      blockCache.returnBlock(cacheKey, existingBlock);
+    }
   }
 
   /**

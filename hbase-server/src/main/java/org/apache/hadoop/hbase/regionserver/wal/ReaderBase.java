@@ -21,24 +21,23 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
-  private static final Log LOG = LogFactory.getLog(ReaderBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReaderBase.class);
   protected Configuration conf;
   protected FileSystem fs;
   protected Path path;
@@ -91,17 +90,14 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
   public Entry next(Entry reuse) throws IOException {
     Entry e = reuse;
     if (e == null) {
-      e = new Entry(new WALKey(), new WALEdit());
-    }
-    if (compressionContext != null) {
-      e.setCompressionContext(compressionContext);
+      e = new Entry();
     }
 
     boolean hasEntry = false;
     try {
       hasEntry = readNext(e);
     } catch (IllegalArgumentException iae) {
-      TableName tableName = e.getKey().getTablename();
+      TableName tableName = e.getKey().getTableName();
       if (tableName != null && tableName.equals(TableName.OLD_ROOT_TABLE_NAME)) {
         // It is old ROOT table edit, ignore it
         LOG.info("Got an old ROOT edit, ignoring ");
@@ -140,7 +136,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
    * Initializes the compression after the shared stuff has been initialized. Called once.
    */
   protected abstract void initAfterCompression() throws IOException;
-  
+
   /**
    * Initializes the compression after the shared stuff has been initialized. Called once.
    * @param cellCodecClsName class name of cell Codec

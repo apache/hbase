@@ -39,8 +39,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,6 +49,8 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A helper class for process-based mini-cluster tests. Unlike
@@ -69,11 +69,11 @@ public class ProcessBasedLocalHBaseCluster {
 
   private static final int MAX_FILE_SIZE_OVERRIDE = 10 * 1000 * 1000;
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       ProcessBasedLocalHBaseCluster.class);
 
   private List<String> daemonPidFiles =
-      Collections.synchronizedList(new ArrayList<String>());;
+      Collections.synchronizedList(new ArrayList<String>());
 
   private boolean shutdownHookInstalled;
 
@@ -461,7 +461,7 @@ public class ProcessBasedLocalHBaseCluster {
       try {
         runInternal();
       } catch (IOException ex) {
-        LOG.error(ex);
+        LOG.error(ex.toString(), ex);
       }
     }
 

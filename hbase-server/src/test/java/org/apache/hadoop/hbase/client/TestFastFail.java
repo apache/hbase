@@ -31,10 +31,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -48,20 +46,28 @@ import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
+import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestFastFail {
-  private static final Log LOG = LogFactory.getLog(TestFastFail.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFastFail.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestFastFail.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final Random random = new Random();
@@ -171,6 +177,7 @@ public class TestFastFail {
          * will follow the killing of a regionserver so that we make sure that
          * some of threads go into PreemptiveFastFailExcception
          */
+        @Override
         public Boolean call() throws Exception {
           try (Table table = connection.getTable(TableName.valueOf(tableName))) {
             Thread.sleep(Math.abs(random.nextInt()) % 250); // Add some jitter here
@@ -275,7 +282,7 @@ public class TestFastFail {
         "All the failures should be coming from the secondput failure",
         numFailedThreads.get(), numThreadsReturnedFalse);
     assertEquals("Number of threads that threw execution exceptions "
-        + "otherwise should be 0", numThreadsThrewExceptions, 0);
+        + "otherwise should be 0", 0, numThreadsThrewExceptions);
     assertEquals("The regionservers that returned true should equal to the"
         + " number of successful threads", numThreadsReturnedTrue,
         numSuccessfullThreads.get());
@@ -288,7 +295,7 @@ public class TestFastFail {
             + "numPreemptiveFastFailExceptions: "
             + numPreemptiveFastFailExceptions.get(),
         numPreemptiveFastFailExceptions.get() > 0);
-    
+
     assertTrue(
         "Only few thread should ideally be waiting for the dead "
             + "regionserver to be coming back. numBlockedWorkers:"

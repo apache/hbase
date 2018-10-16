@@ -28,35 +28,36 @@ import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDataManifest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDataManifest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * Utility class to help read/write the Snapshot Manifest.
@@ -67,7 +68,7 @@ import org.apache.hadoop.hbase.util.Threads;
  */
 @InterfaceAudience.Private
 public final class SnapshotManifest {
-  private static final Log LOG = LogFactory.getLog(SnapshotManifest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotManifest.class);
 
   public static final String SNAPSHOT_MANIFEST_SIZE_LIMIT_CONF_KEY = "snapshot.manifest.size.limit";
 
@@ -75,23 +76,34 @@ public final class SnapshotManifest {
 
   private List<SnapshotRegionManifest> regionManifests;
   private SnapshotDescription desc;
-  private HTableDescriptor htd;
+  private TableDescriptor htd;
 
   private final ForeignExceptionSnare monitor;
   private final Configuration conf;
   private final Path workingDir;
-  private final FileSystem fs;
+  private final FileSystem rootFs;
+  private final FileSystem workingDirFs;
   private int manifestSizeLimit;
 
-  private SnapshotManifest(final Configuration conf, final FileSystem fs,
+  /**
+   *
+   * @param conf configuration file for HBase setup
+   * @param rootFs root filesystem containing HFiles
+   * @param workingDir file path of where the manifest should be located
+   * @param desc description of snapshot being taken
+   * @param monitor monitor of foreign exceptions
+   * @throws IOException if the working directory file system cannot be
+   *                     determined from the config file
+   */
+  private SnapshotManifest(final Configuration conf, final FileSystem rootFs,
       final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor) {
+      final ForeignExceptionSnare monitor) throws IOException {
     this.monitor = monitor;
     this.desc = desc;
     this.workingDir = workingDir;
     this.conf = conf;
-    this.fs = fs;
-
+    this.rootFs = rootFs;
+    this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.manifestSizeLimit = conf.getInt(SNAPSHOT_MANIFEST_SIZE_LIMIT_CONF_KEY, 64 * 1024 * 1024);
   }
 
@@ -110,14 +122,15 @@ public final class SnapshotManifest {
    */
   public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
       final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor) {
+      final ForeignExceptionSnare monitor) throws IOException {
     return new SnapshotManifest(conf, fs, workingDir, desc, monitor);
+
   }
 
   /**
    * Return a SnapshotManifest instance with the information already loaded in-memory.
    *    SnapshotManifest manifest = SnapshotManifest.open(...)
-   *    HTableDescriptor htd = manifest.getTableDescriptor()
+   *    TableDescriptor htd = manifest.getTableDescriptor()
    *    for (SnapshotRegionManifest regionManifest: manifest.getRegionManifests())
    *      hri = regionManifest.getRegionInfo()
    *      for (regionManifest.getFamilyFiles())
@@ -134,12 +147,12 @@ public final class SnapshotManifest {
   /**
    * Add the table descriptor to the snapshot manifest
    */
-  public void addTableDescriptor(final HTableDescriptor htd) throws IOException {
+  public void addTableDescriptor(final TableDescriptor htd) throws IOException {
     this.htd = htd;
   }
 
   interface RegionVisitor<TRegion, TFamily> {
-    TRegion regionOpen(final HRegionInfo regionInfo) throws IOException;
+    TRegion regionOpen(final RegionInfo regionInfo) throws IOException;
     void regionClose(final TRegion region) throws IOException;
 
     TFamily familyOpen(final TRegion region, final byte[] familyName) throws IOException;
@@ -152,19 +165,25 @@ public final class SnapshotManifest {
   private RegionVisitor createRegionVisitor(final SnapshotDescription desc) throws IOException {
     switch (getSnapshotFormat(desc)) {
       case SnapshotManifestV1.DESCRIPTOR_VERSION:
-        return new SnapshotManifestV1.ManifestBuilder(conf, fs, workingDir);
+        return new SnapshotManifestV1.ManifestBuilder(conf, rootFs, workingDir);
       case SnapshotManifestV2.DESCRIPTOR_VERSION:
-        return new SnapshotManifestV2.ManifestBuilder(conf, fs, workingDir);
+        return new SnapshotManifestV2.ManifestBuilder(conf, rootFs, workingDir);
       default:
       throw new CorruptedSnapshotException("Invalid Snapshot version: " + desc.getVersion(),
         ProtobufUtil.createSnapshotDesc(desc));
     }
   }
 
-  public void addMobRegion(HRegionInfo regionInfo) throws IOException {
-    // 0. Get the ManifestBuilder/RegionVisitor
+  public void addMobRegion(RegionInfo regionInfo) throws IOException {
+    // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
+    // Visit the region and add it to the manifest
+    addMobRegion(regionInfo, visitor);
+  }
+
+  @VisibleForTesting
+  protected void addMobRegion(RegionInfo regionInfo, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     LOG.debug("Storing mob region '" + regionInfo + "' region-info for snapshot.");
     Object regionData = visitor.regionOpen(regionInfo);
@@ -174,7 +193,7 @@ public final class SnapshotManifest {
     LOG.debug("Creating references for mob files");
 
     Path mobRegionPath = MobUtils.getMobRegionPath(conf, regionInfo.getTable());
-    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       // 2.1. build the snapshot reference for the store if it's a mob store
       if (!hcd.isMobEnabled()) {
         continue;
@@ -203,9 +222,15 @@ public final class SnapshotManifest {
    * This is used by the "online snapshot" when the table is enabled.
    */
   public void addRegion(final HRegion region) throws IOException {
-    // 0. Get the ManifestBuilder/RegionVisitor
+    // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
+    // Visit the region and add it to the manifest
+    addRegion(region, visitor);
+  }
+
+  @VisibleForTesting
+  protected void addRegion(final HRegion region, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     LOG.debug("Storing '" + region + "' region-info for snapshot.");
     Object regionData = visitor.regionOpen(region.getRegionInfo());
@@ -214,19 +239,20 @@ public final class SnapshotManifest {
     // 2. iterate through all the stores in the region
     LOG.debug("Creating references for hfiles");
 
-    for (Store store : region.getStores()) {
+    for (HStore store : region.getStores()) {
       // 2.1. build the snapshot reference for the store
-      Object familyData = visitor.familyOpen(regionData, store.getFamily().getName());
+      Object familyData = visitor.familyOpen(regionData,
+          store.getColumnFamilyDescriptor().getName());
       monitor.rethrowException();
 
-      List<StoreFile> storeFiles = new ArrayList<>(store.getStorefiles());
+      List<HStoreFile> storeFiles = new ArrayList<>(store.getStorefiles());
       if (LOG.isDebugEnabled()) {
         LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
       }
 
       // 2.2. iterate through all the store's files and create "references".
       for (int i = 0, sz = storeFiles.size(); i < sz; i++) {
-        StoreFile storeFile = storeFiles.get(i);
+        HStoreFile storeFile = storeFiles.get(i);
         monitor.rethrowException();
 
         // create "reference" to this store file.
@@ -242,10 +268,17 @@ public final class SnapshotManifest {
    * Creates a 'manifest' for the specified region, by reading directly from the disk.
    * This is used by the "offline snapshot" when the table is disabled.
    */
-  public void addRegion(final Path tableDir, final HRegionInfo regionInfo) throws IOException {
-    // 0. Get the ManifestBuilder/RegionVisitor
+  public void addRegion(final Path tableDir, final RegionInfo regionInfo) throws IOException {
+    // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
+    // Visit the region and add it to the manifest
+    addRegion(tableDir, regionInfo, visitor);
+  }
+
+  @VisibleForTesting
+  protected void addRegion(final Path tableDir, final RegionInfo regionInfo, RegionVisitor visitor)
+      throws IOException {
     boolean isMobRegion = MobUtils.isMobRegionInfo(regionInfo);
     try {
       Path baseDir = tableDir;
@@ -253,7 +286,7 @@ public final class SnapshotManifest {
       if (isMobRegion) {
         baseDir = FSUtils.getTableDir(MobUtils.getMobHome(conf), regionInfo.getTable());
       }
-      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
+      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, rootFs,
         baseDir, regionInfo, true);
       monitor.rethrowException();
 
@@ -301,12 +334,12 @@ public final class SnapshotManifest {
   }
 
   private List<StoreFileInfo> getStoreFiles(Path storeDir) throws IOException {
-    FileStatus[] stats = FSUtils.listStatus(fs, storeDir);
+    FileStatus[] stats = FSUtils.listStatus(rootFs, storeDir);
     if (stats == null) return null;
 
     ArrayList<StoreFileInfo> storeFiles = new ArrayList<>(stats.length);
     for (int i = 0; i < stats.length; ++i) {
-      storeFiles.add(new StoreFileInfo(conf, fs, stats[i]));
+      storeFiles.add(new StoreFileInfo(conf, rootFs, stats[i]));
     }
     return storeFiles;
   }
@@ -342,11 +375,11 @@ public final class SnapshotManifest {
   private void load() throws IOException {
     switch (getSnapshotFormat(desc)) {
       case SnapshotManifestV1.DESCRIPTOR_VERSION: {
-        this.htd = FSTableDescriptors.getTableDescriptorFromFs(fs, workingDir);
+        this.htd = FSTableDescriptors.getTableDescriptorFromFs(workingDirFs, workingDir);
         ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
         try {
           this.regionManifests =
-            SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
+            SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs, workingDir, desc);
         } finally {
           tpool.shutdown();
         }
@@ -355,7 +388,7 @@ public final class SnapshotManifest {
       case SnapshotManifestV2.DESCRIPTOR_VERSION: {
         SnapshotDataManifest dataManifest = readDataManifest();
         if (dataManifest != null) {
-          htd = ProtobufUtil.convertToHTableDesc(dataManifest.getTableSchema());
+          htd = ProtobufUtil.toTableDescriptor(dataManifest.getTableSchema());
           regionManifests = dataManifest.getRegionManifestsList();
         } else {
           // Compatibility, load the v1 regions
@@ -363,9 +396,10 @@ public final class SnapshotManifest {
           List<SnapshotRegionManifest> v1Regions, v2Regions;
           ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
           try {
-            v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
-            v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc,
-                manifestSizeLimit);
+            v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs,
+                workingDir, desc);
+            v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, rootFs,
+                workingDir, desc, manifestSizeLimit);
           } catch (InvalidProtocolBufferException e) {
             throw new CorruptedSnapshotException("unable to parse region manifest " +
                 e.getMessage(), e);
@@ -407,7 +441,7 @@ public final class SnapshotManifest {
   /**
    * Get the table descriptor from the Snapshot
    */
-  public HTableDescriptor getTableDescriptor() {
+  public TableDescriptor getTableDescriptor() {
     return this.htd;
   }
 
@@ -438,7 +472,7 @@ public final class SnapshotManifest {
       Path rootDir = FSUtils.getRootDir(conf);
       LOG.info("Using old Snapshot Format");
       // write a copy of descriptor to the snapshot directory
-      new FSTableDescriptors(conf, fs, rootDir)
+      new FSTableDescriptors(conf, workingDirFs, rootDir)
         .createTableDescriptorForTableDirectory(workingDir, htd, false);
     } else {
       LOG.debug("Convert to Single Snapshot Manifest");
@@ -455,15 +489,16 @@ public final class SnapshotManifest {
     List<SnapshotRegionManifest> v1Regions, v2Regions;
     ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
     try {
-      v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
-      v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc,
-          manifestSizeLimit);
+      v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, workingDirFs,
+          workingDir, desc);
+      v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, workingDirFs,
+          workingDir, desc, manifestSizeLimit);
     } finally {
       tpool.shutdown();
     }
 
     SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
-    dataManifestBuilder.setTableSchema(ProtobufUtil.convertToTableSchema(htd));
+    dataManifestBuilder.setTableSchema(ProtobufUtil.toTableSchema(htd));
 
     if (v1Regions != null && v1Regions.size() > 0) {
       dataManifestBuilder.addAllRegionManifests(v1Regions);
@@ -487,12 +522,12 @@ public final class SnapshotManifest {
     // them we will get the same information.
     if (v1Regions != null && v1Regions.size() > 0) {
       for (SnapshotRegionManifest regionManifest: v1Regions) {
-        SnapshotManifestV1.deleteRegionManifest(fs, workingDir, regionManifest);
+        SnapshotManifestV1.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
       }
     }
     if (v2Regions != null && v2Regions.size() > 0) {
       for (SnapshotRegionManifest regionManifest: v2Regions) {
-        SnapshotManifestV2.deleteRegionManifest(fs, workingDir, regionManifest);
+        SnapshotManifestV2.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
       }
     }
   }
@@ -502,7 +537,7 @@ public final class SnapshotManifest {
    */
   private void writeDataManifest(final SnapshotDataManifest manifest)
       throws IOException {
-    FSDataOutputStream stream = fs.create(new Path(workingDir, DATA_MANIFEST_NAME));
+    FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME));
     try {
       manifest.writeTo(stream);
     } finally {
@@ -516,7 +551,7 @@ public final class SnapshotManifest {
   private SnapshotDataManifest readDataManifest() throws IOException {
     FSDataInputStream in = null;
     try {
-      in = fs.open(new Path(workingDir, DATA_MANIFEST_NAME));
+      in = workingDirFs.open(new Path(workingDir, DATA_MANIFEST_NAME));
       CodedInputStream cin = CodedInputStream.newInstance(in);
       cin.setSizeLimit(manifestSizeLimit);
       return SnapshotDataManifest.parseFrom(cin);
@@ -543,11 +578,11 @@ public final class SnapshotManifest {
    * Extract the region encoded name from the region manifest
    */
   static String getRegionNameFromManifest(final SnapshotRegionManifest manifest) {
-    byte[] regionName = HRegionInfo.createRegionName(
+    byte[] regionName = RegionInfo.createRegionName(
             ProtobufUtil.toTableName(manifest.getRegionInfo().getTableName()),
             manifest.getRegionInfo().getStartKey().toByteArray(),
             manifest.getRegionInfo().getRegionId(), true);
-    return HRegionInfo.encodeRegionName(regionName);
+    return RegionInfo.encodeRegionName(regionName);
   }
 
   /*

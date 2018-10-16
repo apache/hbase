@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import com.google.common.collect.Lists;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,15 +33,15 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -48,23 +53,27 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegi
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestBaseLoadBalancer extends BalancerTestBase {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBaseLoadBalancer.class);
+
   private static LoadBalancer loadBalancer;
-  private static final Log LOG = LogFactory.getLog(TestBaseLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBaseLoadBalancer.class);
   private static final ServerName master = ServerName.valueOf("fake-master", 0, 1L);
   private static RackManager rackManager;
   private static final int NUM_SERVERS = 15;
@@ -107,18 +116,16 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   public static class MockBalancer extends BaseLoadBalancer {
-
     @Override
-    public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
+    public List<RegionPlan> balanceCluster(Map<ServerName, List<RegionInfo>> clusterState) {
       return null;
     }
 
     @Override
     public List<RegionPlan> balanceCluster(TableName tableName,
-        Map<ServerName, List<HRegionInfo>> clusterState) throws HBaseIOException {
+        Map<ServerName, List<RegionInfo>> clusterState) throws HBaseIOException {
       return null;
     }
-
   }
 
   /**
@@ -127,9 +134,9 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    * @param servers
    * @param assignments
    */
-  private void assertImmediateAssignment(List<HRegionInfo> regions, List<ServerName> servers,
-      Map<HRegionInfo, ServerName> assignments) {
-    for (HRegionInfo region : regions) {
+  private void assertImmediateAssignment(List<RegionInfo> regions, List<ServerName> servers,
+      Map<RegionInfo, ServerName> assignments) {
+    for (RegionInfo region : regions) {
       assertTrue(assignments.containsKey(region));
     }
   }
@@ -142,32 +149,34 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    *
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Test
   public void testBulkAssignment() throws Exception {
     List<ServerName> tmp = getListOfServerNames(randomServers(5, 0));
-    List<HRegionInfo> hris = randomRegions(20);
-    hris.add(HRegionInfo.FIRST_META_REGIONINFO);
+    List<RegionInfo> hris = randomRegions(20);
+    hris.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
     tmp.add(master);
-    Map<ServerName, List<HRegionInfo>> plans = loadBalancer.roundRobinAssignment(hris, tmp);
-    assertTrue(plans.get(master).contains(HRegionInfo.FIRST_META_REGIONINFO));
-    assertEquals(1, plans.get(master).size());
+    Map<ServerName, List<RegionInfo>> plans = loadBalancer.roundRobinAssignment(hris, tmp);
+    if (LoadBalancer.isTablesOnMaster(loadBalancer.getConf())) {
+      assertTrue(plans.get(master).contains(RegionInfoBuilder.FIRST_META_REGIONINFO));
+      assertEquals(1, plans.get(master).size());
+    }
     int totalRegion = 0;
-    for (List<HRegionInfo> regions: plans.values()) {
+    for (List<RegionInfo> regions: plans.values()) {
       totalRegion += regions.size();
     }
     assertEquals(hris.size(), totalRegion);
     for (int[] mock : regionsAndServersMocks) {
       LOG.debug("testBulkAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
-      List<HRegionInfo> regions = randomRegions(mock[0]);
+      List<RegionInfo> regions = randomRegions(mock[0]);
       List<ServerAndLoad> servers = randomServers(mock[1], 0);
       List<ServerName> list = getListOfServerNames(servers);
-      Map<ServerName, List<HRegionInfo>> assignments =
+      Map<ServerName, List<RegionInfo>> assignments =
           loadBalancer.roundRobinAssignment(regions, list);
       float average = (float) regions.size() / servers.size();
       int min = (int) Math.floor(average);
       int max = (int) Math.ceil(average);
       if (assignments != null && !assignments.isEmpty()) {
-        for (List<HRegionInfo> regionList : assignments.values()) {
+        for (List<RegionInfo> regionList : assignments.values()) {
           assertTrue(regionList.size() == min || regionList.size() == max);
         }
       }
@@ -181,12 +190,12 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    * assignment info.
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Test
   public void testRetainAssignment() throws Exception {
     // Test simple case where all same servers are there
     List<ServerAndLoad> servers = randomServers(10, 10);
-    List<HRegionInfo> regions = randomRegions(100);
-    Map<HRegionInfo, ServerName> existing = new TreeMap<>();
+    List<RegionInfo> regions = randomRegions(100);
+    Map<RegionInfo, ServerName> existing = new TreeMap<>(RegionInfo.COMPARATOR);
     for (int i = 0; i < regions.size(); i++) {
       ServerName sn = servers.get(i % servers.size()).getServerName();
       // The old server would have had same host and port, but different
@@ -196,7 +205,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       existing.put(regions.get(i), snWithOldStartCode);
     }
     List<ServerName> listOfServerNames = getListOfServerNames(servers);
-    Map<ServerName, List<HRegionInfo>> assignment =
+    Map<ServerName, List<RegionInfo>> assignment =
         loadBalancer.retainAssignment(existing, listOfServerNames);
     assertRetainedAssignment(existing, listOfServerNames, assignment);
 
@@ -217,7 +226,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertRetainedAssignment(existing, listOfServerNames, assignment);
   }
 
-  @Test (timeout=30000)
+  @Test
   public void testRandomAssignment() throws Exception {
     for (int i = 1; i != 5; ++i) {
       LOG.info("run testRandomAssignment() with idle servers:" + i);
@@ -236,7 +245,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     allServers.addAll(idleServers);
     LoadBalancer balancer = new MockBalancer() {
       @Override
-      public boolean shouldBeOnMaster(HRegionInfo region) {
+      public boolean shouldBeOnMaster(RegionInfo region) {
         return false;
       }
     };
@@ -249,9 +258,12 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     MasterServices services = Mockito.mock(MasterServices.class);
     Mockito.when(services.getServerManager()).thenReturn(sm);
     balancer.setMasterServices(services);
-    HRegionInfo hri1 = new HRegionInfo(
-        TableName.valueOf(name.getMethodName()), "key1".getBytes(), "key2".getBytes(),
-        false, 100);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setStartKey("key1".getBytes())
+        .setEndKey("key2".getBytes())
+        .setSplit(false)
+        .setRegionId(100)
+        .build();
     assertNull(balancer.randomAssignment(hri1, Collections.EMPTY_LIST));
     assertNull(balancer.randomAssignment(hri1, null));
     for (int i = 0; i != 3; ++i) {
@@ -260,30 +272,36 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRegionAvailability() throws Exception {
     // Create a cluster with a few servers, assign them to specific racks
     // then assign some regions. The tests should check whether moving a
     // replica from one node to a specific other node or rack lowers the
     // availability of the region or not
 
-    List<HRegionInfo> list0 = new ArrayList<>();
-    List<HRegionInfo> list1 = new ArrayList<>();
-    List<HRegionInfo> list2 = new ArrayList<>();
+    List<RegionInfo> list0 = new ArrayList<>();
+    List<RegionInfo> list1 = new ArrayList<>();
+    List<RegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
-    HRegionInfo hri1 = new HRegionInfo(
-        TableName.valueOf(name.getMethodName()), "key1".getBytes(), "key2".getBytes(),
-        false, 100);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setStartKey("key1".getBytes())
+        .setEndKey("key2".getBytes())
+        .setSplit(false)
+        .setRegionId(100)
+        .build();
     // create a replica of the region (replica_of_region1)
-    HRegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
+    RegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
-    HRegionInfo hri3 = new HRegionInfo(
-        TableName.valueOf(name.getMethodName()), "key2".getBytes(), "key3".getBytes(),
-        false, 101);
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setStartKey("key2".getBytes())
+        .setEndKey("key3".getBytes())
+        .setSplit(false)
+        .setRegionId(101)
+        .build();
     list0.add(hri1); //only region1
     list1.add(hri2); //only replica_of_region1
     list2.add(hri3); //only region2
-    Map<ServerName, List<HRegionInfo>> clusterState = new LinkedHashMap<>();
+    Map<ServerName, List<RegionInfo>> clusterState = new LinkedHashMap<>();
     clusterState.put(servers[0], list0); //servers[0] hosts region1
     clusterState.put(servers[1], list1); //servers[1] hosts replica_of_region1
     clusterState.put(servers[2], list2); //servers[2] hosts region2
@@ -333,25 +351,31 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertTrue(!cluster.wouldLowerAvailability(hri1, servers[6]));
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRegionAvailabilityWithRegionMoves() throws Exception {
-    List<HRegionInfo> list0 = new ArrayList<>();
-    List<HRegionInfo> list1 = new ArrayList<>();
-    List<HRegionInfo> list2 = new ArrayList<>();
+    List<RegionInfo> list0 = new ArrayList<>();
+    List<RegionInfo> list1 = new ArrayList<>();
+    List<RegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
-    HRegionInfo hri1 = new HRegionInfo(
-        TableName.valueOf(name.getMethodName()), "key1".getBytes(), "key2".getBytes(),
-        false, 100);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setStartKey("key1".getBytes())
+        .setEndKey("key2".getBytes())
+        .setSplit(false)
+        .setRegionId(100)
+        .build();
     // create a replica of the region (replica_of_region1)
-    HRegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
+    RegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
-    HRegionInfo hri3 = new HRegionInfo(
-        TableName.valueOf(name.getMethodName()), "key2".getBytes(), "key3".getBytes(),
-        false, 101);
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setStartKey("key2".getBytes())
+        .setEndKey("key3".getBytes())
+        .setSplit(false)
+        .setRegionId(101)
+        .build();
     list0.add(hri1); //only region1
     list1.add(hri2); //only replica_of_region1
     list2.add(hri3); //only region2
-    Map<ServerName, List<HRegionInfo>> clusterState = new LinkedHashMap<>();
+    Map<ServerName, List<RegionInfo>> clusterState = new LinkedHashMap<>();
     clusterState.put(servers[0], list0); //servers[0] hosts region1
     clusterState.put(servers[1], list1); //servers[1] hosts replica_of_region1
     clusterState.put(servers[2], list2); //servers[2] hosts region2
@@ -373,8 +397,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
     // start over again
     clusterState.clear();
-    List<HRegionInfo> list3 = new ArrayList<>();
-    HRegionInfo hri4 = RegionReplicaUtil.getRegionInfoForReplica(hri3, 1);
+    List<RegionInfo> list3 = new ArrayList<>();
+    RegionInfo hri4 = RegionReplicaUtil.getRegionInfoForReplica(hri3, 1);
     list3.add(hri4);
     clusterState.put(servers[0], list0); //servers[0], rack1 hosts region1
     clusterState.put(servers[5], list1); //servers[5], rack2 hosts replica_of_region1
@@ -409,15 +433,15 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    * @param servers
    * @param assignment
    */
-  private void assertRetainedAssignment(Map<HRegionInfo, ServerName> existing,
-      List<ServerName> servers, Map<ServerName, List<HRegionInfo>> assignment) {
+  private void assertRetainedAssignment(Map<RegionInfo, ServerName> existing,
+      List<ServerName> servers, Map<ServerName, List<RegionInfo>> assignment) {
     // Verify condition 1, every region assigned, and to online server
     Set<ServerName> onlineServerSet = new TreeSet<>(servers);
-    Set<HRegionInfo> assignedRegions = new TreeSet<>();
-    for (Map.Entry<ServerName, List<HRegionInfo>> a : assignment.entrySet()) {
+    Set<RegionInfo> assignedRegions = new TreeSet<>(RegionInfo.COMPARATOR);
+    for (Map.Entry<ServerName, List<RegionInfo>> a : assignment.entrySet()) {
       assertTrue("Region assigned to server that was not listed as online",
         onlineServerSet.contains(a.getKey()));
-      for (HRegionInfo r : a.getValue())
+      for (RegionInfo r : a.getValue())
         assignedRegions.add(r);
     }
     assertEquals(existing.size(), assignedRegions.size());
@@ -428,9 +452,9 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       onlineHostNames.add(s.getHostname());
     }
 
-    for (Map.Entry<ServerName, List<HRegionInfo>> a : assignment.entrySet()) {
+    for (Map.Entry<ServerName, List<RegionInfo>> a : assignment.entrySet()) {
       ServerName assignedTo = a.getKey();
-      for (HRegionInfo r : a.getValue()) {
+      for (RegionInfo r : a.getValue()) {
         ServerName address = existing.get(r);
         if (address != null && onlineHostNames.contains(address.getHostname())) {
           // this region was prevously assigned somewhere, and that
@@ -442,13 +466,13 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testClusterServersWithSameHostPort() {
     // tests whether the BaseLoadBalancer.Cluster can be constructed with servers
     // sharing same host and port
     List<ServerName> servers = getListOfServerNames(randomServers(10, 10));
-    List<HRegionInfo> regions = randomRegions(101);
-    Map<ServerName, List<HRegionInfo>> clusterState = new HashMap<>();
+    List<RegionInfo> regions = randomRegions(101);
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
 
     assignRegions(regions, servers, clusterState);
 
@@ -468,11 +492,11 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertEquals(10, cluster.numServers); // only 10 servers because they share the same host + port
   }
 
-  private void assignRegions(List<HRegionInfo> regions, List<ServerName> servers,
-      Map<ServerName, List<HRegionInfo>> clusterState) {
+  private void assignRegions(List<RegionInfo> regions, List<ServerName> servers,
+      Map<ServerName, List<RegionInfo>> clusterState) {
     for (int i = 0; i < regions.size(); i++) {
       ServerName sn = servers.get(i % servers.size());
-      List<HRegionInfo> regionsOfServer = clusterState.get(sn);
+      List<RegionInfo> regionsOfServer = clusterState.get(sn);
       if (regionsOfServer == null) {
         regionsOfServer = new ArrayList<>(10);
         clusterState.put(sn, regionsOfServer);
@@ -482,12 +506,12 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testClusterRegionLocations() {
     // tests whether region locations are handled correctly in Cluster
     List<ServerName> servers = getListOfServerNames(randomServers(10, 10));
-    List<HRegionInfo> regions = randomRegions(101);
-    Map<ServerName, List<HRegionInfo>> clusterState = new HashMap<>();
+    List<RegionInfo> regions = randomRegions(101);
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
 
     assignRegions(regions, servers, clusterState);
 

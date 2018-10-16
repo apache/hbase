@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,19 +19,29 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.EnableTableState;
@@ -39,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.E
 @InterfaceAudience.Private
 public class EnableTableProcedure
     extends AbstractStateMachineTableProcedure<EnableTableState> {
-  private static final Log LOG = LogFactory.getLog(EnableTableProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EnableTableProcedure.class);
 
   private TableName tableName;
   private boolean skipTableStateCheck;
@@ -83,45 +93,133 @@ public class EnableTableProcedure
 
     try {
       switch (state) {
-      case ENABLE_TABLE_PREPARE:
-        if (prepareEnable(env)) {
-          setNextState(EnableTableState.ENABLE_TABLE_PRE_OPERATION);
-        } else {
-          assert isFailed() : "enable should have an exception here";
+        case ENABLE_TABLE_PREPARE:
+          if (prepareEnable(env)) {
+            setNextState(EnableTableState.ENABLE_TABLE_PRE_OPERATION);
+          } else {
+            assert isFailed() : "enable should have an exception here";
+            return Flow.NO_MORE_STATE;
+          }
+          break;
+        case ENABLE_TABLE_PRE_OPERATION:
+          preEnable(env, state);
+          setNextState(EnableTableState.ENABLE_TABLE_SET_ENABLING_TABLE_STATE);
+          break;
+        case ENABLE_TABLE_SET_ENABLING_TABLE_STATE:
+          setTableStateToEnabling(env, tableName);
+          setNextState(EnableTableState.ENABLE_TABLE_MARK_REGIONS_ONLINE);
+          break;
+        case ENABLE_TABLE_MARK_REGIONS_ONLINE:
+          Connection connection = env.getMasterServices().getConnection();
+          // we will need to get the tableDescriptor here to see if there is a change in the replica
+          // count
+          TableDescriptor hTableDescriptor =
+              env.getMasterServices().getTableDescriptors().get(tableName);
+
+          // Get the replica count
+          int regionReplicaCount = hTableDescriptor.getRegionReplication();
+
+          // Get the regions for the table from memory; get both online and offline regions
+          // ('true').
+          List<RegionInfo> regionsOfTable =
+              env.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName, true);
+
+          int currentMaxReplica = 0;
+          // Check if the regions in memory have replica regions as marked in META table
+          for (RegionInfo regionInfo : regionsOfTable) {
+            if (regionInfo.getReplicaId() > currentMaxReplica) {
+              // Iterating through all the list to identify the highest replicaID region.
+              // We can stop after checking with the first set of regions??
+              currentMaxReplica = regionInfo.getReplicaId();
+            }
+          }
+
+          // read the META table to know the actual number of replicas for the table - if there
+          // was a table modification on region replica then this will reflect the new entries also
+          int replicasFound =
+              getNumberOfReplicasFromMeta(connection, regionReplicaCount, regionsOfTable);
+          assert regionReplicaCount - 1 == replicasFound;
+          LOG.info(replicasFound + " META entries added for the given regionReplicaCount "
+              + regionReplicaCount + " for the table " + tableName.getNameAsString());
+          if (currentMaxReplica == (regionReplicaCount - 1)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("There is no change to the number of region replicas."
+                  + " Assigning the available regions." + " Current and previous"
+                  + "replica count is " + regionReplicaCount);
+            }
+          } else if (currentMaxReplica > (regionReplicaCount - 1)) {
+            // we have additional regions as the replica count has been decreased. Delete
+            // those regions because already the table is in the unassigned state
+            LOG.info("The number of replicas " + (currentMaxReplica + 1)
+                + "  is more than the region replica count " + regionReplicaCount);
+            List<RegionInfo> copyOfRegions = new ArrayList<RegionInfo>(regionsOfTable);
+            for (RegionInfo regionInfo : copyOfRegions) {
+              if (regionInfo.getReplicaId() > (regionReplicaCount - 1)) {
+                // delete the region from the regionStates
+                env.getAssignmentManager().getRegionStates().deleteRegion(regionInfo);
+                // remove it from the list of regions of the table
+                LOG.info("The regioninfo being removed is " + regionInfo + " "
+                    + regionInfo.getReplicaId());
+                regionsOfTable.remove(regionInfo);
+              }
+            }
+          } else {
+            // the replicasFound is less than the regionReplication
+            LOG.info("The number of replicas has been changed(increased)."
+                + " Lets assign the new region replicas. The previous replica count was "
+                + (currentMaxReplica + 1) + ". The current replica count is " + regionReplicaCount);
+            regionsOfTable = RegionReplicaUtil.addReplicas(hTableDescriptor, regionsOfTable,
+              currentMaxReplica + 1, regionReplicaCount);
+          }
+          // Assign all the table regions. (including region replicas if added).
+          // createAssignProcedure will try to retain old assignments if possible.
+          addChildProcedure(env.getAssignmentManager().createAssignProcedures(regionsOfTable));
+          setNextState(EnableTableState.ENABLE_TABLE_SET_ENABLED_TABLE_STATE);
+          break;
+        case ENABLE_TABLE_SET_ENABLED_TABLE_STATE:
+          setTableStateToEnabled(env, tableName);
+          setNextState(EnableTableState.ENABLE_TABLE_POST_OPERATION);
+          break;
+        case ENABLE_TABLE_POST_OPERATION:
+          postEnable(env, state);
           return Flow.NO_MORE_STATE;
-        }
-        break;
-      case ENABLE_TABLE_PRE_OPERATION:
-        preEnable(env, state);
-        setNextState(EnableTableState.ENABLE_TABLE_SET_ENABLING_TABLE_STATE);
-        break;
-      case ENABLE_TABLE_SET_ENABLING_TABLE_STATE:
-        setTableStateToEnabling(env, tableName);
-        setNextState(EnableTableState.ENABLE_TABLE_MARK_REGIONS_ONLINE);
-        break;
-      case ENABLE_TABLE_MARK_REGIONS_ONLINE:
-        addChildProcedure(env.getAssignmentManager().createAssignProcedures(tableName));
-        setNextState(EnableTableState.ENABLE_TABLE_SET_ENABLED_TABLE_STATE);
-        break;
-      case ENABLE_TABLE_SET_ENABLED_TABLE_STATE:
-        setTableStateToEnabled(env, tableName);
-        setNextState(EnableTableState.ENABLE_TABLE_POST_OPERATION);
-        break;
-      case ENABLE_TABLE_POST_OPERATION:
-        postEnable(env, state);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
+        default:
+          throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
         setFailure("master-enable-table", e);
       } else {
-        LOG.warn("Retriable error trying to enable table=" + tableName +
-          " (in state=" + state + ")", e);
+        LOG.warn(
+          "Retriable error trying to enable table=" + tableName + " (in state=" + state + ")", e);
       }
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  private int getNumberOfReplicasFromMeta(Connection connection, int regionReplicaCount,
+      List<RegionInfo> regionsOfTable) throws IOException {
+    Result r = getRegionFromMeta(connection, regionsOfTable);
+    int replicasFound = 0;
+    for (int i = 1; i < regionReplicaCount; i++) {
+      // Since we have already added the entries to the META we will be getting only that here
+      List<Cell> columnCells =
+          r.getColumnCells(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i));
+      if (!columnCells.isEmpty()) {
+        replicasFound++;
+      }
+    }
+    return replicasFound;
+  }
+
+  private Result getRegionFromMeta(Connection connection, List<RegionInfo> regionsOfTable)
+      throws IOException {
+    byte[] metaKeyForRegion = MetaTableAccessor.getMetaKeyForRegion(regionsOfTable.get(0));
+    Get get = new Get(metaKeyForRegion);
+    get.addFamily(HConstants.CATALOG_FAMILY);
+    Table metaTable = MetaTableAccessor.getMetaHTable(connection);
+    Result r = metaTable.get(get);
+    return r;
   }
 
   @Override
@@ -156,7 +254,7 @@ public class EnableTableProcedure
 
   @Override
   protected EnableTableState getState(final int stateId) {
-    return EnableTableState.valueOf(stateId);
+    return EnableTableState.forNumber(stateId);
   }
 
   @Override
@@ -170,8 +268,9 @@ public class EnableTableProcedure
   }
 
   @Override
-  public void serializeStateData(final OutputStream stream) throws IOException {
-    super.serializeStateData(stream);
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.serializeStateData(serializer);
 
     MasterProcedureProtos.EnableTableStateData.Builder enableTableMsg =
         MasterProcedureProtos.EnableTableStateData.newBuilder()
@@ -179,15 +278,16 @@ public class EnableTableProcedure
             .setTableName(ProtobufUtil.toProtoTableName(tableName))
             .setSkipTableStateCheck(skipTableStateCheck);
 
-    enableTableMsg.build().writeDelimitedTo(stream);
+    serializer.serialize(enableTableMsg.build());
   }
 
   @Override
-  public void deserializeStateData(final InputStream stream) throws IOException {
-    super.deserializeStateData(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    super.deserializeStateData(serializer);
 
     MasterProcedureProtos.EnableTableStateData enableTableMsg =
-        MasterProcedureProtos.EnableTableStateData.parseDelimitedFrom(stream);
+        serializer.deserialize(MasterProcedureProtos.EnableTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(enableTableMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(enableTableMsg.getTableName());
     skipTableStateCheck = enableTableMsg.getSkipTableStateCheck();
@@ -229,11 +329,10 @@ public class EnableTableProcedure
       // was implemented. With table lock, there is no need to set the state here (it will
       // set the state later on). A quick state check should be enough for us to move forward.
       TableStateManager tsm = env.getMasterServices().getTableStateManager();
-      TableState.State state = tsm.getTableState(tableName);
-      if(!state.equals(TableState.State.DISABLED)){
-        LOG.info("Table " + tableName + " isn't disabled;is "+state.name()+"; skipping enable");
-        setFailure("master-enable-table", new TableNotDisabledException(
-                this.tableName+" state is "+state.name()));
+      TableState ts = tsm.getTableState(tableName);
+      if(!ts.isDisabled()){
+        LOG.info("Not DISABLED tableState={}; skipping enable; {}", ts.getState(), this);
+        setFailure("master-enable-table", new TableNotDisabledException(ts.toString()));
         canTableBeEnabled = false;
       }
     }

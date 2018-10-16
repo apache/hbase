@@ -21,24 +21,23 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.AbstractService;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AbstractService;
 
 /**
- * A Base implementation for {@link ReplicationEndpoint}s. Users should consider extending this
- * class rather than implementing {@link ReplicationEndpoint} directly for better backwards
- * compatibility.
+ * A Base implementation for {@link ReplicationEndpoint}s. For internal use. Uses our internal
+ * Guava.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
+// This class has been made InterfaceAudience.Private in 2.0.0. It used to be
+// LimitedPrivate. See HBASE-15982.
+@InterfaceAudience.Private
 public abstract class BaseReplicationEndpoint extends AbstractService
   implements ReplicationEndpoint {
 
-  private static final Log LOG = LogFactory.getLog(BaseReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BaseReplicationEndpoint.class);
   public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY
       = "hbase.replication.source.custom.walentryfilters";
   protected Context ctx;
@@ -50,7 +49,7 @@ public abstract class BaseReplicationEndpoint extends AbstractService
     if (this.ctx != null){
       ReplicationPeer peer = this.ctx.getReplicationPeer();
       if (peer != null){
-        peer.trackPeerConfigChanges(this);
+        peer.registerPeerConfigListener(this);
       } else {
         LOG.warn("Not tracking replication peer config changes for Peer Id " + this.ctx.getPeerId() +
             " because there's no such peer");
@@ -85,7 +84,7 @@ public abstract class BaseReplicationEndpoint extends AbstractService
         for (String filterName : filterNames) {
           try {
             Class<?> clazz = Class.forName(filterName);
-            filters.add((WALEntryFilter) clazz.newInstance());
+            filters.add((WALEntryFilter) clazz.getDeclaredConstructor().newInstance());
           } catch (Exception e) {
             LOG.error("Unable to create WALEntryFilter " + filterName, e);
           }
@@ -112,4 +111,8 @@ public abstract class BaseReplicationEndpoint extends AbstractService
     return false;
   }
 
+  @Override
+  public boolean isStarting() {
+    return state() == State.STARTING;
+  }
 }

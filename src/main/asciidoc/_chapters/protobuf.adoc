@@ -29,9 +29,9 @@
 
 
 == Protobuf
-HBase uses Google's link:http://protobuf.protobufs[protobufs] wherever
+HBase uses Google's link:https://developers.google.com/protocol-buffers/[protobufs] wherever
 it persists metadata -- in the tail of hfiles or Cells written by
-HBase into the system hbase;meta table or when HBase writes znodes
+HBase into the system hbase:meta table or when HBase writes znodes
 to zookeeper, etc. -- and when it passes objects over the wire making
 xref:hbase.rpc[RPCs]. HBase uses protobufs to describe the RPC
 Interfaces (Services) we expose to clients, for example the `Admin` and `Client`
@@ -48,15 +48,15 @@ You then feed these descriptors to a protobuf tool, the `protoc` binary,
 to generate classes that can marshall and unmarshall the described serializations
 and field the specified Services.
 
-See the `README.txt` in the HBase sub-modules for detail on how
+See the `README.txt` in the HBase sub-modules for details on how
 to run the class generation on a per-module basis;
-e.g. see `hbase-protocol/README.txt` for how to generated protobuf classes
+e.g. see `hbase-protocol/README.txt` for how to generate protobuf classes
 in the hbase-protocol module.
 
-In HBase, `.proto` files are either in the `hbase-protocol` module, a module
+In HBase, `.proto` files are either in the `hbase-protocol` module; a module
 dedicated to hosting the common proto files and the protoc generated classes
-that HBase uses internally serializing metadata or, for extensions to hbase
-such as REST or Coprocessor Endpoints that need their own descriptors, their
+that HBase uses internally serializing metadata. For extensions to hbase
+such as REST or Coprocessor Endpoints that need their own descriptors; their
 protos are located inside the function's hosting module: e.g. `hbase-rest`
 is home to the REST proto files and the `hbase-rsgroup` table grouping
 Coprocessor Endpoint has all protos that have to do with table grouping.
@@ -71,7 +71,7 @@ of core HBase protos found back in the hbase-protocol module. They'll
 use these core protos when they want to serialize a Cell or a Put or
 refer to a particular node via ServerName, etc., as part of providing the
 CPEP Service. Going forward, after the release of hbase-2.0.0, this
-practice needs to whither. We'll make plain why in the later
+practice needs to whither. We'll explain why in the later
 xref:shaded.protobuf[hbase-2.0.0] section.
 
 [[shaded.protobuf]]
@@ -87,8 +87,8 @@ so hbase core can evolve its protobuf version independent of whatever our
 dependencies rely on. For instance, HDFS serializes using protobuf.
 HDFS is on our CLASSPATH. Without the above described indirection, our
 protobuf versions would have to align. HBase would be stuck
-on the HDFS protobuf version until HDFS decided upgrade. HBase
-and HDFS verions would be tied.
+on the HDFS protobuf version until HDFS decided to upgrade. HBase
+and HDFS versions would be tied.
 
 We had to move on from protobuf-2.5.0 because we need facilities
 added in protobuf-3.1.0; in particular being able to save on
@@ -98,10 +98,8 @@ serialization/deserialization.
 In hbase-2.0.0, we introduced a new module, `hbase-protocol-shaded`
 inside which we contained all to do with protobuf and its subsequent
 relocation/shading. This module is in essence a copy of much of the old
-`hbase-protocol` but with an extra shading/relocation step (see the `README.txt`
-and the `poms.xml` in this module for more on how to trigger this
-effect and how it all works). Core was moved to depend on this new
-module.
+`hbase-protocol` but with an extra shading/relocation step.
+Core was moved to depend on this new module.
 
 That said, a complication arises around Coprocessor Endpoints (CPEPs).
 CPEPs depend on public HBase APIs that reference protobuf classes at
@@ -127,9 +125,7 @@ HBase needs to be able to deal with both
 `org.apache.hadoop.hbase.shaded.com.google.protobuf.*` protobufs.
 
 The `hbase-protocol-shaded` module hosts all
-protobufs used by HBase core as well as the internal shaded version of
-protobufs that hbase depends on. hbase-client and hbase-server, etc.,
-depend on this module.
+protobufs used by HBase core.
 
 But for the vestigial CPEP references to the (non-shaded) content of
 `hbase-protocol`, we keep around most of this  module going forward

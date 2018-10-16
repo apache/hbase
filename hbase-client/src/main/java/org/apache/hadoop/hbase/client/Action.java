@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A Get, Put, Increment, Append, or Delete associated with it's region.  Used internally by
@@ -32,10 +32,16 @@ public class Action implements Comparable<Action> {
   private final int originalIndex;
   private long nonce = HConstants.NO_NONCE;
   private int replicaId = RegionReplicaUtil.DEFAULT_REPLICA_ID;
+  private int priority;
 
   public Action(Row action, int originalIndex) {
+    this(action, originalIndex, HConstants.PRIORITY_UNSET);
+  }
+
+  public Action(Row action, int originalIndex, int priority) {
     this.action = action;
     this.originalIndex = originalIndex;
+    this.priority = priority;
   }
 
   /**
@@ -69,6 +75,8 @@ public class Action implements Comparable<Action> {
   public int getReplicaId() {
     return replicaId;
   }
+
+  public int getPriority() { return priority; }
 
   @Override
   public int compareTo(Action other) {

@@ -20,18 +20,18 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
-  private static final Log LOG = LogFactory.getLog(MetricsRegionSourceImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionSourceImpl.class);
 
   private AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -69,6 +69,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
                                  MetricsRegionAggregateSourceImpl aggregate) {
     this.regionWrapper = regionWrapper;
     agg = aggregate;
+    hashCode = regionWrapper.getRegionHashCode();
     agg.register(this);
 
     LOG.debug("Creating new MetricsRegionSourceImpl for table " +
@@ -83,7 +84,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     String suffix = "Count";
 
-    regionPutKey = regionNamePrefix + MetricsRegionServerSource.MUTATE_KEY + suffix;
+    regionPutKey = regionNamePrefix + MetricsRegionServerSource.PUT_KEY + suffix;
     regionPut = registry.getCounter(regionPutKey, 0L);
 
     regionDeleteKey = regionNamePrefix + MetricsRegionServerSource.DELETE_KEY + suffix;
@@ -100,8 +101,6 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     regionScanKey = regionNamePrefix + MetricsRegionServerSource.SCAN_KEY + suffix;
     regionScan = registry.getCounter(regionScanKey, 0L);
-
-    hashCode = regionWrapper.getRegionHashCode();
   }
 
   @Override
@@ -217,7 +216,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       mrb.addGauge(Interns.info(
               regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
               MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
-          this.regionWrapper.getMemstoreSize());
+          this.regionWrapper.getMemStoreSize());
       mrb.addGauge(Interns.info(
         regionNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
         MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),
@@ -263,6 +262,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
           this.regionWrapper.getReadRequestCount());
       mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.CP_REQUEST_COUNT,
+              MetricsRegionServerSource.CP_REQUEST_COUNT_DESC),
+          this.regionWrapper.getCpRequestCount());
+      mrb.addCounter(Interns.info(
               regionNamePrefix + MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT,
               MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
           this.regionWrapper.getFilteredReadRequestCount());
@@ -270,9 +273,26 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               regionNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
               MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
           this.regionWrapper.getWriteRequestCount());
-      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.REPLICA_ID,
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.REPLICA_ID,
               MetricsRegionSource.REPLICA_ID_DESC),
           this.regionWrapper.getReplicaId());
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.COMPACTIONS_QUEUED_COUNT,
+              MetricsRegionSource.COMPACTIONS_QUEUED_DESC),
+          this.regionWrapper.getNumCompactionsQueued());
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.FLUSHES_QUEUED_COUNT,
+              MetricsRegionSource.FLUSHES_QUEUED_DESC),
+          this.regionWrapper.getNumFlushesQueued());
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.MAX_COMPACTION_QUEUE_SIZE,
+              MetricsRegionSource.MAX_COMPACTION_QUEUE_DESC),
+          this.regionWrapper.getMaxCompactionQueueSize());
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.MAX_FLUSH_QUEUE_SIZE,
+              MetricsRegionSource.MAX_FLUSH_QUEUE_DESC),
+          this.regionWrapper.getMaxFlushQueueSize());
     }
   }
 

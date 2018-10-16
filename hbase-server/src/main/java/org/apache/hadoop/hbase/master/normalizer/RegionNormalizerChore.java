@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.master.HMaster;
 
 import java.io.IOException;
@@ -32,7 +32,7 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class RegionNormalizerChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(RegionNormalizerChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerChore.class);
 
   private final HMaster master;
 

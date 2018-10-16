@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
 public class MetricsMaster {
-  private static final Log LOG = LogFactory.getLog(MetricsMaster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsMaster.class);
   private MetricsMasterSource masterSource;
   private MetricsMasterProcSource masterProcSource;
   private MetricsMasterQuotaSource masterQuotaSource;

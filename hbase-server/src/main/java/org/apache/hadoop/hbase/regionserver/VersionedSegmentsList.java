@@ -19,8 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A list of segment managers coupled with the version of the memstore (version at the time it was
@@ -61,5 +62,30 @@ public class VersionedSegmentsList {
 
   public int getNumOfSegments() {
     return storeSegments.size();
+  }
+
+  // Estimates fraction of unique keys
+  @VisibleForTesting
+  double getEstimatedUniquesFrac() {
+    int segmentCells = 0;
+    int maxCells = 0;
+    double est = 0;
+
+    for (ImmutableSegment s : storeSegments) {
+      double segmentUniques = s.getNumUniqueKeys();
+      if(segmentUniques != CellSet.UNKNOWN_NUM_UNIQUES) {
+        segmentCells = s.getCellsCount();
+        if(segmentCells > maxCells) {
+          maxCells = segmentCells;
+          est = segmentUniques / segmentCells;
+        }
+      }
+      // else ignore this segment specifically since if the unique number is unknown counting
+      // cells can be expensive
+    }
+    if(maxCells == 0) {
+      return 1.0;
+    }
+    return est;
   }
 }

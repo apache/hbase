@@ -29,7 +29,7 @@ module Shell
     @@command_groups
   end
 
-  def self.load_command(name, group, aliases=[])
+  def self.load_command(name, group, aliases = [])
     return if commands[name]
 
     # Register command in the group
@@ -39,7 +39,7 @@ module Shell
     # Load command
     begin
       require "shell/commands/#{name}"
-      klass_name = name.to_s.gsub(/(?:^|_)(.)/) { $1.upcase } # camelize
+      klass_name = name.to_s.gsub(/(?:^|_)(.)/) { Regexp.last_match(1).upcase } # camelize
       commands[name] = eval("Commands::#{klass_name}")
       aliases.each do |an_alias|
         commands[an_alias] = commands[name]
@@ -53,10 +53,10 @@ module Shell
     raise ArgumentError, "No :commands for group #{group}" unless opts[:commands]
 
     command_groups[group] = {
-      :commands => [],
-      :command_names => opts[:commands],
-      :full_name => opts[:full_name] || group,
-      :comment => opts[:comment]
+      commands: [],
+      command_names: opts[:commands],
+      full_name: opts[:full_name] || group,
+      comment: opts[:comment]
     }
 
     all_aliases = opts[:aliases] || {}
@@ -68,6 +68,7 @@ module Shell
   end
 
   #----------------------------------------------------------------------
+  # rubocop:disable Metrics/ClassLength
   class Shell
     attr_accessor :hbase
     attr_accessor :interactive
@@ -76,18 +77,18 @@ module Shell
     @debug = false
     attr_accessor :debug
 
-    def initialize(hbase, interactive=true)
+    def initialize(hbase, interactive = true)
       self.hbase = hbase
       self.interactive = interactive
     end
 
     # Returns Admin class from admin.rb
     def admin
-      @admin ||= hbase.admin()
+      @admin ||= hbase.admin
     end
 
     def hbase_taskmonitor
-      @hbase_taskmonitor ||= hbase.taskmonitor()
+      @hbase_taskmonitor ||= hbase.taskmonitor
     end
 
     def hbase_table(name)
@@ -95,23 +96,23 @@ module Shell
     end
 
     def hbase_replication_admin
-      @hbase_replication_admin ||= hbase.replication_admin()
+      @hbase_replication_admin ||= hbase.replication_admin
     end
 
     def hbase_security_admin
-      @hbase_security_admin ||= hbase.security_admin()
+      @hbase_security_admin ||= hbase.security_admin
     end
 
     def hbase_visibility_labels_admin
-      @hbase_visibility_labels_admin ||= hbase.visibility_labels_admin()
+      @hbase_visibility_labels_admin ||= hbase.visibility_labels_admin
     end
 
     def hbase_quotas_admin
-      @hbase_quotas_admin ||= hbase.quotas_admin()
+      @hbase_quotas_admin ||= hbase.quotas_admin
     end
 
     def hbase_rsgroup_admin
-      @rsgroup_admin ||= hbase.rsgroup_admin()
+      @rsgroup_admin ||= hbase.rsgroup_admin
     end
 
     def export_commands(where)
@@ -135,30 +136,23 @@ module Shell
     end
 
     # call the method 'command' on the specified command
-    # If interactive is enabled, then we suppress the return value. The command should have
-    # printed relevant output.
-    # Return value is only useful in non-interactive mode, for e.g. tests.
     def command(command, *args)
-      ret = internal_command(command, :command, *args)
-      if self.interactive
-        return nil
-      else
-        return ret
-      end
+      internal_command(command, :command, *args)
     end
 
     # call a specific internal method in the command instance
     # command  - name of the command to call
     # method_name - name of the method on the command to call. Defaults to just 'command'
     # args - to be passed to the named method
-    def internal_command(command, method_name= :command, *args)
-      command_instance(command).command_safe(self.debug, method_name, *args)
+    def internal_command(command, method_name = :command, *args)
+      command_instance(command).command_safe(debug, method_name, *args)
     end
 
     def print_banner
       puts 'HBase Shell'
       puts 'Use "help" to get list of supported commands.'
       puts 'Use "exit" to quit this interactive shell.'
+      puts 'For Reference, please visit: http://hbase.apache.org/book.html#shell'
       print 'Version '
       command('version')
       puts
@@ -168,12 +162,12 @@ module Shell
       puts "Command: #{command}"
       puts command_instance(command).help
       puts
-      return nil
+      nil
     end
 
     def help_command(command)
       puts command_instance(command).help
-      return nil
+      nil
     end
 
     def help_group(group_name)
@@ -185,7 +179,7 @@ module Shell
         puts group[:comment]
         puts
       end
-      return nil
+      nil
     end
 
     def help(command = nil)
@@ -200,23 +194,23 @@ module Shell
       puts
       puts 'COMMAND GROUPS:'
       ::Shell.command_groups.each do |name, group|
-        puts "  Group name: " + name
-        puts "  Commands: " + group[:command_names].sort.join(', ')
+        puts '  Group name: ' + name
+        puts '  Commands: ' + group[:command_names].sort.join(', ')
         puts
       end
       unless command
         puts 'SHELL USAGE:'
         help_footer
       end
-      return nil
+      nil
     end
 
     def help_header
-      return "HBase Shell, version #{org.apache.hadoop.hbase.util.VersionInfo.getVersion()}, " +
-             "r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision()}, " +
-             "#{org.apache.hadoop.hbase.util.VersionInfo.getDate()}" + "\n" +
-        "Type 'help \"COMMAND\"', (e.g. 'help \"get\"' -- the quotes are necessary) for help on a specific command.\n" +
-        "Commands are grouped. Type 'help \"COMMAND_GROUP\"', (e.g. 'help \"general\"') for help on a command group."
+      "HBase Shell, version #{org.apache.hadoop.hbase.util.VersionInfo.getVersion}, " \
+             "r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision}, " \
+             "#{org.apache.hadoop.hbase.util.VersionInfo.getDate}" + "\n" \
+             "Type 'help \"COMMAND\"', (e.g. 'help \"get\"' -- the quotes are necessary) for help on a specific command.\n" \
+             "Commands are grouped. Type 'help \"COMMAND_GROUP\"', (e.g. 'help \"general\"') for help on a command group."
     end
 
     def help_footer
@@ -245,6 +239,7 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
       HERE
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end
 
 # Load commands base class
@@ -253,8 +248,8 @@ require 'shell/commands'
 # Load all commands
 Shell.load_command_group(
   'general',
-  :full_name => 'GENERAL HBASE SHELL COMMANDS',
-  :commands => %w[
+  full_name: 'GENERAL HBASE SHELL COMMANDS',
+  commands: %w[
     status
     version
     table_help
@@ -265,8 +260,8 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'ddl',
-  :full_name => 'TABLES MANAGEMENT COMMANDS',
-  :commands => %w[
+  full_name: 'TABLES MANAGEMENT COMMANDS',
+  commands: %w[
     alter
     create
     describe
@@ -286,16 +281,17 @@ Shell.load_command_group(
     get_table
     locate_region
     list_regions
+    clone_table_schema
   ],
-  :aliases => {
+  aliases: {
     'describe' => ['desc']
   }
 )
 
 Shell.load_command_group(
   'namespace',
-  :full_name => 'NAMESPACE MANAGEMENT COMMANDS',
-  :commands => %w[
+  full_name: 'NAMESPACE MANAGEMENT COMMANDS',
+  commands: %w[
     create_namespace
     drop_namespace
     alter_namespace
@@ -307,8 +303,8 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'dml',
-  :full_name => 'DATA MANIPULATION COMMANDS',
-  :commands => %w[
+  full_name: 'DATA MANIPULATION COMMANDS',
+  commands: %w[
     count
     delete
     deleteall
@@ -326,9 +322,9 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'tools',
-  :full_name => 'HBASE SURGERY TOOLS',
-  :comment => "WARNING: Above commands are for 'experts'-only as misuse can damage an install",
-  :commands => %w[
+  full_name: 'HBASE SURGERY TOOLS',
+  comment: "WARNING: Above commands are for 'experts'-only as misuse can damage an install",
+  commands: %w[
     assign
     balancer
     balance_switch
@@ -336,8 +332,10 @@ Shell.load_command_group(
     normalize
     normalizer_switch
     normalizer_enabled
+    is_in_maintenance_mode
     close_region
     compact
+    compaction_switch
     flush
     major_compact
     move
@@ -358,27 +356,37 @@ Shell.load_command_group(
     splitormerge_switch
     splitormerge_enabled
     clear_compaction_queues
+    list_deadservers
+    clear_deadservers
+    clear_block_cache
+    stop_master
+    stop_regionserver
+    rit
   ],
-  # TODO remove older hlog_roll command
-  :aliases => {
+  # TODO: remove older hlog_roll command
+  aliases: {
     'wal_roll' => ['hlog_roll']
   }
 )
 
 Shell.load_command_group(
   'replication',
-  :full_name => 'CLUSTER REPLICATION TOOLS',
-  :commands => %w[
+  full_name: 'CLUSTER REPLICATION TOOLS',
+  commands: %w[
     add_peer
     remove_peer
     list_peers
     enable_peer
     disable_peer
+    set_peer_replicate_all
+    set_peer_serial
     set_peer_namespaces
     append_peer_namespaces
     remove_peer_namespaces
+    set_peer_exclude_namespaces
     show_peer_tableCFs
     set_peer_tableCFs
+    set_peer_exclude_tableCFs
     set_peer_bandwidth
     list_replicated_tables
     append_peer_tableCFs
@@ -388,13 +396,14 @@ Shell.load_command_group(
     get_peer_config
     list_peer_configs
     update_peer_config
+    transit_peer_sync_replication_state
   ]
 )
 
 Shell.load_command_group(
   'snapshots',
-  :full_name => 'CLUSTER SNAPSHOT TOOLS',
-  :commands => %w[
+  full_name: 'CLUSTER SNAPSHOT TOOLS',
+  commands: %w[
     snapshot
     clone_snapshot
     restore_snapshot
@@ -408,8 +417,8 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'configuration',
-  :full_name => 'ONLINE CONFIGURATION TOOLS',
-  :commands => %w[
+  full_name: 'ONLINE CONFIGURATION TOOLS',
+  commands: %w[
     update_config
     update_all_config
   ]
@@ -417,20 +426,21 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'quotas',
-  :full_name => 'CLUSTER QUOTAS TOOLS',
-  :commands => %w[
+  full_name: 'CLUSTER QUOTAS TOOLS',
+  commands: %w[
     set_quota
     list_quotas
     list_quota_table_sizes
     list_quota_snapshots
+    list_snapshot_sizes
   ]
 )
 
 Shell.load_command_group(
   'security',
-  :full_name => 'SECURITY TOOLS',
-  :comment => "NOTE: Above commands are only applicable if running with the AccessController coprocessor",
-  :commands => %w[
+  full_name: 'SECURITY TOOLS',
+  comment: 'NOTE: Above commands are only applicable if running with the AccessController coprocessor',
+  commands: %w[
     list_security_capabilities
     grant
     revoke
@@ -440,9 +450,8 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'procedures',
-  :full_name => 'PROCEDURES & LOCKS MANAGEMENT',
-  :commands => %w[
-    abort_procedure
+  full_name: 'PROCEDURES & LOCKS MANAGEMENT',
+  commands: %w[
     list_procedures
     list_locks
   ]
@@ -450,9 +459,9 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'visibility labels',
-  :full_name => 'VISIBILITY LABEL TOOLS',
-  :comment => "NOTE: Above commands are only applicable if running with the VisibilityController coprocessor",
-  :commands => %w[
+  full_name: 'VISIBILITY LABEL TOOLS',
+  comment: 'NOTE: Above commands are only applicable if running with the VisibilityController coprocessor',
+  commands: %w[
     add_labels
     list_labels
     set_auths
@@ -464,10 +473,10 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'rsgroup',
-  :full_name => 'RSGroups',
-  :comment => "NOTE: The rsgroup Coprocessor Endpoint must be enabled on the Master else commands fail with:
+  full_name: 'RSGroups',
+  comment: "NOTE: The rsgroup Coprocessor Endpoint must be enabled on the Master else commands fail with:
   UnknownProtocolException: No registered Master Coprocessor Endpoint found for RSGroupAdminService",
-  :commands => %w[
+  commands: %w[
     list_rsgroups
     get_rsgroup
     add_rsgroup
@@ -475,8 +484,11 @@ Shell.load_command_group(
     balance_rsgroup
     move_servers_rsgroup
     move_tables_rsgroup
+    move_namespaces_rsgroup
     move_servers_tables_rsgroup
+    move_servers_namespaces_rsgroup
     get_server_rsgroup
     get_table_rsgroup
+    remove_servers_rsgroup
   ]
 )

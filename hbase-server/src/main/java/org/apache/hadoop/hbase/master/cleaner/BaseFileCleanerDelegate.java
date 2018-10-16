@@ -17,28 +17,24 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import java.util.Map;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.BaseConfigurable;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-
-import java.util.Map;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Base class for file cleaners which allows subclasses to implement a simple
  * isFileDeletable method (which used to be the FileCleanerDelegate contract).
  */
+@InterfaceAudience.Private
 public abstract class BaseFileCleanerDelegate extends BaseConfigurable
 implements FileCleanerDelegate {
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
-    return Iterables.filter(files, new Predicate<FileStatus>() {
-      @Override
-      public boolean apply(FileStatus file) {
-        return isFileDeletable(file);
-      }});
+    return Iterables.filter(files, this::isFileDeletable);
   }
 
   @Override

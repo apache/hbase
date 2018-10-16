@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,39 +31,39 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MunkresAssignment;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 
 /**
  * A tool that is used for manipulating and viewing favored nodes information
@@ -71,7 +72,7 @@ import org.apache.log4j.Logger;
 @InterfaceAudience.Private
 // TODO: Remove? Unused. Partially implemented only.
 public class RegionPlacementMaintainer {
-  private static final Log LOG = LogFactory.getLog(RegionPlacementMaintainer.class
+  private static final Logger LOG = LoggerFactory.getLogger(RegionPlacementMaintainer.class
       .getName());
   //The cost of a placement that should never be assigned.
   private static final float MAX_COST = Float.POSITIVE_INFINITY;
@@ -191,265 +192,268 @@ public class RegionPlacementMaintainer {
    * @throws IOException
    */
   private void genAssignmentPlan(TableName tableName,
-      SnapshotOfRegionAssignmentFromMeta assignmentSnapshot,
-      Map<String, Map<String, Float>> regionLocalityMap, FavoredNodesPlan plan,
-      boolean munkresForSecondaryAndTertiary) throws IOException {
-      // Get the all the regions for the current table
-      List<HRegionInfo> regions =
-        assignmentSnapshot.getTableToRegionMap().get(tableName);
-      int numRegions = regions.size();
+    SnapshotOfRegionAssignmentFromMeta assignmentSnapshot,
+    Map<String, Map<String, Float>> regionLocalityMap, FavoredNodesPlan plan,
+    boolean munkresForSecondaryAndTertiary) throws IOException {
+    // Get the all the regions for the current table
+    List<RegionInfo> regions =
+      assignmentSnapshot.getTableToRegionMap().get(tableName);
+    int numRegions = regions.size();
 
-      // Get the current assignment map
-      Map<HRegionInfo, ServerName> currentAssignmentMap =
-        assignmentSnapshot.getRegionToRegionServerMap();
+    // Get the current assignment map
+    Map<RegionInfo, ServerName> currentAssignmentMap =
+      assignmentSnapshot.getRegionToRegionServerMap();
 
-      // Get the all the region servers
-      List<ServerName> servers = new ArrayList<>();
-      try (Admin admin = this.connection.getAdmin()) {
-        servers.addAll(admin.getClusterStatus().getServers());
-      }
+    // Get the all the region servers
+    List<ServerName> servers = new ArrayList<>();
+    try (Admin admin = this.connection.getAdmin()) {
+      servers.addAll(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+        .getLiveServerMetrics().keySet());
+    }
 
-      LOG.info("Start to generate assignment plan for " + numRegions +
-          " regions from table " + tableName + " with " +
-          servers.size() + " region servers");
+    LOG.info("Start to generate assignment plan for " + numRegions +
+        " regions from table " + tableName + " with " +
+        servers.size() + " region servers");
 
-      int slotsPerServer = (int) Math.ceil((float) numRegions /
-          servers.size());
-      int regionSlots = slotsPerServer * servers.size();
+    int slotsPerServer = (int) Math.ceil((float) numRegions /
+        servers.size());
+    int regionSlots = slotsPerServer * servers.size();
 
-      // Compute the primary, secondary and tertiary costs for each region/server
-      // pair. These costs are based only on node locality and rack locality, and
-      // will be modified later.
-      float[][] primaryCost = new float[numRegions][regionSlots];
-      float[][] secondaryCost = new float[numRegions][regionSlots];
-      float[][] tertiaryCost = new float[numRegions][regionSlots];
+    // Compute the primary, secondary and tertiary costs for each region/server
+    // pair. These costs are based only on node locality and rack locality, and
+    // will be modified later.
+    float[][] primaryCost = new float[numRegions][regionSlots];
+    float[][] secondaryCost = new float[numRegions][regionSlots];
+    float[][] tertiaryCost = new float[numRegions][regionSlots];
 
-      if (this.enforceLocality && regionLocalityMap != null) {
-        // Transform the locality mapping into a 2D array, assuming that any
-        // unspecified locality value is 0.
-        float[][] localityPerServer = new float[numRegions][regionSlots];
-        for (int i = 0; i < numRegions; i++) {
-          Map<String, Float> serverLocalityMap =
-              regionLocalityMap.get(regions.get(i).getEncodedName());
-          if (serverLocalityMap == null) {
+    if (this.enforceLocality && regionLocalityMap != null) {
+      // Transform the locality mapping into a 2D array, assuming that any
+      // unspecified locality value is 0.
+      float[][] localityPerServer = new float[numRegions][regionSlots];
+      for (int i = 0; i < numRegions; i++) {
+        Map<String, Float> serverLocalityMap =
+            regionLocalityMap.get(regions.get(i).getEncodedName());
+        if (serverLocalityMap == null) {
+          continue;
+        }
+        for (int j = 0; j < servers.size(); j++) {
+          String serverName = servers.get(j).getHostname();
+          if (serverName == null) {
             continue;
           }
-          for (int j = 0; j < servers.size(); j++) {
-            String serverName = servers.get(j).getHostname();
-            if (serverName == null) {
-              continue;
-            }
-            Float locality = serverLocalityMap.get(serverName);
-            if (locality == null) {
-              continue;
-            }
-            for (int k = 0; k < slotsPerServer; k++) {
-              // If we can't find the locality of a region to a server, which occurs
-              // because locality is only reported for servers which have some
-              // blocks of a region local, then the locality for that pair is 0.
-              localityPerServer[i][j * slotsPerServer + k] = locality.floatValue();
-            }
+          Float locality = serverLocalityMap.get(serverName);
+          if (locality == null) {
+            continue;
           }
-        }
-
-        // Compute the total rack locality for each region in each rack. The total
-        // rack locality is the sum of the localities of a region on all servers in
-        // a rack.
-        Map<String, Map<HRegionInfo, Float>> rackRegionLocality = new HashMap<>();
-        for (int i = 0; i < numRegions; i++) {
-          HRegionInfo region = regions.get(i);
-          for (int j = 0; j < regionSlots; j += slotsPerServer) {
-            String rack = rackManager.getRack(servers.get(j / slotsPerServer));
-            Map<HRegionInfo, Float> rackLocality = rackRegionLocality.get(rack);
-            if (rackLocality == null) {
-              rackLocality = new HashMap<>();
-              rackRegionLocality.put(rack, rackLocality);
-            }
-            Float localityObj = rackLocality.get(region);
-            float locality = localityObj == null ? 0 : localityObj.floatValue();
-            locality += localityPerServer[i][j];
-            rackLocality.put(region, locality);
-          }
-        }
-        for (int i = 0; i < numRegions; i++) {
-          for (int j = 0; j < regionSlots; j++) {
-            String rack = rackManager.getRack(servers.get(j / slotsPerServer));
-            Float totalRackLocalityObj =
-                rackRegionLocality.get(rack).get(regions.get(i));
-            float totalRackLocality = totalRackLocalityObj == null ?
-                0 : totalRackLocalityObj.floatValue();
-
-            // Primary cost aims to favor servers with high node locality and low
-            // rack locality, so that secondaries and tertiaries can be chosen for
-            // nodes with high rack locality. This might give primaries with
-            // slightly less locality at first compared to a cost which only
-            // considers the node locality, but should be better in the long run.
-            primaryCost[i][j] = 1 - (2 * localityPerServer[i][j] -
-                totalRackLocality);
-
-            // Secondary cost aims to favor servers with high node locality and high
-            // rack locality since the tertiary will be chosen from the same rack as
-            // the secondary. This could be negative, but that is okay.
-            secondaryCost[i][j] = 2 - (localityPerServer[i][j] + totalRackLocality);
-
-            // Tertiary cost is only concerned with the node locality. It will later
-            // be restricted to only hosts on the same rack as the secondary.
-            tertiaryCost[i][j] = 1 - localityPerServer[i][j];
+          for (int k = 0; k < slotsPerServer; k++) {
+            // If we can't find the locality of a region to a server, which occurs
+            // because locality is only reported for servers which have some
+            // blocks of a region local, then the locality for that pair is 0.
+            localityPerServer[i][j * slotsPerServer + k] = locality.floatValue();
           }
         }
       }
 
-      if (this.enforceMinAssignmentMove && currentAssignmentMap != null) {
-        // We want to minimize the number of regions which move as the result of a
-        // new assignment. Therefore, slightly penalize any placement which is for
-        // a host that is not currently serving the region.
-        for (int i = 0; i < numRegions; i++) {
-          for (int j = 0; j < servers.size(); j++) {
-            ServerName currentAddress = currentAssignmentMap.get(regions.get(i));
-            if (currentAddress != null &&
-                !currentAddress.equals(servers.get(j))) {
-              for (int k = 0; k < slotsPerServer; k++) {
-                primaryCost[i][j * slotsPerServer + k] += NOT_CURRENT_HOST_PENALTY;
-              }
-            }
-          }
-        }
-      }
-
-      // Artificially increase cost of last slot of each server to evenly
-      // distribute the slop, otherwise there will be a few servers with too few
-      // regions and many servers with the max number of regions.
+      // Compute the total rack locality for each region in each rack. The total
+      // rack locality is the sum of the localities of a region on all servers in
+      // a rack.
+      Map<String, Map<RegionInfo, Float>> rackRegionLocality = new HashMap<>();
       for (int i = 0; i < numRegions; i++) {
+        RegionInfo region = regions.get(i);
         for (int j = 0; j < regionSlots; j += slotsPerServer) {
-          primaryCost[i][j] += LAST_SLOT_COST_PENALTY;
-          secondaryCost[i][j] += LAST_SLOT_COST_PENALTY;
-          tertiaryCost[i][j] += LAST_SLOT_COST_PENALTY;
+          String rack = rackManager.getRack(servers.get(j / slotsPerServer));
+          Map<RegionInfo, Float> rackLocality = rackRegionLocality.get(rack);
+          if (rackLocality == null) {
+            rackLocality = new HashMap<>();
+            rackRegionLocality.put(rack, rackLocality);
+          }
+          Float localityObj = rackLocality.get(region);
+          float locality = localityObj == null ? 0 : localityObj.floatValue();
+          locality += localityPerServer[i][j];
+          rackLocality.put(region, locality);
         }
       }
-
-      RandomizedMatrix randomizedMatrix = new RandomizedMatrix(numRegions,
-          regionSlots);
-      primaryCost = randomizedMatrix.transform(primaryCost);
-      int[] primaryAssignment = new MunkresAssignment(primaryCost).solve();
-      primaryAssignment = randomizedMatrix.invertIndices(primaryAssignment);
-
-      // Modify the secondary and tertiary costs for each region/server pair to
-      // prevent a region from being assigned to the same rack for both primary
-      // and either one of secondary or tertiary.
       for (int i = 0; i < numRegions; i++) {
-        int slot = primaryAssignment[i];
+        for (int j = 0; j < regionSlots; j++) {
+          String rack = rackManager.getRack(servers.get(j / slotsPerServer));
+          Float totalRackLocalityObj =
+              rackRegionLocality.get(rack).get(regions.get(i));
+          float totalRackLocality = totalRackLocalityObj == null ?
+              0 : totalRackLocalityObj.floatValue();
+
+          // Primary cost aims to favor servers with high node locality and low
+          // rack locality, so that secondaries and tertiaries can be chosen for
+          // nodes with high rack locality. This might give primaries with
+          // slightly less locality at first compared to a cost which only
+          // considers the node locality, but should be better in the long run.
+          primaryCost[i][j] = 1 - (2 * localityPerServer[i][j] -
+              totalRackLocality);
+
+          // Secondary cost aims to favor servers with high node locality and high
+          // rack locality since the tertiary will be chosen from the same rack as
+          // the secondary. This could be negative, but that is okay.
+          secondaryCost[i][j] = 2 - (localityPerServer[i][j] + totalRackLocality);
+
+          // Tertiary cost is only concerned with the node locality. It will later
+          // be restricted to only hosts on the same rack as the secondary.
+          tertiaryCost[i][j] = 1 - localityPerServer[i][j];
+        }
+      }
+    }
+
+    if (this.enforceMinAssignmentMove && currentAssignmentMap != null) {
+      // We want to minimize the number of regions which move as the result of a
+      // new assignment. Therefore, slightly penalize any placement which is for
+      // a host that is not currently serving the region.
+      for (int i = 0; i < numRegions; i++) {
+        for (int j = 0; j < servers.size(); j++) {
+          ServerName currentAddress = currentAssignmentMap.get(regions.get(i));
+          if (currentAddress != null &&
+              !currentAddress.equals(servers.get(j))) {
+            for (int k = 0; k < slotsPerServer; k++) {
+              primaryCost[i][j * slotsPerServer + k] += NOT_CURRENT_HOST_PENALTY;
+            }
+          }
+        }
+      }
+    }
+
+    // Artificially increase cost of last slot of each server to evenly
+    // distribute the slop, otherwise there will be a few servers with too few
+    // regions and many servers with the max number of regions.
+    for (int i = 0; i < numRegions; i++) {
+      for (int j = 0; j < regionSlots; j += slotsPerServer) {
+        primaryCost[i][j] += LAST_SLOT_COST_PENALTY;
+        secondaryCost[i][j] += LAST_SLOT_COST_PENALTY;
+        tertiaryCost[i][j] += LAST_SLOT_COST_PENALTY;
+      }
+    }
+
+    RandomizedMatrix randomizedMatrix = new RandomizedMatrix(numRegions,
+        regionSlots);
+    primaryCost = randomizedMatrix.transform(primaryCost);
+    int[] primaryAssignment = new MunkresAssignment(primaryCost).solve();
+    primaryAssignment = randomizedMatrix.invertIndices(primaryAssignment);
+
+    // Modify the secondary and tertiary costs for each region/server pair to
+    // prevent a region from being assigned to the same rack for both primary
+    // and either one of secondary or tertiary.
+    for (int i = 0; i < numRegions; i++) {
+      int slot = primaryAssignment[i];
+      String rack = rackManager.getRack(servers.get(slot / slotsPerServer));
+      for (int k = 0; k < servers.size(); k++) {
+        if (!rackManager.getRack(servers.get(k)).equals(rack)) {
+          continue;
+        }
+        if (k == slot / slotsPerServer) {
+          // Same node, do not place secondary or tertiary here ever.
+          for (int m = 0; m < slotsPerServer; m++) {
+            secondaryCost[i][k * slotsPerServer + m] = MAX_COST;
+            tertiaryCost[i][k * slotsPerServer + m] = MAX_COST;
+          }
+        } else {
+          // Same rack, do not place secondary or tertiary here if possible.
+          for (int m = 0; m < slotsPerServer; m++) {
+            secondaryCost[i][k * slotsPerServer + m] = AVOID_COST;
+            tertiaryCost[i][k * slotsPerServer + m] = AVOID_COST;
+          }
+        }
+      }
+    }
+    if (munkresForSecondaryAndTertiary) {
+      randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
+      secondaryCost = randomizedMatrix.transform(secondaryCost);
+      int[] secondaryAssignment = new MunkresAssignment(secondaryCost).solve();
+      secondaryAssignment = randomizedMatrix.invertIndices(secondaryAssignment);
+
+      // Modify the tertiary costs for each region/server pair to ensure that a
+      // region is assigned to a tertiary server on the same rack as its secondary
+      // server, but not the same server in that rack.
+      for (int i = 0; i < numRegions; i++) {
+        int slot = secondaryAssignment[i];
         String rack = rackManager.getRack(servers.get(slot / slotsPerServer));
         for (int k = 0; k < servers.size(); k++) {
-          if (!rackManager.getRack(servers.get(k)).equals(rack)) {
-            continue;
-          }
           if (k == slot / slotsPerServer) {
-            // Same node, do not place secondary or tertiary here ever.
+            // Same node, do not place tertiary here ever.
             for (int m = 0; m < slotsPerServer; m++) {
-              secondaryCost[i][k * slotsPerServer + m] = MAX_COST;
               tertiaryCost[i][k * slotsPerServer + m] = MAX_COST;
             }
           } else {
-            // Same rack, do not place secondary or tertiary here if possible.
+            if (rackManager.getRack(servers.get(k)).equals(rack)) {
+              continue;
+            }
+            // Different rack, do not place tertiary here if possible.
             for (int m = 0; m < slotsPerServer; m++) {
-              secondaryCost[i][k * slotsPerServer + m] = AVOID_COST;
               tertiaryCost[i][k * slotsPerServer + m] = AVOID_COST;
             }
           }
         }
       }
-      if (munkresForSecondaryAndTertiary) {
-        randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
-        secondaryCost = randomizedMatrix.transform(secondaryCost);
-        int[] secondaryAssignment = new MunkresAssignment(secondaryCost).solve();
-        secondaryAssignment = randomizedMatrix.invertIndices(secondaryAssignment);
 
-        // Modify the tertiary costs for each region/server pair to ensure that a
-        // region is assigned to a tertiary server on the same rack as its secondary
-        // server, but not the same server in that rack.
-        for (int i = 0; i < numRegions; i++) {
-          int slot = secondaryAssignment[i];
-          String rack = rackManager.getRack(servers.get(slot / slotsPerServer));
-          for (int k = 0; k < servers.size(); k++) {
-            if (k == slot / slotsPerServer) {
-              // Same node, do not place tertiary here ever.
-              for (int m = 0; m < slotsPerServer; m++) {
-                tertiaryCost[i][k * slotsPerServer + m] = MAX_COST;
-              }
-            } else {
-              if (rackManager.getRack(servers.get(k)).equals(rack)) {
-                continue;
-              }
-              // Different rack, do not place tertiary here if possible.
-              for (int m = 0; m < slotsPerServer; m++) {
-                tertiaryCost[i][k * slotsPerServer + m] = AVOID_COST;
-              }
-            }
-          }
-        }
+      randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
+      tertiaryCost = randomizedMatrix.transform(tertiaryCost);
+      int[] tertiaryAssignment = new MunkresAssignment(tertiaryCost).solve();
+      tertiaryAssignment = randomizedMatrix.invertIndices(tertiaryAssignment);
 
-        randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
-        tertiaryCost = randomizedMatrix.transform(tertiaryCost);
-        int[] tertiaryAssignment = new MunkresAssignment(tertiaryCost).solve();
-        tertiaryAssignment = randomizedMatrix.invertIndices(tertiaryAssignment);
+      for (int i = 0; i < numRegions; i++) {
+        List<ServerName> favoredServers
+          = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
+        ServerName s = servers.get(primaryAssignment[i] / slotsPerServer);
+        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
+            ServerName.NON_STARTCODE));
 
-        for (int i = 0; i < numRegions; i++) {
-          List<ServerName> favoredServers = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
-          ServerName s = servers.get(primaryAssignment[i] / slotsPerServer);
-          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-              ServerName.NON_STARTCODE));
+        s = servers.get(secondaryAssignment[i] / slotsPerServer);
+        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
+            ServerName.NON_STARTCODE));
 
-          s = servers.get(secondaryAssignment[i] / slotsPerServer);
-          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-              ServerName.NON_STARTCODE));
-
-          s = servers.get(tertiaryAssignment[i] / slotsPerServer);
-          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-              ServerName.NON_STARTCODE));
-          // Update the assignment plan
-          plan.updateFavoredNodesMap(regions.get(i), favoredServers);
-        }
-        LOG.info("Generated the assignment plan for " + numRegions +
-            " regions from table " + tableName + " with " +
-            servers.size() + " region servers");
-        LOG.info("Assignment plan for secondary and tertiary generated " +
-            "using MunkresAssignment");
-      } else {
-        Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<>();
-        for (int i = 0; i < numRegions; i++) {
-          primaryRSMap.put(regions.get(i), servers.get(primaryAssignment[i] / slotsPerServer));
-        }
-        FavoredNodeAssignmentHelper favoredNodeHelper =
-            new FavoredNodeAssignmentHelper(servers, conf);
-        favoredNodeHelper.initialize();
-        Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap =
-            favoredNodeHelper.placeSecondaryAndTertiaryWithRestrictions(primaryRSMap);
-        for (int i = 0; i < numRegions; i++) {
-          List<ServerName> favoredServers = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
-          HRegionInfo currentRegion = regions.get(i);
-          ServerName s = primaryRSMap.get(currentRegion);
-          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-              ServerName.NON_STARTCODE));
-
-          ServerName[] secondaryAndTertiary =
-              secondaryAndTertiaryMap.get(currentRegion);
-          s = secondaryAndTertiary[0];
-          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-              ServerName.NON_STARTCODE));
-
-          s = secondaryAndTertiary[1];
-          favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-              ServerName.NON_STARTCODE));
-          // Update the assignment plan
-          plan.updateFavoredNodesMap(regions.get(i), favoredServers);
-        }
-        LOG.info("Generated the assignment plan for " + numRegions +
-            " regions from table " + tableName + " with " +
-            servers.size() + " region servers");
-        LOG.info("Assignment plan for secondary and tertiary generated " +
-            "using placeSecondaryAndTertiaryWithRestrictions method");
+        s = servers.get(tertiaryAssignment[i] / slotsPerServer);
+        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
+            ServerName.NON_STARTCODE));
+        // Update the assignment plan
+        plan.updateFavoredNodesMap(regions.get(i), favoredServers);
       }
+      LOG.info("Generated the assignment plan for " + numRegions +
+          " regions from table " + tableName + " with " +
+          servers.size() + " region servers");
+      LOG.info("Assignment plan for secondary and tertiary generated " +
+          "using MunkresAssignment");
+    } else {
+      Map<RegionInfo, ServerName> primaryRSMap = new HashMap<>();
+      for (int i = 0; i < numRegions; i++) {
+        primaryRSMap.put(regions.get(i), servers.get(primaryAssignment[i] / slotsPerServer));
+      }
+      FavoredNodeAssignmentHelper favoredNodeHelper =
+          new FavoredNodeAssignmentHelper(servers, conf);
+      favoredNodeHelper.initialize();
+      Map<RegionInfo, ServerName[]> secondaryAndTertiaryMap =
+          favoredNodeHelper.placeSecondaryAndTertiaryWithRestrictions(primaryRSMap);
+      for (int i = 0; i < numRegions; i++) {
+        List<ServerName> favoredServers
+          = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
+        RegionInfo currentRegion = regions.get(i);
+        ServerName s = primaryRSMap.get(currentRegion);
+        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
+            ServerName.NON_STARTCODE));
+
+        ServerName[] secondaryAndTertiary =
+            secondaryAndTertiaryMap.get(currentRegion);
+        s = secondaryAndTertiary[0];
+        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
+            ServerName.NON_STARTCODE));
+
+        s = secondaryAndTertiary[1];
+        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
+            ServerName.NON_STARTCODE));
+        // Update the assignment plan
+        plan.updateFavoredNodesMap(regions.get(i), favoredServers);
+      }
+      LOG.info("Generated the assignment plan for " + numRegions +
+          " regions from table " + tableName + " with " +
+          servers.size() + " region servers");
+      LOG.info("Assignment plan for secondary and tertiary generated " +
+          "using placeSecondaryAndTertiaryWithRestrictions method");
     }
+  }
 
   public FavoredNodesPlan getNewAssignmentPlan() throws IOException {
     // Get the current region assignment snapshot by scanning from the META
@@ -465,7 +469,7 @@ public class RegionPlacementMaintainer {
     FavoredNodesPlan plan = new FavoredNodesPlan();
 
     // Get the table to region mapping
-    Map<TableName, List<HRegionInfo>> tableToRegionMap =
+    Map<TableName, List<RegionInfo>> tableToRegionMap =
       assignmentSnapshot.getTableToRegionMap();
     LOG.info("Start to generate the new assignment plan for the " +
          + tableToRegionMap.keySet().size() + " tables" );
@@ -633,8 +637,8 @@ public class RegionPlacementMaintainer {
     try {
       LOG.info("Start to update the hbase:meta with the new assignment plan");
       Map<String, List<ServerName>> assignmentMap = plan.getAssignmentMap();
-      Map<HRegionInfo, List<ServerName>> planToUpdate = new HashMap<>(assignmentMap.size());
-      Map<String, HRegionInfo> regionToRegionInfoMap =
+      Map<RegionInfo, List<ServerName>> planToUpdate = new HashMap<>(assignmentMap.size());
+      Map<String, RegionInfo> regionToRegionInfoMap =
         getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap();
       for (Map.Entry<String, List<ServerName>> entry : assignmentMap.entrySet()) {
         planToUpdate.put(regionToRegionInfoMap.get(entry.getKey()), entry.getValue());
@@ -657,21 +661,21 @@ public class RegionPlacementMaintainer {
   throws IOException{
     LOG.info("Start to update the region servers with the new assignment plan");
     // Get the region to region server map
-    Map<ServerName, List<HRegionInfo>> currentAssignment =
+    Map<ServerName, List<RegionInfo>> currentAssignment =
       this.getRegionAssignmentSnapshot().getRegionServerToRegionMap();
 
     // track of the failed and succeeded updates
     int succeededNum = 0;
     Map<ServerName, Exception> failedUpdateMap = new HashMap<>();
 
-    for (Map.Entry<ServerName, List<HRegionInfo>> entry :
+    for (Map.Entry<ServerName, List<RegionInfo>> entry :
       currentAssignment.entrySet()) {
-      List<Pair<HRegionInfo, List<ServerName>>> regionUpdateInfos = new ArrayList<>();
+      List<Pair<RegionInfo, List<ServerName>>> regionUpdateInfos = new ArrayList<>();
       try {
         // Keep track of the favored updates for the current region server
         FavoredNodesPlan singleServerPlan = null;
         // Find out all the updates for the current region server
-        for (HRegionInfo region : entry.getValue()) {
+        for (RegionInfo region : entry.getValue()) {
           List<ServerName> favoredServerList = plan.getFavoredNodes(region);
           if (favoredServerList != null &&
               favoredServerList.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
@@ -744,7 +748,7 @@ public class RegionPlacementMaintainer {
       throws IOException {
     Map<TableName, Integer> movesPerTable = new HashMap<>();
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
-    Map<TableName, List<HRegionInfo>> tableToRegions = snapshot
+    Map<TableName, List<RegionInfo>> tableToRegions = snapshot
         .getTableToRegionMap();
     FavoredNodesPlan oldPlan = snapshot.getExistingAssignmentPlan();
     Set<TableName> tables = snapshot.getTableSet();
@@ -754,8 +758,8 @@ public class RegionPlacementMaintainer {
           && !this.targetTableSet.contains(table)) {
         continue;
       }
-      List<HRegionInfo> regions = tableToRegions.get(table);
-      for (HRegionInfo region : regions) {
+      List<RegionInfo> regions = tableToRegions.get(table);
+      for (RegionInfo region : regions) {
         List<ServerName> oldServers = oldPlan.getFavoredNodes(region);
         List<ServerName> newServers = newPlan.getFavoredNodes(region);
         if (oldServers != null && newServers != null) {
@@ -787,7 +791,7 @@ public class RegionPlacementMaintainer {
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
     FavoredNodesPlan oldPlan = snapshot.getExistingAssignmentPlan();
     Set<TableName> tables = snapshot.getTableSet();
-    Map<TableName, List<HRegionInfo>> tableToRegionsMap = snapshot.getTableToRegionMap();
+    Map<TableName, List<RegionInfo>> tableToRegionsMap = snapshot.getTableToRegionMap();
     for (TableName table : tables) {
       float[] deltaLocality = new float[3];
       float[] locality = new float[3];
@@ -795,13 +799,13 @@ public class RegionPlacementMaintainer {
           && !this.targetTableSet.contains(table)) {
         continue;
       }
-      List<HRegionInfo> regions = tableToRegionsMap.get(table);
+      List<RegionInfo> regions = tableToRegionsMap.get(table);
       System.out.println("==================================================");
       System.out.println("Assignment Plan Projection Report For Table: " + table);
       System.out.println("\t Total regions: " + regions.size());
       System.out.println("\t" + movesPerTable.get(table)
           + " primaries will move due to their primary has changed");
-      for (HRegionInfo currentRegion : regions) {
+      for (RegionInfo currentRegion : regions) {
         Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion
             .getEncodedName());
         if (regionLocality == null) {
@@ -879,7 +883,7 @@ public class RegionPlacementMaintainer {
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
     FavoredNodesPlan assignmentPlan = snapshot.getExistingAssignmentPlan();
     Set<TableName> tables = snapshot.getTableSet();
-    Map<TableName, List<HRegionInfo>> tableToRegionsMap = snapshot
+    Map<TableName, List<RegionInfo>> tableToRegionsMap = snapshot
         .getTableToRegionMap();
     for (TableName table : tables) {
       float[] locality = new float[3];
@@ -887,8 +891,8 @@ public class RegionPlacementMaintainer {
           && !this.targetTableSet.contains(table)) {
         continue;
       }
-      List<HRegionInfo> regions = tableToRegionsMap.get(table);
-      for (HRegionInfo currentRegion : regions) {
+      List<RegionInfo> regions = tableToRegionsMap.get(table);
+      for (RegionInfo currentRegion : regions) {
         Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion
             .getEncodedName());
         if (regionLocality == null) {
@@ -977,12 +981,6 @@ public class RegionPlacementMaintainer {
     opt.addOption("ld", "locality-dispersion", false, "print locality and dispersion " +
         "information for current plan");
     try {
-      // Set the log4j
-      Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
-      Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.ERROR);
-      Logger.getLogger("org.apache.hadoop.hbase.master.RegionPlacementMaintainer")
-      .setLevel(Level.INFO);
-
       CommandLine cmd = new GnuParser().parse(opt, args);
       Configuration conf = HBaseConfiguration.create();
 
@@ -1092,7 +1090,7 @@ public class RegionPlacementMaintainer {
         LOG.info("Going to update the region " + regionName + " with the new favored nodes " +
             favoredNodesStr);
         List<ServerName> favoredNodes = null;
-        HRegionInfo regionInfo =
+        RegionInfo regionInfo =
             rp.getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap().get(regionName);
         if (regionInfo == null) {
           LOG.error("Cannot find the region " + regionName + " from the META");

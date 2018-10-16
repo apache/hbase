@@ -26,15 +26,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.collections.MapUtils;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -45,7 +48,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
@@ -54,8 +56,8 @@ import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TConsistency;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
-import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionInfo;
@@ -70,9 +72,12 @@ import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TServerName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 @InterfaceAudience.Private
-public class ThriftUtilities {
+public final class ThriftUtilities {
 
   private ThriftUtilities() {
     throw new UnsupportedOperationException("Can't initialize class");
@@ -94,7 +99,7 @@ public class ThriftUtilities {
 
     // Timestamp overwrites time range if both are set
     if (in.isSetTimestamp()) {
-      out.setTimeStamp(in.getTimestamp());
+      out.setTimestamp(in.getTimestamp());
     } else if (in.isSetTimeRange()) {
       out.setTimeRange(in.getTimeRange().getMinStamp(), in.getTimeRange().getMaxStamp());
     }
@@ -115,7 +120,15 @@ public class ThriftUtilities {
     if (in.isSetAuthorizations()) {
       out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
     }
-    
+
+    if (in.isSetConsistency()) {
+      out.setConsistency(consistencyFromThrift(in.getConsistency()));
+    }
+
+    if (in.isSetTargetReplicaId()) {
+      out.setReplicaId(in.getTargetReplicaId());
+    }
+
     if (!in.isSetColumns()) {
       return out;
     }
@@ -171,11 +184,13 @@ public class ThriftUtilities {
       col.setTimestamp(kv.getTimestamp());
       col.setValue(CellUtil.cloneValue(kv));
       if (kv.getTagsLength() > 0) {
-        col.setTags(CellUtil.getTagArray(kv));
+        col.setTags(PrivateCellUtil.cloneTags(kv));
       }
       columnValues.add(col);
     }
     out.setColumnValues(columnValues);
+
+    out.setStale(in.isStale());
     return out;
   }
 
@@ -217,20 +232,35 @@ public class ThriftUtilities {
     }
 
     for (TColumnValue columnValue : in.getColumnValues()) {
-      if (columnValue.isSetTimestamp()) {
-        out.addImmutable(
-            columnValue.getFamily(), columnValue.getQualifier(), columnValue.getTimestamp(),
-            columnValue.getValue());
-      } else {
-        out.addImmutable(
-            columnValue.getFamily(), columnValue.getQualifier(), columnValue.getValue());
+      try {
+        if (columnValue.isSetTimestamp()) {
+          out.add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+              .setRow(out.getRow())
+              .setFamily(columnValue.getFamily())
+              .setQualifier(columnValue.getQualifier())
+              .setTimestamp(columnValue.getTimestamp())
+              .setType(Cell.Type.Put)
+              .setValue(columnValue.getValue())
+              .build());
+        } else {
+          out.add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+              .setRow(out.getRow())
+              .setFamily(columnValue.getFamily())
+              .setQualifier(columnValue.getQualifier())
+              .setTimestamp(out.getTimestamp())
+              .setType(Cell.Type.Put)
+              .setValue(columnValue.getValue())
+              .build());
+        }
+      } catch (IOException e) {
+        throw new IllegalArgumentException((e));
       }
     }
 
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
     }
-    
+
     if (in.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
     }
@@ -268,27 +298,42 @@ public class ThriftUtilities {
     if (in.isSetColumns()) {
       out = new Delete(in.getRow());
       for (TColumn column : in.getColumns()) {
-        if (column.isSetQualifier()) {
-          if (column.isSetTimestamp()) {
-            if (in.isSetDeleteType() &&
-                in.getDeleteType().equals(TDeleteType.DELETE_COLUMNS))
-              out.addColumns(column.getFamily(), column.getQualifier(), column.getTimestamp());
-            else
-              out.addColumn(column.getFamily(), column.getQualifier(), column.getTimestamp());
-          } else {
-            if (in.isSetDeleteType() &&
-                in.getDeleteType().equals(TDeleteType.DELETE_COLUMNS))
-              out.addColumns(column.getFamily(), column.getQualifier());
-            else
-              out.addColumn(column.getFamily(), column.getQualifier());
+        if (in.isSetDeleteType()) {
+          switch (in.getDeleteType()) {
+            case DELETE_COLUMN:
+              if (column.isSetTimestamp()) {
+                out.addColumn(column.getFamily(), column.getQualifier(), column.getTimestamp());
+              } else {
+                out.addColumn(column.getFamily(), column.getQualifier());
+              }
+              break;
+            case DELETE_COLUMNS:
+              if (column.isSetTimestamp()) {
+                out.addColumns(column.getFamily(), column.getQualifier(), column.getTimestamp());
+              } else {
+                out.addColumns(column.getFamily(), column.getQualifier());
+              }
+              break;
+            case DELETE_FAMILY:
+              if (column.isSetTimestamp()) {
+                out.addFamily(column.getFamily(), column.getTimestamp());
+              } else {
+                out.addFamily(column.getFamily());
+              }
+              break;
+            case DELETE_FAMILY_VERSION:
+              if (column.isSetTimestamp()) {
+                out.addFamilyVersion(column.getFamily(), column.getTimestamp());
+              } else {
+                throw new IllegalArgumentException(
+                    "Timestamp is required for TDelete with DeleteFamilyVersion type");
+              }
+              break;
+            default:
+              throw new IllegalArgumentException("DeleteType is required for TDelete");
           }
-
         } else {
-          if (column.isSetTimestamp()) {
-            out.addFamily(column.getFamily(), column.getTimestamp());
-          } else {
-            out.addFamily(column.getFamily());
-          }
+          throw new IllegalArgumentException("DeleteType is required for TDelete");
         }
       }
     } else {
@@ -332,7 +377,7 @@ public class ThriftUtilities {
     TDelete out = new TDelete(ByteBuffer.wrap(in.getRow()));
 
     List<TColumn> columns = new ArrayList<>(in.getFamilyCellMap().entrySet().size());
-    long rowTimestamp = in.getTimeStamp();
+    long rowTimestamp = in.getTimestamp();
     if (rowTimestamp != HConstants.LATEST_TIMESTAMP) {
       out.setTimestamp(rowTimestamp);
     }
@@ -386,12 +431,15 @@ public class ThriftUtilities {
   public static Scan scanFromThrift(TScan in) throws IOException {
     Scan out = new Scan();
 
-    if (in.isSetStartRow())
+    if (in.isSetStartRow()) {
       out.setStartRow(in.getStartRow());
-    if (in.isSetStopRow())
+    }
+    if (in.isSetStopRow()) {
       out.setStopRow(in.getStopRow());
-    if (in.isSetCaching())
+    }
+    if (in.isSetCaching()) {
       out.setCaching(in.getCaching());
+    }
     if (in.isSetMaxVersions()) {
       out.setMaxVersions(in.getMaxVersions());
     }
@@ -424,7 +472,7 @@ public class ThriftUtilities {
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
     }
-    
+
     if (in.isSetAuthorizations()) {
       out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
     }
@@ -455,6 +503,14 @@ public class ThriftUtilities {
       out.setLimit(in.getLimit());
     }
 
+    if (in.isSetConsistency()) {
+      out.setConsistency(consistencyFromThrift(in.getConsistency()));
+    }
+
+    if (in.isSetTargetReplicaId()) {
+      out.setReplicaId(in.getTargetReplicaId());
+    }
+
     return out;
   }
 
@@ -471,7 +527,7 @@ public class ThriftUtilities {
     if (in.isSetDurability()) {
       out.setDurability(durabilityFromThrift(in.getDurability()));
     }
-    
+
     if(in.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
     }
@@ -482,7 +538,7 @@ public class ThriftUtilities {
   public static Append appendFromThrift(TAppend append) throws IOException {
     Append out = new Append(append.getRow());
     for (TColumnValue column : append.getColumns()) {
-      out.add(column.getFamily(), column.getQualifier(), column.getValue());
+      out.addColumn(column.getFamily(), column.getQualifier(), column.getValue());
     }
 
     if (append.isSetAttributes()) {
@@ -492,7 +548,7 @@ public class ThriftUtilities {
     if (append.isSetDurability()) {
       out.setDurability(durabilityFromThrift(append.getDurability()));
     }
-    
+
     if(append.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(append.getCellVisibility().getExpression()));
     }
@@ -558,15 +614,15 @@ public class ThriftUtilities {
     }
   }
 
-  public static CompareOp compareOpFromThrift(TCompareOp tCompareOp) {
+  public static CompareOperator compareOpFromThrift(TCompareOp tCompareOp) {
     switch (tCompareOp.getValue()) {
-      case 0: return CompareOp.LESS;
-      case 1: return CompareOp.LESS_OR_EQUAL;
-      case 2: return CompareOp.EQUAL;
-      case 3: return CompareOp.NOT_EQUAL;
-      case 4: return CompareOp.GREATER_OR_EQUAL;
-      case 5: return CompareOp.GREATER;
-      case 6: return CompareOp.NO_OP;
+      case 0: return CompareOperator.LESS;
+      case 1: return CompareOperator.LESS_OR_EQUAL;
+      case 2: return CompareOperator.EQUAL;
+      case 3: return CompareOperator.NOT_EQUAL;
+      case 4: return CompareOperator.GREATER_OR_EQUAL;
+      case 5: return CompareOperator.GREATER;
+      case 6: return CompareOperator.NO_OP;
       default: return null;
     }
   }
@@ -577,6 +633,14 @@ public class ThriftUtilities {
       case 2: return ReadType.STREAM;
       case 3: return ReadType.PREAD;
       default: return null;
+    }
+  }
+
+  private static Consistency consistencyFromThrift(TConsistency tConsistency) {
+    switch (tConsistency.getValue()) {
+      case 1: return Consistency.STRONG;
+      case 2: return Consistency.TIMELINE;
+      default: return Consistency.STRONG;
     }
   }
 }

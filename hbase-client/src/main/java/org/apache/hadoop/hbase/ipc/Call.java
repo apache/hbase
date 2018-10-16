@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.util.Timeout;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.Tracer;
 
 /** A call waiting for a value. */
 @InterfaceAudience.Private
@@ -73,7 +73,7 @@ class Call {
     this.timeout = timeout;
     this.priority = priority;
     this.callback = callback;
-    this.span = Trace.currentSpan();
+    this.span = Tracer.getCurrentSpan();
   }
 
   @Override

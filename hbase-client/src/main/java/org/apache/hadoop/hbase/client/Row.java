@@ -18,15 +18,25 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import java.util.Comparator;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Has a row.
  */
 @InterfaceAudience.Public
 public interface Row extends Comparable<Row> {
+  Comparator<Row> COMPARATOR = (v1, v2) -> Bytes.compareTo(v1.getRow(), v2.getRow());
   /**
    * @return The row.
    */
   byte [] getRow();
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Row#COMPARATOR} instead
+   */
+  @Deprecated
+  int compareTo(Row var1);
 }

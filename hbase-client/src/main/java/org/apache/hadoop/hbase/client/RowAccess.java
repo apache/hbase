@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Provide a way to access the inner buffer.
@@ -27,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * of elements between collections.
  * @param <T>
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public interface RowAccess<T> extends Iterable<T> {
   /**
    * @return true if there are no elements.

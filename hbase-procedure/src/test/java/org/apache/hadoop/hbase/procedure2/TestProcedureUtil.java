@@ -15,25 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureUtil {
-  private static final Log LOG = LogFactory.getLog(TestProcedureUtil.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestProcedureUtil.class);
 
   @Test
   public void testValidation() throws Exception {
@@ -48,24 +51,30 @@ public class TestProcedureUtil {
   @Test
   public void testConvert() throws Exception {
     // check Procedure to protobuf conversion
-    final TestProcedure proc1 = new TestProcedure(10);
+    final TestProcedure proc1 = new TestProcedure(10, 1, new byte[] { 65 });
     final ProcedureProtos.Procedure proto1 = ProcedureUtil.convertToProtoProcedure(proc1);
     final TestProcedure proc2 = (TestProcedure)ProcedureUtil.convertToProcedure(proto1);
     final ProcedureProtos.Procedure proto2 = ProcedureUtil.convertToProtoProcedure(proc2);
     assertEquals(false, proto2.hasResult());
     assertEquals("Procedure protobuf does not match", proto1, proto2);
+  }
 
-    // remove the state-data from the procedure protobuf to compare it to the gen ProcedureInfo
-    final ProcedureProtos.Procedure pbproc = proto2.toBuilder().clearStateData().build();
+  @Test
+  public void testGetBackoffTimeMs() {
+    for (int i = 30; i < 1000; i++) {
+      assertEquals(TimeUnit.MINUTES.toMillis(10), ProcedureUtil.getBackoffTimeMs(30));
+    }
+    long backoffTimeMs = ProcedureUtil.getBackoffTimeMs(0);
+    assertTrue(backoffTimeMs >= 1000);
+    assertTrue(backoffTimeMs <= 1000 * 1.01f);
 
-    // check ProcedureInfo to protobuf conversion
-    final ProcedureInfo protoInfo1 = ProcedureUtil.convertToProcedureInfo(proc1);
-    final ProcedureProtos.Procedure proto3 = ProcedureUtil.convertToProtoProcedure(protoInfo1);
-    final ProcedureInfo protoInfo2 = ProcedureUtil.convertToProcedureInfo(proto3);
-    final ProcedureProtos.Procedure proto4 = ProcedureUtil.convertToProtoProcedure(protoInfo2);
-    assertEquals("ProcedureInfo protobuf does not match", proto3, proto4);
-    assertEquals("ProcedureInfo/Procedure protobuf does not match", pbproc, proto3);
-    assertEquals("ProcedureInfo/Procedure protobuf does not match", pbproc, proto4);
+    backoffTimeMs = ProcedureUtil.getBackoffTimeMs(1);
+    assertTrue(backoffTimeMs >= 2000);
+    assertTrue(backoffTimeMs <= 2000 * 1.01f);
+
+    backoffTimeMs = ProcedureUtil.getBackoffTimeMs(5);
+    assertTrue(backoffTimeMs >= 32000);
+    assertTrue(backoffTimeMs <= 32000 * 1.01f);
   }
 
   public static class TestProcedureNoDefaultConstructor extends TestProcedure {

@@ -28,14 +28,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -43,9 +43,10 @@ import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -55,7 +56,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class AbstractProtobufLogWriter {
 
-  private static final Log LOG = LogFactory.getLog(AbstractProtobufLogWriter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractProtobufLogWriter.class);
 
   protected CompressionContext compressionContext;
   protected Configuration conf;
@@ -152,18 +153,16 @@ public abstract class AbstractProtobufLogWriter {
     return doCompress;
   }
 
-  public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable)
-      throws IOException {
+  public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
+      long blocksize) throws IOException, StreamLacksCapabilityException {
     this.conf = conf;
     boolean doCompress = initializeCompressionContext(conf, path);
     this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
     int bufferSize = FSUtils.getDefaultBufferSize(fs);
     short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
       FSUtils.getDefaultReplication(fs, path));
-    long blockSize = conf.getLong("hbase.regionserver.hlog.blocksize",
-      FSUtils.getDefaultBlockSize(fs, path));
 
-    initOutput(fs, path, overwritable, bufferSize, replication, blockSize);
+    initOutput(fs, path, overwritable, bufferSize, replication, blocksize);
 
     boolean doTagCompress = doCompress
         && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
@@ -184,6 +183,8 @@ public abstract class AbstractProtobufLogWriter {
     this.cellEncoder = codec.getEncoder(getOutputStreamForCellEncoder());
     if (doCompress) {
       this.compressor = codec.getByteStringCompressor();
+    } else {
+      this.compressor = WALCellCodec.getNoneCompressor();
     }
   }
 
@@ -199,6 +200,7 @@ public abstract class AbstractProtobufLogWriter {
       this.cellEncoder = codec.getEncoder(getOutputStreamForCellEncoder());
       // We do not support compression
       this.compressionContext = null;
+      this.compressor = WALCellCodec.getNoneCompressor();
     } else {
       initAfterHeader0(doCompress);
     }
@@ -237,7 +239,7 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   protected abstract void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize) throws IOException;
+      short replication, long blockSize) throws IOException, StreamLacksCapabilityException;
 
   /**
    * return the file length after written.

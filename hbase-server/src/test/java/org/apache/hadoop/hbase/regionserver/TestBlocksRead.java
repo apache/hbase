@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,26 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
+
+import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -45,25 +42,32 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.*;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestBlocksRead  {
-  private static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBlocksRead.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlocksRead.class);
   @Rule public TestName testName = new TestName();
 
   static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
       BloomType.ROW, BloomType.NONE };
 
   private static BlockCache blockCache;
-  Region region = null;
+  HRegion region = null;
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
   private Configuration conf = TEST_UTIL.getConfiguration();
@@ -88,7 +92,7 @@ public class TestBlocksRead  {
    * @throws IOException
    * @return created and initialized region.
    */
-  private Region initHRegion(byte[] tableName, String callingMethod,
+  private HRegion initHRegion(byte[] tableName, String callingMethod,
       Configuration conf, String family) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor familyDesc;
@@ -102,7 +106,7 @@ public class TestBlocksRead  {
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
-    Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
     blockCache = new CacheConfig(conf).getBlockCache();
     return r;
   }
@@ -189,7 +193,7 @@ public class TestBlocksRead  {
 
   private static void verifyData(Cell kv, String expectedRow,
       String expectedCol, long expectedVersion) {
-    assertTrue("RowCheck", CellUtil.matchingRow(kv,  Bytes.toBytes(expectedRow)));
+    assertTrue("RowCheck", CellUtil.matchingRows(kv,  Bytes.toBytes(expectedRow)));
     assertTrue("ColumnCheck", CellUtil.matchingQualifier(kv, Bytes.toBytes(expectedCol)));
     assertEquals("TSCheck", expectedVersion, kv.getTimestamp());
     assertTrue("ValueCheck", CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol, expectedVersion)));
@@ -347,7 +351,7 @@ public class TestBlocksRead  {
       // Baseline expected blocks read: 6. [HBASE-4532]
       kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 6, 7, 7);
       assertEquals(0, kvs.length);
- 
+
       // File 7: Put back new data
       putData(FAMILY, "row", "col1", 11);
       putData(FAMILY, "row", "col2", 12);
@@ -407,7 +411,7 @@ public class TestBlocksRead  {
       assertEquals(2 * BLOOM_TYPE.length, result.size());
       rs.close();
       blocksEnd = getBlkCount();
-    
+
       assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);

@@ -18,29 +18,38 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.Size;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Wrapper class for the few fields required by the {@link StochasticLoadBalancer}
- * from the full {@link RegionLoad}.
+ * from the full {@link RegionMetrics}.
  */
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 class BalancerRegionLoad {
   private final long readRequestsCount;
+  private final long cpRequestsCount;
   private final long writeRequestsCount;
   private final int memStoreSizeMB;
   private final int storefileSizeMB;
 
-  BalancerRegionLoad(RegionLoad regionLoad) {
-    readRequestsCount = regionLoad.getReadRequestsCount();
-    writeRequestsCount = regionLoad.getWriteRequestsCount();
-    memStoreSizeMB = regionLoad.getMemStoreSizeMB();
-    storefileSizeMB = regionLoad.getStorefileSizeMB();
+  BalancerRegionLoad(RegionMetrics regionMetrics) {
+    readRequestsCount = regionMetrics.getReadRequestCount();
+    cpRequestsCount = regionMetrics.getCpRequestCount();
+    writeRequestsCount = regionMetrics.getWriteRequestCount();
+    memStoreSizeMB = (int) regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE);
+    storefileSizeMB = (int) regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
   }
 
   public long getReadRequestsCount() {
     return readRequestsCount;
+  }
+
+  public long getCpRequestsCount() {
+    return cpRequestsCount;
   }
 
   public long getWriteRequestsCount() {

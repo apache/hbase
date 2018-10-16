@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -38,15 +38,27 @@ import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(SmallTests.class)
-public class TestMobFile extends TestCase {
-  static final Log LOG = LogFactory.getLog(TestMobFile.class);
+public class TestMobFile {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobFile.class);
+
+  static final Logger LOG = LoggerFactory.getLogger(TestMobFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration conf = TEST_UTIL.getConfiguration();
   private CacheConfig cacheConf =  new CacheConfig(conf);
+  @Rule
+  public TestName testName = new TestName();
 
   @Test
   public void testReadKeyValue() throws Exception {
@@ -57,7 +69,7 @@ public class TestMobFile extends TestCase {
             .withOutputDir(testDir)
             .withFileContext(meta)
             .build();
-    String caseName = getName();
+    String caseName = testName.getMethodName();
     MobTestUtil.writeStoreFile(writer, caseName);
 
     MobFile mobFile =
@@ -110,7 +122,7 @@ public class TestMobFile extends TestCase {
             .withOutputDir(testDir)
             .withFileContext(meta)
             .build();
-    MobTestUtil.writeStoreFile(writer, getName());
+    MobTestUtil.writeStoreFile(writer, testName.getMethodName());
 
     MobFile mobFile =
         new MobFile(new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true));

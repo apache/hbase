@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeepDeletedCells;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
 /**
@@ -53,8 +53,9 @@ public abstract class DropDeletesCompactionScanQueryMatcher extends CompactionSc
   protected final long earliestPutTs;
 
   protected DropDeletesCompactionScanQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
-      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now) {
-    super(scanInfo, deletes, readPointToUse, oldestUnexpiredTS, now);
+      ColumnTracker columns, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
+      long now) {
+    super(scanInfo, deletes, columns, readPointToUse, oldestUnexpiredTS, now);
     this.timeToPurgeDeletes = scanInfo.getTimeToPurgeDeletes();
     this.earliestPutTs = earliestPutTs;
   }

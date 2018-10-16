@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,17 +32,16 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
-
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -51,12 +49,16 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests optimized scanning of multiple columns.
@@ -65,7 +67,11 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestMultiColumnScanner {
 
-  private static final Log LOG = LogFactory.getLog(TestMultiColumnScanner.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultiColumnScanner.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiColumnScanner.class);
 
   private static final String TABLE_NAME =
       TestMultiColumnScanner.class.getSimpleName();
@@ -145,7 +151,9 @@ public class TestMultiColumnScanner {
 
   @Test
   public void testMultiColumnScanner() throws IOException {
-    Region region = TEST_UTIL.createTestRegion(TABLE_NAME,
+    TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
+    TEST_UTIL.getConfiguration().set(BloomFilterUtil.DELIMITER_KEY, "#");
+    HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
         new HColumnDescriptor(FAMILY)
             .setCompressionType(comprAlgo)
             .setBloomFilterType(bloomType)
@@ -223,7 +231,7 @@ public class TestMultiColumnScanner {
       region.flush(true);
     }
 
-    Collections.sort(kvs, CellComparator.COMPARATOR);
+    Collections.sort(kvs, CellComparatorImpl.COMPARATOR);
     for (int maxVersions = 1; maxVersions <= TIMESTAMPS.length; ++maxVersions) {
       for (int columnBitMask = 1; columnBitMask <= MAX_COLUMN_BIT_MASK; ++columnBitMask) {
         Scan scan = new Scan();
@@ -265,8 +273,8 @@ public class TestMultiColumnScanner {
             }
             assertTrue("Scanner returned additional key/value: " + kv + ", "
                 + queryInfo + deleteInfo + ";", kvPos < kvs.size());
-            assertTrue("Scanner returned wrong key/value; " + queryInfo
-                + deleteInfo + ";", CellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
+            assertTrue("Scanner returned wrong key/value; " + queryInfo + deleteInfo + ";",
+              PrivateCellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
             ++kvPos;
             ++numResults;
           }

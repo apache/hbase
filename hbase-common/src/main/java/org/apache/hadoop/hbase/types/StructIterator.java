@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.types;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@link Iterator} over encoded {@code Struct} members.
@@ -73,13 +73,19 @@ public class StructIterator implements Iterator<Object> {
   }
 
   @Override
-  public void remove() { throw new UnsupportedOperationException(); }
+  public void remove() {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public Object next() {
-    if (!hasNext()) throw new NoSuchElementException();
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
     DataType<?> t = types[idx++];
-    if (src.getPosition() == src.getLength() && t.isNullable()) return null;
+    if (src.getPosition() == src.getLength() && t.isNullable()) {
+      return null;
+    }
     return t.decode(src);
   }
 
@@ -88,9 +94,13 @@ public class StructIterator implements Iterator<Object> {
    * @return the number of bytes skipped.
    */
   public int skip() {
-    if (!hasNext()) throw new NoSuchElementException();
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
     DataType<?> t = types[idx++];
-    if (src.getPosition() == src.getLength() && t.isNullable()) return 0;
+    if (src.getPosition() == src.getLength() && t.isNullable()) {
+      return 0;
+    }
     return t.skip(src);
   }
 }

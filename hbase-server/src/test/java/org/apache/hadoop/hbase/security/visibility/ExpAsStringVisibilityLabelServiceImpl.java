@@ -32,18 +32,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -62,6 +61,9 @@ import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionN
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a VisibilityLabelService where labels in Mutation's visibility
@@ -71,8 +73,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelService {
-
-  private static final Log LOG = LogFactory.getLog(ExpAsStringVisibilityLabelServiceImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ExpAsStringVisibilityLabelServiceImpl.class);
 
   private static final byte[] DUMMY_VALUE = new byte[0];
   private static final byte STRING_SERIALIZATION_FORMAT = 2;
@@ -102,8 +104,16 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     assert labelsRegion != null;
     OperationStatus[] finalOpStatus = new OperationStatus[authLabels.size()];
     Put p = new Put(user);
+    CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (byte[] auth : authLabels) {
-      p.addImmutable(LABELS_TABLE_FAMILY, auth, DUMMY_VALUE);
+      p.add(builder.clear()
+          .setRow(p.getRow())
+          .setFamily(LABELS_TABLE_FAMILY)
+          .setQualifier(auth)
+          .setTimestamp(p.getTimestamp())
+          .setType(Cell.Type.Put)
+          .setValue(DUMMY_VALUE)
+          .build());
     }
     this.labelsRegion.put(p);
     // This is a testing impl and so not doing any caching
@@ -273,7 +283,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
         authLabels = (authLabels == null) ? new ArrayList<>() : authLabels;
         authorizations = new Authorizations(authLabels);
       } catch (Throwable t) {
-        LOG.error(t);
+        LOG.error(t.toString(), t);
         throw new IOException(t);
       }
     }
@@ -284,7 +294,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
         boolean visibilityTagPresent = false;
         // Save an object allocation where we can
         if (cell.getTagsLength() > 0) {
-          Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+          Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
           while (tagsItr.hasNext()) {
             boolean includeKV = true;
             Tag tag = tagsItr.next();
@@ -418,6 +428,10 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
 
   private static boolean checkForMatchingVisibilityTagsWithSortedOrder(List<Tag> putVisTags,
       List<Tag> deleteVisTags) {
+    // Early out if there are no tags in both of cell and delete
+    if (putVisTags.isEmpty() && deleteVisTags.isEmpty()) {
+      return true;
+    }
     boolean matchFound = false;
     // If the size does not match. Definitely we are not comparing the equal
     // tags.
@@ -425,7 +439,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
       for (Tag tag : deleteVisTags) {
         matchFound = false;
         for (Tag givenTag : putVisTags) {
-          if (TagUtil.matchingValue(tag, givenTag)) {
+          if (Tag.matchingValue(tag, givenTag)) {
             matchFound = true;
             break;
           }

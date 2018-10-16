@@ -27,21 +27,21 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
-import com.google.common.collect.MinMaxPriorityQueue;
-import org.apache.commons.collections.map.LinkedMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.LinkedMap;
 
 /**
  * This class is used to allocate a block with specified size and free the block
@@ -54,7 +54,7 @@ import com.google.common.primitives.Ints;
 @InterfaceAudience.Private
 @JsonIgnoreProperties({"indexStatistics", "freeSize", "usedSize"})
 public final class BucketAllocator {
-  private static final Log LOG = LogFactory.getLog(BucketAllocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BucketAllocator.class);
 
   @JsonIgnoreProperties({"completelyFree", "uninstantiated"})
   public final static class Bucket {
@@ -268,7 +268,7 @@ public final class BucketAllocator {
 
     @Override
     public String toString() {
-      return Objects.toStringHelper(this.getClass())
+      return MoreObjects.toStringHelper(this.getClass())
         .add("sizeIndex", sizeIndex)
         .add("bucketSize", bucketSizes[sizeIndex])
         .toString();
@@ -315,7 +315,7 @@ public final class BucketAllocator {
     this.bucketSizes = bucketSizes == null ? DEFAULT_BUCKET_SIZES : bucketSizes;
     Arrays.sort(this.bucketSizes);
     this.bigItemSize = Ints.max(this.bucketSizes);
-    this.bucketCapacity = FEWEST_ITEMS_IN_BUCKET * bigItemSize;
+    this.bucketCapacity = FEWEST_ITEMS_IN_BUCKET * (long) bigItemSize;
     buckets = new Bucket[(int) (availableSpace / bucketCapacity)];
     if (buckets.length < this.bucketSizes.length)
       throw new BucketAllocatorException("Bucket allocator size too small (" + buckets.length +
@@ -347,7 +347,7 @@ public final class BucketAllocator {
    * @throws BucketAllocatorException
    */
   BucketAllocator(long availableSpace, int[] bucketSizes, Map<BlockCacheKey, BucketEntry> map,
-      AtomicLong realCacheSize) throws BucketAllocatorException {
+      LongAdder realCacheSize) throws BucketAllocatorException {
     this(availableSpace, bucketSizes);
 
     // each bucket has an offset, sizeindex. probably the buckets are too big
@@ -398,7 +398,7 @@ public final class BucketAllocator {
         bsi.instantiateBucket(b);
         reconfigured[bucketNo] = true;
       }
-      realCacheSize.addAndGet(foundLen);
+      realCacheSize.add(foundLen);
       buckets[bucketNo].addAllocation(foundOffset);
       usedSize += buckets[bucketNo].getItemAllocationSize();
       bucketSizeInfos[bucketSizeIndex].blockAllocated(b);
@@ -414,6 +414,7 @@ public final class BucketAllocator {
     }
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     for (int i = 0; i < buckets.length; ++i) {

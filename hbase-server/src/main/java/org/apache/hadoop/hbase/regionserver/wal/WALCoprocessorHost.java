@@ -21,21 +21,24 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-import java.util.List;
+import java.lang.reflect.InvocationTargetException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.WALCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.WALObserver;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -43,12 +46,13 @@ import org.apache.hadoop.hbase.wal.WALKey;
  */
 @InterfaceAudience.Private
 public class WALCoprocessorHost
-    extends CoprocessorHost<WALCoprocessorHost.WALEnvironment> {
+    extends CoprocessorHost<WALCoprocessor, WALCoprocessorEnvironment> {
+  private static final Logger LOG = LoggerFactory.getLogger(WALCoprocessorHost.class);
 
   /**
    * Encapsulation of the environment of each coprocessor
    */
-  static class WALEnvironment extends CoprocessorHost.Environment
+  static class WALEnvironment extends BaseEnvironment<WALCoprocessor>
     implements WALCoprocessorEnvironment {
 
     private final WAL wal;
@@ -62,19 +66,18 @@ public class WALCoprocessorHost
 
     /**
      * Constructor
-     * @param implClass - not used
      * @param impl the coprocessor instance
      * @param priority chaining priority
      * @param seq load sequence
      * @param conf configuration
      * @param wal WAL
      */
-    public WALEnvironment(Class<?> implClass, final Coprocessor impl,
-        final int priority, final int seq, final Configuration conf,
-        final WAL wal) {
+    private WALEnvironment(final WALCoprocessor impl, final int priority, final int seq,
+        final Configuration conf, final WAL wal) {
       super(impl, priority, seq, conf);
       this.wal = wal;
-      this.metricRegistry = MetricsCoprocessor.createRegistryForWALCoprocessor(implClass.getName());
+      this.metricRegistry = MetricsCoprocessor.createRegistryForWALCoprocessor(
+          impl.getClass().getName());
     }
 
     @Override
@@ -83,7 +86,7 @@ public class WALCoprocessorHost
     }
 
     @Override
-    protected void shutdown() {
+    public void shutdown() {
       super.shutdown();
       MetricsCoprocessor.removeRegistry(this.metricRegistry);
     }
@@ -110,81 +113,59 @@ public class WALCoprocessorHost
   }
 
   @Override
-  public WALEnvironment createEnvironment(final Class<?> implClass,
-      final Coprocessor instance, final int priority, final int seq,
-      final Configuration conf) {
-    return new WALEnvironment(implClass, instance, priority, seq, conf,
-        this.wal);
+  public WALEnvironment createEnvironment(final WALCoprocessor instance, final int priority,
+      final int seq, final Configuration conf) {
+    return new WALEnvironment(instance, priority, seq, conf, this.wal);
   }
 
-  /**
-   * @param info
-   * @param logKey
-   * @param logEdit
-   * @return true if default behavior should be bypassed, false otherwise
-   * @throws IOException
-   */
-  public boolean preWALWrite(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
-      throws IOException {
-    boolean bypass = false;
-    if (this.coprocessors == null || this.coprocessors.isEmpty()) return bypass;
-    ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    List<WALEnvironment> envs = coprocessors.get();
-    for (int i = 0; i < envs.size(); i++) {
-      WALEnvironment env = envs.get(i);
-      if (env.getInstance() instanceof WALObserver) {
-        final WALObserver observer = (WALObserver)env.getInstance();
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          observer.preWALWrite(ctx, info, logKey, logEdit);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+  @Override
+  public WALCoprocessor checkAndGetInstance(Class<?> implClass) throws IllegalAccessException,
+      InstantiationException {
+    if (WALCoprocessor.class.isAssignableFrom(implClass)) {
+      try {
+        return implClass.asSubclass(WALCoprocessor.class).getDeclaredConstructor().newInstance();
+      } catch (NoSuchMethodException | InvocationTargetException e) {
+        throw (InstantiationException) new InstantiationException(implClass.getName()).initCause(e);
       }
+    } else {
+      LOG.error(implClass.getName() + " is not of type WALCoprocessor. Check the "
+          + "configuration " + CoprocessorHost.WAL_COPROCESSOR_CONF_KEY);
+      return null;
     }
-    return bypass;
   }
 
-  /**
-   * @param info
-   * @param logKey
-   * @param logEdit
-   * @throws IOException
-   */
-  public void postWALWrite(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
-      throws IOException {
-    if (this.coprocessors == null || this.coprocessors.isEmpty()) return;
-    ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    List<WALEnvironment> envs = coprocessors.get();
-    for (int i = 0; i < envs.size(); i++) {
-      WALEnvironment env = envs.get(i);
-      if (env.getInstance() instanceof WALObserver) {
-        final WALObserver observer = (WALObserver)env.getInstance();
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          observer.postWALWrite(ctx, info, logKey, logEdit);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
-      }
+  private ObserverGetter<WALCoprocessor, WALObserver> walObserverGetter =
+      WALCoprocessor::getWALObserver;
+
+  abstract class WALObserverOperation extends
+      ObserverOperationWithoutResult<WALObserver> {
+    public WALObserverOperation() {
+      super(walObserverGetter);
     }
+  }
+
+  public void preWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
+      throws IOException {
+    // Not bypassable.
+    if (this.coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execOperation(new WALObserverOperation() {
+      @Override
+      public void call(WALObserver oserver) throws IOException {
+        oserver.preWALWrite(this, info, logKey, logEdit);
+      }
+    });
+  }
+
+  public void postWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
+      @Override
+      protected void call(WALObserver observer) throws IOException {
+        observer.postWALWrite(this, info, logKey, logEdit);
+      }
+    });
   }
 
   /**
@@ -193,29 +174,12 @@ public class WALCoprocessorHost
    * @param newPath the path of the wal we are going to create
    */
   public void preWALRoll(Path oldPath, Path newPath) throws IOException {
-    if (this.coprocessors == null || this.coprocessors.isEmpty()) return;
-    ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    List<WALEnvironment> envs = coprocessors.get();
-    for (int i = 0; i < envs.size(); i++) {
-      WALEnvironment env = envs.get(i);
-      if (env.getInstance() instanceof WALObserver) {
-        final WALObserver observer = (WALObserver)env.getInstance();
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          observer.preWALRoll(ctx, oldPath, newPath);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
+      @Override
+      protected void call(WALObserver observer) throws IOException {
+        observer.preWALRoll(this, oldPath, newPath);
       }
-    }
+    });
   }
 
   /**
@@ -224,28 +188,11 @@ public class WALCoprocessorHost
    * @param newPath the path of the wal we have created and now is the current
    */
   public void postWALRoll(Path oldPath, Path newPath) throws IOException {
-    if (this.coprocessors == null || this.coprocessors.isEmpty()) return;
-    ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    List<WALEnvironment> envs = coprocessors.get();
-    for (int i = 0; i < envs.size(); i++) {
-      WALEnvironment env = envs.get(i);
-      if (env.getInstance() instanceof WALObserver) {
-        final WALObserver observer = (WALObserver)env.getInstance();
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          observer.postWALRoll(ctx, oldPath, newPath);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
+      @Override
+      protected void call(WALObserver observer) throws IOException {
+        observer.postWALRoll(this, oldPath, newPath);
       }
-    }
+    });
   }
 }

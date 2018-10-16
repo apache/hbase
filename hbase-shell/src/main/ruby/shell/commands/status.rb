@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Status < Command
       def help
-        return <<-EOF
+        <<-EOF
 Show cluster status. Can be 'summary', 'simple', 'detailed', or 'replication'. The
 default is 'summary'. Examples:
 
@@ -35,7 +35,7 @@ default is 'summary'. Examples:
 EOF
       end
 
-      def command(format = 'summary',type = 'both')
+      def command(format = 'summary', type = 'both')
         admin.status(format, type)
       end
     end

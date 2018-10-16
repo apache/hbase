@@ -15,32 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
-import java.io.IOException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestChildProcedures {
-  private static final Log LOG = LogFactory.getLog(TestChildProcedures.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestChildProcedures.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestChildProcedures.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
 
@@ -62,11 +65,11 @@ public class TestChildProcedures {
 
     logDir = new Path(testDir, "proc-logs");
     procEnv = new TestProcEnv();
-    procStore = ProcedureTestingUtility.createStore(htu.getConfiguration(), fs, logDir);
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
+    procStore = ProcedureTestingUtility.createStore(htu.getConfiguration(), logDir);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procExecutor.testing = new ProcedureExecutor.Testing();
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
   @After
@@ -106,6 +109,29 @@ public class TestChildProcedures {
     ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
   }
 
+
+  /**
+   * Test the state setting that happens after store to WAL; in particular the bit where we
+   * set the parent runnable again after its children have all completed successfully.
+   * See HBASE-20978.
+   */
+  @Test
+  public void testChildLoadWithRestartAfterChildSuccess() throws Exception {
+    procEnv.toggleKillAfterStoreUpdate = true;
+
+    TestRootProcedure proc = new TestRootProcedure();
+    long procId = ProcedureTestingUtility.submitAndWait(procExecutor, proc);
+    int restartCount = 0;
+    while (!procExecutor.isFinished(procId)) {
+      ProcedureTestingUtility.restart(procExecutor);
+      ProcedureTestingUtility.waitProcedure(procExecutor, proc);
+      restartCount++;
+    }
+    assertEquals(4, restartCount);
+    assertTrue("expected completed proc", procExecutor.isFinished(procId));
+    ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
+  }
+
   @Test
   public void testChildRollbackLoad() throws Exception {
     procEnv.toggleKillBeforeStoreUpdate = false;
@@ -138,7 +164,7 @@ public class TestChildProcedures {
 
   private void assertProcFailed(long procId) {
     assertTrue("expected completed proc", procExecutor.isFinished(procId));
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     assertEquals(true, result.isFailed());
     LOG.info(result.getException().getMessage());
   }
@@ -146,13 +172,18 @@ public class TestChildProcedures {
   public static class TestRootProcedure extends SequentialProcedure<TestProcEnv> {
     public TestRootProcedure() {}
 
+    @Override
     public Procedure[] execute(TestProcEnv env) {
       if (env.toggleKillBeforeStoreUpdate) {
         ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
       }
+      if (env.toggleKillAfterStoreUpdate) {
+        ProcedureTestingUtility.toggleKillAfterStoreUpdate(procExecutor);
+      }
       return new Procedure[] { new TestChildProcedure(), new TestChildProcedure() };
     }
 
+    @Override
     public void rollback(TestProcEnv env) {
     }
 
@@ -165,6 +196,7 @@ public class TestChildProcedures {
   public static class TestChildProcedure extends SequentialProcedure<TestProcEnv> {
     public TestChildProcedure() {}
 
+    @Override
     public Procedure[] execute(TestProcEnv env) {
       if (env.toggleKillBeforeStoreUpdate) {
         ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
@@ -175,6 +207,7 @@ public class TestChildProcedures {
       return null;
     }
 
+    @Override
     public void rollback(TestProcEnv env) {
     }
 
@@ -186,6 +219,7 @@ public class TestChildProcedures {
 
   private static class TestProcEnv {
     public boolean toggleKillBeforeStoreUpdate = false;
+    public boolean toggleKillAfterStoreUpdate = false;
     public boolean triggerRollbackOnChild = false;
   }
 }

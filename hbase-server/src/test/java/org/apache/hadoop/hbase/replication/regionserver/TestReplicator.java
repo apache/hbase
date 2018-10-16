@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,40 +21,39 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.*;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
-import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 @Category(MediumTests.class)
 public class TestReplicator extends TestReplicationBase {
 
-  static final Log LOG = LogFactory.getLog(TestReplicator.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicator.class);
+
+  static final Logger LOG = LoggerFactory.getLogger(TestReplicator.class);
   static final int NUM_ROWS = 10;
 
   @BeforeClass
@@ -62,7 +61,6 @@ public class TestReplicator extends TestReplicationBase {
     // Set RPC size limit to 10kb (will be applied to both source and sink clusters)
     conf1.setInt(RpcServer.MAX_REQUEST_SIZE, 1024 * 10);
     TestReplicationBase.setUpBeforeClass();
-    admin.removePeer("2"); // Remove the peer set up for us by base class
   }
 
   @Test
@@ -74,7 +72,8 @@ public class TestReplicator extends TestReplicationBase {
     // Replace the peer set up for us by the base class with a wrapper for this test
     admin.addPeer("testReplicatorBatching",
       new ReplicationPeerConfig().setClusterKey(utility2.getClusterKey())
-        .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()), null);
+          .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()),
+      null);
 
     ReplicationEndpointForTest.setBatchCount(0);
     ReplicationEndpointForTest.setEntriesCount(0);
@@ -83,11 +82,10 @@ public class TestReplicator extends TestReplicationBase {
       try {
         // Queue up a bunch of cells of size 8K. Because of RPC size limits, they will all
         // have to be replicated separately.
-        final byte[] valueBytes = new byte[8 *1024];
+        final byte[] valueBytes = new byte[8 * 1024];
         for (int i = 0; i < NUM_ROWS; i++) {
-          htable1.put(new Put(("row"+Integer.toString(i)).getBytes())
-            .addColumn(famName, null, valueBytes)
-          );
+          htable1.put(new Put(Bytes.toBytes("row" + Integer.toString(i))).addColumn(famName, null,
+            valueBytes));
         }
       } finally {
         ReplicationEndpointForTest.resume();
@@ -97,6 +95,7 @@ public class TestReplicator extends TestReplicationBase {
       Waiter.waitFor(conf1, 60000, new Waiter.ExplainingPredicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
+          LOG.info("Count=" + ReplicationEndpointForTest.getBatchCount());
           return ReplicationEndpointForTest.getBatchCount() >= NUM_ROWS;
         }
 
@@ -108,8 +107,7 @@ public class TestReplicator extends TestReplicationBase {
 
       assertEquals("We sent an incorrect number of batches", NUM_ROWS,
         ReplicationEndpointForTest.getBatchCount());
-      assertEquals("We did not replicate enough rows", NUM_ROWS,
-        utility2.countRows(htable2));
+      assertEquals("We did not replicate enough rows", NUM_ROWS, utility2.countRows(htable2));
     } finally {
       admin.removePeer("testReplicatorBatching");
     }
@@ -125,7 +123,7 @@ public class TestReplicator extends TestReplicationBase {
     admin.addPeer("testReplicatorWithErrors",
       new ReplicationPeerConfig().setClusterKey(utility2.getClusterKey())
           .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName()),
-        null);
+      null);
 
     FailureInjectingReplicationEndpointForTest.setBatchCount(0);
     FailureInjectingReplicationEndpointForTest.setEntriesCount(0);
@@ -134,11 +132,10 @@ public class TestReplicator extends TestReplicationBase {
       try {
         // Queue up a bunch of cells of size 8K. Because of RPC size limits, they will all
         // have to be replicated separately.
-        final byte[] valueBytes = new byte[8 *1024];
+        final byte[] valueBytes = new byte[8 * 1024];
         for (int i = 0; i < NUM_ROWS; i++) {
-          htable1.put(new Put(("row"+Integer.toString(i)).getBytes())
-            .addColumn(famName, null, valueBytes)
-          );
+          htable1.put(new Put(Bytes.toBytes("row" + Integer.toString(i))).addColumn(famName, null,
+            valueBytes));
         }
       } finally {
         FailureInjectingReplicationEndpointForTest.resume();
@@ -158,8 +155,7 @@ public class TestReplicator extends TestReplicationBase {
         }
       });
 
-      assertEquals("We did not replicate enough rows", NUM_ROWS,
-        utility2.countRows(htable2));
+      assertEquals("We did not replicate enough rows", NUM_ROWS, utility2.countRows(htable2));
     } finally {
       admin.removePeer("testReplicatorWithErrors");
     }
@@ -178,8 +174,8 @@ public class TestReplicator extends TestReplicationBase {
 
   public static class ReplicationEndpointForTest extends HBaseInterClusterReplicationEndpoint {
 
-    private static int batchCount;
-    private static int entriesCount;
+    protected static AtomicInteger batchCount = new AtomicInteger(0);
+    protected static int entriesCount;
     private static final Object latch = new Object();
     private static AtomicBoolean useLatch = new AtomicBoolean(false);
 
@@ -197,17 +193,20 @@ public class TestReplicator extends TestReplicationBase {
     public static void await() throws InterruptedException {
       if (useLatch.get()) {
         LOG.info("Waiting on latch");
-        latch.wait();
+        synchronized (latch) {
+          latch.wait();
+        }
         LOG.info("Waited on latch, now proceeding");
       }
     }
 
     public static int getBatchCount() {
-      return batchCount;
+      return batchCount.get();
     }
 
     public static void setBatchCount(int i) {
-      batchCount = i;
+      LOG.info("SetBatchCount=" + i + ", old=" + getBatchCount());
+      batchCount.set(i);
     }
 
     public static int getEntriesCount() {
@@ -215,38 +214,8 @@ public class TestReplicator extends TestReplicationBase {
     }
 
     public static void setEntriesCount(int i) {
+      LOG.info("SetEntriesCount=" + i);
       entriesCount = i;
-    }
-
-    public class ReplicatorForTest extends Replicator {
-
-      public ReplicatorForTest(List<Entry> entries, int ordinal) {
-        super(entries, ordinal);
-      }
-
-      @Override
-      protected void replicateEntries(BlockingInterface rrs, final List<Entry> entries,
-          String replicationClusterId, Path baseNamespaceDir, Path hfileArchiveDir)
-          throws IOException {
-        try {
-          long size = 0;
-          for (Entry e: entries) {
-            size += e.getKey().estimatedSerializedSizeOf();
-            size += e.getEdit().estimatedSerializedSizeOf();
-          }
-          LOG.info("Replicating batch " + System.identityHashCode(entries) + " of " +
-              entries.size() + " entries with total size " + size + " bytes to " +
-              replicationClusterId);
-          super.replicateEntries(rrs, entries, replicationClusterId, baseNamespaceDir,
-            hfileArchiveDir);
-          entriesCount += entries.size();
-          batchCount++;
-          LOG.info("Completed replicating batch " + System.identityHashCode(entries));
-        } catch (IOException e) {
-          LOG.info("Failed to replicate batch " + System.identityHashCode(entries), e);
-          throw e;
-        }
-      }
     }
 
     @Override
@@ -260,177 +229,37 @@ public class TestReplicator extends TestReplicationBase {
     }
 
     @Override
-    protected Replicator createReplicator(List<Entry> entries, int ordinal) {
-      return new ReplicatorForTest(entries, ordinal);
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal) {
+      return () -> {
+        int batchIndex = replicateEntries(entries, ordinal);
+        entriesCount += entries.size();
+        int count = batchCount.incrementAndGet();
+        LOG.info(
+          "Completed replicating batch " + System.identityHashCode(entries) + " count=" + count);
+        return batchIndex;
+      };
     }
   }
 
   public static class FailureInjectingReplicationEndpointForTest
       extends ReplicationEndpointForTest {
-
-    static class FailureInjectingBlockingInterface implements BlockingInterface {
-
-      private final BlockingInterface delegate;
-      private volatile boolean failNext;
-
-      public FailureInjectingBlockingInterface(BlockingInterface delegate) {
-        this.delegate = delegate;
-      }
-
-      @Override
-      public GetRegionInfoResponse getRegionInfo(RpcController controller,
-          GetRegionInfoRequest request) throws ServiceException {
-        return delegate.getRegionInfo(controller, request);
-      }
-
-      @Override
-      public GetStoreFileResponse getStoreFile(RpcController controller,
-          GetStoreFileRequest request) throws ServiceException {
-        return delegate.getStoreFile(controller, request);
-      }
-
-      @Override
-      public GetOnlineRegionResponse getOnlineRegion(RpcController controller,
-          GetOnlineRegionRequest request) throws ServiceException {
-        return delegate.getOnlineRegion(controller, request);
-      }
-
-      @Override
-      public OpenRegionResponse openRegion(RpcController controller, OpenRegionRequest request)
-          throws ServiceException {
-        return delegate.openRegion(controller, request);
-      }
-
-      @Override
-      public WarmupRegionResponse warmupRegion(RpcController controller,
-          WarmupRegionRequest request) throws ServiceException {
-        return delegate.warmupRegion(controller, request);
-      }
-
-      @Override
-      public CloseRegionResponse closeRegion(RpcController controller, CloseRegionRequest request)
-          throws ServiceException {
-        return delegate.closeRegion(controller, request);
-      }
-
-      @Override
-      public FlushRegionResponse flushRegion(RpcController controller, FlushRegionRequest request)
-          throws ServiceException {
-        return delegate.flushRegion(controller, request);
-      }
-
-      @Override
-      public SplitRegionResponse splitRegion(RpcController controller, SplitRegionRequest request)
-          throws ServiceException {
-        return delegate.splitRegion(controller, request);
-      }
-
-      @Override
-      public CompactRegionResponse compactRegion(RpcController controller,
-          CompactRegionRequest request) throws ServiceException {
-        return delegate.compactRegion(controller, request);
-      }
-
-      @Override
-      public ReplicateWALEntryResponse replicateWALEntry(RpcController controller,
-          ReplicateWALEntryRequest request) throws ServiceException {
-        if (!failNext) {
-          failNext = true;
-          return delegate.replicateWALEntry(controller, request);
-        } else {
-          failNext = false;
-          throw new ServiceException("Injected failure");
-        }
-      }
-
-      @Override
-      public ReplicateWALEntryResponse replay(RpcController controller,
-          ReplicateWALEntryRequest request) throws ServiceException {
-        return delegate.replay(controller, request);
-      }
-
-      @Override
-      public RollWALWriterResponse rollWALWriter(RpcController controller,
-          RollWALWriterRequest request) throws ServiceException {
-        return delegate.rollWALWriter(controller, request);
-      }
-
-      @Override
-      public GetServerInfoResponse getServerInfo(RpcController controller,
-          GetServerInfoRequest request) throws ServiceException {
-        return delegate.getServerInfo(controller, request);
-      }
-
-      @Override
-      public StopServerResponse stopServer(RpcController controller, StopServerRequest request)
-          throws ServiceException {
-        return delegate.stopServer(controller, request);
-      }
-
-      @Override
-      public UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller,
-          UpdateFavoredNodesRequest request) throws ServiceException {
-        return delegate.updateFavoredNodes(controller, request);
-      }
-
-      @Override
-      public UpdateConfigurationResponse updateConfiguration(RpcController controller,
-          UpdateConfigurationRequest request) throws ServiceException {
-        return delegate.updateConfiguration(controller, request);
-      }
-
-      @Override
-      public GetRegionLoadResponse getRegionLoad(RpcController controller,
-          GetRegionLoadRequest request) throws ServiceException {
-        return delegate.getRegionLoad(controller, request);
-      }
-
-      @Override
-      public ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller,
-          ClearCompactionQueuesRequest request) throws ServiceException {
-        return delegate.clearCompactionQueues(controller, request);
-      }
-
-      @Override
-      public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(RpcController controller,
-          GetSpaceQuotaSnapshotsRequest request) throws ServiceException {
-        return delegate.getSpaceQuotaSnapshots(controller, request);
-      }
-
-      @Override
-      public ExecuteProceduresResponse executeProcedures(RpcController controller,
-                                                         ExecuteProceduresRequest request)
-      throws ServiceException {
-        return null;
-      }
-
-      @Override
-      public MergeRegionsResponse mergeRegions(RpcController controller,
-                                               MergeRegionsRequest request)
-      throws ServiceException {
-        return null;
-      }
-    }
-
-    public class FailureInjectingReplicatorForTest extends ReplicatorForTest {
-
-      public FailureInjectingReplicatorForTest(List<Entry> entries, int ordinal) {
-        super(entries, ordinal);
-      }
-
-      @Override
-      protected void replicateEntries(BlockingInterface rrs, List<Entry> entries,
-          String replicationClusterId, Path baseNamespaceDir, Path hfileArchiveDir)
-          throws IOException {
-        super.replicateEntries(new FailureInjectingBlockingInterface(rrs), entries,
-          replicationClusterId, baseNamespaceDir, hfileArchiveDir);
-      }
-    }
+    private final AtomicBoolean failNext = new AtomicBoolean(false);
 
     @Override
-    protected Replicator createReplicator(List<Entry> entries, int ordinal) {
-      return new FailureInjectingReplicatorForTest(entries, ordinal);
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal) {
+      return () -> {
+        if (failNext.compareAndSet(false, true)) {
+          int batchIndex = replicateEntries(entries, ordinal);
+          entriesCount += entries.size();
+          int count = batchCount.incrementAndGet();
+          LOG.info(
+            "Completed replicating batch " + System.identityHashCode(entries) + " count=" + count);
+          return batchIndex;
+        } else if (failNext.compareAndSet(true, false)) {
+          throw new ServiceException("Injected failure");
+        }
+        return ordinal;
+      };
     }
   }
-
 }

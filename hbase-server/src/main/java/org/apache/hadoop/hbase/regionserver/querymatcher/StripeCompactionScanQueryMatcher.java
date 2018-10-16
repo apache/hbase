@@ -21,7 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
 /**
@@ -41,9 +42,9 @@ public class StripeCompactionScanQueryMatcher extends DropDeletesCompactionScanQ
   private DropDeletesInOutput dropDeletesInOutput = DropDeletesInOutput.BEFORE;
 
   public StripeCompactionScanQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
-      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now,
-      byte[] dropDeletesFromRow, byte[] dropDeletesToRow) {
-    super(scanInfo, deletes, readPointToUse, earliestPutTs, oldestUnexpiredTS, now);
+      ColumnTracker columns, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
+      long now, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) {
+    super(scanInfo, deletes, columns, readPointToUse, earliestPutTs, oldestUnexpiredTS, now);
     this.dropDeletesFromRow = dropDeletesFromRow;
     this.dropDeletesToRow = dropDeletesToRow;
   }
@@ -56,7 +57,7 @@ public class StripeCompactionScanQueryMatcher extends DropDeletesCompactionScanQ
     }
     long mvccVersion = cell.getSequenceId();
     byte typeByte = cell.getTypeByte();
-    if (CellUtil.isDelete(typeByte)) {
+    if (PrivateCellUtil.isDelete(typeByte)) {
       if (mvccVersion > maxReadPointToTrackVersions) {
         return MatchCode.INCLUDE;
       }

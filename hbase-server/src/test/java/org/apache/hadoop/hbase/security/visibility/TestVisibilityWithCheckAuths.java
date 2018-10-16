@@ -22,8 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -53,6 +54,11 @@ import org.junit.rules.TestName;
  * Test visibility by setting 'hbase.security.visibility.mutations.checkauths' to true
  */
 public class TestVisibilityWithCheckAuths {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVisibilityWithCheckAuths.class);
+
   private static final String TOPSECRET = "TOPSECRET";
   private static final String PUBLIC = "PUBLIC";
   public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -70,7 +76,6 @@ public class TestVisibilityWithCheckAuths {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setBoolean(VisibilityConstants.CHECK_AUTHS_FOR_MUTATION, true);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
@@ -137,7 +142,7 @@ public class TestVisibilityWithCheckAuths {
                Table table = connection.getTable(tableName)) {
             Put p = new Put(row1);
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
-            p.addColumn(fam, qual, 125l, value);
+            p.addColumn(fam, qual, 125L, value);
             table.put(p);
             Assert.fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {
@@ -191,7 +196,7 @@ public class TestVisibilityWithCheckAuths {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Append append = new Append(row1);
-            append.add(fam, qual, Bytes.toBytes("b"));
+            append.addColumn(fam, qual, Bytes.toBytes("b"));
             table.append(append);
           }
           return null;
@@ -204,7 +209,7 @@ public class TestVisibilityWithCheckAuths {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Append append = new Append(row1);
-            append.add(fam, qual, Bytes.toBytes("c"));
+            append.addColumn(fam, qual, Bytes.toBytes("c"));
             append.setCellVisibility(new CellVisibility(PUBLIC));
             table.append(append);
             Assert.fail("Testcase should fail with AccesDeniedException");

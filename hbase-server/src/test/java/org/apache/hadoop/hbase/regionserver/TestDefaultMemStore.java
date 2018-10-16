@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,31 +17,39 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -53,32 +60,28 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /** memstore test case */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestDefaultMemStore {
-  private static final Log LOG = LogFactory.getLog(TestDefaultMemStore.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDefaultMemStore.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestDefaultMemStore.class);
   @Rule public TestName name = new TestName();
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-    withLookingForStuckThread(true).build();
   protected AbstractMemStore memstore;
   protected static final int ROW_COUNT = 10;
   protected static final int QUALIFIER_COUNT = ROW_COUNT;
@@ -126,17 +129,18 @@ public class TestDefaultMemStore {
   public void testPutSameCell() {
     byte[] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
-    MemstoreSize sizeChangeForFirstCell = new MemstoreSize();
+    MemStoreSizing sizeChangeForFirstCell = new NonThreadSafeMemStoreSizing();
     this.memstore.add(kv, sizeChangeForFirstCell);
-    MemstoreSize sizeChangeForSecondCell = new MemstoreSize();
+    MemStoreSizing sizeChangeForSecondCell = new NonThreadSafeMemStoreSizing();
     this.memstore.add(kv, sizeChangeForSecondCell);
     // make sure memstore size increase won't double-count MSLAB chunk size
-    assertEquals(Segment.getCellLength(kv), sizeChangeForFirstCell.getDataSize());
+    assertEquals(Segment.getCellLength(kv), sizeChangeForFirstCell.getMemStoreSize().getDataSize());
     Segment segment = this.memstore.getActive();
     MemStoreLAB msLab = segment.getMemStoreLAB();
     if (msLab != null) {
       // make sure memstore size increased even when writing the same cell, if using MSLAB
-      assertEquals(Segment.getCellLength(kv), sizeChangeForSecondCell.getDataSize());
+      assertEquals(Segment.getCellLength(kv),
+          sizeChangeForSecondCell.getMemStoreSize().getDataSize());
       // make sure chunk size increased even when writing the same cell, if using MSLAB
       if (msLab instanceof MemStoreLABImpl) {
         // since we add the chunkID at the 0th offset of the chunk and the
@@ -146,8 +150,8 @@ public class TestDefaultMemStore {
       }
     } else {
       // make sure no memstore size change w/o MSLAB
-      assertEquals(0, sizeChangeForSecondCell.getDataSize());
-      assertEquals(0, sizeChangeForSecondCell.getHeapSize());
+      assertEquals(0, sizeChangeForSecondCell.getMemStoreSize().getDataSize());
+      assertEquals(0, sizeChangeForSecondCell.getMemStoreSize().getHeapSize());
     }
   }
 
@@ -163,20 +167,16 @@ public class TestDefaultMemStore {
     List<Cell> result = new ArrayList<>();
     Configuration conf = HBaseConfiguration.create();
     ScanInfo scanInfo = new ScanInfo(conf, null, 0, 1, HConstants.LATEST_TIMESTAMP,
-        KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator());
-    ScanType scanType = ScanType.USER_SCAN;
-    StoreScanner s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
+        KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator(), false);
     int count = 0;
-    try {
+    try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
         count++;
         // Row count is same as column count.
         assertEquals(rowCount, result.size());
         result.clear();
       }
-    } finally {
-      s.close();
     }
     assertEquals(rowCount, count);
     for (KeyValueScanner scanner : memstorescanners) {
@@ -185,13 +185,12 @@ public class TestDefaultMemStore {
 
     memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     // Now assert can count same number even if a snapshot mid-scan.
-    s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
-    try {
+    try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
         // Assert the stuff is coming out in right order.
-        assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
+        assertTrue(CellUtil.matchingRows(result.get(0), Bytes.toBytes(count)));
         count++;
         // Row count is same as column count.
         assertEquals(rowCount, result.size());
@@ -201,8 +200,6 @@ public class TestDefaultMemStore {
         }
         result.clear();
       }
-    } finally {
-      s.close();
     }
     assertEquals(rowCount, count);
     for (KeyValueScanner scanner : memstorescanners) {
@@ -211,28 +208,25 @@ public class TestDefaultMemStore {
     memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     // Assert that new values are seen in kvset as we scan.
     long ts = System.currentTimeMillis();
-    s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
     int snapshotIndex = 5;
-    try {
+    try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
         // Assert the stuff is coming out in right order.
-        assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
+        assertTrue(CellUtil.matchingRows(result.get(0), Bytes.toBytes(count)));
         // Row count is same as column count.
         assertEquals("count=" + count + ", result=" + result, rowCount, result.size());
         count++;
         if (count == snapshotIndex) {
           MemStoreSnapshot snapshot = this.memstore.snapshot();
           this.memstore.clearSnapshot(snapshot.getId());
-          // Added more rows into kvset.  But the scanner wont see these rows.
+          // Added more rows into kvset. But the scanner wont see these rows.
           addRows(this.memstore, ts);
           LOG.info("Snapshotted, cleared it and then added values (which wont be seen)");
         }
         result.clear();
       }
-    } finally {
-      s.close();
     }
     assertEquals(rowCount, count);
   }
@@ -461,22 +455,16 @@ public class TestDefaultMemStore {
 
     final MultiVersionConcurrencyControl mvcc;
     final MemStore memstore;
-    final AtomicLong startSeqNum;
 
     AtomicReference<Throwable> caughtException;
 
 
-    public ReadOwnWritesTester(int id,
-                               MemStore memstore,
-                               MultiVersionConcurrencyControl mvcc,
-                               AtomicReference<Throwable> caughtException,
-                               AtomicLong startSeqNum)
-    {
+    public ReadOwnWritesTester(int id, MemStore memstore, MultiVersionConcurrencyControl mvcc,
+        AtomicReference<Throwable> caughtException) {
       this.mvcc = mvcc;
       this.memstore = memstore;
       this.caughtException = caughtException;
       row = Bytes.toBytes(id);
-      this.startSeqNum = startSeqNum;
     }
 
     @Override
@@ -515,14 +503,13 @@ public class TestDefaultMemStore {
 
   @Test
   public void testReadOwnWritesUnderConcurrency() throws Throwable {
-
     int NUM_THREADS = 8;
 
     ReadOwnWritesTester threads[] = new ReadOwnWritesTester[NUM_THREADS];
     AtomicReference<Throwable> caught = new AtomicReference<>();
 
     for (int i = 0; i < NUM_THREADS; i++) {
-      threads[i] = new ReadOwnWritesTester(i, memstore, mvcc, caught, this.startSeqNum);
+      threads[i] = new ReadOwnWritesTester(i, memstore, mvcc, caught);
       threads[i].start();
     }
 
@@ -552,7 +539,7 @@ public class TestDefaultMemStore {
 
   @Test
   public void testMultipleVersionsSimple() throws Exception {
-    DefaultMemStore m = new DefaultMemStore(new Configuration(), CellComparator.COMPARATOR);
+    DefaultMemStore m = new DefaultMemStore(new Configuration(), CellComparatorImpl.COMPARATOR);
     byte [] row = Bytes.toBytes("testRow");
     byte [] family = Bytes.toBytes("testFamily");
     byte [] qf = Bytes.toBytes("testQualifier");
@@ -585,42 +572,41 @@ public class TestDefaultMemStore {
     Thread.sleep(1);
     addRows(this.memstore);
     Cell closestToEmpty = ((DefaultMemStore) this.memstore).getNextRow(KeyValue.LOWESTKEY);
-    assertTrue(CellComparator.COMPARATOR.compareRows(closestToEmpty,
+    assertTrue(CellComparatorImpl.COMPARATOR.compareRows(closestToEmpty,
         new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((DefaultMemStore) this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
           System.currentTimeMillis()));
       if (i + 1 == ROW_COUNT) {
-        assertEquals(nr, null);
+        assertNull(nr);
       } else {
-        assertTrue(CellComparator.COMPARATOR.compareRows(nr,
+        assertTrue(CellComparatorImpl.COMPARATOR.compareRows(nr,
             new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
       }
     }
     //starting from each row, validate results should contain the starting row
     Configuration conf = HBaseConfiguration.create();
     for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
-      ScanInfo scanInfo = new ScanInfo(conf, FAMILY, 0, 1, Integer.MAX_VALUE,
-          KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator());
-      ScanType scanType = ScanType.USER_SCAN;
-      try (InternalScanner scanner = new StoreScanner(new Scan(
-          Bytes.toBytes(startRowId)), scanInfo, scanType, null,
-          memstore.getScanners(0))) {
+      ScanInfo scanInfo =
+          new ScanInfo(conf, FAMILY, 0, 1, Integer.MAX_VALUE, KeepDeletedCells.FALSE,
+              HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator(), false);
+      try (InternalScanner scanner =
+          new StoreScanner(new Scan().withStartRow(Bytes.toBytes(startRowId)), scanInfo, null,
+              memstore.getScanners(0))) {
         List<Cell> results = new ArrayList<>();
         for (int i = 0; scanner.next(results); i++) {
           int rowId = startRowId + i;
           Cell left = results.get(0);
           byte[] row1 = Bytes.toBytes(rowId);
-          assertTrue(
-              "Row name",
-              CellComparator.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
+          assertTrue("Row name",
+            CellComparatorImpl.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
           assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
           List<Cell> row = new ArrayList<>();
           for (Cell kv : results) {
             row.add(kv);
           }
           isExpectedRowWithoutTimestamps(rowId, row);
-          // Clear out set.  Otherwise row results accumulate.
+          // Clear out set. Otherwise row results accumulate.
           results.clear();
         }
       }
@@ -836,8 +822,8 @@ public class TestDefaultMemStore {
   @Test
   public void testUpsertMemstoreSize() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    memstore = new DefaultMemStore(conf, CellComparator.COMPARATOR);
-    MemstoreSize oldSize = memstore.size();
+    memstore = new DefaultMemStore(conf, CellComparatorImpl.COMPARATOR);
+    MemStoreSize oldSize = memstore.size();
 
     List<Cell> l = new ArrayList<>();
     KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
@@ -848,7 +834,7 @@ public class TestDefaultMemStore {
     l.add(kv1); l.add(kv2); l.add(kv3);
 
     this.memstore.upsert(l, 2, null);// readpoint is 2
-    MemstoreSize newSize = this.memstore.size();
+    MemStoreSize newSize = this.memstore.size();
     assert (newSize.getDataSize() > oldSize.getDataSize());
     //The kv1 should be removed.
     assert(memstore.getActive().getCellsCount() == 2);
@@ -880,7 +866,7 @@ public class TestDefaultMemStore {
       EnvironmentEdgeManager.injectEdge(edge);
       DefaultMemStore memstore = new DefaultMemStore();
       long t = memstore.timeOfOldestEdit();
-      assertEquals(t, Long.MAX_VALUE);
+      assertEquals(Long.MAX_VALUE, t);
 
       // test the case that the timeOfOldestEdit is updated after a KV add
       memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"), null);
@@ -932,14 +918,15 @@ public class TestDefaultMemStore {
       EnvironmentEdgeManager.injectEdge(edge);
       HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
       String cf = "foo";
-      HRegion region = hbaseUtility.createTestRegion("foobar", new HColumnDescriptor(cf));
+      HRegion region =
+          hbaseUtility.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
 
       edge.setCurrentTimeMillis(1234);
       Put p = new Put(Bytes.toBytes("r"));
       p.add(KeyValueTestUtil.create("r", cf, "q", 100, "v"));
       region.put(p);
       edge.setCurrentTimeMillis(1234 + 100);
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       assertTrue(!region.shouldFlush(sb));
       edge.setCurrentTimeMillis(1234 + 10000);
       assertTrue(region.shouldFlush(sb) == expected);
@@ -960,24 +947,48 @@ public class TestDefaultMemStore {
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
     EnvironmentEdgeManager.injectEdge(edge);
     edge.setCurrentTimeMillis(1234);
-    WALFactory wFactory = new WALFactory(conf, null, "1234");
-    HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
+    WALFactory wFactory = new WALFactory(conf, "1234");
+    HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
         conf, FSTableDescriptors.createMetaTableDescriptor(conf),
-        wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
-            getEncodedNameAsBytes()));
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()),
-        Bytes.toBytes("row_0200"), Bytes.toBytes("row_0300"));
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    desc.addFamily(new HColumnDescriptor("foo".getBytes()));
-    HRegion r =
-        HRegion.createHRegion(hri, testDir, conf, desc,
-            wFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()));
-    HRegion.addRegionToMETA(meta, r);
+        wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
+    // parameterized tests add [#] suffix get rid of [ and ].
+    TableDescriptor desc = TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(name.getMethodName().replaceAll("[\\[\\]]", "_")))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("foo")).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(desc.getTableName())
+        .setStartKey(Bytes.toBytes("row_0200")).setEndKey(Bytes.toBytes("row_0300")).build();
+    HRegion r = HRegion.createHRegion(hri, testDir, conf, desc, wFactory.getWAL(hri));
+    addRegionToMETA(meta, r);
     edge.setCurrentTimeMillis(1234 + 100);
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     assertTrue(meta.shouldFlush(sb) == false);
     edge.setCurrentTimeMillis(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
     assertTrue(meta.shouldFlush(sb) == true);
+  }
+
+  /**
+   * Inserts a new region's meta information into the passed
+   * <code>meta</code> region. Used by the HMaster bootstrap code adding
+   * new table to hbase:meta table.
+   *
+   * @param meta hbase:meta HRegion to be updated
+   * @param r HRegion to add to <code>meta</code>
+   *
+   * @throws IOException
+   */
+  public static void addRegionToMETA(final HRegion meta, final HRegion r) throws IOException {
+    meta.checkResources();
+    // The row key is the region name
+    byte[] row = r.getRegionInfo().getRegionName();
+    final long now = EnvironmentEdgeManager.currentTime();
+    final List<Cell> cells = new ArrayList<>(2);
+    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
+      HConstants.REGIONINFO_QUALIFIER, now, RegionInfo.toByteArray(r.getRegionInfo())));
+    // Set into the root table the version of the meta table.
+    cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
+      HConstants.META_VERSION_QUALIFIER, now,
+      Bytes.toBytes(HConstants.META_VERSION)));
+    meta.put(row, HConstants.CATALOG_FAMILY, cells);
   }
 
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {

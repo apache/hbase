@@ -21,11 +21,12 @@ package org.apache.hadoop.hbase.util;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Reservoir;
 import com.codahale.metrics.Snapshot;
-
 import java.lang.reflect.Constructor;
 import java.text.DecimalFormat;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /** Utility functions for working with Yammer Metrics. */
+@InterfaceAudience.Private
 public final class YammerHistogramUtils {
 
   // not for public consumption

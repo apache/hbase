@@ -20,18 +20,19 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
  * as the wrapped filters {@link Filter#filterRowKey(byte[], int, int)},
- * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.Cell)},
+ * {@link Filter#filterCell(org.apache.hadoop.hbase.Cell)},
  * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or
  * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods
  * returns true.
@@ -49,6 +50,7 @@ public class WhileMatchFilter extends FilterBase {
     return filter;
   }
 
+  @Override
   public void reset() throws IOException {
     this.filter.reset();
   }
@@ -77,11 +79,17 @@ public class WhileMatchFilter extends FilterBase {
     return value;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) throws IOException {
-    ReturnCode c = filter.filterKeyValue(v);
-    changeFAR(c != ReturnCode.INCLUDE);
-    return c;
+  public ReturnCode filterKeyValue(final Cell c) throws IOException {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) throws IOException {
+    ReturnCode code = filter.filterCell(c);
+    changeFAR(code != ReturnCode.INCLUDE);
+    return code;
   }
 
   @Override
@@ -104,6 +112,7 @@ public class WhileMatchFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.WhileMatchFilter.Builder builder =
       FilterProtos.WhileMatchFilter.newBuilder();
@@ -133,10 +142,11 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof WhileMatchFilter)) return false;
@@ -145,6 +155,7 @@ public class WhileMatchFilter extends FilterBase {
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }
 
+  @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
     return filter.isFamilyEssential(name);
   }
@@ -152,5 +163,15 @@ public class WhileMatchFilter extends FilterBase {
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + this.filter.toString();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.filter);
   }
 }

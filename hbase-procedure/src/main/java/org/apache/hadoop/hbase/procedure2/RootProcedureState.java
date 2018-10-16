@@ -22,11 +22,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
@@ -42,8 +40,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class RootProcedureState {
-  private static final Log LOG = LogFactory.getLog(RootProcedureState.class);
+class RootProcedureState<TEnvironment> {
 
   private enum State {
     RUNNING,         // The Procedure is running or ready to run
@@ -51,8 +48,8 @@ class RootProcedureState {
     ROLLINGBACK,     // The Procedure failed and the execution was rolledback
   }
 
-  private Set<Procedure> subprocs = null;
-  private ArrayList<Procedure> subprocStack = null;
+  private Set<Procedure<TEnvironment>> subprocs = null;
+  private ArrayList<Procedure<TEnvironment>> subprocStack = null;
   private State state = State.RUNNING;
   private int running = 0;
 
@@ -91,22 +88,19 @@ class RootProcedureState {
   }
 
   protected synchronized long[] getSubprocedureIds() {
-    if (subprocs == null) return null;
-    int index = 0;
-    final long[] subIds = new long[subprocs.size()];
-    for (Procedure proc: subprocs) {
-      subIds[index++] = proc.getProcId();
+    if (subprocs == null) {
+      return null;
     }
-    return subIds;
+    return subprocs.stream().mapToLong(Procedure::getProcId).toArray();
   }
 
-  protected synchronized List<Procedure> getSubproceduresStack() {
+  protected synchronized List<Procedure<TEnvironment>> getSubproceduresStack() {
     return subprocStack;
   }
 
   protected synchronized RemoteProcedureException getException() {
     if (subprocStack != null) {
-      for (Procedure proc: subprocStack) {
+      for (Procedure<TEnvironment> proc: subprocStack) {
         if (proc.hasException()) {
           return proc.getException();
         }
@@ -118,8 +112,10 @@ class RootProcedureState {
   /**
    * Called by the ProcedureExecutor to mark the procedure step as running.
    */
-  protected synchronized boolean acquire(final Procedure proc) {
-    if (state != State.RUNNING) return false;
+  protected synchronized boolean acquire(Procedure<TEnvironment> proc) {
+    if (state != State.RUNNING) {
+      return false;
+    }
 
     running++;
     return true;
@@ -128,7 +124,7 @@ class RootProcedureState {
   /**
    * Called by the ProcedureExecutor to mark the procedure step as finished.
    */
-  protected synchronized void release(final Procedure proc) {
+  protected synchronized void release(Procedure<TEnvironment> proc) {
     running--;
   }
 
@@ -142,7 +138,7 @@ class RootProcedureState {
    * Called by the ProcedureExecutor after the procedure step is completed,
    * to add the step to the rollback list (or procedure stack)
    */
-  protected synchronized void addRollbackStep(final Procedure proc) {
+  protected synchronized void addRollbackStep(Procedure<TEnvironment> proc) {
     if (proc.isFailed()) {
       state = State.FAILED;
     }
@@ -153,8 +149,10 @@ class RootProcedureState {
     subprocStack.add(proc);
   }
 
-  protected synchronized void addSubProcedure(final Procedure proc) {
-    if (!proc.hasParent()) return;
+  protected synchronized void addSubProcedure(Procedure<TEnvironment> proc) {
+    if (!proc.hasParent()) {
+      return;
+    }
     if (subprocs == null) {
       subprocs = new HashSet<>();
     }
@@ -168,7 +166,7 @@ class RootProcedureState {
    * to the store only the Procedure we executed, and nothing else.
    * on load we recreate the full stack by aggregating each procedure stack-positions.
    */
-  protected synchronized void loadStack(final Procedure proc) {
+  protected synchronized void loadStack(Procedure<TEnvironment> proc) {
     addSubProcedure(proc);
     int[] stackIndexes = proc.getStackIndexes();
     if (stackIndexes != null) {
@@ -196,7 +194,7 @@ class RootProcedureState {
    */
   protected synchronized boolean isValid() {
     if (subprocStack != null) {
-      for (Procedure proc: subprocStack) {
+      for (Procedure<TEnvironment> proc : subprocStack) {
         if (proc == null) {
           return false;
         }

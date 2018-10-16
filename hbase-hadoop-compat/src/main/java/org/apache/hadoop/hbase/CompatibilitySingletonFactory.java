@@ -18,25 +18,27 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.ServiceLoader;
 
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  *  Factory for classes supplied by hadoop compatibility modules.  Only one of each class will be
  *  created.
  */
+@InterfaceAudience.Private
 public class CompatibilitySingletonFactory extends CompatibilityFactory {
   public static enum SingletonStorage {
     INSTANCE;
     private final Object lock = new Object();
     private final Map<Class, Object> instances = new HashMap<>();
   }
-  private static final Log LOG = LogFactory.getLog(CompatibilitySingletonFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompatibilitySingletonFactory.class);
 
   /**
    * This is a static only class don't let anyone create an instance.
@@ -67,7 +69,7 @@ public class CompatibilitySingletonFactory extends CompatibilityFactory {
               msg.append(it.next()).append(" ");
             }
             msg.append("}");
-            LOG.warn(msg);
+            LOG.warn(msg.toString());
           }
         } catch (Exception e) {
           throw new RuntimeException(createExceptionString(klass), e);

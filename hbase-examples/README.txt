@@ -28,7 +28,8 @@ Example code.
       2. If HBase server is not secure, or authentication is not enabled for the Thrift server, execute:
       {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port>}
       3. If HBase server is secure, and authentication is enabled for the Thrift server, run kinit at first, then execute:
-      {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port> true}
+      {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port> true <server-principal>}
+      <server-principal> should only be specified when the client connects to a secure cluster. It's default value is "hbase".
       4. Here is a lazy example that just pulls in all hbase dependency jars and that goes against default location on localhost.
       It should work with a standalone hbase instance started by doing ./bin/start-hbase.sh:
       {java -cp ./hbase-examples/target/hbase-examples-2.0.0-SNAPSHOT.jar:`./bin/hbase classpath` org.apache.hadoop.hbase.thrift.DemoClient localhost 9090}
@@ -63,27 +64,8 @@ Example code.
       3. Execute {./DemoClient}.
 
 ON PROTOBUFS
-This maven module has  protobuf definition files ('.protos') used by hbase
-Coprocessor Endpoints examples including tests. Coprocessor
-Endpoints are meant to be standalone, independent code not reliant on hbase
-internals. They define their Service using protobuf. The protobuf version
-they use can be distinct from that used by HBase internally since HBase started
-shading its protobuf references. Endpoints have no access to the shaded protobuf
-hbase uses. They do have access to the content of hbase-protocol -- the
-.protos found in here -- but avoid using as much of this as you can as it is
-liable to change.
+This maven module has core protobuf definition files ('.protos') used by hbase
+examples. 
 
-Generation of java files from protobuf .proto files included here is done apart
-from the build. Run the generation whenever you make changes to the .orotos files
-and then check in the produced java (The reasoning is that change is infrequent
-so why pay the price of generating files anew on each build.
-
-To generate java files from protos run:
-
- $ mvn compile -Dcompile-protobuf
-or
- $ mvn compile -Pcompile-protobuf
-
-After you've done the above, check it and then check in changes (or post a patch
-on a JIRA with your definition file changes and the generated files). Be careful
-to notice new files and files removed and do appropriate git rm/adds.
+Generation of java files from protobuf .proto files included here is done as
+part of the build.

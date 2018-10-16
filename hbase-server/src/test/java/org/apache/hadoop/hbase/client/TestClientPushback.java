@@ -17,39 +17,37 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.AsyncProcessTask;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ExponentialClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.MemstoreSize;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test that we can actually send and use region metrics to slowdown client writes
@@ -57,13 +55,17 @@ import static org.junit.Assert.assertTrue;
 @Category(MediumTests.class)
 public class TestClientPushback {
 
-  private static final Log LOG = LogFactory.getLog(TestClientPushback.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestClientPushback.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestClientPushback.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final TableName tableName = TableName.valueOf("client-pushback");
   private static final byte[] family = Bytes.toBytes("f");
   private static final byte[] qualifier = Bytes.toBytes("q");
-  private static final long flushSizeBytes = 256;
+  private static final long flushSizeBytes = 512;
 
   @BeforeClass
   public static void setupCluster() throws Exception{
@@ -88,24 +90,25 @@ public class TestClientPushback {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testClientTracksServerPushback() throws Exception{
     Configuration conf = UTIL.getConfiguration();
 
     ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
-    Table table = conn.getTable(tableName);
+    BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(tableName);
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    Region region = rs.getOnlineRegions(tableName).get(0);
+    Region region = rs.getRegions(tableName).get(0);
 
     LOG.debug("Writing some data to "+tableName);
     // write some data
     Put p = new Put(Bytes.toBytes("row"));
     p.addColumn(family, qualifier, Bytes.toBytes("value1"));
-    table.put(p);
+    mutator.mutate(p);
+    mutator.flush();
 
     // get the current load on RS. Hopefully memstore isn't flushed since we wrote the the data
-    int load = (int) ((((HRegion) region).addAndGetMemstoreSize(new MemstoreSize(0, 0)) * 100)
+    int load = (int) ((region.getMemStoreHeapSize() * 100)
         / flushSizeBytes);
     LOG.debug("Done writing some data to "+tableName);
 
@@ -113,7 +116,7 @@ public class TestClientPushback {
     ClientBackoffPolicy backoffPolicy = conn.getBackoffPolicy();
     assertTrue("Backoff policy is not correctly configured",
       backoffPolicy instanceof ExponentialClientBackoffPolicy);
-    
+
     ServerStatisticTracker stats = conn.getStatisticsTracker();
     assertNotNull( "No stats configured for the client!", stats);
     // get the names so we can query the stats
@@ -124,10 +127,10 @@ public class TestClientPushback {
     ServerStatistics serverStats = stats.getServerStatsForTesting(server);
     ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
     assertEquals("We did not find some load on the memstore", load,
-      regionStats.getMemstoreLoadPercent());
+      regionStats.getMemStoreLoadPercent());
     // check that the load reported produces a nonzero delay
     long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
-    assertNotEquals("Reported load does not produce a backoff", backoffTime, 0);
+    assertNotEquals("Reported load does not produce a backoff", 0, backoffTime);
     LOG.debug("Backoff calculated for " + region.getRegionInfo().getRegionNameAsString() + " @ " +
       server + " is " + backoffTime);
 
@@ -138,7 +141,6 @@ public class TestClientPushback {
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicLong endTime = new AtomicLong();
     long startTime = EnvironmentEdgeManager.currentTime();
-    BufferedMutatorImpl mutator = ((HTable) table).mutator;
     Batch.Callback<Result> callback = (byte[] r, byte[] row, Result result) -> {
         endTime.set(EnvironmentEdgeManager.currentTime());
         latch.countDown();
@@ -163,17 +165,17 @@ public class TestClientPushback {
     assertEquals(rsStats.heapOccupancyHist.getSnapshot().getMean(),
         (double)regionStats.getHeapOccupancyPercent(), 0.1 );
     assertEquals(rsStats.memstoreLoadHist.getSnapshot().getMean(),
-        (double)regionStats.getMemstoreLoadPercent(), 0.1);
+        (double)regionStats.getMemStoreLoadPercent(), 0.1);
 
     MetricsConnection.RunnerStats runnerStats = conn.getConnectionMetrics().runnerStats;
 
-    assertEquals(runnerStats.delayRunners.getCount(), 1);
-    assertEquals(runnerStats.normalRunners.getCount(), 1);
+    assertEquals(1, runnerStats.delayRunners.getCount());
+    assertEquals(1, runnerStats.normalRunners.getCount());
     assertEquals("", runnerStats.delayIntevalHist.getSnapshot().getMean(),
       (double)backoffTime, 0.1);
 
     latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
-    assertNotEquals("AsyncProcess did not submit the work time", endTime.get(), 0);
+    assertNotEquals("AsyncProcess did not submit the work time", 0, endTime.get());
     assertTrue("AsyncProcess did not delay long enough", endTime.get() - startTime >= backoffTime);
   }
 
@@ -183,7 +185,7 @@ public class TestClientPushback {
     ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
     Table table = conn.getTable(tableName);
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    Region region = rs.getOnlineRegions(tableName).get(0);
+    Region region = rs.getRegions(tableName).get(0);
 
     RowMutations mutations = new RowMutations(Bytes.toBytes("row"));
     Put p = new Put(Bytes.toBytes("row"));
@@ -202,6 +204,6 @@ public class TestClientPushback {
     ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
 
     assertNotNull(regionStats);
-    assertTrue(regionStats.getMemstoreLoadPercent() > 0);
+    assertTrue(regionStats.getMemStoreLoadPercent() > 0);
     }
 }

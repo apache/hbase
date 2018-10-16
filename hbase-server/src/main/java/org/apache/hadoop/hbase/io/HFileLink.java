@@ -22,21 +22,22 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * HFileLink describes a link to an hfile.
@@ -57,7 +58,7 @@ import org.apache.hadoop.hbase.util.Pair;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS",
   justification="To be fixed but warning suppressed for now")
 public class HFileLink extends FileLink {
-  private static final Log LOG = LogFactory.getLog(HFileLink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileLink.class);
 
   /**
    * A non-capture group, for HFileLink, so that this can be embedded.
@@ -73,14 +74,14 @@ public class HFileLink extends FileLink {
   public static final String LINK_NAME_REGEX =
     String.format("(?:(?:%s=)?)%s=%s-%s",
       TableName.VALID_NAMESPACE_REGEX, TableName.VALID_TABLE_QUALIFIER_REGEX,
-      HRegionInfo.ENCODED_REGION_NAME_REGEX, StoreFileInfo.HFILE_NAME_REGEX);
+        RegionInfoBuilder.ENCODED_REGION_NAME_REGEX, StoreFileInfo.HFILE_NAME_REGEX);
 
   /** Define the HFile Link name parser in the form of: table=region-hfile */
   //made package private for testing
   static final Pattern LINK_NAME_PATTERN =
     Pattern.compile(String.format("^(?:(%s)(?:\\=))?(%s)=(%s)-(%s)$",
       TableName.VALID_NAMESPACE_REGEX, TableName.VALID_TABLE_QUALIFIER_REGEX,
-      HRegionInfo.ENCODED_REGION_NAME_REGEX, StoreFileInfo.HFILE_NAME_REGEX));
+      RegionInfoBuilder.ENCODED_REGION_NAME_REGEX, StoreFileInfo.HFILE_NAME_REGEX));
 
   /**
    * The pattern should be used for hfile and reference links
@@ -89,7 +90,7 @@ public class HFileLink extends FileLink {
   private static final Pattern REF_OR_HFILE_LINK_PATTERN =
     Pattern.compile(String.format("^(?:(%s)(?:=))?(%s)=(%s)-(.+)$",
       TableName.VALID_NAMESPACE_REGEX, TableName.VALID_TABLE_QUALIFIER_REGEX,
-      HRegionInfo.ENCODED_REGION_NAME_REGEX));
+        RegionInfoBuilder.ENCODED_REGION_NAME_REGEX));
 
   private final Path archivePath;
   private final Path originPath;
@@ -285,7 +286,7 @@ public class HFileLink extends FileLink {
    * @param hfileName - Linked HFile name
    * @return file name of the HFile Link
    */
-  public static String createHFileLinkName(final HRegionInfo hfileRegionInfo,
+  public static String createHFileLinkName(final RegionInfo hfileRegionInfo,
       final String hfileName) {
     return createHFileLinkName(hfileRegionInfo.getTable(),
             hfileRegionInfo.getEncodedName(), hfileName);
@@ -322,7 +323,7 @@ public class HFileLink extends FileLink {
    * @throws IOException on file or parent directory creation failure
    */
   public static boolean create(final Configuration conf, final FileSystem fs,
-      final Path dstFamilyPath, final HRegionInfo hfileRegionInfo,
+      final Path dstFamilyPath, final RegionInfo hfileRegionInfo,
       final String hfileName) throws IOException {
     return create(conf, fs, dstFamilyPath, hfileRegionInfo, hfileName, true);
   }
@@ -343,7 +344,7 @@ public class HFileLink extends FileLink {
    * @throws IOException on file or parent directory creation failure
    */
   public static boolean create(final Configuration conf, final FileSystem fs,
-      final Path dstFamilyPath, final HRegionInfo hfileRegionInfo,
+      final Path dstFamilyPath, final RegionInfo hfileRegionInfo,
       final String hfileName, final boolean createBackRef) throws IOException {
     TableName linkedTable = hfileRegionInfo.getTable();
     String linkedRegion = hfileRegionInfo.getEncodedName();

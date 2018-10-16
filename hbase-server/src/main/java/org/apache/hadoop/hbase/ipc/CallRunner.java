@@ -19,20 +19,20 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
 
 /**
  * The request processing logic, which is usually executed in thread pools provided by an
@@ -107,28 +107,25 @@ public class CallRunner {
       this.status.setStatus("Setting up call");
       this.status.setConnection(call.getRemoteAddress().getHostAddress(), call.getRemotePort());
       if (RpcServer.LOG.isTraceEnabled()) {
-        User remoteUser = call.getRequestUser();
+        Optional<User> remoteUser = call.getRequestUser();
         RpcServer.LOG.trace(call.toShortString() + " executing as " +
-            ((remoteUser == null) ? "NULL principal" : remoteUser.getName()));
+            (remoteUser.isPresent() ? "NULL principal" : remoteUser.get().getName()));
       }
       Throwable errorThrowable = null;
       String error = null;
       Pair<Message, CellScanner> resultPair = null;
       RpcServer.CurCall.set(call);
-      TraceScope traceScope = null;
       try {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
           throw new ServerNotRunningYetException("Server " +
               (address != null ? address : "(channel closed)") + " is not running yet");
         }
-        if (call.getTraceInfo() != null) {
-          String serviceName =
-              call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
-          String methodName = (call.getMethod() != null) ? call.getMethod().getName() : "";
-          String traceString = serviceName + "." + methodName;
-          traceScope = Trace.startSpan(traceString, call.getTraceInfo());
-        }
+        String serviceName =
+            call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
+        String methodName = (call.getMethod() != null) ? call.getMethod().getName() : "";
+        String traceString = serviceName + "." + methodName;
+        TraceUtil.createTrace(traceString);
         // make the call
         resultPair = this.rpcServer.call(call, this.status);
       } catch (TimeoutIOException e){
@@ -141,7 +138,8 @@ public class CallRunner {
             RpcServer.LOG.trace(call.toShortString(), e);
           }
         } else {
-          RpcServer.LOG.debug(call.toShortString(), e);
+          // Don't dump full exception.. just String version
+          RpcServer.LOG.debug(call.toShortString() + ", exception=" + e);
         }
         errorThrowable = e;
         error = StringUtils.stringifyException(e);
@@ -149,9 +147,6 @@ public class CallRunner {
           throw (Error)e;
         }
       } finally {
-        if (traceScope != null) {
-          traceScope.close();
-        }
         RpcServer.CurCall.set(null);
         if (resultPair != null) {
           this.rpcServer.addCallSize(call.getSize() * -1);

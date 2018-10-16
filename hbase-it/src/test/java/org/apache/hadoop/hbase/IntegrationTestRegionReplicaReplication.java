@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.ConstantDelayQueue;
@@ -38,7 +37,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Integration test for testing async wal replication to secondary region replicas. Sets up a table
@@ -51,11 +50,12 @@ import com.google.common.collect.Lists;
  * with the replication of the edits before read_delay_ms to the given region replica id so that
  * the read and verify will not fail.
  *
- * The job will run for <b>at least<b> given runtime (default 10min) by running a concurrent
+ * The job will run for <b>at least</b> given runtime (default 10min) by running a concurrent
  * writer and reader workload followed by a concurrent updater and reader workload for
  * num_keys_per_server.
- *<p>
+ * <p>
  * Example usage:
+ * </p>
  * <pre>
  * hbase org.apache.hadoop.hbase.IntegrationTestRegionReplicaReplication
  * -DIntegrationTestRegionReplicaReplication.num_keys_per_server=10000
@@ -154,7 +154,8 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
       int recordSize, int writeThreads, int readThreads) throws Exception {
 
     LOG.info("Running ingest");
-    LOG.info("Cluster size:" + util.getHBaseClusterInterface().getClusterStatus().getServersSize());
+    LOG.info("Cluster size:" + util.getHBaseClusterInterface()
+      .getClusterMetrics().getLiveServerMetrics().size());
 
     // sleep for some time so that the cache for disabled tables does not interfere.
     Threads.sleep(

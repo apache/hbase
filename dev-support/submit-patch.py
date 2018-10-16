@@ -171,17 +171,16 @@ def validate_patch_dir(patch_dir):
 # - current branch is same as base branch
 # - current branch is ahead of base_branch by more than 1 commits
 def check_diff_between_branches(base_branch):
-    only_in_base_branch = git.log("HEAD.." + base_branch, oneline = True)
-    only_in_active_branch = git.log(base_branch + "..HEAD", oneline = True)
+    only_in_base_branch = list(repo.iter_commits("HEAD.." + base_branch))
+    only_in_active_branch = list(repo.iter_commits(base_branch + "..HEAD"))
     if len(only_in_base_branch) != 0:
         log_fatal_and_exit(" '%s' is ahead of current branch by %s commits. Rebase "
-                           "and try again.", base_branch, len(only_in_base_branch.split("\n")))
+                           "and try again.", base_branch, len(only_in_base_branch))
     if len(only_in_active_branch) == 0:
         log_fatal_and_exit(" Current branch is same as '%s'. Exiting...", base_branch)
-    if len(only_in_active_branch.split("\n")) > 1:
+    if len(only_in_active_branch) > 1:
         log_fatal_and_exit(" Current branch is ahead of '%s' by %s commits. Squash into single "
-                           "commit and try again.",
-                           base_branch, len(only_in_active_branch.split("\n")))
+                           "commit and try again.", base_branch, len(only_in_active_branch))
 
 
 # If ~/.apache-creds is present, load credentials from it otherwise prompt user.
@@ -205,12 +204,12 @@ def get_credentials():
     return creds
 
 
-def attach_patch_to_jira(issue_url, patch_filepath, creds):
+def attach_patch_to_jira(issue_url, patch_filepath, patch_filename, creds):
     # Upload patch to jira using REST API.
     headers = {'X-Atlassian-Token': 'no-check'}
-    files = {'file': open(patch_filepath, 'rb')}
+    files = {'file': (patch_filename, open(patch_filepath, 'rb'), 'text/plain')}
     jira_auth = requests.auth.HTTPBasicAuth(creds['jira_username'], creds['jira_password'])
-    attachment_url = issue_url +  "/attachments"
+    attachment_url = issue_url + "/attachments"
     r = requests.post(attachment_url, headers = headers, files = files, auth = jira_auth)
     assert_status_code(r, 200, "uploading patch to jira")
 
@@ -249,14 +248,14 @@ logger.info(" Patch name: %s", patch_filename)
 patch_filepath = os.path.join(patch_dir, patch_filename)
 
 diff = git.format_patch(base_branch, stdout = True)
-with open(patch_filepath, "w") as f:
-    f.write(diff)
+with open(patch_filepath, "wb") as f:
+    f.write(diff.encode('utf8'))
 
 if args.jira_id is not None:
     creds = get_credentials()
     issue_url = "https://issues.apache.org/jira/rest/api/2/issue/" + args.jira_id
 
-    attach_patch_to_jira(issue_url, patch_filepath, creds)
+    attach_patch_to_jira(issue_url, patch_filepath, patch_filename, creds)
 
     if not args.skip_review_board:
         rb_auth = requests.auth.HTTPBasicAuth(creds['rb_username'], creds['rb_password'])
@@ -277,7 +276,7 @@ if args.jira_id is not None:
             # Use jira summary as review's summary too.
             summary = get_jira_summary(issue_url)
             # Use commit message as description.
-            description = git.log("-1", pretty="%B")
+            description = repo.head.commit.message
             update_draft_data = {"bugs_closed" : [args.jira_id.upper()], "target_groups" : "hbase",
                                  "target_people" : args.reviewers, "summary" : summary,
                                  "description" : description }

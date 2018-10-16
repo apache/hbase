@@ -30,17 +30,21 @@ AssignmentManager assignmentManager = null;
 </%args>
 <%import>
 java.util.*;
+java.io.IOException;
+org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
+org.apache.hadoop.hbase.client.RegionInfo;
+org.apache.hadoop.hbase.client.TableDescriptor;
+org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
-org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.NamespaceDescriptor;
-org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.TableName;
 org.apache.hadoop.hbase.client.Admin;
 org.apache.hadoop.hbase.client.MasterSwitchType;
-org.apache.hadoop.hbase.client.SnapshotDescription;
+org.apache.hadoop.hbase.client.TableState;
 org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 org.apache.hadoop.hbase.master.DeadServer;
 org.apache.hadoop.hbase.master.HMaster;
@@ -50,6 +54,7 @@ org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
 org.apache.hadoop.hbase.security.access.AccessControlLists;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
+org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 org.apache.hadoop.hbase.tool.Canary;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.util.FSUtils;
@@ -93,9 +98,27 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
   }
 </%class>
 
-<!--[if IE]>
+<%class>
+  public static String getUserTables(HMaster master, List<TableDescriptor> tables){
+    if (master.isInitialized()){
+      try {
+        Map<String, TableDescriptor> descriptorMap = master.getTableDescriptors().getAll();
+        if (descriptorMap != null) {
+          for (TableDescriptor desc : descriptorMap.values()) {
+            if (!desc.getTableName().isSystemTable()) {
+             tables.add(desc);
+            }
+          }
+        }
+      } catch (IOException e) {
+        return "Got user tables error, " + e.getMessage();
+      }
+    }
+    return null;
+  }
+</%class>
+
 <!DOCTYPE html>
-<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>
@@ -125,7 +148,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 <ul class="nav navbar-nav">
                 <li class="active"><a href="/">Home</a></li>
                 <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                <%if master.isActiveMaster() %>
                 <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
+                </%if>
+                <li><a href="/processMaster.jsp">Process Metrics</a></li>
                 <li><a href="/logs/">Local Logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug Dump</a></li>
@@ -162,6 +188,12 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           re-enabled from the hbase shell by running the command 'catalogjanitor_switch true'
           </div>
         </%if>
+        <%if master.isInMaintenanceMode() %>
+          <div class="alert alert-warning">
+          Your Master is in maintenance mode. This may be because of HBCK aborting while
+          running in repair mode. Please re-run HBCK in repair mode.
+          </div>
+        </%if>
         <%if !master.isBalancerOn() %>
           <div class="alert alert-warning">
             The Load Balancer is not enabled which will eventually cause performance degradation
@@ -183,9 +215,14 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             or re-run HBCK in repair mode.
           </div>
         </%if>
-
+        <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null %>
+          <section>
+            <h2><a name="rsgroup">RSGroup</a></h2>
+            <& RSGroupListTmpl; master= master; serverManager= serverManager&>
+          </section>
+        </%if>
         <section>
-            <h2>Region Servers</h2>
+            <h2><a name="regionservers">Region Servers</a></h2>
             <& RegionServerListTmpl; master= master; servers = servers &>
 
             <%if (deadServers != null) %>
@@ -196,7 +233,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             <& BackupMasterStatusTmpl; master = master &>
         </section>
         <section>
-            <h2>Tables</h2>
+            <h2><a name="tables">Tables</a></h2>
             <div class="tabbable">
                 <ul class="nav nav-pills">
                     <li class="active">
@@ -226,6 +263,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 </div>
             </div>
         </section>
+        <section>
+            <h2><a name="peers">Peers</a></h2>
+            <& peerConfigs &>
+        </section>
         <%if master.getAssignmentManager() != null %>
         <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
         </%if>
@@ -241,7 +282,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         </section>
 
         <section>
-            <h2>Software Attributes</h2>
+            <h2><a name="attributes">Software Attributes</a></h2>
             <table id="attributes_table" class="table table-striped">
                 <tr>
                     <th>Attribute Name</th>
@@ -299,6 +340,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     <td>Root node of this cluster in ZK.</td>
                 </tr>
                 <tr>
+                    <td>Cluster Key</td>
+                    <td> <% formatZKString() %>:<% master.getZooKeeper().getZNodePaths().baseZNode %></td>
+                    <td>Key to add this cluster as a peer for replication. Use 'help "add_peer"' in the shell for details.</td>
+                </tr>
+                <tr>
                     <td>HBase Root Directory</td>
                     <td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td>
                     <td>Location of HBase home directory</td>
@@ -350,20 +396,31 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </div> <!-- /container -->
 
     <script src="/static/js/jquery.min.js" type="text/javascript"></script>
+    <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
     <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
     <script src="/static/js/tab.js" type="text/javascript"></script>
+    <script>
+    $(document).ready(function()
+        {
+            $("#baseStatsTable").tablesorter();
+            $("#memoryStatsTable").tablesorter();
+            $("#requestStatsTable").tablesorter();
+            $("#storeStatsTable").tablesorter();
+            $("#compactionStatsTable").tablesorter();
+
+            $("#userTables").tablesorter();
+        }
+    );
+    </script>
   </body>
 </html>
 
 <%def catalogTables>
 <%java>
- HTableDescriptor[] sysTables = null;
- try (Admin admin = master.getConnection().getAdmin()) {
-   sysTables = master.isInitialized() ? admin.listTableDescriptorsByNamespace(
-     NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;
- }
+ List<TableDescriptor> sysTables = master.isInitialized() ?
+   master.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;
 </%java>
-<%if (sysTables != null && sysTables.length > 0)%>
+<%if (sysTables != null && sysTables.size() > 0)%>
 <table class="table table-striped">
 <tr>
     <th>Table Name</th>
@@ -372,7 +429,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </%if>
     <th>Description</th>
 </tr>
-<%for HTableDescriptor systemTable : sysTables%>
+<%for TableDescriptor systemTable : sysTables%>
 <tr>
 <%java>TableName tableName = systemTable.getTableName();</%java>
     <td><a href="table.jsp?name=<% tableName %>"><% tableName %></a></td>
@@ -411,45 +468,63 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def userTables>
 <%java>
-   HTableDescriptor[] tables = null;
-   try (Admin admin = master.getConnection().getAdmin()) {
-     tables = master.isInitialized() ? admin.listTables() : null;
-   }
+   List<TableDescriptor> tables = new ArrayList<TableDescriptor>();
+   String errorMessage = getUserTables(master, tables);
 </%java>
-<%if (tables != null && tables.length > 0)%>
-<table class="table table-striped">
+<%if (tables.size() == 0 && errorMessage != null)%>
+<p> <% errorMessage %> </p>
+</%if>
+
+<%if (tables != null && tables.size() > 0)%>
+<table id="userTables" class="tablesorter table table-striped">
+<thead>
     <tr>
-        <th>Namespace</th>
-        <th>Table Name</th>
+        <th style="vertical-align: middle;" rowspan="2">Namespace</th>
+        <th style="vertical-align: middle;" rowspan="2">Name</th>
         <%if (frags != null) %>
             <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
         </%if>
-        <th>Online Regions</th>
-        <th>Offline Regions</th>
-        <th>Failed Regions</th>
-        <th>Split Regions</th>
-        <th>Other Regions</th>
-        <th>Description</th>
+        <th style="vertical-align:middle;" rowspan="2">State</th>
+        <th style="text-align: center" colspan="8">Regions</th>
+        <th style="vertical-align:middle;" rowspan="2">Description</th>
     </tr>
-    <%for HTableDescriptor htDesc : tables%>
+    <tr>
+        <th>OPEN</th>
+        <th>OPENING</th>
+        <th>CLOSED</th>
+        <th>CLOSING</th>
+        <th>OFFLINE</th>
+        <th>FAILED</th>
+        <th>SPLIT</th>
+        <th>Other</th>
+    </tr>
+</thead>
+<tbody>
+    <%for TableDescriptor desc : tables%>
     <%java>
+      HTableDescriptor htDesc = new HTableDescriptor(desc);
       TableName tableName = htDesc.getTableName();
-      Map<RegionState.State, List<HRegionInfo>> tableRegions =
+      TableState tableState = master.getTableStateManager().getTableState(tableName);
+      Map<RegionState.State, List<RegionInfo>> tableRegions =
           master.getAssignmentManager().getRegionStates()
             .getRegionByStateOfTable(tableName);
       int openRegionsCount = tableRegions.get(RegionState.State.OPEN).size();
+      int openingRegionsCount = tableRegions.get(RegionState.State.OPENING).size();
+      int closedRegionsCount = tableRegions.get(RegionState.State.CLOSED).size();
+      int closingRegionsCount = tableRegions.get(RegionState.State.CLOSING).size();
       int offlineRegionsCount = tableRegions.get(RegionState.State.OFFLINE).size();
       int splitRegionsCount = tableRegions.get(RegionState.State.SPLIT).size();
       int failedRegionsCount = tableRegions.get(RegionState.State.FAILED_OPEN).size()
              + tableRegions.get(RegionState.State.FAILED_CLOSE).size();
       int otherRegionsCount = 0;
-      for (List<HRegionInfo> list: tableRegions.values()) {
+      for (List<RegionInfo> list: tableRegions.values()) {
          otherRegionsCount += list.size();
       }
       // now subtract known states
       otherRegionsCount = otherRegionsCount - openRegionsCount
                      - failedRegionsCount - offlineRegionsCount
-                     - splitRegionsCount;
+                     - splitRegionsCount - openingRegionsCount
+                     - closedRegionsCount - closingRegionsCount;
     </%java>
     <tr>
         <td><% tableName.getNamespaceAsString() %></td>
@@ -457,7 +532,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <%if (frags != null) %>
             <td align="center"><% frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
+        <td><% tableState.getState() %></td>
         <td><% openRegionsCount %></td>
+        <td><% openingRegionsCount %></td>
+        <td><% closedRegionsCount %></td>
+        <td><% closingRegionsCount %></td>
         <td><% offlineRegionsCount %></td>
         <td><% failedRegionsCount %></td>
         <td><% splitRegionsCount %></td>
@@ -465,17 +544,16 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <td><% htDesc.toStringCustomizedValues() %></td>
     </tr>
     </%for>
-    <p><% tables.length %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
+    <p><% tables.size() %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
+</tbody>
 </table>
 </%if>
 </%def>
 
 <%def userSnapshots>
 <%java>
-   List<SnapshotDescription> snapshots = null;
-   try (Admin admin = master.getConnection().getAdmin()) {
-     snapshots = master.isInitialized() ? admin.listSnapshots() : null;
-   }
+   List<SnapshotDescription> snapshots = master.isInitialized() ?
+     master.getSnapshotManager().getCompletedSnapshots() : null;
 </%java>
 <%if (snapshots != null && snapshots.size() > 0)%>
 <table class="table table-striped">
@@ -486,7 +564,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
     <%for SnapshotDescription snapshotDesc : snapshots%>
     <%java>
-        TableName snapshotTable = snapshotDesc.getTableName();
+        TableName snapshotTable = TableName.valueOf(snapshotDesc.getTable());
     </%java>
     <tr>
         <td><a href="snapshot.jsp?name=<% snapshotDesc.getName() %>"><% snapshotDesc.getName() %></a> </td>
@@ -532,4 +610,56 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
 </table>
 </%if>
+</%def>
+
+<%def peerConfigs>
+<%java>
+    List<ReplicationPeerDescription> peers = null;
+    if (master.getReplicationPeerManager() != null) {
+        peers = master.getReplicationPeerManager().listPeers(null);
+    }
+</%java>
+<table class="table table-striped">
+    <tr>
+        <th>Peer Id</th>
+        <th>Cluster Key</th>
+        <th>State</th>
+        <th>IsSerial</th>
+        <th>Bandwidth</th>
+        <th>ReplicateAll</th>
+        <th>Namespaces</th>
+        <th>Exclude Namespaces</th>
+        <th>Table Cfs</th>
+        <th>Exclude Table Cfs</th>
+    </tr>
+<%if (peers != null && peers.size() > 0)%>
+    <%for ReplicationPeerDescription peer : peers %>
+    <%java>
+        String peerId = peer.getPeerId();
+        ReplicationPeerConfig peerConfig = peer.getPeerConfig();
+    </%java>
+    <tr>
+        <td><% peerId %></td>
+        <td><% peerConfig.getClusterKey() %></td>
+        <td><% peer.isEnabled() ? "ENABLED" : "DISABLED" %></td>
+        <td><% peerConfig.isSerial() %></td>
+        <td><% peerConfig.getBandwidth() == 0? "UNLIMITED" : StringUtils.humanReadableInt(peerConfig.getBandwidth()) %></td>
+        <td><% peerConfig.replicateAllUserTables() %></td>
+        <td>
+           <% peerConfig.getNamespaces() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getNamespaces()).replaceAll(";", "; ") %>
+        </td>
+        <td>
+            <% peerConfig.getExcludeNamespaces() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getExcludeNamespaces()).replaceAll(";", "; ") %>
+        </td>
+        <td>
+           <% peerConfig.getTableCFsMap() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getTableCFsMap()).replaceAll(";", "; ") %>
+        </td>
+        <td>
+           <% peerConfig.getExcludeTableCFsMap() == null ? "" : ReplicationPeerConfigUtil.convertToString(peerConfig.getExcludeTableCFsMap()).replaceAll(";", "; ") %>
+        </td>
+    </tr>
+    </%for>
+</%if>
+<tr><td>Total: <% (peers != null) ? peers.size() : 0 %></td></tr>
+</table>
 </%def>

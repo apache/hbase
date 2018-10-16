@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,11 +23,11 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The compaction pipeline of a {@link CompactingMemStore}, is a FIFO queue of segments.
@@ -43,18 +43,18 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * suffix of the pipeline.
  *
  * The synchronization model is copy-on-write. Methods which change the structure of the
- * pipeline (pushHead() and swap()) apply their changes in the context of a lock. They also make
- * a read-only copy of the pipeline's list. Read methods read from a read-only copy. If a read
- * method accesses the read-only copy more than once it makes a local copy of it
- * to ensure it accesses the same copy.
+ * pipeline (pushHead(), flattenOneSegment() and swap()) apply their changes in the context of a
+ * lock. They also make a read-only copy of the pipeline's list. Read methods read from a
+ * read-only copy. If a read method accesses the read-only copy more than once it makes a local
+ * copy of it to ensure it accesses the same copy.
  *
- * The methods getVersionedList(), getVersionedTail(), and flattenYoungestSegment() are also
+ * The methods getVersionedList(), getVersionedTail(), and flattenOneSegment() are also
  * protected by a lock since they need to have a consistent (atomic) view of the pipeline list
  * and version number.
  */
 @InterfaceAudience.Private
 public class CompactionPipeline {
-  private static final Log LOG = LogFactory.getLog(CompactionPipeline.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompactionPipeline.class);
 
   public final static long FIXED_OVERHEAD = ClassSize
       .align(ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + Bytes.SIZEOF_LONG);
@@ -72,8 +72,15 @@ public class CompactionPipeline {
   }
 
   public boolean pushHead(MutableSegment segment) {
+    // Record the ImmutableSegment' heap overhead when initialing
+    MemStoreSizing memstoreAccounting = new NonThreadSafeMemStoreSizing();
     ImmutableSegment immutableSegment = SegmentFactory.instance().
-        createImmutableSegment(segment);
+        createImmutableSegment(segment, memstoreAccounting);
+    if (region != null) {
+      region.addMemStoreSize(memstoreAccounting.getDataSize(),
+          memstoreAccounting.getHeapSize(),
+          memstoreAccounting.getOffHeapSize());
+    }
     synchronized (pipeline){
       boolean res = addFirst(immutableSegment);
       readOnlyCopy = new LinkedList<>(pipeline);
@@ -125,16 +132,8 @@ public class CompactionPipeline {
         return false;
       }
       suffix = versionedList.getStoreSegments();
-      if (LOG.isDebugEnabled()) {
-        int count = 0;
-        if(segment != null) {
-          count = segment.getCellsCount();
-        }
-        LOG.debug("Swapping pipeline suffix. "
-            + "Just before the swap the number of segments in pipeline is:"
-            + versionedList.getStoreSegments().size()
-            + ", and the number of cells in new segment is:" + count);
-      }
+      LOG.debug("Swapping pipeline suffix; before={}, new segment={}",
+          versionedList.getStoreSegments().size(), segment);
       swapSuffix(suffix, segment, closeSuffix);
       readOnlyCopy = new LinkedList<>(pipeline);
       version++;
@@ -143,18 +142,25 @@ public class CompactionPipeline {
       // update the global memstore size counter
       long suffixDataSize = getSegmentsKeySize(suffix);
       long newDataSize = 0;
-      if(segment != null) newDataSize = segment.keySize();
+      if(segment != null) {
+        newDataSize = segment.getDataSize();
+      }
       long dataSizeDelta = suffixDataSize - newDataSize;
       long suffixHeapSize = getSegmentsHeapSize(suffix);
+      long suffixOffHeapSize = getSegmentsOffHeapSize(suffix);
       long newHeapSize = 0;
-      if(segment != null) newHeapSize = segment.heapSize();
-      long heapSizeDelta = suffixHeapSize - newHeapSize;
-      region.addMemstoreSize(new MemstoreSize(-dataSizeDelta, -heapSizeDelta));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Suffix data size: " + suffixDataSize + " new segment data size: "
-            + newDataSize + ". Suffix heap size: " + suffixHeapSize
-            + " new segment heap size: " + newHeapSize);
+      long newOffHeapSize = 0;
+      if(segment != null) {
+        newHeapSize = segment.getHeapSize();
+        newOffHeapSize = segment.getOffHeapSize();
       }
+      long offHeapSizeDelta = suffixOffHeapSize - newOffHeapSize;
+      long heapSizeDelta = suffixHeapSize - newHeapSize;
+      region.addMemStoreSize(-dataSizeDelta, -heapSizeDelta, -offHeapSizeDelta);
+      LOG.debug("Suffix data size={}, new segment data size={}, " + "suffix heap size={},"
+              + "new segment heap size={}" + "suffix off heap size={},"
+              + "new segment off heap size={}", suffixDataSize, newDataSize, suffixHeapSize,
+          newHeapSize, suffixOffHeapSize, newOffHeapSize);
     }
     return true;
   }
@@ -162,7 +168,15 @@ public class CompactionPipeline {
   private static long getSegmentsHeapSize(List<? extends Segment> list) {
     long res = 0;
     for (Segment segment : list) {
-      res += segment.heapSize();
+      res += segment.getHeapSize();
+    }
+    return res;
+  }
+
+  private static long getSegmentsOffHeapSize(List<? extends Segment> list) {
+    long res = 0;
+    for (Segment segment : list) {
+      res += segment.getOffHeapSize();
     }
     return res;
   }
@@ -170,7 +184,7 @@ public class CompactionPipeline {
   private static long getSegmentsKeySize(List<? extends Segment> list) {
     long res = 0;
     for (Segment segment : list) {
-      res += segment.keySize();
+      res += segment.getDataSize();
     }
     return res;
   }
@@ -183,7 +197,9 @@ public class CompactionPipeline {
    *
    * @return true iff a segment was successfully flattened
    */
-  public boolean flattenYoungestSegment(long requesterVersion) {
+  public boolean flattenOneSegment(long requesterVersion,
+      CompactingMemStore.IndexType idxType,
+      MemStoreCompactionStrategy.Action action) {
 
     if(requesterVersion != version) {
       LOG.warn("Segment flattening failed, because versions do not match. Requester version: "
@@ -196,17 +212,25 @@ public class CompactionPipeline {
         LOG.warn("Segment flattening failed, because versions do not match");
         return false;
       }
-
+      int i = 0;
       for (ImmutableSegment s : pipeline) {
-        // remember the old size in case this segment is going to be flatten
-        MemstoreSize memstoreSize = new MemstoreSize();
-        if (s.flatten(memstoreSize)) {
+        if ( s.canBeFlattened() ) {
+          s.waitForUpdates(); // to ensure all updates preceding s in-memory flush have completed
+          // size to be updated
+          MemStoreSizing newMemstoreAccounting = new NonThreadSafeMemStoreSizing();
+          ImmutableSegment newS = SegmentFactory.instance().createImmutableSegmentByFlattening(
+              (CSLMImmutableSegment)s,idxType,newMemstoreAccounting,action);
+          replaceAtIndex(i,newS);
           if(region != null) {
-            region.addMemstoreSize(memstoreSize);
+            // Update the global memstore size counter upon flattening there is no change in the
+            // data size
+            MemStoreSize mss = newMemstoreAccounting.getMemStoreSize();
+            region.addMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
           }
-          LOG.debug("Compaction pipeline segment " + s + " was flattened");
+          LOG.debug("Compaction pipeline segment {} flattened", s);
           return true;
         }
+        i++;
       }
 
     }
@@ -236,26 +260,24 @@ public class CompactionPipeline {
     return minSequenceId;
   }
 
-  public MemstoreSize getTailSize() {
+  public MemStoreSize getTailSize() {
     LinkedList<? extends Segment> localCopy = readOnlyCopy;
-    if (localCopy.isEmpty()) return new MemstoreSize(true);
-    return new MemstoreSize(localCopy.peekLast().keySize(), localCopy.peekLast().heapSize());
+    return localCopy.isEmpty()? new MemStoreSize(): localCopy.peekLast().getMemStoreSize();
   }
 
-  public MemstoreSize getPipelineSize() {
-    long keySize = 0;
-    long heapSize = 0;
+  public MemStoreSize getPipelineSize() {
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     LinkedList<? extends Segment> localCopy = readOnlyCopy;
-    if (localCopy.isEmpty()) return new MemstoreSize(true);
     for (Segment segment : localCopy) {
-      keySize += segment.keySize();
-      heapSize += segment.heapSize();
+      memStoreSizing.incMemStoreSize(segment.getMemStoreSize());
     }
-    return new MemstoreSize(keySize, heapSize);
+    return memStoreSizing.getMemStoreSize();
   }
 
   private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,
       boolean closeSegmentsInSuffix) {
+    pipeline.removeAll(suffix);
+    if(segment != null) pipeline.addLast(segment);
     // During index merge we won't be closing the segments undergoing the merge. Segment#close()
     // will release the MSLAB chunks to pool. But in case of index merge there wont be any data copy
     // from old MSLABs. So the new cells in new segment also refers to same chunks. In case of data
@@ -267,8 +289,20 @@ public class CompactionPipeline {
         itemInSuffix.close();
       }
     }
-    pipeline.removeAll(suffix);
-    if(segment != null) pipeline.addLast(segment);
+  }
+
+  // replacing one segment in the pipeline with a new one exactly at the same index
+  // need to be called only within synchronized block
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="VO_VOLATILE_INCREMENT",
+      justification="replaceAtIndex is invoked under a synchronize block so safe")
+  private void replaceAtIndex(int idx, ImmutableSegment newSegment) {
+    pipeline.set(idx, newSegment);
+    readOnlyCopy = new LinkedList<>(pipeline);
+    // the version increment is indeed needed, because the swap uses removeAll() method of the
+    // linked-list that compares the objects to find what to remove.
+    // The flattening changes the segment object completely (creation pattern) and so
+    // swap will not proceed correctly after concurrent flattening.
+    version++;
   }
 
   public Segment getTail() {
@@ -276,7 +310,7 @@ public class CompactionPipeline {
     if(localCopy.isEmpty()) {
       return null;
     }
-    return localCopy.get(localCopy.size()-1);
+    return localCopy.get(localCopy.size() - 1);
   }
 
   private boolean addFirst(ImmutableSegment segment) {

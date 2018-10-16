@@ -17,27 +17,27 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
-
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
 
 /**
  * The implementation of a region based coprocessor rpc channel.
@@ -49,7 +49,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
 
   private final TableName tableName;
 
-  private final HRegionInfo region;
+  private final RegionInfo region;
 
   private final byte[] row;
 
@@ -57,7 +57,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
 
   private final long operationTimeoutNs;
 
-  RegionCoprocessorRpcChannelImpl(AsyncConnectionImpl conn, TableName tableName, HRegionInfo region,
+  RegionCoprocessorRpcChannelImpl(AsyncConnectionImpl conn, TableName tableName, RegionInfo region,
       byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
     this.conn = conn;
     this.tableName = tableName;
@@ -81,7 +81,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
       request, row, loc.getRegionInfo().getRegionName());
     stub.execService(controller, csr,
-      new org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
+      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
 
         @Override
         public void run(CoprocessorServiceResponse resp) {

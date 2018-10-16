@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 
 /**

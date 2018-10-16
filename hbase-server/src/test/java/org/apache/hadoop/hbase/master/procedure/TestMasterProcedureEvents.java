@@ -15,40 +15,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterProcedureEvents {
-  private static final Log LOG = LogFactory.getLog(TestCreateTableProcedure.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterProcedureEvents.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -78,70 +84,34 @@ public class TestMasterProcedureEvents {
 
   @After
   public void tearDown() throws Exception {
-    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
+    for (TableDescriptor htd: UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testMasterInitializedEvent() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
 
-    HRegionInfo hri = new HRegionInfo(tableName);
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor("f"));
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
 
-    while (!master.isInitialized()) Thread.sleep(250);
+    while (!master.isInitialized()) {
+      Thread.sleep(250);
+    }
     master.setInitialized(false); // fake it, set back later
 
     // check event wait/wake
     testProcedureEventWaitWake(master, master.getInitializedEvent(),
-      new CreateTableProcedure(procExec.getEnvironment(), htd, new HRegionInfo[] { hri }));
+      new CreateTableProcedure(procExec.getEnvironment(), htd, new RegionInfo[] { hri }));
   }
 
-  @Test(timeout = 30000)
-  public void testServerCrashProcedureEvent() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-
-    while (!master.isServerCrashProcessingEnabled() || !master.isInitialized() ||
-        master.getAssignmentManager().getRegionStates().hasRegionsInTransition()) {
-      Thread.sleep(25);
-    }
-
-    UTIL.createTable(tableName, HBaseTestingUtility.COLUMNS[0]);
-    try (Table t = UTIL.getConnection().getTable(tableName)) {
-      // Load the table with a bit of data so some logs to split and some edits in each region.
-      UTIL.loadTable(t, HBaseTestingUtility.COLUMNS[0]);
-    }
-
-    master.setServerCrashProcessingEnabled(false);  // fake it, set back later
-
-    // Kill a server. Master will notice but do nothing other than add it to list of dead servers.
-    HRegionServer hrs = getServerWithRegions();
-    boolean carryingMeta = master.getAssignmentManager().isCarryingMeta(hrs.getServerName());
-    UTIL.getHBaseCluster().killRegionServer(hrs.getServerName());
-    hrs.join();
-
-    // Wait until the expiration of the server has arrived at the master. We won't process it
-    // by queuing a ServerCrashProcedure because we have disabled crash processing... but wait
-    // here so ServerManager gets notice and adds expired server to appropriate queues.
-    while (!master.getServerManager().isServerDead(hrs.getServerName())) Thread.sleep(10);
-
-    // Do some of the master processing of dead servers so when SCP runs, it has expected 'state'.
-    master.getServerManager().moveFromOnlineToDeadServers(hrs.getServerName());
-
-    // check event wait/wake
-    testProcedureEventWaitWake(master, master.getServerCrashProcessingEnabledEvent(),
-      new ServerCrashProcedure(procExec.getEnvironment(), hrs.getServerName(), true, carryingMeta));
-  }
-
-  private void testProcedureEventWaitWake(final HMaster master, final ProcedureEvent event,
-      final Procedure proc) throws Exception {
+  private void testProcedureEventWaitWake(final HMaster master, final ProcedureEvent<?> event,
+      final Procedure<MasterProcedureEnv> proc) throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     final MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureScheduler();
 
@@ -168,7 +138,7 @@ public class TestMasterProcedureEvents {
 
     // wake the event
     LOG.debug("wake " + event);
-    procSched.wakeEvent(event);
+    event.wake(procSched);
     assertEquals(true, event.isReady());
 
     // wait until proc completes
@@ -181,15 +151,5 @@ public class TestMasterProcedureEvents {
     LOG.debug("completed execution of " + proc +
       " pollCalls=" + (procSched.getPollCalls() - startPollCalls) +
       " nullPollCalls=" + (procSched.getNullPollCalls() - startNullPollCalls));
-  }
-
-  private HRegionServer getServerWithRegions() {
-    for (int i = 0; i < 3; ++i) {
-      HRegionServer hrs = UTIL.getHBaseCluster().getRegionServer(i);
-      if (hrs.getNumberOfOnlineRegions() > 0) {
-        return hrs;
-      }
-    }
-    return null;
   }
 }

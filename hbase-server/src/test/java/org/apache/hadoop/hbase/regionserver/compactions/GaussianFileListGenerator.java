@@ -15,16 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.math.random.GaussianRandomGenerator;
-import org.apache.commons.math.random.MersenneTwister;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.commons.math3.random.GaussianRandomGenerator;
+import org.apache.commons.math3.random.MersenneTwister;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 class GaussianFileListGenerator extends StoreFileListGenerator {
 
@@ -33,8 +32,8 @@ class GaussianFileListGenerator extends StoreFileListGenerator {
   }
 
   @Override
-  public Iterator<List<StoreFile>> iterator() {
-    return new Iterator<List<StoreFile>>() {
+  public Iterator<List<HStoreFile>> iterator() {
+    return new Iterator<List<HStoreFile>>() {
       private GaussianRandomGenerator gen =
           new GaussianRandomGenerator(new MersenneTwister(random.nextInt()));
       private int count = 0;
@@ -45,9 +44,9 @@ class GaussianFileListGenerator extends StoreFileListGenerator {
       }
 
       @Override
-      public List<StoreFile> next() {
+      public List<HStoreFile> next() {
         count += 1;
-        ArrayList<StoreFile> files = new ArrayList<>(NUM_FILES_GEN);
+        ArrayList<HStoreFile> files = new ArrayList<>(NUM_FILES_GEN);
         for (int i = 0; i < NUM_FILES_GEN; i++) {
           files.add(createMockStoreFile(
               (int) Math.ceil(Math.max(0, gen.nextNormalizedDouble() * 32 + 32)))

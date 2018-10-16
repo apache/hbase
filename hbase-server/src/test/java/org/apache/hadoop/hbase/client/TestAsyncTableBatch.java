@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -28,18 +29,22 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -49,6 +54,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -60,6 +66,10 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncTableBatch {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncTableBatch.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
@@ -67,6 +77,7 @@ public class TestAsyncTableBatch {
   private static byte[] FAMILY = Bytes.toBytes("cf");
 
   private static byte[] CQ = Bytes.toBytes("cq");
+  private static byte[] CQ1 = Bytes.toBytes("cq1");
 
   private static int COUNT = 1000;
 
@@ -78,20 +89,20 @@ public class TestAsyncTableBatch {
   public String tableType;
 
   @Parameter(1)
-  public Function<TableName, AsyncTableBase> tableGetter;
+  public Function<TableName, AsyncTable<?>> tableGetter;
 
-  private static RawAsyncTable getRawTable(TableName tableName) {
-    return CONN.getRawTable(tableName);
+  private static AsyncTable<?> getRawTable(TableName tableName) {
+    return CONN.getTable(tableName);
   }
 
-  private static AsyncTable getTable(TableName tableName) {
+  private static AsyncTable<?> getTable(TableName tableName) {
     return CONN.getTable(tableName, ForkJoinPool.commonPool());
   }
 
   @Parameters(name = "{index}: type={0}")
   public static List<Object[]> params() {
-    Function<TableName, AsyncTableBase> rawTableGetter = TestAsyncTableBatch::getRawTable;
-    Function<TableName, AsyncTableBase> tableGetter = TestAsyncTableBatch::getTable;
+    Function<TableName, AsyncTable<?>> rawTableGetter = TestAsyncTableBatch::getRawTable;
+    Function<TableName, AsyncTable<?>> tableGetter = TestAsyncTableBatch::getTable;
     return Arrays.asList(new Object[] { "raw", rawTableGetter },
       new Object[] { "normal", tableGetter });
   }
@@ -132,18 +143,15 @@ public class TestAsyncTableBatch {
   }
 
   @Test
-  public void test() throws InterruptedException, ExecutionException, IOException {
-    AsyncTableBase table = tableGetter.apply(TABLE_NAME);
+  public void test()
+      throws InterruptedException, ExecutionException, IOException, TimeoutException {
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     table.putAll(IntStream.range(0, COUNT)
         .mapToObj(i -> new Put(getRow(i)).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
         .collect(Collectors.toList())).get();
-    List<Result> results =
-        table
-            .getAll(IntStream.range(0, COUNT)
-                .mapToObj(
-                  i -> Arrays.asList(new Get(getRow(i)), new Get(Arrays.copyOf(getRow(i), 4))))
-                .flatMap(l -> l.stream()).collect(Collectors.toList()))
-            .get();
+    List<Result> results = table.getAll(IntStream.range(0, COUNT)
+        .mapToObj(i -> Arrays.asList(new Get(getRow(i)), new Get(Arrays.copyOf(getRow(i), 4))))
+        .flatMap(l -> l.stream()).collect(Collectors.toList())).get();
     assertEquals(2 * COUNT, results.size());
     for (int i = 0; i < COUNT; i++) {
       assertEquals(i, Bytes.toInt(results.get(2 * i).getValue(FAMILY, CQ)));
@@ -151,19 +159,20 @@ public class TestAsyncTableBatch {
     }
     Admin admin = TEST_UTIL.getAdmin();
     admin.flush(TABLE_NAME);
-    TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).forEach(r -> {
-      byte[] startKey = r.getRegionInfo().getStartKey();
-      int number = startKey.length == 0 ? 55 : Integer.parseInt(Bytes.toString(startKey));
-      byte[] splitPoint = Bytes.toBytes(String.format("%03d", number + 55));
-      try {
-        admin.splitRegion(r.getRegionInfo().getRegionName(), splitPoint);
-      } catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
-    });
-    // we are not going to test the function of split so no assertion here. Just wait for a while
-    // and then start our work.
-    Thread.sleep(5000);
+    List<Future<?>> splitFutures =
+      TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream().map(r -> {
+        byte[] startKey = r.getRegionInfo().getStartKey();
+        int number = startKey.length == 0 ? 55 : Integer.parseInt(Bytes.toString(startKey));
+        byte[] splitPoint = Bytes.toBytes(String.format("%03d", number + 55));
+        try {
+          return admin.splitRegionAsync(r.getRegionInfo().getRegionName(), splitPoint);
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
+      }).collect(Collectors.toList());
+    for (Future<?> future : splitFutures) {
+      future.get(30, TimeUnit.SECONDS);
+    }
     table.deleteAll(
       IntStream.range(0, COUNT).mapToObj(i -> new Delete(getRow(i))).collect(Collectors.toList()))
         .get();
@@ -176,19 +185,50 @@ public class TestAsyncTableBatch {
   }
 
   @Test
-  public void testMixed() throws InterruptedException, ExecutionException {
-    AsyncTableBase table = tableGetter.apply(TABLE_NAME);
-    table.putAll(IntStream.range(0, 5)
+  public void testWithRegionServerFailover() throws Exception {
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
+    table.putAll(IntStream.range(0, COUNT)
+        .mapToObj(i -> new Put(getRow(i)).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
+        .collect(Collectors.toList())).get();
+    TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).abort("Aborting for tests");
+    Thread.sleep(100);
+    table.putAll(IntStream.range(COUNT, 2 * COUNT)
+        .mapToObj(i -> new Put(getRow(i)).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
+        .collect(Collectors.toList())).get();
+    List<Result> results = table.getAll(
+      IntStream.range(0, 2 * COUNT).mapToObj(i -> new Get(getRow(i))).collect(Collectors.toList()))
+        .get();
+    assertEquals(2 * COUNT, results.size());
+    results.forEach(r -> assertFalse(r.isEmpty()));
+    table.deleteAll(IntStream.range(0, 2 * COUNT).mapToObj(i -> new Delete(getRow(i)))
+        .collect(Collectors.toList())).get();
+    results = table.getAll(
+      IntStream.range(0, 2 * COUNT).mapToObj(i -> new Get(getRow(i))).collect(Collectors.toList()))
+        .get();
+    assertEquals(2 * COUNT, results.size());
+    results.forEach(r -> assertTrue(r.isEmpty()));
+  }
+
+  @Test
+  public void testMixed() throws InterruptedException, ExecutionException, IOException {
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
+    table.putAll(IntStream.range(0, 7)
         .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(FAMILY, CQ, Bytes.toBytes((long) i)))
         .collect(Collectors.toList())).get();
     List<Row> actions = new ArrayList<>();
     actions.add(new Get(Bytes.toBytes(0)));
-    actions.add(new Put(Bytes.toBytes(1)).addColumn(FAMILY, CQ, Bytes.toBytes((long) 2)));
+    actions.add(new Put(Bytes.toBytes(1)).addColumn(FAMILY, CQ, Bytes.toBytes(2L)));
     actions.add(new Delete(Bytes.toBytes(2)));
     actions.add(new Increment(Bytes.toBytes(3)).addColumn(FAMILY, CQ, 1));
-    actions.add(new Append(Bytes.toBytes(4)).add(FAMILY, CQ, Bytes.toBytes(4)));
+    actions.add(new Append(Bytes.toBytes(4)).addColumn(FAMILY, CQ, Bytes.toBytes(4)));
+    RowMutations rm = new RowMutations(Bytes.toBytes(5));
+    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ, Bytes.toBytes(100L)));
+    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ1, Bytes.toBytes(200L)));
+    actions.add(rm);
+    actions.add(new Get(Bytes.toBytes(6)));
+
     List<Object> results = table.batchAll(actions).get();
-    assertEquals(5, results.size());
+    assertEquals(7, results.size());
     Result getResult = (Result) results.get(0);
     assertEquals(0, Bytes.toLong(getResult.getValue(FAMILY, CQ)));
     assertEquals(2, Bytes.toLong(table.get(new Get(Bytes.toBytes(1))).get().getValue(FAMILY, CQ)));
@@ -200,9 +240,20 @@ public class TestAsyncTableBatch {
     assertEquals(12, appendValue.length);
     assertEquals(4, Bytes.toLong(appendValue));
     assertEquals(4, Bytes.toInt(appendValue, 8));
+    assertEquals(100,
+      Bytes.toLong(table.get(new Get(Bytes.toBytes(5))).get().getValue(FAMILY, CQ)));
+    assertEquals(200,
+      Bytes.toLong(table.get(new Get(Bytes.toBytes(5))).get().getValue(FAMILY, CQ1)));
+    getResult = (Result) results.get(6);
+    assertEquals(6, Bytes.toLong(getResult.getValue(FAMILY, CQ)));
   }
 
-  public static final class ErrorInjectObserver implements RegionObserver {
+  public static final class ErrorInjectObserver implements RegionCoprocessor, RegionObserver {
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
@@ -216,10 +267,10 @@ public class TestAsyncTableBatch {
   @Test
   public void testPartialSuccess() throws IOException, InterruptedException, ExecutionException {
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(TABLE_NAME));
-    htd.addCoprocessor(ErrorInjectObserver.class.getName());
-    admin.modifyTable(TABLE_NAME, htd);
-    AsyncTableBase table = tableGetter.apply(TABLE_NAME);
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(admin.getDescriptor(TABLE_NAME))
+        .setCoprocessor(ErrorInjectObserver.class.getName()).build();
+    admin.modifyTable(htd);
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     table.putAll(Arrays.asList(SPLIT_KEYS).stream().map(k -> new Put(k).addColumn(FAMILY, CQ, k))
         .collect(Collectors.toList())).get();
     List<CompletableFuture<Result>> futures = table

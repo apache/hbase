@@ -15,17 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ClientTests.class, SmallTests.class})
 public class TestReplicationPeerConfig {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationPeerConfig.class);
 
   @Test
   public void testClassMethodsAreBuilderStyle() {
@@ -43,5 +48,4 @@ public class TestReplicationPeerConfig {
 
     BuilderStyleTest.assertClassesAreBuilderStyle(ReplicationPeerConfig.class);
   }
-
 }

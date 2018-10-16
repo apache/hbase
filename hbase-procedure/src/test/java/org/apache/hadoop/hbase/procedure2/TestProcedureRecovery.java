@@ -15,40 +15,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Int32Value;
+
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureRecovery {
-  private static final Log LOG = LogFactory.getLog(TestProcedureRecovery.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureRecovery.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureRecovery.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
 
@@ -71,11 +75,11 @@ public class TestProcedureRecovery {
 
     logDir = new Path(testDir, "proc-logs");
     procEnv = new TestProcEnv();
-    procStore = ProcedureTestingUtility.createStore(htu.getConfiguration(), fs, logDir);
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
+    procStore = ProcedureTestingUtility.createStore(htu.getConfiguration(), logDir);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procExecutor.testing = new ProcedureExecutor.Testing();
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
     procSleepInterval = 0;
   }
 
@@ -186,7 +190,7 @@ public class TestProcedureRecovery {
     restart();
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testSingleStepProcRecovery() throws Exception {
     Procedure proc = new TestSingleStepProcedure();
     procExecutor.testing.killBeforeStoreUpdate = true;
@@ -198,7 +202,7 @@ public class TestProcedureRecovery {
     long restartTs = EnvironmentEdgeManager.currentTime();
     restart();
     waitProcedure(procId);
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     assertTrue(result.getLastUpdate() > restartTs);
     ProcedureTestingUtility.assertProcNotFailed(result);
     assertEquals(1, Bytes.toInt(result.getResult()));
@@ -212,7 +216,7 @@ public class TestProcedureRecovery {
     assertEquals(1, Bytes.toInt(result.getResult()));
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testMultiStepProcRecovery() throws Exception {
     // Step 0 - kill
     Procedure proc = new TestMultiStepProcedure();
@@ -237,11 +241,11 @@ public class TestProcedureRecovery {
     assertTrue(procExecutor.isRunning());
 
     // The procedure is completed
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testMultiStepRollbackRecovery() throws Exception {
     // Step 0 - kill
     Procedure proc = new TestMultiStepProcedure();
@@ -284,7 +288,7 @@ public class TestProcedureRecovery {
     waitProcedure(procId);
 
     // The procedure is completed
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertIsAbortException(result);
   }
 
@@ -383,32 +387,34 @@ public class TestProcedureRecovery {
     }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
-      super.serializeStateData(stream);
-      stream.write(Bytes.toBytes(iResult));
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      super.serializeStateData(serializer);
+      Int32Value.Builder builder = Int32Value.newBuilder().setValue(iResult);
+      serializer.serialize(builder.build());
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
-      super.deserializeStateData(stream);
-      byte[] data = new byte[4];
-      stream.read(data);
-      iResult = Bytes.toInt(data);
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      super.deserializeStateData(serializer);
+      Int32Value value = serializer.deserialize(Int32Value.class);
+      iResult = value.getValue();
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStateMachineMultipleLevel() throws Exception {
     long procId = procExecutor.submitProcedure(new TestStateMachineProcedure(true));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExecutor, procId);
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
     assertEquals(19, Bytes.toInt(result.getResult()));
     assertEquals(4, procExecutor.getLastProcId());
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStateMachineRecovery() throws Exception {
     ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, true);
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, true);
@@ -441,12 +447,12 @@ public class TestProcedureRecovery {
     assertTrue(procExecutor.isRunning());
 
     // The procedure is completed
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
     assertEquals(26, Bytes.toInt(result.getResult()));
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStateMachineRollbackRecovery() throws Exception {
     ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, true);
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, true);
@@ -495,7 +501,7 @@ public class TestProcedureRecovery {
     assertTrue(procExecutor.isRunning());
 
     // The procedure is completed
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertIsAbortException(result);
   }
 

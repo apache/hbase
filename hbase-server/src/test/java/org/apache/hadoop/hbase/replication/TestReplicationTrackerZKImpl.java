@@ -1,5 +1,4 @@
 /**
-
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,35 +18,38 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class tests the ReplicationTrackerZKImpl class and ReplicationListener interface. One
@@ -59,49 +61,47 @@ import org.junit.experimental.categories.Category;
 @Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationTrackerZKImpl {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationTrackerZKImpl.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationTrackerZKImpl.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationTrackerZKImpl.class);
 
   private static Configuration conf;
   private static HBaseTestingUtility utility;
 
   // Each one of the below variables are reinitialized before every test case
-  private ZooKeeperWatcher zkw;
+  private ZKWatcher zkw;
   private ReplicationPeers rp;
   private ReplicationTracker rt;
   private AtomicInteger rsRemovedCount;
   private String rsRemovedData;
-  private AtomicInteger plChangedCount;
-  private List<String> plChangedData;
-  private AtomicInteger peerRemovedCount;
-  private String peerRemovedData;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     utility = new HBaseTestingUtility();
     utility.startMiniZKCluster();
     conf = utility.getConfiguration();
-    ZooKeeperWatcher zk = HBaseTestingUtility.getZooKeeperWatcher(utility);
-    ZKUtil.createWithParents(zk, zk.znodePaths.rsZNode);
+    ZKWatcher zk = HBaseTestingUtility.getZooKeeperWatcher(utility);
+    ZKUtil.createWithParents(zk, zk.getZNodePaths().rsZNode);
   }
 
   @Before
   public void setUp() throws Exception {
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
-    String fakeRs1 = ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234");
+    String fakeRs1 = ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode,
+            "hostname1.example.org:1234");
     try {
       ZKClusterId.setClusterId(zkw, new ClusterId());
-      rp = ReplicationFactory.getReplicationPeers(zkw, conf, zkw);
+      rp = ReplicationFactory.getReplicationPeers(zkw, conf);
       rp.init();
-      rt = ReplicationFactory.getReplicationTracker(zkw, rp, conf, zkw, new DummyServer(fakeRs1));
+      rt = ReplicationFactory.getReplicationTracker(zkw, new DummyServer(fakeRs1),
+        new DummyServer(fakeRs1));
     } catch (Exception e) {
       fail("Exception during test setup: " + e);
     }
     rsRemovedCount = new AtomicInteger(0);
     rsRemovedData = "";
-    plChangedCount = new AtomicInteger(0);
-    plChangedData = new ArrayList<>();
-    peerRemovedCount = new AtomicInteger(0);
-    peerRemovedData = "";
   }
 
   @AfterClass
@@ -116,31 +116,34 @@ public class TestReplicationTrackerZKImpl {
 
     // 1 region server
     ZKUtil.createWithParents(zkw,
-      ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234"));
+      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname1.example.org:1234"));
     assertEquals(1, rt.getListOfRegionServers().size());
 
     // 2 region servers
     ZKUtil.createWithParents(zkw,
-      ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
+      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname2.example.org:1234"));
     assertEquals(2, rt.getListOfRegionServers().size());
 
     // 1 region server
-    ZKUtil.deleteNode(zkw, ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
+    ZKUtil.deleteNode(zkw,
+      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname2.example.org:1234"));
     assertEquals(1, rt.getListOfRegionServers().size());
 
     // 0 region server
-    ZKUtil.deleteNode(zkw, ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234"));
+    ZKUtil.deleteNode(zkw,
+      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname1.example.org:1234"));
     assertEquals(0, rt.getListOfRegionServers().size());
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testRegionServerRemovedEvent() throws Exception {
     ZKUtil.createAndWatch(zkw,
-      ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"),
+      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname2.example.org:1234"),
       HConstants.EMPTY_BYTE_ARRAY);
     rt.registerListener(new DummyReplicationListener());
     // delete one
-    ZKUtil.deleteNode(zkw, ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
+    ZKUtil.deleteNode(zkw,
+      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname2.example.org:1234"));
     // wait for event
     while (rsRemovedCount.get() < 1) {
       Thread.sleep(5);
@@ -148,65 +151,29 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("hostname2.example.org:1234", rsRemovedData);
   }
 
-  @Test(timeout = 30000)
-  public void testPeerRemovedEvent() throws Exception {
-    rp.registerPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
-    rt.registerListener(new DummyReplicationListener());
-    rp.unregisterPeer("5");
-    // wait for event
-    while (peerRemovedCount.get() < 1) {
-      Thread.sleep(5);
-    }
-    assertEquals("5", peerRemovedData);
-  }
-
-  @Test(timeout = 30000)
-  public void testPeerListChangedEvent() throws Exception {
-    // add a peer
-    rp.registerPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
-    zkw.getRecoverableZooKeeper().getZooKeeper().getChildren("/hbase/replication/peers/5", true);
-    rt.registerListener(new DummyReplicationListener());
-    rp.disablePeer("5");
-    int tmp = plChangedCount.get();
-    LOG.info("Peer count=" + tmp);
-    ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5/peer-state");
-    // wait for event
-    while (plChangedCount.get() <= tmp) {
-      Thread.sleep(100);
-      LOG.info("Peer count=" + tmp);
-    }
-    assertEquals(1, plChangedData.size());
-    assertTrue(plChangedData.contains("5"));
-
-    // clean up
-    //ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5");
-    rp.unregisterPeer("5");
-  }
-
-  @Test(timeout = 30000)
+  @Test
   public void testPeerNameControl() throws Exception {
     int exists = 0;
-    int hyphen = 0;
-    rp.registerPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
-    
-    try{
-      rp.registerPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
-    }catch(IllegalArgumentException e){
-      exists++;
+    rp.getPeerStorage().addPeer("6",
+      ReplicationPeerConfig.newBuilder().setClusterKey(utility.getClusterKey()).build(), true,
+      SyncReplicationState.NONE);
+
+    try {
+      rp.getPeerStorage().addPeer("6",
+        ReplicationPeerConfig.newBuilder().setClusterKey(utility.getClusterKey()).build(), true,
+        SyncReplicationState.NONE);
+    } catch (ReplicationException e) {
+      if (e.getCause() instanceof KeeperException.NodeExistsException) {
+        exists++;
+      }
     }
 
-    try{
-      rp.registerPeer("6-ec2", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
-    }catch(IllegalArgumentException e){
-      hyphen++;
-    }
     assertEquals(1, exists);
-    assertEquals(1, hyphen);
-    
+
     // clean up
-    rp.unregisterPeer("6");
+    rp.getPeerStorage().removePeer("6");
   }
-  
+
   private class DummyReplicationListener implements ReplicationListener {
 
     @Override
@@ -214,21 +181,6 @@ public class TestReplicationTrackerZKImpl {
       rsRemovedData = regionServer;
       rsRemovedCount.getAndIncrement();
       LOG.debug("Received regionServerRemoved event: " + regionServer);
-    }
-
-    @Override
-    public void peerRemoved(String peerId) {
-      peerRemovedData = peerId;
-      peerRemovedCount.getAndIncrement();
-      LOG.debug("Received peerDisconnected event: " + peerId);
-    }
-
-    @Override
-    public void peerListChanged(List<String> peerIds) {
-      plChangedData.clear();
-      plChangedData.addAll(peerIds);
-      int count = plChangedCount.getAndIncrement();
-      LOG.debug("Received peerListChanged event " + count);
     }
   }
 
@@ -247,7 +199,7 @@ public class TestReplicationTrackerZKImpl {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return zkw;
     }
 
@@ -300,6 +252,21 @@ public class TestReplicationTrackerZKImpl {
     @Override
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
       return null;
     }
   }

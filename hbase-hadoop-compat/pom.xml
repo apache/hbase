@@ -21,10 +21,10 @@
     -->
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>hbase</artifactId>
+        <artifactId>hbase-build-configuration</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>3.0.0-SNAPSHOT</version>
-        <relativePath>..</relativePath>
+        <relativePath>../hbase-build-configuration</relativePath>
     </parent>
 
     <artifactId>hbase-hadoop-compat</artifactId>
@@ -37,17 +37,9 @@
 
     <build>
       <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-site-plugin</artifactId>
-          <configuration>
-            <skip>true</skip>
-          </configuration>
-        </plugin>
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
         <configuration>
           <skipAssembly>true</skipAssembly>
         </configuration>
@@ -57,7 +49,18 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
         </plugin>
-        </plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <configuration>
+            <failOnViolation>true</failOnViolation>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>net.revelc.code</groupId>
+          <artifactId>warbucks-maven-plugin</artifactId>
+        </plugin>
+      </plugins>
       <pluginManagement>
         <plugins>
           <!--This plugin's configuration is used to store Eclipse m2e settings
@@ -65,23 +68,9 @@
           <plugin>
             <groupId>org.eclipse.m2e</groupId>
             <artifactId>lifecycle-mapping</artifactId>
-            <version>1.0.0</version>
             <configuration>
               <lifecycleMappingMetadata>
                 <pluginExecutions>
-                  <pluginExecution>
-                    <pluginExecutionFilter>
-                      <groupId>org.apache.maven.plugins</groupId>
-                      <artifactId>maven-compiler-plugin</artifactId>
-                      <versionRange>[3.2,)</versionRange>
-                      <goals>
-                        <goal>compile</goal>
-                      </goals>
-                    </pluginExecutionFilter>
-                    <action>
-                      <ignore></ignore>
-                    </action>
-                  </pluginExecution>
                 </pluginExecutions>
               </lifecycleMappingMetadata>
             </configuration>
@@ -97,19 +86,30 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-common</artifactId>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-miscellaneous</artifactId>
+      </dependency>
       <!-- General dependencies -->
       <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
       </dependency>
       <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-math</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-metrics-api</artifactId>
       </dependency>
-        <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-metrics-api</artifactId>
-        </dependency>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <profiles>

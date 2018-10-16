@@ -27,8 +27,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -36,6 +34,9 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.*;
 
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 public class ProcedureWALPerformanceEvaluation extends AbstractHBaseTool {
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
@@ -93,9 +94,9 @@ public class ProcedureWALPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("Logs directory : " + logDir.toString());
     fs.delete(logDir, true);
     if ("nosync".equals(syncType)) {
-      store = new NoSyncWalProcedureStore(conf, fs, logDir);
+      store = new NoSyncWalProcedureStore(conf, logDir);
     } else {
-      store = ProcedureTestingUtility.createWalStore(conf, fs, logDir);
+      store = ProcedureTestingUtility.createWalStore(conf, logDir);
     }
     store.start(numThreads);
     store.recoverLease();
@@ -243,10 +244,9 @@ public class ProcedureWALPerformanceEvaluation extends AbstractHBaseTool {
     }
   }
 
-  private class NoSyncWalProcedureStore extends WALProcedureStore {
-    public NoSyncWalProcedureStore(final Configuration conf, final FileSystem fs,
-        final Path logDir) {
-      super(conf, fs, logDir, new WALProcedureStore.LeaseRecovery() {
+  private static class NoSyncWalProcedureStore extends WALProcedureStore {
+    public NoSyncWalProcedureStore(final Configuration conf, final Path logDir) throws IOException {
+      super(conf, logDir, null, new WALProcedureStore.LeaseRecovery() {
         @Override
         public void recoverFileLease(FileSystem fs, Path path) throws IOException {
           // no-op

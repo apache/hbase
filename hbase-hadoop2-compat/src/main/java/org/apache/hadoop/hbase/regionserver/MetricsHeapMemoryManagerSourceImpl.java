@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop2 implementation of MetricsHeapMemoryManagerSource. Implements BaseSource through

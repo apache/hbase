@@ -22,10 +22,11 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -51,8 +52,8 @@ public class RemoveColumnAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
-    HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
+    TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
+    ColumnFamilyDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
 
     if (columnDescriptors.length <= (protectedColumns == null ? 1 : protectedColumns.size())) {
       return;
@@ -66,12 +67,14 @@ public class RemoveColumnAction extends Action {
     byte[] colDescName = columnDescriptors[index].getName();
     LOG.debug("Performing action: Removing " + Bytes.toString(colDescName)+ " from "
         + tableName.getNameAsString());
-    tableDescriptor.removeFamily(colDescName);
+
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
+    builder.removeColumnFamily(colDescName);
 
     // Don't try the modify if we're stopping
     if (context.isStopping()) {
       return;
     }
-    admin.modifyTable(tableName, tableDescriptor);
+    admin.modifyTable(builder.build());
   }
 }

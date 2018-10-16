@@ -15,12 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
+
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
@@ -31,7 +33,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
-import static org.junit.Assert.fail;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -39,6 +41,11 @@ import org.junit.rules.TestName;
 
 @Category({ClientTests.class, SmallTests.class})
 public class TestImmutableHColumnDescriptor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestImmutableHColumnDescriptor.class);
+
   @Rule
   public TestName name = new TestName();
   private static final List<Consumer<ImmutableHColumnDescriptor>> TEST_FUNCTION = Arrays.asList(
@@ -51,7 +58,6 @@ public class TestImmutableHColumnDescriptor {
     hcd -> hcd.setBlocksize(10),
     hcd -> hcd.setBloomFilterType(BloomType.NONE),
     hcd -> hcd.setCacheBloomsOnWrite(false),
-    hcd -> hcd.setCacheDataInL1(true),
     hcd -> hcd.setCacheDataOnWrite(true),
     hcd -> hcd.setCacheIndexesOnWrite(true),
     hcd -> hcd.setCompactionCompressionType(Compression.Algorithm.LZO),

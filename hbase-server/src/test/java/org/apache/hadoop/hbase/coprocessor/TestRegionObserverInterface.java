@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -28,18 +26,16 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -52,6 +48,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -63,32 +60,43 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.NoLimitScannerContext;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 @Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionObserverInterface {
-  private static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionObserverInterface.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionObserverInterface.class);
 
   public static final TableName TEST_TABLE = TableName.valueOf("TestTable");
   public final static byte[] A = Bytes.toBytes("a");
@@ -119,7 +127,7 @@ public class TestRegionObserverInterface {
     util.shutdownMiniCluster();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRegionObserver() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     // recreate table every time in order to reset the status of the
@@ -179,7 +187,7 @@ public class TestRegionObserverInterface {
       tableName, new Integer[] { 1, 1, 1, 1 });
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRowMutation() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -211,7 +219,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testIncrementHook() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -234,7 +242,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCheckAndPutHooks() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     try (Table table = util.createTable(tableName, new byte[][] { A, B, C })) {
@@ -246,7 +254,7 @@ public class TestRegionObserverInterface {
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
         tableName, new Boolean[] { false, false, false });
-      table.checkAndPut(Bytes.toBytes(0), A, A, A, p);
+      table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenPut(p);
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
         tableName, new Boolean[] { true, true, true });
@@ -255,7 +263,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCheckAndDeleteHooks() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -269,7 +277,7 @@ public class TestRegionObserverInterface {
         SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
             "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
         tableName, new Boolean[] { false, false, false });
-      table.checkAndDelete(Bytes.toBytes(0), A, A, A, d);
+      table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenDelete(d);
       verifyMethodResult(
         SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
             "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
@@ -280,13 +288,13 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testAppendHook() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       Append app = new Append(Bytes.toBytes(0));
-      app.add(A, A, A);
+      app.addColumn(A, A, A);
 
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock" }, tableName,
@@ -303,7 +311,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   // HBase-3583
   public void testHBase3583() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -346,7 +354,7 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testHBASE14489() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A });
@@ -370,7 +378,7 @@ public class TestRegionObserverInterface {
 
   }
 
-  @Test(timeout = 300000)
+  @Test
   // HBase-3758
   public void testHBase3758() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -409,18 +417,20 @@ public class TestRegionObserverInterface {
   }
 
   /* Overrides compaction to only output rows with keys that are even numbers */
-  public static class EvenOnlyCompactor implements RegionObserver {
+  public static class EvenOnlyCompactor implements RegionCoprocessor, RegionObserver {
     long lastCompaction;
     long lastFlush;
 
     @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
-        final InternalScanner scanner, final ScanType scanType) {
+        InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+        CompactionRequest request) {
       return new InternalScanner() {
-        @Override
-        public boolean next(List<Cell> results) throws IOException {
-          return next(results, NoLimitScannerContext.getInstance());
-        }
 
         @Override
         public boolean next(List<Cell> results, ScannerContext scannerContext) throws IOException {
@@ -454,12 +464,13 @@ public class TestRegionObserverInterface {
 
     @Override
     public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
-        StoreFile resultFile) {
+        StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request) {
       lastCompaction = EnvironmentEdgeManager.currentTime();
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+        FlushLifeCycleTracker tracker) {
       lastFlush = EnvironmentEdgeManager.currentTime();
     }
   }
@@ -468,7 +479,7 @@ public class TestRegionObserverInterface {
    * Tests overriding compaction handling via coprocessor hooks
    * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test
   public void testCompactionOverride() throws Exception {
     final TableName compactTable = TableName.valueOf(name.getMethodName());
     Admin admin = util.getAdmin();
@@ -492,8 +503,7 @@ public class TestRegionObserverInterface {
     }
 
     HRegion firstRegion = cluster.getRegions(compactTable).get(0);
-    Coprocessor cp =
-        firstRegion.getCoprocessorHost().findCoprocessor(EvenOnlyCompactor.class.getName());
+    Coprocessor cp = firstRegion.getCoprocessorHost().findCoprocessor(EvenOnlyCompactor.class);
     assertNotNull("EvenOnlyCompactor coprocessor should be loaded", cp);
     EvenOnlyCompactor compactor = (EvenOnlyCompactor) cp;
 
@@ -539,7 +549,7 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void bulkLoadHFileTest() throws Exception {
     final String testName = TestRegionObserverInterface.class.getName() + "." + name.getMethodName();
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
@@ -568,7 +578,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
@@ -618,7 +628,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testPreWALRestoreSkip() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
     TableName tableName = TableName.valueOf(SimpleRegionObserver.TABLE_SKIPPED);
@@ -654,14 +664,14 @@ public class TestRegionObserverInterface {
   }
 
   // check each region whether the coprocessor upcalls are called or not.
-  private void verifyMethodResult(Class<?> c, String methodName[], TableName tableName,
+  private void verifyMethodResult(Class<?> coprocessor, String methodName[], TableName tableName,
       Object value[]) throws IOException {
     try {
       for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
         if (!t.isAlive() || t.getRegionServer().isAborted() || t.getRegionServer().isStopping()) {
           continue;
         }
-        for (HRegionInfo r : ProtobufUtil
+        for (RegionInfo r : ProtobufUtil
             .getOnlineRegions(t.getRegionServer().getRSRpcServices())) {
           if (!r.getTable().equals(tableName)) {
             continue;
@@ -669,14 +679,14 @@ public class TestRegionObserverInterface {
           RegionCoprocessorHost cph =
               t.getRegionServer().getOnlineRegion(r.getRegionName()).getCoprocessorHost();
 
-          Coprocessor cp = cph.findCoprocessor(c.getName());
+          Coprocessor cp = cph.findCoprocessor(coprocessor.getName());
           assertNotNull(cp);
           for (int i = 0; i < methodName.length; ++i) {
-            Method m = c.getMethod(methodName[i]);
+            Method m = coprocessor.getMethod(methodName[i]);
             Object o = m.invoke(cp);
-            assertTrue("Result of " + c.getName() + "." + methodName[i] + " is expected to be "
-                + value[i].toString() + ", while we get " + o.toString(),
-              o.equals(value[i]));
+            assertTrue("Result of " + coprocessor.getName() + "." + methodName[i]
+                    + " is expected to be " + value[i].toString() + ", while we get "
+                    + o.toString(), o.equals(value[i]));
           }
         }
       }

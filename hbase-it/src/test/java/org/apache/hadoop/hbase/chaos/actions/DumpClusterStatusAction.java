@@ -33,6 +33,6 @@ public class DumpClusterStatusAction extends Action {
   @Override
   public void perform() throws Exception {
     LOG.debug("Performing action: Dump cluster status");
-    LOG.info("Cluster status\n" + cluster.getClusterStatus());
+    LOG.info("Cluster status\n" + cluster.getClusterMetrics());
   }
 }

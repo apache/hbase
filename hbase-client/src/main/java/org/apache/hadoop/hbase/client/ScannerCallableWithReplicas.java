@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -32,14 +32,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Private
 class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
-  private static final Log LOG = LogFactory.getLog(ScannerCallableWithReplicas.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ScannerCallableWithReplicas.class);
   volatile ScannerCallable currentScannerCallable;
   AtomicBoolean replicaSwitched = new AtomicBoolean(false);
   final ClusterConnection cConnection;

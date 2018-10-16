@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +18,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.naming.ServiceUnavailableException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -33,21 +28,31 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test case for JMX Connector Server.
  */
 @Category({ MiscTests.class, MediumTests.class })
 public class TestJMXConnectorServer {
-  private static final Log LOG = LogFactory.getLog(TestJMXConnectorServer.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestJMXConnectorServer.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestJMXConnectorServer.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static Configuration conf = null;
@@ -74,7 +79,7 @@ public class TestJMXConnectorServer {
   /**
    * This tests to validate the HMaster's ConnectorServer after unauthorised stopMaster call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testHMConnectorServerWhenStopMaster() throws Exception {
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       JMXListener.class.getName() + "," + MyAccessController.class.getName());
@@ -89,7 +94,7 @@ public class TestJMXConnectorServer {
       LOG.info("Stopping HMaster...");
       admin.stopMaster();
     } catch (AccessDeniedException e) {
-      LOG.info("Exception occured while stopping HMaster. ", e);
+      LOG.info("Exception occurred while stopping HMaster. ", e);
       accessDenied = true;
     }
     Assert.assertTrue(accessDenied);
@@ -112,7 +117,7 @@ public class TestJMXConnectorServer {
    * This tests to validate the RegionServer's ConnectorServer after unauthorised stopRegionServer
    * call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testRSConnectorServerWhenStopRegionServer() throws Exception {
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       JMXListener.class.getName() + "," + MyAccessController.class.getName());
@@ -142,7 +147,7 @@ public class TestJMXConnectorServer {
   /**
    * This tests to validate the HMaster's ConnectorServer after unauthorised shutdown call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testHMConnectorServerWhenShutdownCluster() throws Exception {
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       JMXListener.class.getName() + "," + MyAccessController.class.getName());
@@ -157,7 +162,7 @@ public class TestJMXConnectorServer {
       LOG.info("Stopping HMaster...");
       admin.shutdown();
     } catch (AccessDeniedException e) {
-      LOG.error("Exception occured while stopping HMaster. ", e);
+      LOG.error("Exception occurred while stopping HMaster. ", e);
       accessDenied = true;
     }
     Assert.assertTrue(accessDenied);
@@ -182,6 +187,12 @@ public class TestJMXConnectorServer {
    */
   public static class MyAccessController extends AccessController {
     @Override
+    public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+      // Do nothing. In particular, stop the creation of the hbase:acl table. It makes the
+      // shutdown take time.
+    }
+
+    @Override
     public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> c) throws IOException {
       if (!hasAccess) {
         throw new AccessDeniedException("Insufficient permissions to stop master");
@@ -201,6 +212,13 @@ public class TestJMXConnectorServer {
       if (!hasAccess) {
         throw new AccessDeniedException("Insufficient permissions to shut down cluster.");
       }
+    }
+
+    @Override
+    public void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+        throws IOException {
+      // FIXME: ignore the procedure permission check since in our UT framework master is neither
+      // the systemuser nor the superuser so we can not call executeProcedures...
     }
   }
 }

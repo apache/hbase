@@ -20,14 +20,16 @@ package org.apache.hadoop.hbase.filter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -124,21 +126,28 @@ public class MultiRowRangeFilter extends FilterBase {
     return false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell ignored) {
+  public ReturnCode filterKeyValue(final Cell ignored) {
+    return filterCell(ignored);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell ignored) {
     return currentReturnCode;
   }
 
   @Override
   public Cell getNextCellHint(Cell currentKV) {
     // skip to the next range's start row
-    return CellUtil.createFirstOnRow(range.startRow, 0,
+    return PrivateCellUtil.createFirstOnRow(range.startRow, 0,
         (short) range.startRow.length);
   }
 
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte[] toByteArray() {
     FilterProtos.MultiRowRangeFilter.Builder builder = FilterProtos.MultiRowRangeFilter
         .newBuilder();
@@ -187,6 +196,7 @@ public class MultiRowRangeFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized are equal to the
    *         corresponding fields in other. Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this)
       return true;
@@ -503,5 +513,38 @@ public class MultiRowRangeFilter extends FilterBase {
           || Bytes.compareTo(startRow, stopRow) < 0
           || (Bytes.compareTo(startRow, stopRow) == 0 && stopRowInclusive == true);
     }
+
+    @Override
+    public boolean equals(Object obj){
+      if (!(obj instanceof RowRange)) {
+        return false;
+      }
+      if (this == obj) {
+        return true;
+      }
+      RowRange rr = (RowRange) obj;
+      return Bytes.equals(this.stopRow, rr.getStopRow()) &&
+          Bytes.equals(this.startRow, this.getStartRow()) &&
+          this.startRowInclusive == rr.isStartRowInclusive() &&
+          this.stopRowInclusive == rr.isStopRowInclusive();
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(Bytes.hashCode(this.stopRow),
+          Bytes.hashCode(this.startRow),
+          this.startRowInclusive,
+          this.stopRowInclusive);
+    }
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.rangeList);
   }
 }

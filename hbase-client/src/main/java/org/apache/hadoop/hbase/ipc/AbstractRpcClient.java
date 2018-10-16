@@ -21,20 +21,20 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcChannel;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
-import io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -49,12 +49,12 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
@@ -89,11 +89,12 @@ import org.apache.hadoop.security.token.TokenSelector;
  * outside the lock in {@link Call} and {@link HBaseRpcController} which means the implementations
  * of the callbacks are free to hold any lock.</li>
  * </ul>
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcClient {
   // Log level is being changed in tests
-  public static final Log LOG = LogFactory.getLog(AbstractRpcClient.class);
+  public static final Logger LOG = LoggerFactory.getLogger(AbstractRpcClient.class);
 
   protected static final HashedWheelTimer WHEEL_TIMER = new HashedWheelTimer(
       Threads.newDaemonThreadFactory("RpcClient-timer"), 10, TimeUnit.MILLISECONDS);
@@ -101,6 +102,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private static final ScheduledExecutorService IDLE_CONN_SWEEPER = Executors
       .newScheduledThreadPool(1, Threads.newDaemonThreadFactory("Idle-Rpc-Conn-Sweeper"));
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_MUTABLE_COLLECTION_PKGPROTECT",
+      justification="the rest of the system which live in the different package can use")
   protected final static Map<Kind, TokenSelector<? extends TokenIdentifier>> TOKEN_HANDLERS = new HashMap<>();
 
   static {
@@ -240,7 +243,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       return null;
     }
     try {
-      return (Codec) Class.forName(className).newInstance();
+      return (Codec) Class.forName(className).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Failed getting codec " + className, e);
     }
@@ -268,7 +271,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       return null;
     }
     try {
-      return (CompressionCodec) Class.forName(className).newInstance();
+      return (CompressionCodec) Class.forName(className).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Failed getting compressor " + className, e);
     }
@@ -413,6 +416,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       if (count > maxConcurrentCallsPerServer) {
         throw new ServerTooBusyException(addr, count);
       }
+      cs.setConcurrentCallsPerServer(count);
       T connection = getConnection(remoteId);
       connection.sendRequest(call, hrc);
     } catch (Exception e) {

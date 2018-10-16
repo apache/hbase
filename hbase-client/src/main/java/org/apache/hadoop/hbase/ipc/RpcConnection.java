@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -52,7 +52,7 @@ import org.apache.hadoop.security.token.TokenSelector;
 @InterfaceAudience.Private
 abstract class RpcConnection {
 
-  private static final Log LOG = LogFactory.getLog(RpcConnection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RpcConnection.class);
 
   protected final ConnectionId remoteId;
 

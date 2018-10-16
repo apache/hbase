@@ -20,7 +20,7 @@ module Shell
   module Commands
     class DeleteAllSnapshot < Command
       def help
-        return <<-EOF
+        <<-EOF
 Delete all of the snapshots matching the given regex. Examples:
 
   hbase> delete_all_snapshot 's.*'
@@ -29,17 +29,17 @@ EOF
       end
 
       def command(regex)
-        formatter.header([ "SNAPSHOT", "TABLE + CREATION TIME"])
+        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
         list = admin.list_snapshot(regex)
         count = list.size
         list.each do |snapshot|
-          creation_time = Time.at(snapshot.getCreationTime() / 1000).to_s
-          formatter.row([ snapshot.getName, snapshot.getTable + " (" + creation_time + ")" ])
+          creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
+          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
         end
         puts "\nDelete the above #{count} snapshots (y/n)?" unless count == 0
         answer = 'n'
         answer = gets.chomp unless count == 0
-        puts "No snapshots matched the regex #{regex.to_s}" if count == 0
+        puts "No snapshots matched the regex #{regex}" if count == 0
         return unless answer =~ /y.*/i
         @start_time = Time.now
         admin.delete_all_snapshot(regex)
@@ -50,10 +50,10 @@ EOF
         puts "#{successfullyDeleted} snapshots successfully deleted." unless successfullyDeleted == 0
         return if leftOverSnapshotCount == 0
         puts "\nFailed to delete the below #{leftOverSnapshotCount} snapshots."
-        formatter.header([ "SNAPSHOT", "TABLE + CREATION TIME"])
+        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
         list.each do |snapshot|
-          creation_time = Time.at(snapshot.getCreationTime() / 1000).to_s
-          formatter.row([ snapshot.getName, snapshot.getTable + " (" + creation_time + ")" ])
+          creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
+          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
         end
       end
     end

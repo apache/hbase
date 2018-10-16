@@ -21,20 +21,26 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
-import com.google.common.base.Predicate;
-
+@InterfaceAudience.Private
 public class BulkLoadCellFilter {
-  private static final Log LOG = LogFactory.getLog(BulkLoadCellFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BulkLoadCellFilter.class);
 
+  private final ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
   /**
    * Filters the bulk load cell using the supplied predicate.
    * @param cell The WAL cell to filter.
@@ -75,7 +81,13 @@ public class BulkLoadCellFilter {
             .setBulkloadSeqNum(bld.getBulkloadSeqNum());
     newDesc.addAllStores(copiedStoresList);
     BulkLoadDescriptor newBulkLoadDescriptor = newDesc.build();
-    return CellUtil.createCell(CellUtil.cloneRow(cell), WALEdit.METAFAMILY, WALEdit.BULK_LOAD,
-        cell.getTimestamp(), cell.getTypeByte(), newBulkLoadDescriptor.toByteArray());
+    return cellBuilder.clear()
+            .setRow(CellUtil.cloneRow(cell))
+            .setFamily(WALEdit.METAFAMILY)
+            .setQualifier(WALEdit.BULK_LOAD)
+            .setTimestamp(cell.getTimestamp())
+            .setType(cell.getTypeByte())
+            .setValue(newBulkLoadDescriptor.toByteArray())
+            .build();
   }
 }

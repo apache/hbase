@@ -22,16 +22,16 @@ package org.apache.hadoop.hbase.util;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class PrettyPrinter {
 
-  private static final Log LOG = LogFactory.getLog(PrettyPrinter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PrettyPrinter.class);
 
   private static final String INTERVAL_REGEX = "((\\d+)\\s*SECONDS?\\s*\\()?\\s*" +
           "((\\d+)\\s*DAYS?)?\\s*((\\d+)\\s*HOURS?)?\\s*" +

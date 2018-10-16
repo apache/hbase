@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Describe the throttling result.
@@ -29,7 +29,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * TODO: At some point this will be handled on the client side to prevent
  * operation to go on the server if the waitInterval is grater than the one got
  * as result of this exception.
+ *
+ * @deprecated  replaced by {@link RpcThrottlingException} since hbase-2.0.0.
  */
+@Deprecated
 @InterfaceAudience.Public
 public class ThrottlingException extends QuotaExceededException {
   private static final long serialVersionUID = 1406576492085155743L;
@@ -67,7 +70,7 @@ public class ThrottlingException extends QuotaExceededException {
       int index = msg.indexOf(MSG_TYPE[i]);
       if (index >= 0) {
         String waitTimeStr = msg.substring(index + MSG_TYPE[i].length() + MSG_WAIT.length());
-        type = Type.values()[i];;
+        type = Type.values()[i];
         waitInterval = timeFromString(waitTimeStr);
         break;
       }

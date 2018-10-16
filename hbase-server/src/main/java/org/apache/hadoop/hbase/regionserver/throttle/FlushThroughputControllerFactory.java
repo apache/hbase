@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.util.ReflectionUtils;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public final class FlushThroughputControllerFactory {
 
-  private static final Log LOG = LogFactory.getLog(FlushThroughputControllerFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushThroughputControllerFactory.class);
 
   public static final String HBASE_FLUSH_THROUGHPUT_CONTROLLER_KEY =
       "hbase.regionserver.flush.throughput.controller";

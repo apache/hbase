@@ -19,11 +19,12 @@
 
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 
 /**
@@ -46,7 +47,7 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 @InterfaceAudience.Private
 public class CompactionConfiguration {
 
-  private static final Log LOG = LogFactory.getLog(CompactionConfiguration.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompactionConfiguration.class);
 
   public static final String HBASE_HSTORE_COMPACTION_RATIO_KEY = "hbase.hstore.compaction.ratio";
   public static final String HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY =
@@ -115,10 +116,10 @@ public class CompactionConfiguration {
     this.storeConfigInfo = storeConfigInfo;
 
     maxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY, Long.MAX_VALUE);
-    offPeakMaxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY, 
-      maxCompactSize);      
+    offPeakMaxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY,
+      maxCompactSize);
     minCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY,
-        storeConfigInfo.getMemstoreFlushSize());
+        storeConfigInfo.getMemStoreFlushSize());
     minFilesToCompact = Math.max(2, conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY,
           /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
     maxFilesToCompact = conf.getInt(HBASE_HSTORE_COMPACTION_MAX_KEY, 10);
@@ -126,10 +127,11 @@ public class CompactionConfiguration {
     offPeakCompactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY, 5.0F);
 
     throttlePoint = conf.getLong("hbase.regionserver.thread.compaction.throttle",
-          2 * maxFilesToCompact * storeConfigInfo.getMemstoreFlushSize());
-    majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24*7);
-    // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
-    majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
+          2 * maxFilesToCompact * storeConfigInfo.getMemStoreFlushSize());
+    majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD,
+                                         HConstants.DEFAULT_MAJOR_COMPACTION_PERIOD);
+    majorCompactionJitter = conf.getFloat(HConstants.MAJOR_COMPACTION_JITTER,
+                                          HConstants.DEFAULT_MAJOR_COMPACTION_JITTER);
     minLocalityToForceCompact = conf.getFloat(HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT, 0f);
 
     dateTieredMaxStoreFileAgeMillis = conf.getLong(DATE_TIERED_MAX_AGE_MILLIS_KEY, Long.MAX_VALUE);
@@ -142,20 +144,20 @@ public class CompactionConfiguration {
     this.dateTieredCompactionWindowFactory = conf.get(
       DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY,
       DEFAULT_DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS.getName());
-    LOG.info(this);
+    LOG.info(toString());
   }
 
   @Override
   public String toString() {
     return String.format(
-      "size [%d, %d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
+      "size [%s, %s, %s); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
       + " major period %d, major jitter %f, min locality to compact %f;"
       + " tiered compaction: max_age %d, incoming window min %d,"
       + " compaction policy for tiered window %s, single output for minor %b,"
       + " compaction window factory %s",
-      minCompactSize,
-      maxCompactSize,
-      offPeakMaxCompactSize,
+      StringUtils.byteDesc(minCompactSize),
+      StringUtils.byteDesc(maxCompactSize),
+      StringUtils.byteDesc(offPeakMaxCompactSize),
       minFilesToCompact,
       maxFilesToCompact,
       compactionRatio,

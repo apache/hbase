@@ -54,10 +54,6 @@ $LOAD_PATH.unshift Pathname.new(sources)
 cmdline_help = <<HERE # HERE document output as shell usage
 Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
 
- --format=OPTION                Formatter for outputting results.
-                                Valid options are: console, html.
-                                (Default: console)
-
  -d | --debug                   Set DEBUG log levels.
  -h | --help                    This help.
  -n | --noninteractive          Do not run within an IRB session
@@ -65,23 +61,12 @@ Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
                                 first error.
 HERE
 found = []
-format = 'console'
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
 interactive = true
 for arg in ARGV
-  if arg =~ /^--format=(.+)/i
-    format = $1
-    if format =~ /^html$/i
-      raise NoMethodError.new("Not yet implemented")
-    elsif format =~ /^console$/i
-      # This is default
-    else
-      raise ArgumentError.new("Unsupported format " + arg)
-    end
-    found.push(arg)
-  elsif arg == '-h' || arg == '--help'
+  if arg == '-h' || arg == '--help'
     puts cmdline_help
     exit
   elsif arg == '-d' || arg == '--debug'
@@ -89,9 +74,13 @@ for arg in ARGV
     $fullBackTrace = true
     @shell_debug = true
     found.push(arg)
-    puts "Setting DEBUG log level..."
+    puts 'Setting DEBUG log level...'
   elsif arg == '-n' || arg == '--noninteractive'
     interactive = false
+    found.push(arg)
+  elsif arg == '-r' || arg == '--return-values'
+    warn '[INFO] the -r | --return-values option is ignored. we always behave '\
+         'as though it was given.'
     found.push(arg)
   else
     # Presume it a script. Save it off for running later below
@@ -106,13 +95,11 @@ end
 # Delete all processed args
 found.each { |arg| ARGV.delete(arg) }
 # Make sure debug flag gets back to IRB
-if @shell_debug
-  ARGV.unshift('-d')
-end
+ARGV.unshift('-d') if @shell_debug
 
 # Set logging level to avoid verboseness
-org.apache.log4j.Logger.getLogger("org.apache.zookeeper").setLevel(log_level)
-org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase").setLevel(log_level)
+org.apache.log4j.Logger.getLogger('org.apache.zookeeper').setLevel(log_level)
+org.apache.log4j.Logger.getLogger('org.apache.hadoop.hbase').setLevel(log_level)
 
 # Require HBase now after setting log levels
 require 'hbase_constants'
@@ -155,8 +142,8 @@ def debug
     conf.back_trace_limit = 100
     log_level = org.apache.log4j.Level::DEBUG
   end
-  org.apache.log4j.Logger.getLogger("org.apache.zookeeper").setLevel(log_level)
-  org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase").setLevel(log_level)
+  org.apache.log4j.Logger.getLogger('org.apache.zookeeper').setLevel(log_level)
+  org.apache.log4j.Logger.getLogger('org.apache.hadoop.hbase').setLevel(log_level)
   debug?
 end
 
@@ -176,23 +163,23 @@ if interactive
   # Output a banner message that tells users where to go for help
   @shell.print_banner
 
-  require "irb"
+  require 'irb'
   require 'irb/hirb'
 
   module IRB
     def self.start(ap_path = nil)
-      $0 = File::basename(ap_path, ".rb") if ap_path
+      $0 = File.basename(ap_path, '.rb') if ap_path
 
       IRB.setup(ap_path)
       @CONF[:IRB_NAME] = 'hbase'
       @CONF[:AP_NAME] = 'hbase'
       @CONF[:BACK_TRACE_LIMIT] = 0 unless $fullBackTrace
 
-      if @CONF[:SCRIPT]
-        hirb = HIRB.new(nil, @CONF[:SCRIPT])
-      else
-        hirb = HIRB.new
-      end
+      hirb = if @CONF[:SCRIPT]
+               HIRB.new(nil, @CONF[:SCRIPT])
+             else
+               HIRB.new
+             end
 
       @CONF[:IRB_RC].call(hirb.context) if @CONF[:IRB_RC]
       @CONF[:MAIN_CONTEXT] = hirb.context
@@ -211,13 +198,22 @@ else
     #     in order to maintain compatibility with previous behavior where
     #     a user could pass in script2run and then still pipe commands on
     #     stdin.
-    require "irb/ruby-lex"
-    require "irb/workspace"
-    workspace = IRB::WorkSpace.new(binding())
+    require 'irb/ruby-lex'
+    require 'irb/workspace'
+    workspace = IRB::WorkSpace.new(binding)
     scanner = RubyLex.new
+
+    # RubyLex claims to take an IO but really wants an InputMethod
+    module IOExtensions
+      def encoding
+        external_encoding
+      end
+    end
+    IO.include IOExtensions
+
     scanner.set_input(STDIN)
     scanner.each_top_level_statement do |statement, linenum|
-       puts(workspace.evaluate(nil, statement, 'stdin', linenum))
+      puts(workspace.evaluate(nil, statement, 'stdin', linenum))
     end
   # XXX We're catching Exception on purpose, because we want to include
   #     unwrapped java exceptions, syntax errors, eval failures, etc.
@@ -225,8 +221,8 @@ else
     message = exception.to_s
     # exception unwrapping in shell means we'll have to handle Java exceptions
     # as a special case in order to format them properly.
-    if exception.kind_of? java.lang.Exception
-      $stderr.puts "java exception"
+    if exception.is_a? java.lang.Exception
+      $stderr.puts 'java exception'
       message = exception.get_message
     end
     # Include the 'ERROR' string to try to make transition easier for scripts that

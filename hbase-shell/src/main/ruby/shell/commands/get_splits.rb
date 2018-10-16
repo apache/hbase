@@ -20,7 +20,7 @@ module Shell
   module Commands
     class GetSplits < Command
       def help
-        return <<-EOF
+        <<-EOF
 Get the splits of the named table:
   hbase> get_splits 't1'
   hbase> get_splits 'ns1:t1'
@@ -37,10 +37,14 @@ EOF
       end
 
       def get_splits(table)
-        table._get_splits_internal()
+        splits = table._get_splits_internal
+        puts(format('Total number of splits = %<numsplits>d',
+                    numsplits: (splits.size + 1)))
+        puts splits
+        splits
       end
     end
   end
 end
 
-::Hbase::Table.add_shell_command("get_splits")
+::Hbase::Table.add_shell_command('get_splits')

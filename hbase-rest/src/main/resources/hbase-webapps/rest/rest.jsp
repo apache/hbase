@@ -27,9 +27,7 @@ Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.rest.port", "8080");
 %>
-<!--[if IE]>
 <!DOCTYPE html>
-<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>

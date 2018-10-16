@@ -16,10 +16,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,13 +28,14 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import sun.nio.ch.DirectBuffer;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility functions for working with byte buffers, such as reading/writing
@@ -49,8 +50,7 @@ public final class ByteBufferUtils {
   public final static int NEXT_BIT_MASK = 1 << 7;
   @VisibleForTesting
   final static boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
-  @VisibleForTesting
-  final static boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  public final static boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -193,6 +193,28 @@ public final class ByteBufferUtils {
     }
   }
 
+  /**
+   * Copy data from a buffer to an output stream. Does not update the position
+   * in the buffer.
+   * @param out the output stream to write bytes to
+   * @param in the buffer to read bytes from
+   * @param offset the offset in the buffer (from the buffer's array offset)
+   *      to start copying bytes from
+   * @param length the number of bytes to copy
+   */
+  public static void copyBufferToStream(DataOutput out, ByteBuffer in, int offset, int length)
+      throws IOException {
+    if (out instanceof ByteBufferWriter) {
+      ((ByteBufferWriter) out).write(in, offset, length);
+    } else if (in.hasArray()) {
+      out.write(in.array(), in.arrayOffset() + offset, length);
+    } else {
+      for (int i = 0; i < length; ++i) {
+        out.write(toByte(in, offset + i));
+      }
+    }
+  }
+
   public static int putLong(OutputStream out, final long value,
       final int fitInBytes) throws IOException {
     long tmpValue = value;
@@ -222,27 +244,27 @@ public final class ByteBufferUtils {
       return 8;
     }
 
-    if (value < (1l << 4 * 8)) {
+    if (value < (1L << (4 * 8))) {
       // no more than 4 bytes
-      if (value < (1l << 2 * 8)) {
-        if (value < (1l << 1 * 8)) {
+      if (value < (1L << (2 * 8))) {
+        if (value < (1L << (1 * 8))) {
           return 1;
         }
         return 2;
       }
-      if (value < (1l << 3 * 8)) {
+      if (value < (1L << (3 * 8))) {
         return 3;
       }
       return 4;
     }
     // more than 4 bytes
-    if (value < (1l << 6 * 8)) {
-      if (value < (1l << 5 * 8)) {
+    if (value < (1L << (6 * 8))) {
+      if (value < (1L << (5 * 8))) {
         return 5;
       }
       return 6;
     }
-    if (value < (1l << 7 * 8)) {
+    if (value < (1L << (7 * 8))) {
       return 7;
     }
     return 8;
@@ -258,13 +280,13 @@ public final class ByteBufferUtils {
       return 4;
     }
 
-    if (value < (1 << 2 * 8)) {
-      if (value < (1 << 1 * 8)) {
+    if (value < (1 << (2 * 8))) {
+      if (value < (1 << (1 * 8))) {
         return 1;
       }
       return 2;
     }
-    if (value <= (1 << 3 * 8)) {
+    if (value <= (1 << (3 * 8))) {
       return 3;
     }
     return 4;
@@ -314,7 +336,7 @@ public final class ByteBufferUtils {
       throws IOException {
     long tmpLong = 0;
     for (int i = 0; i < fitInBytes; ++i) {
-      tmpLong |= (in.read() & 0xffl) << (8 * i);
+      tmpLong |= (in.read() & 0xffL) << (8 * i);
     }
     return tmpLong;
   }
@@ -327,7 +349,7 @@ public final class ByteBufferUtils {
   public static long readLong(ByteBuffer in, final int fitInBytes) {
     long tmpLength = 0;
     for (int i = 0; i < fitInBytes; ++i) {
-      tmpLength |= (in.get() & 0xffl) << (8l * i);
+      tmpLength |= (in.get() & 0xffL) << (8L * i);
     }
     return tmpLength;
   }
@@ -395,7 +417,7 @@ public final class ByteBufferUtils {
    * @param destinationOffset
    * @param length
    */
-  public static int copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
+  public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
       int destinationOffset, int length) {
     if (in.hasArray() && out.hasArray()) {
       System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out.array(), out.arrayOffset()
@@ -409,7 +431,7 @@ public final class ByteBufferUtils {
       inDup.position(sourceOffset).limit(sourceOffset + length);
       outDup.put(inDup);
     }
-    return destinationOffset + length;
+    // We used to return a result but disabled; return destinationOffset + length;
   }
 
   /**
@@ -607,6 +629,8 @@ public final class ByteBufferUtils {
   }
 
   public static int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
+    // NOTE: This method is copied over in BBKVComparator!!!!! For perf reasons. If you make
+    // changes here, make them there too!!!!
     if (UNSAFE_UNALIGNED) {
       long offset1Adj, offset2Adj;
       Object refObj1 = null, refObj2 = null;
@@ -648,9 +672,12 @@ public final class ByteBufferUtils {
     return compareTo(buf1, o1, l1, buf2, o2, l2) == 0;
   }
 
+  // The below two methods show up in lots of places. Versions of them in commons util and in
+  // Cassandra. In guava too? They are copied from ByteBufferUtils. They are here as static
+  // privates. Seems to make code smaller and make Hotspot happier (comes of compares and study
+  // of compiled code via  jitwatch).
+
   public static int compareTo(byte [] buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
-    // This method is nearly same as the compareTo that follows but hard sharing code given
-    // byte array and bytebuffer types and this is a hot code path
     if (UNSAFE_UNALIGNED) {
       long offset2Adj;
       Object refObj2 = null;
@@ -715,7 +742,7 @@ public final class ByteBufferUtils {
       long lw = UnsafeAccess.theUnsafe.getLong(obj1, o1 + (long) i);
       long rw = UnsafeAccess.theUnsafe.getLong(obj2, o2 + (long) i);
       if (lw != rw) {
-        if (!UnsafeAccess.littleEndian) {
+        if (!UnsafeAccess.LITTLE_ENDIAN) {
           return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
         }
 
@@ -741,42 +768,6 @@ public final class ByteBufferUtils {
       }
     }
     return l1 - l2;
-  }
-
-  /*
-   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
-   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
-   */
-  private static boolean lessThanUnsignedLong(long x1, long x2) {
-    if (UnsafeAccess.littleEndian) {
-      x1 = Long.reverseBytes(x1);
-      x2 = Long.reverseBytes(x2);
-    }
-    return (x1 + Long.MIN_VALUE) < (x2 + Long.MIN_VALUE);
-  }
-
-  /*
-   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
-   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
-   */
-  private static boolean lessThanUnsignedInt(int x1, int x2) {
-    if (UnsafeAccess.littleEndian) {
-      x1 = Integer.reverseBytes(x1);
-      x2 = Integer.reverseBytes(x2);
-    }
-    return (x1 & 0xffffffffL) < (x2 & 0xffffffffL);
-  }
-
-  /*
-   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
-   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
-   */
-  private static boolean lessThanUnsignedShort(short x1, short x2) {
-    if (UnsafeAccess.littleEndian) {
-      x1 = Short.reverseBytes(x1);
-      x2 = Short.reverseBytes(x2);
-    }
-    return (x1 & 0xffff) < (x2 & 0xffff);
   }
 
   /**

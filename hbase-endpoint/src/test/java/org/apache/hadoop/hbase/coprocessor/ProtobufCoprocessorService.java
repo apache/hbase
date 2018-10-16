@@ -15,13 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-import org.apache.hadoop.hbase.Coprocessor;
+
+import java.io.IOException;
+import java.util.Collections;
+
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -33,55 +35,52 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestPro
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.util.Threads;
 
-import java.io.IOException;
-
 /**
  * Test implementation of a coprocessor endpoint exposing the
  * {@link TestRpcServiceProtos.TestProtobufRpcProto} service methods. For internal use by unit tests
  * only.
  */
 public class ProtobufCoprocessorService extends TestRpcServiceProtos.TestProtobufRpcProto
-    implements CoprocessorService, Coprocessor {
-  public ProtobufCoprocessorService() {
-  }
+        implements MasterCoprocessor, RegionCoprocessor {
+  public ProtobufCoprocessorService() {}
 
   @Override
-  public Service getService() {
-    return this;
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   @Override
   public void ping(RpcController controller, TestProtos.EmptyRequestProto request,
-      RpcCallback<TestProtos.EmptyResponseProto> done) {
+          RpcCallback<TestProtos.EmptyResponseProto> done) {
     done.run(TestProtos.EmptyResponseProto.getDefaultInstance());
   }
 
   @Override
   public void echo(RpcController controller, TestProtos.EchoRequestProto request,
-      RpcCallback<TestProtos.EchoResponseProto> done) {
+          RpcCallback<TestProtos.EchoResponseProto> done) {
     String message = request.getMessage();
     done.run(TestProtos.EchoResponseProto.newBuilder().setMessage(message).build());
   }
 
   @Override
   public void error(RpcController controller, TestProtos.EmptyRequestProto request,
-      RpcCallback<TestProtos.EmptyResponseProto> done) {
+          RpcCallback<TestProtos.EmptyResponseProto> done) {
     CoprocessorRpcUtils.setControllerException(controller, new IOException("Test exception"));
     done.run(null);
   }
 
   @Override
   public void pause(RpcController controller, PauseRequestProto request,
-      RpcCallback<EmptyResponseProto> done) {
+          RpcCallback<EmptyResponseProto> done) {
     Threads.sleepWithoutInterrupt(request.getMs());
     done.run(EmptyResponseProto.getDefaultInstance());
   }
 
   @Override
   public void addr(RpcController controller, EmptyRequestProto request,
-      RpcCallback<AddrResponseProto> done) {
-    done.run(AddrResponseProto.newBuilder().setAddr(RpcServer.getRemoteAddress().getHostAddress())
-        .build());
+          RpcCallback<AddrResponseProto> done) {
+    done.run(AddrResponseProto.newBuilder()
+        .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build());
   }
 
   @Override
@@ -93,5 +92,4 @@ public class ProtobufCoprocessorService extends TestRpcServiceProtos.TestProtobu
   public void stop(CoprocessorEnvironment env) throws IOException {
     // To change body of implemented methods use File | Settings | File Templates.
   }
-
 }

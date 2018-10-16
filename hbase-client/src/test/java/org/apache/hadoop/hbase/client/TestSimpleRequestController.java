@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Arrays;
@@ -28,6 +32,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -39,21 +44,22 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ClientTests.class, SmallTests.class})
 public class TestSimpleRequestController {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSimpleRequestController.class);
+
   private static final TableName DUMMY_TABLE
           = TableName.valueOf("DUMMY_TABLE");
-  private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes();
-  private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes();
-  private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes();
+  private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
+  private static final byte[] DUMMY_BYTES_2 = Bytes.toBytes("DUMMY_BYTES_2");
+  private static final byte[] DUMMY_BYTES_3 = Bytes.toBytes("DUMMY_BYTES_3");
   private static final ServerName SN = ServerName.valueOf("s1,1,1");
   private static final ServerName SN2 = ServerName.valueOf("s2,2,2");
   private static final HRegionInfo HRI1
@@ -118,15 +124,18 @@ public class TestSimpleRequestController {
     final AtomicLong tasksInProgress = new AtomicLong(0);
     final Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
     final Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
-    SimpleRequestController.TaskCountChecker countChecker = new SimpleRequestController.TaskCountChecker(
+    SimpleRequestController.TaskCountChecker countChecker =
+        new SimpleRequestController.TaskCountChecker(
             maxTotalConcurrentTasks,
             maxConcurrentTasksPerServer,
             maxConcurrentTasksPerRegion,
             tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
     final long maxHeapSizePerRequest = 2 * 1024 * 1024;
     // unlimiited
-    SimpleRequestController.RequestHeapSizeChecker sizeChecker = new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
-    RequestController.Checker checker = SimpleRequestController.newChecker(Arrays.asList(countChecker, sizeChecker));
+    SimpleRequestController.RequestHeapSizeChecker sizeChecker =
+        new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
+    RequestController.Checker checker =
+        SimpleRequestController.newChecker(Arrays.asList(countChecker, sizeChecker));
     ReturnCode loc1Code = checker.canTakeRow(LOC1, createPut(maxHeapSizePerRequest));
     assertEquals(ReturnCode.INCLUDE, loc1Code);
 
@@ -357,11 +366,7 @@ public class TestSimpleRequestController {
         controller.waitForMaximumCurrentTasks(max.get(), 123, 1, null);
       } catch (InterruptedIOException e) {
         Assert.fail(e.getMessage());
-      } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      } catch (BrokenBarrierException e) {
-        // TODO Auto-generated catch block
+      } catch (InterruptedException | BrokenBarrierException e) {
         e.printStackTrace();
       }
     };

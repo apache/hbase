@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -34,19 +36,19 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 // This tests that GroupBasedBalancer will use data in zk to do balancing during master startup.
 // This does not test retain assignment.
@@ -57,7 +59,12 @@ import static org.junit.Assert.assertFalse;
 // assignment with a timeout.
 @Category(MediumTests.class)
 public class TestRSGroupsOfflineMode {
-  private static final Log LOG = LogFactory.getLog(TestRSGroupsOfflineMode.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRSGroupsOfflineMode.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsOfflineMode.class);
   private static HMaster master;
   private static Admin hbaseAdmin;
   private static HBaseTestingUtility TEST_UTIL;
@@ -78,7 +85,9 @@ public class TestRSGroupsOfflineMode {
     TEST_UTIL.getConfiguration().set(
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
         "1");
-    TEST_UTIL.startMiniCluster(2, 3);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    TEST_UTIL.startMiniCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((MiniHBaseCluster)cluster).getMaster();
     master.balanceSwitch(false);
@@ -99,7 +108,7 @@ public class TestRSGroupsOfflineMode {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Ignore @Test
+  @Test
   public void testOffline() throws Exception, InterruptedException {
     // Table should be after group table name so it gets assigned later.
     final TableName failoverTable = TableName.valueOf(name.getMethodName());
@@ -119,8 +128,8 @@ public class TestRSGroupsOfflineMode {
       LOG.info("Waiting for region unassignments on failover RS...");
       TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
         @Override public boolean evaluate() throws Exception {
-          return master.getServerManager().getLoad(failoverRS.getServerName())
-              .getRegionsLoad().size() > 0;
+          return !master.getServerManager().getLoad(failoverRS.getServerName())
+              .getRegionMetrics().isEmpty();
         }
       });
     }
@@ -131,7 +140,7 @@ public class TestRSGroupsOfflineMode {
       @Override
       public boolean evaluate() throws Exception {
         return groupRS.getNumberOfOnlineRegions() < 1 &&
-            master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() < 1;
+            master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() < 1;
       }
     });
     // Move table to group and wait.
@@ -161,7 +170,7 @@ public class TestRSGroupsOfflineMode {
 
     // Get groupInfoManager from the new active master.
     RSGroupInfoManager groupMgr = ((MiniHBaseCluster)cluster).getMaster().getMasterCoprocessorHost()
-            .findCoprocessors(RSGroupAdminEndpoint.class).get(0).getGroupInfoManager();
+            .findCoprocessor(RSGroupAdminEndpoint.class).getGroupInfoManager();
     // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
     // Verify the group affiliation that's loaded from ZK instead of tables.
@@ -176,10 +185,10 @@ public class TestRSGroupsOfflineMode {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return failoverRS.getOnlineRegions(failoverTable).size() >= 1;
+        return failoverRS.getRegions(failoverTable).size() >= 1;
       }
     });
-    Assert.assertEquals(0, failoverRS.getOnlineRegions(RSGroupInfoManager.RSGROUP_TABLE_NAME).size());
+    Assert.assertEquals(0, failoverRS.getRegions(RSGroupInfoManager.RSGROUP_TABLE_NAME).size());
 
     // Need this for minicluster to shutdown cleanly.
     master.stopMaster();

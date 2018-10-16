@@ -25,11 +25,11 @@ import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -44,7 +44,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Public
 public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
-  private static final Log LOG = LogFactory.getLog(QuotaRetriever.class);
+  private static final Logger LOG = LoggerFactory.getLogger(QuotaRetriever.class);
 
   private final Queue<QuotaSettings> cache = new LinkedList<>();
   private ResultScanner scanner;
@@ -85,6 +85,7 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
     }
   }
 
+  @Override
   public void close() throws IOException {
     if (this.table != null) {
       this.table.close();

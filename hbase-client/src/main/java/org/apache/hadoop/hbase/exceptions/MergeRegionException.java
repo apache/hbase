@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 
@@ -41,5 +41,9 @@ public class MergeRegionException extends DoNotRetryRegionException {
    */
   public MergeRegionException(String s) {
     super(s);
+  }
+
+  public MergeRegionException(Throwable cause) {
+    super(cause);
   }
 }

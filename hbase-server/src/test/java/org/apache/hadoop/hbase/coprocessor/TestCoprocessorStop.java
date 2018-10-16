@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,25 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
-import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.assertTrue;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for master and regionserver coprocessor stop method
@@ -42,14 +41,19 @@ import static org.junit.Assert.assertTrue;
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorStop {
-  private static final Log LOG = LogFactory.getLog(TestCoprocessorStop.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCoprocessorStop.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorStop.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final String MASTER_FILE =
                               "master" + System.currentTimeMillis();
   private static final String REGIONSERVER_FILE =
                               "regionserver" + System.currentTimeMillis();
 
-  public static class FooCoprocessor implements Coprocessor {
+  public static class FooCoprocessor implements MasterCoprocessor, RegionServerCoprocessor {
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       String where = null;

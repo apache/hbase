@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -35,19 +38,23 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationSyncUpTool extends TestReplicationBase {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationSyncUpTool.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationSyncUpTool.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSyncUpTool.class);
 
   private static final TableName t1_su = TableName.valueOf("t1_syncup");
   private static final TableName t2_su = TableName.valueOf("t2_syncup");
@@ -64,7 +71,6 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
 
   @Before
   public void setUp() throws Exception {
-
     HColumnDescriptor fam;
 
     t1_syncupSource = new HTableDescriptor(t1_su);
@@ -92,7 +98,12 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     t2_syncupTarget.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     t2_syncupTarget.addFamily(fam);
+  }
 
+  @After
+  public void tearDownBase() throws Exception {
+    // Do nothing, just replace the super tearDown. because the super tearDown will use the
+    // out-of-data HBase admin to remove replication peer, which will be result in failure.
   }
 
   /**
@@ -100,7 +111,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
    * check's gone Also check the puts and deletes are not replicated back to
    * the originating cluster.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testSyncUpTool() throws Exception {
 
     /**
@@ -176,7 +187,6 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
      * verify correctly replicated to Slave
      */
     mimicSyncUpAfterPut();
-
   }
 
   protected void setupReplication() throws Exception {
@@ -198,15 +208,11 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
 
     // Get HTable from Master
     ht1Source = connection1.getTable(t1_su);
-    ht1Source.setWriteBufferSize(1024);
     ht2Source = connection1.getTable(t2_su);
-    ht1Source.setWriteBufferSize(1024);
 
     // Get HTable from Peer1
     ht1TargetAtPeer1 = connection2.getTable(t1_su);
-    ht1TargetAtPeer1.setWriteBufferSize(1024);
     ht2TargetAtPeer1 = connection2.getTable(t2_su);
-    ht2TargetAtPeer1.setWriteBufferSize(1024);
 
     /**
      * set M-S : Master: utility1 Slave1: utility2
@@ -281,14 +287,14 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     // delete half of the rows
     for (int i = 0; i < NB_ROWS_IN_BATCH / 2; i++) {
       String rowKey = "row" + i;
-      Delete del = new Delete(rowKey.getBytes());
+      Delete del = new Delete(Bytes.toBytes(rowKey));
       list.add(del);
     }
     ht1Source.delete(list);
 
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       String rowKey = "row" + i;
-      Delete del = new Delete(rowKey.getBytes());
+      Delete del = new Delete(Bytes.toBytes(rowKey));
       list.add(del);
     }
     ht2Source.delete(list);
@@ -421,9 +427,6 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
   }
 
   protected void syncUp(HBaseTestingUtility ut) throws Exception {
-    ReplicationSyncUp.setConfigure(ut.getConfiguration());
-    String[] arguments = new String[] { null };
-    new ReplicationSyncUp().run(arguments);
+    ToolRunner.run(ut.getConfiguration(), new ReplicationSyncUp(), new String[0]);
   }
-
 }

@@ -21,15 +21,17 @@ module Shell
   module Commands
     class CompactionState < Command
       def help
-        return <<-EOF
-          Gets compaction status for a table:
+        <<-EOF
+          Gets compaction status (MAJOR, MAJOR_AND_MINOR, MINOR, NONE) for a table:
           hbase> compaction_state 'ns1:t1'
           hbase> compaction_state 't1'
         EOF
       end
 
       def command(table_name)
-        admin.getCompactionState(table_name)
+        rv = admin.getCompactionState(table_name)
+        formatter.row([rv])
+        rv
       end
     end
   end

@@ -23,9 +23,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -42,16 +41,19 @@ import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This testcase is used to ensure that the compaction marker will fail a compaction if the RS is
@@ -60,6 +62,12 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, LargeTests.class })
 public class TestCompactionInDeadRegionServer {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactionInDeadRegionServer.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionInDeadRegionServer.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -73,10 +81,6 @@ public class TestCompactionInDeadRegionServer {
 
     public IgnoreYouAreDeadRS(Configuration conf) throws IOException, InterruptedException {
       super(conf);
-    }
-
-    public IgnoreYouAreDeadRS(Configuration conf, CoordinatedStateManager csm) throws IOException {
-      super(conf, csm);
     }
 
     @Override
@@ -96,7 +100,7 @@ public class TestCompactionInDeadRegionServer {
   @Parameters(name = "{index}: wal={0}")
   public static List<Object[]> params() {
     return Arrays.asList(new Object[] { FSHLogProvider.class },
-      new Object[] { AsyncFSWALProvider.class });
+        new Object[] { AsyncFSWALProvider.class });
   }
 
   @Before
@@ -124,12 +128,27 @@ public class TestCompactionInDeadRegionServer {
 
   @Test
   public void test() throws Exception {
+    HRegionServer regionSvr = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    HRegion region = regionSvr.getRegions(TABLE_NAME).get(0);
+    String regName = region.getRegionInfo().getEncodedName();
+    List<HRegion> metaRegs = regionSvr.getRegions(TableName.META_TABLE_NAME);
+    if (metaRegs != null && !metaRegs.isEmpty()) {
+      LOG.info("meta is on the same server: " + regionSvr);
+      // when region is on same server as hbase:meta, reassigning meta would abort the server
+      // since WAL is broken.
+      // so the region is moved to a different server
+      HRegionServer otherRs = UTIL.getOtherRegionServer(regionSvr);
+      UTIL.moveRegionAndWait(region.getRegionInfo(), otherRs.getServerName());
+      LOG.info("Moved region: " + regName + " to " + otherRs.getServerName());
+    }
     HRegionServer rsToSuspend = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    HRegion region = (HRegion) rsToSuspend.getOnlineRegions(TABLE_NAME).get(0);
-    ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
+    region = rsToSuspend.getRegions(TABLE_NAME).get(0);
+
+    ZKWatcher watcher = UTIL.getZooKeeperWatcher();
     watcher.getRecoverableZooKeeper().delete(
-      ZKUtil.joinZNode(watcher.getZNodePaths().rsZNode, rsToSuspend.getServerName().toString()),
+      ZNodePaths.joinZNode(watcher.getZNodePaths().rsZNode, rsToSuspend.getServerName().toString()),
       -1);
+    LOG.info("suspending " + rsToSuspend);
     UTIL.waitFor(60000, 1000, new ExplainingPredicate<Exception>() {
 
       @Override
@@ -137,7 +156,7 @@ public class TestCompactionInDeadRegionServer {
         for (RegionServerThread thread : UTIL.getHBaseCluster().getRegionServerThreads()) {
           HRegionServer rs = thread.getRegionServer();
           if (rs != rsToSuspend) {
-            return !rs.getOnlineRegions(TABLE_NAME).isEmpty();
+            return !rs.getRegions(TABLE_NAME).isEmpty();
           }
         }
         return false;
@@ -153,7 +172,7 @@ public class TestCompactionInDeadRegionServer {
       fail("Should fail as our wal file has already been closed, " +
           "and walDir has also been renamed");
     } catch (Exception e) {
-      // expected
+      LOG.debug("expected exception: ", e);
     }
     Table table = UTIL.getConnection().getTable(TABLE_NAME);
     // should not hit FNFE

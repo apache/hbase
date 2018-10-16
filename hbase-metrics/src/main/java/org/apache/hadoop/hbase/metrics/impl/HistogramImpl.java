@@ -16,13 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.metrics.impl;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Histogram;
 import org.apache.hadoop.hbase.metrics.Snapshot;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Custom histogram implementation based on FastLongHistogram. Dropwizard-based histograms are
@@ -67,6 +65,7 @@ public class HistogramImpl implements Histogram {
     histogram.add(value, 1);
   }
 
+  @Override
   public long getCount() {
     return counter.getCount();
   }
@@ -75,6 +74,7 @@ public class HistogramImpl implements Histogram {
     return this.histogram.getMax();
   }
 
+  @Override
   public Snapshot snapshot() {
     return histogram.snapshotAndReset();
   }

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,27 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
-import junit.framework.TestCase;
-
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
+import junit.framework.TestCase;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test requirement that root directory must be a URI
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestRootPath extends TestCase {
-  private static final Log LOG = LogFactory.getLog(TestRootPath.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRootPath.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRootPath.class);
 
   /** The test */
   public void testRootPath() {
@@ -44,14 +47,14 @@ public class TestRootPath extends TestCase {
       // Try good path
       FSUtils.validateRootPath(new Path("file:///tmp/hbase/hbase"));
     } catch (IOException e) {
-      LOG.fatal("Unexpected exception checking valid path:", e);
+      LOG.error(HBaseMarkers.FATAL, "Unexpected exception checking valid path:", e);
       fail();
     }
     try {
       // Try good path
       FSUtils.validateRootPath(new Path("hdfs://a:9000/hbase"));
     } catch (IOException e) {
-      LOG.fatal("Unexpected exception checking valid path:", e);
+      LOG.error(HBaseMarkers.FATAL, "Unexpected exception checking valid path:", e);
       fail();
     }
     try {

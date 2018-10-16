@@ -21,10 +21,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -33,7 +33,7 @@ import org.apache.hadoop.util.DataChecksum;
  */
 @InterfaceAudience.Private
 public class ChecksumUtil {
-  public static final Log LOG = LogFactory.getLog(ChecksumUtil.class);
+  public static final Logger LOG = LoggerFactory.getLogger(ChecksumUtil.class);
 
   /** This is used to reserve space in a byte buffer */
   private static byte[] DUMMY_VALUE = new byte[128 * HFileBlock.CHECKSUM_SIZE];

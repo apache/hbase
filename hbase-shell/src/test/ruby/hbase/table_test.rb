@@ -106,18 +106,12 @@ module Hbase
       @test_table = table(@test_name)
       
       # Insert data to perform delete operations
-      @test_table.put("101", "x:a", "1")
-      @test_table.put("101", "x:a", "2", Time.now.to_i)
-      
-      @test_table.put("102", "x:a", "1", 1212)
-      @test_table.put("102", "x:a", "2", 1213)
-      
-      @test_table.put(103, "x:a", "3")
-      @test_table.put(103, "x:a", "4")
-      
+      @test_table.put("102", "x:a", "2", 1212)
+      @test_table.put(103, "x:a", "3", 1214)
+
       @test_table.put("104", "x:a", 5)
       @test_table.put("104", "x:b", 6)
-      
+
       @test_table.put(105, "x:a", "3")
       @test_table.put(105, "x:a", "4")
 
@@ -152,21 +146,16 @@ module Hbase
     end
 
     #-------------------------------------------------------------------------------
-
-    define_test "delete should work without timestamp" do
-      @test_table.delete("101", "x:a")
-      res = @test_table._get_internal('101', 'x:a')
-      assert_nil(res)
-    end
-
-    define_test "delete should work with timestamp" do
-      @test_table.delete("102", "x:a", 1214)
+    define_test "delete should work with string keys" do
+      @test_table.delete('102', 'x:a', 1212)
       res = @test_table._get_internal('102', 'x:a')
       assert_nil(res)
     end
 
     define_test "delete should work with integer keys" do
-      @test_table.delete(103, "x:a")
+      res = @test_table._get_internal('103', 'x:a')
+      assert_not_nil(res)
+      @test_table.delete(103, 'x:a', 1214)
       res = @test_table._get_internal('103', 'x:a')
       assert_nil(res)
     end
@@ -197,7 +186,19 @@ module Hbase
       @test_table.append("123", 'x:cnt2', '123')
       assert_equal("123123", @test_table._append_internal("123", 'x:cnt2', '123'))
     end
+
+    define_test 'append should work without qualifier' do
+      @test_table.append('1001', 'x', '123')
+      assert_equal('123321', @test_table._append_internal('1001', 'x', '321'))
+    end
+
     #-------------------------------------------------------------------------------
+    define_test 'incr should work without qualifier' do
+      @test_table.incr('1010', 'x', 123)
+      assert_equal(123, @test_table._get_counter_internal('1010', 'x'))
+      @test_table.incr('1010', 'x', 123)
+      assert_equal(246, @test_table._get_counter_internal('1010', 'x'))
+    end
 
     define_test "get_counter should work with integer keys" do
       @test_table.incr(12345, 'x:cnt')
@@ -210,6 +211,7 @@ module Hbase
   end
 
   # Complex data management methods tests
+  # rubocop:disable Metrics/ClassLength
   class TableComplexMethodsTest < Test::Unit::TestCase
     include TestHelpers
 
@@ -266,7 +268,7 @@ module Hbase
         count = @test_table.count COLUMNS => [ 'x:c']
         assert(count == 1)
       ensure
-        @test_table.delete(4, "x:c")
+        @test_table.deleteall(4, 'x:c')
       end
     end
 
@@ -348,8 +350,9 @@ module Hbase
       assert_nil(res['x:a'])
       assert_not_nil(res['x:b'])
     end
-    
-     define_test "get should work with hash columns spec and TIMESTAMP and AUTHORIZATIONS" do
+
+    define_test 'get should work with hash columns spec and TIMESTAMP and' \
+                ' AUTHORIZATIONS' do
       res = @test_table._get_internal('1', TIMESTAMP => 1234, AUTHORIZATIONS=>['PRIVATE'])
       assert_nil(res)
     end
@@ -413,8 +416,8 @@ module Hbase
           assert_not_nil(/value=98/.match(res['x:d']))
         ensure
           # clean up newly added columns for this test only.
-          @test_table.delete(1, "x:c")
-          @test_table.delete(1, "x:d")
+          @test_table.deleteall(1, 'x:c')
+          @test_table.deleteall(1, 'x:d')
         end
     end
 
@@ -430,7 +433,22 @@ module Hbase
         assert_nil(res)
       ensure
         # clean up newly added columns for this test only.
-        @test_table.delete(1, "x:v")
+        @test_table.deleteall(1, 'x:v')
+      end
+    end
+
+    define_test 'get should work with a custom converter class' do
+      @test_table.put(1, 'x:v', 1234)
+      begin
+        res = @test_table._get_internal('1', 'COLUMNS' =>
+                    ['x:v:c(org.apache.hadoop.hbase.util.Bytes).len'])
+        assert_not_nil(res)
+        assert_kind_of(Hash, res)
+        assert_not_nil(res['x:v'])
+        assert_not_nil(/value=4/.match(res['x:v']))
+      ensure
+        # clean up newly added columns for this test only.
+        @test_table.deleteall(1, 'x:v')
       end
     end
 
@@ -568,21 +586,40 @@ module Hbase
       @test_table.put(2, "x:raw1", 11)
 
       args = {}
-      numRows = 0
-      count = @test_table._scan_internal(args) do |row, cells| # Normal Scan
-        numRows += 1
+      num_rows = 0
+      @test_table._scan_internal(args) do # Normal Scan
+        num_rows += 1
       end
-      assert_equal(numRows, 2, "Num rows scanned without RAW/VERSIONS are not 2") 
+      assert_equal(num_rows, 2,
+                   'Num rows scanned without RAW/VERSIONS are not 2')
 
-      args = {VERSIONS=>10,RAW=>true} # Since 4 versions of row with rowkey 2 is been added, we can use any number >= 4 for VERSIONS to scan all 4 versions.
-      numRows = 0
-      count = @test_table._scan_internal(args) do |row, cells| # Raw Scan
-        numRows += 1
+      args = { VERSIONS => 10, RAW => true } # Since 4 versions of row with rowkey 2 is been added, we can use any number >= 4 for VERSIONS to scan all 4 versions.
+      num_rows = 0
+      @test_table._scan_internal(args) do # Raw Scan
+        num_rows += 1
       end
-      assert_equal(numRows, 5, "Num rows scanned without RAW/VERSIONS are not 5") # 5 since , 1 from row key '1' and other 4 from row key '4'
+      # 5 since , 1 from row key '1' and other 4 from row key '4'
+      assert_equal(num_rows, 5,
+                   'Num rows scanned without RAW/VERSIONS are not 5')
+
+      @test_table.delete(1, 'x:a')
+      args = {}
+      num_rows = 0
+      @test_table._scan_internal(args) do # Normal Scan
+        num_rows += 1
+      end
+      assert_equal(num_rows, 1,
+                   'Num rows scanned without RAW/VERSIONS are not 1')
+
+      args = { VERSIONS => 10, RAW => true }
+      num_rows = 0
+      @test_table._scan_internal(args) do # Raw Scan
+        num_rows += 1
+      end
+      # 6 since , 2 from row key '1' and other 4 from row key '4'
+      assert_equal(num_rows, 6,
+                   'Num rows scanned without RAW/VERSIONS are not 5')
     end
-
-
 
     define_test "scan should fail on invalid COLUMNS parameter types" do
       assert_raise(ArgumentError) do
@@ -613,8 +650,8 @@ module Hbase
         assert_not_nil(/value=98/.match(res['1']['x:d']))
       ensure
         # clean up newly added columns for this test only.
-        @test_table.delete(1, "x:c")
-        @test_table.delete(1, "x:d")
+        @test_table.deleteall(1, 'x:c')
+        @test_table.deleteall(1, 'x:d')
       end
     end
 
@@ -632,7 +669,7 @@ module Hbase
         assert_equal(res, {}, "Result is not empty")
       ensure
         # clean up newly added columns for this test only.
-        @test_table.delete(1, "x:v")
+        @test_table.deleteall(1, 'x:v')
       end
     end
 
@@ -648,13 +685,28 @@ module Hbase
         assert_nil(res['2'])
       ensure
         # clean up newly added columns for this test only.
-        @test_table.delete(4, "x:a")
+        @test_table.deleteall(4, 'x:a')
       end
     end
 
     define_test "scan hbase meta table" do
       res = table("hbase:meta")._scan_internal
       assert_not_nil(res)
+    end
+
+    define_test 'scan should work with a custom converter class' do
+      @test_table.put(1, 'x:v', 1234)
+      begin
+        res = @test_table._scan_internal 'COLUMNS' =>
+                    ['x:v:c(org.apache.hadoop.hbase.util.Bytes).len']
+        assert_not_nil(res)
+        assert_kind_of(Hash, res)
+        assert_not_nil(res['1']['x:v'])
+        assert_not_nil(/value=4/.match(res['1']['x:v']))
+      ensure
+        # clean up newly added columns for this test only.
+        @test_table.deleteall(1, 'x:v')
+      end
     end
 
     define_test "mutation with TTL should expire" do
@@ -666,7 +718,7 @@ module Hbase
         res = @test_table._get_internal('ttlTest', 'x:a')
         assert_nil(res)
       ensure
-        @test_table.delete('ttlTest', 'x:a')
+        @test_table.deleteall('ttlTest', 'x:a')
       end
     end
 
@@ -687,5 +739,30 @@ module Hbase
       assert_equal(0, splits.size)
       assert_equal([], splits)
     end
+
+    define_test 'Split count for a table with region replicas' do
+      @test_table_name = 'tableWithRegionReplicas'
+      create_test_table_with_region_replicas(@test_table_name, 3,
+                                             SPLITS => ['10'])
+      @table = table(@test_table_name)
+      splits = @table._get_splits_internal
+      # In this case, total splits should be 1 even if the number of region
+      # replicas is 3.
+      assert_equal(1, splits.size)
+      assert_equal(['10'], splits)
+      drop_test_table(@test_table_name)
+    end
+
+    define_test "scan should throw an exception on a disabled table" do
+      @test_table.disable
+      begin
+        assert_raise(RuntimeError) do
+          @test_table.scan
+        end
+      ensure
+        @test_table.enable
+      end
+    end
   end
+  # rubocop:enable Metrics/ClassLength
 end

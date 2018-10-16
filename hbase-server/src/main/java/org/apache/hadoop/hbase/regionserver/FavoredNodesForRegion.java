@@ -19,19 +19,16 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.net.InetSocketAddress;
-import java.util.List; 
+import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Abstraction that allows different modules in RegionServer to update/get
  * the favored nodes information for regions. 
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface FavoredNodesForRegion {
   /**
    * Used to update the favored nodes mapping when required.

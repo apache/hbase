@@ -22,17 +22,24 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An example coprocessor that collects some metrics to demonstrate the usage of exporting custom
@@ -45,36 +52,76 @@ import org.apache.hadoop.hbase.metrics.Timer;
  *
  * @see ExampleMasterObserverWithMetrics
  */
-public class ExampleRegionObserverWithMetrics implements RegionObserver {
+@InterfaceAudience.Private
+public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
 
   private Counter preGetCounter;
+  private Counter flushCounter;
+  private Counter filesCompactedCounter;
   private Timer costlyOperationTimer;
+  private ExampleRegionObserver observer;
 
-  @Override
-  public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
-      throws IOException {
-    // Increment the Counter whenever the coprocessor is called
-    preGetCounter.increment();
-  }
+  class ExampleRegionObserver implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
-  @Override
-  public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
-                        List<Cell> results) throws IOException {
-    // do a costly (high latency) operation which we want to measure how long it takes by
-    // using a Timer (which is a Meter and a Histogram).
-    long start = System.nanoTime();
-    try {
-      performCostlyOperation();
-    } finally {
-      costlyOperationTimer.updateNanos(System.nanoTime() - start);
+    @Override
+    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+        List<Cell> results) throws IOException {
+      // Increment the Counter whenever the coprocessor is called
+      preGetCounter.increment();
+    }
+
+    @Override
+    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+        List<Cell> results) throws IOException {
+      // do a costly (high latency) operation which we want to measure how long it takes by
+      // using a Timer (which is a Meter and a Histogram).
+      long start = System.nanoTime();
+      try {
+        performCostlyOperation();
+      } finally {
+        costlyOperationTimer.updateNanos(System.nanoTime() - start);
+      }
+    }
+
+    @Override
+    public void postFlush(
+        ObserverContext<RegionCoprocessorEnvironment> c,
+        FlushLifeCycleTracker tracker) throws IOException {
+      flushCounter.increment();
+    }
+
+    @Override
+    public void postFlush(
+        ObserverContext<RegionCoprocessorEnvironment> c, Store store, StoreFile resultFile,
+        FlushLifeCycleTracker tracker) throws IOException {
+      flushCounter.increment();
+    }
+
+    @Override
+    public void postCompactSelection(
+        ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+        CompactionRequest request) {
+      if (selected != null) {
+        filesCompactedCounter.increment(selected.size());
+      }
+    }
+
+    private void performCostlyOperation() {
+      try {
+        // simulate the operation by sleeping.
+        Thread.sleep(ThreadLocalRandom.current().nextLong(100));
+      } catch (InterruptedException ignore) {
+      }
     }
   }
 
-  private void performCostlyOperation() {
-    try {
-      // simulate the operation by sleeping.
-      Thread.sleep(ThreadLocalRandom.current().nextLong(100));
-    } catch (InterruptedException ignore) {}
+  @Override public Optional<RegionObserver> getRegionObserver() {
+    return Optional.of(observer);
   }
 
   @Override
@@ -88,6 +135,7 @@ public class ExampleRegionObserverWithMetrics implements RegionObserver {
       // at the region server level per-regionserver.
       MetricRegistry registry =
           ((RegionCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
+      observer = new ExampleRegionObserver();
 
       if (preGetCounter == null) {
         // Create a new Counter, or get the already registered counter.
@@ -102,6 +150,17 @@ public class ExampleRegionObserverWithMetrics implements RegionObserver {
       if (costlyOperationTimer == null) {
         // Create a Timer to track execution times for the costly operation.
         costlyOperationTimer = registry.timer("costlyOperation");
+      }
+
+      if (flushCounter == null) {
+        // Track the number of flushes that have completed
+        flushCounter = registry.counter("flushesCompleted");
+      }
+
+      if (filesCompactedCounter == null) {
+        // Track the number of files that were compacted (many files may be rewritten in a single
+        // compaction).
+        filesCompactedCounter = registry.counter("filesCompacted");
       }
     }
   }

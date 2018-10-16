@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,36 +25,42 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class which verifies that region sizes are reported to the master.
  */
 @Category(MediumTests.class)
 public class TestRegionSizeUse {
-  private static final Log LOG = LogFactory.getLog(TestRegionSizeUse.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionSizeUse.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionSizeUse.class);
   private static final int SIZE_PER_VALUE = 256;
   private static final int NUM_SPLITS = 10;
   private static final String F1 = "f1";
@@ -87,11 +94,11 @@ public class TestRegionSizeUse {
     admin.flush(tn);
     LOG.debug("Data flushed to disk");
     // Get the final region distribution
-    final List<HRegionInfo> regions = TEST_UTIL.getAdmin().getTableRegions(tn);
+    final List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(tn);
 
     HMaster master = cluster.getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
-    Map<HRegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
+    Map<RegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
     // Wait until we get all of the region reports for our table
     // The table may split, so make sure we have at least as many as expected right after we
     // finished writing the data.
@@ -181,9 +188,9 @@ public class TestRegionSizeUse {
    * @param regions A collection of region sizes
    * @return The number of regions for the given table.
    */
-  private int numRegionsForTable(TableName tn, Map<HRegionInfo,Long> regions) {
+  private int numRegionsForTable(TableName tn, Map<RegionInfo,Long> regions) {
     int sum = 0;
-    for (Entry<HRegionInfo,Long> entry : regions.entrySet()) {
+    for (Entry<RegionInfo,Long> entry : regions.entrySet()) {
       if (tn.equals(entry.getKey().getTable()) && 0 < entry.getValue()) {
         sum++;
       }

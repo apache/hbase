@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -35,11 +33,15 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncTableScanAll.class);
+
   @Parameter(0)
   public String tableType;
 
   @Parameter(1)
-  public Supplier<AsyncTableBase> getTable;
+  public Supplier<AsyncTable<?>> getTable;
 
   @Parameter(2)
   public String scanType;
@@ -47,22 +49,9 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
   @Parameter(3)
   public Supplier<Scan> scanCreator;
 
-  private static RawAsyncTable getRawTable() {
-    return ASYNC_CONN.getRawTable(TABLE_NAME);
-  }
-
-  private static AsyncTable getTable() {
-    return ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
-  }
-
   @Parameters(name = "{index}: table={0}, scan={2}")
   public static List<Object[]> params() {
-    Supplier<AsyncTableBase> rawTable = TestAsyncTableScanAll::getRawTable;
-    Supplier<AsyncTableBase> normalTable = TestAsyncTableScanAll::getTable;
-    return getScanCreater().stream()
-        .flatMap(p -> Arrays.asList(new Object[] { "raw", rawTable, p.getFirst(), p.getSecond() },
-          new Object[] { "normal", normalTable, p.getFirst(), p.getSecond() }).stream())
-        .collect(Collectors.toList());
+    return getTableAndScanCreatorParams();
   }
 
   @Override

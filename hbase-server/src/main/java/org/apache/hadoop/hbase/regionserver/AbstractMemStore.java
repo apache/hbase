@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,18 +18,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -47,45 +47,55 @@ public abstract class AbstractMemStore implements MemStore {
   private final CellComparator comparator;
 
   // active segment absorbs write operations
-  protected volatile MutableSegment active;
+  private volatile MutableSegment active;
   // Snapshot of memstore.  Made for flusher.
   protected volatile ImmutableSegment snapshot;
   protected volatile long snapshotId;
   // Used to track when to flush
   private volatile long timeOfOldestEdit;
 
-  public final static long FIXED_OVERHEAD = ClassSize.OBJECT
-          + (4 * ClassSize.REFERENCE)
+  protected RegionServicesForStores regionServices;
+
+  public final static long FIXED_OVERHEAD = (long) ClassSize.OBJECT
+          + (5 * ClassSize.REFERENCE)
           + (2 * Bytes.SIZEOF_LONG); // snapshotId, timeOfOldestEdit
 
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD;
 
-  public static long addToScanners(List<? extends Segment> segments, long readPt, long order,
+  public static void addToScanners(List<? extends Segment> segments, long readPt,
       List<KeyValueScanner> scanners) {
     for (Segment item : segments) {
-      order = addToScanners(item, readPt, order, scanners);
+      addToScanners(item, readPt, scanners);
     }
-    return order;
   }
 
-  protected static long addToScanners(Segment segment, long readPt, long order,
+  protected static void addToScanners(Segment segment, long readPt,
       List<KeyValueScanner> scanners) {
-    scanners.add(segment.getScanner(readPt, order));
-    return order - 1;
+    scanners.add(segment.getScanner(readPt));
   }
 
-  protected AbstractMemStore(final Configuration conf, final CellComparator c) {
+  protected AbstractMemStore(final Configuration conf, final CellComparator c,
+      final RegionServicesForStores regionServices) {
     this.conf = conf;
     this.comparator = c;
+    this.regionServices = regionServices;
     resetActive();
     this.snapshot = SegmentFactory.instance().createImmutableSegment(c);
     this.snapshotId = NO_SNAPSHOT_ID;
   }
 
   protected void resetActive() {
+    // Record the MutableSegment' heap overhead when initialing
+    MemStoreSizing memstoreAccounting = new NonThreadSafeMemStoreSizing();
     // Reset heap to not include any keys
-    this.active = SegmentFactory.instance().createMutableSegment(conf, comparator);
-    this.timeOfOldestEdit = Long.MAX_VALUE;
+    active = SegmentFactory.instance().createMutableSegment(conf, comparator, memstoreAccounting);
+    // regionServices can be null when testing
+    if (regionServices != null) {
+      regionServices.addMemStoreSize(memstoreAccounting.getDataSize(),
+          memstoreAccounting.getHeapSize(),
+          memstoreAccounting.getOffHeapSize());
+    }
+    timeOfOldestEdit = Long.MAX_VALUE;
   }
 
   /**
@@ -96,20 +106,60 @@ public abstract class AbstractMemStore implements MemStore {
   public abstract void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent);
 
   @Override
-  public void add(Iterable<Cell> cells, MemstoreSize memstoreSize) {
+  public void add(Iterable<Cell> cells, MemStoreSizing memstoreSizing) {
     for (Cell cell : cells) {
-      add(cell, memstoreSize);
+      add(cell, memstoreSizing);
     }
   }
 
   @Override
-  public void add(Cell cell, MemstoreSize memstoreSize) {
-    Cell toAdd = maybeCloneWithAllocator(cell);
+  public void add(Cell cell, MemStoreSizing memstoreSizing) {
+    doAddOrUpsert(cell, 0, memstoreSizing, true);  }
+
+  /*
+   * Inserts the specified Cell into MemStore and deletes any existing
+   * versions of the same row/family/qualifier as the specified Cell.
+   * <p>
+   * First, the specified Cell is inserted into the Memstore.
+   * <p>
+   * If there are any existing Cell in this MemStore with the same row,
+   * family, and qualifier, they are removed.
+   * <p>
+   * Callers must hold the read lock.
+   *
+   * @param cell the cell to be updated
+   * @param readpoint readpoint below which we can safely remove duplicate KVs
+   * @param memstoreSizing object to accumulate changed size
+   */
+  private void upsert(Cell cell, long readpoint, MemStoreSizing memstoreSizing) {
+    doAddOrUpsert(cell, readpoint, memstoreSizing, false);
+  }
+
+  private void doAddOrUpsert(Cell cell, long readpoint, MemStoreSizing memstoreSizing, boolean
+      doAdd) {
+    MutableSegment currentActive;
+    boolean succ = false;
+    while (!succ) {
+      currentActive = getActive();
+      succ = preUpdate(currentActive, cell, memstoreSizing);
+      if (succ) {
+        if(doAdd) {
+          doAdd(currentActive, cell, memstoreSizing);
+        } else {
+          doUpsert(currentActive, cell, readpoint, memstoreSizing);
+        }
+        postUpdate(currentActive);
+      }
+    }
+  }
+
+  private void doAdd(MutableSegment currentActive, Cell cell, MemStoreSizing memstoreSizing) {
+    Cell toAdd = maybeCloneWithAllocator(currentActive, cell, false);
     boolean mslabUsed = (toAdd != cell);
-    // This cell data is backed by the same byte[] where we read request in RPC(See HBASE-15180). By
-    // default MSLAB is ON and we might have copied cell to MSLAB area. If not we must do below deep
-    // copy. Or else we will keep referring to the bigger chunk of memory and prevent it from
-    // getting GCed.
+    // This cell data is backed by the same byte[] where we read request in RPC(See
+    // HBASE-15180). By default MSLAB is ON and we might have copied cell to MSLAB area. If
+    // not we must do below deep copy. Or else we will keep referring to the bigger chunk of
+    // memory and prevent it from getting GCed.
     // Copy to MSLAB would not have happened if
     // 1. MSLAB is turned OFF. See "hbase.hregion.memstore.mslab.enabled"
     // 2. When the size of the cell is bigger than the max size supported by MSLAB. See
@@ -118,8 +168,41 @@ public abstract class AbstractMemStore implements MemStore {
     if (!mslabUsed) {
       toAdd = deepCopyIfNeeded(toAdd);
     }
-    internalAdd(toAdd, mslabUsed, memstoreSize);
+    internalAdd(currentActive, toAdd, mslabUsed, memstoreSizing);
   }
+
+  private void doUpsert(MutableSegment currentActive, Cell cell, long readpoint, MemStoreSizing
+      memstoreSizing) {
+    // Add the Cell to the MemStore
+    // Use the internalAdd method here since we (a) already have a lock
+    // and (b) cannot safely use the MSLAB here without potentially
+    // hitting OOME - see TestMemStore.testUpsertMSLAB for a
+    // test that triggers the pathological case if we don't avoid MSLAB
+    // here.
+    // This cell data is backed by the same byte[] where we read request in RPC(See
+    // HBASE-15180). We must do below deep copy. Or else we will keep referring to the bigger
+    // chunk of memory and prevent it from getting GCed.
+    cell = deepCopyIfNeeded(cell);
+    boolean sizeAddedPreOperation = sizeAddedPreOperation();
+    currentActive.upsert(cell, readpoint, memstoreSizing, sizeAddedPreOperation);
+    setOldestEditTimeToNow();
+  }
+
+    /**
+     * Issue any synchronization and test needed before applying the update
+     * @param currentActive the segment to be updated
+     * @param cell the cell to be added
+     * @param memstoreSizing object to accumulate region size changes
+     * @return true iff can proceed with applying the update
+     */
+  protected abstract boolean preUpdate(MutableSegment currentActive, Cell cell,
+      MemStoreSizing memstoreSizing);
+
+  /**
+   * Issue any post update synchronization and tests
+   * @param currentActive updated segment
+   */
+  protected abstract void postUpdate(MutableSegment currentActive);
 
   private static Cell deepCopyIfNeeded(Cell cell) {
     if (cell instanceof ExtendedCell) {
@@ -129,9 +212,9 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   @Override
-  public void upsert(Iterable<Cell> cells, long readpoint, MemstoreSize memstoreSize) {
+  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing) {
     for (Cell cell : cells) {
-      upsert(cell, readpoint, memstoreSize);
+      upsert(cell, readpoint, memstoreSizing);
     }
   }
 
@@ -166,13 +249,13 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   @Override
-  public MemstoreSize getSnapshotSize() {
-    return new MemstoreSize(this.snapshot.keySize(), this.snapshot.heapSize());
+  public MemStoreSize getSnapshotSize() {
+    return this.snapshot.getMemStoreSize();
   }
 
   @Override
   public String toString() {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     int i = 1;
     try {
       for (Segment segment : getSegments()) {
@@ -189,42 +272,11 @@ public abstract class AbstractMemStore implements MemStore {
     return conf;
   }
 
-  protected void dump(Log log) {
-    active.dump(log);
+  protected void dump(Logger log) {
+    getActive().dump(log);
     snapshot.dump(log);
   }
 
-
-  /*
-   * Inserts the specified Cell into MemStore and deletes any existing
-   * versions of the same row/family/qualifier as the specified Cell.
-   * <p>
-   * First, the specified Cell is inserted into the Memstore.
-   * <p>
-   * If there are any existing Cell in this MemStore with the same row,
-   * family, and qualifier, they are removed.
-   * <p>
-   * Callers must hold the read lock.
-   *
-   * @param cell the cell to be updated
-   * @param readpoint readpoint below which we can safely remove duplicate KVs
-   * @param memstoreSize
-   */
-  private void upsert(Cell cell, long readpoint, MemstoreSize memstoreSize) {
-    // Add the Cell to the MemStore
-    // Use the internalAdd method here since we (a) already have a lock
-    // and (b) cannot safely use the MSLAB here without potentially
-    // hitting OOME - see TestMemStore.testUpsertMSLAB for a
-    // test that triggers the pathological case if we don't avoid MSLAB
-    // here.
-    // This cell data is backed by the same byte[] where we read request in RPC(See HBASE-15180). We
-    // must do below deep copy. Or else we will keep referring to the bigger chunk of memory and
-    // prevent it from getting GCed.
-    cell = deepCopyIfNeeded(cell);
-    this.active.upsert(cell, readpoint, memstoreSize);
-    setOldestEditTimeToNow();
-    checkActiveSize();
-  }
 
   /*
    * @param a
@@ -264,8 +316,22 @@ public abstract class AbstractMemStore implements MemStore {
     return result;
   }
 
-  private Cell maybeCloneWithAllocator(Cell cell) {
-    return active.maybeCloneWithAllocator(cell);
+  /**
+   * If the segment has a memory allocator the cell is being cloned to this space, and returned;
+   * Otherwise the given cell is returned
+   *
+   * When a cell's size is too big (bigger than maxAlloc), it is not allocated on MSLAB.
+   * Since the process of flattening to CellChunkMap assumes that all cells are allocated on MSLAB,
+   * during this process, the input parameter forceCloneOfBigCell is set to 'true'
+   * and the cell is copied into MSLAB.
+   *
+   * @param cell the cell to clone
+   * @param forceCloneOfBigCell true only during the process of flattening to CellChunkMap.
+   * @return either the given cell or its clone
+   */
+  private Cell maybeCloneWithAllocator(MutableSegment currentActive, Cell cell, boolean
+      forceCloneOfBigCell) {
+    return currentActive.maybeCloneWithAllocator(cell, forceCloneOfBigCell);
   }
 
   /*
@@ -275,13 +341,16 @@ public abstract class AbstractMemStore implements MemStore {
    * Callers should ensure they already have the read lock taken
    * @param toAdd the cell to add
    * @param mslabUsed whether using MSLAB
-   * @param memstoreSize
+   * @param memstoreSizing object to accumulate changed size
    */
-  private void internalAdd(final Cell toAdd, final boolean mslabUsed, MemstoreSize memstoreSize) {
-    active.add(toAdd, mslabUsed, memstoreSize);
+  private void internalAdd(MutableSegment currentActive, final Cell toAdd, final boolean
+      mslabUsed, MemStoreSizing memstoreSizing) {
+    boolean sizeAddedPreOperation = sizeAddedPreOperation();
+    currentActive.add(toAdd, mslabUsed, memstoreSizing, sizeAddedPreOperation);
     setOldestEditTimeToNow();
-    checkActiveSize();
   }
+
+  protected abstract boolean sizeAddedPreOperation();
 
   private void setOldestEditTimeToNow() {
     if (timeOfOldestEdit == Long.MAX_VALUE) {
@@ -313,11 +382,6 @@ public abstract class AbstractMemStore implements MemStore {
   ImmutableSegment getSnapshot() {
     return snapshot;
   }
-
-  /**
-   * Check whether anything need to be done based on the current active set size
-   */
-  protected abstract void checkActiveSize();
 
   /**
    * @return an ordered list of segments from most recent to oldest in memstore

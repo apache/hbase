@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,23 +19,48 @@ package org.apache.hadoop.hbase.nio;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestMultiByteBuff {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultiByteBuff.class);
+
+  /**
+   * Test right answer though we span many sub-buffers.
+   */
+  @Test
+  public void testGetShort() {
+    ByteBuffer bb1 = ByteBuffer.allocate(1);
+    bb1.put((byte)1);
+    ByteBuffer bb2 = ByteBuffer.allocate(1);
+    bb2.put((byte)0);
+    ByteBuffer bb3 = ByteBuffer.allocate(1);
+    bb3.put((byte)2);
+    ByteBuffer bb4 = ByteBuffer.allocate(1);
+    bb4.put((byte)3);
+    MultiByteBuff mbb = new MultiByteBuff(bb1, bb2, bb3, bb4);
+    assertEquals(256, mbb.getShortAfterPosition(0));
+    assertEquals(2, mbb.getShortAfterPosition(1));
+    assertEquals(515, mbb.getShortAfterPosition(2));
+  }
 
   @Test
   public void testWritesAndReads() {
@@ -102,10 +125,10 @@ public class TestMultiByteBuff {
   public void testPutPrimitives() {
     ByteBuffer bb = ByteBuffer.allocate(10);
     SingleByteBuff s = new SingleByteBuff(bb);
-    s.putLong(-4465109508325701663l);
+    s.putLong(-4465109508325701663L);
     bb.rewind();
     long long1 = bb.getLong();
-    assertEquals(long1, -4465109508325701663l);
+    assertEquals(-4465109508325701663L, long1);
     s.position(8);
   }
 
@@ -235,18 +258,18 @@ public class TestMultiByteBuff {
     multi.putLong(l2);
     multi.rewind();
     ByteBuffer sub = multi.asSubByteBuffer(Bytes.SIZEOF_LONG);
-    assertTrue(bb1 == sub);
+    assertEquals(bb1, sub);
     assertEquals(l1, ByteBufferUtils.toLong(sub, sub.position()));
     multi.skip(Bytes.SIZEOF_LONG);
     sub = multi.asSubByteBuffer(Bytes.SIZEOF_LONG);
-    assertFalse(bb1 == sub);
-    assertFalse(bb2 == sub);
+    assertNotEquals(bb1, sub);
+    assertNotEquals(bb2, sub);
     assertEquals(l2, ByteBufferUtils.toLong(sub, sub.position()));
     multi.rewind();
     ObjectIntPair<ByteBuffer> p = new ObjectIntPair<>();
     multi.asSubByteBuffer(8, Bytes.SIZEOF_LONG, p);
-    assertFalse(bb1 == p.getFirst());
-    assertFalse(bb2 == p.getFirst());
+    assertNotEquals(bb1, p.getFirst());
+    assertNotEquals(bb2, p.getFirst());
     assertEquals(0, p.getSecond());
     assertEquals(l2, ByteBufferUtils.toLong(sub, p.getSecond()));
   }
@@ -291,7 +314,7 @@ public class TestMultiByteBuff {
     bres[2] = mbb1.get(4);
     bres[3] = mbb1.get(5);
     int expected = Bytes.toInt(bres);
-    assertEquals(res, expected);
+    assertEquals(expected, res);
   }
 
   @Test
@@ -402,5 +425,36 @@ public class TestMultiByteBuff {
     assertTrue(mbb1.hasRemaining());
     mbb1.get(); // Now we have reached the limit
     assertFalse(mbb1.hasRemaining());
+  }
+
+  @Test
+  public void testGetPrimitivesWithSmallIndividualBBs() {
+    short s = 45;
+    int i = 2345;
+    long l = 75681526L;
+    ByteBuffer bb = ByteBuffer.allocate(14);
+    bb.putShort(s);
+    bb.putInt(i);
+    bb.putLong(l);
+
+    ByteBuffer bb1 = ((ByteBuffer) bb.duplicate().position(0).limit(1)).slice();
+    ByteBuffer bb2 = ((ByteBuffer) bb.duplicate().position(1).limit(3)).slice();
+    ByteBuffer bb3 = ((ByteBuffer) bb.duplicate().position(3).limit(5)).slice();
+    ByteBuffer bb4 = ((ByteBuffer) bb.duplicate().position(5).limit(11)).slice();
+    ByteBuffer bb5 = ((ByteBuffer) bb.duplicate().position(11).limit(12)).slice();
+    ByteBuffer bb6 = ((ByteBuffer) bb.duplicate().position(12).limit(14)).slice();
+    MultiByteBuff mbb = new MultiByteBuff(bb1, bb2, bb3, bb4, bb5, bb6);
+    assertEquals(s, mbb.getShortAfterPosition(0));
+    assertEquals(i, mbb.getIntAfterPosition(2));
+    assertEquals(l, mbb.getLongAfterPosition(6));
+
+    assertEquals(s, mbb.getShort(0));
+    assertEquals(i, mbb.getInt(2));
+    assertEquals(l, mbb.getLong(6));
+
+    mbb.position(0);
+    assertEquals(s, mbb.getShort());
+    assertEquals(i, mbb.getInt());
+    assertEquals(l, mbb.getLong());
   }
 }

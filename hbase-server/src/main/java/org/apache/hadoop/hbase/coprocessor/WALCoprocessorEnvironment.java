@@ -19,8 +19,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface WALCoprocessorEnvironment extends CoprocessorEnvironment {
+public interface WALCoprocessorEnvironment extends CoprocessorEnvironment<WALCoprocessor> {
   /** @return reference to the region server's WAL */
   WAL getWAL();
 

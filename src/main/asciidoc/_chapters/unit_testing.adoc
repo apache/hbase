@@ -33,7 +33,7 @@ For information on unit tests for HBase itself, see <<hbase.tests,hbase.tests>>.
 
 == JUnit
 
-HBase uses link:http://junit.org[JUnit] 4 for unit tests
+HBase uses link:http://junit.org[JUnit] for unit tests
 
 This example will add unit tests to the following example class:
 
@@ -117,8 +117,8 @@ First, add a dependency for Mockito to your Maven POM file.
 
 <dependency>
     <groupId>org.mockito</groupId>
-    <artifactId>mockito-all</artifactId>
-    <version>1.9.5</version>
+    <artifactId>mockito-core</artifactId>
+    <version>2.1.0</version>
     <scope>test</scope>
 </dependency>
 ----
@@ -171,7 +171,7 @@ Similarly, you can now expand into other operations such as Get, Scan, or Delete
 
 == MRUnit
 
-link:http://mrunit.apache.org/[Apache MRUnit] is a library that allows you to unit-test MapReduce jobs.
+link:https://mrunit.apache.org/[Apache MRUnit] is a library that allows you to unit-test MapReduce jobs.
 You can use it to test HBase jobs in the same way as other MapReduce jobs.
 
 Given a MapReduce job that writes to an HBase table called `MyTest`, which has one column family called `CF`, the reducer of such a job could look like the following:
@@ -326,8 +326,6 @@ Next, it creates a table called `MyTest` with one column family, `CF`.
 A record is inserted, a Get is performed from the same table, and the insertion is verified.
 
 NOTE: Starting the mini-cluster takes about 20-30 seconds, but that should be appropriate for integration testing.
-
-To use an HBase mini-cluster on Microsoft Windows, you need to use a Cygwin environment.
 
 See the paper at link:http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/[HBase Case-Study: Using HBaseTestingUtility for Local Testing and
                 Development] (2010) for more information about HBaseTestingUtility.

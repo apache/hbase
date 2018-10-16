@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown by the region server when it is in shutting down state.

@@ -21,11 +21,11 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -51,7 +51,7 @@ public class MemorySizeUtil {
   // Default lower water mark limit is 95% size of memstore size.
   public static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
 
-  private static final Log LOG = LogFactory.getLog(MemorySizeUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MemorySizeUtil.class);
   // a constant to convert a fraction to a percentage
   private static final int CONVERT_TO_PERCENTAGE = 100;
 
@@ -159,7 +159,7 @@ public class MemorySizeUtil {
   /**
    * @return Pair of global memstore size and memory type(ie. on heap or off heap).
    */
-  public static Pair<Long, MemoryType> getGlobalMemstoreSize(Configuration conf) {
+  public static Pair<Long, MemoryType> getGlobalMemStoreSize(Configuration conf) {
     long offheapMSGlobal = conf.getLong(OFFHEAP_MEMSTORE_SIZE_KEY, 0);// Size in MBs
     if (offheapMSGlobal > 0) {
       // Off heap memstore size has not relevance when MSLAB is turned OFF. We will go with making
@@ -178,7 +178,7 @@ public class MemorySizeUtil {
             + " Going with on heap global memstore size ('" + MEMSTORE_SIZE_KEY + "')");
       }
     }
-    return new Pair<>(getOnheapGlobalMemstoreSize(conf), MemoryType.HEAP);
+    return new Pair<>(getOnheapGlobalMemStoreSize(conf), MemoryType.HEAP);
   }
 
   /**
@@ -187,7 +187,7 @@ public class MemorySizeUtil {
    * @param conf
    * @return the onheap global memstore limt
    */
-  public static long getOnheapGlobalMemstoreSize(Configuration conf) {
+  public static long getOnheapGlobalMemStoreSize(Configuration conf) {
     long max = -1L;
     final MemoryUsage usage = safeGetHeapMemoryUsage();
     if (usage != null) {
@@ -205,29 +205,7 @@ public class MemorySizeUtil {
     // L1 block cache is always on heap
     float l1CachePercent = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
         HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    float l2CachePercent = getL2BlockCacheHeapPercent(conf);
-    return l1CachePercent + l2CachePercent;
-  }
-
-  /**
-   * @param conf
-   * @return The on heap size for L2 block cache.
-   */
-  public static float getL2BlockCacheHeapPercent(Configuration conf) {
-    float l2CachePercent = 0.0F;
-    String bucketCacheIOEngineName = conf.get(HConstants.BUCKET_CACHE_IOENGINE_KEY, null);
-    // L2 block cache can be on heap when IOEngine is "heap"
-    if (bucketCacheIOEngineName != null && bucketCacheIOEngineName.startsWith("heap")) {
-      float bucketCachePercentage = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
-      long max = -1L;
-      final MemoryUsage usage = safeGetHeapMemoryUsage();
-      if (usage != null) {
-        max = usage.getMax();
-      }
-      l2CachePercent = bucketCachePercentage < 1 ? bucketCachePercentage
-          : (bucketCachePercentage * 1024 * 1024) / max;
-    }
-    return l2CachePercent;
+    return l1CachePercent;
   }
 
   /**
@@ -235,7 +213,7 @@ public class MemorySizeUtil {
    * @return the number of bytes to use for LRU, negative if disabled.
    * @throws IllegalArgumentException if HFILE_BLOCK_CACHE_SIZE_KEY is > 1.0
    */
-  public static long getLruCacheSize(final Configuration conf) {
+  public static long getOnHeapCacheSize(final Configuration conf) {
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
       HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     if (cachePercentage <= 0.0001f) {
@@ -260,21 +238,13 @@ public class MemorySizeUtil {
    * @return the number of bytes to use for bucket cache, negative if disabled.
    */
   public static long getBucketCacheSize(final Configuration conf) {
-    final float bucketCachePercentage = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
-    long bucketCacheSize;
-    // Values < 1 are treated as % of heap
-    if (bucketCachePercentage < 1) {
-      long max = -1L;
-      final MemoryUsage usage = safeGetHeapMemoryUsage();
-      if (usage != null) {
-        max = usage.getMax();
-      }
-      bucketCacheSize = (long)(max * bucketCachePercentage);
-    // values >= 1 are treated as # of MiB
-    } else {
-      bucketCacheSize = (long)(bucketCachePercentage * 1024 * 1024);
+    // Size configured in MBs
+    float bucketCacheSize = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
+    if (bucketCacheSize < 1) {
+      throw new IllegalArgumentException("Bucket Cache should be minimum 1 MB in size."
+          + "Configure 'hbase.bucketcache.size' with > 1 value");
     }
-    return bucketCacheSize;
+    return (long) (bucketCacheSize * 1024 * 1024);
   }
 
 }

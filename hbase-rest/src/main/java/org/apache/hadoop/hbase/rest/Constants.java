@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Common constants for org.apache.hadoop.hbase.rest
@@ -78,6 +78,7 @@ public interface Constants {
   String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
   String SCAN_FILTER = "filter";
   String SCAN_REVERSED = "reversed";
+  String SCAN_CACHE_BLOCKS = "cacheblocks";
   String CUSTOM_FILTERS = "hbase.rest.custom.filters"; 
 
   String ROW_KEYS_PARAM_NAME = "row";

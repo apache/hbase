@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.errorhandling;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * The ForeignExceptionListener is an interface for objects that can receive a ForeignException.

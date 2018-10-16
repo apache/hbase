@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This should be implemented by the Get/Scan implementations that

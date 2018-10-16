@@ -18,8 +18,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
+import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -41,30 +42,23 @@ import java.util.concurrent.locks.ReentrantLock;
 @InterfaceAudience.Private
 public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
 
+  private static final long serialVersionUID = -6334572230936888291L;
+
   private BlockingQueue<T> stealFromQueue;
 
   private final Lock lock = new ReentrantLock();
-  private final Condition notEmpty = lock.newCondition();
+  private final transient Condition notEmpty = lock.newCondition();
 
-  public StealJobQueue() {
-    this.stealFromQueue = new PriorityBlockingQueue<T>() {
-
-      @Override
-      public boolean offer(T t) {
-        lock.lock();
-        try {
-          notEmpty.signal();
-          return super.offer(t);
-        } finally {
-          lock.unlock();
-        }
-      }
-    };
+  public StealJobQueue(Comparator<? super T> comparator) {
+    this(11, 11, comparator);
   }
 
-  public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity) {
-    super(initCapacity);
-    this.stealFromQueue = new PriorityBlockingQueue<T>(stealFromQueueInitCapacity) {
+  public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity,
+      Comparator<? super T> comparator) {
+    super(initCapacity, comparator);
+    this.stealFromQueue = new PriorityBlockingQueue<T>(stealFromQueueInitCapacity, comparator) {
+
+      private static final long serialVersionUID = -6805567216580184701L;
 
       @Override
       public boolean offer(T t) {

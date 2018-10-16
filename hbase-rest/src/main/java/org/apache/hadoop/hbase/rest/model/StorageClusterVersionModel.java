@@ -19,14 +19,12 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import org.codehaus.jackson.annotate.JsonValue;
-
 import java.io.Serializable;
 
+import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlValue;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Simple representation of the version of the storage cluster
@@ -47,7 +45,7 @@ public class StorageClusterVersionModel implements Serializable {
   /**
    * @return the storage cluster version
    */
-  @XmlValue
+  @XmlAttribute(name="Version")
   public String getVersion() {
     return version;
   }
@@ -62,7 +60,6 @@ public class StorageClusterVersionModel implements Serializable {
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
-  @JsonValue
   @Override
   public String toString() {
     return version;

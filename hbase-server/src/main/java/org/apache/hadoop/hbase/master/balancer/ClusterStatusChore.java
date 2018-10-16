@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.InterruptedIOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 
@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
  */
 @InterfaceAudience.Private
 public class ClusterStatusChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(ClusterStatusChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClusterStatusChore.class);
   private final HMaster master;
   private final LoadBalancer balancer;
 
@@ -46,7 +46,7 @@ public class ClusterStatusChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      balancer.setClusterStatus(master.getClusterStatus());
+      balancer.setClusterMetrics(master.getClusterMetricsWithoutCoprocessor());
     } catch (InterruptedIOException e) {
       LOG.warn("Ignoring interruption", e);
     }

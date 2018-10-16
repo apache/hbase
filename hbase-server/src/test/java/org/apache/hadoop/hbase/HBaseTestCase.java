@@ -19,10 +19,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.NavigableMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,6 +30,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionAsTable;
@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
@@ -49,7 +51,7 @@ import junit.framework.TestCase;
  */
 @Deprecated
 public abstract class HBaseTestCase extends TestCase {
-  private static final Log LOG = LogFactory.getLog(HBaseTestCase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseTestCase.class);
 
   protected final static byte [] fam1 = Bytes.toBytes("colfamily11");
   protected final static byte [] fam2 = Bytes.toBytes("colfamily21");
@@ -70,7 +72,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   protected final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
-  public volatile Configuration conf = HBaseConfiguration.create();
+  public volatile Configuration conf = testUtil.getConfiguration();
   public final FSTableDescriptors fsTableDescriptors;
   {
     try {
@@ -115,7 +117,7 @@ public abstract class HBaseTestCase extends TestCase {
         testDir = FSUtils.getRootDir(conf);
       }
     } catch (Exception e) {
-      LOG.fatal("error during setup", e);
+      LOG.error(HBaseMarkers.FATAL, "error during setup", e);
       throw e;
     }
   }
@@ -129,7 +131,7 @@ public abstract class HBaseTestCase extends TestCase {
         }
       }
     } catch (Exception e) {
-      LOG.fatal("error during tear down", e);
+      LOG.error(HBaseMarkers.FATAL, "error during tear down", e);
     }
     super.tearDown();
   }
@@ -284,7 +286,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    */
   public static long addContent(final Table updater,
-                                   final String columnFamily, 
+                                   final String columnFamily,
                                    final String column,
       final byte [] startKeyBytes, final byte [] endKey, final long ts)
   throws IOException {
@@ -326,7 +328,7 @@ public abstract class HBaseTestCase extends TestCase {
                 }
               }
               byte[][] split =
-                KeyValue.parseColumn(Bytes.toBytes(sb.toString()));
+                CellUtil.parseColumn(Bytes.toBytes(sb.toString()));
               if(split.length == 1) {
                 byte[] qualifier = new byte[0];
                 put.addColumn(split[0], qualifier, t);
@@ -361,31 +363,30 @@ public abstract class HBaseTestCase extends TestCase {
 
   protected void assertResultEquals(final HRegion region, final byte [] row,
       final byte [] family, final byte [] qualifier, final long timestamp,
-      final byte [] value)
-    throws IOException {
-      Get get = new Get(row);
-      get.setTimeStamp(timestamp);
-      Result res = region.get(get);
-      NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
-        res.getMap();
-      byte [] res_value = map.get(family).get(qualifier).get(timestamp);
+      final byte [] value) throws IOException {
+    Get get = new Get(row);
+    get.setTimestamp(timestamp);
+    Result res = region.get(get);
+    NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
+      res.getMap();
+    byte [] res_value = map.get(family).get(qualifier).get(timestamp);
 
-      if (value == null) {
+    if (value == null) {
+      assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
+          " at timestamp " + timestamp, null, res_value);
+    } else {
+      if (res_value == null) {
+        fail(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
+            " at timestamp " + timestamp + "\" was expected to be \"" +
+            Bytes.toStringBinary(value) + " but was null");
+      }
+      if (res_value != null) {
         assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-            " at timestamp " + timestamp, null, res_value);
-      } else {
-        if (res_value == null) {
-          fail(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-              " at timestamp " + timestamp + "\" was expected to be \"" +
-              Bytes.toStringBinary(value) + " but was null");
-        }
-        if (res_value != null) {
-          assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-              " at timestamp " +
-              timestamp, value, new String(res_value));
-        }
+            " at timestamp " +
+            timestamp, value, new String(res_value, StandardCharsets.UTF_8));
       }
     }
+  }
 
   /**
    * Common method to close down a MiniDFSCluster and the associated file system

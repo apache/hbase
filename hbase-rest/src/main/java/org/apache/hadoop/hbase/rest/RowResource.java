@@ -36,42 +36,52 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Cell.Type;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RowResource extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(RowResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowResource.class);
 
-  static final String CHECK_PUT = "put";
-  static final String CHECK_DELETE = "delete";
+  private static final String CHECK_PUT = "put";
+  private static final String CHECK_DELETE = "delete";
+  private static final String CHECK_APPEND = "append";
+  private static final String CHECK_INCREMENT = "increment";
 
-  TableResource tableResource;
-  RowSpec rowspec;
+  private TableResource tableResource;
+  private RowSpec rowspec;
   private String check = null;
+  private boolean returnResult = false;
 
   /**
    * Constructor
    * @param tableResource
    * @param rowspec
    * @param versions
+   * @param check
+   * @param returnResult
    * @throws IOException
    */
   public RowResource(TableResource tableResource, String rowspec,
-      String versions, String check) throws IOException {
+      String versions, String check, String returnResult) throws IOException {
     super();
     this.tableResource = tableResource;
     this.rowspec = new RowSpec(rowspec);
@@ -79,6 +89,9 @@ public class RowResource extends ResourceBase {
       this.rowspec.setMaxVersions(Integer.parseInt(versions));
     }
     this.check = check;
+    if (returnResult != null) {
+      this.returnResult = Boolean.valueOf(returnResult);
+    }
   }
 
   @GET
@@ -182,6 +195,10 @@ public class RowResource extends ResourceBase {
       return checkAndPut(model);
     } else if (CHECK_DELETE.equalsIgnoreCase(check)) {
       return checkAndDelete(model);
+    } else if (CHECK_APPEND.equalsIgnoreCase(check)) {
+      return append(model);
+    } else if (CHECK_INCREMENT.equalsIgnoreCase(check)) {
+      return increment(model);
     } else if (check != null && check.length() > 0) {
       return Response.status(Response.Status.BAD_REQUEST)
         .type(MIMETYPE_TEXT).entity("Invalid check value '" + check + "'" + CRLF)
@@ -218,13 +235,20 @@ public class RowResource extends ResourceBase {
               .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
               .build();
           }
-          byte [][] parts = KeyValue.parseColumn(col);
+          byte [][] parts = CellUtil.parseColumn(col);
           if (parts.length != 2) {
             return Response.status(Response.Status.BAD_REQUEST)
               .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
               .build();
           }
-          put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+          put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(put.getRow())
+              .setFamily(parts[0])
+              .setQualifier(parts[1])
+              .setTimestamp(cell.getTimestamp())
+              .setType(Type.Put)
+              .setValue(cell.getValue())
+              .build());
         }
         puts.add(put);
         if (LOG.isTraceEnabled()) {
@@ -286,13 +310,20 @@ public class RowResource extends ResourceBase {
             .build();
       }
       Put put = new Put(row);
-      byte parts[][] = KeyValue.parseColumn(column);
+      byte parts[][] = CellUtil.parseColumn(column);
       if (parts.length != 2) {
         return Response.status(Response.Status.BAD_REQUEST)
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();
       }
-      put.addImmutable(parts[0], parts[1], timestamp, message);
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+        .setRow(put.getRow())
+        .setFamily(parts[0])
+        .setQualifier(parts[1])
+        .setTimestamp(timestamp)
+        .setType(Type.Put)
+        .setValue(message)
+        .build());
       table = servlet.getTable(tableResource.getName());
       table.put(put);
       if (LOG.isTraceEnabled()) {
@@ -375,7 +406,7 @@ public class RowResource extends ResourceBase {
       delete = new Delete(rowspec.getRow());
 
     for (byte[] column: rowspec.getColumns()) {
-      byte[][] split = KeyValue.parseColumn(column);
+      byte[][] split = CellUtil.parseColumn(column);
       if (rowspec.hasTimestamp()) {
         if (split.length == 1) {
           delete.addFamily(split[0], rowspec.getTimestamp());
@@ -458,7 +489,7 @@ public class RowResource extends ResourceBase {
       boolean retValue;
       CellModel valueToCheckCell = cellModels.get(cellModelCount - 1);
       byte[] valueToCheckColumn = valueToCheckCell.getColumn();
-      byte[][] valueToPutParts = KeyValue.parseColumn(valueToCheckColumn);
+      byte[][] valueToPutParts = CellUtil.parseColumn(valueToCheckColumn);
       if (valueToPutParts.length == 2 && valueToPutParts[1].length > 0) {
         CellModel valueToPutCell = null;
 
@@ -475,15 +506,21 @@ public class RowResource extends ResourceBase {
                     .build();
           }
 
-          byte [][] parts = KeyValue.parseColumn(col);
+          byte [][] parts = CellUtil.parseColumn(col);
 
           if (parts.length != 2) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
                     .build();
           }
-          put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
-
+          put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(put.getRow())
+              .setFamily(parts[0])
+              .setQualifier(parts[1])
+              .setTimestamp(cell.getTimestamp())
+              .setType(Type.Put)
+              .setValue(cell.getValue())
+              .build());
           if(Bytes.equals(col,
                   valueToCheckCell.getColumn())) {
             valueToPutCell = cell;
@@ -495,8 +532,8 @@ public class RowResource extends ResourceBase {
           return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
               .entity("Bad request: The column to put and check do not match." + CRLF).build();
         } else {
-          retValue = table.checkAndPut(key, valueToPutParts[0], valueToPutParts[1],
-            valueToCheckCell.getValue(), put);
+          retValue = table.checkAndMutate(key, valueToPutParts[0]).qualifier(valueToPutParts[1])
+            .ifEquals(valueToCheckCell.getValue()).thenPut(put);
         }
       } else {
         servlet.getMetrics().incrementFailedPutRequests(1);
@@ -544,7 +581,7 @@ public class RowResource extends ResourceBase {
       if (model.getRows().size() != 1) {
         servlet.getMetrics().incrementFailedDeleteRequests(1);
         return Response.status(Response.Status.BAD_REQUEST)
-          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+          .type(MIMETYPE_TEXT).entity("Bad request: Number of rows specified is not 1." + CRLF)
           .build();
       }
       RowModel rowModel = model.getRows().get(0);
@@ -591,7 +628,7 @@ public class RowResource extends ResourceBase {
                     .build();
           }
 
-          parts = KeyValue.parseColumn(col);
+          parts = CellUtil.parseColumn(col);
 
           if (parts.length == 1) {
             // Only Column Family is specified
@@ -608,7 +645,7 @@ public class RowResource extends ResourceBase {
         }
       }
 
-      parts = KeyValue.parseColumn(valueToDeleteColumn);
+      parts = CellUtil.parseColumn(valueToDeleteColumn);
       if (parts.length == 2) {
         if (parts[1].length != 0) {
           // To support backcompat of deleting a cell
@@ -616,15 +653,15 @@ public class RowResource extends ResourceBase {
           if(cellModelCount == 1) {
             delete.addColumns(parts[0], parts[1]);
           }
-          retValue = table.checkAndDelete(key, parts[0], parts[1],
-            valueToDeleteCell.getValue(), delete);
+          retValue = table.checkAndMutate(key, parts[0]).qualifier(parts[1])
+              .ifEquals(valueToDeleteCell.getValue()).thenDelete(delete);
         } else {
           // The case of empty qualifier.
           if(cellModelCount == 1) {
             delete.addColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
           }
-          retValue = table.checkAndDelete(key, parts[0], Bytes.toBytes(StringUtils.EMPTY),
-            valueToDeleteCell.getValue(), delete);
+          retValue = table.checkAndMutate(key, parts[0])
+              .ifEquals(valueToDeleteCell.getValue()).thenDelete(delete);
         }
       } else {
         servlet.getMetrics().incrementFailedDeleteRequests(1);
@@ -655,6 +692,197 @@ public class RowResource extends ResourceBase {
         table.close();
       } catch (IOException ioe) {
         LOG.debug("Exception received while closing the table", ioe);
+      }
+    }
+  }
+
+  /**
+   * Validates the input request parameters, parses columns from CellSetModel,
+   * and invokes Append on HTable.
+   *
+   * @param model instance of CellSetModel
+   * @return Response 200 OK, 304 Not modified, 400 Bad request
+   */
+  Response append(final CellSetModel model) {
+    Table table = null;
+    Append append = null;
+    try {
+      table = servlet.getTable(tableResource.getName());
+      if (model.getRows().size() != 1) {
+        servlet.getMetrics().incrementFailedAppendRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .type(MIMETYPE_TEXT).entity("Bad request: Number of rows specified is not 1." + CRLF)
+                .build();
+      }
+      RowModel rowModel = model.getRows().get(0);
+      byte[] key = rowModel.getKey();
+      if (key == null) {
+        key = rowspec.getRow();
+      }
+      if (key == null) {
+        servlet.getMetrics().incrementFailedAppendRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .type(MIMETYPE_TEXT).entity("Bad request: Row key found to be null." + CRLF)
+                .build();
+      }
+
+      append = new Append(key);
+      append.setReturnResults(returnResult);
+      int i = 0;
+      for (CellModel cell: rowModel.getCells()) {
+        byte[] col = cell.getColumn();
+        if (col == null) {
+          try {
+            col = rowspec.getColumns()[i++];
+          } catch (ArrayIndexOutOfBoundsException e) {
+            col = null;
+          }
+        }
+        if (col == null) {
+          servlet.getMetrics().incrementFailedAppendRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST)
+                  .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
+                  .build();
+        }
+        byte [][] parts = CellUtil.parseColumn(col);
+        if (parts.length != 2) {
+          servlet.getMetrics().incrementFailedAppendRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST)
+                  .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
+                  .build();
+        }
+        append.add(parts[0], parts[1], cell.getValue());
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("APPEND " + append.toString());
+      }
+      Result result = table.append(append);
+      if (returnResult) {
+        if (result.isEmpty()) {
+          servlet.getMetrics().incrementFailedAppendRequests(1);
+          return Response.status(Response.Status.NOT_MODIFIED)
+                  .type(MIMETYPE_TEXT).entity("Append return empty." + CRLF)
+                  .build();
+        }
+
+        CellSetModel rModel = new CellSetModel();
+        RowModel rRowModel = new RowModel(result.getRow());
+        for (Cell cell : result.listCells()) {
+          rRowModel.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
+                  cell.getTimestamp(), CellUtil.cloneValue(cell)));
+        }
+        rModel.addRow(rRowModel);
+        servlet.getMetrics().incrementSucessfulAppendRequests(1);
+        return Response.ok(rModel).build();
+      }
+      servlet.getMetrics().incrementSucessfulAppendRequests(1);
+      return Response.ok().build();
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedAppendRequests(1);
+      return processException(e);
+    } finally {
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) {
+        LOG.debug("Exception received while closing the table" + table.getName(), ioe);
+      }
+    }
+  }
+
+  /**
+   * Validates the input request parameters, parses columns from CellSetModel,
+   * and invokes Increment on HTable.
+   *
+   * @param model instance of CellSetModel
+   * @return Response 200 OK, 304 Not modified, 400 Bad request
+   */
+  Response increment(final CellSetModel model) {
+    Table table = null;
+    Increment increment = null;
+    try {
+      table = servlet.getTable(tableResource.getName());
+      if (model.getRows().size() != 1) {
+        servlet.getMetrics().incrementFailedIncrementRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .type(MIMETYPE_TEXT).entity("Bad request: Number of rows specified is not 1." + CRLF)
+                .build();
+      }
+      RowModel rowModel = model.getRows().get(0);
+      byte[] key = rowModel.getKey();
+      if (key == null) {
+        key = rowspec.getRow();
+      }
+      if (key == null) {
+        servlet.getMetrics().incrementFailedIncrementRequests(1);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .type(MIMETYPE_TEXT).entity("Bad request: Row key found to be null." + CRLF)
+                .build();
+      }
+
+      increment = new Increment(key);
+      increment.setReturnResults(returnResult);
+      int i = 0;
+      for (CellModel cell: rowModel.getCells()) {
+        byte[] col = cell.getColumn();
+        if (col == null) {
+          try {
+            col = rowspec.getColumns()[i++];
+          } catch (ArrayIndexOutOfBoundsException e) {
+            col = null;
+          }
+        }
+        if (col == null) {
+          servlet.getMetrics().incrementFailedIncrementRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST)
+                  .type(MIMETYPE_TEXT).entity("Bad request: Column found to be null." + CRLF)
+                  .build();
+        }
+        byte [][] parts = CellUtil.parseColumn(col);
+        if (parts.length != 2) {
+          servlet.getMetrics().incrementFailedIncrementRequests(1);
+          return Response.status(Response.Status.BAD_REQUEST)
+                  .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
+                  .build();
+        }
+        increment.addColumn(parts[0], parts[1], Long.parseLong(Bytes.toStringBinary(cell.getValue())));
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("INCREMENT " + increment.toString());
+      }
+      Result result = table.increment(increment);
+
+      if (returnResult) {
+        if (result.isEmpty()) {
+          servlet.getMetrics().incrementFailedIncrementRequests(1);
+          return Response.status(Response.Status.NOT_MODIFIED)
+                  .type(MIMETYPE_TEXT).entity("Increment return empty." + CRLF)
+                  .build();
+        }
+
+        CellSetModel rModel = new CellSetModel();
+        RowModel rRowModel = new RowModel(result.getRow());
+        for (Cell cell : result.listCells()) {
+          rRowModel.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
+                  cell.getTimestamp(), CellUtil.cloneValue(cell)));
+        }
+        rModel.addRow(rowModel);
+        servlet.getMetrics().incrementSucessfulIncrementRequests(1);
+        return Response.ok(rModel).build();
+      }
+
+      ResponseBuilder response = Response.ok();
+      servlet.getMetrics().incrementSucessfulIncrementRequests(1);
+      return response.build();
+    } catch (Exception e) {
+      servlet.getMetrics().incrementFailedIncrementRequests(1);
+      return processException(e);
+    } finally {
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) {
+        LOG.debug("Exception received while closing the table " + table.getName(), ioe);
       }
     }
   }

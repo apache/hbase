@@ -20,16 +20,17 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.Queue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterChunk;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -46,8 +47,8 @@ import org.apache.hadoop.io.Writable;
 public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     implements BloomFilterWriter, InlineBlockWriter {
 
-  private static final Log LOG =
-    LogFactory.getLog(CompoundBloomFilterWriter.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(CompoundBloomFilterWriter.class);
 
   /** The current chunk being written to */
   private BloomFilterChunk chunk;
@@ -70,7 +71,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     BloomFilterChunk chunk;
   }
 
-  private Queue<ReadyChunk> readyChunks = new LinkedList<>();
+  private Queue<ReadyChunk> readyChunks = new ArrayDeque<>();
 
   /** The first key in the current Bloom filter chunk. */
   private byte[] firstKeyInChunk = null;
@@ -173,11 +174,12 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
             + Bytes.toStringBinary(firstKeyInChunk));
       }
       // This will be done only once per chunk
-      if (bloomType == BloomType.ROW) {
-        firstKeyInChunk = CellUtil.copyRow(cell);
-      } else {
+      if (bloomType == BloomType.ROWCOL) {
         firstKeyInChunk =
-            CellUtil.getCellKeySerializedAsKeyValueKey(CellUtil.createFirstOnRowCol(cell));
+            PrivateCellUtil
+                .getCellKeySerializedAsKeyValueKey(PrivateCellUtil.createFirstOnRowCol(cell));
+      } else {
+        firstKeyInChunk = CellUtil.copyRow(cell);
       }
       allocateNewChunk();
     }

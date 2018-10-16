@@ -29,12 +29,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,6 +37,13 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Intelligently keep track of all the files for all the snapshots.
@@ -85,7 +86,7 @@ public class SnapshotFileCache implements Stoppable {
     Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException;
   }
 
-  private static final Log LOG = LogFactory.getLog(SnapshotFileCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotFileCache.class);
   private volatile boolean stop = false;
   private final FileSystem fs;
   private final SnapshotFileInspector fileInspector;

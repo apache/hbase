@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class RowBloomHashKey extends CellHashKey {
@@ -30,7 +30,7 @@ public class RowBloomHashKey extends CellHashKey {
 
   @Override
   public byte get(int offset) {
-    return CellUtil.getRowByte(t, offset);
+    return PrivateCellUtil.getRowByte(t, offset);
   }
 
   @Override

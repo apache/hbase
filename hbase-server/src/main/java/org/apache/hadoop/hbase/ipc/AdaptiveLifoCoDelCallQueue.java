@@ -24,9 +24,9 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -52,8 +52,8 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   private int maxCapacity;
 
   // metrics (shared across all queues)
-  private AtomicLong numGeneralCallsDropped;
-  private AtomicLong numLifoModeSwitches;
+  private LongAdder numGeneralCallsDropped;
+  private LongAdder numLifoModeSwitches;
 
   // Both are in milliseconds
   private volatile int codelTargetDelay;
@@ -76,7 +76,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   private AtomicBoolean isOverloaded = new AtomicBoolean(false);
 
   public AdaptiveLifoCoDelCallQueue(int capacity, int targetDelay, int interval,
-      double lifoThreshold, AtomicLong numGeneralCallsDropped, AtomicLong numLifoModeSwitches) {
+      double lifoThreshold, LongAdder numGeneralCallsDropped, LongAdder numLifoModeSwitches) {
     this.maxCapacity = capacity;
     this.queue = new LinkedBlockingDeque<>(capacity);
     this.codelTargetDelay = targetDelay;
@@ -112,13 +112,13 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
     CallRunner cr;
     while(true) {
       if (((double) queue.size() / this.maxCapacity) > lifoThreshold) {
-        numLifoModeSwitches.incrementAndGet();
+        numLifoModeSwitches.increment();
         cr = queue.takeLast();
       } else {
         cr = queue.takeFirst();
       }
       if (needToDrop(cr)) {
-        numGeneralCallsDropped.incrementAndGet();
+        numGeneralCallsDropped.increment();
         cr.drop();
       } else {
         return cr;
@@ -135,7 +135,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
         // Only count once per switch.
         if (!switched) {
           switched = true;
-          numLifoModeSwitches.incrementAndGet();
+          numLifoModeSwitches.increment();
         }
         cr = queue.pollLast();
       } else {
@@ -146,7 +146,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
         return cr;
       }
       if (needToDrop(cr)) {
-        numGeneralCallsDropped.incrementAndGet();
+        numGeneralCallsDropped.increment();
         cr.drop();
       } else {
         return cr;

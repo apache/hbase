@@ -24,15 +24,15 @@ import java.lang.management.RuntimeMXBean;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class DefaultMemStore extends AbstractMemStore {
-  private static final Log LOG = LogFactory.getLog(DefaultMemStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultMemStore.class);
 
   public final static long DEEP_OVERHEAD = ClassSize.align(AbstractMemStore.DEEP_OVERHEAD);
   public final static long FIXED_OVERHEAD = ClassSize.align(AbstractMemStore.FIXED_OVERHEAD);
@@ -63,7 +63,7 @@ public class DefaultMemStore extends AbstractMemStore {
    * Default constructor. Used for tests.
    */
   public DefaultMemStore() {
-    this(HBaseConfiguration.create(), CellComparator.COMPARATOR);
+    this(HBaseConfiguration.create(), CellComparator.getInstance(), null);
   }
 
   /**
@@ -71,7 +71,16 @@ public class DefaultMemStore extends AbstractMemStore {
    * @param c Comparator
    */
   public DefaultMemStore(final Configuration conf, final CellComparator c) {
-    super(conf, c);
+    super(conf, c, null);
+  }
+
+  /**
+   * Constructor.
+   * @param c Comparator
+   */
+  public DefaultMemStore(final Configuration conf, final CellComparator c,
+      final RegionServicesForStores regionServices) {
+    super(conf, c, regionServices);
   }
 
   /**
@@ -87,9 +96,17 @@ public class DefaultMemStore extends AbstractMemStore {
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
     } else {
       this.snapshotId = EnvironmentEdgeManager.currentTime();
-      if (!this.active.isEmpty()) {
+      if (!getActive().isEmpty()) {
+        // Record the ImmutableSegment' heap overhead when initialing
+        MemStoreSizing memstoreAccounting = new NonThreadSafeMemStoreSizing();
         ImmutableSegment immutableSegment = SegmentFactory.instance().
-            createImmutableSegment(this.active);
+            createImmutableSegment(getActive(), memstoreAccounting);
+        // regionServices can be null when testing
+        if (regionServices != null) {
+          regionServices.addMemStoreSize(memstoreAccounting.getDataSize(),
+              memstoreAccounting.getHeapSize(),
+              memstoreAccounting.getOffHeapSize());
+        }
         this.snapshot = immutableSegment;
         resetActive();
       }
@@ -97,26 +114,20 @@ public class DefaultMemStore extends AbstractMemStore {
     return new MemStoreSnapshot(this.snapshotId, this.snapshot);
   }
 
-  /**
-   * On flush, how much memory we will clear from the active cell set.
-   *
-   * @return size of data that is going to be flushed from active set
-   */
   @Override
-  public MemstoreSize getFlushableSize() {
-    MemstoreSize snapshotSize = getSnapshotSize();
-    return snapshotSize.getDataSize() > 0 ? snapshotSize
-        : new MemstoreSize(keySize(), heapSize());
+  public MemStoreSize getFlushableSize() {
+    MemStoreSize mss = getSnapshotSize();
+    return mss.getDataSize() > 0? mss: getActive().getMemStoreSize();
   }
 
   @Override
   protected long keySize() {
-    return this.active.keySize();
+    return getActive().getDataSize();
   }
 
   @Override
   protected long heapSize() {
-    return this.active.heapSize();
+    return getActive().getHeapSize();
   }
 
   @Override
@@ -125,17 +136,16 @@ public class DefaultMemStore extends AbstractMemStore {
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     List<KeyValueScanner> list = new ArrayList<>();
-    long order = snapshot.getNumOfSegments();
-    order = addToScanners(active, readPt, order, list);
-    addToScanners(snapshot.getAllSegments(), readPt, order, list);
+    addToScanners(getActive(), readPt, list);
+    addToScanners(snapshot.getAllSegments(), readPt, list);
     return list;
   }
 
   @Override
   protected List<Segment> getSegments() throws IOException {
     List<Segment> list = new ArrayList<>(2);
-    list.add(this.active);
-    list.add(this.snapshot);
+    list.add(getActive());
+    list.add(snapshot);
     return list;
   }
 
@@ -146,25 +156,29 @@ public class DefaultMemStore extends AbstractMemStore {
    */
   Cell getNextRow(final Cell cell) {
     return getLowest(
-        getNextRow(cell, this.active.getCellSet()),
+        getNextRow(cell, this.getActive().getCellSet()),
         getNextRow(cell, this.snapshot.getCellSet()));
   }
 
   @Override public void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent) {
   }
 
-  @Override
-  public MemstoreSize size() {
-    return new MemstoreSize(this.active.keySize(), this.active.heapSize());
+  @Override protected boolean preUpdate(MutableSegment currentActive, Cell cell,
+      MemStoreSizing memstoreSizing) {
+    return true;
   }
 
-  /**
-   * Check whether anything need to be done based on the current active set size
-   * Nothing need to be done for the DefaultMemStore
-   */
-  @Override
-  protected void checkActiveSize() {
+  @Override protected void postUpdate(MutableSegment currentActive) {
     return;
+  }
+
+  @Override protected boolean sizeAddedPreOperation() {
+    return false;
+  }
+
+  @Override
+  public MemStoreSize size() {
+    return getActive().getMemStoreSize();
   }
 
   @Override
@@ -194,26 +208,27 @@ public class DefaultMemStore extends AbstractMemStore {
     byte [] fam = Bytes.toBytes("col");
     byte [] qf = Bytes.toBytes("umn");
     byte [] empty = new byte[0];
-    MemstoreSize memstoreSize = new MemstoreSize();
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     for (int i = 0; i < count; i++) {
       // Give each its own ts
-      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
+      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memStoreSizing);
     }
-    LOG.info("memstore1 estimated size="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
+    LOG.info("memstore1 estimated size={}", memStoreSizing.getMemStoreSize().getDataSize() +
+        memStoreSizing.getMemStoreSize().getHeapSize());
     for (int i = 0; i < count; i++) {
-      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
+      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memStoreSizing);
     }
-    LOG.info("memstore1 estimated size (2nd loading of same data)="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
+    LOG.info("memstore1 estimated size (2nd loading of same data)={}",
+        memStoreSizing.getMemStoreSize().getDataSize() +
+            memStoreSizing.getMemStoreSize().getHeapSize());
     // Make a variably sized memstore.
     DefaultMemStore memstore2 = new DefaultMemStore();
-    memstoreSize = new MemstoreSize();
+    memStoreSizing = new NonThreadSafeMemStoreSizing();
     for (int i = 0; i < count; i++) {
-      memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, new byte[i]), memstoreSize);
+      memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, new byte[i]), memStoreSizing);
     }
-    LOG.info("memstore2 estimated size="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
+    LOG.info("memstore2 estimated size={}", memStoreSizing.getMemStoreSize().getDataSize() +
+        memStoreSizing.getMemStoreSize().getHeapSize());
     final int seconds = 30;
     LOG.info("Waiting " + seconds + " seconds while heap dump is taken");
     LOG.info("Exiting.");

@@ -24,7 +24,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A ScanResultCache that may return partial result.
@@ -69,7 +69,7 @@ class AllowPartialScanResultCache implements ScanResultCache {
     if (i == results.length) {
       return EMPTY_RESULT_ARRAY;
     }
-    if (lastResultPartial && !CellUtil.matchingRow(lastCell, results[0].getRow())) {
+    if (lastResultPartial && !CellUtil.matchingRows(lastCell, results[0].getRow())) {
       // there is a row change, so increase numberOfCompleteRows
       numberOfCompleteRows++;
     }

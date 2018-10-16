@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,17 +21,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,6 +40,11 @@ import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestResettingCounters {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestResettingCounters.class);
+
   @Rule
   public TestName name = new TestName();
 
@@ -73,7 +78,7 @@ public class TestResettingCounters {
         throw new IOException("Failed delete of " + path);
       }
     }
-    Region region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, htd);
     try {
       Increment odd = new Increment(rows[0]);
       odd.setDurability(Durability.SKIP_WAL);

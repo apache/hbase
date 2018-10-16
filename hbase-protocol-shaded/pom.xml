@@ -21,10 +21,10 @@
     -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase</artifactId>
+    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
     <version>3.0.0-SNAPSHOT</version>
-    <relativePath>..</relativePath>
+    <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-protocol-shaded</artifactId>
   <name>Apache HBase - Shaded Protocol</name>
@@ -32,35 +32,30 @@
   <properties>
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <!--Version of protobuf that hbase uses internally (we shade our pb)
+         Must match what is out in hbase-thirdparty include.
+         3.5.1-1 is the same as 3.5.1 except includes corrected binaries for el6
+         to work around https://github.com/google/protobuf/issues/4109
            -->
-    <internal.protobuf.version>3.2.0</internal.protobuf.version>
-    <!--The Default target dir-->
-    <classes.dir>${project.build.directory}/classes</classes.dir>
-    <!--The Default location for sources-->
-    <sources.dir>src/main/java</sources.dir>
+    <internal.protobuf.version>3.5.1-1</internal.protobuf.version>
   </properties>
   <build>
-    <!--I want to override these in profile so define them
-         with variables up here-->
-    <sourceDirectory>${sources.dir}</sourceDirectory>
-    <outputDirectory>${classes.dir}</outputDirectory>
+    <resources>
+      <resource>
+        <directory>src/main/</directory>
+        <includes>
+          <include>**/*.proto</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
       <!-- Make a jar and put the sources in the jar -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-      </plugin>
+		  </plugin>
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
         <configuration>
           <skipAssembly>true</skipAssembly>
         </configuration>
@@ -81,6 +76,125 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <attachProtoSources>false</attachProtoSources>
+              <checkStaleness>true</checkStaleness>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!--Need this old plugin to replace in generated files instances
+           of com.google.protobuf so instead its o.a.h.h.com.google.protobuf.
+           Plugin is old and in google code archive. Here is usage done by
+           anohther: https://github.com/beiliubei/maven-replacer-plugin/wiki/Usage-Guide
+           The mess with the regex in the below is to prevent replacement every time
+           we run mvn install. There is probably a better way of avoiding the
+           double interpolation but this is it for now.
+        -->
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <basedir>${basedir}/target/generated-sources/</basedir>
+            <includes>
+                <include>**/*.java</include>
+            </includes>
+            <!-- Ignore errors when missing files, because it means this build
+                 was run with -Dprotoc.skip and there is no -Dreplacer.skip -->
+            <ignoreErrors>true</ignoreErrors>
+            <replacements>
+              <replacement>
+                <token>([^\.])com.google.protobuf</token>
+                <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
+              </replacement>
+              <replacement>
+                <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
+                <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
+              </replacement>
+              <!-- replacer doesn't support anchoring or negative lookbehind -->
+              <replacement>
+                <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
+                <value>$1</value>
+              </replacement>
+            </replacements>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <minimizeJar>true</minimizeJar>
+              <shadeSourcesContent>true</shadeSourcesContent>
+              <!-- Causes an NPE until shade 3.0.1.  See MSHADE-247
+              <createSourcesJar>true</createSourcesJar>
+              -->
+              <relocations>
+                <relocation>
+                  <pattern>com.google.protobuf</pattern>
+                  <shadedPattern>org.apache.hadoop.hbase.shaded.com.google.protobuf</shadedPattern>
+                </relocation>
+              </relocations>
+              <artifactSet>
+                <excludes>
+                  <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
+                    -->
+                  <exclude>org.apache.hbase.thirdparty:*</exclude>
+                  <exclude>com.google.protobuf:protobuf-java</exclude>
+                  <exclude>com.google.code.findbugs:*</exclude>
+                  <exclude>com.google.errorprone:error_prone_annotations</exclude>
+                  <exclude>com.google.j2objc:j2objc-annotations</exclude>
+                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
+                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
+                  <exclude>junit:junit</exclude>
+                  <exclude>log4j:log4j</exclude>
+                  <exclude>commons-logging:commons-logging</exclude>
+                  <exclude>org.slf4j:slf4j-api</exclude>
+                  <exclude>org.apache.yetus:audience-annotations</exclude>
+                  <exclude>com.github.stephenc.fingbugs:*</exclude>
+                  <exclude></exclude>
+                </excludes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
@@ -88,7 +202,6 @@
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
           <configuration>
             <lifecycleMappingMetadata>
               <pluginExecutions>
@@ -105,6 +218,23 @@
                     <ignore/>
                   </action>
                 </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>
+                      com.google.code.maven-replacer-plugin
+                    </groupId>
+                    <artifactId>replacer</artifactId>
+                    <versionRange>[1.5.3,)</versionRange>
+                    <goals>
+                      <goal>replace</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                     <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
@@ -118,24 +248,17 @@
           will get bundled-->
     <!-- Intra-project dependencies -->
     <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-annotations</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>jdk.tools</groupId>
-          <artifactId>jdk.tools</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <!-- General dependencies -->
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <version>${internal.protobuf.version}</version>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-protobuf</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
     </dependency>
   </dependencies>
   <profiles>
@@ -149,219 +272,8 @@
       </activation>
       <properties>
         <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
-    </profile>
-    <profile>
-      <id>compile-protobuf</id>
-      <!--
-         Generate and shade proto files. Drops generated java files
-         under src/main/java when done. Check in the generated files so
-         available at build time. Run this profile/step everytime you change
-         proto files or update the protobuf version.
-
-         The below does a bunch of ugly stuff. It purges current content
-         of the generated and shaded com.google.protobuf java files first.
-         Let me say that again. We do a remove of java files under src/main/java
-         in the shaded dirs. It does this because later we apply patches and
-         patches fail if they've already been applied. We remove too because we
-         overlay the shaded protobuf and if files have been removed or added,
-         it'll be more plain if we have first done this delete.
-
-         Next up we generate protos, build a scratch jar that contains protos
-         only and stuff we want shaded (we have to do this because shading only
-         works at install time on a jar), run the shade on the jar, then
-         carefully STOP this scratch jar from being put into the local repository
-         (because it can mess up builds that come later... mvn automatically wants
-         to install artifact into repo per module). Finally, undo this shaded
-         jar over the src/main/java directory, and then apply patches atop this.
-
-         The result needs to be checked in.
-      -->
-      <activation>
-        <property>
-          <name>compile-protobuf</name>
-        </property>
-      </activation>
-      <properties>
-        <profile.id>compile-protobuf</profile.id>
-        <!--Directory under target to hold generated protos files-->
-        <protoc.sources.dir>${project.build.directory}/protoc-generated-sources</protoc.sources.dir>
-        <!--When doing this step, the sources.dir is pointed at generated protos, NOT src/main/java-->
-        <sources.dir>${protoc.sources.dir}</sources.dir>
-        <!--Where to compile protos into-->
-        <classes.dir>${project.build.directory}/protoc-generated-classes</classes.dir>
-        <!--When the compile for this profile runs, make sure it makes jars that
-            can be related back to this shading profile. Give them the shading profile
-            name as a prefix.
-         -->
-        <jar.finalName>${profile.id}.${project.artifactId}-${project.version}</jar.finalName>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-clean-plugin</artifactId>
-              <executions>
-                <execution>
-                  <id>pre-compile-protoc</id>
-                  <phase>generate-sources</phase>
-                  <goals>
-                    <goal>clean</goal>
-                  </goals>
-                <configuration>
-                  <filesets>
-                    <fileset>
-                      <directory>${basedir}/src/main/java/org/apache/hadoop/hbase/shaded</directory>
-                      <includes>
-                        <include>ipc/protobuf/generated/**/*.java</include>
-                        <include>protobuf/generated/**/*.java</include>
-                        <include>com/google/protobuf/**/*.java</include>
-                      </includes>
-                      <followSymlinks>false</followSymlinks>
-                    </fileset>
-                  </filesets>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.xolstice.maven.plugins</groupId>
-            <artifactId>protobuf-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>compile-protoc</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>compile</goal>
-                </goals>
-                <configuration>
-                  <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-                  <outputDirectory>${protoc.sources.dir}</outputDirectory>
-                  <attachProtoSources>false</attachProtoSources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-jar-plugin</artifactId>
-            <version>3.0.2</version>
-            <configuration>
-              <finalName>${jar.finalName}</finalName>                   
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-shade-plugin</artifactId>
-            <version>2.4.3</version>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>shade</goal>
-                </goals>
-                <configuration>
-                  <shadeSourcesContent>true</shadeSourcesContent>
-                  <createSourcesJar>true</createSourcesJar>
-                  <relocations>
-                    <relocation>
-                      <pattern>com.google.protobuf</pattern>
-                      <shadedPattern>org.apache.hadoop.hbase.shaded.com.google.protobuf</shadedPattern>
-                    </relocation>
-                  </relocations>
-                  <!-- What I got when I did a mvn dependency:list for this
-                   module. Exclude all but the protobuf
-                [INFO]    commons-logging:commons-logging:jar:1.2:compile
-                [INFO]    com.github.stephenc.findbugs:findbugs-annotations:jar:1.3.9-1:compile
-                [INFO]    log4j:log4j:jar:1.2.17:compile
-                [INFO]    com.google.protobuf:protobuf-java:jar:2.5.0:compile
-                [INFO]    org.hamcrest:hamcrest-core:jar:1.3:test
-                [INFO]    org.mockito:mockito-all:jar:1.10.8:test
-                [INFO]    junit:junit:jar:4.12:compile
-                [INFO]    org.apache.hbase:hbase-annotations:jar:2.0.0-SNAPSHOT:compile
-
-                  The list below must exlude all of the above except protobuf.
-              -->
-                  <artifactSet>
-                    <excludes>
-                      <exclude>commons-logging:commons-logging</exclude>
-                      <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
-                      <exclude>log4j:log4j</exclude>
-                      <exclude>org.hamcrest:hamcrest-core</exclude>
-                      <exclude>org.mockito:mockito-all</exclude>
-                      <exclude>junit:junit</exclude>
-                      <exclude>org.apache.hbase:hbase-annotations</exclude>
-                    </excludes>
-                  </artifactSet>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <!--Now unpack the shaded jar made above so the shaded classes
-             are available to subsequent modules-->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-dependency-plugin</artifactId>
-            <version>2.10</version>
-            <executions>
-              <execution>
-                <id>unpack</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>unpack</goal>
-                </goals>
-                <configuration>
-                  <artifactItems>
-                    <artifactItem>
-                      <groupId>${project.groupId}</groupId>
-                      <artifactId>${project.artifactId}</artifactId>
-                      <version>${project.version}</version>
-                      <classifier>sources</classifier>
-                      <type>jar</type>
-                      <overWrite>true</overWrite>
-                      <outputDirectory>${basedir}/src/main/java</outputDirectory>
-                      <includes>**/*.java</includes>
-                    </artifactItem>
-                  </artifactItems>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-patch-plugin</artifactId>
-        <version>1.2</version>
-        <configuration>
-           <!--Patches are made at top-level-->
-           <targetDirectory>${basedir}/..</targetDirectory>
-          <skipApplication>false</skipApplication>
-        </configuration>
-        <executions>
-          <execution>
-            <id>patch</id>
-            <configuration>
-               <strip>1</strip>
-              <patchDirectory>src/main/patches</patchDirectory>
-              <patchTrackingFile>${project.build.directory}/patches-applied.txt</patchTrackingFile>
-              <naturalOrderProcessing>true</naturalOrderProcessing>
-            </configuration>
-            <phase>package</phase>
-            <goals>
-              <!--This should run after the above unpack phase-->
-              <goal>apply</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-install-plugin</artifactId>
-            <version>2.5.2</version>
-            <configuration>
-                <skip>true</skip>
-            </configuration>
-        </plugin>
-        </plugins>
-      </build>
     </profile>
   </profiles>
 </project>

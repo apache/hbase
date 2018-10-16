@@ -22,16 +22,16 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
  * Code shared by PE tests.
  */
 public class PerformanceEvaluationCommons {
-  private static final Log LOG =
-    LogFactory.getLog(PerformanceEvaluationCommons.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(PerformanceEvaluationCommons.class.getName());
 
   public static void assertValueSize(final int expectedSize, final int got) {
     if (got != expectedSize) {

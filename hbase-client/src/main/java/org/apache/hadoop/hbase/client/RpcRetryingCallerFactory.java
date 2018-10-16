@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory to create an {@link RpcRetryingCaller}
@@ -32,7 +32,7 @@ public class RpcRetryingCallerFactory {
 
   /** Configuration key for a custom {@link RpcRetryingCaller} */
   public static final String CUSTOM_CALLER_CONF_KEY = "hbase.rpc.callerfactory.class";
-  private static final Log LOG = LogFactory.getLog(RpcRetryingCallerFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RpcRetryingCallerFactory.class);
   protected final Configuration conf;
   private final long pause;
   private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
@@ -47,7 +47,7 @@ public class RpcRetryingCallerFactory {
   public RpcRetryingCallerFactory(Configuration conf) {
     this(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR);
   }
-  
+
   public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor) {
     this.conf = conf;
     pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,

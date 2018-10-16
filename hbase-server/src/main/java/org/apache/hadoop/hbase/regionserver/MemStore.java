@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 
 /**
@@ -50,36 +50,35 @@ public interface MemStore {
   void clearSnapshot(long id) throws UnexpectedStateException;
 
   /**
-   * On flush, how much memory we will clear.
    * Flush will first clear out the data in snapshot if any (It will take a second flush
    * invocation to clear the current Cell set). If snapshot is empty, current
    * Cell set will be flushed.
    *
-   * @return size of data that is going to be flushed
+   * @return On flush, how much memory we will clear.
    */
-  MemstoreSize getFlushableSize();
+  MemStoreSize getFlushableSize();
 
   /**
    * Return the size of the snapshot(s) if any
    * @return size of the memstore snapshot
    */
-  MemstoreSize getSnapshotSize();
+  MemStoreSize getSnapshotSize();
 
   /**
    * Write an update
    * @param cell
-   * @param memstoreSize The delta in memstore size will be passed back via this.
+   * @param memstoreSizing The delta in memstore size will be passed back via this.
    *        This will include both data size and heap overhead delta.
    */
-  void add(final Cell cell, MemstoreSize memstoreSize);
+  void add(final Cell cell, MemStoreSizing memstoreSizing);
 
   /**
    * Write the updates
    * @param cells
-   * @param memstoreSize The delta in memstore size will be passed back via this.
+   * @param memstoreSizing The delta in memstore size will be passed back via this.
    *        This will include both data size and heap overhead delta.
    */
-  void add(Iterable<Cell> cells, MemstoreSize memstoreSize);
+  void add(Iterable<Cell> cells, MemStoreSizing memstoreSizing);
 
   /**
    * @return Oldest timestamp of all the Cells in the MemStore
@@ -99,10 +98,10 @@ public interface MemStore {
    * only see each KeyValue update as atomic.
    * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate Cells.
-   * @param memstoreSize The delta in memstore size will be passed back via this.
+   * @param memstoreSizing The delta in memstore size will be passed back via this.
    *        This will include both data size and heap overhead delta.
    */
-  void upsert(Iterable<Cell> cells, long readpoint, MemstoreSize memstoreSize);
+  void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing);
 
   /**
    * @return scanner over the memstore. This might include scanner over the snapshot when one is
@@ -116,7 +115,7 @@ public interface MemStore {
    *         the memstore may be changed while computing its size. It is the responsibility of the
    *         caller to make sure this doesn't happen.
    */
-  MemstoreSize size();
+  MemStoreSize size();
 
   /**
    * This method is called before the flush is executed.

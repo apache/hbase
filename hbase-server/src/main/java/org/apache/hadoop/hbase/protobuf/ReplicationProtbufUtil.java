@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.protobuf;
 
 
@@ -24,28 +23,24 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.UUID;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 @InterfaceAudience.Private
 public class ReplicationProtbufUtil {
@@ -68,8 +63,8 @@ public class ReplicationProtbufUtil {
     HBaseRpcController controller = new HBaseRpcControllerImpl(p.getSecond());
     try {
       admin.replicateWALEntry(controller, p.getFirst());
-    } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e) {
-      throw ProtobufUtil.handleRemoteException(e);
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
+      throw ProtobufUtil.getServiceException(e);
     }
   }
 
@@ -81,7 +76,7 @@ public class ReplicationProtbufUtil {
    * found.
    */
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
-      buildReplicateWALEntryRequest(final Entry[] entries) {
+      buildReplicateWALEntryRequest(final Entry[] entries) throws IOException {
     return buildReplicateWALEntryRequest(entries, null, null, null, null);
   }
 
@@ -97,56 +92,34 @@ public class ReplicationProtbufUtil {
    */
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
       buildReplicateWALEntryRequest(final Entry[] entries, byte[] encodedRegionName,
-          String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir) {
+          String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir)
+          throws IOException {
     // Accumulate all the Cells seen in here.
     List<List<? extends Cell>> allCells = new ArrayList<>(entries.length);
     int size = 0;
-    WALProtos.FamilyScope.Builder scopeBuilder = WALProtos.FamilyScope.newBuilder();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
     AdminProtos.ReplicateWALEntryRequest.Builder builder =
       AdminProtos.ReplicateWALEntryRequest.newBuilder();
-    HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
+
     for (Entry entry: entries) {
       entryBuilder.clear();
-      // TODO: this duplicates a lot in WALKey#getBuilder
-      WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
-      WALKey key = entry.getKey();
-      keyBuilder.setEncodedRegionName(
-          UnsafeByteOperations.unsafeWrap(encodedRegionName == null
-            ? key.getEncodedRegionName()
-            : encodedRegionName));
-      keyBuilder.setTableName(UnsafeByteOperations.unsafeWrap(key.getTablename().getName()));
-      keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
-      keyBuilder.setWriteTime(key.getWriteTime());
-      if (key.getNonce() != HConstants.NO_NONCE) {
-        keyBuilder.setNonce(key.getNonce());
+      WALProtos.WALKey.Builder keyBuilder;
+      try {
+        keyBuilder = entry.getKey().getBuilder(WALCellCodec.getNoneCompressor());
+      } catch (IOException e) {
+        throw new IOException(
+            "There should not throw exception since NoneCompressor do not throw any exceptions", e);
       }
-      if (key.getNonceGroup() != HConstants.NO_NONCE) {
-        keyBuilder.setNonceGroup(key.getNonceGroup());
+      if(encodedRegionName != null){
+        keyBuilder.setEncodedRegionName(
+            UnsafeByteOperations.unsafeWrap(encodedRegionName));
       }
-      for(UUID clusterId : key.getClusterIds()) {
-        uuidBuilder.setLeastSigBits(clusterId.getLeastSignificantBits());
-        uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());
-        keyBuilder.addClusterIds(uuidBuilder.build());
-      }
-      if(key.getOrigLogSeqNum() > 0) {
-        keyBuilder.setOrigSequenceNumber(key.getOrigLogSeqNum());
-      }
+      entryBuilder.setKey(keyBuilder.build());
       WALEdit edit = entry.getEdit();
-      NavigableMap<byte[], Integer> scopes = key.getReplicationScopes();
-      if (scopes != null && !scopes.isEmpty()) {
-        for (Map.Entry<byte[], Integer> scope: scopes.entrySet()) {
-          scopeBuilder.setFamily(UnsafeByteOperations.unsafeWrap(scope.getKey()));
-          WALProtos.ScopeType scopeType =
-              WALProtos.ScopeType.valueOf(scope.getValue().intValue());
-          scopeBuilder.setScopeType(scopeType);
-          keyBuilder.addScopes(scopeBuilder.build());
-        }
-      }
       List<Cell> cells = edit.getCells();
       // Add up the size.  It is used later serializing out the kvs.
       for (Cell cell: cells) {
-        size += CellUtil.estimatedSerializedSizeOf(cell);
+        size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       // Collect up the cells
       allCells.add(cells);

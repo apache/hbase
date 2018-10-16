@@ -24,16 +24,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 
 /**
  * {@link QuotaSnapshotStore} implementation for namespaces.
@@ -46,9 +46,9 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
 
   private final Connection conn;
   private final QuotaObserverChore chore;
-  private Map<HRegionInfo,Long> regionUsage;
+  private Map<RegionInfo,Long> regionUsage;
 
-  public NamespaceQuotaSnapshotStore(Connection conn, QuotaObserverChore chore, Map<HRegionInfo,Long> regionUsage) {
+  public NamespaceQuotaSnapshotStore(Connection conn, QuotaObserverChore chore, Map<RegionInfo,Long> regionUsage) {
     this.conn = Objects.requireNonNull(conn);
     this.chore = Objects.requireNonNull(chore);
     this.regionUsage = Objects.requireNonNull(regionUsage);
@@ -83,7 +83,7 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
     try {
       final long sizeLimitInBytes = spaceQuota.getSoftLimit();
       long sum = 0L;
-      for (Entry<HRegionInfo,Long> entry : filterBySubject(subject)) {
+      for (Entry<RegionInfo,Long> entry : filterBySubject(subject)) {
         sum += entry.getValue();
       }
       // Add in the size for any snapshots against this table
@@ -98,12 +98,12 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
   }
 
   @Override
-  public Iterable<Entry<HRegionInfo,Long>> filterBySubject(String namespace) {
+  public Iterable<Entry<RegionInfo, Long>> filterBySubject(String namespace) {
     rlock.lock();
     try {
-      return Iterables.filter(regionUsage.entrySet(), new Predicate<Entry<HRegionInfo,Long>>() {
+      return Iterables.filter(regionUsage.entrySet(), new Predicate<Entry<RegionInfo,Long>>() {
         @Override
-        public boolean apply(Entry<HRegionInfo,Long> input) {
+        public boolean apply(Entry<RegionInfo,Long> input) {
           return namespace.equals(input.getKey().getTable().getNamespaceAsString());
         }
       });
@@ -119,7 +119,7 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
   }
 
   @Override
-  public void setRegionUsage(Map<HRegionInfo,Long> regionUsage) {
+  public void setRegionUsage(Map<RegionInfo,Long> regionUsage) {
     wlock.lock();
     try {
       this.regionUsage = Objects.requireNonNull(regionUsage);

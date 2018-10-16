@@ -31,8 +31,9 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.rest.Constants;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An adapter between Jersey and Object.toString(). Hooks up plain text output
@@ -64,6 +65,6 @@ public class PlainTextMessageBodyProducer
       Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, Object> httpHeaders, OutputStream outStream)
       throws IOException, WebApplicationException {
-    outStream.write(object.toString().getBytes());
+    outStream.write(Bytes.toBytes(object.toString()));
   }
 }

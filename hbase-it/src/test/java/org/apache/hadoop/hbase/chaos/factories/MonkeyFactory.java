@@ -22,20 +22,20 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class of the factory that will create a ChaosMonkey.
  */
 public abstract class MonkeyFactory {
-  private static final Log LOG = LogFactory.getLog(MonkeyFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MonkeyFactory.class);
 
   protected TableName tableName;
   protected Set<String> columnFamilies;

@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class NonLeafExpressionNode implements ExpressionNode {
@@ -91,6 +91,7 @@ public class NonLeafExpressionNode implements ExpressionNode {
     return this.op == Operator.NOT;
   }
 
+  @Override
   public NonLeafExpressionNode deepClone() {
     NonLeafExpressionNode clone = new NonLeafExpressionNode(this.op);
     for (ExpressionNode exp : this.childExps) {

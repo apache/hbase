@@ -22,7 +22,7 @@ module Shell
   module Commands
     class ListTableSnapshots < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all completed snapshots matching the table name regular expression and the
 snapshot name regular expression (by printing the names and relative information).
 Optional snapshot name regular expression parameter could be used to filter the output
@@ -38,17 +38,17 @@ Examples:
 EOF
       end
 
-      def command(tableNameRegex, snapshotNameRegex = ".*")
-        formatter.header([ "SNAPSHOT", "TABLE + CREATION TIME"])
+      def command(tableNameRegex, snapshotNameRegex = '.*')
+        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
 
         list = admin.list_table_snapshots(tableNameRegex, snapshotNameRegex)
         list.each do |snapshot|
-          creation_time = Time.at(snapshot.getCreationTime() / 1000).to_s
-          formatter.row([ snapshot.getName, snapshot.getTable + " (" + creation_time + ")" ])
+          creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
+          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
         end
 
         formatter.footer(list.size)
-        return list.map { |s| s.getName() }
+        list.map(&:getName)
       end
     end
   end

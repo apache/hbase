@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc..

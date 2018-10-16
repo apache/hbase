@@ -24,11 +24,12 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
-import io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,14 +44,14 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.MultiResponse.RegionResult;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -58,7 +59,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -77,7 +77,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 class AsyncBatchRpcRetryingCaller<T> {
 
-  private static final Log LOG = LogFactory.getLog(AsyncBatchRpcRetryingCaller.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncBatchRpcRetryingCaller.class);
 
   private final HashedWheelTimer retryTimer;
 
@@ -232,35 +232,27 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private ClientProtos.MultiRequest buildReq(Map<byte[], RegionRequest> actionsByRegion,
-      List<CellScannable> cells) throws IOException {
+      List<CellScannable> cells, Map<Integer, Integer> rowMutationsIndexMap) throws IOException {
     ClientProtos.MultiRequest.Builder multiRequestBuilder = ClientProtos.MultiRequest.newBuilder();
     ClientProtos.RegionAction.Builder regionActionBuilder = ClientProtos.RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     ClientProtos.MutationProto.Builder mutationBuilder = ClientProtos.MutationProto.newBuilder();
     for (Map.Entry<byte[], RegionRequest> entry : actionsByRegion.entrySet()) {
-      // TODO: remove the extra for loop as we will iterate it in mutationBuilder.
-      if (!multiRequestBuilder.hasNonceGroup()) {
-        for (Action action : entry.getValue().actions) {
-          if (action.hasNonce()) {
-            multiRequestBuilder.setNonceGroup(conn.getNonceGenerator().getNonceGroup());
-            break;
-          }
-        }
-      }
-      regionActionBuilder.clear();
-      regionActionBuilder.setRegion(
-        RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, entry.getKey()));
-      regionActionBuilder = RequestConverter.buildNoDataRegionAction(entry.getKey(),
-        entry.getValue().actions, cells, regionActionBuilder, actionBuilder, mutationBuilder);
-      multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+      long nonceGroup = conn.getNonceGenerator().getNonceGroup();
+      // multiRequestBuilder will be populated with region actions.
+      // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
+      // action list.
+      RequestConverter.buildNoDataRegionActions(entry.getKey(),
+        entry.getValue().actions, cells, multiRequestBuilder, regionActionBuilder, actionBuilder,
+        mutationBuilder, nonceGroup, rowMutationsIndexMap);
     }
     return multiRequestBuilder.build();
   }
 
   @SuppressWarnings("unchecked")
   private void onComplete(Action action, RegionRequest regionReq, int tries, ServerName serverName,
-      RegionResult regionResult, List<Action> failedActions) {
-    Object result = regionResult.result.get(action.getOriginalIndex());
+      RegionResult regionResult, List<Action> failedActions, Throwable regionException) {
+    Object result = regionResult.result.getOrDefault(action.getOriginalIndex(), regionException);
     if (result == null) {
       LOG.error("Server " + serverName + " sent us neither result nor exception for row '"
           + Bytes.toStringBinary(action.getAction().getRow()) + "' of "
@@ -270,6 +262,7 @@ class AsyncBatchRpcRetryingCaller<T> {
     } else if (result instanceof Throwable) {
       Throwable error = translateException((Throwable) result);
       logException(tries, () -> Stream.of(regionReq), error, serverName);
+      conn.getLocator().updateCachedLocation(regionReq.loc, error);
       if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
         failOne(action, tries, error, EnvironmentEdgeManager.currentTime(),
           getExtraContextForError(serverName));
@@ -286,27 +279,28 @@ class AsyncBatchRpcRetryingCaller<T> {
     List<Action> failedActions = new ArrayList<>();
     actionsByRegion.forEach((rn, regionReq) -> {
       RegionResult regionResult = resp.getResults().get(rn);
+      Throwable regionException = resp.getException(rn);
       if (regionResult != null) {
         regionReq.actions.forEach(
-          action -> onComplete(action, regionReq, tries, serverName, regionResult, failedActions));
+          action -> onComplete(action, regionReq, tries, serverName, regionResult, failedActions,
+            regionException));
       } else {
-        Throwable t = resp.getException(rn);
         Throwable error;
-        if (t == null) {
+        if (regionException == null) {
           LOG.error(
             "Server sent us neither results nor exceptions for " + Bytes.toStringBinary(rn));
           error = new RuntimeException("Invalid response");
         } else {
-          error = translateException(t);
-          logException(tries, () -> Stream.of(regionReq), error, serverName);
-          conn.getLocator().updateCachedLocation(regionReq.loc, error);
-          if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
-            failAll(regionReq.actions.stream(), tries, error, serverName);
-            return;
-          }
-          addError(regionReq.actions, error, serverName);
-          failedActions.addAll(regionReq.actions);
+          error = translateException(regionException);
         }
+        logException(tries, () -> Stream.of(regionReq), error, serverName);
+        conn.getLocator().updateCachedLocation(regionReq.loc, error);
+        if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
+          failAll(regionReq.actions.stream(), tries, error, serverName);
+          return;
+        }
+        addError(regionReq.actions, error, serverName);
+        failedActions.addAll(regionReq.actions);
       }
     });
     if (!failedActions.isEmpty()) {
@@ -337,8 +331,12 @@ class AsyncBatchRpcRetryingCaller<T> {
       }
       ClientProtos.MultiRequest req;
       List<CellScannable> cells = new ArrayList<>();
+      // Map from a created RegionAction to the original index for a RowMutations within
+      // the original list of actions. This will be used to process the results when there
+      // is RowMutations in the action list.
+      Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
       try {
-        req = buildReq(serverReq.actionsByRegion, cells);
+        req = buildReq(serverReq.actionsByRegion, cells, rowMutationsIndexMap);
       } catch (IOException e) {
         onError(serverReq.actionsByRegion, tries, e, sn);
         return;
@@ -353,8 +351,8 @@ class AsyncBatchRpcRetryingCaller<T> {
           onError(serverReq.actionsByRegion, tries, controller.getFailed(), sn);
         } else {
           try {
-            onComplete(serverReq.actionsByRegion, tries, sn,
-              ResponseConverter.getResults(req, resp, controller.cellScanner()));
+            onComplete(serverReq.actionsByRegion, tries, sn, ResponseConverter.getResults(req,
+              rowMutationsIndexMap, resp, controller.cellScanner()));
           } catch (Exception e) {
             onError(serverReq.actionsByRegion, tries, e, sn);
             return;
@@ -368,6 +366,8 @@ class AsyncBatchRpcRetryingCaller<T> {
       ServerName serverName) {
     Throwable error = translateException(t);
     logException(tries, () -> actionsByRegion.values().stream(), error, serverName);
+    actionsByRegion
+        .forEach((rn, regionReq) -> conn.getLocator().updateCachedLocation(regionReq.loc, error));
     if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
       failAll(actionsByRegion.values().stream().flatMap(r -> r.actions.stream()), tries, error,
         serverName);

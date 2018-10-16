@@ -25,20 +25,21 @@ import java.net.SocketTimeoutException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.SortedMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -49,6 +50,30 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -73,26 +98,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrEx
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
-
-import com.google.common.base.Stopwatch;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * Test client behavior w/o setting up a cluster.
@@ -100,7 +105,12 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
  */
 @Category({ClientTests.class, SmallTests.class})
 public class TestClientNoCluster extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(TestClientNoCluster.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestClientNoCluster.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestClientNoCluster.class);
   private Configuration conf;
   public static final ServerName META_SERVERNAME =
       ServerName.valueOf("meta.example.org", 16010, 12345);
@@ -117,27 +127,27 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Simple cluster registry inserted in place of our usual zookeeper based one.
    */
-  static class SimpleRegistry implements Registry {
+  static class SimpleRegistry extends DoNothingAsyncRegistry {
     final ServerName META_HOST = META_SERVERNAME;
 
-    @Override
-    public void init(Connection connection) {
+    public SimpleRegistry(Configuration conf) {
+      super(conf);
     }
 
     @Override
-    public RegionLocations getMetaRegionLocation() throws IOException {
-      return new RegionLocations(
-        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, META_HOST));
+    public CompletableFuture<RegionLocations> getMetaRegionLocation() {
+      return CompletableFuture.completedFuture(new RegionLocations(
+          new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, META_HOST)));
     }
 
     @Override
-    public String getClusterId() {
-      return HConstants.CLUSTER_ID_DEFAULT;
+    public CompletableFuture<String> getClusterId() {
+      return CompletableFuture.completedFuture(HConstants.CLUSTER_ID_DEFAULT);
     }
 
     @Override
-    public int getCurrentNrHRS() throws IOException {
-      return 1;
+    public CompletableFuture<Integer> getCurrentNrHRS() {
+      return CompletableFuture.completedFuture(1);
     }
   }
 
@@ -232,7 +242,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     try {
       Result result = null;
       while ((result = scanner.next()) != null) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
       }
     } finally {
       scanner.close();
@@ -254,7 +264,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     try {
       Result result = null;
       while ((result = scanner.next()) != null) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
       }
     } finally {
       scanner.close();
@@ -461,7 +471,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     @Override
     public MutateResponse mutate(RpcController controller,
         MutateRequest request) throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
@@ -476,14 +486,14 @@ public class TestClientNoCluster extends Configured implements Tool {
     public BulkLoadHFileResponse bulkLoadHFile(
         RpcController controller, BulkLoadHFileRequest request)
         throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public CoprocessorServiceResponse execService(
         RpcController controller, CoprocessorServiceRequest request)
         throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
@@ -505,19 +515,19 @@ public class TestClientNoCluster extends Configured implements Tool {
     @Override
     public CoprocessorServiceResponse execRegionServerService(RpcController controller,
         CoprocessorServiceRequest request) throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public PrepareBulkLoadResponse prepareBulkLoad(RpcController controller,
         PrepareBulkLoadRequest request) throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public CleanupBulkLoadResponse cleanupBulkLoad(RpcController controller,
         CleanupBulkLoadRequest request) throws ServiceException {
-      throw new NotImplementedException();
+      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
   }
 
@@ -677,7 +687,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Comparator for meta row keys.
    */
   private static class MetaRowsComparator implements Comparator<byte []> {
-    private final CellComparator delegate = CellComparator.META_COMPARATOR;
+    private final CellComparatorImpl delegate = CellComparatorImpl.META_COMPARATOR;
     @Override
     public int compare(byte[] left, byte[] right) {
       return delegate.compareRows(new KeyValue.KeyOnlyKeyValue(left), right, 0, right.length);
@@ -722,14 +732,13 @@ public class TestClientNoCluster extends Configured implements Tool {
     TableName tableName = TableName.valueOf(BIG_USER_TABLE);
     if (get) {
       try (Table table = sharedConnection.getTable(tableName)){
-        Stopwatch stopWatch = new Stopwatch();
-        stopWatch.start();
+        Stopwatch stopWatch = Stopwatch.createStarted();
         for (int i = 0; i < namespaceSpan; i++) {
           byte [] b = format(rd.nextLong());
           Get g = new Get(b);
           table.get(g);
           if (i % printInterval == 0) {
-            LOG.info("Get " + printInterval + "/" + stopWatch.elapsedMillis());
+            LOG.info("Get " + printInterval + "/" + stopWatch.elapsed(java.util.concurrent.TimeUnit.MILLISECONDS));
             stopWatch.reset();
             stopWatch.start();
           }
@@ -739,15 +748,14 @@ public class TestClientNoCluster extends Configured implements Tool {
       }
     } else {
       try (BufferedMutator mutator = sharedConnection.getBufferedMutator(tableName)) {
-        Stopwatch stopWatch = new Stopwatch();
-        stopWatch.start();
+        Stopwatch stopWatch = Stopwatch.createStarted();
         for (int i = 0; i < namespaceSpan; i++) {
           byte [] b = format(rd.nextLong());
           Put p = new Put(b);
           p.addColumn(HConstants.CATALOG_FAMILY, b, b);
           mutator.mutate(p);
           if (i % printInterval == 0) {
-            LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());
+            LOG.info("Put " + printInterval + "/" + stopWatch.elapsed(java.util.concurrent.TimeUnit.MILLISECONDS));
             stopWatch.reset();
             stopWatch.start();
           }

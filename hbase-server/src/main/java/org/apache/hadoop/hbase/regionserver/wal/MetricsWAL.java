@@ -19,13 +19,14 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.util.StringUtils;
@@ -35,8 +36,8 @@ import org.apache.hadoop.util.StringUtils;
  * single function call and turn it into multiple manipulations of the hadoop metrics system.
  */
 @InterfaceAudience.Private
-public class MetricsWAL extends WALActionsListener.Base {
-  private static final Log LOG = LogFactory.getLog(MetricsWAL.class);
+public class MetricsWAL implements WALActionsListener {
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsWAL.class);
 
   private final MetricsWALSource source;
 

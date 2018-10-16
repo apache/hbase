@@ -21,10 +21,10 @@
     -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase</artifactId>
+    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
     <version>3.0.0-SNAPSHOT</version>
-    <relativePath>..</relativePath>
+    <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-assembly</artifactId>
   <name>Apache HBase - Assembly</name>
@@ -37,11 +37,26 @@
   </properties>
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <!-- hbase-spark is ok in the assembly -->
+          <execution>
+            <id>banned-hbase-spark</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <!-- licensing info from our dependencies -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-remote-resources-plugin</artifactId>
-        <version>1.5</version>
         <executions>
           <execution>
             <id>aggregate-licenses</id>
@@ -72,7 +87,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
         <configuration>
           <!--Else will use hbase-assembly as final name.-->
           <finalName>hbase-${project.version}</finalName>
@@ -81,16 +95,10 @@
           <tarLongFileMode>gnu</tarLongFileMode>
           <descriptors>
             <descriptor>${assembly.file}</descriptor>
+            <descriptor>src/main/assembly/client.xml</descriptor>
           </descriptors>
         </configuration>
       </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-site-plugin</artifactId>
-          <configuration>
-            <skip>true</skip>
-          </configuration>
-        </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
@@ -103,14 +111,25 @@
             </goals>
             <configuration>
               <outputFile>${project.parent.basedir}/target/cached_classpath.txt</outputFile>
-              <excludeArtifactIds>jruby-complete</excludeArtifactIds>
+              <excludeArtifactIds>jline,jruby-complete,hbase-shaded-client,hbase-shaded-client-byo-hadoop,hbase-shaded-mapreduce</excludeArtifactIds>
             </configuration>
           </execution>
 
           <execution>
-            <!-- Generates a file containing jruby jar.
-                 In dev environment, bin/hbase will read the file and add the jar into classpath when jruby is needed
-            -->
+            <!-- generates the file that will be used by the bin/hbase zkcli script in the dev env -->
+            <id>create-hbase-generated-classpath-jline</id>
+            <phase>test</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <outputFile>${project.parent.basedir}/target/cached_classpath_jline.txt</outputFile>
+              <includeArtifactIds>jline</includeArtifactIds>
+            </configuration>
+          </execution>
+
+          <execution>
+            <!-- generates the file that will be used by the bin/hbase shell script in the dev env -->
             <id>create-hbase-generated-classpath-jruby</id>
             <phase>test</phase>
             <goals>
@@ -144,7 +163,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.4.0</version>
+        <version>${exec.maven.version}</version>
         <executions>
           <execution>
             <id>concat-NOTICE-files</id>
@@ -171,15 +190,45 @@
     </plugins>
   </build>
   <dependencies>
+    <!-- client artifacts for downstream use -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-mapreduce</artifactId>
+    </dependency>
 	<!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-it</artifactId>
       <type>test-jar</type>
     </dependency>
+    <!-- Hamcrest is required by hbase-it (via junit), but as long as we're grabbing the hbase-it test-jar,
+         maven dependency resolution won't pick it up for us. -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-core</artifactId>
+      <!-- Overriding the scope in depMgmt -->
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+      <type>test-jar</type>
     </dependency>
     <!-- To dump tools in hbase-procedure into cached_classpath.txt. -->
     <dependency>
@@ -193,59 +242,63 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-hadoop-compat</artifactId>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>${compat.module}</artifactId>
-        <version>${project.version}</version>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>${compat.module}</artifactId>
     </dependency>
     <dependency>
-       <groupId>org.apache.hbase</groupId>
-       <artifactId>hbase-shell</artifactId>
-       <version>${project.version}</version>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shell</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-thrift</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-rest</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-external-blockcache</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-testing-util</artifactId>
-       <version>${project.version}</version>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-metrics-api</artifactId>
-       <version>${project.version}</version>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-metrics</artifactId>
-       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-resource-bundle</artifactId>
-       <version>${project.version}</version>
        <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-spark</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
@@ -255,8 +308,36 @@
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpcore</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-spark-it</artifactId>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-backup</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-replication</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-http</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-examples</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-zookeeper</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>jline</groupId>
+      <artifactId>jline</artifactId>
+    </dependency>
   </dependencies>
-
   <profiles>
     <profile>
       <id>rsgroup</id>

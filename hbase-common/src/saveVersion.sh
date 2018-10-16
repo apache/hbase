@@ -27,14 +27,18 @@ outputDirectory=$2
 pushd .
 cd ..
 
-user=`whoami`
+user=`whoami | sed -n -e 's/\\\/\\\\\\\\/p'`
+if [ "$user" == "" ]
+then
+  user=`whoami`
+fi
 date=`date`
 cwd=`pwd`
 if [ -d .svn ]; then
   revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
   url=`svn info | sed -n -e 's/^URL: \(.*\)/\1/p'`
 elif [ -d .git ]; then
-  revision=`git log -1 --pretty=format:"%H"`
+  revision=`git log -1 --no-show-signature --pretty=format:"%H"`
   hostname=`hostname`
   url="git://${hostname}${cwd}"
 else
@@ -61,7 +65,7 @@ cat >"$outputDirectory/org/apache/hadoop/hbase/Version.java" <<EOF
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class Version {

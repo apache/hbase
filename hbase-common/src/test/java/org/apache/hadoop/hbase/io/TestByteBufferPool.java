@@ -17,15 +17,22 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import java.nio.ByteBuffer;
+import static org.junit.Assert.assertEquals;
 
+import java.nio.ByteBuffer;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.assertEquals;
+
 @Category({ IOTests.class, SmallTests.class })
 public class TestByteBufferPool {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestByteBufferPool.class);
 
   @Test
   public void testOffheapBBPool() throws Exception {

@@ -18,9 +18,9 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A decoding context that is created by a reader's encoder, and is shared

@@ -17,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -36,37 +35,13 @@ import org.junit.rules.TestName;
 
 @Category({SmallTests.class, ClientTests.class})
 public class TestBufferedMutator {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBufferedMutator.class);
+
   @Rule
   public TestName name = new TestName();
-
-  /**
-   * Registry that does nothing.
-   * Otherwise, default Registry wants zookeeper up and running.
-   */
-  public static class DoNothingRegistry implements Registry {
-    @Override
-    public void init(Connection connection) {
-      // TODO Auto-generated method stub
-    }
-
-    @Override
-    public RegionLocations getMetaRegionLocation() throws IOException {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public String getClusterId() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public int getCurrentNrHRS() throws IOException {
-      // TODO Auto-generated method stub
-      return 0;
-    }
-  }
 
   /**
    * My BufferedMutator.
@@ -83,7 +58,7 @@ public class TestBufferedMutator {
   public void testAlternateBufferedMutatorImpl() throws IOException {
     BufferedMutatorParams params =  new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
     Configuration conf = HBaseConfiguration.create();
-    conf.set(RegistryFactory.REGISTRY_IMPL_CONF_KEY, DoNothingRegistry.class.getName());
+    conf.set(AsyncRegistryFactory.REGISTRY_IMPL_CONF_KEY, DoNothingAsyncRegistry.class.getName());
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       BufferedMutator bm = connection.getBufferedMutator(params);
       // Assert we get default BM if nothing specified.

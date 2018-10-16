@@ -27,16 +27,20 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-import com.google.common.cache.LoadingCache;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 /**
  * Wrapper to abstract out usage of user and group information in HBase.
@@ -132,6 +136,13 @@ public abstract class User {
    */
   public void addToken(Token<? extends TokenIdentifier> token) {
     ugi.addToken(token);
+  }
+
+  /**
+   * @return true if user credentials are obtained from keytab.
+   */
+  public boolean isLoginFromKeytab() {
+    return ugi.isFromKeytab();
   }
 
   @Override
@@ -230,6 +241,16 @@ public abstract class User {
   }
 
   /**
+   * Login with the given keytab and principal.
+   * @param keytabLocation path of keytab
+   * @param pricipalName login principal
+   * @throws IOException underlying exception from UserGroupInformation.loginUserFromKeytab
+   */
+  public static void login(String keytabLocation, String pricipalName) throws IOException {
+    SecureHadoopUser.login(keytabLocation, pricipalName);
+  }
+
+  /**
    * Returns whether or not Kerberos authentication is configured for Hadoop.
    * For non-secure Hadoop, this always returns <code>false</code>.
    * For secure Hadoop, it will return the value from
@@ -246,6 +267,21 @@ public abstract class User {
    */
   public static boolean isHBaseSecurityEnabled(Configuration conf) {
     return "kerberos".equalsIgnoreCase(conf.get(HBASE_SECURITY_CONF_KEY));
+  }
+
+  /**
+   * In secure environment, if a user specified his keytab and principal,
+   * a hbase client will try to login with them. Otherwise, hbase client will try to obtain
+   * ticket(through kinit) from system.
+   * @param conf configuration file
+   * @return true if keytab and principal are configured
+   */
+  public static boolean shouldLoginFromKeytab(Configuration conf) {
+    Optional<String> keytab =
+      Optional.ofNullable(conf.get(AuthUtil.HBASE_CLIENT_KEYTAB_FILE));
+    Optional<String> principal =
+      Optional.ofNullable(conf.get(AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL));
+    return keytab.isPresent() && principal.isPresent();
   }
 
   /* Concrete implementations */
@@ -340,6 +376,19 @@ public abstract class User {
         String principalConfKey, String localhost) throws IOException {
       if (isSecurityEnabled()) {
         SecurityUtil.login(conf, fileConfKey, principalConfKey, localhost);
+      }
+    }
+
+    /**
+     * Login through configured keytab and pricipal.
+     * @param keytabLocation location of keytab
+     * @param principalName principal in keytab
+     * @throws IOException exception from UserGroupInformation.loginUserFromKeytab
+     */
+    public static void login(String keytabLocation, String principalName)
+        throws IOException {
+      if (isSecurityEnabled()) {
+        UserGroupInformation.loginUserFromKeytab(principalName, keytabLocation);
       }
     }
 

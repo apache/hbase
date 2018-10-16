@@ -23,13 +23,14 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.util.ShutdownHookManager;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -39,7 +40,7 @@ import org.apache.hadoop.hbase.util.Threads;
  */
 @InterfaceAudience.Private
 public class ShutdownHook {
-  private static final Log LOG = LogFactory.getLog(ShutdownHook.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ShutdownHook.class);
   private static final String CLIENT_FINALIZER_DATA_METHOD = "clientFinalizer";
 
   /**
@@ -211,10 +212,12 @@ public class ShutdownHook {
       }
       return hdfsClientFinalizer;
     } catch (NoSuchFieldException nsfe) {
-      LOG.fatal("Couldn't find field 'clientFinalizer' in FileSystem!", nsfe);
+      LOG.error(HBaseMarkers.FATAL, "Couldn't find field 'clientFinalizer' in FileSystem!",
+          nsfe);
       throw new RuntimeException("Failed to suppress HDFS shutdown hook");
     } catch (IllegalAccessException iae) {
-      LOG.fatal("Couldn't access field 'clientFinalizer' in FileSystem!", iae);
+      LOG.error(HBaseMarkers.FATAL, "Couldn't access field 'clientFinalizer' in FileSystem!",
+          iae);
       throw new RuntimeException("Failed to suppress HDFS shutdown hook");
     }
   }

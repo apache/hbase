@@ -20,7 +20,7 @@ module Shell
   module Commands
     class CatalogjanitorSwitch < Command
       def help
-        return <<-EOF
+        <<-EOF
 Enable/Disable CatalogJanitor. Returns previous CatalogJanitor state.
 Examples:
 
@@ -30,7 +30,7 @@ EOF
       end
 
       def command(enableDisable)
-        formatter.row([admin.catalogjanitor_switch(enableDisable)? "true" : "false"])
+        formatter.row([admin.catalogjanitor_switch(enableDisable) ? 'true' : 'false'])
       end
     end
   end

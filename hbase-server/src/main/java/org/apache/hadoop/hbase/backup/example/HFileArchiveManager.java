@@ -19,16 +19,17 @@ package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Client-side manager for which table's hfiles should be preserved for long-term archive.
@@ -40,13 +41,13 @@ import org.apache.zookeeper.KeeperException;
 class HFileArchiveManager {
 
   private final String archiveZnode;
-  private static final Log LOG = LogFactory.getLog(HFileArchiveManager.class);
-  private final ZooKeeperWatcher zooKeeper;
+  private static final Logger LOG = LoggerFactory.getLogger(HFileArchiveManager.class);
+  private final ZKWatcher zooKeeper;
   private volatile boolean stopped = false;
 
   public HFileArchiveManager(Connection connection, Configuration conf)
       throws ZooKeeperConnectionException, IOException {
-    this.zooKeeper = new ZooKeeperWatcher(conf, "hfileArchiveManager-on-" + connection.toString(),
+    this.zooKeeper = new ZKWatcher(conf, "hfileArchiveManager-on-" + connection.toString(),
         connection);
     this.archiveZnode = ZKTableArchiveClient.getArchiveZNode(this.zooKeeper.getConfiguration(),
       this.zooKeeper);
@@ -103,7 +104,7 @@ class HFileArchiveManager {
    * @param table table name on which to enable archiving
    * @throws KeeperException
    */
-  private void enable(ZooKeeperWatcher zooKeeper, byte[] table)
+  private void enable(ZKWatcher zooKeeper, byte[] table)
       throws KeeperException {
     LOG.debug("Ensuring archiving znode exists");
     ZKUtil.createAndFailSilent(zooKeeper, archiveZnode);
@@ -122,7 +123,7 @@ class HFileArchiveManager {
    * @param table name of the table to disable
    * @throws KeeperException if an unexpected ZK connection issues occurs
    */
-  private void disable(ZooKeeperWatcher zooKeeper, byte[] table) throws KeeperException {
+  private void disable(ZKWatcher zooKeeper, byte[] table) throws KeeperException {
     // ensure the latest state of the archive node is found
     zooKeeper.sync(archiveZnode);
 
@@ -164,6 +165,6 @@ class HFileArchiveManager {
    * @return znode for the table's archive status
    */
   private String getTableNode(byte[] table) {
-    return ZKUtil.joinZNode(archiveZnode, Bytes.toString(table));
+    return ZNodePaths.joinZNode(archiveZnode, Bytes.toString(table));
   }
 }

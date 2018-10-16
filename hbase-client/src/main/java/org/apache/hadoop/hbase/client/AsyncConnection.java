@@ -22,10 +22,11 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The asynchronous version of Connection.
+ * @since 2.0.0
  */
 @InterfaceAudience.Public
 public interface AsyncConnection extends Closeable {
@@ -48,32 +49,37 @@ public interface AsyncConnection extends Closeable {
   AsyncTableRegionLocator getRegionLocator(TableName tableName);
 
   /**
-   * Retrieve an {@link RawAsyncTable} implementation for accessing a table.
+   * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
-   * The returned instance will use default configs. Use {@link #getRawTableBuilder(TableName)} if you
-   * want to customize some configs.
+   * The returned instance will use default configs. Use {@link #getTableBuilder(TableName)} if
+   * you want to customize some configs.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
+   * <p>
+   * The returned {@code CompletableFuture} will be finished directly in the rpc framework's
+   * callback thread, so typically you should not do any time consuming work inside these methods.
+   * And also the observer style scan API will use {@link AdvancedScanResultConsumer} which is
+   * designed for experts only. Only use it when you know what you are doing.
    * @param tableName the name of the table
-   * @return an RawAsyncTable to use for interactions with this table
-   * @see #getRawTableBuilder(TableName)
+   * @return an AsyncTable to use for interactions with this table
+   * @see #getTableBuilder(TableName)
    */
-  default RawAsyncTable getRawTable(TableName tableName) {
-    return getRawTableBuilder(tableName).build();
+  default AsyncTable<AdvancedScanResultConsumer> getTable(TableName tableName) {
+    return getTableBuilder(tableName).build();
   }
 
   /**
-   * Returns an {@link AsyncTableBuilder} for creating {@link RawAsyncTable}.
+   * Returns an {@link AsyncTableBuilder} for creating {@link AsyncTable}.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
    * @param tableName the name of the table
    */
-  AsyncTableBuilder<RawAsyncTable> getRawTableBuilder(TableName tableName);
+  AsyncTableBuilder<AdvancedScanResultConsumer> getTableBuilder(TableName tableName);
 
   /**
-   * Retrieve an AsyncTable implementation for accessing a table.
+   * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
@@ -81,7 +87,7 @@ public interface AsyncConnection extends Closeable {
    * @param pool the thread pool to use for executing callback
    * @return an AsyncTable to use for interactions with this table
    */
-  default AsyncTable getTable(TableName tableName, ExecutorService pool) {
+  default AsyncTable<ScanResultConsumer> getTable(TableName tableName, ExecutorService pool) {
     return getTableBuilder(tableName, pool).build();
   }
 
@@ -93,14 +99,86 @@ public interface AsyncConnection extends Closeable {
    * @param tableName the name of the table
    * @param pool the thread pool to use for executing callback
    */
-  AsyncTableBuilder<AsyncTable> getTableBuilder(TableName tableName, ExecutorService pool);
+  AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName, ExecutorService pool);
 
   /**
-   * Retrieve an AsyncAdmin implementation to administer an HBase cluster. The returned AsyncAdmin
-   * is not guaranteed to be thread-safe. A new instance should be created for each using thread.
-   * This is a lightweight operation. Pooling or caching of the returned AsyncAdmin is not
-   * recommended.
-   * @return an AsyncAdmin instance for cluster administration
+   * Retrieve an {@link AsyncAdmin} implementation to administer an HBase cluster.
+   * <p>
+   * The returned instance will use default configs. Use {@link #getAdminBuilder()} if you want to
+   * customize some configs.
+   * <p>
+   * The admin operation's returned {@code CompletableFuture} will be finished directly in the rpc
+   * framework's callback thread, so typically you should not do any time consuming work inside
+   * these methods.
+   * @return an {@link AsyncAdmin} instance for cluster administration
    */
-  AsyncAdmin getAdmin();
+  default AsyncAdmin getAdmin() {
+    return getAdminBuilder().build();
+  }
+
+  /**
+   * Returns an {@link AsyncAdminBuilder} for creating {@link AsyncAdmin}.
+   * <p>
+   * The admin operation's returned {@code CompletableFuture} will be finished directly in the rpc
+   * framework's callback thread, so typically you should not do any time consuming work inside
+   * these methods.
+   */
+  AsyncAdminBuilder getAdminBuilder();
+
+  /**
+   * Retrieve an {@link AsyncAdmin} implementation to administer an HBase cluster.
+   * <p>
+   * The returned instance will use default configs. Use {@link #getAdminBuilder(ExecutorService)}
+   * if you want to customize some configs.
+   * @param pool the thread pool to use for executing callback
+   * @return an {@link AsyncAdmin} instance for cluster administration
+   */
+  default AsyncAdmin getAdmin(ExecutorService pool) {
+    return getAdminBuilder(pool).build();
+  }
+
+  /**
+   * Returns an {@link AsyncAdminBuilder} for creating {@link AsyncAdmin}.
+   * @param pool the thread pool to use for executing callback
+   */
+  AsyncAdminBuilder getAdminBuilder(ExecutorService pool);
+
+  /**
+   * Retrieve an {@link AsyncBufferedMutator} for performing client-side buffering of writes.
+   * <p>
+   * The returned instance will use default configs. Use
+   * {@link #getBufferedMutatorBuilder(TableName)} if you want to customize some configs.
+   * @param tableName the name of the table
+   * @return an {@link AsyncBufferedMutator} for the supplied tableName.
+   */
+  default AsyncBufferedMutator getBufferedMutator(TableName tableName) {
+    return getBufferedMutatorBuilder(tableName).build();
+  }
+
+  /**
+   * Returns an {@link AsyncBufferedMutatorBuilder} for creating {@link AsyncBufferedMutator}.
+   * @param tableName the name of the table
+   */
+  AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName);
+
+  /**
+   * Retrieve an {@link AsyncBufferedMutator} for performing client-side buffering of writes.
+   * <p>
+   * The returned instance will use default configs. Use
+   * {@link #getBufferedMutatorBuilder(TableName, ExecutorService)} if you want to customize some
+   * configs.
+   * @param tableName the name of the table
+   * @param pool the thread pool to use for executing callback
+   * @return an {@link AsyncBufferedMutator} for the supplied tableName.
+   */
+  default AsyncBufferedMutator getBufferedMutator(TableName tableName, ExecutorService pool) {
+    return getBufferedMutatorBuilder(tableName, pool).build();
+  }
+
+  /**
+   * Returns an {@link AsyncBufferedMutatorBuilder} for creating {@link AsyncBufferedMutator}.
+   * @param tableName the name of the table
+   * @param pool the thread pool to use for executing callback
+   */
+  AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName, ExecutorService pool);
 }

@@ -20,15 +20,15 @@ package org.apache.hadoop.hbase.procedure;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Distributed procedure member's Subprocedure.  A procedure is sarted on a ProcedureCoordinator
@@ -50,8 +50,9 @@ import org.apache.zookeeper.KeeperException;
  * There is a category of procedure (ex: online-snapshots), and a user-specified instance-specific
  * barrierName. (ex: snapshot121126).
  */
+@InterfaceAudience.Private
 abstract public class Subprocedure implements Callable<Void> {
-  private static final Log LOG = LogFactory.getLog(Subprocedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Subprocedure.class);
 
   // Name of the procedure
   final private String barrierName;
@@ -153,6 +154,7 @@ abstract public class Subprocedure implements Callable<Void> {
    * Subprocedure, ForeignException)}.
    */
   @SuppressWarnings("finally")
+  @Override
   final public Void call() {
     LOG.debug("Starting subprocedure '" + barrierName + "' with timeout " +
         executionTimeoutTimer.getMaxTime() + "ms");
@@ -337,5 +339,5 @@ abstract public class Subprocedure implements Callable<Void> {
 
     @Override
     public void cleanup(Exception e) {}
-  };
+  }
 }

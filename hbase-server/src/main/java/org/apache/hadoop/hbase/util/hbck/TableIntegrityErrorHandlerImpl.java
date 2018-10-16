@@ -19,14 +19,15 @@ package org.apache.hadoop.hbase.util.hbck;
 
 import java.io.IOException;
 import java.util.Collection;
-
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Simple implementation of TableIntegrityErrorHandler. Can be used as a base
  * class.
  */
+@InterfaceAudience.Private
 abstract public class TableIntegrityErrorHandlerImpl implements
     TableIntegrityErrorHandler {
   TableInfo ti;
@@ -53,7 +54,7 @@ abstract public class TableIntegrityErrorHandlerImpl implements
   @Override
   public void handleRegionStartKeyNotEmpty(HbckInfo hi) throws IOException {
   }
-  
+
   /**
    * {@inheritDoc}
    */

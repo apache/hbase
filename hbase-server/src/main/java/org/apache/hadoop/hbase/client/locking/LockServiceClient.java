@@ -19,22 +19,22 @@
 
 package org.apache.hadoop.hbase.client.locking;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.NonceGenerator;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType;
 
 /**
  * Helper class to create "master locks" for namespaces, tables and regions.
@@ -83,7 +83,7 @@ public class LockServiceClient {
    * Create a new EntityLock object to acquire exclusive lock on multiple regions of same tables.
    * Internally, the table and its namespace will also be locked in shared mode.
    */
-  public EntityLock regionLock(List<HRegionInfo> regionInfos, String description, Abortable abort) {
+  public EntityLock regionLock(List<RegionInfo> regionInfos, String description, Abortable abort) {
     LockRequest lockRequest = buildLockRequest(LockType.EXCLUSIVE,
         null, null, regionInfos, description, ng.getNonceGroup(), ng.newNonce());
     return new EntityLock(conf, stub, lockRequest, abort);
@@ -91,15 +91,15 @@ public class LockServiceClient {
 
   @VisibleForTesting
   public static LockRequest buildLockRequest(final LockType type,
-      final String namespace, final TableName tableName, final List<HRegionInfo> regionInfos,
+      final String namespace, final TableName tableName, final List<RegionInfo> regionInfos,
       final String description, final long nonceGroup, final long nonce) {
     final LockRequest.Builder builder = LockRequest.newBuilder()
       .setLockType(type)
       .setNonceGroup(nonceGroup)
       .setNonce(nonce);
     if (regionInfos != null) {
-      for (HRegionInfo hri: regionInfos) {
-        builder.addRegionInfo(HRegionInfo.convert(hri));
+      for (RegionInfo hri: regionInfos) {
+        builder.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     } else if (namespace != null) {
       builder.setNamespace(namespace);

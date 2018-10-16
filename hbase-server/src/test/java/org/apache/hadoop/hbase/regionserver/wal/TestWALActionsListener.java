@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,32 +19,31 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -54,6 +52,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestWALActionsListener {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWALActionsListener.class);
 
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
@@ -95,27 +97,23 @@ public class TestWALActionsListener {
   @Test
   public void testActionListener() throws Exception {
     DummyWALActionsListener observer = new DummyWALActionsListener();
-    List<WALActionsListener> list = new ArrayList<>(1);
-    list.add(observer);
-    final WALFactory wals = new WALFactory(conf, list, "testActionListener");
+    final WALFactory wals = new WALFactory(conf, "testActionListener");
+    wals.getWALProvider().addWALActionsListener(observer);
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(SOME_BYTES),
-             SOME_BYTES, SOME_BYTES, false);
-    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(SOME_BYTES))
+        .setStartKey(SOME_BYTES).setEndKey(SOME_BYTES).build();
+    final WAL wal = wals.getWAL(hri);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     for (int i = 0; i < 20; i++) {
       byte[] b = Bytes.toBytes(i + "");
-      KeyValue kv = new KeyValue(b,b,b);
+      KeyValue kv = new KeyValue(b, b, b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(SOME_BYTES));
-      htd.addFamily(new HColumnDescriptor(b));
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for(byte[] fam : htd.getFamiliesKeys()) {
-        scopes.put(fam, 0);
-      }
-      final long txid = wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(),
-          TableName.valueOf(b), 0, mvcc, scopes), edit, true);
+      scopes.put(b, 0);
+      long txid = wal.append(hri,
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), TableName.valueOf(b), 0, mvcc, scopes), edit,
+        true);
       wal.sync(txid);
       if (i == 10) {
         wal.registerWALActionsListener(laterobserver);
@@ -138,7 +136,7 @@ public class TestWALActionsListener {
   /**
    * Just counts when methods are called
    */
-  public static class DummyWALActionsListener extends WALActionsListener.Base {
+  public static class DummyWALActionsListener implements WALActionsListener {
     public int preLogRollCounter = 0;
     public int postLogRollCounter = 0;
     public int closedCount = 0;

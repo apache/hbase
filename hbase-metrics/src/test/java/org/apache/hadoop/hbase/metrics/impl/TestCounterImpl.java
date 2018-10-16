@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.metrics.impl;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -30,6 +32,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestCounterImpl {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCounterImpl.class);
 
   private Counter counter;
 

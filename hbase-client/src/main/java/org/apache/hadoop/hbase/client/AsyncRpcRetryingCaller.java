@@ -23,7 +23,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
-import io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,17 +32,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 @InterfaceAudience.Private
 public abstract class AsyncRpcRetryingCaller<T> {
 
-  private static final Log LOG = LogFactory.getLog(AsyncRpcRetryingCaller.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncRpcRetryingCaller.class);
 
   private final HashedWheelTimer retryTimer;
 

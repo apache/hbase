@@ -62,9 +62,8 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -101,7 +100,7 @@ public abstract class TestVisibilityLabels {
   public static Configuration conf;
 
   private volatile boolean killedRS = false;
-  @Rule 
+  @Rule
   public final TestName TEST_NAME = new TestName();
   public static User SUPERUSER, USER1;
 
@@ -146,7 +145,7 @@ public abstract class TestVisibilityLabels {
           current.getRowLength(), row2, 0, row2.length));
     }
   }
-  
+
   @Test
   public void testSimpleVisibilityLabelsWithUniCodeCharacters() throws Exception {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
@@ -303,11 +302,12 @@ public abstract class TestVisibilityLabels {
       TEST_UTIL.getHBaseCluster().startRegionServer();
     }
     Thread t1 = new Thread() {
+      @Override
       public void run() {
         List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
             .getRegionServerThreads();
         for (RegionServerThread rsThread : regionServerThreads) {
-          List<Region> onlineRegions = rsThread.getRegionServer().getOnlineRegions(
+          List<HRegion> onlineRegions = rsThread.getRegionServer().getRegions(
               LABELS_TABLE_NAME);
           if (onlineRegions.size() > 0) {
             rsThread.getRegionServer().abort("Aborting ");
@@ -321,6 +321,7 @@ public abstract class TestVisibilityLabels {
     t1.start();
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     Thread t = new Thread() {
+      @Override
       public void run() {
         try {
           while (!killedRS) {
@@ -341,7 +342,7 @@ public abstract class TestVisibilityLabels {
     for (RegionServerThread rsThread : regionServerThreads) {
       while (true) {
         if (!rsThread.getRegionServer().isAborted()) {
-          List<Region> onlineRegions = rsThread.getRegionServer().getOnlineRegions(
+          List<HRegion> onlineRegions = rsThread.getRegionServer().getRegions(
               LABELS_TABLE_NAME);
           if (onlineRegions.size() > 0) {
             break;
@@ -364,7 +365,7 @@ public abstract class TestVisibilityLabels {
     }
   }
 
-  @Test(timeout = 60 * 1000)
+  @Test
   public void testVisibilityLabelsOnRSRestart() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
@@ -376,7 +377,7 @@ public abstract class TestVisibilityLabels {
     RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
     waitForLabelsRegionAvailability(rs.getRegionServer());
     try (Table table = createTableAndWriteDataWithLabels(tableName, "(" + SECRET + "|" + CONFIDENTIAL
-        + ")", PRIVATE);) {
+        + ")", PRIVATE)) {
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET));
       ResultScanner scanner = table.getScanner(s);
@@ -392,14 +393,7 @@ public abstract class TestVisibilityLabels {
       } catch (InterruptedException e) {
       }
     }
-    while (regionServer.getOnlineRegions(LABELS_TABLE_NAME).isEmpty()) {
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-      }
-    }
-    Region labelsTableRegion = regionServer.getOnlineRegions(LABELS_TABLE_NAME).get(0);
-    while (labelsTableRegion.isRecovering()) {
+    while (regionServer.getRegions(LABELS_TABLE_NAME).isEmpty()) {
       try {
         Thread.sleep(10);
       } catch (InterruptedException e) {
@@ -423,17 +417,19 @@ public abstract class TestVisibilityLabels {
   public void testSetAndGetUserAuths() throws Throwable {
     final String user = "user1";
     PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         String[] auths = { SECRET, CONFIDENTIAL };
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.setAuths(conn, auths, user);
         } catch (Throwable e) {
+          throw new IOException(e);
         }
         return null;
       }
     };
     SUPERUSER.runAs(action);
-    try (Table ht = TEST_UTIL.getConnection().getTable(LABELS_TABLE_NAME);) {
+    try (Table ht = TEST_UTIL.getConnection().getTable(LABELS_TABLE_NAME)) {
       Scan scan = new Scan();
       scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
       ResultScanner scanner = ht.getScanner(scan);
@@ -449,12 +445,13 @@ public abstract class TestVisibilityLabels {
     }
 
     action = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         GetAuthsResponse authsResponse = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           authsResponse = VisibilityClient.getAuths(conn, user);
         } catch (Throwable e) {
-          fail("Should not have failed");
+          throw new IOException(e);
         }
         List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
@@ -470,6 +467,7 @@ public abstract class TestVisibilityLabels {
 
     // Try doing setAuths once again and there should not be any duplicates
     action = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         String[] auths1 = { SECRET, CONFIDENTIAL };
         GetAuthsResponse authsResponse = null;
@@ -478,7 +476,7 @@ public abstract class TestVisibilityLabels {
           try {
             authsResponse = VisibilityClient.getAuths(conn, user);
           } catch (Throwable e) {
-            fail("Should not have failed");
+            throw new IOException(e);
           }
         } catch (Throwable e) {
         }
@@ -499,7 +497,7 @@ public abstract class TestVisibilityLabels {
     List<String> auths = new ArrayList<>();
     for (Result result : results) {
       Cell labelCell = result.getColumnLatestCell(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
-      Cell userAuthCell = result.getColumnLatestCell(LABELS_TABLE_FAMILY, user.getBytes());
+      Cell userAuthCell = result.getColumnLatestCell(LABELS_TABLE_FAMILY, Bytes.toBytes(user));
       if (userAuthCell != null) {
         auths.add(Bytes.toString(labelCell.getValueArray(), labelCell.getValueOffset(),
             labelCell.getValueLength()));
@@ -511,13 +509,14 @@ public abstract class TestVisibilityLabels {
   @Test
   public void testClearUserAuths() throws Throwable {
     PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         String[] auths = { SECRET, CONFIDENTIAL, PRIVATE };
         String user = "testUser";
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.setAuths(conn, auths, user);
         } catch (Throwable e) {
-          fail("Should not have failed");
+          throw new IOException(e);
         }
         // Removing the auths for SECRET and CONFIDENTIAL for the user.
         // Passing a non existing auth also.
@@ -555,7 +554,7 @@ public abstract class TestVisibilityLabels {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           authsResponse = VisibilityClient.getAuths(conn, user);
         } catch (Throwable e) {
-          fail("Should not have failed");
+          throw new IOException(e);
         }
         List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
@@ -577,13 +576,13 @@ public abstract class TestVisibilityLabels {
       Put put = new Put(row1);
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setCellVisibility(new CellVisibility(SECRET + " & " + CONFIDENTIAL));
-      table.checkAndPut(row1, fam, qual, null, put);
+      table.checkAndMutate(row1, fam).qualifier(qual).ifNotExists().thenPut(put);
       byte[] row2 = Bytes.toBytes("row2");
       put = new Put(row2);
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setCellVisibility(new CellVisibility(SECRET));
-      table.checkAndPut(row2, fam, qual, null, put);
-      
+      table.checkAndMutate(row2, fam).qualifier(qual).ifNotExists().thenPut(put);
+
       Scan scan = new Scan();
       scan.setAuthorizations(new Authorizations(SECRET));
       ResultScanner scanner = table.getScanner(scan);
@@ -624,7 +623,7 @@ public abstract class TestVisibilityLabels {
   @Test
   public void testLabelsWithAppend() throws Throwable {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    try (Table table = TEST_UTIL.createTable(tableName, fam);) {
+    try (Table table = TEST_UTIL.createTable(tableName, fam)) {
       byte[] row1 = Bytes.toBytes("row1");
       byte[] val = Bytes.toBytes("a");
       Put put = new Put(row1);
@@ -636,12 +635,12 @@ public abstract class TestVisibilityLabels {
       Result result = table.get(get);
       assertTrue(result.isEmpty());
       Append append = new Append(row1);
-      append.add(fam, qual, Bytes.toBytes("b"));
+      append.addColumn(fam, qual, Bytes.toBytes("b"));
       table.append(append);
       result = table.get(get);
       assertTrue(result.isEmpty());
       append = new Append(row1);
-      append.add(fam, qual, Bytes.toBytes("c"));
+      append.addColumn(fam, qual, Bytes.toBytes("c"));
       append.setCellVisibility(new CellVisibility(SECRET));
       table.append(append);
       result = table.get(get);
@@ -708,32 +707,32 @@ public abstract class TestVisibilityLabels {
     TEST_UTIL.getAdmin().createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(r1);
-      put.addColumn(fam, qual, 3l, v1);
-      put.addColumn(fam, qual2, 3l, v1);
-      put.addColumn(fam2, qual, 3l, v1);
-      put.addColumn(fam2, qual2, 3l, v1);
+      put.addColumn(fam, qual, 3L, v1);
+      put.addColumn(fam, qual2, 3L, v1);
+      put.addColumn(fam2, qual, 3L, v1);
+      put.addColumn(fam2, qual2, 3L, v1);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       put = new Put(r1);
-      put.addColumn(fam, qual, 4l, v2);
-      put.addColumn(fam, qual2, 4l, v2);
-      put.addColumn(fam2, qual, 4l, v2);
-      put.addColumn(fam2, qual2, 4l, v2);
+      put.addColumn(fam, qual, 4L, v2);
+      put.addColumn(fam, qual2, 4L, v2);
+      put.addColumn(fam2, qual, 4L, v2);
+      put.addColumn(fam2, qual2, 4L, v2);
       put.setCellVisibility(new CellVisibility(PRIVATE));
       table.put(put);
 
       put = new Put(r2);
-      put.addColumn(fam, qual, 3l, v1);
-      put.addColumn(fam, qual2, 3l, v1);
-      put.addColumn(fam2, qual, 3l, v1);
-      put.addColumn(fam2, qual2, 3l, v1);
+      put.addColumn(fam, qual, 3L, v1);
+      put.addColumn(fam, qual2, 3L, v1);
+      put.addColumn(fam2, qual, 3L, v1);
+      put.addColumn(fam2, qual2, 3L, v1);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       put = new Put(r2);
-      put.addColumn(fam, qual, 4l, v2);
-      put.addColumn(fam, qual2, 4l, v2);
-      put.addColumn(fam2, qual, 4l, v2);
-      put.addColumn(fam2, qual2, 4l, v2);
+      put.addColumn(fam, qual, 4L, v2);
+      put.addColumn(fam, qual2, 4L, v2);
+      put.addColumn(fam2, qual, 4L, v2);
+      put.addColumn(fam2, qual2, 4L, v2);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
 
@@ -843,10 +842,10 @@ public abstract class TestVisibilityLabels {
     }
     TEST_UTIL.getAdmin().flush(tableName);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-    Store store = regions.get(0).getStore(fam);
-    Collection<StoreFile> storefiles = store.getStorefiles();
+    HStore store = regions.get(0).getStore(fam);
+    Collection<HStoreFile> storefiles = store.getStorefiles();
     assertTrue(storefiles.size() > 0);
-    for (StoreFile storeFile : storefiles) {
+    for (HStoreFile storeFile : storefiles) {
       assertTrue(storeFile.getReader().getHFileReader().getFileContext().isIncludesTags());
     }
   }
@@ -868,6 +867,7 @@ public abstract class TestVisibilityLabels {
   public static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
             UNICODE_VIS_TAG, UC1, UC2 };

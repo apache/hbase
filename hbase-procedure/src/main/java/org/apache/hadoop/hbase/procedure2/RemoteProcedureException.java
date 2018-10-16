@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 

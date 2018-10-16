@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,14 +23,15 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -40,6 +40,11 @@ import org.junit.experimental.categories.Category;
  */
 @Category({SmallTests.class, ClientTests.class})
 public class TestPutDeleteEtcCellIteration {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestPutDeleteEtcCellIteration.class);
+
   private static final byte [] ROW = new byte [] {'r'};
   private static final long TIMESTAMP = System.currentTimeMillis();
   private static final int COUNT = 10;
@@ -100,7 +105,7 @@ public class TestPutDeleteEtcCellIteration {
     Append a = new Append(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
-      a.add(bytes, bytes, bytes);
+      a.addColumn(bytes, bytes, bytes);
     }
     int index = 0;
     for (CellScanner cellScanner = a.cellScanner(); cellScanner.advance();) {

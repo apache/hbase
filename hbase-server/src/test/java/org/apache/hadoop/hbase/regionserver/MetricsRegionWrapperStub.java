@@ -61,7 +61,7 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
-  public long getMemstoreSize() {
+  public long getMemStoreSize() {
     return 103;
   }
 
@@ -98,6 +98,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   @Override
   public long getNumReferenceFiles() {
     return 2;
+  }
+
+  @Override
+  public long getCpRequestCount() {
+    return 108;
   }
 
   @Override
@@ -141,5 +146,30 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   @Override
   public int getReplicaId() {
     return replicaid;
+  }
+
+  @Override
+  public long getNumCompactionsQueued() {
+    return 4;
+  }
+
+  @Override
+  public long getNumFlushesQueued() {
+    return 6;
+  }
+
+  @Override
+  public long getMaxCompactionQueueSize() {
+    return 4;
+  }
+
+  @Override
+  public long getMaxFlushQueueSize() {
+    return 6;
+  }
+
+  @Override
+  public long getTotalRequestCount() {
+    return 0;
   }
 }

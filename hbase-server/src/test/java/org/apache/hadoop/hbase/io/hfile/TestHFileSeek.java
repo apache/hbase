@@ -1,55 +1,56 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.StringTokenizer;
-
 import junit.framework.TestCase;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.io.BytesWritable;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.OptionBuilder;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 /**
  * test the performance for seek.
@@ -61,6 +62,11 @@ import org.junit.experimental.categories.Category;
  */
 @Category({IOTests.class, MediumTests.class})
 public class TestHFileSeek extends TestCase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileSeek.class);
+
   private static final byte[] CF = "f1".getBytes();
   private static final byte[] QUAL = "q1".getBytes();
   private static final boolean USE_PREAD = true;
@@ -73,7 +79,7 @@ public class TestHFileSeek extends TestCase {
   private RandomDistribution.DiscreteRNG keyLenGen;
   private KVGenerator kvGen;
 
-  private static final Log LOG = LogFactory.getLog(TestHFileSeek.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileSeek.class);
 
   @Override
   public void setUp() throws IOException {
@@ -82,11 +88,11 @@ public class TestHFileSeek extends TestCase {
     }
 
     conf = new Configuration();
-    
+
     if (options.useRawFs) {
       conf.setClass("fs.file.impl", RawLocalFileSystem.class, FileSystem.class);
     }
-    
+
     conf.setInt("tfile.fs.input.buffer.size", options.fsInputBufferSize);
     conf.setInt("tfile.fs.output.buffer.size", options.fsOutputBufferSize);
     path = new Path(new Path(options.rootDir), options.file);
@@ -137,7 +143,7 @@ public class TestHFileSeek extends TestCase {
       Writer writer = HFile.getWriterFactoryNoCache(conf)
           .withOutputStream(fout)
           .withFileContext(context)
-          .withComparator(CellComparator.COMPARATOR)
+          .withComparator(CellComparatorImpl.COMPARATOR)
           .create();
       try {
         BytesWritable key = new BytesWritable();
@@ -186,8 +192,8 @@ public class TestHFileSeek extends TestCase {
     Reader reader = HFile.createReaderFromStream(path, fsdis,
         fs.getFileStatus(path).getLen(), new CacheConfig(conf), conf);
     reader.loadFileInfo();
-    KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey()).getKey(),
-        ((KeyValue) reader.getLastKey()).getKey(), keyLenGen);
+    KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey().get()).getKey(),
+        ((KeyValue) reader.getLastKey().get()).getKey(), keyLenGen);
     HFileScanner scanner = reader.getScanner(false, USE_PREAD);
     BytesWritable key = new BytesWritable();
     timer.reset();
@@ -378,9 +384,9 @@ public class TestHFileSeek extends TestCase {
               .withDescription(
                   "specify how many seek operations we perform (requires -x r or -x rw.")
               .create('n');
-      
+
       Option trialCount =
-          OptionBuilder 
+          OptionBuilder
               .withLongOpt("trials")
               .withArgName("n")
               .hasArg()
@@ -393,7 +399,7 @@ public class TestHFileSeek extends TestCase {
             .withLongOpt("rawfs")
             .withDescription("use raw instead of checksummed file system")
             .create();
-      
+
       Option help =
           OptionBuilder.withLongOpt("help").hasArg(false).withDescription(
               "show this screen").create("h");
@@ -442,7 +448,7 @@ public class TestHFileSeek extends TestCase {
       if (line.hasOption('n')) {
         seekCount = Integer.parseInt(line.getOptionValue('n'));
       }
-      
+
       if (line.hasOption('t')) {
         trialCount = Integer.parseInt(line.getOptionValue('t'));
       }
@@ -490,7 +496,7 @@ public class TestHFileSeek extends TestCase {
           throw new ParseException("Unknown action specifier: " + strOp);
         }
       }
-      
+
       useRawFs = line.hasOption("rawfs");
 
       proceed = true;

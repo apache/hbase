@@ -19,11 +19,9 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.SequentialProcedureData;
 
 /**
@@ -69,15 +67,17 @@ public abstract class SequentialProcedure<TEnvironment> extends Procedure<TEnvir
   }
 
   @Override
-  protected void serializeStateData(final OutputStream stream) throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
     SequentialProcedureData.Builder data = SequentialProcedureData.newBuilder();
     data.setExecuted(executed);
-    data.build().writeDelimitedTo(stream);
+    serializer.serialize(data.build());
   }
 
   @Override
-  protected void deserializeStateData(final InputStream stream) throws IOException {
-    SequentialProcedureData data = SequentialProcedureData.parseDelimitedFrom(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    SequentialProcedureData data = serializer.deserialize(SequentialProcedureData.class);
     executed = data.getExecuted();
   }
 }

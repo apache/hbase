@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.InputStream;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Not thread safe!
@@ -42,6 +42,7 @@ public class ByteBuffInputStream extends InputStream {
    * because the end of the stream has been reached, the value <code>-1</code> is returned.
    * @return the next byte of data, or <code>-1</code> if the end of the stream has been reached.
    */
+  @Override
   public int read() {
     if (this.buf.hasRemaining()) {
       return (this.buf.get() & 0xff);
@@ -58,6 +59,7 @@ public class ByteBuffInputStream extends InputStream {
    * @return the total number of bytes actually read into the buffer, or <code>-1</code> if not even
    *         1 byte can be read because the end of the stream has been reached.
    */
+  @Override
   public int read (byte b[], int off, int len) {
     int avail = available();
     if (avail <= 0) {
@@ -81,6 +83,7 @@ public class ByteBuffInputStream extends InputStream {
    * @param n the number of bytes to be skipped.
    * @return the actual number of bytes skipped.
    */
+  @Override
   public long skip(long n) {
     long k = Math.min(n, available());
     if (k <= 0) {
@@ -94,6 +97,7 @@ public class ByteBuffInputStream extends InputStream {
    * @return  the number of remaining bytes that can be read (or skipped
    *          over) from this input stream.
    */
+  @Override
   public int available() {
     return this.buf.remaining();
   }

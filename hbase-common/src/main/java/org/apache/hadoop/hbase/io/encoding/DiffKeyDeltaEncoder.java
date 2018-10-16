@@ -23,14 +23,14 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Compress using:
@@ -208,7 +208,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   private int compressSingleKeyValue(DataOutputStream out, Cell cell, Cell prevCell)
       throws IOException {
-    byte flag = 0;
+    int flag = 0; // Do not use more bits that can fit into a byte
     int kLength = KeyValueUtil.keyLength(cell);
     int vLength = cell.getValueLength();
 
@@ -229,11 +229,11 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       // put column family
       byte familyLength = cell.getFamilyLength();
       out.write(familyLength);
-      CellUtil.writeFamily(out, cell, familyLength);
+      PrivateCellUtil.writeFamily(out, cell, familyLength);
     } else {
       // Finding common prefix
       int preKeyLength = KeyValueUtil.keyLength(prevCell);
-      commonPrefix = CellUtil.findCommonPrefixInFlatKey(cell, prevCell, true, false);
+      commonPrefix = PrivateCellUtil.findCommonPrefixInFlatKey(cell, prevCell, true, false);
       if (kLength == preKeyLength) {
         flag |= FLAG_SAME_KEY_LENGTH;
       }
@@ -281,8 +281,8 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     if (commonPrefix < rLen + KeyValue.ROW_LENGTH_SIZE) {
       // Previous and current rows are different. Copy the differing part of
       // the row, skip the column family, and copy the qualifier.
-      CellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
-      CellUtil.writeQualifier(out, cell, cell.getQualifierLength());
+      PrivateCellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
+      PrivateCellUtil.writeQualifier(out, cell, cell.getQualifierLength());
     } else {
       // The common part includes the whole row. As the column family is the
       // same across the whole file, it will automatically be included in the
@@ -290,7 +290,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       // What we write here is the non common part of the qualifier
       int commonQualPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
           - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
-      CellUtil.writeQualifierSkippingBytes(out, cell, cell.getQualifierLength(),
+      PrivateCellUtil.writeQualifierSkippingBytes(out, cell, cell.getQualifierLength(),
         commonQualPrefix);
     }
     if ((flag & FLAG_TIMESTAMP_IS_DIFF) == 0) {
@@ -302,7 +302,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     if ((flag & FLAG_SAME_TYPE) == 0) {
       out.write(cell.getTypeByte());
     }
-    CellUtil.writeValue(out, cell, vLength);
+    PrivateCellUtil.writeValue(out, cell, vLength);
     return kLength + vLength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 

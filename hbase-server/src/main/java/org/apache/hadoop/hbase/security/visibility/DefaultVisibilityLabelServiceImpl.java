@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,23 +40,26 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Cell.Type;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -66,12 +70,15 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService {
-
-  private static final Log LOG = LogFactory.getLog(DefaultVisibilityLabelServiceImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultVisibilityLabelServiceImpl.class);
 
   // "system" label is having an ordinal value 1.
   private static final int SYSTEM_LABEL_ORDINAL = 1;
@@ -111,7 +118,15 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
 
   @Override
   public void init(RegionCoprocessorEnvironment e) throws IOException {
-    ZooKeeperWatcher zk = e.getRegionServerServices().getZooKeeper();
+    /* So, presumption that the RegionCE has a ZK Connection is too much. Why would a RCE have
+     * a ZK instance? This is cheating presuming we have access to the RS ZKW. TODO: Fix.
+     *
+     * And what is going on here? This ain't even a Coprocessor? And its being passed a CP Env?
+     */
+    // This is a CoreCoprocessor. On creation, we should have gotten an environment that
+    // implements HasRegionServerServices so we can get at RSS. FIX!!!! Integrate this CP as
+    // native service.
+    ZKWatcher zk = ((HasRegionServerServices)e).getRegionServerServices().getZooKeeper();
     try {
       labelsCache = VisibilityLabelsCache.createAndGet(zk, this.conf);
     } catch (IOException ioe) {
@@ -176,7 +191,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         if (CellUtil.matchingQualifier(cell, LABEL_QUALIFIER)) {
           labels.put(
               Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()),
-              CellUtil.getRowAsInt(cell));
+              PrivateCellUtil.getRowAsInt(cell));
         } else {
           // These are user cells who has authorization for this label
           String user = Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(),
@@ -186,7 +201,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
             auths = new ArrayList<>();
             userAuths.put(user, auths);
           }
-          auths.add(CellUtil.getRowAsInt(cell));
+          auths.add(PrivateCellUtil.getRowAsInt(cell));
         }
       }
     }
@@ -196,8 +211,16 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   protected void addSystemLabel(Region region, Map<String, Integer> labels,
       Map<String, List<Integer>> userAuths) throws IOException {
     if (!labels.containsKey(SYSTEM_LABEL)) {
-      Put p = new Put(Bytes.toBytes(SYSTEM_LABEL_ORDINAL));
-      p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, Bytes.toBytes(SYSTEM_LABEL));
+      byte[] row = Bytes.toBytes(SYSTEM_LABEL_ORDINAL);
+      Put p = new Put(row);
+      p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                    .setRow(row)
+                    .setFamily(LABELS_TABLE_FAMILY)
+                    .setQualifier(LABEL_QUALIFIER)
+                    .setTimestamp(p.getTimestamp())
+                    .setType(Type.Put)
+                    .setValue(Bytes.toBytes(SYSTEM_LABEL))
+                    .build());
       region.put(p);
       labels.put(SYSTEM_LABEL, SYSTEM_LABEL_ORDINAL);
     }
@@ -209,14 +232,24 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     OperationStatus[] finalOpStatus = new OperationStatus[labels.size()];
     List<Mutation> puts = new ArrayList<>(labels.size());
     int i = 0;
+    ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (byte[] label : labels) {
       String labelStr = Bytes.toString(label);
       if (this.labelsCache.getLabelOrdinal(labelStr) > 0) {
         finalOpStatus[i] = new OperationStatus(OperationStatusCode.FAILURE,
             new LabelAlreadyExistsException("Label '" + labelStr + "' already exists"));
       } else {
-        Put p = new Put(Bytes.toBytes(ordinalCounter.get()));
-        p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
+        byte[] row = Bytes.toBytes(ordinalCounter.get());
+        Put p = new Put(row);
+        p.add(builder.clear()
+              .setRow(row)
+              .setFamily(LABELS_TABLE_FAMILY)
+              .setQualifier(LABEL_QUALIFIER)
+              .setTimestamp(p.getTimestamp())
+              .setType(Type.Put)
+              .setValue(label)
+              .setTags(TagUtil.fromList(Arrays.asList(LABELS_TABLE_TAGS)))
+              .build());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Adding the label " + labelStr);
         }
@@ -237,6 +270,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     OperationStatus[] finalOpStatus = new OperationStatus[authLabels.size()];
     List<Mutation> puts = new ArrayList<>(authLabels.size());
     int i = 0;
+    ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (byte[] auth : authLabels) {
       String authStr = Bytes.toString(auth);
       int labelOrdinal = this.labelsCache.getLabelOrdinal(authStr);
@@ -245,8 +279,17 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         finalOpStatus[i] = new OperationStatus(OperationStatusCode.FAILURE,
             new InvalidLabelException("Label '" + authStr + "' doesn't exists"));
       } else {
-        Put p = new Put(Bytes.toBytes(labelOrdinal));
-        p.addImmutable(LABELS_TABLE_FAMILY, user, DUMMY_VALUE, LABELS_TABLE_TAGS);
+        byte[] row = Bytes.toBytes(labelOrdinal);
+        Put p = new Put(row);
+        p.add(builder.clear()
+            .setRow(row)
+            .setFamily(LABELS_TABLE_FAMILY)
+            .setQualifier(user)
+            .setTimestamp(p.getTimestamp())
+            .setType(Cell.Type.Put)
+            .setValue(DUMMY_VALUE)
+            .setTags(TagUtil.fromList(Arrays.asList(LABELS_TABLE_TAGS)))
+            .build());
         puts.add(p);
       }
       i++;
@@ -304,7 +347,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private boolean mutateLabelsRegion(List<Mutation> mutations, OperationStatus[] finalOpStatus)
       throws IOException {
     OperationStatus[] opStatus = this.labelsRegion.batchMutate(mutations
-      .toArray(new Mutation[mutations.size()]), HConstants.NO_NONCE, HConstants.NO_NONCE);
+      .toArray(new Mutation[mutations.size()]));
     int i = 0;
     boolean updateZk = false;
     for (OperationStatus status : opStatus) {
@@ -342,7 +385,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         scanner.next(results);
         if (results.isEmpty()) break;
         Cell cell = results.get(0);
-        int ordinal = CellUtil.getRowAsInt(cell);
+        int ordinal = PrivateCellUtil.getRowAsInt(cell);
         String label = this.labelsCache.getLabel(ordinal);
         if (label != null) {
           auths.add(label);
@@ -379,7 +422,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         scanner.next(results);
         if (results.isEmpty()) break;
         Cell cell = results.get(0);
-        int ordinal = CellUtil.getRowAsInt(cell);
+        int ordinal = PrivateCellUtil.getRowAsInt(cell);
         String label = this.labelsCache.getLabel(ordinal);
         if (label != null) {
           auths.add(label);
@@ -464,7 +507,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         authLabels = (authLabels == null) ? new ArrayList<>() : authLabels;
         authorizations = new Authorizations(authLabels);
       } catch (Throwable t) {
-        LOG.error(t);
+        LOG.error(t.toString(), t);
         throw new IOException(t);
       }
     }
@@ -483,7 +526,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       @Override
       public boolean evaluate(Cell cell) throws IOException {
         boolean visibilityTagPresent = false;
-        Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+        Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
         while (tagsItr.hasNext()) {
           boolean includeKV = true;
           Tag tag = tagsItr.next();
@@ -551,12 +594,16 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   @Override
   public boolean matchVisibility(List<Tag> putVisTags, Byte putTagsFormat, List<Tag> deleteVisTags,
       Byte deleteTagsFormat) throws IOException {
+    // Early out if there are no tags in both of cell and delete
+    if (putVisTags.isEmpty() && deleteVisTags.isEmpty()) {
+      return true;
+    }
+    // Early out if one of the tags is empty
+    if (putVisTags.isEmpty() ^ deleteVisTags.isEmpty()) {
+      return false;
+    }
     if ((deleteTagsFormat != null && deleteTagsFormat == SORTED_ORDINAL_SERIALIZATION_FORMAT)
         && (putTagsFormat == null || putTagsFormat == SORTED_ORDINAL_SERIALIZATION_FORMAT)) {
-      if (putVisTags.isEmpty()) {
-        // Early out if there are no tags in the cell
-        return false;
-      }
       if (putTagsFormat == null) {
         return matchUnSortedVisibilityTags(putVisTags, deleteVisTags);
       } else {
@@ -593,7 +640,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       for (Tag tag : deleteVisTags) {
         matchFound = false;
         for (Tag givenTag : putVisTags) {
-          if (TagUtil.matchingValue(tag, givenTag)) {
+          if (Tag.matchingValue(tag, givenTag)) {
             matchFound = true;
             break;
           }

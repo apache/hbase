@@ -39,9 +39,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequ
 public class OOMERegionServer extends HRegionServer {
   private List<Put> retainer = new ArrayList<>();
 
-  public OOMERegionServer(HBaseConfiguration conf, CoordinatedStateManager cp)
-      throws IOException, InterruptedException {
-    super(conf, cp);
+  public OOMERegionServer(HBaseConfiguration conf) throws IOException, InterruptedException {
+    super(conf);
   }
 
   public void put(byte [] regionName, Put put)
@@ -54,7 +53,7 @@ public class OOMERegionServer extends HRegionServer {
         // Add the batch update 30 times to bring on the OOME faster.
         this.retainer.add(put);
       }
-    } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e) {
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
   }

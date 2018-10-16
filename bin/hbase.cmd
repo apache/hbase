@@ -16,7 +16,7 @@
 @rem * See the License for the specific language governing permissions and
 @rem * limitations under the License.
 @rem */
-@rem 
+@rem
 @rem The hbase command script.  Based on the hadoop command script putting
 @rem in hbase classes, libs and configurations ahead of hadoop's.
 @rem
@@ -103,7 +103,7 @@ if defined HBASE_OFFHEAPSIZE (
 set CLASSPATH=%HBASE_CONF_DIR%;%JAVA_HOME%\lib\tools.jar
 
 rem Add maven target directory
-set cached_classpath_filename=%HBASE_HOME%\target\cached_classpath.txt
+set cached_classpath_filename=%HBASE_HOME%\hbase-build-configuration\target\cached_classpath.txt
 if "%in_dev_env%"=="true" (
 
   rem adding maven main classes to classpath
@@ -197,7 +197,7 @@ if exist "%HBASE_HOME%\build\native" (
 rem This loop would set %hbase-command-arguments%
 set _hbasearguments=
 :MakeCmdArgsLoop
-  if [%1]==[] goto :EndLoop 
+  if [%1]==[] goto :EndLoop
 
   if not defined _hbasearguments (
     set _hbasearguments=%1
@@ -205,8 +205,8 @@ set _hbasearguments=
     set _hbasearguments=!_hbasearguments! %1
   )
   shift
-goto :MakeCmdArgsLoop 
-:EndLoop 
+goto :MakeCmdArgsLoop
+:EndLoop
 
 set hbase-command-arguments=%_hbasearguments%
 
@@ -288,7 +288,7 @@ if defined jruby-needed (
   if not defined JRUBY_HOME (
     @rem in dev environment
     if "%in_dev_env%"=="true" (
-      set cached_classpath_jruby_filename=%HBASE_HOME%\target\cached_classpath_jruby.txt
+      set cached_classpath_jruby_filename=%HBASE_HOME%\hbase-build-configuration\target\cached_classpath_jruby.txt
       if not exist "!cached_classpath_jruby_filename!" (
         echo "As this is a development environment, we need !cached_classpath_jruby_filename! to be generated from maven (command: mvn install -DskipTests)"
         goto :eof
@@ -415,11 +415,6 @@ goto :eof
   set CLASS=org.apache.hadoop.hbase.util.HBaseFsck
   goto :eof
 
-@rem TODO remove older 'hlog' command
-:hlog
-  set CLASS=org.apache.hadoop.hbase.wal.WALPrettyPrinter
-  goto :eof
-
 :wal
   set CLASS=org.apache.hadoop.hbase.wal.WALPrettyPrinter
   goto :eof
@@ -429,7 +424,8 @@ goto :eof
   goto :eof
 
 :zkcli
-  set CLASS=org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer
+  set CLASS=org.apache.hadoop.hbase.zookeeper.ZKMainServer
+  set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\lib\zkcli\*
   goto :eof
 
 :mapredcp

@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.hbase.regionserver.handler;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Handles opening of a high priority region on a region server.
@@ -34,7 +33,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 @InterfaceAudience.Private
 public class OpenPriorityRegionHandler extends OpenRegionHandler {
   public OpenPriorityRegionHandler(Server server, RegionServerServices rsServices,
-      HRegionInfo regionInfo, HTableDescriptor htd, long masterSystemTime) {
+                                   RegionInfo regionInfo, TableDescriptor htd, long masterSystemTime) {
     super(server, rsServices, regionInfo, htd, masterSystemTime,
        EventType.M_RS_OPEN_PRIORITY_REGION);
   }

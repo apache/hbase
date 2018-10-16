@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -29,15 +27,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -45,17 +40,33 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class})
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+
+@RunWith(Parameterized.class)
+@Category({ MediumTests.class })
 public class TestNamespaceReplication extends TestReplicationBase {
 
-  private static final Log LOG = LogFactory.getLog(TestNamespaceReplication.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNamespaceReplication.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceReplication.class);
 
   private static String ns1 = "ns1";
   private static String ns2 = "ns2";
@@ -68,13 +79,23 @@ public class TestNamespaceReplication extends TestReplicationBase {
 
   private static final byte[] val = Bytes.toBytes("myval");
 
-  private static HTableDescriptor tabA;
-  private static HTableDescriptor tabB;
-
   private static Connection connection1;
   private static Connection connection2;
   private static Admin admin1;
   private static Admin admin2;
+
+  @Parameter
+  public boolean serialPeer;
+
+  @Override
+  protected boolean isSerialPeer() {
+    return serialPeer;
+  }
+
+  @Parameters(name = "{index}: serialPeer={0}")
+  public static List<Boolean> parameters() {
+    return ImmutableList.of(true, false);
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -90,23 +111,21 @@ public class TestNamespaceReplication extends TestReplicationBase {
     admin2.createNamespace(NamespaceDescriptor.create(ns1).build());
     admin2.createNamespace(NamespaceDescriptor.create(ns2).build());
 
-    tabA = new HTableDescriptor(tabAName);
-    HColumnDescriptor fam = new HColumnDescriptor(f1Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabA.addFamily(fam);
-    fam = new HColumnDescriptor(f2Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabA.addFamily(fam);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tabAName);
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(f1Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(f2Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+    TableDescriptor tabA = builder.build();
     admin1.createTable(tabA);
     admin2.createTable(tabA);
 
-    tabB = new HTableDescriptor(tabBName);
-    fam = new HColumnDescriptor(f1Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabB.addFamily(fam);
-    fam = new HColumnDescriptor(f2Name);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabB.addFamily(fam);
+    builder = TableDescriptorBuilder.newBuilder(tabBName);
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(f1Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(f2Name).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build());
+    TableDescriptor tabB = builder.build();
     admin1.createTable(tabB);
     admin2.createTable(tabB);
   }
@@ -134,18 +153,24 @@ public class TestNamespaceReplication extends TestReplicationBase {
 
   @Test
   public void testNamespaceReplication() throws Exception {
+    String peerId = "2";
+
     Table htab1A = connection1.getTable(tabAName);
     Table htab2A = connection2.getTable(tabAName);
 
     Table htab1B = connection1.getTable(tabBName);
     Table htab2B = connection2.getTable(tabBName);
 
+    ReplicationPeerConfig rpc = admin1.getReplicationPeerConfig(peerId);
+    admin1.updateReplicationPeerConfig(peerId,
+      ReplicationPeerConfig.newBuilder(rpc).setReplicateAllUserTables(false).build());
+
     // add ns1 to peer config which replicate to cluster2
-    ReplicationPeerConfig rpc = admin.getPeerConfig("2");
+    rpc = admin1.getReplicationPeerConfig(peerId);
     Set<String> namespaces = new HashSet<>();
     namespaces.add(ns1);
-    rpc.setNamespaces(namespaces);
-    admin.updatePeerConfig("2", rpc);
+    admin1.updateReplicationPeerConfig(peerId,
+      ReplicationPeerConfig.newBuilder(rpc).setNamespaces(namespaces).build());
     LOG.info("update peer config");
 
     // Table A can be replicated to cluster2
@@ -159,15 +184,14 @@ public class TestNamespaceReplication extends TestReplicationBase {
     ensureRowNotExisted(htab2B, row, f1Name, f2Name);
 
     // add ns1:TA => 'f1' and ns2 to peer config which replicate to cluster2
-    rpc = admin.getPeerConfig("2");
+    rpc = admin1.getReplicationPeerConfig(peerId);
     namespaces = new HashSet<>();
     namespaces.add(ns2);
-    rpc.setNamespaces(namespaces);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
     tableCfs.put(tabAName, new ArrayList<>());
     tableCfs.get(tabAName).add("f1");
-    rpc.setTableCFsMap(tableCfs);
-    admin.updatePeerConfig("2", rpc);
+    admin1.updateReplicationPeerConfig(peerId, ReplicationPeerConfig.newBuilder(rpc)
+        .setNamespaces(namespaces).setTableCFsMap(tableCfs).build());
     LOG.info("update peer config");
 
     // Only family f1 of Table A can replicated to cluster2
@@ -182,7 +206,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     delete(htab1B, row, f1Name, f2Name);
     ensureRowNotExisted(htab2B, row, f1Name, f2Name);
 
-    admin.removePeer("2");
+    admin1.removeReplicationPeer(peerId);
   }
 
   private void put(Table source, byte[] row, byte[]... families)
@@ -216,11 +240,11 @@ public class TestNamespaceReplication extends TestReplicationBase {
         if (res.isEmpty()) {
           LOG.info("Row not available");
         } else {
-          assertEquals(res.size(), 1);
-          assertArrayEquals(res.value(), val);
+          assertEquals(1, res.size());
+          assertArrayEquals(val, res.value());
           break;
         }
-        Thread.sleep(SLEEP_TIME);
+        Thread.sleep(10 * SLEEP_TIME);
       }
     }
   }
@@ -240,7 +264,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
         } else {
           break;
         }
-        Thread.sleep(SLEEP_TIME);
+        Thread.sleep(10 * SLEEP_TIME);
       }
     }
   }

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 
 /**
@@ -34,11 +34,8 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @param cacheKey The block's cache key.
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
-   * @param cacheDataInL1 If multi-tier block cache deploy -- i.e. has an L1 and L2 tier -- then
-   * if this flag is true, cache data blocks up in the L1 tier (meta blocks are probably being
-   * cached in L1 already).
    */
-  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory, boolean cacheDataInL1);
+  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
 
   /**
    * Add block to cache (defaults to not in-memory).
@@ -91,6 +88,12 @@ public interface BlockCache extends Iterable<CachedBlock> {
   long size();
 
   /**
+   * Returns the Max size of the block cache, in bytes.
+   * @return size of cache, in bytes
+   */
+  long getMaxSize();
+
+  /**
    * Returns the free size of the block cache, in bytes.
    * @return free space in cache, in bytes
    */
@@ -103,14 +106,27 @@ public interface BlockCache extends Iterable<CachedBlock> {
   long getCurrentSize();
 
   /**
+   * Returns the occupied size of data blocks, in bytes.
+   * @return occupied space in cache, in bytes
+   */
+  long getCurrentDataSize();
+
+  /**
    * Returns the number of blocks currently cached in the block cache.
    * @return number of blocks in the cache
    */
   long getBlockCount();
 
+ /**
+  * Returns the number of data blocks currently cached in the block cache.
+  * @return number of blocks in the cache
+  */
+ long getDataBlockCount();
+
   /**
    * @return Iterator over the blocks in the cache.
    */
+  @Override
   Iterator<CachedBlock> iterator();
 
   /**
@@ -128,5 +144,5 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @param cacheKey the cache key of the block
    * @param block the hfileblock to be returned
    */
-  void returnBlock(BlockCacheKey cacheKey, Cacheable block);
+  default void returnBlock(BlockCacheKey cacheKey, Cacheable block){}
 }

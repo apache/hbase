@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -37,62 +36,49 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class SplitLogTask {
   private final ServerName originServer;
   private final ZooKeeperProtos.SplitLogTask.State state;
-  private final ZooKeeperProtos.SplitLogTask.RecoveryMode mode;
 
   public static class Unassigned extends SplitLogTask {
-    public Unassigned(final ServerName originServer, final RecoveryMode mode) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.UNASSIGNED, mode);
+    public Unassigned(final ServerName originServer) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.UNASSIGNED);
     }
   }
 
   public static class Owned extends SplitLogTask {
     public Owned(final ServerName originServer) {
-      this(originServer, ZooKeeperProtos.SplitLogTask.RecoveryMode.LOG_SPLITTING);
-    }
- 
-    public Owned(final ServerName originServer, final RecoveryMode mode) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.OWNED, mode);
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.OWNED);
     }
   }
 
   public static class Resigned extends SplitLogTask {
-    public Resigned(final ServerName originServer, final RecoveryMode mode) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.RESIGNED, mode);
+    public Resigned(final ServerName originServer) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.RESIGNED);
     }
   }
 
   public static class Done extends SplitLogTask {
-    public Done(final ServerName originServer, final RecoveryMode mode) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.DONE, mode);
+    public Done(final ServerName originServer) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.DONE);
     }
   }
 
   public static class Err extends SplitLogTask {
-    public Err(final ServerName originServer, final RecoveryMode mode) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.ERR, mode);
+    public Err(final ServerName originServer) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.ERR);
     }
   }
 
   SplitLogTask(final ZooKeeperProtos.SplitLogTask slt) {
     this.originServer = ProtobufUtil.toServerName(slt.getServerName());
     this.state = slt.getState();
-    this.mode = (slt.hasMode()) ? slt.getMode() :
-      ZooKeeperProtos.SplitLogTask.RecoveryMode.UNKNOWN;
   }
 
-  SplitLogTask(final ServerName originServer, final ZooKeeperProtos.SplitLogTask.State state,
-      final ZooKeeperProtos.SplitLogTask.RecoveryMode mode) {
+  SplitLogTask(final ServerName originServer, final ZooKeeperProtos.SplitLogTask.State state) {
     this.originServer = originServer;
     this.state = state;
-    this.mode = mode;
   }
 
   public ServerName getServerName() {
     return this.originServer;
-  }
-
-  public ZooKeeperProtos.SplitLogTask.RecoveryMode getMode() {
-    return this.mode;
   }
 
   public boolean isUnassigned(final ServerName sn) {
@@ -182,8 +168,7 @@ public class SplitLogTask {
     // pbs just created.
     HBaseProtos.ServerName snpb = ProtobufUtil.toServerName(this.originServer);
     ZooKeeperProtos.SplitLogTask slts =
-      ZooKeeperProtos.SplitLogTask.newBuilder().setServerName(snpb).setState(this.state).
-      setMode(this.mode).build();
+      ZooKeeperProtos.SplitLogTask.newBuilder().setServerName(snpb).setState(this.state).build();
     return ProtobufUtil.prependPBMagic(slts.toByteArray());
   }
 }

@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Chain of ByteBuffers.
@@ -101,7 +101,7 @@ class BufferChain {
     try {
       long ret = channel.write(buffers, bufferOffset, bufCount);
       if (ret > 0) {
-        remaining -= ret;
+        remaining = (int) (remaining - ret);
       }
       return ret;
     } finally {

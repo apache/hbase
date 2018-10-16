@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.util;
 import java.lang.ref.Reference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Allows multiple concurrent clients to lock on a numeric id with ReentrantReadWriteLock. The
@@ -42,14 +42,14 @@ import com.google.common.annotations.VisibleForTesting;
  * For write lock, use lock.writeLock()
  */
 @InterfaceAudience.Private
-public class IdReadWriteLock {
+public class IdReadWriteLock<T> {
   // The number of lock we want to easily support. It's not a maximum.
   private static final int NB_CONCURRENT_LOCKS = 1000;
   /**
    * The pool to get entry from, entries are mapped by {@link Reference} and will be automatically
    * garbage-collected by JVM
    */
-  private final ObjectPool<Long, ReentrantReadWriteLock> lockPool;
+  private final ObjectPool<T, ReentrantReadWriteLock> lockPool;
   private final ReferenceType refType;
 
   public IdReadWriteLock() {
@@ -65,22 +65,22 @@ public class IdReadWriteLock {
   public IdReadWriteLock(ReferenceType referenceType) {
     this.refType = referenceType;
     switch (referenceType) {
-    case SOFT:
-      lockPool = new SoftObjectPool<>(new ObjectPool.ObjectFactory<Long, ReentrantReadWriteLock>() {
-        @Override
-        public ReentrantReadWriteLock createObject(Long id) {
-          return new ReentrantReadWriteLock();
-        }
-      }, NB_CONCURRENT_LOCKS);
-      break;
-    case WEAK:
-    default:
-      lockPool = new WeakObjectPool<>(new ObjectPool.ObjectFactory<Long, ReentrantReadWriteLock>() {
-        @Override
-        public ReentrantReadWriteLock createObject(Long id) {
-          return new ReentrantReadWriteLock();
-        }
-      }, NB_CONCURRENT_LOCKS);
+      case SOFT:
+        lockPool = new SoftObjectPool<>(new ObjectPool.ObjectFactory<T, ReentrantReadWriteLock>() {
+          @Override
+          public ReentrantReadWriteLock createObject(T id) {
+            return new ReentrantReadWriteLock();
+          }
+        }, NB_CONCURRENT_LOCKS);
+        break;
+      case WEAK:
+      default:
+        lockPool = new WeakObjectPool<>(new ObjectPool.ObjectFactory<T, ReentrantReadWriteLock>() {
+          @Override
+          public ReentrantReadWriteLock createObject(T id) {
+            return new ReentrantReadWriteLock();
+          }
+        }, NB_CONCURRENT_LOCKS);
     }
   }
 
@@ -92,7 +92,7 @@ public class IdReadWriteLock {
    * Get the ReentrantReadWriteLock corresponding to the given id
    * @param id an arbitrary number to identify the lock
    */
-  public ReentrantReadWriteLock getLock(long id) {
+  public ReentrantReadWriteLock getLock(T id) {
     lockPool.purge();
     ReentrantReadWriteLock readWriteLock = lockPool.get(id);
     return readWriteLock;
@@ -113,7 +113,7 @@ public class IdReadWriteLock {
   }
 
   @VisibleForTesting
-  public void waitForWaiters(long id, int numWaiters) throws InterruptedException {
+  public void waitForWaiters(T id, int numWaiters) throws InterruptedException {
     for (ReentrantReadWriteLock readWriteLock;;) {
       readWriteLock = lockPool.get(id);
       if (readWriteLock != null) {

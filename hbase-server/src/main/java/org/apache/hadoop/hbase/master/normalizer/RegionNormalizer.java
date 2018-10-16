@@ -21,12 +21,12 @@ package org.apache.hadoop.hbase.master.normalizer;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Performs "normalization" of regions on the cluster, making sure that suboptimal
@@ -68,8 +68,8 @@ public interface RegionNormalizer {
    * @param hri the region which is involved in the plan
    * @param type type of plan
    */
-  void planSkipped(HRegionInfo hri, PlanType type);
-  
+  void planSkipped(RegionInfo hri, PlanType type);
+
   /**
    * @param type type of plan for which skipped count is to be returned
    * @return the count of plans of specified type which were skipped

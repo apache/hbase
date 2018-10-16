@@ -101,6 +101,10 @@ module Hbase
 
     define_test "flush should work" do
       command(:flush, 'hbase:meta')
+      servers = admin.list_liveservers
+      servers.each do |s|
+        command(:flush, s.toString)
+      end
     end
 
     #-------------------------------------------------------------------------------
@@ -124,7 +128,11 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "split should work" do
-      command(:split, 'hbase:meta', nil)
+      begin
+        command(:split, 'hbase:meta', nil)
+      rescue org.apache.hadoop.hbase.ipc.RemoteWithExtrasException => e
+        puts "can not split hbase:meta"
+      end
     end
 
     #-------------------------------------------------------------------------------
@@ -173,7 +181,7 @@ module Hbase
         command(:create, @create_test_name)
       end
     end
-    
+
     define_test "create should fail without columns when called with options" do
       drop_test_table(@create_test_name)
       assert_raise(ArgumentError) do
@@ -198,13 +206,11 @@ module Hbase
       command(:create, @create_test_name,
             { NAME => 'a',
               CACHE_BLOOMS_ON_WRITE => 'TRUE',
-              CACHE_DATA_IN_L1 => 'TRUE',
               CACHE_INDEX_ON_WRITE => 'TRUE',
               EVICT_BLOCKS_ON_CLOSE => 'TRUE',
               COMPRESSION_COMPACT => 'GZ'})
       assert_equal(['a:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/CACHE_BLOOMS_ON_WRITE/, admin.describe(@create_test_name))
-      assert_match(/CACHE_DATA_IN_L1/, admin.describe(@create_test_name))
       assert_match(/CACHE_INDEX_ON_WRITE/, admin.describe(@create_test_name))
       assert_match(/EVICT_BLOCKS_ON_CLOSE/, admin.describe(@create_test_name))
       assert_match(/GZ/, admin.describe(@create_test_name))
@@ -237,7 +243,7 @@ module Hbase
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/987654321/, admin.describe(@create_test_name))
     end
-    
+
     define_test "create should work with SPLITALGO" do
       drop_test_table(@create_test_name)
       command(:create, @create_test_name, 'a', 'b',
@@ -281,6 +287,22 @@ module Hbase
       assert(!output.empty?)
     end
 
+    #-------------------------------------------------------------------------------
+
+    define_test "truncate_preserve should empty a table" do
+      table(@test_name).put(1, "x:a", 1)
+      table(@test_name).put(2, "x:a", 2)
+      assert_equal(2, table(@test_name)._count_internal)
+      # This is hacky.  Need to get the configuration into admin instance
+      command(:truncate_preserve, @test_name)
+      assert_equal(0, table(@test_name)._count_internal)
+    end
+
+    define_test "truncate_preserve should yield log records" do
+      output = capture_stdout { command(:truncate_preserve, @test_name) }
+      assert(!output.empty?)
+    end
+
     define_test "truncate_preserve should maintain the previous region boundaries" do
       drop_test_table(@create_test_name)
       admin.create(@create_test_name, 'a', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
@@ -296,6 +318,101 @@ module Hbase
       $TEST_CLUSTER.getConfiguration.setBoolean("hbase.client.truncatetable.support", false)
       admin.truncate_preserve(@create_test_name, $TEST_CLUSTER.getConfiguration)
       assert_equal(splits, table(@create_test_name)._get_splits_internal())
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test "list_regions should fail for disabled table" do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a')
+      command(:disable, @create_test_name)
+      assert(:is_disabled, @create_test_name)
+      assert_raise(RuntimeError) do
+        command(:list_regions, @create_test_name)
+      end
+    end
+  end
+
+  # Simple administration methods tests
+  class AdminCloneTableSchemaTest < Test::Unit::TestCase
+    include TestHelpers
+    def setup
+      setup_hbase
+      # Create table test table name
+      @source_table_name = 'hbase_shell_tests_source_table_name'
+      @destination_table_name = 'hbase_shell_tests_destination_table_name'
+    end
+
+    def teardown
+      shutdown
+    end
+
+    define_test "clone_table_schema should create a new table by cloning the
+                 existent table schema." do
+      drop_test_table(@source_table_name)
+      drop_test_table(@destination_table_name)
+      command(:create,
+              @source_table_name,
+              NAME => 'a',
+              CACHE_BLOOMS_ON_WRITE => 'TRUE',
+              CACHE_INDEX_ON_WRITE => 'TRUE',
+              EVICT_BLOCKS_ON_CLOSE => 'TRUE',
+              COMPRESSION_COMPACT => 'GZ')
+      command(:clone_table_schema,
+              @source_table_name,
+              @destination_table_name,
+              false)
+      assert_equal(['a:'],
+                   table(@source_table_name).get_all_columns.sort)
+      assert_match(/CACHE_BLOOMS_ON_WRITE/,
+                   admin.describe(@destination_table_name))
+      assert_match(/CACHE_INDEX_ON_WRITE/,
+                   admin.describe(@destination_table_name))
+      assert_match(/EVICT_BLOCKS_ON_CLOSE/,
+                   admin.describe(@destination_table_name))
+      assert_match(/GZ/,
+                   admin.describe(@destination_table_name))
+    end
+
+    define_test "clone_table_schema should maintain the source table's region
+                 boundaries when preserve_splits set to true" do
+      drop_test_table(@source_table_name)
+      drop_test_table(@destination_table_name)
+      command(:create,
+              @source_table_name,
+              'a',
+              NUMREGIONS => 10,
+              SPLITALGO => 'HexStringSplit')
+      splits = table(@source_table_name)._get_splits_internal
+      command(:clone_table_schema,
+              @source_table_name,
+              @destination_table_name,
+              true)
+      assert_equal(splits, table(@destination_table_name)._get_splits_internal)
+    end
+
+    define_test "clone_table_schema should have failed when source table
+                 doesn't exist." do
+      drop_test_table(@source_table_name)
+      drop_test_table(@destination_table_name)
+      assert_raise(RuntimeError) do
+        command(:clone_table_schema,
+                @source_table_name,
+                @destination_table_name)
+      end
+    end
+
+    define_test "clone_table_schema should have failed when destination
+                 table exists." do
+      drop_test_table(@source_table_name)
+      drop_test_table(@destination_table_name)
+      command(:create, @source_table_name, 'a')
+      command(:create, @destination_table_name, 'a')
+      assert_raise(RuntimeError) do
+        command(:clone_table_schema,
+                @source_table_name,
+                @destination_table_name)
+      end
     end
   end
 
@@ -314,21 +431,21 @@ module Hbase
       shutdown
     end
 
-    define_test "close_region should allow encoded & non-encoded region names" do
+    define_test "unassign should allow encoded region names" do
       region = command(:locate_region, @test_name, '')
-      serverName = region.getServerName().getServerName()
       regionName = region.getRegionInfo().getRegionNameAsString()
-      encodedRegionName = region.getRegionInfo().getEncodedName()
+      command(:unassign, regionName, true)
+    end
 
-      # Close region with just region name.
-      command(:close_region, regionName, nil)
-      # Close region with region name and server.
-      command(:close_region, regionName, serverName)
-      command(:close_region, encodedRegionName, serverName)
+    define_test "unassign should allow non-encoded region names" do
+      region = command(:locate_region, @test_name, '')
+      encodedRegionName = region.getRegionInfo().getEncodedName()
+      command(:unassign, encodedRegionName, true)
     end
   end
 
- # Simple administration methods tests
+  # Simple administration methods tests
+  # rubocop:disable Metrics/ClassLength
   class AdminAlterTableTest < Test::Unit::TestCase
     include TestHelpers
 
@@ -384,18 +501,27 @@ module Hbase
       assert_equal(['x:', 'y:', 'z:'], table(@test_name).get_all_columns.sort)
     end
 
-    define_test "alter should support more than one alteration in one call" do
+    define_test 'alter should support more than one alteration in one call' do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      alterOutput = capture_stdout {
-        command(:alter, @test_name, { NAME => 'z' }, { METHOD => 'delete', NAME => 'y' },
-                'MAX_FILESIZE' => 12345678) }
+      alter_out_put = capture_stdout do
+        command(:alter, @test_name, { NAME => 'z' },
+                { METHOD => 'delete', NAME => 'y' },
+                'MAX_FILESIZE' => 12_345_678)
+      end
       command(:enable, @test_name)
-      assert_equal(1, /Updating all regions/.match(alterOutput).size,
-        "HBASE-15641 - Should only perform one table modification per alter.")
+      assert_equal(1, /Updating all regions/.match(alter_out_put).size,
+                   "HBASE-15641 - Should only perform one table
+                   modification per alter.")
       assert_equal(['x:', 'z:'], table(@test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
+    define_test 'alter should be able to set the TargetRegionSize and TargetRegionCount' do
+      command(:alter, @test_name, 'NORMALIZER_TARGET_REGION_COUNT' => 156)
+      assert_match(/156/, admin.describe(@test_name))
+      command(:alter, @test_name, 'NORMALIZER_TARGET_REGION_SIZE' => 234)
+      assert_match(/234/, admin.describe(@test_name))
+    end
 
     define_test 'alter should support shortcut DELETE alter specs' do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
@@ -412,7 +538,7 @@ module Hbase
       command(:alter, @test_name, 'MAX_FILESIZE' => 12345678)
       assert_match(/12345678/, admin.describe(@test_name))
     end
-    
+
     define_test "alter should be able to change coprocessor attributes" do
       drop_test_table(@test_name)
       create_test_table(@test_name)
@@ -460,6 +586,36 @@ module Hbase
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
     end
 
+    define_test "alter should be able to remove a table configuration" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      key = "TestConf"
+      command(:alter, @test_name, CONFIGURATION => {key => 1})
+
+      # eval() is used to convert a string to regex
+      assert_match(eval("/" + key + "/"), admin.describe(@test_name))
+
+      command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => key)
+      assert_no_match(eval("/" + key + "/"), admin.describe(@test_name))
+    end
+
+    define_test "alter should be able to remove a list of table configuration" do
+      drop_test_table(@test_name)
+
+      key_1 = "TestConf1"
+      key_2 = "TestConf2"
+      command(:create, @test_name, { NAME => 'i'}, CONFIGURATION => { key_1 => 1, key_2 => 2 })
+
+      # eval() is used to convert a string to regex
+      assert_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => [ key_1, key_2 ])
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+    end
+
     define_test "get_table should get a real table" do
       drop_test_table(@test_name)
       create_test_table(@test_name)
@@ -468,21 +624,60 @@ module Hbase
       assert_not_equal(nil, table)
       table.close
     end
+  end
+  # rubocop:enable Metrics/ClassLength
 
-    define_test "Get replication status" do
-      replication_status("replication", "both")
+  # Tests for the `status` shell command
+  class StatusTest < Test::Unit::TestCase
+    include TestHelpers
+
+    def setup
+      setup_hbase
+      # Create test table if it does not exist
+      @test_name = 'hbase_shell_tests_table'
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
     end
 
-    define_test "Get replication source metrics information" do
-      replication_status("replication", "source")
+    def teardown
+      shutdown
     end
 
-    define_test "Get replication sink metrics information" do
-      replication_status("replication", "sink")
+    define_test 'Get replication status' do
+      output = capture_stdout { replication_status('replication', 'both') }
+      puts "Status output:\n#{output}"
+      assert output.include? 'SOURCE'
+      assert output.include? 'SINK'
+    end
+
+    define_test 'Get replication source metrics information' do
+      output = capture_stdout { replication_status('replication', 'source') }
+      puts "Status output:\n#{output}"
+      assert output.include? 'SOURCE'
+    end
+
+    define_test 'Get replication sink metrics information' do
+      output = capture_stdout { replication_status('replication', 'sink') }
+      puts "Status output:\n#{output}"
+      assert output.include? 'SINK'
+    end
+
+    define_test 'Get simple status' do
+      output = capture_stdout { admin.status('simple', '') }
+      puts "Status output:\n#{output}"
+      assert output.include? 'active master'
+    end
+
+    define_test 'Get detailed status' do
+      output = capture_stdout { admin.status('detailed', '') }
+      puts "Status output:\n#{output}"
+      # Some text which isn't in the simple output
+      assert output.include? 'regionsInTransition'
     end
   end
 
-# Simple administration methods tests
+  # Simple administration methods tests
+  # rubocop:disable ClassLength
   class AdminSnapshotTest < Test::Unit::TestCase
     include TestHelpers
 
@@ -551,20 +746,33 @@ module Hbase
       end
     end
 
-    define_test "Restore snapshot should work" do
-      drop_test_snapshot()
-      restore_table = "test_restore_snapshot_table"
+    define_test 'Restore snapshot should work' do
+      drop_test_snapshot
+      restore_table = 'test_restore_snapshot_table'
       command(:create, restore_table, 'f1', 'f2')
-      assert_match(eval("/" + "f1" + "/"), admin.describe(restore_table))
-      assert_match(eval("/" + "f2" + "/"), admin.describe(restore_table))
+      assert_match(/f1/, admin.describe(restore_table))
+      assert_match(/f2/, admin.describe(restore_table))
       command(:snapshot, restore_table, @create_test_snapshot)
       command(:alter, restore_table, METHOD => 'delete', NAME => 'f1')
-      assert_no_match(eval("/" + "f1" + "/"), admin.describe(restore_table))
-      assert_match(eval("/" + "f2" + "/"), admin.describe(restore_table))
+      assert_no_match(/f1/, admin.describe(restore_table))
+      assert_match(/f2/, admin.describe(restore_table))
       drop_test_table(restore_table)
       command(:restore_snapshot, @create_test_snapshot)
-      assert_match(eval("/" + "f1" + "/"), admin.describe(restore_table))
-      assert_match(eval("/" + "f2" + "/"), admin.describe(restore_table))
+      assert_match(/f1/, admin.describe(restore_table))
+      assert_match(/f2/, admin.describe(restore_table))
+      drop_test_table(restore_table)
+    end
+
+    define_test 'Restore snapshot should fail' do
+      drop_test_snapshot
+      restore_table = 'test_restore_snapshot_table'
+      command(:create, restore_table, 'f1', 'f2')
+      assert_match(/f1/, admin.describe(restore_table))
+      assert_match(/f2/, admin.describe(restore_table))
+      command(:snapshot, restore_table, @create_test_snapshot)
+      assert_raise(RuntimeError) do
+        command(:restore_snapshot, @create_test_snapshot)
+      end
       drop_test_table(restore_table)
     end
 
@@ -684,4 +892,5 @@ module Hbase
       drop_test_table(new_table)
     end
   end
+  # rubocop:enable ClassLength
 end

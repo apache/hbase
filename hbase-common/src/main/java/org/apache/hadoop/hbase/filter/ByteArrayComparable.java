@@ -20,18 +20,19 @@ package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 
 /** Base class for byte array comparators */
 @InterfaceAudience.Public
-// TODO Now we are deviating a lot from the actual Comparable<byte[]> what this implements, by
+// TODO Now we are deviating a lot from the actual Comparable<byte[]> that this implements, by
 // adding special compareTo methods. We have to clean it. Deprecate this class and replace it
 // with a more generic one which says it compares bytes (not necessary a byte array only)
 // BytesComparable implements Comparable<Byte> will work?
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public abstract class ByteArrayComparable implements Comparable<byte[]> {
 
   byte[] value;

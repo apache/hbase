@@ -23,26 +23,32 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({MasterTests.class, MediumTests.class})
 public class TestRegionLocationFinder {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionLocationFinder.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
 
@@ -55,21 +61,21 @@ public class TestRegionLocationFinder {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    cluster = TEST_UTIL.startMiniCluster(1, ServerNum);
+    cluster = TEST_UTIL.startMiniCluster(ServerNum);
     table = TEST_UTIL.createTable(tableName, FAMILY, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     TEST_UTIL.waitTableAvailable(tableName, 1000);
     TEST_UTIL.loadTable(table, FAMILY);
 
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
-      for (Region region : server.getOnlineRegions(tableName)) {
+      for (HRegion region : server.getRegions(tableName)) {
         region.flush(true);
       }
     }
 
     finder.setConf(TEST_UTIL.getConfiguration());
     finder.setServices(cluster.getMaster());
-    finder.setClusterStatus(cluster.getMaster().getClusterStatus());
+    finder.setClusterMetrics(cluster.getMaster().getClusterMetrics());
   }
 
   @AfterClass
@@ -83,8 +89,8 @@ public class TestRegionLocationFinder {
   public void testInternalGetTopBlockLocation() throws Exception {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
-      for (Region region : server.getOnlineRegions(tableName)) {
-        // get region's hdfs block distribution by region and RegionLocationFinder, 
+      for (HRegion region : server.getRegions(tableName)) {
+        // get region's hdfs block distribution by region and RegionLocationFinder,
         // they should have same result
         HDFSBlocksDistribution blocksDistribution1 = region.getHDFSBlocksDistribution();
         HDFSBlocksDistribution blocksDistribution2 = finder.getBlockDistribution(region
@@ -122,7 +128,7 @@ public class TestRegionLocationFinder {
   public void testGetTopBlockLocations() throws Exception {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
-      for (Region region : server.getOnlineRegions(tableName)) {
+      for (HRegion region : server.getRegions(tableName)) {
         List<ServerName> servers = finder.getTopBlockLocations(region
             .getRegionInfo());
         // test table may have empty region
@@ -147,16 +153,16 @@ public class TestRegionLocationFinder {
     finder.getCache().invalidateAll();
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
-      List<Region> regions = server.getOnlineRegions(tableName);
+      List<HRegion> regions = server.getRegions(tableName);
       if (regions.size() <= 0) {
         continue;
       }
-      List<HRegionInfo> regionInfos = new ArrayList<>(regions.size());
-      for (Region region : regions) {
+      List<RegionInfo> regionInfos = new ArrayList<>(regions.size());
+      for (HRegion region : regions) {
         regionInfos.add(region.getRegionInfo());
       }
       finder.refreshAndWait(regionInfos);
-      for (HRegionInfo regionInfo : regionInfos) {
+      for (RegionInfo regionInfo : regionInfos) {
         assertNotNull(finder.getCache().getIfPresent(regionInfo));
       }
     }

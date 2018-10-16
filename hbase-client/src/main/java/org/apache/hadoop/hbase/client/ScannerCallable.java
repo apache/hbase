@@ -27,8 +27,6 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.updateServerSideMet
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -39,7 +37,9 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -62,7 +62,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
 
   // Keeping LOG public as it is being used in TestScannerHeartbeatMessages
-  public static final Log LOG = LogFactory.getLog(ScannerCallable.class);
+  public static final Logger LOG = LoggerFactory.getLogger(ScannerCallable.class);
   protected long scannerId = -1L;
   protected boolean instantiated = false;
   protected boolean closed = false;
@@ -117,7 +117,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
    */
   public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
-    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController());
+    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController(), scan.getPriority());
     this.id = id;
     this.scan = scan;
     this.scanMetrics = scanMetrics;

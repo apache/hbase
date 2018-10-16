@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Put < Command
       def help
-        return <<-EOF
+        <<-EOF
 Put a cell 'value' at specified table/row/column and optionally
 timestamp coordinates.  To put a cell value into table 'ns1:t1' or 't1'
 at row 'r1' under column 'c1' marked with the time 'ts1', do:
@@ -40,7 +40,7 @@ t to table 't1', the corresponding command would be:
 EOF
       end
 
-      def command(table, row, column, value, timestamp=nil, args = {})
+      def command(table, row, column, value, timestamp = nil, args = {})
         put table(table), row, column, value, timestamp, args
       end
 
@@ -52,5 +52,5 @@ EOF
   end
 end
 
-#Add the method table.put that calls Put.put
-::Hbase::Table.add_shell_command("put")
+# Add the method table.put that calls Put.put
+::Hbase::Table.add_shell_command('put')

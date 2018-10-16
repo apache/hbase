@@ -20,7 +20,7 @@ import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{CellUtil, TableName, HBaseTestingUtility}
 import org.apache.hadoop.hbase.spark.HBaseRDDFunctions._
-import org.apache.spark.{Logging, SparkContext}
+import org.apache.spark.SparkContext
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
 
 import scala.collection.mutable

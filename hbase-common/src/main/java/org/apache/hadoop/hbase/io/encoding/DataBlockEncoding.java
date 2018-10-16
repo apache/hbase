@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Provide access to all data block encoding algorithms. All of the algorithms
@@ -39,7 +39,7 @@ public enum DataBlockEncoding {
   FAST_DIFF(4, "org.apache.hadoop.hbase.io.encoding.FastDiffDeltaEncoder"),
   // id 5 is reserved for the COPY_KEY algorithm for benchmarking
   // COPY_KEY(5, "org.apache.hadoop.hbase.io.encoding.CopyKeyDataBlockEncoder"),
-  PREFIX_TREE(6, "org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec"),
+  // PREFIX_TREE(6, "org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec"),
   ROW_INDEX_V1(7, "org.apache.hadoop.hbase.io.encoding.RowIndexCodecV1");
 
   private final short id;
@@ -172,16 +172,13 @@ public enum DataBlockEncoding {
     return algorithm;
   }
 
-  protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName){
-      try {
-        return (DataBlockEncoder)Class.forName(fullyQualifiedClassName).newInstance();
-      } catch (InstantiationException e) {
-        throw new RuntimeException(e);
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException(e);
-      } catch (ClassNotFoundException e) {
-        throw new IllegalArgumentException(e);
-      }
+  protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName) {
+    try {
+      return (DataBlockEncoder) Class.forName(fullyQualifiedClassName).getDeclaredConstructor()
+          .newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }

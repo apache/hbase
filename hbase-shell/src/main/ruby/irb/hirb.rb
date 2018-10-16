@@ -32,28 +32,29 @@ module IRB
       # down in IRB didn't seem to work. I think the worst thing that can
       # happen is the shell exiting because of failed IRB construction with
       # no error (though we're not blanking STDERR)
-      begin
-        # Map the '/dev/null' according to the runing platform
-        # Under Windows platform the 'dev/null' is not fully compliant with unix,
-        # and the 'NUL' object need to be use instead.
-        devnull = "/dev/null"
-        devnull = "NUL" if WINDOZE 
-        f = File.open(devnull, "w")
-        $stdout = f
-        super
-      ensure
-        f.close()
-        $stdout = STDOUT
-      end
+
+      # Map the '/dev/null' according to the runing platform
+      # Under Windows platform the 'dev/null' is not fully compliant with unix,
+      # and the 'NUL' object need to be use instead.
+      devnull = '/dev/null'
+      devnull = 'NUL' if WINDOZE
+      f = File.open(devnull, 'w')
+      $stdout = f
+      # This is a workaround for the jruby issue 1372.
+      # The stderr is an input to stty to re-adjust the terminal for the error('stdin isnt a terminal')
+      # incase the command is piped with hbase shell(eg - >echo 'list' | bin/hbase shell)
+      `stty icrnl <&2`
+      super
+    ensure
+      f.close
+      $stdout = STDOUT
     end
 
     def output_value
       # Suppress output if last_value is 'nil'
       # Otherwise, when user types help, get ugly 'nil'
       # after all output.
-      if @context.last_value != nil
-        super
-      end
+      super unless @context.last_value.nil?
     end
   end
 end

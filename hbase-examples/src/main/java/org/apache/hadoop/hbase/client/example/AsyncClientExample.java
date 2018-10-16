@@ -23,10 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
-
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -38,13 +35,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple example shows how to use asynchronous client.
  */
+@InterfaceAudience.Private
 public class AsyncClientExample extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(AsyncClientExample.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncClientExample.class);
 
   /**
    * The size for thread pool.
@@ -97,6 +98,8 @@ public class AsyncClientExample extends Configured implements Tool {
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NONNULL_PARAM_VIOLATION",
+      justification="it is valid to pass NULL to CompletableFuture#completedFuture")
   private CompletableFuture<Void> closeConn() {
     CompletableFuture<AsyncConnection> f = future.get();
     if (f == null) {
@@ -139,7 +142,7 @@ public class AsyncClientExample extends Configured implements Tool {
           latch.countDown();
           return;
         }
-        AsyncTable table = conn.getTable(tableName, threadPool);
+        AsyncTable<?> table = conn.getTable(tableName, threadPool);
         table.put(new Put(getKey(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i)))
             .whenComplete((putResp, putErr) -> {
               if (putErr != null) {
@@ -150,7 +153,7 @@ public class AsyncClientExample extends Configured implements Tool {
               LOG.info("put for " + i + " succeeded, try getting");
               table.get(new Get(getKey(i))).whenComplete((result, getErr) -> {
                 if (getErr != null) {
-                  LOG.warn("get failed for " + i, putErr);
+                  LOG.warn("get failed for " + i);
                   latch.countDown();
                   return;
                 }

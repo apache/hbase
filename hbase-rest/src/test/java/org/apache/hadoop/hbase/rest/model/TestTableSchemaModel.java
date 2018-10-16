@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Iterator;
-
-import javax.xml.bind.JAXBContext;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-
+import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableSchemaModel.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableSchemaModel.class);
 
   public static final String TABLE_NAME = "testTable";
   private static final boolean IS_META = false;
@@ -37,8 +46,6 @@ public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
   private static final boolean READONLY = false;
 
   TestColumnSchemaModel testColumnSchemaModel;
-
-  private JAXBContext context;
 
   public TestTableSchemaModel() throws Exception {
     super(TableSchemaModel.class);
@@ -64,6 +71,7 @@ public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
       "\"COMPRESSION\":\"GZ\",\"VERSIONS\":\"1\",\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}]}";
   }
 
+  @Override
   protected TableSchemaModel buildTestModel() {
     return buildTestModel(TABLE_NAME);
   }
@@ -78,15 +86,16 @@ public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(TableSchemaModel model) {
     checkModel(model, TABLE_NAME);
   }
 
   public void checkModel(TableSchemaModel model, String tableName) {
     assertEquals(model.getName(), tableName);
-    assertEquals(model.__getIsMeta(), IS_META);
-    assertEquals(model.__getIsRoot(), IS_ROOT);
-    assertEquals(model.__getReadOnly(), READONLY);
+    assertEquals(IS_META, model.__getIsMeta());
+    assertEquals(IS_ROOT, model.__getIsRoot());
+    assertEquals(READONLY, model.__getReadOnly());
     Iterator<ColumnSchemaModel> families = model.getColumns().iterator();
     assertTrue(families.hasNext());
     ColumnSchemaModel family = families.next();
@@ -94,14 +103,20 @@ public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
     assertFalse(families.hasNext());
   }
 
+  @Override
+  @Test
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Override
+  @Test
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Override
+  @Test
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }

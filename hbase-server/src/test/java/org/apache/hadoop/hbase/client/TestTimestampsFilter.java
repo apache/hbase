@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,10 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -37,10 +34,13 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Run tests related to {@link TimestampsFilter} using HBase client APIs.
@@ -49,7 +49,12 @@ import org.junit.rules.TestName;
  */
 @Category({MediumTests.class, ClientTests.class})
 public class TestTimestampsFilter {
-  private static final Log LOG = LogFactory.getLog(TestTimestampsFilter.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTimestampsFilter.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestTimestampsFilter.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
@@ -181,15 +186,15 @@ public class TestTimestampsFilter {
     Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     Put p = new Put(Bytes.toBytes("row"));
-    p.addColumn(FAMILY, Bytes.toBytes("column0"), (long) 3, Bytes.toBytes("value0-3"));
-    p.addColumn(FAMILY, Bytes.toBytes("column1"), (long) 3, Bytes.toBytes("value1-3"));
-    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 1, Bytes.toBytes("value2-1"));
-    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 2, Bytes.toBytes("value2-2"));
-    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 3, Bytes.toBytes("value2-3"));
-    p.addColumn(FAMILY, Bytes.toBytes("column3"), (long) 2, Bytes.toBytes("value3-2"));
-    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 1, Bytes.toBytes("value4-1"));
-    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 2, Bytes.toBytes("value4-2"));
-    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 3, Bytes.toBytes("value4-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column0"), 3L, Bytes.toBytes("value0-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column1"), 3L, Bytes.toBytes("value1-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), 1L, Bytes.toBytes("value2-1"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), 2L, Bytes.toBytes("value2-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), 3L, Bytes.toBytes("value2-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column3"), 2L, Bytes.toBytes("value3-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), 1L, Bytes.toBytes("value4-1"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), 2L, Bytes.toBytes("value4-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), 3L, Bytes.toBytes("value4-3"));
     ht.put(p);
 
     ArrayList<Long> timestamps = new ArrayList<>();
@@ -209,7 +214,7 @@ public class TestTimestampsFilter {
           + Bytes.toString(CellUtil.cloneValue(kv)));
     }
 
-    assertEquals(result.listCells().size(), 2);
+    assertEquals(2, result.listCells().size());
     assertTrue(CellUtil.matchingValue(result.listCells().get(0), Bytes.toBytes("value2-3")));
     assertTrue(CellUtil.matchingValue(result.listCells().get(1), Bytes.toBytes("value4-3")));
 
@@ -233,7 +238,7 @@ public class TestTimestampsFilter {
 
   private void testWithVersionDeletes(boolean flushTables) throws IOException {
     final byte [] TABLE = Bytes.toBytes(name.getMethodName() + "_" +
-                                   (flushTables ? "flush" : "noflush")); 
+                                   (flushTables ? "flush" : "noflush"));
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 

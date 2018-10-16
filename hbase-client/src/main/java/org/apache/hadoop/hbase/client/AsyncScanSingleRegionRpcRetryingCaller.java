@@ -28,11 +28,6 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.updateResultsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.updateServerSideMetrics;
 
-import com.google.common.base.Preconditions;
-
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timeout;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,26 +35,30 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.RawScanResultConsumer.ScanResumer;
+import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer.ScanResumer;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.Interface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Retry caller for scanning a region.
@@ -70,7 +69,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 class AsyncScanSingleRegionRpcRetryingCaller {
 
-  private static final Log LOG = LogFactory.getLog(AsyncScanSingleRegionRpcRetryingCaller.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AsyncScanSingleRegionRpcRetryingCaller.class);
 
   private final HashedWheelTimer retryTimer;
 
@@ -82,7 +82,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private final ScanResultCache resultCache;
 
-  private final RawScanResultConsumer consumer;
+  private final AdvancedScanResultConsumer consumer;
 
   private final ClientService.Interface stub;
 
@@ -141,10 +141,12 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   // Notice that, the public methods of this class is supposed to be called by upper layer only, and
   // package private methods can only be called within the implementation of
   // AsyncScanSingleRegionRpcRetryingCaller.
-  private final class ScanControllerImpl implements RawScanResultConsumer.ScanController {
+  private final class ScanControllerImpl implements AdvancedScanResultConsumer.ScanController {
 
     // Make sure the methods are only called in this thread.
-    private final Thread callerThread = Thread.currentThread();
+    private final Thread callerThread;
+
+    private final Optional<Cursor> cursor;
 
     // INITIALIZED -> SUSPENDED -> DESTROYED
     // INITIALIZED -> TERMINATED -> DESTROYED
@@ -153,6 +155,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     private ScanControllerState state = ScanControllerState.INITIALIZED;
 
     private ScanResumerImpl resumer;
+
+    public ScanControllerImpl(Optional<Cursor> cursor) {
+      this.callerThread = Thread.currentThread();
+      this.cursor = cursor;
+    }
 
     private void preCheck() {
       Preconditions.checkState(Thread.currentThread() == callerThread,
@@ -184,6 +191,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       this.state = ScanControllerState.DESTROYED;
       return state;
     }
+
+    @Override
+    public Optional<Cursor> cursor() {
+        return cursor;
+    }
   }
 
   private enum ScanResumerState {
@@ -203,7 +215,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   // Notice that, the public methods of this class is supposed to be called by upper layer only, and
   // package private methods can only be called within the implementation of
   // AsyncScanSingleRegionRpcRetryingCaller.
-  private final class ScanResumerImpl implements RawScanResultConsumer.ScanResumer {
+  private final class ScanResumerImpl implements AdvancedScanResultConsumer.ScanResumer {
 
     // INITIALIZED -> SUSPENDED -> RESUMED
     // INITIALIZED -> RESUMED
@@ -287,7 +299,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   public AsyncScanSingleRegionRpcRetryingCaller(HashedWheelTimer retryTimer,
       AsyncConnectionImpl conn, Scan scan, ScanMetrics scanMetrics, long scannerId,
-      ScanResultCache resultCache, RawScanResultConsumer consumer, Interface stub,
+      ScanResultCache resultCache, AdvancedScanResultConsumer consumer, Interface stub,
       HRegionLocation loc, boolean isRegionServerRemote, long scannerLeaseTimeoutPeriodNs,
       long pauseNs, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
@@ -330,8 +342,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     stub.scan(controller, req, resp -> {
       if (controller.failed()) {
         LOG.warn("Call to " + loc.getServerName() + " for closing scanner id = " + scannerId +
-            " for " + loc.getRegionInfo().getEncodedName() + " of " +
-            loc.getRegionInfo().getTable() + " failed, ignore, probably already closed",
+            " for " + loc.getRegion().getEncodedName() + " of " +
+            loc.getRegion().getTable() + " failed, ignore, probably already closed",
           controller.getFailed());
       }
     });
@@ -370,7 +382,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     error = translateException(error);
     if (tries > startLogErrorsCnt) {
       LOG.warn("Call to " + loc.getServerName() + " for scanner id = " + scannerId + " for " +
-          loc.getRegionInfo().getEncodedName() + " of " + loc.getRegionInfo().getTable() +
+          loc.getRegion().getEncodedName() + " of " + loc.getRegion().getTable() +
           " failed, , tries = " + tries + ", maxAttempts = " + maxAttempts + ", timeout = " +
           TimeUnit.NANOSECONDS.toMillis(scanTimeoutNs) + " ms, time elapsed = " + elapsedMs() +
           " ms",
@@ -419,18 +431,18 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   }
 
   private void completeWhenNoMoreResultsInRegion() {
-    if (noMoreResultsForScan(scan, loc.getRegionInfo())) {
+    if (noMoreResultsForScan(scan, loc.getRegion())) {
       completeNoMoreResults();
     } else {
-      completeWithNextStartRow(loc.getRegionInfo().getEndKey(), true);
+      completeWithNextStartRow(loc.getRegion().getEndKey(), true);
     }
   }
 
   private void completeReversedWhenNoMoreResultsInRegion() {
-    if (noMoreResultsForReverseScan(scan, loc.getRegionInfo())) {
+    if (noMoreResultsForReverseScan(scan, loc.getRegion())) {
       completeNoMoreResults();
     } else {
-      completeWithNextStartRow(loc.getRegionInfo().getStartKey(), false);
+      completeWithNextStartRow(loc.getRegion().getStartKey(), false);
     }
   }
 
@@ -462,10 +474,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     updateServerSideMetrics(scanMetrics, resp);
     boolean isHeartbeatMessage = resp.hasHeartbeatMessage() && resp.getHeartbeatMessage();
+    Result[] rawResults;
     Result[] results;
     int numberOfCompleteRowsBefore = resultCache.numberOfCompleteRows();
     try {
-      Result[] rawResults = ResponseConverter.getResults(controller.cellScanner(), resp);
+      rawResults = ResponseConverter.getResults(controller.cellScanner(), resp);
       updateResultsMetrics(scanMetrics, rawResults, isHeartbeatMessage);
       results = resultCache.addAndGet(
         Optional.ofNullable(rawResults).orElse(ScanResultCache.EMPTY_RESULT_ARRAY),
@@ -479,12 +492,30 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
 
-    ScanControllerImpl scanController = new ScanControllerImpl();
+    ScanControllerImpl scanController;
     if (results.length > 0) {
+      scanController = new ScanControllerImpl(
+          resp.hasCursor() ? Optional.of(ProtobufUtil.toCursor(resp.getCursor()))
+              : Optional.empty());
       updateNextStartRowWhenError(results[results.length - 1]);
       consumer.onNext(results, scanController);
-    } else if (resp.hasHeartbeatMessage() && resp.getHeartbeatMessage()) {
-      consumer.onHeartbeat(scanController);
+    } else {
+      Optional<Cursor> cursor = Optional.empty();
+      if (resp.hasCursor()) {
+        cursor = Optional.of(ProtobufUtil.toCursor(resp.getCursor()));
+      } else if (scan.isNeedCursorResult() && rawResults.length > 0) {
+        // It is size limit exceed and we need to return the last Result's row.
+        // When user setBatch and the scanner is reopened, the server may return Results that
+        // user has seen and the last Result can not be seen because the number is not enough.
+        // So the row keys of results may not be same, we must use the last one.
+        cursor = Optional.of(new Cursor(rawResults[rawResults.length - 1].getRow()));
+      }
+      scanController = new ScanControllerImpl(cursor);
+      if (isHeartbeatMessage || cursor.isPresent()) {
+        // only call onHeartbeat if server tells us explicitly this is a heartbeat message, or we
+        // want to pass a cursor to upper layer.
+        consumer.onHeartbeat(scanController);
+      }
     }
     ScanControllerState state = scanController.destroy();
     if (state == ScanControllerState.TERMINATED) {

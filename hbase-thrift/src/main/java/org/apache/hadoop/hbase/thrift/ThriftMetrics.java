@@ -19,14 +19,13 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class is for maintaining the various statistics of thrift server
@@ -64,12 +64,14 @@ public class ThriftMetrics  {
 
 
   public ThriftMetrics(Configuration conf, ThriftServerType t) {
-    slowResponseTime = conf.getLong( SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
+    slowResponseTime = conf.getLong(SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
 
     if (t == ThriftServerType.ONE) {
-      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftOneSource();
+      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class)
+              .createThriftOneSource();
     } else if (t == ThriftServerType.TWO) {
-      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftTwoSource();
+      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class)
+              .createThriftTwoSource();
     }
 
   }

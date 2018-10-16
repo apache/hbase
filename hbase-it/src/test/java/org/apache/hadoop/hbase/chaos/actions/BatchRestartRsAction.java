@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 
@@ -61,7 +60,7 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
     }
 
     LOG.info("Killed " + killedServers.size() + " region servers. Reported num of rs:"
-        + cluster.getClusterStatus().getServersSize());
+        + cluster.getClusterMetrics().getLiveServerMetrics().size());
 
     sleep(sleepTime);
 
@@ -76,6 +75,6 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
           PolicyBasedChaosMonkey.TIMEOUT);
     }
     LOG.info("Started " + killedServers.size() +" region servers. Reported num of rs:"
-        + cluster.getClusterStatus().getServersSize());
+        + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 }

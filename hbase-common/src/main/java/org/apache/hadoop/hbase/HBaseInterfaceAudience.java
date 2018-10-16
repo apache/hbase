@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+
+// TODO move this to hbase-annotations non-test-jar
 
 /**
  * This class defines constants for different classes of hbase limited private apis
@@ -34,6 +36,7 @@ public final class HBaseInterfaceAudience {
   public static final String REPLICATION = "Replication";
   public static final String PHOENIX = "Phoenix";
   public static final String SPARK = "Spark";
+  public static final String UNITTEST = "Unittest";
 
   /**
    * Denotes class names that appear in user facing configuration files.
@@ -45,4 +48,9 @@ public final class HBaseInterfaceAudience {
    * for class name, and arguments.
    */
   public static final String TOOLS = "Tools";
+
+  /**
+   * Denotes classes used by hbck tool for fixing inconsistent state of HBase.
+   */
+  public static final String HBCK = "HBCK";
 }

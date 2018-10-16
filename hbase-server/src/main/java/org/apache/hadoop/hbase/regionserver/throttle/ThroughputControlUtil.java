@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Helper methods for throttling
@@ -40,7 +40,7 @@ public final class ThroughputControlUtil {
    * @param opName Name of the IO operation, e.g. "flush", "compaction", etc.
    * @return The name for throttling
    */
-  public static String getNameForThrottling(final Store store, final String opName) {
+  public static String getNameForThrottling(HStore store, String opName) {
     int counter;
     for (;;) {
       counter = NAME_COUNTER.get();
@@ -49,7 +49,8 @@ public final class ThroughputControlUtil {
         break;
       }
     }
-    return store.getRegionInfo().getRegionNameAsString() + NAME_DELIMITER
-        + store.getFamily().getNameAsString() + NAME_DELIMITER + opName + NAME_DELIMITER + counter;
+    return store.getRegionInfo().getEncodedName() + NAME_DELIMITER +
+        store.getColumnFamilyDescriptor().getNameAsString() + NAME_DELIMITER + opName +
+        NAME_DELIMITER + counter;
   }
 }

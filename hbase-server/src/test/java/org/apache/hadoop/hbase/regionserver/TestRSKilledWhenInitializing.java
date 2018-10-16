@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,43 +25,50 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
 /**
  * Tests that a regionserver that dies after reporting for duty gets removed
  * from list of online regions. See HBASE-9593.
  */
 @Category({RegionServerTests.class, MediumTests.class})
+@Ignore("See HBASE-19515")
 public class TestRSKilledWhenInitializing {
-  private static final Log LOG = LogFactory.getLog(TestRSKilledWhenInitializing.class);
-  @Rule public TestName testName = new TestName();
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-    withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRSKilledWhenInitializing.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRSKilledWhenInitializing.class);
+
+  @Rule
+  public TestName testName = new TestName();
 
   // This boolean needs to be globally available. It is used below in our
   // mocked up regionserver so it knows when to die.
@@ -74,7 +80,7 @@ public class TestRSKilledWhenInitializing {
   private static final int NUM_RS = 2;
 
   /**
-   * Test verifies whether a region server is removing from online servers list in master if it went
+   * Test verifies whether a region server is removed from online servers list in master if it went
    * down after registering with master. Test will TIMEOUT if an error!!!!
    * @throws Exception
    */
@@ -98,18 +104,18 @@ public class TestRSKilledWhenInitializing {
       for (int i = 0; i < NUM_RS; i++) {
         cluster.getRegionServers().get(i).start();
       }
-      // Now wait on master to see NUM_RS + 1 servers as being online, thats NUM_RS plus
-      // the Master itself (because Master hosts hbase:meta and checks in as though it a RS).
+      // Expected total regionservers depends on whether Master can host regions or not.
+      int expectedTotalRegionServers = NUM_RS + (LoadBalancer.isTablesOnMaster(conf)? 1: 0);
       List<ServerName> onlineServersList = null;
       do {
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
-      } while (onlineServersList.size() < (NUM_RS + 1));
+      } while (onlineServersList.size() < expectedTotalRegionServers);
       // Wait until killedRS is set. Means RegionServer is starting to go down.
       while (killedRS.get() == null) {
         Threads.sleep(1);
       }
       // Wait on the RegionServer to fully die.
-      while (cluster.getLiveRegionServers().size() > NUM_RS) {
+      while (cluster.getLiveRegionServers().size() >= expectedTotalRegionServers) {
         Threads.sleep(1);
       }
       // Make sure Master is fully up before progressing. Could take a while if regions
@@ -122,22 +128,27 @@ public class TestRSKilledWhenInitializing {
       // showing still. The downed RegionServer should still be showing as registered.
       assertTrue(master.getMaster().getServerManager().isServerOnline(killedRS.get()));
       // Find non-meta region (namespace?) and assign to the killed server. That'll trigger cleanup.
-      Map<HRegionInfo, ServerName> assignments = null;
+      Map<RegionInfo, ServerName> assignments = null;
       do {
         assignments = master.getMaster().getAssignmentManager().getRegionStates().getRegionAssignments();
       } while (assignments == null || assignments.size() < 2);
-      HRegionInfo hri = null;
-      for (Map.Entry<HRegionInfo, ServerName> e: assignments.entrySet()) {
+      RegionInfo hri = null;
+      for (Map.Entry<RegionInfo, ServerName> e: assignments.entrySet()) {
         if (e.getKey().isMetaRegion()) continue;
         hri = e.getKey();
         break;
       }
       // Try moving region to the killed server. It will fail. As by-product, we will
       // remove the RS from Master online list because no corresponding znode.
-      assertEquals(NUM_RS + 1, master.getMaster().getServerManager().getOnlineServersList().size());
+      assertEquals(expectedTotalRegionServers,
+        master.getMaster().getServerManager().getOnlineServersList().size());
       LOG.info("Move " + hri.getEncodedName() + " to " + killedRS.get());
       master.getMaster().move(hri.getEncodedNameAsBytes(),
           Bytes.toBytes(killedRS.get().toString()));
+
+      // TODO: This test could do more to verify fix. It could create a table
+      // and do round-robin assign. It should fail if zombie RS. HBASE-19515.
+
       // Wait until the RS no longer shows as registered in Master.
       while (onlineServersList.size() > (NUM_RS + 1)) {
         Thread.sleep(100);
@@ -188,9 +199,9 @@ public class TestRSKilledWhenInitializing {
    * notices and so removes the region from its set of online regionservers.
    */
   static class RegisterAndDieRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
-    public RegisterAndDieRegionServer(Configuration conf, CoordinatedStateManager cp)
+    public RegisterAndDieRegionServer(Configuration conf)
     throws IOException, InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     @Override

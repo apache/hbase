@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown when a snapshot could not be exported due to an error during the operation.

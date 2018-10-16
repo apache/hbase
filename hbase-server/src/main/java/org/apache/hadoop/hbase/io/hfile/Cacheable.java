@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 
 /**
@@ -46,8 +46,9 @@ public interface Cacheable extends HeapSize {
   /**
    * Serializes its data into destination.
    * @param destination Where to serialize to
+   * @param includeNextBlockMetadata Whether to include nextBlockMetadata in the Cache block.
    */
-  void serialize(ByteBuffer destination);
+  void serialize(ByteBuffer destination, boolean includeNextBlockMetadata);
 
   /**
    * Returns CacheableDeserializer instance which reconstructs original object from ByteBuffer.
@@ -73,6 +74,6 @@ public interface Cacheable extends HeapSize {
    * exclusive memory area of this Cacheable.
    */
   public static enum MemoryType {
-    SHARED, EXCLUSIVE;
+    SHARED, EXCLUSIVE
   }
 }

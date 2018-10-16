@@ -18,28 +18,29 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,16 +49,21 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TimeOffsetEnvironmentEdge;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestFIFOCompactionPolicy {
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFIFOCompactionPolicy.class);
 
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
 
@@ -65,42 +71,38 @@ public class TestFIFOCompactionPolicy {
 
   private final byte[] qualifier = Bytes.toBytes("q");
 
-  private Store getStoreWithName(TableName tableName) {
+  @Rule
+  public ExpectedException error = ExpectedException.none();
+
+  private HStore getStoreWithName(TableName tableName) {
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
-      for (Region region : hrs.getOnlineRegions(tableName)) {
+      for (HRegion region : hrs.getRegions(tableName)) {
         return region.getStores().iterator().next();
       }
     }
     return null;
   }
 
-  private Store prepareData() throws IOException {
+  private HStore prepareData() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, 
-      FIFOCompactionPolicy.class.getName());
-    desc.setConfiguration(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, 
-      DisabledRegionSplitPolicy.class.getName());
-    HColumnDescriptor colDesc = new HColumnDescriptor(family);
-    colDesc.setTimeToLive(1); // 1 sec
-    desc.addFamily(colDesc);
-
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .build();
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
-    Random rand = new Random();
     TimeOffsetEnvironmentEdge edge =
         (TimeOffsetEnvironmentEdge) EnvironmentEdgeManager.getDelegate();
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[128 * 1024];
-        rand.nextBytes(value);
+        ThreadLocalRandom.current().nextBytes(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       admin.flush(tableName);
@@ -109,125 +111,84 @@ public class TestFIFOCompactionPolicy {
     return getStoreWithName(tableName);
   }
 
-  @BeforeClass   
-  public static void setEnvironmentEdge()
-  {
+  @BeforeClass
+  public static void setEnvironmentEdge() throws Exception {
     EnvironmentEdge ee = new TimeOffsetEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(ee);
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
+    TEST_UTIL.startMiniCluster(1);
   }
-  
+
   @AfterClass
-  public static void resetEnvironmentEdge()
-  {
+  public static void resetEnvironmentEdge() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
     EnvironmentEdgeManager.reset();
   }
-  
+
   @Test
   public void testPurgeExpiredFiles() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
+    HStore store = prepareData();
+    assertEquals(10, store.getStorefilesCount());
+    TEST_UTIL.getAdmin().majorCompact(tableName);
+    TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
 
-    TEST_UTIL.startMiniCluster(1);
-    try {
-      Store store = prepareData();
-      assertEquals(10, store.getStorefilesCount());
-      TEST_UTIL.getAdmin().majorCompact(tableName);
-      while (store.getStorefilesCount() > 1) {
-        Thread.sleep(100);
+      @Override
+      public boolean evaluate() throws Exception {
+        return store.getStorefilesCount() == 1;
       }
-      assertTrue(store.getStorefilesCount() == 1);
-    } finally {
-      TEST_UTIL.shutdownMiniCluster();
-    }
-  }
-  
-  @Test  
-  public void testSanityCheckTTL() throws Exception
-  {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
-    TEST_UTIL.startMiniCluster(1);
 
-    Admin admin = TEST_UTIL.getAdmin();
+      @Override
+      public String explainFailure() throws Exception {
+        return "The store file count " + store.getStorefilesCount() + " is still greater than 1";
+      }
+    });
+  }
+
+  @Test
+  public void testSanityCheckTTL() throws IOException {
+    error.expect(DoNotRetryIOException.class);
+    error.expectMessage("Default TTL is not supported");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-TTL");
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, 
-      FIFOCompactionPolicy.class.getName());
-    desc.setConfiguration(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, 
-      DisabledRegionSplitPolicy.class.getName());
-    HColumnDescriptor colDesc = new HColumnDescriptor(family);
-    desc.addFamily(colDesc);
-    try{
-      admin.createTable(desc);
-      Assert.fail();
-    }catch(Exception e){      
-    }finally{
-      TEST_UTIL.shutdownMiniCluster();
-    }
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+    TEST_UTIL.getAdmin().createTable(desc);
   }
 
-  @Test  
-  public void testSanityCheckMinVersion() throws Exception
-  {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
-    TEST_UTIL.startMiniCluster(1);
-
-    Admin admin = TEST_UTIL.getAdmin();
+  @Test
+  public void testSanityCheckMinVersion() throws IOException {
+    error.expect(DoNotRetryIOException.class);
+    error.expectMessage("MIN_VERSION > 0 is not supported for FIFO compaction");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-MinVersion");
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, 
-      FIFOCompactionPolicy.class.getName());
-    desc.setConfiguration(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, 
-      DisabledRegionSplitPolicy.class.getName());
-    HColumnDescriptor colDesc = new HColumnDescriptor(family);
-    colDesc.setTimeToLive(1); // 1 sec
-    colDesc.setMinVersions(1);
-    desc.addFamily(colDesc);
-    try{
-      admin.createTable(desc);
-      Assert.fail();
-    }catch(Exception e){      
-    }finally{
-      TEST_UTIL.shutdownMiniCluster();
-    }
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1)
+            .setMinVersions(1).build())
+        .build();
+    TEST_UTIL.getAdmin().createTable(desc);
   }
-  
-  @Test  
-  public void testSanityCheckBlockingStoreFiles() throws Exception
-  {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10);
-    TEST_UTIL.startMiniCluster(1);
 
-    Admin admin = TEST_UTIL.getAdmin();
+  @Test
+  public void testSanityCheckBlockingStoreFiles() throws IOException {
+    error.expect(DoNotRetryIOException.class);
+    error.expectMessage("Blocking file count 'hbase.hstore.blockingStoreFiles'");
+    error.expectMessage("is below recommended minimum of 1000 for column family");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-BlockingStoreFiles");
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, 
-      FIFOCompactionPolicy.class.getName());
-    desc.setConfiguration(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, 
-      DisabledRegionSplitPolicy.class.getName());
-    HColumnDescriptor colDesc = new HColumnDescriptor(family);
-    colDesc.setTimeToLive(1); // 1 sec
-    desc.addFamily(colDesc);
-    try{
-      admin.createTable(desc);
-      Assert.fail();
-    }catch(Exception e){      
-    }finally{
-      TEST_UTIL.shutdownMiniCluster();
-    }
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .setValue(HStore.BLOCKING_STOREFILES_KEY, "10")
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .build();
+    TEST_UTIL.getAdmin().createTable(desc);
   }
 }

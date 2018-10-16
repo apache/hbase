@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -32,21 +36,29 @@ import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestColumnFamilyDescriptorBuilder {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestColumnFamilyDescriptorBuilder.class);
+
+  @Rule
+  public ExpectedException expectedEx = ExpectedException.none();
+
   @Test
   public void testBuilder() throws DeserializationException {
     ColumnFamilyDescriptorBuilder builder
       = ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
             .setInMemory(true)
             .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-            .setBloomFilterType(BloomType.NONE)
-            .setCacheDataInL1(true);
+            .setBloomFilterType(BloomType.NONE);
     final int v = 123;
     builder.setBlocksize(v);
     builder.setTimeToLive(v);
@@ -87,15 +99,14 @@ public class TestColumnFamilyDescriptorBuilder {
     assertEquals(v, deserializedHcd.getDFSReplication());
   }
 
+  /**
+   * Tests HColumnDescriptor with empty familyName
+   */
   @Test
-  /** Tests HColumnDescriptor with empty familyName*/
-  public void testHColumnDescriptorShouldThrowIAEWhenFamiliyNameEmpty()
-      throws Exception {
-    try {
-      ColumnFamilyDescriptorBuilder.newBuilder("".getBytes()).build();
-    } catch (IllegalArgumentException e) {
-      assertEquals("Column Family name can not be empty", e.getLocalizedMessage());
-    }
+  public void testHColumnDescriptorShouldThrowIAEWhenFamilyNameEmpty() throws Exception {
+    expectedEx.expect(IllegalArgumentException.class);
+    expectedEx.expectMessage("Column Family name can not be empty");
+    ColumnFamilyDescriptorBuilder.of("");
   }
 
   /**

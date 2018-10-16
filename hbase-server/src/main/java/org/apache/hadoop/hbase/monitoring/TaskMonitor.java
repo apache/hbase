@@ -27,13 +27,16 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.collections.buffer.CircularFifoBuffer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Threads;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.queue.CircularFifoQueue;
 
 /**
  * Singleton which keeps track of tasks going on in this VM.
@@ -42,18 +45,37 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class TaskMonitor {
-  private static final Log LOG = LogFactory.getLog(TaskMonitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TaskMonitor.class);
 
-  // Don't keep around any tasks that have completed more than
-  // 60 seconds ago
-  private static final long EXPIRATION_TIME = 60*1000;
+  public static final String MAX_TASKS_KEY = "hbase.taskmonitor.max.tasks";
+  public static final int DEFAULT_MAX_TASKS = 1000;
+  public static final String RPC_WARN_TIME_KEY = "hbase.taskmonitor.rpc.warn.time";
+  public static final long DEFAULT_RPC_WARN_TIME = 0;
+  public static final String EXPIRATION_TIME_KEY = "hbase.taskmonitor.expiration.time";
+  public static final long DEFAULT_EXPIRATION_TIME = 60*1000;
+  public static final String MONITOR_INTERVAL_KEY = "hbase.taskmonitor.monitor.interval";
+  public static final long DEFAULT_MONITOR_INTERVAL = 10*1000;
 
-  @VisibleForTesting
-  static final int MAX_TASKS = 1000;
-  
   private static TaskMonitor instance;
-  private CircularFifoBuffer tasks = new CircularFifoBuffer(MAX_TASKS);
-  private List<TaskAndWeakRefPair> rpcTasks = Lists.newArrayList();
+
+  private final int maxTasks;
+  private final long rpcWarnTime;
+  private final long expirationTime;
+  private final CircularFifoQueue tasks;
+  private final List<TaskAndWeakRefPair> rpcTasks;
+  private final long monitorInterval;
+  private Thread monitorThread;
+
+  TaskMonitor(Configuration conf) {
+    maxTasks = conf.getInt(MAX_TASKS_KEY, DEFAULT_MAX_TASKS);
+    expirationTime = conf.getLong(EXPIRATION_TIME_KEY, DEFAULT_EXPIRATION_TIME);
+    rpcWarnTime = conf.getLong(RPC_WARN_TIME_KEY, DEFAULT_RPC_WARN_TIME);
+    tasks = new CircularFifoQueue(maxTasks);
+    rpcTasks = Lists.newArrayList();
+    monitorInterval = conf.getLong(MONITOR_INTERVAL_KEY, DEFAULT_MONITOR_INTERVAL);
+    monitorThread = new Thread(new MonitorRunnable());
+    Threads.setDaemonThreadRunning(monitorThread, "Monitor thread for TaskMonitor");
+  }
 
   /**
    * Get singleton instance.
@@ -61,7 +83,7 @@ public class TaskMonitor {
    */
   public static synchronized TaskMonitor get() {
     if (instance == null) {
-      instance = new TaskMonitor();
+      instance = new TaskMonitor(HBaseConfiguration.create());
     }
     return instance;
   }
@@ -93,6 +115,22 @@ public class TaskMonitor {
     return proxy;
   }
 
+  private synchronized void warnStuckTasks() {
+    if (rpcWarnTime > 0) {
+      final long now = EnvironmentEdgeManager.currentTime();
+      for (Iterator<TaskAndWeakRefPair> it = rpcTasks.iterator();
+          it.hasNext();) {
+        TaskAndWeakRefPair pair = it.next();
+        MonitoredTask stat = pair.get();
+        if ((stat.getState() == MonitoredTaskImpl.State.RUNNING) &&
+            (now >= stat.getWarnTime() + rpcWarnTime)) {
+          LOG.warn("Task may be stuck: " + stat);
+          stat.setWarnTime(now);
+        }
+      }
+    }
+  }
+
   private synchronized void purgeExpiredTasks() {
     for (Iterator<TaskAndWeakRefPair> it = tasks.iterator();
          it.hasNext();) {
@@ -119,32 +157,61 @@ public class TaskMonitor {
    * MonitoredTasks handled by this TaskMonitor.
    * @return A complete list of MonitoredTasks.
    */
-  public synchronized List<MonitoredTask> getTasks() {
+  public List<MonitoredTask> getTasks() {
+    return getTasks(null);
+  }
+
+  /**
+   * Produces a list containing copies of the current state of all non-expired 
+   * MonitoredTasks handled by this TaskMonitor.
+   * @param filter type of wanted tasks
+   * @return A filtered list of MonitoredTasks.
+   */
+  public synchronized List<MonitoredTask> getTasks(String filter) {
     purgeExpiredTasks();
-    ArrayList<MonitoredTask> ret = Lists.newArrayListWithCapacity(tasks.size() + rpcTasks.size());
-    for (Iterator<TaskAndWeakRefPair> it = tasks.iterator();
-         it.hasNext();) {
-      TaskAndWeakRefPair pair = it.next();
-      MonitoredTask t = pair.get();
-      ret.add(t.clone());
+    TaskFilter taskFilter = createTaskFilter(filter);
+    ArrayList<MonitoredTask> results =
+        Lists.newArrayListWithCapacity(tasks.size() + rpcTasks.size());
+    processTasks(tasks, taskFilter, results);
+    processTasks(rpcTasks, taskFilter, results);
+    return results;
+  }
+
+  /**
+   * Create a task filter according to a given filter type.
+   * @param filter type of monitored task
+   * @return a task filter
+   */
+  private static TaskFilter createTaskFilter(String filter) {
+    switch (TaskFilter.TaskType.getTaskType(filter)) {
+      case GENERAL: return task -> task instanceof MonitoredRPCHandler;
+      case HANDLER: return task -> !(task instanceof MonitoredRPCHandler);
+      case RPC: return task -> !(task instanceof MonitoredRPCHandler) ||
+                               !((MonitoredRPCHandler) task).isRPCRunning();
+      case OPERATION: return task -> !(task instanceof MonitoredRPCHandler) ||
+                                     !((MonitoredRPCHandler) task).isOperationRunning();
+      default: return task -> false;
     }
-    for (Iterator<TaskAndWeakRefPair> it = rpcTasks.iterator();
-         it.hasNext();) {
-      TaskAndWeakRefPair pair = it.next();
-      MonitoredTask t = pair.get();
-      ret.add(t.clone());
+  }
+
+  private static void processTasks(Iterable<TaskAndWeakRefPair> tasks,
+                                   TaskFilter filter,
+                                   List<MonitoredTask> results) {
+    for (TaskAndWeakRefPair task : tasks) {
+      MonitoredTask t = task.get();
+      if (!filter.filter(t)) {
+        results.add(t.clone());
+      }
     }
-    return ret;
   }
 
   private boolean canPurge(MonitoredTask stat) {
     long cts = stat.getCompletionTimestamp();
-    return (cts > 0 && System.currentTimeMillis() - cts > EXPIRATION_TIME);
+    return (cts > 0 && EnvironmentEdgeManager.currentTime() - cts > expirationTime);
   }
-  
 
   public void dumpAsText(PrintWriter out) {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     
     List<MonitoredTask> tasks = getTasks();
     for (MonitoredTask task : tasks) {
@@ -161,6 +228,12 @@ public class TaskMonitor {
         out.println("Running for " + running + "s");
       }
       out.println();
+    }
+  }
+
+  public synchronized void shutdown() {
+    if (this.monitorThread != null) {
+      monitorThread.interrupt();
     }
   }
 
@@ -217,5 +290,65 @@ public class TaskMonitor {
         throws Throwable {
       return method.invoke(delegatee, args);
     }    
+  }
+
+  private class MonitorRunnable implements Runnable {
+    private boolean running = true;
+
+    @Override
+    public void run() {
+      while (running) {
+        try {
+          Thread.sleep(monitorInterval);
+          if (tasks.isFull()) {
+            purgeExpiredTasks();
+          }
+          warnStuckTasks();
+        } catch (InterruptedException e) {
+          running = false;
+        }
+      }
+    }
+  }
+
+  private interface TaskFilter {
+    enum TaskType {
+      GENERAL("general"),
+      HANDLER("handler"),
+      RPC("rpc"),
+      OPERATION("operation"),
+      ALL("all");
+
+      private final String type;
+
+      private TaskType(String type) {
+        this.type = type.toLowerCase();
+      }
+
+      static TaskType getTaskType(String type) {
+        if (type == null || type.isEmpty()) {
+          return ALL;
+        }
+        type = type.toLowerCase();
+        for (TaskType taskType : values()) {
+          if (taskType.toString().equals(type)) {
+            return taskType;
+          }
+        }
+        return ALL;
+      }
+
+      @Override
+      public String toString() {
+        return type;
+      }
+    }
+
+    /**
+     * Filter out unwanted task.
+     * @param task monitored task
+     * @return false if a task is accepted, true if it is filtered
+     */
+    boolean filter(MonitoredTask task);
   }
 }

@@ -15,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-@InterfaceStability.Stable
 public class ProcedureSuspendedException extends ProcedureException {
+
+  private static final long serialVersionUID = -8328419627678496269L;
+
   /** default constructor */
   public ProcedureSuspendedException() {
     super();

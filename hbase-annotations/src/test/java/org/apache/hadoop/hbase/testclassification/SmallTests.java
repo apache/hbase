@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,19 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.testclassification;
 
 /**
- * Tag a test as 'small', meaning that the test class has the following
- * characteristics:
- *  - can be run simultaneously with other small tests in the same JVM
- *  - ideally, last less than 15 seconds
- *  - does not use a cluster
+ * Tagging a test as 'small' means that the test class has the following characteristics:
+ * <ul>
+ *  <li>it can be run simultaneously with other small tests all in the same JVM</li>
+ *  <li>ideally, the WHOLE implementing test-suite/class, no matter how many or how few test
+ *  methods it has, should take less than 15 seconds to complete</li>
+ *  <li>it does not use a cluster</li>
+ * </ul>
  *
  * @see MediumTests
  * @see LargeTests
  * @see IntegrationTests
  */
-public interface SmallTests {
-}
+public interface SmallTests {}

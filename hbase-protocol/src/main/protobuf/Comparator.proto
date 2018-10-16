@@ -72,3 +72,7 @@ message RegexStringComparator {
 message SubstringComparator {
   required string substr = 1;
 }
+
+message BigDecimalComparator {
+  required ByteArrayComparable comparable = 1;
+}

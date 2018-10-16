@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
-
 /**
  * A load test data generator for MOB
  */

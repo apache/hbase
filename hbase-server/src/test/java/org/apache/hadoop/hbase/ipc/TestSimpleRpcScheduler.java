@@ -21,21 +21,16 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,21 +40,12 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,21 +53,32 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
 @Category({RPCTests.class, SmallTests.class})
 public class TestSimpleRpcScheduler {
-  @Rule
-  public final TestRule timeout =
-      CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-          withLookingForStuckThread(true).build();
 
-  private static final Log LOG = LogFactory.getLog(TestSimpleRpcScheduler.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSimpleRpcScheduler.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSimpleRpcScheduler.class);
 
   private final RpcScheduler.Context CONTEXT = new RpcScheduler.Context() {
     @Override
@@ -107,13 +104,80 @@ public class TestSimpleRpcScheduler {
     CallRunner task = createMockTask();
     task.setStatus(new MonitoredRPCHandlerImpl());
     scheduler.dispatch(task);
-    verify(task, timeout(1000)).run();
+    verify(task, timeout(10000)).run();
     scheduler.stop();
   }
 
+  private RpcScheduler disableHandlers(RpcScheduler scheduler) {
+    try {
+      Field ExecutorField = scheduler.getClass().getDeclaredField("callExecutor");
+      ExecutorField.setAccessible(true);
+
+      RpcExecutor rpcExecutor = (RpcExecutor)ExecutorField.get(scheduler);
+
+      Field handlerCountField = rpcExecutor.getClass().getSuperclass().getSuperclass().getDeclaredField("handlerCount");
+
+      handlerCountField.setAccessible(true);
+      handlerCountField.set(rpcExecutor, 0);
+
+      Field numCallQueuesField = rpcExecutor.getClass().getSuperclass().getSuperclass().getDeclaredField("numCallQueues");
+
+      numCallQueuesField.setAccessible(true);
+      numCallQueuesField.set(rpcExecutor, 1);
+
+      Field currentQueueLimitField = rpcExecutor.getClass().getSuperclass().getSuperclass().getDeclaredField("currentQueueLimit");
+
+      currentQueueLimitField.setAccessible(true);
+      currentQueueLimitField.set(rpcExecutor, 100);
+
+    } catch (NoSuchFieldException e) {
+      LOG.error("No such field exception"+e);
+    } catch (IllegalAccessException e) {
+      LOG.error("Illegal access exception"+e);
+    }
+
+    return scheduler;
+  }
+
+  @Test
+  public void testCallQueueInfo() throws IOException, InterruptedException {
+
+    PriorityFunction qosFunction = mock(PriorityFunction.class);
+    RpcScheduler scheduler = new SimpleRpcScheduler(
+            conf, 0, 0, 0, qosFunction, 0);
+
+    scheduler.init(CONTEXT);
+
+    // Set the handlers to zero. So that number of requests in call Queue can be tested
+    scheduler = disableHandlers(scheduler);
+    scheduler.start();
+
+    int totalCallMethods = 10;
+    for (int i = totalCallMethods; i>0; i--) {
+      CallRunner task = createMockTask();
+      task.setStatus(new MonitoredRPCHandlerImpl());
+      scheduler.dispatch(task);
+    }
+
+
+    CallQueueInfo callQueueInfo = scheduler.getCallQueueInfo();
+
+    for (String callQueueName:callQueueInfo.getCallQueueNames()) {
+
+      for (String calledMethod: callQueueInfo.getCalledMethodNames(callQueueName)) {
+        assertEquals(totalCallMethods,
+            callQueueInfo.getCallMethodCount(callQueueName, calledMethod));
+      }
+
+    }
+
+    scheduler.stop();
+
+  }
+
+
   @Test
   public void testHandlerIsolation() throws IOException, InterruptedException {
-
     CallRunner generalTask = createMockTask();
     CallRunner priorityTask = createMockTask();
     CallRunner replicationTask = createMockTask();
@@ -150,13 +214,11 @@ public class TestSimpleRpcScheduler {
     scheduler.init(CONTEXT);
     scheduler.start();
     for (CallRunner task : tasks) {
-      when(qosFunction.getPriority((RPCProtos.RequestHeader) anyObject(),
-        (Message) anyObject(), (User) anyObject()))
-          .thenReturn(qos.get(task));
+      when(qosFunction.getPriority(any(), any(), any())).thenReturn(qos.get(task));
       scheduler.dispatch(task);
     }
     for (CallRunner task : tasks) {
-      verify(task, timeout(1000)).run();
+      verify(task, timeout(10000)).run();
     }
     scheduler.stop();
 
@@ -174,7 +236,6 @@ public class TestSimpleRpcScheduler {
 
   @Test
   public void testRpcScheduler() throws Exception {
-
     testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
     testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
   }
@@ -184,9 +245,7 @@ public class TestSimpleRpcScheduler {
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
 
     PriorityFunction priority = mock(PriorityFunction.class);
-    when(priority.getPriority(any(RequestHeader.class),
-      any(Message.class), any(User.class)))
-      .thenReturn(HConstants.NORMAL_QOS);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
 
     RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 1, 1, 1, priority,
                                                     HConstants.QOS_THRESHOLD);
@@ -211,9 +270,9 @@ public class TestSimpleRpcScheduler {
       when(hugeCallTask.getRpcCall()).thenReturn(hugeCall);
       when(hugeCall.getHeader()).thenReturn(hugeHead);
 
-      when(priority.getDeadline(eq(smallHead), any(Message.class))).thenReturn(0L);
-      when(priority.getDeadline(eq(largeHead), any(Message.class))).thenReturn(50L);
-      when(priority.getDeadline(eq(hugeHead), any(Message.class))).thenReturn(100L);
+      when(priority.getDeadline(eq(smallHead), any())).thenReturn(0L);
+      when(priority.getDeadline(eq(largeHead), any())).thenReturn(50L);
+      when(priority.getDeadline(eq(hugeHead), any())).thenReturn(100L);
 
       final ArrayList<Integer> work = new ArrayList<>();
       doAnswerTaskExecution(smallCallTask, work, 10, 250);
@@ -264,12 +323,11 @@ public class TestSimpleRpcScheduler {
     schedConf.setFloat(RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0f);
 
     PriorityFunction priority = mock(PriorityFunction.class);
-    when(priority.getPriority(any(RequestHeader.class), any(Message.class),
-      any(User.class))).thenReturn(HConstants.NORMAL_QOS);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
 
     RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 2, 1, 1, priority,
                                                     HConstants.QOS_THRESHOLD);
-    assertNotEquals(scheduler, null);
+    assertNotEquals(null, scheduler);
   }
 
   @Test
@@ -280,8 +338,7 @@ public class TestSimpleRpcScheduler {
     schedConf.setFloat(RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
 
     PriorityFunction priority = mock(PriorityFunction.class);
-    when(priority.getPriority(any(RPCProtos.RequestHeader.class), any(Message.class),
-      any(User.class))).thenReturn(HConstants.NORMAL_QOS);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
 
     RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 3, 1, 1, priority,
                                                     HConstants.QOS_THRESHOLD);
@@ -371,10 +428,11 @@ public class TestSimpleRpcScheduler {
 
     schedConf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 0);
     schedConf.setInt("hbase.ipc.server.max.callqueue.length", 5);
+    schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
 
     PriorityFunction priority = mock(PriorityFunction.class);
-    when(priority.getPriority(any(RequestHeader.class), any(Message.class),
-      any(User.class))).thenReturn(HConstants.NORMAL_QOS);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
     SimpleRpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 0, 0, 0, priority,
       HConstants.QOS_THRESHOLD);
     try {
@@ -415,7 +473,7 @@ public class TestSimpleRpcScheduler {
       for (String threadNamePrefix : threadNamePrefixs) {
         String threadName = Thread.currentThread().getName();
         if (threadName.startsWith(threadNamePrefix)) {
-          return timeQ.poll().longValue() + offset; 
+          return timeQ.poll().longValue() + offset;
         }
       }
       return System.currentTimeMillis();
@@ -439,8 +497,7 @@ public class TestSimpleRpcScheduler {
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
       RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
     PriorityFunction priority = mock(PriorityFunction.class);
-    when(priority.getPriority(any(RPCProtos.RequestHeader.class), any(Message.class),
-      any(User.class))).thenReturn(HConstants.NORMAL_QOS);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
     SimpleRpcScheduler scheduler =
         new SimpleRpcScheduler(schedConf, 1, 1, 1, priority, HConstants.QOS_THRESHOLD);
     try {
@@ -508,7 +565,7 @@ public class TestSimpleRpcScheduler {
     ServerCall putCall = new ServerCall(1, null, null,
         RPCProtos.RequestHeader.newBuilder().setMethodName("mutate").build(),
         RequestConverter.buildMutateRequest(Bytes.toBytes("abc"), new Put(Bytes.toBytes("row"))),
-        null, null, 9, null, null, timestamp, 0, null, null, null) {
+        null, null, 9, null, timestamp, 0, null, null, null) {
 
       @Override
       public void sendResponseIfReady() throws IOException {
@@ -516,6 +573,7 @@ public class TestSimpleRpcScheduler {
     };
 
     CallRunner cr = new CallRunner(null, putCall) {
+      @Override
       public void run() {
         if (sleepTime <= 0) return;
         try {
@@ -526,10 +584,12 @@ public class TestSimpleRpcScheduler {
         }
       }
 
+      @Override
       public RpcCall getRpcCall() {
         return putCall;
       }
 
+      @Override
       public void drop() {
       }
     };

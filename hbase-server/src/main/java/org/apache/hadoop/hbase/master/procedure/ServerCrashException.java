@@ -19,11 +19,12 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Passed as Exception by {@link ServerCrashProcedure}
- * notifying on-going RIT that server has failed.
+ * notifying on-going RIT that server has failed. This exception is less an error-condition than
+ * it is a signal to waiting procedures that they can now proceed.
  */
 @InterfaceAudience.Private
 @SuppressWarnings("serial")

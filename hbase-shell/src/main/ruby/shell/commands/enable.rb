@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Enable < Command
       def help
-        return <<-EOF
+        <<-EOF
 Start enable of named table:
   hbase> enable 't1'
   hbase> enable 'ns1:t1'

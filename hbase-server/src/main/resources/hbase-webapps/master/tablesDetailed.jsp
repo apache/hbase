@@ -18,99 +18,55 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
-  import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.master.HMaster"
-  import="org.apache.hadoop.hbase.client.Admin"
-  import="org.apache.hadoop.hbase.client.Connection"
-  import="org.apache.hadoop.hbase.client.ConnectionFactory"
-  import="org.apache.hadoop.hbase.HTableDescriptor"
-  import="org.apache.hadoop.hbase.HBaseConfiguration" %>
-<%
-  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  Configuration conf = master.getConfiguration();
+         import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+         import="java.io.IOException"
+         import="java.util.ArrayList"
+         import="java.util.List"
+         import="java.util.Map"
 %>
-<!--[if IE]>
-<!DOCTYPE html>
-<![endif]-->
-<?xml version="1.0" encoding="UTF-8" ?>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>HBase Master: <%= master.getServerName() %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
+<%@ page import="org.apache.hadoop.hbase.client.TableDescriptor" %>
+<%@ page import="org.apache.hadoop.hbase.master.HMaster" %>
+<%@ page import="org.apache.hadoop.hbase.tmpl.master.MasterStatusTmplImpl" %>
+<%
+  HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
+  pageContext.setAttribute("pageTitle", "HBase Master: " + master.getServerName());
+%>
+<jsp:include page="header.jsp">
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 
-
-      <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-      <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-      <link href="/static/css/hbase.css" rel="stylesheet">
-  </head>
-
-  <body>
-
-  <div class="navbar  navbar-fixed-top navbar-default">
-      <div class="container-fluid">
-          <div class="navbar-header">
-              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                  <span class="icon-bar"></span>
-                  <span class="icon-bar"></span>
-                  <span class="icon-bar"></span>
-              </button>
-              <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-          </div>
-          <div class="collapse navbar-collapse">
-              <ul class="nav navbar-nav">
-                  <li class="active"><a href="/master-status">Home</a></li>
-                  <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                  <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                  <li><a href="/logs/">Local Logs</a></li>
-                  <li><a href="/logLevel">Log Level</a></li>
-                  <li><a href="/dump">Debug Dump</a></li>
-                  <li><a href="/jmx">Metrics Dump</a></li>
-                  <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                  <li><a href="/conf">HBase Configuration</a></li>
-                  <% } %>
-              </ul>
-          </div><!--/.nav-collapse -->
-      </div>
+<div class="container-fluid content">
+  <div class="row inner_header">
+    <div class="page-header">
+      <h1>User Tables</h1>
+    </div>
   </div>
 
-  <div class="container-fluid content">
-    <div class="row inner_header">
-        <div class="page-header">
-            <h1>User Tables</h1>
-        </div>
-    </div>
+  <% List<TableDescriptor> tables = new ArrayList<TableDescriptor>();
+     String errorMessage = MasterStatusTmplImpl.getUserTables(master, tables);
+  if (tables.size() == 0 && errorMessage != null) { %>
+  <p> <%= errorMessage %> </p>
+  <% }
+  if (tables != null && tables.size() > 0) { %>
+  <table class="table table-striped">
+    <tr>
+      <th>Table</th>
+      <th>Description</th>
+    </tr>
+    <% for (TableDescriptor htDesc : tables) { %>
+    <tr>
+      <td>
+        <a href="/table.jsp?name=<%= escapeXml(htDesc.getTableName().getNameAsString()) %>"><%= escapeXml(
+            htDesc.getTableName().getNameAsString()) %>
+        </a></td>
+      <td><%= htDesc.toString() %>
+      </td>
+    </tr>
+    <% } %>
 
-<% HTableDescriptor[] tables;
-   Connection connection = master.getConnection();
-   Admin admin = connection.getAdmin();
-   try {
-     tables = admin.listTables();
-   } finally {
-     admin.close();
-   }
-   if(tables != null && tables.length > 0) { %>
-<table class="table table-striped">
-<tr>
-    <th>Table</th>
-    <th>Description</th>
-</tr>
-<%   for(HTableDescriptor htDesc : tables ) { %>
-<tr>
-    <td><a href="/table.jsp?name=<%= escapeXml(htDesc.getTableName().getNameAsString()) %>"><%= escapeXml(htDesc.getTableName().getNameAsString()) %></a></td>
-    <td><%= htDesc.toString() %></td>
-</tr>
-<%   }  %>
-
-<p> <%= tables.length %> table(s) in set.</p>
-</table>
-<% } %>
+    <p><%= tables.size() %> table(s) in set.</p>
+  </table>
+  <% } %>
 </div>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
-</body>
-</html>
+<jsp:include page="footer.jsp"/>

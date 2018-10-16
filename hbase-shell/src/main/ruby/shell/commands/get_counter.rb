@@ -21,7 +21,7 @@ module Shell
   module Commands
     class GetCounter < Command
       def help
-        return <<-EOF
+        <<-EOF
 Return a counter cell value at specified table/row/column coordinates.
 A counter cell should be managed with atomic increment functions on HBase
 and the data should be binary encoded (as long value). Example:
@@ -44,7 +44,7 @@ EOF
         if cnt = table._get_counter_internal(row, column)
           puts "COUNTER VALUE = #{cnt}"
         else
-          puts "No counter found at specified coordinates"
+          puts 'No counter found at specified coordinates'
         end
       end
     end

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 
@@ -60,8 +60,8 @@ public interface ColumnTracker extends ShipperListener {
    * method based on the return type (INCLUDE) of this method. The values that can be returned by
    * this method are {@link MatchCode#INCLUDE}, {@link MatchCode#SEEK_NEXT_COL} and
    * {@link MatchCode#SEEK_NEXT_ROW}.
-   * @param cell
-   * @param type The type of the KeyValue
+   * @param cell a cell with the column to match against
+   * @param type The type of the Cell
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem caused by a data
    *           corruption.
@@ -70,15 +70,15 @@ public interface ColumnTracker extends ShipperListener {
 
   /**
    * Keeps track of the number of versions for the columns asked for. It assumes that the user has
-   * already checked if the keyvalue needs to be included by calling the
+   * already checked if the cell needs to be included by calling the
    * {@link #checkColumn(Cell, byte)} method. The enum values returned by this method
    * are {@link MatchCode#SKIP}, {@link MatchCode#INCLUDE},
    * {@link MatchCode#INCLUDE_AND_SEEK_NEXT_COL} and {@link MatchCode#INCLUDE_AND_SEEK_NEXT_ROW}.
    * Implementations which include all the columns could just return {@link MatchCode#INCLUDE} in
    * the {@link #checkColumn(Cell, byte)} method and perform all the operations in this
    * checkVersions method.
-   * @param cell
-   * @param ttl The timeToLive to enforce.
+   * @param cell a cell with the column to match against
+   * @param timestamp The timestamp of the cell.
    * @param type the type of the key value (Put/Delete)
    * @param ignoreCount indicates if the KV needs to be excluded while counting (used during
    *          compactions. We only count KV's that are older than all the scanners' read points.)
@@ -86,8 +86,8 @@ public interface ColumnTracker extends ShipperListener {
    * @throws IOException in case there is an internal consistency problem caused by a data
    *           corruption.
    */
-  ScanQueryMatcher.MatchCode checkVersions(Cell cell, long ttl, byte type, boolean ignoreCount)
-      throws IOException;
+  ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
+      boolean ignoreCount) throws IOException;
   /**
    * Resets the Matcher
    */
@@ -126,4 +126,13 @@ public interface ColumnTracker extends ShipperListener {
    * @return <code>true</code> to early out based on timestamp.
    */
   boolean isDone(long timestamp);
+
+  /**
+   * This method is used to inform the column tracker that we are done with this column. We may get
+   * this information from external filters or timestamp range and we then need to indicate this
+   * information to tracker. It is currently implemented for ExplicitColumnTracker.
+   * @param cell
+   */
+  default void doneWithColumn(Cell cell) {
+  }
 }

@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
+
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -36,12 +37,18 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestBlocksScanned extends HBaseTestCase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBlocksScanned.class);
+
   private static byte [] FAMILY = Bytes.toBytes("family");
   private static byte [] COL = Bytes.toBytes("col");
   private static byte [] START_KEY = Bytes.toBytes("aaa");
@@ -50,6 +57,7 @@ public class TestBlocksScanned extends HBaseTestCase {
 
   private static HBaseTestingUtility TEST_UTIL = null;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
@@ -89,7 +97,7 @@ public class TestBlocksScanned extends HBaseTestCase {
   }
 
   private void _testBlocksScanned(HTableDescriptor table) throws Exception {
-    Region r = createNewHRegion(table, START_KEY, END_KEY, TEST_UTIL.getConfiguration());
+    HRegion r = createNewHRegion(table, START_KEY, END_KEY, TEST_UTIL.getConfiguration());
     addContent(r, FAMILY, COL);
     r.flush(true);
 
@@ -109,7 +117,7 @@ public class TestBlocksScanned extends HBaseTestCase {
     int expectResultSize = 'z' - 'a';
     assertEquals(expectResultSize, results.size());
 
-    int kvPerBlock = (int) Math.ceil(BLOCK_SIZE / 
+    int kvPerBlock = (int) Math.ceil(BLOCK_SIZE /
         (double) KeyValueUtil.ensureKeyValue(results.get(0)).getLength());
     Assert.assertEquals(2, kvPerBlock);
 

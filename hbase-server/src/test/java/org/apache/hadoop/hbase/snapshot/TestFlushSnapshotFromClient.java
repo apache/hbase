@@ -28,28 +28,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -60,7 +54,11 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
  * Test creating/using/deleting snapshots from the client
@@ -72,10 +70,12 @@ import org.junit.rules.TestRule;
  */
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestFlushSnapshotFromClient {
-  private static final Log LOG = LogFactory.getLog(TestFlushSnapshotFromClient.class);
+
   @ClassRule
-  public static final TestRule timeout =
-      CategoryBasedTimeout.forClass(TestFlushSnapshotFromClient.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFlushSnapshotFromClient.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static final int NUM_RS = 2;
@@ -313,6 +313,7 @@ public class TestFlushSnapshotFromClient {
     // Merge two regions
     List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
     Collections.sort(regions, new Comparator<HRegionInfo>() {
+      @Override
       public int compare(HRegionInfo r1, HRegionInfo r2) {
         return Bytes.compareTo(r1.getStartKey(), r2.getStartKey());
       }
@@ -354,6 +355,7 @@ public class TestFlushSnapshotFromClient {
     // Merge two regions
     List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
     Collections.sort(regions, new Comparator<HRegionInfo>() {
+      @Override
       public int compare(HRegionInfo r1, HRegionInfo r2) {
         return Bytes.compareTo(r1.getStartKey(), r2.getStartKey());
       }
@@ -444,7 +446,7 @@ public class TestFlushSnapshotFromClient {
             .toString(ProtobufUtil.createHBaseProtosSnapshotDesc(ss)));
         toBeSubmitted.countDown();
       }
-    };
+    }
 
     // build descriptions
     SnapshotDescription[] descs = new SnapshotDescription[ssNum];

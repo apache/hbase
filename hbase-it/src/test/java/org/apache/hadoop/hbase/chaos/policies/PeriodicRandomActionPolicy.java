@@ -58,8 +58,7 @@ public class PeriodicRandomActionPolicy extends PeriodicPolicy {
     try {
       action.perform();
     } catch (Exception ex) {
-      LOG.warn("Exception occured during performing action: "
-          + StringUtils.stringifyException(ex));
+      LOG.warn("Exception performing action: " + StringUtils.stringifyException(ex));
     }
   }
 

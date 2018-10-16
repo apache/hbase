@@ -18,17 +18,16 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Class that transitions metrics from MetricsWAL into the metrics subsystem.
  *
  * Implements BaseSource through BaseSourceImpl, following the pattern.
- * @see org.apache.hadoop.hbase.regionserver.wal.MetricsWAL
+ * @see org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource
  */
 @InterfaceAudience.Private
 public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSource {
@@ -55,15 +54,15 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     //Create and store the metrics that will be used.
     appendTimeHisto = this.getMetricsRegistry().newTimeHistogram(APPEND_TIME, APPEND_TIME_DESC);
     appendSizeHisto = this.getMetricsRegistry().newSizeHistogram(APPEND_SIZE, APPEND_SIZE_DESC);
-    appendCount = this.getMetricsRegistry().newCounter(APPEND_COUNT, APPEND_COUNT_DESC, 0l);
+    appendCount = this.getMetricsRegistry().newCounter(APPEND_COUNT, APPEND_COUNT_DESC, 0L);
     slowAppendCount =
-        this.getMetricsRegistry().newCounter(SLOW_APPEND_COUNT, SLOW_APPEND_COUNT_DESC, 0l);
+        this.getMetricsRegistry().newCounter(SLOW_APPEND_COUNT, SLOW_APPEND_COUNT_DESC, 0L);
     syncTimeHisto = this.getMetricsRegistry().newTimeHistogram(SYNC_TIME, SYNC_TIME_DESC);
     logRollRequested =
         this.getMetricsRegistry().newCounter(ROLL_REQUESTED, ROLL_REQUESTED_DESC, 0L);
     lowReplicationLogRollRequested = this.getMetricsRegistry()
         .newCounter(LOW_REPLICA_ROLL_REQUESTED, LOW_REPLICA_ROLL_REQUESTED_DESC, 0L);
-    writtenBytes = this.getMetricsRegistry().newCounter(WRITTEN_BYTES, WRITTEN_BYTES_DESC, 0l);
+    writtenBytes = this.getMetricsRegistry().newCounter(WRITTEN_BYTES, WRITTEN_BYTES_DESC, 0L);
   }
 
   @Override

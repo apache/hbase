@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.hbase.test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -26,12 +34,6 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-
-import static org.junit.Assert.*;
 
 /**
  *  A helper class that will allow tests to get into hadoop2's metrics2 values.
@@ -226,6 +228,14 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
     String cName = canonicalizeMetricName(name);
     assertNotNull("Should get gauge " + cName + " but did not", gauges.get(cName));
     return gauges.get(cName).longValue();
+  }
+
+  @Override
+  public String toDebugString(BaseSource source) {
+    getMetrics(source);
+    StringBuilder sb = new StringBuilder();
+    sb.append("Tags=").append(tags).append(", Counters=").append(counters);
+    return sb.append(", Gauges=").append(gauges).toString();
   }
 
   private void reset() {

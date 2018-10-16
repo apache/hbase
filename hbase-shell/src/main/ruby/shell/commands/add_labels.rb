@@ -20,7 +20,7 @@ module Shell
   module Commands
     class AddLabels < Command
       def help
-        return <<-EOF
+        <<-EOF
 Add a set of visibility labels.
 Syntax : add_labels [label1, label2]
 

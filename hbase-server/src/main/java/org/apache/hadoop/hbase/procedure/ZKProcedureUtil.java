@@ -21,13 +21,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a shared ZooKeeper-based znode management utils for distributed procedure.  All znode
@@ -49,9 +50,9 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public abstract class ZKProcedureUtil
-    extends ZooKeeperListener implements Closeable {
+    extends ZKListener implements Closeable {
 
-  private static final Log LOG = LogFactory.getLog(ZKProcedureUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKProcedureUtil.class);
 
   public static final String ACQUIRED_BARRIER_ZNODE_DEFAULT = "acquired";
   public static final String REACHED_BARRIER_ZNODE_DEFAULT = "reached";
@@ -72,16 +73,16 @@ public abstract class ZKProcedureUtil
    * @param procDescription name of the znode describing the procedure to run
    * @throws KeeperException when the procedure znodes cannot be created
    */
-  public ZKProcedureUtil(ZooKeeperWatcher watcher, String procDescription)
+  public ZKProcedureUtil(ZKWatcher watcher, String procDescription)
       throws KeeperException {
     super(watcher);
     // make sure we are listening for events
     watcher.registerListener(this);
     // setup paths for the zknodes used in procedures
-    this.baseZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, procDescription);
-    acquiredZnode = ZKUtil.joinZNode(baseZNode, ACQUIRED_BARRIER_ZNODE_DEFAULT);
-    reachedZnode = ZKUtil.joinZNode(baseZNode, REACHED_BARRIER_ZNODE_DEFAULT);
-    abortZnode = ZKUtil.joinZNode(baseZNode, ABORT_ZNODE_DEFAULT);
+    this.baseZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, procDescription);
+    acquiredZnode = ZNodePaths.joinZNode(baseZNode, ACQUIRED_BARRIER_ZNODE_DEFAULT);
+    reachedZnode = ZNodePaths.joinZNode(baseZNode, REACHED_BARRIER_ZNODE_DEFAULT);
+    abortZnode = ZNodePaths.joinZNode(baseZNode, ABORT_ZNODE_DEFAULT);
 
     // first make sure all the ZK nodes exist
     // make sure all the parents exist (sometimes not the case in tests)
@@ -130,7 +131,7 @@ public abstract class ZKProcedureUtil
    */
   public static String getAcquireBarrierNode(ZKProcedureUtil controller,
       String opInstanceName) {
-    return ZKUtil.joinZNode(controller.acquiredZnode, opInstanceName);
+    return ZNodePaths.joinZNode(controller.acquiredZnode, opInstanceName);
   }
 
   /**
@@ -142,7 +143,7 @@ public abstract class ZKProcedureUtil
    */
   public static String getReachedBarrierNode(ZKProcedureUtil controller,
       String opInstanceName) {
-    return ZKUtil.joinZNode(controller.reachedZnode, opInstanceName);
+    return ZNodePaths.joinZNode(controller.reachedZnode, opInstanceName);
   }
 
   /**
@@ -153,10 +154,11 @@ public abstract class ZKProcedureUtil
    * @return full znode path to the abort znode
    */
   public static String getAbortNode(ZKProcedureUtil controller, String opInstanceName) {
-    return ZKUtil.joinZNode(controller.abortZnode, opInstanceName);
+    return ZNodePaths.joinZNode(controller.abortZnode, opInstanceName);
   }
 
-  public ZooKeeperWatcher getWatcher() {
+  @Override
+  public ZKWatcher getWatcher() {
     return watcher;
   }
 
@@ -212,7 +214,7 @@ public abstract class ZKProcedureUtil
   private boolean isMemberNode(final String path, final String statePath) {
     int count = 0;
     for (int i = statePath.length(); i < path.length(); ++i) {
-      count += (path.charAt(i) == ZKUtil.ZNODE_PATH_SEPARATOR) ? 1 : 0;
+      count += (path.charAt(i) == ZNodePaths.ZNODE_PATH_SEPARATOR) ? 1 : 0;
     }
     return count == 2;
   }
@@ -261,14 +263,13 @@ public abstract class ZKProcedureUtil
     if (children == null) return;
     for (String child : children) {
       LOG.debug(prefix + child);
-      String node = ZKUtil.joinZNode(root.equals("/") ? "" : root, child);
+      String node = ZNodePaths.joinZNode(root.equals("/") ? "" : root, child);
       logZKTree(node, prefix + "---");
     }
   }
 
   public void clearChildZNodes() throws KeeperException {
-    LOG.info("Clearing all procedure znodes: " + acquiredZnode + " " + reachedZnode + " "
-        + abortZnode);
+    LOG.debug("Clearing all znodes {}, {}, {}", acquiredZnode, reachedZnode, abortZnode);
 
     // If the coordinator was shutdown mid-procedure, then we are going to lose
     // an procedure that was previously started by cleaning out all the previous state. Its much

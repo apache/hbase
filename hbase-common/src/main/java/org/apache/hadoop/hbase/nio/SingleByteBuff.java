@@ -17,19 +17,18 @@
  */
 package org.apache.hadoop.hbase.nio;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import sun.nio.ch.DirectBuffer;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * An implementation of ByteBuff where a single BB backs the BBI. This just acts

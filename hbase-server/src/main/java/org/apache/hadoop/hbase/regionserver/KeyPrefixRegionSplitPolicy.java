@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A custom RegionSplitPolicy implementing a SplitPolicy that groups
@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
-  private static final Log LOG = LogFactory
-      .getLog(KeyPrefixRegionSplitPolicy.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(KeyPrefixRegionSplitPolicy.class);
   @Deprecated
   public static final String PREFIX_LENGTH_KEY_DEPRECATED = "prefix_split_key_policy.prefix_length";
   public static final String PREFIX_LENGTH_KEY = "KeyPrefixRegionSplitPolicy.prefix_length";
@@ -46,14 +46,14 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
     prefixLength = 0;
 
     // read the prefix length from the table descriptor
-    String prefixLengthString = region.getTableDesc().getValue(
+    String prefixLengthString = region.getTableDescriptor().getValue(
         PREFIX_LENGTH_KEY);
     if (prefixLengthString == null) {
       //read the deprecated value
-      prefixLengthString = region.getTableDesc().getValue(PREFIX_LENGTH_KEY_DEPRECATED);
+      prefixLengthString = region.getTableDescriptor().getValue(PREFIX_LENGTH_KEY_DEPRECATED);
       if (prefixLengthString == null) {
         LOG.error(PREFIX_LENGTH_KEY + " not specified for table "
-            + region.getTableDesc().getTableName()
+            + region.getTableDescriptor().getTableName()
             + ". Using default RegionSplitPolicy");
         return;
       }
@@ -63,13 +63,13 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
     } catch (NumberFormatException nfe) {
       /* Differentiate NumberFormatException from an invalid value range reported below. */
       LOG.error("Number format exception when parsing " + PREFIX_LENGTH_KEY + " for table "
-          + region.getTableDesc().getTableName() + ":"
+          + region.getTableDescriptor().getTableName() + ":"
           + prefixLengthString + ". " + nfe);
       return;
     }
     if (prefixLength <= 0) {
       LOG.error("Invalid value for " + PREFIX_LENGTH_KEY + " for table "
-          + region.getTableDesc().getTableName() + ":"
+          + region.getTableDescriptor().getTableName() + ":"
           + prefixLengthString + ". Using default RegionSplitPolicy");
     }
   }

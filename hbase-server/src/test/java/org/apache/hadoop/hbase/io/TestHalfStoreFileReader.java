@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import static org.junit.Assert.assertEquals;
@@ -27,13 +25,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -47,11 +45,17 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestHalfStoreFileReader {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHalfStoreFileReader.class);
+
   private static HBaseTestingUtility TEST_UTIL;
 
   @BeforeClass
@@ -96,7 +100,7 @@ public class TestHalfStoreFileReader {
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
     r.loadFileInfo();
-    Cell midKV = r.midkey();
+    Cell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
     // System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
@@ -155,7 +159,7 @@ public class TestHalfStoreFileReader {
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
     r.loadFileInfo();
-    Cell midKV = r.midkey();
+    Cell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
     Reference bottom = new Reference(midkey, Reference.Range.bottom);
@@ -164,7 +168,7 @@ public class TestHalfStoreFileReader {
     // Ugly code to get the item before the midkey
     KeyValue beforeMidKey = null;
     for (KeyValue item : items) {
-      if (CellComparator.COMPARATOR.compare(item, midKV) >= 0) {
+      if (CellComparatorImpl.COMPARATOR.compare(item, midKV) >= 0) {
         break;
       }
       beforeMidKey = item;

@@ -20,11 +20,12 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -33,8 +34,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Region Server Quota Manager.
@@ -47,7 +47,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RegionServerRpcQuotaManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerRpcQuotaManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerRpcQuotaManager.class);
 
   private final RegionServerServices rsServices;
 
@@ -127,10 +127,10 @@ public class RegionServerRpcQuotaManager {
    * @param region the region where the operation will be performed
    * @param type the operation type
    * @return the OperationQuota
-   * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   public OperationQuota checkQuota(final Region region,
-      final OperationQuota.OperationType type) throws IOException, ThrottlingException {
+      final OperationQuota.OperationType type) throws IOException, RpcThrottlingException {
     switch (type) {
       case SCAN:   return checkQuota(region, 0, 0, 1);
       case GET:    return checkQuota(region, 0, 1, 0);
@@ -146,10 +146,10 @@ public class RegionServerRpcQuotaManager {
    * @param region the region where the operation will be performed
    * @param actions the "multi" actions to perform
    * @return the OperationQuota
-   * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   public OperationQuota checkQuota(final Region region,
-      final List<ClientProtos.Action> actions) throws IOException, ThrottlingException {
+      final List<ClientProtos.Action> actions) throws IOException, RpcThrottlingException {
     int numWrites = 0;
     int numReads = 0;
     for (final ClientProtos.Action action: actions) {
@@ -171,24 +171,24 @@ public class RegionServerRpcQuotaManager {
    * @param numReads number of short-reads to perform
    * @param numScans number of scan to perform
    * @return the OperationQuota
-   * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
+   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
   private OperationQuota checkQuota(final Region region,
       final int numWrites, final int numReads, final int numScans)
-      throws IOException, ThrottlingException {
-    User user = RpcServer.getRequestUser();
+      throws IOException, RpcThrottlingException {
+    Optional<User> user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
-    if (user != null) {
-      ugi = user.getUGI();
+    if (user.isPresent()) {
+      ugi = user.get().getUGI();
     } else {
       ugi = User.getCurrent().getUGI();
     }
-    TableName table = region.getTableDesc().getTableName();
+    TableName table = region.getTableDescriptor().getTableName();
 
     OperationQuota quota = getQuota(ugi, table);
     try {
       quota.checkQuota(numWrites, numReads, numScans);
-    } catch (ThrottlingException e) {
+    } catch (RpcThrottlingException e) {
       LOG.debug("Throttling exception for user=" + ugi.getUserName() +
                 " table=" + table + " numWrites=" + numWrites +
                 " numReads=" + numReads + " numScans=" + numScans +

@@ -15,27 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store;
 
-import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import static org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker.BitSetNode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@Category({MasterTests.class, SmallTests.class})
+import java.util.Random;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@Category({MasterTests.class, MediumTests.class})
 public class TestProcedureStoreTracker {
-  private static final Log LOG = LogFactory.getLog(TestProcedureStoreTracker.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureStoreTracker.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureStoreTracker.class);
 
   @Test
   public void testSeqInsertAndDelete() {
@@ -115,29 +118,29 @@ public class TestProcedureStoreTracker {
     tracker.insert(procs[0]);
     tracker.insert(procs[1], new long[] { procs[2], procs[3], procs[4] });
     assertFalse(tracker.isEmpty());
-    assertTrue(tracker.isUpdated());
+    assertTrue(tracker.isAllModified());
 
-    tracker.resetUpdates();
-    assertFalse(tracker.isUpdated());
+    tracker.resetModified();
+    assertFalse(tracker.isAllModified());
 
     for (int i = 0; i < 4; ++i) {
       tracker.update(procs[i]);
       assertFalse(tracker.isEmpty());
-      assertFalse(tracker.isUpdated());
+      assertFalse(tracker.isAllModified());
     }
 
     tracker.update(procs[4]);
     assertFalse(tracker.isEmpty());
-    assertTrue(tracker.isUpdated());
+    assertTrue(tracker.isAllModified());
 
     tracker.update(procs[5]);
     assertFalse(tracker.isEmpty());
-    assertTrue(tracker.isUpdated());
+    assertTrue(tracker.isAllModified());
 
     for (int i = 0; i < 5; ++i) {
       tracker.delete(procs[i]);
       assertFalse(tracker.isEmpty());
-      assertTrue(tracker.isUpdated());
+      assertTrue(tracker.isAllModified());
     }
     tracker.delete(procs[5]);
     assertTrue(tracker.isEmpty());
@@ -214,54 +217,8 @@ public class TestProcedureStoreTracker {
     }
   }
 
-  boolean isDeleted(ProcedureStoreTracker n, long procId) {
-    return n.isDeleted(procId) == ProcedureStoreTracker.DeleteState.YES;
-  }
-
-  boolean isDeleted(BitSetNode n, long procId) {
-    return n.isDeleted(procId) == ProcedureStoreTracker.DeleteState.YES;
-  }
-
-  /**
-   * @param active list of active proc ids. To mark them as non-deleted, since by default a proc
-   *               id is always marked deleted.
-   */
-  ProcedureStoreTracker buildTracker(long[] active, long[] updated, long[] deleted) {
-    ProcedureStoreTracker tracker = new ProcedureStoreTracker();
-    for (long i : active) {
-      tracker.insert(i);
-    }
-    tracker.resetUpdates();
-    for (long i : updated) {
-      tracker.update(i);
-    }
-    for (long i : deleted) {
-      tracker.delete(i);
-    }
-    return tracker;
-  }
-
-  /**
-   * @param active list of active proc ids. To mark them as non-deleted, since by default a proc
-   *               id is always marked deleted.
-   */
-  BitSetNode buildBitSetNode(long[] active, long[] updated, long[] deleted) {
-    BitSetNode bitSetNode = new BitSetNode(0L, false);
-    for (long i : active) {
-      bitSetNode.update(i);
-    }
-    bitSetNode.resetUpdates();
-    for (long i : updated) {
-      bitSetNode.update(i);
-    }
-    for (long i : deleted) {
-      bitSetNode.delete(i);
-    }
-    return bitSetNode;
-  }
-
   @Test
-  public void testSetDeletedIfSet() {
+  public void testSetDeletedIfModified() {
     final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
     final long[] procIds = new long[] { 1, 3, 7, 152, 512, 1024, 1025 };
 
@@ -272,9 +229,9 @@ public class TestProcedureStoreTracker {
     assertEquals(false, tracker.isEmpty());
 
     for (int i = 0; i < procIds.length; ++i) {
-      tracker.setDeletedIfSet(procIds[i] - 1);
-      tracker.setDeletedIfSet(procIds[i]);
-      tracker.setDeletedIfSet(procIds[i] + 1);
+      tracker.setDeletedIfModified(procIds[i] - 1);
+      tracker.setDeletedIfModified(procIds[i]);
+      tracker.setDeletedIfModified(procIds[i] + 1);
     }
     assertEquals(true, tracker.isEmpty());
 
@@ -285,7 +242,23 @@ public class TestProcedureStoreTracker {
     }
     assertEquals(false, tracker.isEmpty());
 
-    tracker.setDeletedIfSet(procIds);
+    tracker.setDeletedIfModified(procIds);
     assertEquals(true, tracker.isEmpty());
+  }
+
+  @Test
+  public void testGetActiveProcIds() {
+    ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+    for (int i = 0; i < 10000; i++) {
+      tracker.insert(i * 10);
+    }
+    for (int i = 0; i < 10000; i += 2) {
+      tracker.delete(i * 10);
+    }
+    long[] activeProcIds = tracker.getAllActiveProcIds();
+    assertEquals(5000, activeProcIds.length);
+    for (int i = 0; i < 5000; i++) {
+      assertEquals((2 * i + 1) * 10, activeProcIds[i]);
+    }
   }
 }

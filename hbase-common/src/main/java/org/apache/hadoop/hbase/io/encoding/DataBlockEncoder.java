@@ -23,9 +23,9 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Encoding of KeyValue. It aims to be fast and efficient using assumptions:
@@ -100,8 +100,7 @@ public interface DataBlockEncoder {
    * @param decodingCtx
    * @return A newly created seeker.
    */
-  EncodedSeeker createSeeker(CellComparator comparator, 
-      HFileBlockDecodingContext decodingCtx);
+  EncodedSeeker createSeeker(CellComparator comparator, HFileBlockDecodingContext decodingCtx);
 
   /**
    * Creates a encoder specific encoding context

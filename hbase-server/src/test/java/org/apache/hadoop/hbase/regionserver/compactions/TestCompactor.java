@@ -43,9 +43,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -56,10 +56,10 @@ import org.mockito.stubbing.Answer;
 
 public class TestCompactor {
 
-  public static StoreFile createDummyStoreFile(long maxSequenceId) throws Exception {
+  public static HStoreFile createDummyStoreFile(long maxSequenceId) throws Exception {
     // "Files" are totally unused, it's Scanner class below that gives compactor fake KVs.
     // But compaction depends on everything under the sun, so stub everything with dummies.
-    StoreFile sf = mock(StoreFile.class);
+    HStoreFile sf = mock(HStoreFile.class);
     StoreFileReader r = mock(StoreFileReader.class);
     when(r.length()).thenReturn(1L);
     when(r.getBloomFilterType()).thenReturn(BloomType.NONE);
@@ -71,8 +71,8 @@ public class TestCompactor {
     return sf;
   }
 
-  public static CompactionRequest createDummyRequest() throws Exception {
-    return new CompactionRequest(Arrays.asList(createDummyStoreFile(1L)));
+  public static CompactionRequestImpl createDummyRequest() throws Exception {
+    return new CompactionRequestImpl(Arrays.asList(createDummyStoreFile(1L)));
   }
 
   // StoreFile.Writer has private ctor and is unwieldy, so this has to be convoluted.
@@ -92,23 +92,25 @@ public class TestCompactor {
       writers.add(realWriter);
       StoreFileWriter writer = mock(StoreFileWriter.class);
       doAnswer(new Answer<Object>() {
+        @Override
         public Object answer(InvocationOnMock invocation) {
-          return realWriter.kvs.add((KeyValue) invocation.getArguments()[0]);
+          return realWriter.kvs.add((KeyValue) invocation.getArgument(0));
         }
-      }).when(writer).append(any(KeyValue.class));
+      }).when(writer).append(any());
       doAnswer(new Answer<Object>() {
+        @Override
         public Object answer(InvocationOnMock invocation) {
           Object[] args = invocation.getArguments();
           return realWriter.data.put((byte[]) args[0], (byte[]) args[1]);
         }
-      }).when(writer).appendFileInfo(any(byte[].class), any(byte[].class));
+      }).when(writer).appendFileInfo(any(), any());
       doAnswer(new Answer<Void>() {
         @Override
         public Void answer(InvocationOnMock invocation) throws Throwable {
           realWriter.hasMetadata = true;
           return null;
         }
-      }).when(writer).appendMetadata(any(long.class), any(boolean.class));
+      }).when(writer).appendMetadata(anyLong(), anyBoolean());
       doAnswer(new Answer<Path>() {
         @Override
         public Path answer(InvocationOnMock invocation) throws Throwable {
@@ -193,15 +195,10 @@ public class TestCompactor {
     }
 
     @Override
-    public boolean next(List<Cell> results) throws IOException {
-      if (kvs.isEmpty()) return false;
-      results.add(kvs.remove(0));
-      return !kvs.isEmpty();
-    }
-
-    @Override
     public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
-      return next(result);
+      if (kvs.isEmpty()) return false;
+      result.add(kvs.remove(0));
+      return !kvs.isEmpty();
     }
 
     @Override

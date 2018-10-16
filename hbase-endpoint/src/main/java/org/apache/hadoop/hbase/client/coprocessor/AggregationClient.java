@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.coprocessor;
 
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
@@ -38,13 +36,10 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -58,6 +53,9 @@ import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRespo
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This client class is for invoking the aggregate functions deployed on the
@@ -83,7 +81,7 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Public
 public class AggregationClient implements Closeable {
   // TODO: This class is not used.  Move to examples?
-  private static final Log log = LogFactory.getLog(AggregationClient.class);
+  private static final Logger log = LoggerFactory.getLogger(AggregationClient.class);
   private final Connection connection;
 
   /**
@@ -135,7 +133,7 @@ public class AggregationClient implements Closeable {
 
   /**
    * Constructor with Conf object
-   * @param cfg
+   * @param cfg Configuration to use
    */
   public AggregationClient(Configuration cfg) {
     try {
@@ -157,17 +155,16 @@ public class AggregationClient implements Closeable {
    * It gives the maximum value of a column for a given column family for the
    * given range. In case qualifier is null, a max of all values for the given
    * family is returned.
-   * @param tableName
-   * @param ci
-   * @param scan
+   * @param tableName the name of the table to scan
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return max val &lt;R&gt;
-   * @throws Throwable
-   *           The caller is supposed to handle the exception as they are thrown
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
    *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R max(
-      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-  throws Throwable {
+          final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+          throws Throwable {
     try (Table table = connection.getTable(tableName)) {
       return max(table, ci, scan);
     }
@@ -177,17 +174,16 @@ public class AggregationClient implements Closeable {
    * It gives the maximum value of a column for a given column family for the
    * given range. In case qualifier is null, a max of all values for the given
    * family is returned.
-   * @param table
-   * @param ci
-   * @param scan
+   * @param table table to scan.
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return max val &lt;&gt;
-   * @throws Throwable
-   *           The caller is supposed to handle the exception as they are thrown
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
    *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  R max(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
-      final Scan scan) throws Throwable {
+    R max(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+          throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MaxCallBack implements Batch.Callback<R> {
       R max = null;
@@ -225,21 +221,20 @@ public class AggregationClient implements Closeable {
     return aMaxCallBack.getMax();
   }
 
-
-
   /**
    * It gives the minimum value of a column for a given column family for the
    * given range. In case qualifier is null, a min of all values for the given
    * family is returned.
-   * @param tableName
-   * @param ci
-   * @param scan
+   * @param tableName the name of the table to scan
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return min val &lt;R&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R min(
-      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-  throws Throwable {
+          final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+          throws Throwable {
     try (Table table = connection.getTable(tableName)) {
       return min(table, ci, scan);
     }
@@ -249,18 +244,18 @@ public class AggregationClient implements Closeable {
    * It gives the minimum value of a column for a given column family for the
    * given range. In case qualifier is null, a min of all values for the given
    * family is returned.
-   * @param table
-   * @param ci
-   * @param scan
+   * @param table table to scan.
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return min val &lt;R&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  R min(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
-      final Scan scan) throws Throwable {
+    R min(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+          throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MinCallBack implements Batch.Callback<R> {
-
       private R min = null;
 
       public R getMinimum() {
@@ -272,10 +267,10 @@ public class AggregationClient implements Closeable {
         min = (min == null || (result != null && ci.compare(result, min) < 0)) ? result : min;
       }
     }
+
     MinCallBack minCallBack = new MinCallBack();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
         new Batch.Call<AggregateService, R>() {
-
           @Override
           public R call(AggregateService instance) throws IOException {
             RpcController controller = new AggregationClientRpcController();
@@ -305,17 +300,18 @@ public class AggregationClient implements Closeable {
    * filter as it may set the flag to skip to next row, but the value read is
    * not of the given filter: in this case, this particular row will not be
    * counted ==&gt; an error.
-   * @param tableName
-   * @param ci
-   * @param scan
+   * @param tableName the name of the table to scan
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> long rowCount(
-      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-  throws Throwable {
+          final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+          throws Throwable {
     try (Table table = connection.getTable(tableName)) {
-        return rowCount(table, ci, scan);
+      return rowCount(table, ci, scan);
     }
   }
 
@@ -326,15 +322,16 @@ public class AggregationClient implements Closeable {
    * filter as it may set the flag to skip to next row, but the value read is
    * not of the given filter: in this case, this particular row will not be
    * counted ==&gt; an error.
-   * @param table
-   * @param ci
-   * @param scan
+   * @param table table to scan.
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  long rowCount(final Table table,
-      final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
+    long rowCount(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+          throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, true);
     class RowNumCallback implements Batch.Callback<Long> {
       private final AtomicLong rowCountL = new AtomicLong(0);
@@ -348,6 +345,7 @@ public class AggregationClient implements Closeable {
         rowCountL.addAndGet(result.longValue());
       }
     }
+
     RowNumCallback rowNum = new RowNumCallback();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
         new Batch.Call<AggregateService, Long>() {
@@ -373,32 +371,34 @@ public class AggregationClient implements Closeable {
   /**
    * It sums up the value returned from various regions. In case qualifier is
    * null, summation of all the column qualifiers in the given family is done.
-   * @param tableName
-   * @param ci
-   * @param scan
+   * @param tableName the name of the table to scan
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return sum &lt;S&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> S sum(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-  throws Throwable {
+    throws Throwable {
     try (Table table = connection.getTable(tableName)) {
-        return sum(table, ci, scan);
+      return sum(table, ci, scan);
     }
   }
 
   /**
    * It sums up the value returned from various regions. In case qualifier is
    * null, summation of all the column qualifiers in the given family is done.
-   * @param table
-   * @param ci
-   * @param scan
+   * @param table table to scan.
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return sum &lt;S&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  S sum(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
-      final Scan scan) throws Throwable {
+    S sum(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+          throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
 
     class SumCallBack implements Batch.Callback<S> {
@@ -443,15 +443,16 @@ public class AggregationClient implements Closeable {
    * It computes average while fetching sum and row count from all the
    * corresponding regions. Approach is to compute a global sum of region level
    * sum and rowcount and then compute the average.
-   * @param tableName
-   * @param scan
-   * @throws Throwable
+   * @param tableName the name of the table to scan
+   * @param scan the HBase scan object to use to read data from HBase
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long> getAvgArgs(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
     try (Table table = connection.getTable(tableName)) {
-        return getAvgArgs(table, ci, scan);
+      return getAvgArgs(table, ci, scan);
     }
   }
 
@@ -459,17 +460,18 @@ public class AggregationClient implements Closeable {
    * It computes average while fetching sum and row count from all the
    * corresponding regions. Approach is to compute a global sum of region level
    * sum and rowcount and then compute the average.
-   * @param table
-   * @param scan
-   * @throws Throwable
+   * @param table table to scan.
+   * @param scan the HBase scan object to use to read data from HBase
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
-  Pair<S, Long> getAvgArgs(final Table table,
-      final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
+    Pair<S, Long> getAvgArgs(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
+          final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
       S sum = null;
-      Long rowCount = 0l;
+      Long rowCount = 0L;
 
       public synchronized Pair<S, Long> getAvgArgs() {
         return new Pair<>(sum, rowCount);
@@ -481,6 +483,7 @@ public class AggregationClient implements Closeable {
         rowCount += result.getSecond();
       }
     }
+
     AvgCallBack avgCallBack = new AvgCallBack();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
         new Batch.Call<AggregateService, Pair<S, Long>>() {
@@ -518,15 +521,16 @@ public class AggregationClient implements Closeable {
    * its return type should be a decimal value, irrespective of what
    * columninterpreter says. So, this methods collects the necessary parameters
    * to compute the average and returs the double value.
-   * @param tableName
-   * @param ci
-   * @param scan
+   * @param tableName the name of the table to scan
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  double avg(final TableName tableName,
-      final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+    double avg(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci,
+          Scan scan) throws Throwable {
     Pair<S, Long> p = getAvgArgs(tableName, ci, scan);
     return ci.divideForAvg(p.getFirst(), p.getSecond());
   }
@@ -537,14 +541,16 @@ public class AggregationClient implements Closeable {
    * its return type should be a decimal value, irrespective of what
    * columninterpreter says. So, this methods collects the necessary parameters
    * to compute the average and returs the double value.
-   * @param table
-   * @param ci
-   * @param scan
+   * @param table table to scan.
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> double avg(
-      final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+          final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan)
+          throws Throwable {
     Pair<S, Long> p = getAvgArgs(table, ci, scan);
     return ci.divideForAvg(p.getFirst(), p.getSecond());
   }
@@ -555,17 +561,18 @@ public class AggregationClient implements Closeable {
    * average*average). From individual regions, it obtains sum, square sum and
    * number of rows. With these, the above values are computed to get the global
    * std.
-   * @param table
-   * @param scan
+   * @param table table to scan.
+   * @param scan the HBase scan object to use to read data from HBase
    * @return standard deviations
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
-  Pair<List<S>, Long> getStdArgs(final Table table,
-      final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
+    Pair<List<S>, Long> getStdArgs(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
+          final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
-      long rowCountVal = 0l;
+      long rowCountVal = 0L;
       S sumVal = null, sumSqVal = null;
 
       public synchronized Pair<List<S>, Long> getStdParams() {
@@ -585,6 +592,7 @@ public class AggregationClient implements Closeable {
         }
       }
     }
+
     StdCallback stdCallback = new StdCallback();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
         new Batch.Call<AggregateService, Pair<List<S>, Long>>() {
@@ -626,17 +634,18 @@ public class AggregationClient implements Closeable {
    * return type should be a decimal value, irrespective of what
    * columninterpreter says. So, this methods collects the necessary parameters
    * to compute the std and returns the double value.
-   * @param tableName
-   * @param ci
-   * @param scan
+   * @param tableName the name of the table to scan
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  double std(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
+    double std(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
     try (Table table = connection.getTable(tableName)) {
-        return std(table, ci, scan);
+      return std(table, ci, scan);
     }
   }
 
@@ -646,11 +655,12 @@ public class AggregationClient implements Closeable {
    * return type should be a decimal value, irrespective of what
    * columninterpreter says. So, this methods collects the necessary parameters
    * to compute the std and returns the double value.
-   * @param table
-   * @param ci
-   * @param scan
+   * @param table table to scan.
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> double std(
       final Table table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
@@ -667,17 +677,18 @@ public class AggregationClient implements Closeable {
    * It helps locate the region with median for a given column whose weight
    * is specified in an optional column.
    * From individual regions, it obtains sum of values and sum of weights.
-   * @param table
-   * @param ci
-   * @param scan
+   * @param table table to scan.
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return pair whose first element is a map between start row of the region
-   *  and (sum of values, sum of weights) for the region, the second element is
-   *  (sum of values, sum of weights) for all the regions chosen
-   * @throws Throwable
+   *   and (sum of values, sum of weights) for the region, the second element is
+   *   (sum of values, sum of weights) for all the regions chosen
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
-  Pair<NavigableMap<byte[], List<S>>, List<S>>
-  getMedianArgs(final Table table,
+    Pair<NavigableMap<byte[], List<S>>, List<S>>
+    getMedianArgs(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     final NavigableMap<byte[], List<S>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -731,17 +742,18 @@ public class AggregationClient implements Closeable {
    * This is the client side interface/handler for calling the median method for a
    * given cf-cq combination. This method collects the necessary parameters
    * to compute the median and returns the median.
-   * @param tableName
-   * @param ci
-   * @param scan
+   * @param tableName the name of the table to scan
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return R the median
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  R median(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
+    R median(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
     try (Table table = connection.getTable(tableName)) {
-        return median(table, ci, scan);
+      return median(table, ci, scan);
     }
   }
 
@@ -749,15 +761,15 @@ public class AggregationClient implements Closeable {
    * This is the client side interface/handler for calling the median method for a
    * given cf-cq combination. This method collects the necessary parameters
    * to compute the median and returns the median.
-   * @param table
-   * @param ci
-   * @param scan
+   * @param table table to scan.
+   * @param ci the user's ColumnInterpreter implementation
+   * @param scan the HBase scan object to use to read data from HBase
    * @return R the median
-   * @throws Throwable
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  R median(final Table table, ColumnInterpreter<R, S, P, Q, T> ci,
-      Scan scan) throws Throwable {
+    R median(final Table table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<NavigableMap<byte[], List<S>>, List<S>> p = getMedianArgs(table, ci, scan);
     byte[] startRow = null;
     byte[] colFamily = scan.getFamilies()[0];
@@ -776,14 +788,19 @@ public class AggregationClient implements Closeable {
     for (Map.Entry<byte[], List<S>> entry : map.entrySet()) {
       S s = weighted ? entry.getValue().get(1) : entry.getValue().get(0);
       double newSumVal = movingSumVal + ci.divideForAvg(s, 1L);
-      if (newSumVal > halfSumVal) break;  // we found the region with the median
+      if (newSumVal > halfSumVal) {
+        // we found the region with the median
+        break;
+      }
       movingSumVal = newSumVal;
       startRow = entry.getKey();
     }
     // scan the region with median and find it
     Scan scan2 = new Scan(scan);
     // inherit stop row from method parameter
-    if (startRow != null) scan2.setStartRow(startRow);
+    if (startRow != null) {
+      scan2.setStartRow(startRow);
+    }
     ResultScanner scanner = null;
     try {
       int cacheSize = scan2.getCaching();
@@ -815,8 +832,8 @@ public class AggregationClient implements Closeable {
             movingSumVal = newSumVal;
             kv = r.getColumnLatestCell(colFamily, qualifier);
             value = ci.getValue(colFamily, qualifier, kv);
-            }
           }
+        }
       } while (results != null && results.length > 0);
     } finally {
       if (scanner != null) {

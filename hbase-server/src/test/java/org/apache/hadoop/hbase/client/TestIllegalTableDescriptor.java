@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,22 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.lang.reflect.Field;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,21 +36,25 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestIllegalTableDescriptor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestIllegalTableDescriptor.class);
+
   // NOTE: Increment tests were moved to their own class, TestIncrementsFromClientSide.
-  private static final Log LOG = LogFactory.getLog(TestFromClientSide.class);
+  private static final Logger masterLogger;
+
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
@@ -64,8 +62,17 @@ public class TestIllegalTableDescriptor {
   @Rule
   public TestName name = new TestName();
 
+  static {
+    masterLogger = mock(Logger.class);
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // replacing HMaster.LOG with our mock logger for verifying logging
+    Field field = HMaster.class.getDeclaredField("LOG");
+    field.setAccessible(true);
+    field.set(null, masterLogger);
+
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
     // We need more than one region server in this test
@@ -165,20 +172,12 @@ public class TestIllegalTableDescriptor {
     htd.setMemStoreFlushSize(0);
 
     // Check that logs warn on invalid table but allow it.
-    ListAppender listAppender = new ListAppender();
-    Logger log = Logger.getLogger(HMaster.class);
-    log.addAppender(listAppender);
-    log.setLevel(Level.WARN);
-
     htd.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
     checkTableIsLegal(htd);
 
-    assertFalse(listAppender.getMessages().isEmpty());
-    assertTrue(listAppender.getMessages().get(0).startsWith("MEMSTORE_FLUSHSIZE for table "
+    verify(masterLogger).warn(contains("MEMSTORE_FLUSHSIZE for table "
         + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
         + "cause very frequent flushing."));
-
-    log.removeAppender(listAppender);
   }
 
   private void checkTableIsLegal(HTableDescriptor htd) throws IOException {
@@ -197,27 +196,5 @@ public class TestIllegalTableDescriptor {
       // should throw ex
     }
     assertFalse(admin.tableExists(htd.getTableName()));
-  }
-
-  private static class ListAppender extends AppenderSkeleton {
-    private final List<String> messages = new ArrayList<>();
-
-    @Override
-    protected void append(LoggingEvent event) {
-      messages.add(event.getMessage().toString());
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    public boolean requiresLayout() {
-      return false;
-    }
-
-    public List<String> getMessages() {
-      return messages;
-    }
   }
 }

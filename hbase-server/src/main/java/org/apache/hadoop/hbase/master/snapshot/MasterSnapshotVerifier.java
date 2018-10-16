@@ -22,28 +22,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * General snapshot verification on the master.
@@ -67,7 +68,7 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
  * </ol>
  * <ul>
  * <li>Matching regions in the snapshot as currently in the table</li>
- * <li>{@link HRegionInfo} matches the current and stored regions</li>
+ * <li>{@link RegionInfo} matches the current and stored regions</li>
  * <li>All referenced hfiles have valid names</li>
  * <li>All the hfiles are present (either in .archive directory in the region)</li>
  * <li>All recovered.edits files are present (by name) and have the correct file size</li>
@@ -76,38 +77,37 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class MasterSnapshotVerifier {
-  private static final Log LOG = LogFactory.getLog(MasterSnapshotVerifier.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterSnapshotVerifier.class);
 
   private SnapshotDescription snapshot;
-  private FileSystem fs;
-  private Path rootDir;
+  private FileSystem workingDirFs;
   private TableName tableName;
   private MasterServices services;
 
   /**
    * @param services services for the master
    * @param snapshot snapshot to check
-   * @param rootDir root directory of the hbase installation.
+   * @param workingDirFs the file system containing the temporary snapshot information
    */
-  public MasterSnapshotVerifier(MasterServices services, SnapshotDescription snapshot, Path rootDir) {
-    this.fs = services.getMasterFileSystem().getFileSystem();
+  public MasterSnapshotVerifier(MasterServices services,
+      SnapshotDescription snapshot, FileSystem workingDirFs) {
+    this.workingDirFs = workingDirFs;
     this.services = services;
     this.snapshot = snapshot;
-    this.rootDir = rootDir;
     this.tableName = TableName.valueOf(snapshot.getTable());
   }
 
   /**
    * Verify that the snapshot in the directory is a valid snapshot
    * @param snapshotDir snapshot directory to check
-   * @param snapshotServers {@link org.apache.hadoop.hbase.ServerName} of the servers 
+   * @param snapshotServers {@link org.apache.hadoop.hbase.ServerName} of the servers
    *        that are involved in the snapshot
    * @throws CorruptedSnapshotException if the snapshot is invalid
    * @throws IOException if there is an unexpected connection issue to the filesystem
    */
   public void verifySnapshot(Path snapshotDir, Set<String> snapshotServers)
       throws CorruptedSnapshotException, IOException {
-    SnapshotManifest manifest = SnapshotManifest.open(services.getConfiguration(), fs,
+    SnapshotManifest manifest = SnapshotManifest.open(services.getConfiguration(), workingDirFs,
                                                       snapshotDir, snapshot);
     // verify snapshot info matches
     verifySnapshotDescription(snapshotDir);
@@ -124,7 +124,8 @@ public final class MasterSnapshotVerifier {
    * @param snapshotDir snapshot directory to check
    */
   private void verifySnapshotDescription(Path snapshotDir) throws CorruptedSnapshotException {
-    SnapshotDescription found = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    SnapshotDescription found = SnapshotDescriptionUtils.readSnapshotInfo(workingDirFs,
+        snapshotDir);
     if (!this.snapshot.equals(found)) {
       throw new CorruptedSnapshotException(
           "Snapshot read (" + found + ") doesn't equal snapshot we ran (" + snapshot + ").",
@@ -137,16 +138,16 @@ public final class MasterSnapshotVerifier {
    * @param manifest snapshot manifest to inspect
    */
   private void verifyTableInfo(final SnapshotManifest manifest) throws IOException {
-    HTableDescriptor htd = manifest.getTableDescriptor();
+    TableDescriptor htd = manifest.getTableDescriptor();
     if (htd == null) {
       throw new CorruptedSnapshotException("Missing Table Descriptor",
         ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
-    if (!htd.getNameAsString().equals(snapshot.getTable())) {
+    if (!htd.getTableName().getNameAsString().equals(snapshot.getTable())) {
       throw new CorruptedSnapshotException(
           "Invalid Table Descriptor. Expected " + snapshot.getTable() + " name, got "
-              + htd.getNameAsString(), ProtobufUtil.createSnapshotDesc(snapshot));
+              + htd.getTableName().getNameAsString(), ProtobufUtil.createSnapshotDesc(snapshot));
     }
   }
 
@@ -156,7 +157,7 @@ public final class MasterSnapshotVerifier {
    * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
   private void verifyRegions(final SnapshotManifest manifest) throws IOException {
-    List<HRegionInfo> regions;
+    List<RegionInfo> regions;
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       regions = new MetaTableLocator().getMetaRegions(services.getZooKeeper());
     } else {
@@ -187,8 +188,8 @@ public final class MasterSnapshotVerifier {
       LOG.error(errorMsg);
     }
 
-    // Verify HRegionInfo
-    for (HRegionInfo region : regions) {
+    // Verify RegionInfo
+    for (RegionInfo region : regions) {
       SnapshotRegionManifest regionManifest = regionManifests.get(region.getEncodedName());
       if (regionManifest == null) {
         // could happen due to a move or split race.
@@ -206,7 +207,9 @@ public final class MasterSnapshotVerifier {
     }
 
     // Verify Snapshot HFiles
-    SnapshotReferenceUtil.verifySnapshot(services.getConfiguration(), fs, manifest);
+    // Requires the root directory file system as HFiles are stored in the root directory
+    SnapshotReferenceUtil.verifySnapshot(services.getConfiguration(),
+        FSUtils.getRootDirFileSystem(services.getConfiguration()), manifest);
   }
 
   /**
@@ -214,10 +217,10 @@ public final class MasterSnapshotVerifier {
    * @param region the region to check
    * @param manifest snapshot manifest to inspect
    */
-  private void verifyRegionInfo(final HRegionInfo region,
+  private void verifyRegionInfo(final RegionInfo region,
       final SnapshotRegionManifest manifest) throws IOException {
-    HRegionInfo manifestRegionInfo = HRegionInfo.convert(manifest.getRegionInfo());
-    if (!region.equals(manifestRegionInfo)) {
+    RegionInfo manifestRegionInfo = ProtobufUtil.toRegionInfo(manifest.getRegionInfo());
+    if (RegionInfo.COMPARATOR.compare(region, manifestRegionInfo) != 0) {
       String msg = "Manifest region info " + manifestRegionInfo +
                    "doesn't match expected region:" + region;
       throw new CorruptedSnapshotException(msg, ProtobufUtil.createSnapshotDesc(snapshot));

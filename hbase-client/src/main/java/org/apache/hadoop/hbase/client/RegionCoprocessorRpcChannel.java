@@ -19,10 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
@@ -42,7 +43,7 @@ import com.google.protobuf.RpcController;
  */
 @InterfaceAudience.Private
 class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
-  private static final Log LOG = LogFactory.getLog(RegionCoprocessorRpcChannel.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionCoprocessorRpcChannel.class);
   private final TableName table;
   private final byte [] row;
   private final ClusterConnection conn;
@@ -77,7 +78,7 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
     }
     ClientServiceCallable<CoprocessorServiceResponse> callable =
       new ClientServiceCallable<CoprocessorServiceResponse>(this.conn,
-              this.table, this.row, this.conn.getRpcControllerFactory().newController()) {
+              this.table, this.row, this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET) {
       @Override
       protected CoprocessorServiceResponse rpcCall() throws Exception {
         byte [] regionName = getLocation().getRegionInfo().getRegionName();

@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -30,19 +30,25 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({ RPCTests.class, SmallTests.class })
+@Category({ RPCTests.class, MediumTests.class })
 public class TestNettyRpcServer {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNettyRpcServer.class);
+
   @Rule
   public TestName name = new TestName();
   private static HBaseTestingUtility TEST_UTIL;
@@ -71,7 +77,7 @@ public class TestNettyRpcServer {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testNettyRpcServer() throws Exception {
     final Table table = TEST_UTIL.createTable(TABLE, FAMILY);
     try {

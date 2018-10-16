@@ -19,29 +19,17 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
-import java.util.NavigableSet;
+import java.util.OptionalDouble;
+import java.util.OptionalLong;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
-import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
-import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Interface for objects that hold a column family in a Region. Its a memstore and a set of zero or
@@ -49,116 +37,21 @@ import org.apache.hadoop.hbase.security.User;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface Store extends HeapSize, StoreConfigInformation, PropagatingConfigurationObserver {
+public interface Store {
 
-  /* The default priority for user-specified compaction requests.
+  /**
+   * The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
-   */ int PRIORITY_USER = 1;
+   */
+  int PRIORITY_USER = 1;
   int NO_PRIORITY = Integer.MIN_VALUE;
 
   // General Accessors
   CellComparator getComparator();
 
-  Collection<StoreFile> getStorefiles();
+  Collection<? extends StoreFile> getStorefiles();
 
-  /**
-   * Close all the readers We don't need to worry about subsequent requests because the Region
-   * holds a write lock that will prevent any more reads or writes.
-   * @return the {@link StoreFile StoreFiles} that were previously being used.
-   * @throws IOException on failure
-   */
-  Collection<StoreFile> close() throws IOException;
-
-  /**
-   * Return a scanner for both the memstore and the HStore files. Assumes we are not in a
-   * compaction.
-   * @param scan Scan to apply when scanning the stores
-   * @param targetCols columns to scan
-   * @return a scanner over the current key values
-   * @throws IOException on failure
-   */
-  KeyValueScanner getScanner(Scan scan, final NavigableSet<byte[]> targetCols, long readPt)
-      throws IOException;
-
-  /**
-   * Get all scanners with no filtering based on TTL (that happens further down the line).
-   * @param cacheBlocks cache the blocks or not
-   * @param usePread true to use pread, false if not
-   * @param isCompaction true if the scanner is created for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the start row
-   * @param stopRow the stop row
-   * @param readPt the read point of the current scan
-   * @return all scanners for this store
-   */
-  default List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet, boolean usePread,
-      boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt)
-      throws IOException {
-    return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
-      readPt);
-  }
-
-  /**
-   * Get all scanners with no filtering based on TTL (that happens further down the line).
-   * @param cacheBlocks cache the blocks or not
-   * @param usePread true to use pread, false if not
-   * @param isCompaction true if the scanner is created for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the start row
-   * @param includeStartRow true to include start row, false if not
-   * @param stopRow the stop row
-   * @param includeStopRow true to include stop row, false if not
-   * @param readPt the read point of the current scan
-   * @return all scanners for this store
-   */
-  List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread, boolean isCompaction,
-      ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow, byte[] stopRow,
-      boolean includeStopRow, long readPt) throws IOException;
-
-  /**
-   * Create scanners on the given files and if needed on the memstore with no filtering based on TTL
-   * (that happens further down the line).
-   * @param files the list of files on which the scanners has to be created
-   * @param cacheBlocks cache the blocks or not
-   * @param usePread true to use pread, false if not
-   * @param isCompaction true if the scanner is created for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the start row
-   * @param stopRow the stop row
-   * @param readPt the read point of the current scan
-   * @param includeMemstoreScanner true if memstore has to be included
-   * @return scanners on the given files and on the memstore if specified
-   */
-  default List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
-      boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
-      byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner)
-      throws IOException {
-    return getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow,
-      false, readPt, includeMemstoreScanner);
-  }
-
-  /**
-   * Create scanners on the given files and if needed on the memstore with no filtering based on TTL
-   * (that happens further down the line).
-   * @param files the list of files on which the scanners has to be created
-   * @param cacheBlocks ache the blocks or not
-   * @param usePread true to use pread, false if not
-   * @param isCompaction true if the scanner is created for compaction
-   * @param matcher the scan query matcher
-   * @param startRow the start row
-   * @param includeStartRow true to include start row, false if not
-   * @param stopRow the stop row
-   * @param includeStopRow true to include stop row, false if not
-   * @param readPt the read point of the current scan
-   * @param includeMemstoreScanner true if memstore has to be included
-   * @return scanners on the given files and on the memstore if specified
-   */
-  List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks, boolean usePread,
-      boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
-      byte[] stopRow, boolean includeStopRow, long readPt, boolean includeMemstoreScanner)
-      throws IOException;
-
-  ScanInfo getScanInfo();
+  Collection<? extends StoreFile> getCompactedFiles();
 
   /**
    * When was the last edit done in the memstore
@@ -167,193 +60,60 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
 
   FileSystem getFileSystem();
 
-
   /**
-   * @param maxKeyCount
-   * @param compression Compression algorithm to use
-   * @param isCompaction whether we are creating a new file in a compaction
-   * @param includeMVCCReadpoint whether we should out the MVCC readpoint
-   * @return Writer for a new StoreFile in the tmp dir.
-   */
-  StoreFileWriter createWriterInTmp(
-      long maxKeyCount,
-      Compression.Algorithm compression,
-      boolean isCompaction,
-      boolean includeMVCCReadpoint,
-      boolean includesTags
-  ) throws IOException;
-
-  /**
-   * @param maxKeyCount
-   * @param compression Compression algorithm to use
-   * @param isCompaction whether we are creating a new file in a compaction
-   * @param includeMVCCReadpoint whether we should out the MVCC readpoint
-   * @param shouldDropBehind should the writer drop caches behind writes
-   * @return Writer for a new StoreFile in the tmp dir.
-   */
-  StoreFileWriter createWriterInTmp(
-    long maxKeyCount,
-    Compression.Algorithm compression,
-    boolean isCompaction,
-    boolean includeMVCCReadpoint,
-    boolean includesTags,
-    boolean shouldDropBehind
-  ) throws IOException;
-
-  /**
-   * @param maxKeyCount
-   * @param compression Compression algorithm to use
-   * @param isCompaction whether we are creating a new file in a compaction
-   * @param includeMVCCReadpoint whether we should out the MVCC readpoint
-   * @param shouldDropBehind should the writer drop caches behind writes
-   * @param trt Ready-made timetracker to use.
-   * @return Writer for a new StoreFile in the tmp dir.
-   */
-  StoreFileWriter createWriterInTmp(
-    long maxKeyCount,
-    Compression.Algorithm compression,
-    boolean isCompaction,
-    boolean includeMVCCReadpoint,
-    boolean includesTags,
-    boolean shouldDropBehind,
-    final TimeRangeTracker trt
-  ) throws IOException;
-
-  // Compaction oriented methods
-
-  boolean throttleCompaction(long compactionSize);
-
-  /**
-   * getter for CompactionProgress object
-   * @return CompactionProgress object; can be null
-   */
-  CompactionProgress getCompactionProgress();
-
-  CompactionContext requestCompaction() throws IOException;
-
-  /**
-   * @deprecated see requestCompaction(int, CompactionRequest, User)
-   */
-  @Deprecated
-  CompactionContext requestCompaction(int priority, CompactionRequest baseRequest)
-      throws IOException;
-
-  CompactionContext requestCompaction(int priority, CompactionRequest baseRequest, User user)
-      throws IOException;
-
-  void cancelRequestedCompaction(CompactionContext compaction);
-
-  /**
-   * @deprecated see compact(CompactionContext, ThroughputController, User)
-   */
-  @Deprecated
-  List<StoreFile> compact(CompactionContext compaction,
-      ThroughputController throughputController) throws IOException;
-
-  List<StoreFile> compact(CompactionContext compaction,
-    ThroughputController throughputController, User user) throws IOException;
-
-  /**
+   * Tests whether we should run a major compaction. For example, if the configured major compaction
+   * interval is reached.
    * @return true if we should run a major compaction.
    */
-  boolean isMajorCompaction() throws IOException;
-
-  void triggerMajorCompaction();
+  boolean shouldPerformMajorCompaction() throws IOException;
 
   /**
    * See if there's too much store files in this store
-   * @return true if number of store files is greater than the number defined in minFilesToCompact
+   * @return <code>true</code> if number of store files is greater than the number defined in
+   *         minFilesToCompact
    */
   boolean needsCompaction();
 
   int getCompactPriority();
 
-  StoreFlushContext createFlushContext(long cacheFlushId);
-
-  // Split oriented methods
-
+  /**
+   * Returns whether this store is splittable, i.e., no reference file in this store.
+   */
   boolean canSplit();
 
   /**
-   * Determines if Store should be split
-   * @return byte[] if store should be split, null otherwise.
-   */
-  byte[] getSplitPoint();
-
-  // General accessors into the state of the store
-  // TODO abstract some of this out into a metrics class
-
-  /**
-   * @return <tt>true</tt> if the store has any underlying reference files to older HFiles
+   * @return <code>true</code> if the store has any underlying reference files to older HFiles
    */
   boolean hasReferences();
 
   /**
-   * @return The size of this store's memstore, in bytes
-   * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeOfMemStore()} instead.
-   * <p>
-   * Note: When using off heap MSLAB feature, this will not account the cell data bytes size which
-   * is in off heap MSLAB area.
-   */
-  @Deprecated
-  long getMemStoreSize();
-
-  /**
    * @return The size of this store's memstore.
    */
-  MemstoreSize getSizeOfMemStore();
+  MemStoreSize getMemStoreSize();
 
   /**
    * @return The amount of memory we could flush from this memstore; usually this is equal to
    * {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the size of
    * outstanding snapshots.
-   * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeToFlush()} instead.
-   * <p>
-   * Note: When using off heap MSLAB feature, this will not account the cell data bytes size which
-   * is in off heap MSLAB area.
    */
-  @Deprecated
-  long getFlushableSize();
-
-  /**
-   * @return The amount of memory we could flush from this memstore; usually this is equal to
-   * {@link #getSizeOfMemStore()} unless we are carrying snapshots and then it will be the size of
-   * outstanding snapshots.
-   */
-  MemstoreSize getSizeToFlush();
-
-  /**
-   * Returns the memstore snapshot size
-   * @return size of the memstore snapshot
-   * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeOfSnapshot()} instead.
-   * <p>
-   * Note: When using off heap MSLAB feature, this will not account the cell data bytes size which
-   * is in off heap MSLAB area.
-   */
-  @Deprecated
-  long getSnapshotSize();
+  MemStoreSize getFlushableSize();
 
   /**
    * @return size of the memstore snapshot
    */
-  MemstoreSize getSizeOfSnapshot();
+  MemStoreSize getSnapshotSize();
 
-  HColumnDescriptor getFamily();
+  ColumnFamilyDescriptor getColumnFamilyDescriptor();
 
   /**
    * @return The maximum sequence id in all store files.
    */
-  long getMaxSequenceId();
+  OptionalLong getMaxSequenceId();
 
   /**
    * @return The maximum memstoreTS in all store files.
    */
-  long getMaxMemstoreTS();
-
-  /**
-   * @return the data block encoder
-   */
-  HFileDataBlockEncoder getDataBlockEncoder();
+  OptionalLong getMaxMemStoreTS();
 
   /** @return aggregate size of all HStores used in the last compaction */
   long getLastCompactSize();
@@ -367,19 +127,24 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   int getStorefilesCount();
 
   /**
+   * @return Count of compacted store files
+   */
+  int getCompactedFilesCount();
+
+  /**
    * @return Max age of store files in this store
    */
-  long getMaxStoreFileAge();
+  OptionalLong getMaxStoreFileAge();
 
   /**
    * @return Min age of store files in this store
    */
-  long getMinStoreFileAge();
+  OptionalLong getMinStoreFileAge();
 
   /**
-   *  @return Average age of store files in this store, 0 if no store files
+   *  @return Average age of store files in this store
    */
-  long getAvgStoreFileAge();
+  OptionalDouble getAvgStoreFileAge();
 
   /**
    *  @return Number of reference files in this store
@@ -407,9 +172,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   long getHFilesSize();
 
   /**
-   * @return The size of the store file indexes, in bytes.
+   * @return The size of the store file root-level indexes, in bytes.
    */
-  long getStorefilesIndexSize();
+  long getStorefilesRootLevelIndexSize();
 
   /**
    * Returns the total size of all index blocks in the data block indexes, including the root level,
@@ -426,20 +191,10 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    */
   long getTotalStaticBloomSize();
 
-  // Test-helper methods
-
-  /**
-   * Used for tests.
-   * @return cache configuration for this Store.
-   */
-  CacheConfig getCacheConfig();
-
   /**
    * @return the parent region info hosting this store
    */
-  HRegionInfo getRegionInfo();
-
-  RegionCoprocessorHost getCoprocessorHost();
+  RegionInfo getRegionInfo();
 
   boolean areWritesEnabled();
 
@@ -489,26 +244,15 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    */
   long getMajorCompactedCellsSize();
 
-  /*
-   * @param o Observer who wants to know about changes in set of Readers
-   */
-  void addChangedReaderObserver(ChangedReadersObserver o);
-
-  /*
-   * @param o Observer no longer interested in changes in set of Readers.
-   */
-  void deleteChangedReaderObserver(ChangedReadersObserver o);
-
   /**
    * @return Whether this store has too many store files.
    */
   boolean hasTooManyStoreFiles();
 
   /**
-   * Checks the underlying store files, and opens the files that  have not
-   * been opened, and removes the store file readers for store files no longer
-   * available. Mainly used by secondary region replicas to keep up to date with
-   * the primary region files.
+   * Checks the underlying store files, and opens the files that have not been opened, and removes
+   * the store file readers for store files no longer available. Mainly used by secondary region
+   * replicas to keep up to date with the primary region files.
    * @throws IOException
    */
   void refreshStoreFiles() throws IOException;
@@ -530,23 +274,12 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    */
   double getCompactionPressure();
 
-   /**
-    * Replaces the store files that the store has with the given files. Mainly used by
-    * secondary region replicas to keep up to date with
-    * the primary region files.
-    * @throws IOException
-    */
-  void refreshStoreFiles(Collection<String> newFiles) throws IOException;
-
   boolean isPrimaryReplicaStore();
-
-  /**
-   * Closes and archives the compacted files under this store
-   */
-  void closeAndArchiveCompactedFiles() throws IOException;
 
   /**
    * @return true if the memstore may need some extra memory space
    */
-  boolean isSloppyMemstore();
+  boolean isSloppyMemStore();
+
+  int getCurrentParallelPutCount();
 }

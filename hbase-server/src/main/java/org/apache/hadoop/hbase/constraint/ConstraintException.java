@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Exception that a user defined constraint throws on failure of a

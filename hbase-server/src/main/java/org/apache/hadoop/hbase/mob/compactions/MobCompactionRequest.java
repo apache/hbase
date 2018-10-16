@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.mob.compactions;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The compaction request for mob files.
@@ -59,6 +59,6 @@ public abstract class MobCompactionRequest {
     /**
      * All of mob files are selected.
      */
-    ALL_FILES;
+    ALL_FILES
   }
 }

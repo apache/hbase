@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,27 +19,28 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.WrongRegionException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -47,14 +48,14 @@ import com.google.protobuf.Service;
 
 /**
  * This class demonstrates how to implement atomic multi row transactions using
- * {@link HRegion#mutateRowsWithLocks(java.util.Collection, java.util.Collection)}
+ * {@link HRegion#mutateRowsWithLocks(Collection, Collection, long, long)}
  * and Coprocessor endpoints.
  *
  * Defines a protocol to perform multi row transactions.
  * See {@link MultiRowMutationEndpoint} for the implementation.
  * <br>
  * See
- * {@link HRegion#mutateRowsWithLocks(java.util.Collection, java.util.Collection)}
+ * {@link HRegion#mutateRowsWithLocks(Collection, Collection, long, long)}
  * for details and limitations.
  * <br>
  * Example:
@@ -77,8 +78,7 @@ import com.google.protobuf.Service;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public class MultiRowMutationEndpoint extends MultiRowMutationService implements
-CoprocessorService, Coprocessor {
+public class MultiRowMutationEndpoint extends MultiRowMutationService implements RegionCoprocessor {
   private RegionCoprocessorEnvironment env;
   @Override
   public void mutateRows(RpcController controller, MutateRowsRequest request,
@@ -93,7 +93,7 @@ CoprocessorService, Coprocessor {
         mutations.add(ProtobufUtil.toMutation(m));
       }
 
-      HRegionInfo regionInfo = env.getRegion().getRegionInfo();
+      RegionInfo regionInfo = env.getRegion().getRegionInfo();
       for (Mutation m : mutations) {
         // check whether rows are in range for this region
         if (!HRegion.rowIsInRange(regionInfo, m.getRow())) {
@@ -120,10 +120,9 @@ CoprocessorService, Coprocessor {
     done.run(response);
   }
 
-
   @Override
-  public Service getService() {
-    return this;
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   /**

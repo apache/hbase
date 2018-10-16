@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
@@ -32,21 +31,16 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
-import org.apache.log4j.WriterAppender;
 import org.junit.Assert;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
-import com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Test provides some very generic helpers which might be used across the tests
@@ -70,14 +64,14 @@ public abstract class GenericTestUtils {
   public static int uniqueSequenceId() {
     return sequence.incrementAndGet();
   }
-  
+
   /**
    * Assert that a given file exists.
    */
   public static void assertExists(File f) {
     Assert.assertTrue("File " + f + " should exist", f.exists());
   }
-    
+
   /**
    * List all of the files in 'dir' that match the regex 'pattern'.
    * Then check that this list is identical to 'expectedMatches'.
@@ -85,7 +79,7 @@ public abstract class GenericTestUtils {
    */
   public static void assertGlobEquals(File dir, String pattern,
       String ... expectedMatches) throws IOException {
-    
+
     Set<String> found = Sets.newTreeSet();
     for (File f : FileUtil.listFiles(dir)) {
       if (f.getName().matches(pattern)) {
@@ -98,13 +92,6 @@ public abstract class GenericTestUtils {
         Joiner.on(",").join(expectedSet),
         Joiner.on(",").join(found));
   }
-  
-  public static void assertExceptionContains(String string, Throwable t) {
-    String msg = t.getMessage();
-    Assert.assertTrue(
-        "Expected to find '" + string + "' but got unexpected exception:"
-        + StringUtils.stringifyException(t), msg.contains(string));
-  }  
 
   public static void waitFor(Supplier<Boolean> check,
       int checkEveryMillis, int waitForMillis)
@@ -116,64 +103,34 @@ public abstract class GenericTestUtils {
       if (result) {
         return;
       }
-      
+
       Thread.sleep(checkEveryMillis);
     } while (Time.now() - st < waitForMillis);
-    
+
     throw new TimeoutException("Timed out waiting for condition. " +
         "Thread diagnostics:\n" +
         TimedOutTestsListener.buildThreadDiagnosticString());
   }
-  
-  public static class LogCapturer {
-    private StringWriter sw = new StringWriter();
-    private WriterAppender appender;
-    private Logger logger;
-    
-    public static LogCapturer captureLogs(Log l) {
-      Logger logger = ((Log4JLogger)l).getLogger();
-      LogCapturer c = new LogCapturer(logger);
-      return c;
-    }
-    
 
-    private LogCapturer(Logger logger) {
-      this.logger = logger;
-      Layout layout = Logger.getRootLogger().getAppender("stdout").getLayout();
-      WriterAppender wa = new WriterAppender(layout, sw);
-      logger.addAppender(wa);
-    }
-    
-    public String getOutput() {
-      return sw.toString();
-    }
-    
-    public void stopCapturing() {
-      logger.removeAppender(appender);
-
-    }
-  }
-  
-  
   /**
    * Mockito answer helper that triggers one latch as soon as the
    * method is called, then waits on another before continuing.
    */
   public static class DelayAnswer implements Answer<Object> {
-    private final Log LOG;
-    
+    private final Logger LOG;
+
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
     private final CountDownLatch resultLatch = new CountDownLatch(1);
-    
+
     private final AtomicInteger fireCounter = new AtomicInteger(0);
     private final AtomicInteger resultCounter = new AtomicInteger(0);
-    
+
     // Result fields set after proceed() is called.
     private volatile Throwable thrown;
     private volatile Object returnValue;
-    
-    public DelayAnswer(Log log) {
+
+    public DelayAnswer(Logger log) {
       this.LOG = log;
     }
 
@@ -183,7 +140,7 @@ public abstract class GenericTestUtils {
     public void waitForCall() throws InterruptedException {
       fireLatch.await();
     }
-  
+
     /**
      * Tell the method to proceed.
      * This should only be called after waitForCall()
@@ -191,7 +148,7 @@ public abstract class GenericTestUtils {
     public void proceed() {
       waitLatch.countDown();
     }
-  
+
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
       LOG.info("DelayAnswer firing fireLatch");
@@ -220,7 +177,7 @@ public abstract class GenericTestUtils {
         resultLatch.countDown();
       }
     }
-    
+
     /**
      * After calling proceed(), this will wait until the call has
      * completed and a result has been returned to the caller.
@@ -228,7 +185,7 @@ public abstract class GenericTestUtils {
     public void waitForResult() throws InterruptedException {
       resultLatch.await();
     }
-    
+
     /**
      * After the call has gone through, return any exception that
      * was thrown, or null if no exception was thrown.
@@ -236,7 +193,7 @@ public abstract class GenericTestUtils {
     public Throwable getThrown() {
       return thrown;
     }
-    
+
     /**
      * After the call has gone through, return the call's return value,
      * or null in case it was void or an exception was thrown.
@@ -244,20 +201,20 @@ public abstract class GenericTestUtils {
     public Object getReturnValue() {
       return returnValue;
     }
-    
+
     public int getFireCount() {
       return fireCounter.get();
     }
-    
+
     public int getResultCount() {
       return resultCounter.get();
     }
   }
-  
+
   /**
    * An Answer implementation that simply forwards all calls through
    * to a delegate.
-   * 
+   *
    * This is useful as the default Answer for a mock object, to create
    * something like a spy on an RPC proxy. For example:
    * <code>
@@ -268,15 +225,15 @@ public abstract class GenericTestUtils {
    *    ...
    * </code>
    */
-  public static class DelegateAnswer implements Answer<Object> { 
+  public static class DelegateAnswer implements Answer<Object> {
     private final Object delegate;
-    private final Log log;
-    
+    private final Logger log;
+
     public DelegateAnswer(Object delegate) {
       this(null, delegate);
     }
-    
-    public DelegateAnswer(Log log, Object delegate) {
+
+    public DelegateAnswer(Logger log, Object delegate) {
       this.log = log;
       this.delegate = delegate;
     }
@@ -305,11 +262,11 @@ public abstract class GenericTestUtils {
   public static class SleepAnswer implements Answer<Object> {
     private final int maxSleepTime;
     private static Random r = new Random();
-    
+
     public SleepAnswer(int maxSleepTime) {
       this.maxSleepTime = maxSleepTime;
     }
-    
+
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
       boolean interrupted = false;
@@ -333,11 +290,11 @@ public abstract class GenericTestUtils {
         " but got:\n" + output,
         Pattern.compile(pattern).matcher(output).find());
   }
-  
+
   public static void assertValueNear(long expected, long actual, long allowedError) {
     assertValueWithinRange(expected - allowedError, expected + allowedError, actual);
   }
-  
+
   public static void assertValueWithinRange(long expectedMin, long expectedMax,
       long actual) {
     Assert.assertTrue("Expected " + actual + " to be in range (" + expectedMin + ","
@@ -352,7 +309,7 @@ public abstract class GenericTestUtils {
   public static void assertNoThreadsMatching(String regex) {
     Pattern pattern = Pattern.compile(regex);
     ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-    
+
     ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
     for (ThreadInfo info : infos) {
       if (info == null) continue;

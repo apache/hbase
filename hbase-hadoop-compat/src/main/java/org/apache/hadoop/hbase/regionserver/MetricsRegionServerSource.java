@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface for classes that expose metrics about the regionserver.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSource {
 
   /**
@@ -54,11 +56,35 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updatePut(long t);
 
   /**
+   * Update the PutBatch time histogram if a batch contains a Put op
+   * @param t time it took
+   */
+  void updatePutBatch(long t);
+
+  /**
    * Update the Delete time histogram
    *
    * @param t time it took
    */
   void updateDelete(long t);
+
+  /**
+   * Update the Delete time histogram if a batch contains a delete op
+   * @param t time it took
+   */
+  void updateDeleteBatch(long t);
+
+  /**
+   * Update checkAndDelete histogram
+   * @param t time it took
+   */
+  void updateCheckAndDelete(long t);
+
+  /**
+   * Update checkAndPut histogram
+   * @param t time it took
+   */
+  void updateCheckAndPut(long t);
 
   /**
    * Update the Get time histogram .
@@ -151,7 +177,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
    * Update the flush memstore size histogram
    * @param bytes the number of bytes in the memstore
    */
-  void updateFlushMemstoreSize(long bytes);
+  void updateFlushMemStoreSize(long bytes);
 
   /**
    * Update the flush output file size histogram
@@ -212,23 +238,39 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String MIN_STORE_FILE_AGE = "minStoreFileAge";
   String AVG_STORE_FILE_AGE = "avgStoreFileAge";
   String NUM_REFERENCE_FILES = "numReferenceFiles";
-  String MAX_STORE_FILE_AGE_DESC = "Max age of store files hosted on this region server";
-  String MIN_STORE_FILE_AGE_DESC = "Min age of store files hosted on this region server";
-  String AVG_STORE_FILE_AGE_DESC = "Average age of store files hosted on this region server";
-  String NUM_REFERENCE_FILES_DESC = "Number of reference file on this region server";
+  String MAX_STORE_FILE_AGE_DESC = "Max age of store files hosted on this RegionServer";
+  String MIN_STORE_FILE_AGE_DESC = "Min age of store files hosted on this RegionServer";
+  String AVG_STORE_FILE_AGE_DESC = "Average age of store files hosted on this RegionServer";
+  String NUM_REFERENCE_FILES_DESC = "Number of reference file on this RegionServer";
   String STOREFILE_SIZE_DESC = "Size of storefiles being served.";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC =
-      "Total number of requests this RegionServer has answered.";
+      "Total number of requests this RegionServer has answered; increments the count once for " +
+          "EVERY access whether an admin operation, a Scan, a Put or Put of 1M rows, or a Get " +
+          "of a non-existent row";
+  String TOTAL_ROW_ACTION_REQUEST_COUNT = "totalRowActionRequestCount";
+  String TOTAL_ROW_ACTION_REQUEST_COUNT_DESC =
+      "Total number of region requests this RegionServer has answered; counts by row-level " +
+          "action at the RPC Server (Sums 'readRequestsCount' and 'writeRequestsCount'); counts" +
+          "once per access whether a Put of 1M rows or a Get that returns 1M Results";
   String READ_REQUEST_COUNT = "readRequestCount";
-  String READ_REQUEST_COUNT_DESC =
-      "Number of read requests this region server has answered.";
   String FILTERED_READ_REQUEST_COUNT = "filteredReadRequestCount";
   String FILTERED_READ_REQUEST_COUNT_DESC =
-    "Number of filtered read requests this region server has answered.";
+      "Number of read requests this region server has answered.";
+  String READ_REQUEST_COUNT_DESC =
+      "Number of read requests with non-empty Results that this RegionServer has answered.";
+  String READ_REQUEST_RATE_PER_SECOND = "readRequestRatePerSecond";
+  String READ_REQUEST_RATE_DESC =
+      "Rate of answering the read requests by this region server per second.";
+  String CP_REQUEST_COUNT = "cpRequestCount";
+  String CP_REQUEST_COUNT_DESC =
+      "Number of coprocessor service requests this region server has answered.";
   String WRITE_REQUEST_COUNT = "writeRequestCount";
   String WRITE_REQUEST_COUNT_DESC =
-      "Number of mutation requests this region server has answered.";
+      "Number of mutation requests this RegionServer has answered.";
+  String WRITE_REQUEST_RATE_PER_SECOND = "writeRequestRatePerSecond";
+  String WRITE_REQUEST_RATE_DESC =
+      "Rate of answering the mutation requests by this region server per second.";
   String CHECK_MUTATE_FAILED_COUNT = "checkMutateFailedCount";
   String CHECK_MUTATE_FAILED_COUNT_DESC =
       "Number of Check and Mutate calls that failed the checks.";
@@ -321,7 +363,22 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_GENERAL_BLOOM_META_HIT_COUNT = "blockCacheGeneralBloomMetaHitCount";
   String BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT = "blockCacheDeleteFamilyBloomHitCount";
   String BLOCK_CACHE_TRAILER_HIT_COUNT = "blockCacheTrailerHitCount";
-
+  String L1_CACHE_HIT_COUNT = "l1CacheHitCount";
+  String L1_CACHE_HIT_COUNT_DESC = "L1 cache hit count.";
+  String L1_CACHE_MISS_COUNT = "l1CacheMissCount";
+  String L1_CACHE_MISS_COUNT_DESC = "L1 cache miss count.";
+  String L1_CACHE_HIT_RATIO = "l1CacheHitRatio";
+  String L1_CACHE_HIT_RATIO_DESC = "L1 cache hit ratio.";
+  String L1_CACHE_MISS_RATIO = "l1CacheMissRatio";
+  String L1_CACHE_MISS_RATIO_DESC = "L1 cache miss ratio.";
+  String L2_CACHE_HIT_COUNT = "l2CacheHitCount";
+  String L2_CACHE_HIT_COUNT_DESC = "L2 cache hit count.";
+  String L2_CACHE_MISS_COUNT = "l2CacheMissCount";
+  String L2_CACHE_MISS_COUNT_DESC = "L2 cache miss count.";
+  String L2_CACHE_HIT_RATIO = "l2CacheHitRatio";
+  String L2_CACHE_HIT_RATIO_DESC = "L2 cache hit ratio.";
+  String L2_CACHE_MISS_RATIO = "l2CacheMissRatio";
+  String L2_CACHE_MISS_RATIO_DESC = "L2 cache miss ratio.";
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";
@@ -334,25 +391,29 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String UPDATES_BLOCKED_DESC =
       "Number of MS updates have been blocked so that the memstore can be flushed.";
   String DELETE_KEY = "delete";
+  String CHECK_AND_DELETE_KEY = "checkAndDelete";
+  String CHECK_AND_PUT_KEY = "checkAndPut";
+  String DELETE_BATCH_KEY = "deleteBatch";
   String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";
   String INCREMENT_KEY = "increment";
-  String MUTATE_KEY = "mutate";
+  String PUT_KEY = "put";
+  String PUT_BATCH_KEY = "putBatch";
   String APPEND_KEY = "append";
   String REPLAY_KEY = "replay";
   String SCAN_KEY = "scan";
   String SCAN_SIZE_KEY = "scanSize";
   String SCAN_TIME_KEY = "scanTime";
 
-  String SLOW_MUTATE_KEY = "slowPutCount";
+  String SLOW_PUT_KEY = "slowPutCount";
   String SLOW_GET_KEY = "slowGetCount";
   String SLOW_DELETE_KEY = "slowDeleteCount";
   String SLOW_INCREMENT_KEY = "slowIncrementCount";
   String SLOW_APPEND_KEY = "slowAppendCount";
-  String SLOW_MUTATE_DESC =
-      "The number of Multis that took over 1000ms to complete";
+  String SLOW_PUT_DESC =
+      "The number of batches containing puts that took over 1000ms to complete";
   String SLOW_DELETE_DESC =
-      "The number of Deletes that took over 1000ms to complete";
+      "The number of batches containing delete(s) that took over 1000ms to complete";
   String SLOW_GET_DESC = "The number of Gets that took over 1000ms to complete";
   String SLOW_INCREMENT_DESC =
       "The number of Increments that took over 1000ms to complete";
@@ -479,17 +540,17 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     = "Total number of bytes that is output from compaction, major only";
 
   String RPC_GET_REQUEST_COUNT = "rpcGetRequestCount";
-  String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this region server has answered.";
+  String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this RegionServer has answered.";
   String RPC_SCAN_REQUEST_COUNT = "rpcScanRequestCount";
   String RPC_SCAN_REQUEST_COUNT_DESC =
-      "Number of rpc scan requests this region server has answered.";
+      "Number of rpc scan requests this RegionServer has answered.";
   String RPC_MULTI_REQUEST_COUNT = "rpcMultiRequestCount";
   String RPC_MULTI_REQUEST_COUNT_DESC =
-      "Number of rpc multi requests this region server has answered.";
+      "Number of rpc multi requests this RegionServer has answered.";
   String RPC_MUTATE_REQUEST_COUNT = "rpcMutateRequestCount";
   String RPC_MUTATE_REQUEST_COUNT_DESC =
-      "Number of rpc mutation requests this region server has answered.";
+      "Number of rpc mutation requests this RegionServer has answered.";
   String AVERAGE_REGION_SIZE = "averageRegionSize";
   String AVERAGE_REGION_SIZE_DESC =
-      "Average region size over the region server including memstore and storefile sizes.";
+      "Average region size over the RegionServer including memstore and storefile sizes.";
 }

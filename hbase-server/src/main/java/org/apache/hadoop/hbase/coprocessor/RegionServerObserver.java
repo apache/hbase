@@ -19,18 +19,12 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.List;
 
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.MetaMutationAnnotation;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Defines coprocessor hooks for interacting with operations on the
@@ -59,72 +53,13 @@ import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface RegionServerObserver extends Coprocessor {
+public interface RegionServerObserver {
   /**
    * Called before stopping region server.
    * @param ctx the environment to interact with the framework and region server.
    */
   default void preStopRegionServer(
     final ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {}
-
-  /**
-   * Called before the regions merge.
-   * Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} to skip the merge.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void preMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB) throws IOException {}
-
-  /**
-   * called after the regions merge.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void postMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB, final Region mergedRegion) throws IOException {}
-
-  /**
-   * This will be called before PONR step as part of regions merge transaction. Calling
-   * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the merge
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   * @param metaEntries mutations to execute on hbase:meta atomically with regions merge updates.
-   *        Any puts or deletes to execute on hbase:meta can be added to the mutations.
-   */
-  default void preMergeCommit(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB,
-      @MetaMutationAnnotation List<Mutation> metaEntries) throws IOException {}
-
-  /**
-   * This will be called after PONR step as part of regions merge transaction.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void postMergeCommit(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB, final Region mergedRegion) throws IOException {}
-
-  /**
-   * This will be called before the roll back of the regions merge.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void preRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB) throws IOException {}
-
-  /**
-   * This will be called after the roll back of the regions merge.
-   * @param ctx the environment to interact with the framework and region server.
-   * @param regionA region being merged.
-   * @param regionB region being merged.
-   */
-  default void postRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final Region regionA, final Region regionB) throws IOException {}
 
   /**
    * This will be called before executing user request to roll a region server WAL.
@@ -153,24 +88,28 @@ public interface RegionServerObserver extends Coprocessor {
     return endpoint;
   }
 
+  // TODO remove below 2 hooks when we implement AC as a core impl than a CP impl.
   /**
    * This will be called before executing replication request to shipping log entries.
    * @param ctx the environment to interact with the framework and region server.
-   * @param entries list of WALEntries to replicate
-   * @param cells Cells that the WALEntries refer to (if cells is non-null)
+   * @deprecated As of release 2.0.0 with out any replacement. This is maintained for internal
+   * usage by AccessController. Do not use these hooks in custom co-processors.
    */
-  default void preReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      List<WALEntry> entries, CellScanner cells) throws IOException {}
+  @Deprecated
+  default void preReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {
+  }
 
   /**
    * This will be called after executing replication request to shipping log entries.
    * @param ctx the environment to interact with the framework and region server.
-   * @param entries list of WALEntries to replicate
-   * @param cells Cells that the WALEntries refer to (if cells is non-null)
+   * @deprecated As of release 2.0.0 with out any replacement. This is maintained for internal
+   * usage by AccessController. Do not use these hooks in custom co-processors.
    */
+  @Deprecated
   default void postReplicateLogEntries(
-      final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      List<WALEntry> entries, CellScanner cells) throws IOException {}
+      final ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
+  }
 
   /**
    * This will be called before clearing compaction queues
@@ -186,5 +125,19 @@ public interface RegionServerObserver extends Coprocessor {
    */
   default void postClearCompactionQueues(
       final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * This will be called before executing procedures
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * This will be called after executing procedures
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void postExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
       throws IOException {}
 }

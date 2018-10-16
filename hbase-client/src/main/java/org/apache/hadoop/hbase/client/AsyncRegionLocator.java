@@ -21,8 +21,8 @@ import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.findException;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.isMetaClearingException;
 
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timeout;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -30,11 +30,11 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 class AsyncRegionLocator {
 
-  private static final Log LOG = LogFactory.getLog(AsyncRegionLocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncRegionLocator.class);
 
   private final HashedWheelTimer retryTimer;
 
@@ -79,23 +79,28 @@ class AsyncRegionLocator {
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      RegionLocateType type, long timeoutNs) {
+      RegionLocateType type, boolean reload, long timeoutNs) {
     // meta region can not be split right now so we always call the same method.
     // Change it later if the meta table can have more than one regions.
     CompletableFuture<HRegionLocation> future =
-        tableName.equals(META_TABLE_NAME) ? metaRegionLocator.getRegionLocation()
-            : nonMetaRegionLocator.getRegionLocation(tableName, row, type);
+        tableName.equals(META_TABLE_NAME) ? metaRegionLocator.getRegionLocation(reload)
+            : nonMetaRegionLocator.getRegionLocation(tableName, row, type, reload);
     return withTimeout(future, timeoutNs,
-      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
-          + "ms) waiting for region location for " + tableName + ", row='"
-          + Bytes.toStringBinary(row) + "'");
+      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
+          "ms) waiting for region location for " + tableName + ", row='" +
+          Bytes.toStringBinary(row) + "'");
+  }
+
+  CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
+      RegionLocateType type, long timeoutNs) {
+    return getRegionLocation(tableName, row, type, false, timeoutNs);
   }
 
   static boolean canUpdate(HRegionLocation loc, HRegionLocation oldLoc) {
     // Do not need to update if no such location, or the location is newer, or the location is not
     // same with us
-    return oldLoc != null && oldLoc.getSeqNum() <= loc.getSeqNum()
-        && oldLoc.getServerName().equals(loc.getServerName());
+    return oldLoc != null && oldLoc.getSeqNum() <= loc.getSeqNum() &&
+        oldLoc.getServerName().equals(loc.getServerName());
   }
 
   static void updateCachedLocation(HRegionLocation loc, Throwable exception,
@@ -137,7 +142,7 @@ class AsyncRegionLocator {
   }
 
   void updateCachedLocation(HRegionLocation loc, Throwable exception) {
-    if (loc.getRegionInfo().isMetaTable()) {
+    if (loc.getRegion().isMetaRegion()) {
       metaRegionLocator.updateCachedLocation(loc, exception);
     } else {
       nonMetaRegionLocator.updateCachedLocation(loc, exception);

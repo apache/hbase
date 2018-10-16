@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,11 +25,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -39,15 +36,19 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.RegionSplitter.DecimalStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for {@link RegionSplitter}, which can create a pre-split table or do a
@@ -55,7 +56,12 @@ import org.junit.rules.TestName;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestRegionSplitter {
-    private final static Log LOG = LogFactory.getLog(TestRegionSplitter.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionSplitter.class);
+
+    private final static Logger LOG = LoggerFactory.getLogger(TestRegionSplitter.class);
     private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
     private final static String CF_NAME = "SPLIT_TEST_CF";
     private final static byte xFF = (byte) 0xff;
@@ -143,7 +149,7 @@ public class TestRegionSplitter {
 
         byte[][] twoRegionsSplits = splitter.split(2);
         assertEquals(1, twoRegionsSplits.length);
-    assertArrayEquals(twoRegionsSplits[0], "80000000".getBytes());
+        assertArrayEquals("80000000".getBytes(), twoRegionsSplits[0]);
 
         byte[][] threeRegionsSplits = splitter.split(3);
         assertEquals(2, threeRegionsSplits.length);
@@ -163,11 +169,73 @@ public class TestRegionSplitter {
 
         // Halfway between 00... and 20... should be 10...
         splitPoint = splitter.split(firstRow, "20000000".getBytes());
-        assertArrayEquals(splitPoint, "10000000".getBytes());
+        assertArrayEquals("10000000".getBytes(), splitPoint);
 
         // Halfway between df... and ff... should be ef....
         splitPoint = splitter.split("dfffffff".getBytes(), lastRow);
-        assertArrayEquals(splitPoint,"efffffff".getBytes());
+        assertArrayEquals("efffffff".getBytes(), splitPoint);
+
+        // Check splitting region with multiple mappers per region
+        byte[][] splits = splitter.split("00000000".getBytes(), "30000000".getBytes(), 3, false);
+        assertEquals(2, splits.length);
+        assertArrayEquals("10000000".getBytes(), splits[0]);
+        assertArrayEquals("20000000".getBytes(), splits[1]);
+
+        splits = splitter.split("00000000".getBytes(), "20000000".getBytes(), 2, true);
+        assertEquals(3, splits.length);
+        assertArrayEquals("10000000".getBytes(), splits[1]);
+    }
+
+    /**
+     * Unit tests for the DecimalStringSplit algorithm. Makes sure it divides up the
+     * space of keys in the way that we expect.
+     */
+    @Test
+    public void unitTestDecimalStringSplit() {
+        DecimalStringSplit splitter = new DecimalStringSplit();
+        // Check splitting while starting from scratch
+
+        byte[][] twoRegionsSplits = splitter.split(2);
+        assertEquals(1, twoRegionsSplits.length);
+        assertArrayEquals("50000000".getBytes(), twoRegionsSplits[0]);
+
+        byte[][] threeRegionsSplits = splitter.split(3);
+        assertEquals(2, threeRegionsSplits.length);
+        byte[] expectedSplit0 = "33333333".getBytes();
+        assertArrayEquals(expectedSplit0, threeRegionsSplits[0]);
+        byte[] expectedSplit1 = "66666666".getBytes();
+        assertArrayEquals(expectedSplit1, threeRegionsSplits[1]);
+
+        // Check splitting existing regions that have start and end points
+        byte[] splitPoint = splitter.split("10000000".getBytes(), "30000000".getBytes());
+        assertArrayEquals("20000000".getBytes(), splitPoint);
+
+        byte[] lastRow = "99999999".getBytes();
+        assertArrayEquals(lastRow, splitter.lastRow());
+        byte[] firstRow = "00000000".getBytes();
+        assertArrayEquals(firstRow, splitter.firstRow());
+
+        // Halfway between 00... and 20... should be 10...
+        splitPoint = splitter.split(firstRow, "20000000".getBytes());
+        assertArrayEquals("10000000".getBytes(), splitPoint);
+
+        // Halfway between 00... and 19... should be 09...
+        splitPoint = splitter.split(firstRow, "19999999".getBytes());
+        assertArrayEquals("09999999".getBytes(), splitPoint);
+
+        // Halfway between 79... and 99... should be 89....
+        splitPoint = splitter.split("79999999".getBytes(), lastRow);
+        assertArrayEquals("89999999".getBytes(), splitPoint);
+
+        // Check splitting region with multiple mappers per region
+        byte[][] splits = splitter.split("00000000".getBytes(), "30000000".getBytes(), 3, false);
+        assertEquals(2, splits.length);
+        assertArrayEquals("10000000".getBytes(), splits[0]);
+        assertArrayEquals("20000000".getBytes(), splits[1]);
+
+        splits = splitter.split("00000000".getBytes(), "20000000".getBytes(), 2, true);
+        assertEquals(3, splits.length);
+        assertArrayEquals("10000000".getBytes(), splits[1]);
     }
 
     /**
@@ -215,6 +283,16 @@ public class TestRegionSplitter {
 
         splitPoint = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'b'});
         assertArrayEquals(splitPoint, new byte[] { 'a', 'a', 'a', (byte) 0x80 });
+
+        // Check splitting region with multiple mappers per region
+        byte[][] splits = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'd'}, 3, false);
+        assertEquals(2, splits.length);
+        assertArrayEquals(splits[0], new byte[]{'a', 'a', 'b'});
+        assertArrayEquals(splits[1], new byte[]{'a', 'a', 'c'});
+
+        splits = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'e'}, 2, true);
+        assertEquals(3, splits.length);
+        assertArrayEquals(splits[1], new byte[] { 'a', 'a', 'c'});
     }
 
   @Test
@@ -227,6 +305,15 @@ public class TestRegionSplitter {
     assertFalse(splitFailsPrecondition(algo, "0", "2", 3)); // should be fine
     assertFalse(splitFailsPrecondition(algo, "0", "A", 11)); // should be fine
     assertTrue(splitFailsPrecondition(algo, "0", "A", 12)); // too granular
+
+    algo = new DecimalStringSplit();
+    assertFalse(splitFailsPrecondition(algo)); // default settings are fine
+    assertFalse(splitFailsPrecondition(algo, "00", "99")); // custom is fine
+    assertTrue(splitFailsPrecondition(algo, "99", "00")); // range error
+    assertTrue(splitFailsPrecondition(algo, "99", "99")); // range error
+    assertFalse(splitFailsPrecondition(algo, "0", "2", 3)); // should be fine
+    assertFalse(splitFailsPrecondition(algo, "0", "9", 10)); // should be fine
+    assertTrue(splitFailsPrecondition(algo, "0", "9", 11)); // too granular
 
     algo = new UniformSplit();
     assertFalse(splitFailsPrecondition(algo)); // default settings are fine
@@ -336,7 +423,7 @@ public class TestRegionSplitter {
     }
 
     /**
-     * List.indexOf() doesn't really work for a List<byte[]>, because byte[]
+     * List.indexOf() doesn't really work for a List&lt;byte[]>, because byte[]
      * doesn't override equals(). This method checks whether a list contains
      * a given element by checking each element using the byte array
      * comparator.

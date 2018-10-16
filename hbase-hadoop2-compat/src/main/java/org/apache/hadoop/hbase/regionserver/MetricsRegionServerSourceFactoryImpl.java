@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.MetricsIOSource;
 import org.apache.hadoop.hbase.io.MetricsIOSourceImpl;
 import org.apache.hadoop.hbase.io.MetricsIOWrapper;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Factory to create MetricsRegionServerSource when given a  MetricsRegionServerWrapper
@@ -65,7 +65,8 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   }
 
   @Override
-  public synchronized MetricsRegionServerSource createServer(MetricsRegionServerWrapper regionServerWrapper) {
+  public synchronized MetricsRegionServerSource createServer(
+      MetricsRegionServerWrapper regionServerWrapper) {
     return new MetricsRegionServerSourceImpl(regionServerWrapper);
   }
 

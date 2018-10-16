@@ -22,8 +22,8 @@ import static org.junit.Assert.assertEquals;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.AsyncAggregationClient;
@@ -35,11 +35,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, CoprocessorTests.class })
 public class TestAsyncAggregationClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncAggregationClient.class);
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -55,7 +60,7 @@ public class TestAsyncAggregationClient {
 
   private static AsyncConnection CONN;
 
-  private static RawAsyncTable TABLE;
+  private static AsyncTable<AdvancedScanResultConsumer> TABLE;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -69,7 +74,7 @@ public class TestAsyncAggregationClient {
     }
     UTIL.createTable(TABLE_NAME, CF, splitKeys);
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
-    TABLE = CONN.getRawTable(TABLE_NAME);
+    TABLE = CONN.getTable(TABLE_NAME);
     TABLE.putAll(LongStream.range(0, COUNT)
         .mapToObj(l -> new Put(Bytes.toBytes(String.format("%03d", l)))
             .addColumn(CF, CQ, Bytes.toBytes(l)).addColumn(CF, CQ2, Bytes.toBytes(l * l)))

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 import java.io.IOException;
 
@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Optionally carries Cells across the proxy/service interface down into ipc. On its way out it
@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface HBaseRpcController extends RpcController, CellScannable {
-
-  static final int PRIORITY_UNSET = -1;
 
   /**
    * Only used to send cells to rpc server, the returned cells should be set by

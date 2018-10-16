@@ -27,20 +27,23 @@ import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This is a generic executor service. This component abstracts a
@@ -56,7 +59,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  */
 @InterfaceAudience.Private
 public class ExecutorService {
-  private static final Log LOG = LogFactory.getLog(ExecutorService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExecutorService.class);
 
   // hold the all the executors created in a map addressable by their names
   private final ConcurrentHashMap<String, Executor> executorMap = new ConcurrentHashMap<>();
@@ -64,12 +67,15 @@ public class ExecutorService {
   // Name of the server hosting this executor service.
   private final String servername;
 
+  private final ListeningScheduledExecutorService delayedSubmitTimer =
+    MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+      .setDaemon(true).setNameFormat("Event-Executor-Delay-Submit-Timer").build()));
+
   /**
    * Default constructor.
    * @param servername Name of the hosting server.
    */
   public ExecutorService(final String servername) {
-    super();
     this.servername = servername;
   }
 
@@ -99,6 +105,7 @@ public class ExecutorService {
   }
 
   public void shutdown() {
+    this.delayedSubmitTimer.shutdownNow();
     for(Entry<String, Executor> entry: this.executorMap.entrySet()) {
       List<Runnable> wasRunning =
         entry.getValue().threadPoolExecutor.shutdownNow();
@@ -146,6 +153,18 @@ public class ExecutorService {
     }
   }
 
+  // Submit the handler after the given delay. Used for retrying.
+  public void delayedSubmit(EventHandler eh, long delay, TimeUnit unit) {
+    ListenableFuture<?> future = delayedSubmitTimer.schedule(() -> submit(eh), delay, unit);
+    future.addListener(() -> {
+      try {
+        future.get();
+      } catch (Exception e) {
+        LOG.error("Failed to submit the event handler {} to executor", eh, e);
+      }
+    }, MoreExecutors.directExecutor());
+  }
+
   public Map<String, ExecutorStatus> getAllExecutorStatuses() {
     Map<String, ExecutorStatus> ret = Maps.newHashMap();
     for (Map.Entry<String, Executor> e : executorMap.entrySet()) {
@@ -178,6 +197,7 @@ public class ExecutorService {
       // name the threads for this threadpool
       ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
       tfb.setNameFormat(this.name + "-%d");
+      tfb.setDaemon(true);
       this.threadPoolExecutor.setThreadFactory(tfb.build());
     }
 

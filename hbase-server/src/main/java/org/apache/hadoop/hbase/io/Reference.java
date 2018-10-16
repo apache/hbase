@@ -25,12 +25,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -175,7 +175,9 @@ public class Reference {
       in.mark(pblen);
       byte [] pbuf = new byte[pblen];
       int read = in.read(pbuf);
-      if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
+      if (read != pblen) {
+        throw new IOException("read=" + read + ", wanted=" + pblen);
+      }
       // WATCHOUT! Return in middle of function!!!
       if (ProtobufUtil.isPBMagicPrefix(pbuf)) return convert(FSProtos.Reference.parseFrom(in));
       // Else presume Writables.  Need to reset the stream since it didn't start w/ pb.
@@ -222,6 +224,7 @@ public class Reference {
     return Arrays.hashCode(splitkey) + region.hashCode();
   }
 
+  @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null) return false;

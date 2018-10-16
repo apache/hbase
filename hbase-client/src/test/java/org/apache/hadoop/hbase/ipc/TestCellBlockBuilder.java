@@ -22,16 +22,14 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-
-import org.apache.commons.lang.time.StopWatch;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
@@ -43,15 +41,21 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.log4j.Level;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestCellBlockBuilder {
 
-  private static final Log LOG = LogFactory.getLog(TestCellBlockBuilder.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellBlockBuilder.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCellBlockBuilder.class);
 
   private CellBlockBuilder builder;
 
@@ -91,7 +95,7 @@ public class TestCellBlockBuilder {
   static CellScanner getSizedCellScanner(final Cell[] cells) {
     int size = -1;
     for (Cell cell : cells) {
-      size += CellUtil.estimatedSerializedSizeOf(cell);
+      size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
     }
     final int totalSize = ClassSize.align(size);
     final CellScanner cellScanner = CellUtil.createCellScanner(cells);
@@ -189,7 +193,6 @@ public class TestCellBlockBuilder {
       }
     }
     CellBlockBuilder builder = new CellBlockBuilder(HBaseConfiguration.create());
-    ((Log4JLogger) CellBlockBuilder.LOG).getLogger().setLevel(Level.ALL);
     timerTests(builder, count, size, new KeyValueCodec(), null);
     timerTests(builder, count, size, new KeyValueCodec(), new DefaultCodec());
     timerTests(builder, count, size, new KeyValueCodec(), new GzipCodec());

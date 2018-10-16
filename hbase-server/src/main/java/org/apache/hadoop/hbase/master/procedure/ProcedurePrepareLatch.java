@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 
@@ -57,6 +57,20 @@ public abstract class ProcedurePrepareLatch {
     return hasProcedureSupport(major, minor) ? noopLatch : new CompatibilityLatch();
   }
 
+  /**
+   * Creates a latch which blocks.
+   */
+  public static ProcedurePrepareLatch createBlockingLatch() {
+    return new CompatibilityLatch();
+  }
+
+  /**
+   * Returns the singleton latch which does nothing.
+   */
+  public static ProcedurePrepareLatch getNoopLatch() {
+    return noopLatch;
+  }
+
   private static boolean hasProcedureSupport(int major, int minor) {
     return VersionInfoUtil.currentClientHasMinimumVersion(major, minor);
   }
@@ -64,14 +78,16 @@ public abstract class ProcedurePrepareLatch {
   protected abstract void countDown(final Procedure proc);
   public abstract void await() throws IOException;
 
-  protected static void releaseLatch(final ProcedurePrepareLatch latch, final Procedure proc) {
+  public static void releaseLatch(final ProcedurePrepareLatch latch, final Procedure proc) {
     if (latch != null) {
       latch.countDown(proc);
     }
   }
 
   private static class NoopLatch extends ProcedurePrepareLatch {
+    @Override
     protected void countDown(final Procedure proc) {}
+    @Override
     public void await() throws IOException {}
   }
 
@@ -80,6 +96,7 @@ public abstract class ProcedurePrepareLatch {
 
     private IOException exception = null;
 
+    @Override
     protected void countDown(final Procedure proc) {
       if (proc.hasException()) {
         exception = proc.getException().unwrapRemoteIOException();
@@ -87,6 +104,7 @@ public abstract class ProcedurePrepareLatch {
       latch.countDown();
     }
 
+    @Override
     public void await() throws IOException {
       try {
         latch.await();

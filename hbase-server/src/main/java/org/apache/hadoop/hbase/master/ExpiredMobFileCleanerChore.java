@@ -21,18 +21,18 @@ package org.apache.hadoop.hbase.master;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.ExpiredMobFileCleaner;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.procedure2.LockType;
 
 /**
  * The Class ExpiredMobFileCleanerChore for running cleaner regularly to remove the expired
@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 @InterfaceAudience.Private
 public class ExpiredMobFileCleanerChore extends ScheduledChore {
 
-  private static final Log LOG = LogFactory.getLog(ExpiredMobFileCleanerChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExpiredMobFileCleanerChore.class);
   private final HMaster master;
   private ExpiredMobFileCleaner cleaner;
 
@@ -61,14 +61,14 @@ public class ExpiredMobFileCleanerChore extends ScheduledChore {
   protected void chore() {
     try {
       TableDescriptors htds = master.getTableDescriptors();
-      Map<String, HTableDescriptor> map = htds.getAll();
-      for (HTableDescriptor htd : map.values()) {
-        for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      Map<String, TableDescriptor> map = htds.getAll();
+      for (TableDescriptor htd : map.values()) {
+        for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
           if (hcd.isMobEnabled() && hcd.getMinVersions() == 0) {
             // clean only for mob-enabled column.
             // obtain a read table lock before cleaning, synchronize with MobFileCompactionChore.
             final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
-                MobUtils.getTableLockName(htd.getTableName()), LockProcedure.LockType.SHARED,
+                MobUtils.getTableLockName(htd.getTableName()), LockType.SHARED,
                 this.getClass().getSimpleName() + ": Cleaning expired mob files");
             try {
               lock.acquire();

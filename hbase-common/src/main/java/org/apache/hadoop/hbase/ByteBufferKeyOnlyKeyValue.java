@@ -18,11 +18,15 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Optional;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is a key only Cell implementation which is identical to {@link KeyValue.KeyOnlyKeyValue}
@@ -30,8 +34,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  * (onheap and offheap).
  */
 @InterfaceAudience.Private
-public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
-
+public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
+  public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
+      + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT;
   private ByteBuffer buf;
   private int offset = 0; // offset into buffer where key starts at
   private int length = 0; // length of this.
@@ -148,6 +153,21 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
   }
 
   @Override
+  public void setSequenceId(long seqId) throws IOException {
+    throw new IllegalArgumentException("This is a key only Cell");
+  }
+
+  @Override
+  public void setTimestamp(long ts) throws IOException {
+    throw new IllegalArgumentException("This is a key only Cell");
+  }
+
+  @Override
+  public void setTimestamp(byte[] ts) throws IOException {
+    throw new IllegalArgumentException("This is a key only Cell");
+  }
+
+  @Override
   public long getSequenceId() {
     return 0;
   }
@@ -241,5 +261,23 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
   @Override
   public String toString() {
     return CellUtil.toString(this, false);
+  }
+
+  @Override
+  public Iterator<Tag> getTags() {
+    return Collections.emptyIterator();
+  }
+
+  @Override
+  public Optional<Tag> getTag(byte type) {
+    return Optional.empty();
+  }
+
+  @Override
+  public long heapSize() {
+    if (this.buf.hasArray()) {
+      return ClassSize.align(FIXED_OVERHEAD + length);
+    }
+    return ClassSize.align(FIXED_OVERHEAD);
   }
 }

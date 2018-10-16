@@ -26,7 +26,7 @@ module Hbase
 
     def initialize(admin)
       @admin = admin
-      @connection = @admin.getConnection()
+      @connection = @admin.getConnection
     end
 
     def close
@@ -34,31 +34,33 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    def grant(user, permissions, table_name=nil, family=nil, qualifier=nil)
+    def grant(user, permissions, table_name = nil, family = nil, qualifier = nil)
       security_available?
 
       # TODO: need to validate user name
 
       begin
         # Verify that the specified permission is valid
-        if (permissions == nil || permissions.length == 0)
-          raise(ArgumentError, "Invalid permission: no actions associated with user")
+        if permissions.nil? || permissions.empty?
+          raise(ArgumentError, 'Invalid permission: no actions associated with user')
         end
 
         perm = org.apache.hadoop.hbase.security.access.Permission.new(
-                  permissions.to_java_bytes)
+          permissions.to_java_bytes
+        )
 
-        if (table_name != nil)
-          tablebytes=table_name.to_java_bytes
-          #check if the tablename passed is actually a namespace
-          if (isNamespace?(table_name))
+        if !table_name.nil?
+          tablebytes = table_name.to_java_bytes
+          # check if the tablename passed is actually a namespace
+          if isNamespace?(table_name)
             # Namespace should exist first.
             namespace_name = table_name[1...table_name.length]
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless
               namespace_exists?(namespace_name)
 
             org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
-              @connection, namespace_name, user, perm.getActions())
+              @connection, namespace_name, user, perm.getActions
+            )
           else
             # Table should exist
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
@@ -66,100 +68,106 @@ module Hbase
             tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
             htd = @admin.getTableDescriptor(tableName)
 
-            if (family != nil)
-             raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
+            unless family.nil?
+              raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
             end
 
-            fambytes = family.to_java_bytes if (family != nil)
-            qualbytes = qualifier.to_java_bytes if (qualifier != nil)
+            fambytes = family.to_java_bytes unless family.nil?
+            qualbytes = qualifier.to_java_bytes unless qualifier.nil?
 
             org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
-              @connection, tableName, user, fambytes, qualbytes, perm.getActions())
+              @connection, tableName, user, fambytes, qualbytes, perm.getActions
+            )
           end
         else
           # invoke cp endpoint to perform access controls
           org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
-            @connection, user, perm.getActions())
+            @connection, user, perm.getActions
+          )
         end
       end
     end
 
     #----------------------------------------------------------------------------------------------
-    def revoke(user, table_name=nil, family=nil, qualifier=nil)
+    def revoke(user, table_name = nil, family = nil, qualifier = nil)
       security_available?
 
       # TODO: need to validate user name
 
       begin
-        if (table_name != nil)
-          #check if the tablename passed is actually a namespace
-          if (isNamespace?(table_name))
+        if !table_name.nil?
+          # check if the tablename passed is actually a namespace
+          if isNamespace?(table_name)
             # Namespace should exist first.
             namespace_name = table_name[1...table_name.length]
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
 
-            tablebytes=table_name.to_java_bytes
+            tablebytes = table_name.to_java_bytes
             org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
-              @connection, namespace_name, user)
+              @connection, namespace_name, user
+            )
           else
-             # Table should exist
-             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
+            # Table should exist
+            raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-             tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
-             htd = @admin.getTableDescriptor(tableName)
+            tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
+            htd = @admin.getTableDescriptor(tableName)
 
-             if (family != nil)
-               raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
-             end
+            unless family.nil?
+              raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
+            end
 
-             fambytes = family.to_java_bytes if (family != nil)
-             qualbytes = qualifier.to_java_bytes if (qualifier != nil)
+            fambytes = family.to_java_bytes unless family.nil?
+            qualbytes = qualifier.to_java_bytes unless qualifier.nil?
 
             org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
-              @connection, tableName, user, fambytes, qualbytes)
+              @connection, tableName, user, fambytes, qualbytes
+            )
           end
         else
           perm = org.apache.hadoop.hbase.security.access.Permission.new(''.to_java_bytes)
           org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
-            @connection, user, perm.getActions())
+            @connection, user, perm.getActions
+          )
         end
       end
     end
 
     #----------------------------------------------------------------------------------------------
-    def user_permission(table_regex=nil)
+    def user_permission(table_regex = nil)
       security_available?
       all_perms = org.apache.hadoop.hbase.security.access.AccessControlClient.getUserPermissions(
-        @connection,table_regex)
+        @connection, table_regex
+      )
       res = {}
-      count  = 0
+      count = 0
       all_perms.each do |value|
-          user_name = String.from_java_bytes(value.getUser)
-          if (table_regex != nil && isNamespace?(table_regex))
-            namespace = value.getNamespace()
-          else
-            namespace = (value.getTableName != nil) ? value.getTableName.getNamespaceAsString() : value.getNamespace()
-          end
-          table = (value.getTableName != nil) ? value.getTableName.getNameAsString() : ''
-          family = (value.getFamily != nil) ?
-            org.apache.hadoop.hbase.util.Bytes::toStringBinary(value.getFamily) :
-            ''
-          qualifier = (value.getQualifier != nil) ?
-            org.apache.hadoop.hbase.util.Bytes::toStringBinary(value.getQualifier) :
-            ''
+        user_name = String.from_java_bytes(value.getUser)
+        if !table_regex.nil? && isNamespace?(table_regex)
+          namespace = value.getNamespace
+        else
+          namespace = !value.getTableName.nil? ? value.getTableName.getNamespaceAsString : value.getNamespace
+        end
+        table = !value.getTableName.nil? ? value.getTableName.getNameAsString : ''
+        family = !value.getFamily.nil? ?
+          org.apache.hadoop.hbase.util.Bytes.toStringBinary(value.getFamily) :
+          ''
+        qualifier = !value.getQualifier.nil? ?
+          org.apache.hadoop.hbase.util.Bytes.toStringBinary(value.getQualifier) :
+          ''
 
-          action = org.apache.hadoop.hbase.security.access.Permission.new value.getActions
+        action = org.apache.hadoop.hbase.security.access.Permission.new value.getActions
 
-          if block_given?
-            yield(user_name, "#{namespace},#{table},#{family},#{qualifier}: #{action.to_s}")
-          else
-            res[user_name] ||= {}
-            res[user_name]["#{family}:#{qualifier}"] = action
-          end
-          count += 1
+        if block_given?
+          yield(user_name, "#{namespace},#{table},#{family},#{qualifier}: #{action}")
+        else
+          res[user_name] ||= {}
+          res[user_name]["#{family}:#{qualifier}"] = action
+        end
+        count += 1
       end
 
-      return ((block_given?) ? count : res)
+      (block_given? ? count : res)
     end
 
     # Does table exist?
@@ -171,15 +179,15 @@ module Hbase
       table_name.start_with?('@')
     end
 
-     # Does Namespace exist
+    # Does Namespace exist
     def namespace_exists?(namespace_name)
-      return @admin.getNamespaceDescriptor(namespace_name) != nil
+      return !@admin.getNamespaceDescriptor(namespace_name).nil?
     rescue org.apache.hadoop.hbase.NamespaceNotFoundException => e
       return false
     end
 
     # Make sure that security features are available
-    def security_available?()
+    def security_available?
       caps = []
       begin
         # Try the getSecurityCapabilities API where supported.
@@ -189,11 +197,11 @@ module Hbase
       rescue
         # If we are unable to use getSecurityCapabilities, fall back with a check for
         # deployment of the ACL table
-        raise(ArgumentError, "DISABLED: Security features are not available") unless \
-          exists?(org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
+        raise(ArgumentError, 'DISABLED: Security features are not available') unless \
+          exists?(org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME.getNameAsString)
         return
       end
-      raise(ArgumentError, "DISABLED: Security features are not available") unless \
+      raise(ArgumentError, 'DISABLED: Security features are not available') unless \
         caps.include? org.apache.hadoop.hbase.client.security.SecurityCapability::AUTHORIZATION
     end
   end

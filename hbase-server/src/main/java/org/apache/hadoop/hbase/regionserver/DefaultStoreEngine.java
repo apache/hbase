@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPoli
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Default StoreEngine creates the default compactor, policy, and store file manager, or
@@ -57,14 +57,14 @@ public class DefaultStoreEngine extends StoreEngine<
     DEFAULT_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
 
   @Override
-  public boolean needsCompaction(List<StoreFile> filesCompacting) {
+  public boolean needsCompaction(List<HStoreFile> filesCompacting) {
     return compactionPolicy.needsCompaction(
         this.storeFileManager.getStorefiles(), filesCompacting);
   }
 
   @Override
   protected void createComponents(
-      Configuration conf, Store store, CellComparator kvComparator) throws IOException {
+      Configuration conf, HStore store, CellComparator kvComparator) throws IOException {
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
@@ -73,17 +73,17 @@ public class DefaultStoreEngine extends StoreEngine<
             compactionPolicy.getConf());
   }
 
-  protected void createCompactor(Configuration conf, Store store) throws IOException {
+  protected void createCompactor(Configuration conf, HStore store) throws IOException {
     String className = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class, Store.class }, new Object[] { conf, store });
+          new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
     } catch (Exception e) {
       throw new IOException("Unable to load configured compactor '" + className + "'", e);
     }
   }
 
-  protected void createCompactionPolicy(Configuration conf, Store store) throws IOException {
+  protected void createCompactionPolicy(Configuration conf, HStore store) throws IOException {
     String className = conf.get(
         DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
     try {
@@ -95,12 +95,12 @@ public class DefaultStoreEngine extends StoreEngine<
     }
   }
 
-  protected void createStoreFlusher(Configuration conf, Store store) throws IOException {
+  protected void createStoreFlusher(Configuration conf, HStore store) throws IOException {
     String className = conf.get(
         DEFAULT_STORE_FLUSHER_CLASS_KEY, DEFAULT_STORE_FLUSHER_CLASS.getName());
     try {
       storeFlusher = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class, Store.class }, new Object[] { conf, store });
+          new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
     } catch (Exception e) {
       throw new IOException("Unable to load configured store flusher '" + className + "'", e);
     }
@@ -113,7 +113,7 @@ public class DefaultStoreEngine extends StoreEngine<
 
   private class DefaultCompactionContext extends CompactionContext {
     @Override
-    public boolean select(List<StoreFile> filesCompacting, boolean isUserCompaction,
+    public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
         boolean mayUseOffPeak, boolean forceMajor) throws IOException {
       request = compactionPolicy.selectCompaction(storeFileManager.getStorefiles(),
           filesCompacting, isUserCompaction, mayUseOffPeak, forceMajor);
@@ -127,7 +127,7 @@ public class DefaultStoreEngine extends StoreEngine<
     }
 
     @Override
-    public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
+    public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
       return compactionPolicy.preSelectCompactionForCoprocessor(
           storeFileManager.getStorefiles(), filesCompacting);
     }

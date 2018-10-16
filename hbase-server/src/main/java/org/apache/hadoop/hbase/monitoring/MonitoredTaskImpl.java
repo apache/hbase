@@ -18,11 +18,16 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @InterfaceAudience.Private
@@ -30,11 +35,15 @@ class MonitoredTaskImpl implements MonitoredTask {
   private long startTime;
   private long statusTime;
   private long stateTime;
-  
+  private long warnTime;
+
   private volatile String status;
   private volatile String description;
   
   protected volatile State state = State.RUNNING;
+
+  private boolean journalEnabled = false;
+  private List<StatusJournalEntry> journal;
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -42,6 +51,36 @@ class MonitoredTaskImpl implements MonitoredTask {
     startTime = System.currentTimeMillis();
     statusTime = startTime;
     stateTime = startTime;
+    warnTime = startTime;
+  }
+
+  private static class StatusJournalEntryImpl implements StatusJournalEntry {
+    private long statusTime;
+    private String status;
+
+    public StatusJournalEntryImpl(String status, long statusTime) {
+      this.status = status;
+      this.statusTime = statusTime;
+    }
+
+    @Override
+    public String getStatus() {
+      return status;
+    }
+
+    @Override
+    public long getTimeStamp() {
+      return statusTime;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(status);
+      sb.append(" at ");
+      sb.append(statusTime);
+      return sb.toString();
+    }
   }
 
   @Override
@@ -82,7 +121,12 @@ class MonitoredTaskImpl implements MonitoredTask {
   public long getStateTime() {
     return stateTime;
   }
-  
+
+  @Override
+  public long getWarnTime() {
+    return warnTime;
+  }
+
   @Override
   public long getCompletionTimestamp() {
     if (state == State.COMPLETE || state == State.ABORTED) {
@@ -119,6 +163,9 @@ class MonitoredTaskImpl implements MonitoredTask {
   public void setStatus(String status) {
     this.status = status;
     statusTime = System.currentTimeMillis();
+    if (journalEnabled) {
+      journal.add(new StatusJournalEntryImpl(this.status, statusTime));
+    }
   }
 
   protected void setState(State state) {
@@ -132,6 +179,11 @@ class MonitoredTaskImpl implements MonitoredTask {
   }
 
   @Override
+  public void setWarnTime(long t) {
+    this.warnTime = t;
+  }
+
+  @Override
   public void cleanup() {
     if (state == State.RUNNING) {
       setState(State.ABORTED);
@@ -142,6 +194,7 @@ class MonitoredTaskImpl implements MonitoredTask {
    * Force the completion timestamp backwards so that
    * it expires now.
    */
+  @Override
   public void expireNow() {
     stateTime -= 180 * 1000;
   }
@@ -176,6 +229,49 @@ class MonitoredTaskImpl implements MonitoredTask {
     sb.append(", completionTime=");
     sb.append(getCompletionTimestamp());
     return sb.toString();
+  }
+
+  /**
+   * Returns the status journal. This implementation of status journal is not thread-safe. Currently
+   * we use this to track various stages of flushes and compactions where we can use this/pretty
+   * print for post task analysis, by which time we are already done changing states (writing to
+   * journal)
+   */
+  @Override
+  public List<StatusJournalEntry> getStatusJournal() {
+    if (journal == null) {
+      return Collections.emptyList();
+    } else {
+      return Collections.unmodifiableList(journal);
+    }
+  }
+
+  /**
+   * Enables journaling of this monitored task, the first invocation will lazily initialize the
+   * journal. The journal implementation itself and this method are not thread safe
+   */
+  @Override
+  public void enableStatusJournal(boolean includeCurrentStatus) {
+    if (journalEnabled && journal != null) {
+      return;
+    }
+    journalEnabled = true;
+    if (journal == null) {
+      journal = new ArrayList<StatusJournalEntry>();
+    }
+    if (includeCurrentStatus) {
+      journal.add(new StatusJournalEntryImpl(status, statusTime));
+    }
+  }
+
+  @Override
+  public void disableStatusJournal() {
+    journalEnabled = false;
+  }
+
+  @Override
+  public String prettyPrintJournal() {
+    return StringUtils.join("\n\t", getStatusJournal());
   }
 
 }

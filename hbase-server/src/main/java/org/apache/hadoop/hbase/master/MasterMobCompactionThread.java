@@ -27,16 +27,16 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class MasterMobCompactionThread {
-  static final Log LOG = LogFactory.getLog(MasterMobCompactionThread.class);
+  static final Logger LOG = LoggerFactory.getLogger(MasterMobCompactionThread.class);
   private final HMaster master;
   private final Configuration conf;
   private final ExecutorService mobCompactorPool;
@@ -79,7 +79,7 @@ public class MasterMobCompactionThread {
    * @param allFiles Whether add all mob files into the compaction.
    */
   public void requestMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
-      List<HColumnDescriptor> columns, boolean allFiles) throws IOException {
+                                   List<ColumnFamilyDescriptor> columns, boolean allFiles) throws IOException {
     master.reportMobCompactionStart(tableName);
     try {
       masterMobPool.execute(new CompactionRunner(fs, tableName, columns,
@@ -102,11 +102,11 @@ public class MasterMobCompactionThread {
   private class CompactionRunner implements Runnable {
     private FileSystem fs;
     private TableName tableName;
-    private List<HColumnDescriptor> hcds;
+    private List<ColumnFamilyDescriptor> hcds;
     private boolean allFiles;
     private ExecutorService pool;
 
-    public CompactionRunner(FileSystem fs, TableName tableName, List<HColumnDescriptor> hcds,
+    public CompactionRunner(FileSystem fs, TableName tableName, List<ColumnFamilyDescriptor> hcds,
       boolean allFiles, ExecutorService pool) {
       super();
       this.fs = fs;
@@ -120,10 +120,10 @@ public class MasterMobCompactionThread {
     public void run() {
       // These locks are on dummy table names, and only used for compaction/mob file cleaning.
       final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
-          MobUtils.getTableLockName(tableName), LockProcedure.LockType.EXCLUSIVE,
+          MobUtils.getTableLockName(tableName), LockType.EXCLUSIVE,
           this.getClass().getName() + ": mob compaction");
       try {
-        for (HColumnDescriptor hcd : hcds) {
+        for (ColumnFamilyDescriptor hcd : hcds) {
           MobUtils.doMobCompaction(conf, fs, tableName, hcd, pool, allFiles, lock);
         }
       } catch (IOException e) {

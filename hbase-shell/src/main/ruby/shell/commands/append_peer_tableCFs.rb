@@ -19,9 +19,9 @@
 
 module Shell
   module Commands
-    class AppendPeerTableCFs< Command
+    class AppendPeerTableCFs < Command
       def help
-        return <<-EOF
+        <<-EOF
 Append a replicable table-cf config for the specified peer
 Examples:
 
@@ -33,6 +33,10 @@ EOF
 
       def command(id, table_cfs)
         replication_admin.append_peer_tableCFs(id, table_cfs)
+      end
+
+      def command_name
+        'append_peer_tableCFs'
       end
     end
   end

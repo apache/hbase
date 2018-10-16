@@ -20,8 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ObjectPool.ObjectFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@code WeakReference} based shared object pool.

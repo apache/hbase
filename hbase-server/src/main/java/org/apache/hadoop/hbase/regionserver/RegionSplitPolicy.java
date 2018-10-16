@@ -19,19 +19,22 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
-import com.google.common.base.Preconditions;
 
 /**
- * A split policy determines when a region should be split.
+ * A split policy determines when a Region should be split.
+ *
+ * @see SteppingSplitPolicy Default split policy since 2.0.0
  * @see IncreasingToUpperBoundRegionSplitPolicy Default split policy since
  *      0.94.0
  * @see ConstantSizeRegionSplitPolicy Default split policy before 0.94.0
@@ -39,10 +42,13 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class RegionSplitPolicy extends Configured {
   private static final Class<? extends RegionSplitPolicy>
-    DEFAULT_SPLIT_POLICY_CLASS = IncreasingToUpperBoundRegionSplitPolicy.class;
+    DEFAULT_SPLIT_POLICY_CLASS = SteppingSplitPolicy.class;
 
   /**
    * The region configured for this split policy.
+   * As of hbase-2.0.0, RegionSplitPolicy can be instantiated on the Master-side so the
+   * Phoenix local-indexer can block default hbase behavior. This is an exotic usage. Should not
+   * trouble any other users of RegionSplitPolicy.
    */
   protected HRegion region;
 
@@ -74,16 +80,16 @@ public abstract class RegionSplitPolicy extends Configured {
     if (explicitSplitPoint != null) {
       return explicitSplitPoint;
     }
-    List<Store> stores = region.getStores();
+    List<HStore> stores = region.getStores();
 
     byte[] splitPointFromLargestStore = null;
     long largestStoreSize = 0;
-    for (Store s : stores) {
-      byte[] splitPoint = s.getSplitPoint();
+    for (HStore s : stores) {
+      Optional<byte[]> splitPoint = s.getSplitPoint();
       // Store also returns null if it has references as way of indicating it is not splittable
       long storeSize = s.getSize();
-      if (splitPoint != null && largestStoreSize < storeSize) {
-        splitPointFromLargestStore = splitPoint;
+      if (splitPoint.isPresent() && largestStoreSize < storeSize) {
+        splitPointFromLargestStore = splitPoint.get();
         largestStoreSize = storeSize;
       }
     }
@@ -100,15 +106,16 @@ public abstract class RegionSplitPolicy extends Configured {
    */
   public static RegionSplitPolicy create(HRegion region,
       Configuration conf) throws IOException {
+    Preconditions.checkNotNull(region, "Region should not be null.");
     Class<? extends RegionSplitPolicy> clazz = getSplitPolicyClass(
-        region.getTableDesc(), conf);
+        region.getTableDescriptor(), conf);
     RegionSplitPolicy policy = ReflectionUtils.newInstance(clazz, conf);
     policy.configureForRegion(region);
     return policy;
   }
 
   public static Class<? extends RegionSplitPolicy> getSplitPolicyClass(
-      HTableDescriptor htd, Configuration conf) throws IOException {
+      TableDescriptor htd, Configuration conf) throws IOException {
     String className = htd.getRegionSplitPolicyClassName();
     if (className == null) {
       className = conf.get(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
@@ -128,13 +135,19 @@ public abstract class RegionSplitPolicy extends Configured {
   }
 
   /**
-   * In {@link HRegionFileSystem#splitStoreFile(org.apache.hadoop.hbase.HRegionInfo, String,
-   * StoreFile, byte[], boolean, RegionSplitPolicy)} we are not creating the split reference
-   * if split row not lies in the StoreFile range. But in some use cases we may need to create
-   * the split reference even when the split row not lies in the range. This method can be used
-   * to decide, whether to skip the the StoreFile range check or not.
-   * @return whether to skip the StoreFile range check or not
-   * @param familyName
+   * In {@link HRegionFileSystem#splitStoreFile(org.apache.hadoop.hbase.client.RegionInfo, String,
+   * HStoreFile, byte[], boolean, RegionSplitPolicy)} we are not creating the split reference
+   * if split row does not lie inside the StoreFile range. But in some use cases we may need to
+   * create the split reference even when the split row does not lie inside the StoreFile range.
+   * This method can be used to decide, whether to skip the the StoreFile range check or not.
+   *
+   * <p>This method is not for general use. It is a mechanism put in place by Phoenix
+   * local indexing to defeat standard hbase behaviors. Phoenix local indices are very likely
+   * the only folks who would make use of this method. On the Master-side, we will instantiate
+   * a RegionSplitPolicy instance and run this method ONLY... none of the others make sense
+   * on the Master-side.</p>
+   *
+   * TODO: Shutdown this phoenix specialization or do it via some other means.
    * @return whether to skip the StoreFile range check or not
    */
   protected boolean skipStoreFileRangeCheck(String familyName) {

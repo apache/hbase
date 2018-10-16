@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,17 +21,23 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsZooKeeperSourceImpl {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetricsZooKeeperSourceImpl.class);
 
   @Test
-  public void testGetInstance() throws Exception {
-    MetricsZooKeeperSource zkSource = CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
+  public void testGetInstance() {
+    MetricsZooKeeperSource zkSource =
+            CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
     assertTrue(zkSource instanceof MetricsZooKeeperSourceImpl);
     assertSame(zkSource, CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class));
   }

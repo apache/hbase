@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,10 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.metrics2.util;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Specifies a quantile (with error bounds) to be watched by a
@@ -26,8 +25,14 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MetricQuantile {
-  public final double quantile;
-  public final double error;
+  /**
+   * The quantile to be watched by a {@link MetricSampleQuantiles}.
+   */
+  final double quantile;
+  /**
+   * The error bounds for the {@link #quantile}.
+   */
+  final double error;
 
   public MetricQuantile(double quantile, double error) {
     this.quantile = quantile;

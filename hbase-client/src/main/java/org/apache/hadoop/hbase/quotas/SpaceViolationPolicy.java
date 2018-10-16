@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Enumeration that represents the action HBase will take when a space quota is violated.
@@ -41,5 +41,5 @@ public enum SpaceViolationPolicy {
   /**
    * Disallows any updates (but allows deletes and compactions) on the table(s).
    */
-  NO_INSERTS;
+  NO_INSERTS
 }

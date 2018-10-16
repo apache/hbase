@@ -22,13 +22,12 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * It's provided to have a way for coprocessors to observe, rewrite,
@@ -66,25 +65,30 @@ import org.apache.hadoop.hbase.wal.WALKey;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface WALObserver extends Coprocessor {
+public interface WALObserver {
   /**
-   * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
+   * Called before a {@link WALEdit}
    * is writen to WAL.
-   *
-   * @return true if default behavior should be bypassed, false otherwise
+   * Do not amend the WALKey. It is InterfaceAudience.Private. Changing the WALKey will cause
+   * damage.
+   * @deprecated Since hbase-2.0.0. To be replaced with an alternative that does not expose
+   * InterfaceAudience classes such as WALKey and WALEdit. Will be removed in hbase-3.0.0.
    */
-  // TODO: return value is not used
-  default boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
-    return false;
-  }
+  @Deprecated
+  default void preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
-   * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
+   * Called after a {@link WALEdit}
    * is writen to WAL.
+   * Do not amend the WALKey. It is InterfaceAudience.Private. Changing the WALKey will cause
+   * damage.
+   * @deprecated Since hbase-2.0.0. To be replaced with an alternative that does not expose
+   * InterfaceAudience classes such as WALKey and WALEdit. Will be removed in hbase-3.0.0.
    */
+  @Deprecated
   default void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
    * Called before rolling the current WAL

@@ -22,13 +22,14 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility functions for region server storage layer.
@@ -36,12 +37,12 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class StoreUtils {
 
-  private static final Log LOG = LogFactory.getLog(StoreUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreUtils.class);
 
   /**
    * Creates a deterministic hash code for store file collection.
    */
-  public static OptionalInt getDeterministicRandomSeed(Collection<StoreFile> files) {
+  public static OptionalInt getDeterministicRandomSeed(Collection<HStoreFile> files) {
     return files.stream().mapToInt(f -> f.getPath().getName().hashCode()).findFirst();
   }
 
@@ -49,25 +50,18 @@ public class StoreUtils {
    * Determines whether any files in the collection are references.
    * @param files The files.
    */
-  public static boolean hasReferences(final Collection<StoreFile> files) {
-    if (files != null) {
-      for (StoreFile hsf: files) {
-        if (hsf.isReference()) {
-          return true;
-        }
-      }
-    }
-    return false;
+  public static boolean hasReferences(Collection<HStoreFile> files) {
+    // TODO: make sure that we won't pass null here in the future.
+    return files != null ? files.stream().anyMatch(HStoreFile::isReference) : false;
   }
 
   /**
    * Gets lowest timestamp from candidate StoreFiles
    */
-  public static long getLowestTimestamp(final Collection<StoreFile> candidates)
-    throws IOException {
+  public static long getLowestTimestamp(Collection<HStoreFile> candidates) throws IOException {
     long minTs = Long.MAX_VALUE;
-    for (StoreFile storeFile : candidates) {
-      minTs = Math.min(minTs, storeFile.getModificationTimeStamp());
+    for (HStoreFile storeFile : candidates) {
+      minTs = Math.min(minTs, storeFile.getModificationTimestamp());
     }
     return minTs;
   }
@@ -77,7 +71,7 @@ public class StoreUtils {
    * @param candidates The files to choose from.
    * @return The largest file; null if no file has a reader.
    */
-  static Optional<StoreFile> getLargestFile(Collection<StoreFile> candidates) {
+  static Optional<HStoreFile> getLargestFile(Collection<HStoreFile> candidates) {
     return candidates.stream().filter(f -> f.getReader() != null)
         .max((f1, f2) -> Long.compare(f1.getReader().length(), f2.getReader().length()));
   }
@@ -86,32 +80,17 @@ public class StoreUtils {
    * Return the largest memstoreTS found across all storefiles in the given list. Store files that
    * were created by a mapreduce bulk load are ignored, as they do not correspond to any specific
    * put operation, and thus do not have a memstoreTS associated with them.
-   * @return 0 if no non-bulk-load files are provided or, this is Store that does not yet have any
-   *         store files.
    */
-  public static long getMaxMemstoreTSInList(Collection<StoreFile> sfs) {
-    long max = 0;
-    for (StoreFile sf : sfs) {
-      if (!sf.isBulkLoadResult()) {
-        max = Math.max(max, sf.getMaxMemstoreTS());
-      }
-    }
-    return max;
+  public static OptionalLong getMaxMemStoreTSInList(Collection<HStoreFile> sfs) {
+    return sfs.stream().filter(sf -> !sf.isBulkLoadResult()).mapToLong(HStoreFile::getMaxMemStoreTS)
+        .max();
   }
 
   /**
-   * Return the highest sequence ID found across all storefiles in
-   * the given list.
-   * @param sfs
-   * @return 0 if no non-bulk-load files are provided or, this is Store that
-   * does not yet have any store files.
+   * Return the highest sequence ID found across all storefiles in the given list.
    */
-  public static long getMaxSequenceIdInList(Collection<StoreFile> sfs) {
-    long max = 0;
-    for (StoreFile sf : sfs) {
-      max = Math.max(max, sf.getMaxSequenceId());
-    }
-    return max;
+  public static OptionalLong getMaxSequenceIdInList(Collection<HStoreFile> sfs) {
+    return sfs.stream().mapToLong(HStoreFile::getMaxSequenceId).max();
   }
 
   /**
@@ -120,7 +99,7 @@ public class StoreUtils {
    * @param comparator Comparator used to compare KVs.
    * @return The split point row, or null if splitting is not possible, or reader is null.
    */
-  static Optional<byte[]> getFileSplitPoint(StoreFile file, CellComparator comparator)
+  static Optional<byte[]> getFileSplitPoint(HStoreFile file, CellComparator comparator)
       throws IOException {
     StoreFileReader reader = file.getReader();
     if (reader == null) {
@@ -130,20 +109,31 @@ public class StoreUtils {
     // Get first, last, and mid keys. Midkey is the key that starts block
     // in middle of hfile. Has column and timestamp. Need to return just
     // the row we want to split on as midkey.
-    Cell midkey = reader.midkey();
-    if (midkey != null) {
-      Cell firstKey = reader.getFirstKey();
-      Cell lastKey = reader.getLastKey();
-      // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
-      if (comparator.compareRows(midkey, firstKey) == 0 ||
-          comparator.compareRows(midkey, lastKey) == 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("cannot split because midkey is the same as first or last row");
-        }
-        return Optional.empty();
-      }
-      return Optional.of(CellUtil.cloneRow(midkey));
+    Optional<Cell> optionalMidKey = reader.midKey();
+    if (!optionalMidKey.isPresent()) {
+      return Optional.empty();
     }
-    return Optional.empty();
+    Cell midKey = optionalMidKey.get();
+    Cell firstKey = reader.getFirstKey().get();
+    Cell lastKey = reader.getLastKey().get();
+    // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
+    if (comparator.compareRows(midKey, firstKey) == 0 ||
+        comparator.compareRows(midKey, lastKey) == 0) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("cannot split {} because midkey is the same as first or last row", file);
+      }
+      return Optional.empty();
+    }
+    return Optional.of(CellUtil.cloneRow(midKey));
+  }
+
+  /**
+   * Gets the mid point of the largest file passed in as split point.
+   */
+  static Optional<byte[]> getSplitPoint(Collection<HStoreFile> storefiles,
+      CellComparator comparator) throws IOException {
+    Optional<HStoreFile> largestFile = StoreUtils.getLargestFile(storefiles);
+    return largestFile.isPresent() ? StoreUtils.getFileSplitPoint(largestFile.get(), comparator)
+        : Optional.empty();
   }
 }

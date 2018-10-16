@@ -15,21 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-import static org.junit.Assert.*;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -38,12 +37,20 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestModifyNamespaceProcedure {
-  private static final Log LOG = LogFactory.getLog(TestModifyNamespaceProcedure.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestModifyNamespaceProcedure.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestModifyNamespaceProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -81,7 +88,7 @@ public class TestModifyNamespaceProcedure {
   }
 
 
-  @Test(timeout = 60000)
+  @Test
   public void testModifyNamespace() throws Exception {
     final NamespaceDescriptor nsd = NamespaceDescriptor.create("testModifyNamespace").build();
     final String nsKey1 = "hbase.namespace.quota.maxregions";
@@ -97,7 +104,7 @@ public class TestModifyNamespaceProcedure {
     // Before modify
     NamespaceDescriptor currentNsDescriptor =
         UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
-    assertEquals(currentNsDescriptor.getConfigurationValue(nsKey1), nsValue1before);
+    assertEquals(nsValue1before, currentNsDescriptor.getConfigurationValue(nsKey1));
     assertNull(currentNsDescriptor.getConfigurationValue(nsKey2));
 
     // Update
@@ -113,11 +120,11 @@ public class TestModifyNamespaceProcedure {
     // Verify the namespace is updated.
     currentNsDescriptor =
         UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
-    assertEquals(nsd.getConfigurationValue(nsKey1), nsValue1after);
-    assertEquals(currentNsDescriptor.getConfigurationValue(nsKey2), nsValue2);
+    assertEquals(nsValue1after, nsd.getConfigurationValue(nsKey1));
+    assertEquals(nsValue2, currentNsDescriptor.getConfigurationValue(nsKey2));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testModifyNonExistNamespace() throws Exception {
     final String namespaceName = "testModifyNonExistNamespace";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -138,14 +145,14 @@ public class TestModifyNamespaceProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     // Expect fail with NamespaceNotFoundException
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("modify namespace failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("modify namespace failed with exception: " + result.getException());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceNotFoundException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testModifyNamespaceWithInvalidRegionCount() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testModifyNamespaceWithInvalidRegionCount").build();
@@ -162,13 +169,13 @@ public class TestModifyNamespaceProcedure {
       new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Modify namespace failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Modify namespace failed with exception: " + result.getException());
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testModifyNamespaceWithInvalidTableCount() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testModifyNamespaceWithInvalidTableCount").build();
@@ -185,13 +192,13 @@ public class TestModifyNamespaceProcedure {
       new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Modify namespace failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Modify namespace failed with exception: " + result.getException());
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testRecoveryAndDoubleExecution").build();
@@ -217,10 +224,10 @@ public class TestModifyNamespaceProcedure {
     // Validate
     NamespaceDescriptor currentNsDescriptor =
         UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
-    assertEquals(currentNsDescriptor.getConfigurationValue(nsKey), nsValue);
+    assertEquals(nsValue, currentNsDescriptor.getConfigurationValue(nsKey));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testRollbackAndDoubleExecution").build();

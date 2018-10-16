@@ -40,19 +40,6 @@
     <surefire.version>2.19</surefire.version>
     <junit.version>4.12</junit.version>
   </properties>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>${surefire.version}</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
-
   <dependencies>
     <!-- Dependency for hbase-testing-util must precede compile-scoped dependencies. -->
     <dependency>
@@ -63,8 +50,21 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-client</artifactId>
       <version>${project.version}</version>
+      <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

@@ -22,17 +22,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithMOB;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * Integration Test for MOB ingest.
@@ -41,7 +46,7 @@ import org.junit.experimental.categories.Category;
 public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   private static final char COLON = ':';
 
-  private byte[] mobColumnFamily = LoadTestTool.DEFAULT_COLUMN_FAMILY;
+  private byte[] mobColumnFamily = HFileTestUtil.DEFAULT_COLUMN_FAMILY;
   public static final String THRESHOLD = "threshold";
   public static final String MIN_MOB_DATA_SIZE = "minMobDataSize";
   public static final String MAX_MOB_DATA_SIZE = "maxMobDataSize";
@@ -53,7 +58,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   //similar to LOAD_TEST_TOOL_INIT_ARGS except OPT_IN_MEMORY is removed
   protected String[] LOAD_TEST_TOOL_MOB_INIT_ARGS = {
       LoadTestTool.OPT_COMPRESSION,
-      LoadTestTool.OPT_DATA_BLOCK_ENCODING,
+      HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
       LoadTestTool.OPT_ENCRYPTION,
       LoadTestTool.OPT_NUM_REGIONS_PER_SERVER,
       LoadTestTool.OPT_REGION_REPLICATION,
@@ -106,27 +111,27 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   @Test
   public void testIngest() throws Exception {
     runIngestTest(JUNIT_RUN_TIME, 100, 10, 1024, 10, 20);
-  };
+  }
 
   @Override
   protected void initTable() throws IOException {
     super.initTable();
 
     TableName tableName = getTablename();
-    Admin admin = ConnectionFactory.createConnection().getAdmin();
-    HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
-    LOG.info("Disabling table " + getTablename());
-    admin.disableTable(tableName);
-    for (HColumnDescriptor columnDescriptor : tableDesc.getFamilies()) {
-      if(Arrays.equals(columnDescriptor.getName(), mobColumnFamily)) {
-        columnDescriptor.setMobEnabled(true);
-        columnDescriptor.setMobThreshold((long) threshold);
-        admin.modifyColumnFamily(tableName, columnDescriptor);
-      }
+    try (Connection connection = ConnectionFactory.createConnection();
+         Admin admin = connection.getAdmin()) {
+      HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
+      LOG.info("Disabling table " + getTablename());
+      admin.disableTable(tableName);
+      ColumnFamilyDescriptor mobColumn = tableDesc.getColumnFamily(mobColumnFamily);
+      ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(mobColumn)
+        .setMobEnabled(true)
+        .setMobThreshold((long) threshold)
+        .build();
+      admin.modifyColumnFamily(tableName, cfd);
+      LOG.info("Enabling table " + getTablename());
+      admin.enableTable(tableName);
     }
-    LOG.info("Enabling table " + getTablename());
-    admin.enableTable(tableName);
-    admin.close();
   }
 
   @Override

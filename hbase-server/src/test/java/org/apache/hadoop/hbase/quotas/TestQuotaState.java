@@ -15,36 +15,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
-
-import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
+
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestQuotaState {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestQuotaState.class);
+
   private static final TableName UNKNOWN_TABLE_NAME = TableName.valueOf("unknownTable");
 
   @Rule
   public TestName name = new TestName();
 
-  @Test(timeout=60000)
+  @Test
   public void testQuotaStateBypass() {
     QuotaState quotaInfo = new QuotaState();
     assertTrue(quotaInfo.isBypass());
@@ -55,7 +60,7 @@ public class TestQuotaState {
     assertNoopLimiter(userQuotaState.getTableLimiter(UNKNOWN_TABLE_NAME));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSimpleQuotaStateOperation() {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final int NUM_GLOBAL_THROTTLE = 3;
@@ -76,7 +81,7 @@ public class TestQuotaState {
     assertThrottleException(quotaInfo.getTableLimiter(tableName), NUM_TABLE_THROTTLE);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testQuotaStateUpdateBypassThrottle() {
     final long LAST_UPDATE = 10;
 
@@ -95,7 +100,7 @@ public class TestQuotaState {
     assertNoopLimiter(quotaInfo.getTableLimiter(UNKNOWN_TABLE_NAME));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testQuotaStateUpdateGlobalThrottle() {
     final int NUM_GLOBAL_THROTTLE_1 = 3;
     final int NUM_GLOBAL_THROTTLE_2 = 11;
@@ -141,7 +146,7 @@ public class TestQuotaState {
     assertNoopLimiter(quotaInfo.getGlobalLimiter());
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testQuotaStateUpdateTableThrottle() {
     final TableName tableNameA = TableName.valueOf(name.getMethodName() + "A");
     final TableName tableNameB = TableName.valueOf(name.getMethodName() + "B");
@@ -198,6 +203,34 @@ public class TestQuotaState {
     assertNoopLimiter(quotaInfo.getTableLimiter(UNKNOWN_TABLE_NAME));
   }
 
+  @Test(timeout = 60000)
+  public void testTableThrottleWithBatch() {
+    final TableName TABLE_A = TableName.valueOf("TableA");
+    final int TABLE_A_THROTTLE_1 = 3;
+    final long LAST_UPDATE_1 = 10;
+
+    UserQuotaState quotaInfo = new UserQuotaState();
+    assertEquals(0, quotaInfo.getLastUpdate());
+    assertTrue(quotaInfo.isBypass());
+
+    // Add A table limiters
+    UserQuotaState otherQuotaState = new UserQuotaState(LAST_UPDATE_1);
+    otherQuotaState.setQuotas(TABLE_A, buildReqNumThrottle(TABLE_A_THROTTLE_1));
+    assertEquals(LAST_UPDATE_1, otherQuotaState.getLastUpdate());
+    assertFalse(otherQuotaState.isBypass());
+
+    quotaInfo.update(otherQuotaState);
+    assertEquals(LAST_UPDATE_1, quotaInfo.getLastUpdate());
+    assertFalse(quotaInfo.isBypass());
+    QuotaLimiter limiter = quotaInfo.getTableLimiter(TABLE_A);
+    try {
+      limiter.checkQuota(TABLE_A_THROTTLE_1 + 1, TABLE_A_THROTTLE_1 + 1, 0, 0);
+      fail("Should have thrown RpcThrottlingException");
+    } catch (RpcThrottlingException e) {
+      // expected
+    }
+  }
+
   private Quotas buildReqNumThrottle(final long limit) {
     return Quotas.newBuilder()
             .setThrottle(Throttle.newBuilder()
@@ -209,9 +242,9 @@ public class TestQuotaState {
   private void assertThrottleException(final QuotaLimiter limiter, final int availReqs) {
     assertNoThrottleException(limiter, availReqs);
     try {
-      limiter.checkQuota(1, 1);
-      fail("Should have thrown ThrottlingException");
-    } catch (ThrottlingException e) {
+      limiter.checkQuota(1, 1, 0, 0);
+      fail("Should have thrown RpcThrottlingException");
+    } catch (RpcThrottlingException e) {
       // expected
     }
   }
@@ -219,11 +252,11 @@ public class TestQuotaState {
   private void assertNoThrottleException(final QuotaLimiter limiter, final int availReqs) {
     for (int i = 0; i < availReqs; ++i) {
       try {
-        limiter.checkQuota(1, 1);
-      } catch (ThrottlingException e) {
-        fail("Unexpected ThrottlingException after " + i + " requests. limit=" + availReqs);
+        limiter.checkQuota(1, 1, 0, 0);
+      } catch (RpcThrottlingException e) {
+        fail("Unexpected RpcThrottlingException after " + i + " requests. limit=" + availReqs);
       }
-      limiter.grabQuota(1, 1);
+      limiter.grabQuota(1, 1, 0, 0);
     }
   }
 

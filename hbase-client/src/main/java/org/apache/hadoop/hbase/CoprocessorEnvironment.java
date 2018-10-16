@@ -19,18 +19,16 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Coprocessor environment state.
  */
-@InterfaceAudience.Private
-public interface CoprocessorEnvironment {
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
+public interface CoprocessorEnvironment<C extends Coprocessor> {
 
   /** @return the Coprocessor interface version */
   int getVersion();
@@ -39,7 +37,7 @@ public interface CoprocessorEnvironment {
   String getHBaseVersion();
 
   /** @return the loaded coprocessor instance */
-  Coprocessor getInstance();
+  C getInstance();
 
   /** @return the priority assigned to the loaded coprocessor */
   int getPriority();
@@ -47,21 +45,11 @@ public interface CoprocessorEnvironment {
   /** @return the load sequence number */
   int getLoadSequence();
 
-  /** @return the configuration */
+  /**
+   * @return a Read-only Configuration; throws {@link UnsupportedOperationException} if you try
+   *   to set a configuration.
+   */
   Configuration getConfiguration();
-
-  /**
-   * @return an interface for accessing the given table
-   * @throws IOException
-   */
-  Table getTable(TableName tableName) throws IOException;
-
-  /**
-   * @return an interface for accessing the given table using the passed executor to run batch
-   *         operations
-   * @throws IOException
-   */
-  Table getTable(TableName tableName, ExecutorService service) throws IOException;
 
   /**
    * @return the classloader for the loaded coprocessor instance

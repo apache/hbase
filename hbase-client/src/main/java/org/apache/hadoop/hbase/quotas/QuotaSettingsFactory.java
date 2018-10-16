@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -53,6 +55,24 @@ public class QuotaSettingsFactory {
     @Override
     public String toString() {
       return "GLOBAL_BYPASS => " + bypassGlobals;
+    }
+
+    protected boolean getBypass() {
+      return bypassGlobals;
+    }
+
+    @Override
+    protected QuotaGlobalsSettingsBypass merge(QuotaSettings newSettings) throws IOException {
+      if (newSettings instanceof QuotaGlobalsSettingsBypass) {
+        QuotaGlobalsSettingsBypass other = (QuotaGlobalsSettingsBypass) newSettings;
+
+        validateQuotaTarget(other);
+
+        if (getBypass() != other.getBypass()) {
+          return other;
+        }
+      }
+      return this;
     }
   }
 
@@ -96,7 +116,7 @@ public class QuotaSettingsFactory {
     return settings;
   }
 
-  private static List<QuotaSettings> fromThrottle(final String userName, final TableName tableName,
+  protected static List<QuotaSettings> fromThrottle(final String userName, final TableName tableName,
       final String namespace, final QuotaProtos.Throttle throttle) {
     List<QuotaSettings> settings = new ArrayList<>();
     if (throttle.hasReqNum()) {
@@ -127,13 +147,22 @@ public class QuotaSettingsFactory {
   }
 
   static QuotaSettings fromSpace(TableName table, String namespace, SpaceQuota protoQuota) {
+    if (protoQuota == null) {
+      return null;
+    }
     if ((table == null && namespace == null) || (table != null && namespace != null)) {
       throw new IllegalArgumentException(
           "Can only construct SpaceLimitSettings for a table or namespace.");
     }
     if (table != null) {
+      if (protoQuota.getRemove()) {
+        return new SpaceLimitSettings(table);
+      }
       return SpaceLimitSettings.fromSpaceQuota(table, protoQuota);
     } else {
+      if (protoQuota.getRemove()) {
+        return new SpaceLimitSettings(namespace);
+      }
       // namespace must be non-null
       return SpaceLimitSettings.fromSpaceQuota(namespace, protoQuota);
     }

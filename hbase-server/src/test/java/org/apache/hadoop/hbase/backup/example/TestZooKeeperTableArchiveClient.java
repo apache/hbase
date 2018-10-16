@@ -21,34 +21,32 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
+import org.apache.hadoop.hbase.master.cleaner.CleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,16 +54,19 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Spin up a small cluster and check that the hfiles of region are properly long-term archived as
@@ -74,7 +75,11 @@ import org.mockito.stubbing.Answer;
 @Category({MiscTests.class, MediumTests.class})
 public class TestZooKeeperTableArchiveClient {
 
-  private static final Log LOG = LogFactory.getLog(TestZooKeeperTableArchiveClient.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestZooKeeperTableArchiveClient.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestZooKeeperTableArchiveClient.class);
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   private static final String STRING_TABLE_NAME = "test";
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
@@ -94,7 +99,7 @@ public class TestZooKeeperTableArchiveClient {
     CONNECTION = (ClusterConnection)ConnectionFactory.createConnection(UTIL.getConfiguration());
     archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), CONNECTION);
     // make hfile archiving node so we can archive files
-    ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
+    ZKWatcher watcher = UTIL.getZooKeeperWatcher();
     String archivingZNode = ZKTableArchiveClient.getArchiveZNode(UTIL.getConfiguration(), watcher);
     ZKUtil.createWithParents(watcher, archivingZNode);
     rss = mock(RegionServerServices.class);
@@ -136,7 +141,7 @@ public class TestZooKeeperTableArchiveClient {
   /**
    * Test turning on/off archiving
    */
-  @Test (timeout=300000)
+  @Test
   public void testArchivingEnableDisable() throws Exception {
     // 1. turn on hfile backups
     LOG.debug("----Starting archiving");
@@ -159,7 +164,7 @@ public class TestZooKeeperTableArchiveClient {
       archivingClient.getArchivingEnabled(TABLE_NAME));
   }
 
-  @Test (timeout=300000)
+  @Test
   public void testArchivingOnSingleTable() throws Exception {
     createArchiveDirectory();
     FileSystem fs = UTIL.getTestFileSystem();
@@ -171,16 +176,17 @@ public class TestZooKeeperTableArchiveClient {
     Configuration conf = UTIL.getConfiguration();
     // setup the delegate
     Stoppable stop = new StoppableImplementation();
+    CleanerChore.initChorePool(conf);
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);
 
     // create the region
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(TEST_FAM);
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
-    List<Region> regions = new ArrayList<>();
+    List<HRegion> regions = new ArrayList<>();
     regions.add(region);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner =
         new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
@@ -207,7 +213,7 @@ public class TestZooKeeperTableArchiveClient {
    * Test archiving/cleaning across multiple tables, where some are retained, and others aren't
    * @throws Exception on failure
    */
-  @Test (timeout=300000)
+  @Test
   public void testMultipleTables() throws Exception {
     createArchiveDirectory();
     String otherTable = "otherTable";
@@ -225,25 +231,26 @@ public class TestZooKeeperTableArchiveClient {
     // setup the delegate
     Stoppable stop = new StoppableImplementation();
     final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    CleanerChore.initChorePool(conf);
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);
     // create the region
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(TEST_FAM);
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
-    List<Region> regions = new ArrayList<>();
+    List<HRegion> regions = new ArrayList<>();
     regions.add(region);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner =
         new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
     compactionCleaner.chore();
     // create the another table that we don't archive
-    hcd = new HColumnDescriptor(TEST_FAM);
+    hcd = ColumnFamilyDescriptorBuilder.of(TEST_FAM);
     HRegion otherRegion = UTIL.createTestRegion(otherTable, hcd);
     regions = new ArrayList<>();
     regions.add(otherRegion);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner1 = new CompactedHFilesDischarger(100, stop,
         rss, false);
     loadFlushAndCompact(otherRegion, TEST_FAM);
@@ -363,7 +370,7 @@ public class TestZooKeeperTableArchiveClient {
       public Iterable<FileStatus> answer(InvocationOnMock invocation) throws Throwable {
         counter[0]++;
         LOG.debug(counter[0] + "/ " + expected + ") Wrapping call to getDeletableFiles for files: "
-            + invocation.getArguments()[0]);
+            + invocation.getArgument(0));
 
         @SuppressWarnings("unchecked")
         Iterable<FileStatus> ret = (Iterable<FileStatus>) invocation.callRealMethod();
@@ -400,12 +407,12 @@ public class TestZooKeeperTableArchiveClient {
     return allFiles;
   }
 
-  private void loadFlushAndCompact(Region region, byte[] family) throws IOException {
+  private void loadFlushAndCompact(HRegion region, byte[] family) throws IOException {
     // create two hfiles in the region
     createHFileInRegion(region, family);
     createHFileInRegion(region, family);
 
-    Store s = region.getStore(family);
+    HStore s = region.getStore(family);
     int count = s.getStorefilesCount();
     assertTrue("Don't have the expected store files, wanted >= 2 store files, but was:" + count,
       count >= 2);
@@ -421,7 +428,7 @@ public class TestZooKeeperTableArchiveClient {
    * @param columnFamily family for which to add data
    * @throws IOException
    */
-  private void createHFileInRegion(Region region, byte[] columnFamily) throws IOException {
+  private void createHFileInRegion(HRegion region, byte[] columnFamily) throws IOException {
     // put one row in the region
     Put p = new Put(Bytes.toBytes("row"));
     p.addColumn(columnFamily, Bytes.toBytes("Qual"), Bytes.toBytes("v1"));

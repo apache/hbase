@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} for interacting with values encoded using
@@ -38,20 +38,33 @@ public class RawString implements DataType<String> {
 
   protected final Order order;
 
-  protected RawString() { this.order = Order.ASCENDING; }
-  protected RawString(Order order) { this.order = order; }
+  protected RawString() {
+    this.order = Order.ASCENDING;
+  }
+
+  protected RawString(Order order) {
+    this.order = order;
+  }
 
   @Override
-  public boolean isOrderPreserving() { return true; }
+  public boolean isOrderPreserving() {
+    return true;
+  }
 
   @Override
-  public Order getOrder() { return order; }
+  public Order getOrder() {
+    return order;
+  }
 
   @Override
-  public boolean isNullable() { return false; }
+  public boolean isNullable() {
+    return false;
+  }
 
   @Override
-  public boolean isSkippable() { return false; }
+  public boolean isSkippable() {
+    return false;
+  }
 
   @Override
   public int skip(PositionedByteRange src) {
@@ -61,10 +74,14 @@ public class RawString implements DataType<String> {
   }
 
   @Override
-  public int encodedLength(String val) { return Bytes.toBytes(val).length; }
+  public int encodedLength(String val) {
+    return Bytes.toBytes(val).length;
+  }
 
   @Override
-  public Class<String> encodedClass() { return String.class; }
+  public Class<String> encodedClass() {
+    return String.class;
+  }
 
   @Override
   public String decode(PositionedByteRange src) {

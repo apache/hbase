@@ -22,10 +22,11 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
@@ -41,7 +42,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class FileMmapEngine implements IOEngine {
-  static final Log LOG = LogFactory.getLog(FileMmapEngine.class);
+  static final Logger LOG = LoggerFactory.getLogger(FileMmapEngine.class);
 
   private final String path;
   private long size;
@@ -69,22 +70,15 @@ public class FileMmapEngine implements IOEngine {
       throw ioex;
     }
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
-      int pos = 0;
+      AtomicInteger pos = new AtomicInteger(0);
       @Override
-      public ByteBuffer allocate(long size, boolean directByteBuffer) throws IOException {
-        ByteBuffer buffer = null;
-        if (directByteBuffer) {
-          buffer = fileChannel.map(java.nio.channels.FileChannel.MapMode.READ_WRITE, pos * size,
-              size);
-        } else {
-          throw new IllegalArgumentException(
-              "Only Direct Bytebuffers allowed with FileMMap engine");
-        }
-        pos++;
+      public ByteBuffer allocate(long size) throws IOException {
+        ByteBuffer buffer = fileChannel.map(java.nio.channels.FileChannel.MapMode.READ_WRITE,
+          pos.getAndIncrement() * size, size);
         return buffer;
       }
     };
-    bufferArray = new ByteBufferArray(fileSize, true, allocator);
+    bufferArray = new ByteBufferArray(fileSize, allocator);
   }
 
   private long roundUp(long n, long to) {
@@ -112,7 +106,7 @@ public class FileMmapEngine implements IOEngine {
     byte[] dst = new byte[length];
     bufferArray.getMultiple(offset, length, dst);
     return deserializer.deserialize(new SingleByteBuff(ByteBuffer.wrap(dst)), true,
-        MemoryType.EXCLUSIVE);
+      MemoryType.EXCLUSIVE);
   }
 
   /**

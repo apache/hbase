@@ -18,21 +18,25 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.BULKLOAD_TIME_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -43,12 +47,22 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 
 /**
  * Utility class for HFile-related testing.
  */
 public class HFileTestUtil {
+
+  public static final String OPT_DATA_BLOCK_ENCODING_USAGE =
+    "Encoding algorithm (e.g. prefix "
+        + "compression) to use for data blocks in the test column family, "
+        + "one of " + Arrays.toString(DataBlockEncoding.values()) + ".";
+  public static final String OPT_DATA_BLOCK_ENCODING =
+      HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase(Locale.ROOT);
+  /** Column family used by the test */
+  public static byte[] DEFAULT_COLUMN_FAMILY = Bytes.toBytes("test_cf");
+  /** Column families used by the test */
+  public static final byte[][] DEFAULT_COLUMN_FAMILIES = { DEFAULT_COLUMN_FAMILY };
 
   /**
    * Create an HFile with the given number of rows between a given
@@ -122,15 +136,15 @@ public class HFileTestUtil {
           kv = MobUtils.createMobRefCell(kv, key, tableNameTag);
 
           // verify that the kv has the tag.
-          Tag t = CellUtil.getTag(kv, TagType.MOB_TABLE_NAME_TAG_TYPE);
-          if (t == null) {
+          Optional<Tag> tag = PrivateCellUtil.getTag(kv, TagType.MOB_TABLE_NAME_TAG_TYPE);
+          if (!tag.isPresent()) {
             throw new IllegalStateException("Tag didn't stick to KV " + kv.toString());
           }
         }
         writer.append(kv);
       }
     } finally {
-      writer.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
+      writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
       writer.close();
     }
   }
@@ -146,12 +160,13 @@ public class HFileTestUtil {
     ResultScanner s = table.getScanner(new Scan());
     for (Result r : s) {
       for (Cell c : r.listCells()) {
-        Tag t = CellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
-        if (t == null) {
+        Optional<Tag> tag = PrivateCellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
+        if (!tag.isPresent()) {
           fail(c.toString() + " has null tag");
           continue;
         }
-        byte[] tval = TagUtil.cloneValue(t);
+        Tag t = tag.get();
+        byte[] tval = Tag.cloneValue(t);
         assertArrayEquals(c.toString() + " has tag" + Bytes.toString(tval),
             r.getRow(), tval);
       }

@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.util;
 import java.net.URL;
 import java.net.URLClassLoader;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Base class loader that defines couple shared constants used by sub-classes.

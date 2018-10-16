@@ -15,17 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Base class for all the Table procedures that want to use a StateMachineProcedure.
@@ -78,8 +88,12 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   }
 
   @Override
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+    return env.waitInitialized(this);
+  }
+
+  @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return LockState.LOCK_EVENT_WAIT;
     if (env.getProcedureScheduler().waitTableExclusiveLock(this, getTableName())) {
       return LockState.LOCK_EVENT_WAIT;
     }
@@ -113,5 +127,67 @@ public abstract class AbstractStateMachineTableProcedure<TState>
     if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
       throw new TableNotFoundException(getTableName());
     }
+  }
+
+  protected final Path getWALRegionDir(MasterProcedureEnv env, RegionInfo region)
+      throws IOException {
+    return FSUtils.getWALRegionDir(env.getMasterConfiguration(),
+        region.getTable(), region.getEncodedName());
+  }
+
+  /**
+   * Check that cluster is up and master is running. Check table is modifiable.
+   * If <code>enabled</code>, check table is enabled else check it is disabled.
+   * Call in Procedure constructor so can pass any exception to caller.
+   * @param enabled If true, check table is enabled and throw exception if not. If false, do the
+   *                inverse. If null, do no table checks.
+   */
+  protected void preflightChecks(MasterProcedureEnv env, Boolean enabled) throws HBaseIOException {
+    MasterServices master = env.getMasterServices();
+    if (!master.isClusterUp()) {
+      throw new HBaseIOException("Cluster not up!");
+    }
+    if (master.isStopping() || master.isStopped()) {
+      throw new HBaseIOException("Master stopping=" + master.isStopping() +
+          ", stopped=" + master.isStopped());
+    }
+    if (enabled == null) {
+      // Don't do any table checks.
+      return;
+    }
+    try {
+      // Checks table exists and is modifiable.
+      checkTableModifiable(env);
+      TableName tn = getTableName();
+      TableStateManager tsm = master.getTableStateManager();
+      TableState ts = tsm.getTableState(tn);
+      if (enabled) {
+        if (!ts.isEnabledOrEnabling()) {
+          throw new TableNotEnabledException(tn);
+        }
+      } else {
+        if (!ts.isDisabledOrDisabling()) {
+          throw new TableNotDisabledException(tn);
+        }
+      }
+    } catch (IOException ioe) {
+      if (ioe instanceof HBaseIOException) {
+        throw (HBaseIOException)ioe;
+      }
+      throw new HBaseIOException(ioe);
+    }
+  }
+
+  /**
+   * Check region is online.
+   */
+  protected static void checkOnline(MasterProcedureEnv env, RegionInfo ri)
+      throws DoNotRetryRegionException {
+    RegionStateNode regionNode =
+      env.getAssignmentManager().getRegionStates().getRegionStateNode(ri);
+    if (regionNode == null) {
+      throw new UnknownRegionException("No RegionState found for " + ri.getEncodedName());
+    }
+    regionNode.checkOnline();
   }
 }

@@ -20,34 +20,32 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 
 /**
  * CombinedBlockCache is an abstraction layer that combines
  * {@link LruBlockCache} and {@link BucketCache}. The smaller lruCache is used
- * to cache bloom blocks and index blocks.  The larger l2Cache is used to
+ * to cache bloom blocks and index blocks.  The larger Cache is used to
  * cache data blocks. {@link #getBlock(BlockCacheKey, boolean, boolean, boolean)} reads
- * first from the smaller lruCache before looking for the block in the l2Cache.  Blocks evicted
- * from lruCache are put into the bucket cache. 
+ * first from the smaller lruCache before looking for the block in the l2Cache.
  * Metrics are the combined size and hits and misses of both caches.
- * 
  */
 @InterfaceAudience.Private
 public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
-  protected final LruBlockCache lruCache;
+  protected final LruBlockCache onHeapCache;
   protected final BlockCache l2Cache;
   protected final CombinedCacheStats combinedCacheStats;
 
-  public CombinedBlockCache(LruBlockCache lruCache, BlockCache l2Cache) {
-    this.lruCache = lruCache;
+  public CombinedBlockCache(LruBlockCache onHeapCache, BlockCache l2Cache) {
+    this.onHeapCache = onHeapCache;
     this.l2Cache = l2Cache;
-    this.combinedCacheStats = new CombinedCacheStats(lruCache.getStats(),
+    this.combinedCacheStats = new CombinedCacheStats(onHeapCache.getStats(),
         l2Cache.getStats());
   }
 
@@ -57,23 +55,22 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     if (l2Cache instanceof HeapSize) {
       l2size = ((HeapSize) l2Cache).heapSize();
     }
-    return lruCache.heapSize() + l2size;
+    return onHeapCache.heapSize() + l2size;
   }
 
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
-      final boolean cacheDataInL1) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     boolean metaBlock = buf.getBlockType().getCategory() != BlockCategory.DATA;
-    if (metaBlock || cacheDataInL1) {
-      lruCache.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
+    if (metaBlock) {
+      onHeapCache.cacheBlock(cacheKey, buf, inMemory);
     } else {
-      l2Cache.cacheBlock(cacheKey, buf, inMemory, false);
+      l2Cache.cacheBlock(cacheKey, buf, inMemory);
     }
   }
 
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-    cacheBlock(cacheKey, buf, false, false);
+    cacheBlock(cacheKey, buf, false);
   }
 
   @Override
@@ -81,19 +78,21 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
       boolean repeat, boolean updateCacheMetrics) {
     // TODO: is there a hole here, or just awkwardness since in the lruCache getBlock
     // we end up calling l2Cache.getBlock.
-    return lruCache.containsBlock(cacheKey)?
-        lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
+    // We are not in a position to exactly look at LRU cache or BC as BlockType may not be getting
+    // passed always.
+    return onHeapCache.containsBlock(cacheKey)?
+        onHeapCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
         l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
 
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
-    return lruCache.evictBlock(cacheKey) || l2Cache.evictBlock(cacheKey);
+    return onHeapCache.evictBlock(cacheKey) || l2Cache.evictBlock(cacheKey);
   }
 
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    return lruCache.evictBlocksByHfileName(hfileName)
+    return onHeapCache.evictBlocksByHfileName(hfileName)
         + l2Cache.evictBlocksByHfileName(hfileName);
   }
 
@@ -104,28 +103,43 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public void shutdown() {
-    lruCache.shutdown();
+    onHeapCache.shutdown();
     l2Cache.shutdown();
   }
 
   @Override
   public long size() {
-    return lruCache.size() + l2Cache.size();
+    return onHeapCache.size() + l2Cache.size();
+  }
+
+  @Override
+  public long getMaxSize() {
+    return onHeapCache.getMaxSize() + l2Cache.getMaxSize();
+  }
+
+  @Override
+  public long getCurrentDataSize() {
+    return onHeapCache.getCurrentDataSize() + l2Cache.getCurrentDataSize();
   }
 
   @Override
   public long getFreeSize() {
-    return lruCache.getFreeSize() + l2Cache.getFreeSize();
+    return onHeapCache.getFreeSize() + l2Cache.getFreeSize();
   }
 
   @Override
   public long getCurrentSize() {
-    return lruCache.getCurrentSize() + l2Cache.getCurrentSize();
+    return onHeapCache.getCurrentSize() + l2Cache.getCurrentSize();
   }
 
   @Override
   public long getBlockCount() {
-    return lruCache.getBlockCount() + l2Cache.getBlockCount();
+    return onHeapCache.getBlockCount() + l2Cache.getBlockCount();
+  }
+
+  @Override
+  public long getDataBlockCount() {
+    return onHeapCache.getDataBlockCount() + l2Cache.getDataBlockCount();
   }
 
   public static class CombinedCacheStats extends CacheStats {
@@ -348,12 +362,12 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public BlockCache[] getBlockCaches() {
-    return new BlockCache [] {this.lruCache, this.l2Cache};
+    return new BlockCache [] {this.onHeapCache, this.l2Cache};
   }
 
   @Override
   public void setMaxSize(long size) {
-    this.lruCache.setMaxSize(size);
+    this.onHeapCache.setMaxSize(size);
   }
 
   @Override
@@ -364,6 +378,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @VisibleForTesting
   public int getRefCount(BlockCacheKey cacheKey) {
-    return ((BucketCache) this.l2Cache).getRefCount(cacheKey);
+    return (this.l2Cache instanceof BucketCache)
+        ? ((BucketCache) this.l2Cache).getRefCount(cacheKey) : 0;
   }
 }

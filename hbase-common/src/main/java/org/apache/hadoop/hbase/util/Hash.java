@@ -20,8 +20,8 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * This class represents a common API for hashing functions.
@@ -74,15 +74,15 @@ public abstract class Hash {
    * @return hash function instance, or null if type is invalid
    */
   public static Hash getInstance(int type) {
-    switch(type) {
-    case JENKINS_HASH:
-      return JenkinsHash.getInstance();
-    case MURMUR_HASH:
-      return MurmurHash.getInstance();
-    case MURMUR_HASH3:
-      return MurmurHash3.getInstance();
-    default:
-      return null;
+    switch (type) {
+      case JENKINS_HASH:
+        return JenkinsHash.getInstance();
+      case MURMUR_HASH:
+        return MurmurHash.getInstance();
+      case MURMUR_HASH3:
+        return MurmurHash3.getInstance();
+      default:
+        return null;
     }
   }
 

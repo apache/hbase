@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Stores the state of data block encoder at the beginning of new key.

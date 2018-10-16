@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,8 +25,8 @@ import static org.junit.Assert.fail;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -44,6 +44,10 @@ import org.mockito.stubbing.Answer;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestServerNonceManager {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestServerNonceManager.class);
 
   @Test
   public void testMvcc() throws Exception {
@@ -101,7 +105,7 @@ public class TestServerNonceManager {
     ServerNonceManager nm = createManager();
     try {
       nm.endOperation(NO_NONCE, 1, true);
-      fail("Should have thrown");
+      throw new Error("Should have thrown");
     } catch (AssertionError err) {}
   }
 

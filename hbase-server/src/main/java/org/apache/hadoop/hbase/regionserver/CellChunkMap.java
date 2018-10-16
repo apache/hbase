@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.nio.ByteBuffer;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 import java.util.Comparator;
 
@@ -56,11 +56,11 @@ import java.util.Comparator;
 public class CellChunkMap extends CellFlatMap {
 
   private final Chunk[] chunks;             // the array of chunks, on which the index is based
-  private final int numOfCellsInsideChunk;  // constant number of cell-representations in a chunk
 
-  // each cell-representation requires three integers for chunkID (reference to the ByteBuffer),
-  // offset and length, and one long for seqID
-  public static final int SIZEOF_CELL_REP = 3*Bytes.SIZEOF_INT + Bytes.SIZEOF_LONG ;
+  // number of cell-representations in a chunk
+  // depends on the size of the chunks (may be index chunks or regular data chunks)
+  // each chunk starts with its own ID following the cells data
+  private final int numOfCellRepsInChunk;
 
   /**
    * C-tor for creating CellChunkMap from existing Chunk array, which must be ordered
@@ -75,9 +75,12 @@ public class CellChunkMap extends CellFlatMap {
       Chunk[] chunks, int min, int max, boolean descending) {
     super(comparator, min, max, descending);
     this.chunks = chunks;
-    this.numOfCellsInsideChunk = // each chunk starts with its own ID following the cells data
-        (ChunkCreator.getInstance().getChunkSize() - Bytes.SIZEOF_INT) / SIZEOF_CELL_REP;
-
+    if (chunks != null && chunks.length != 0 && chunks[0] != null) {
+      this.numOfCellRepsInChunk = (chunks[0].size - ChunkCreator.SIZEOF_CHUNK_HEADER) /
+              ClassSize.CELL_CHUNK_MAP_ENTRY;
+    } else { // In case the chunks array was not allocated
+      this.numOfCellRepsInChunk = 0;
+    }
   }
 
   /* To be used by base (CellFlatMap) class only to create a sub-CellFlatMap
@@ -91,20 +94,20 @@ public class CellChunkMap extends CellFlatMap {
   @Override
   protected Cell getCell(int i) {
     // get the index of the relevant chunk inside chunk array
-    int chunkIndex = (i / numOfCellsInsideChunk);
+    int chunkIndex = (i / numOfCellRepsInChunk);
     ByteBuffer block = chunks[chunkIndex].getData();// get the ByteBuffer of the relevant chunk
-    int j = i - chunkIndex * numOfCellsInsideChunk; // get the index of the cell-representation
+    int j = i - chunkIndex * numOfCellRepsInChunk; // get the index of the cell-representation
 
     // find inside the offset inside the chunk holding the index, skip bytes for chunk id
-    int offsetInBytes = Bytes.SIZEOF_INT + j* SIZEOF_CELL_REP;
-
+    int offsetInBytes = ChunkCreator.SIZEOF_CHUNK_HEADER + j* ClassSize.CELL_CHUNK_MAP_ENTRY;
 
     // find the chunk holding the data of the cell, the chunkID is stored first
     int chunkId = ByteBufferUtils.toInt(block, offsetInBytes);
     Chunk chunk = ChunkCreator.getInstance().getChunk(chunkId);
     if (chunk == null) {
-      // this should not happen, putting an assertion here at least for the testing period
-      assert false;
+      // this should not happen
+      throw new IllegalArgumentException("In CellChunkMap, cell must be associated with chunk."
+          + ". We were looking for a cell at index " + i);
     }
 
     // find the offset of the data of the cell, skip integer for chunkID, offset is stored second
@@ -118,10 +121,12 @@ public class CellChunkMap extends CellFlatMap {
 
     ByteBuffer buf = chunk.getData();   // get the ByteBuffer where the cell data is stored
     if (buf == null) {
-      // this should not happen, putting an assertion here at least for the testing period
-      assert false;
+      // this should not happen
+      throw new IllegalArgumentException("In CellChunkMap, chunk must be associated with ByteBuffer."
+          + " Chunk: " + chunk + " Chunk ID: " + chunk.getId() + ", is from pool: "
+          + chunk.isFromPool() + ". We were looking for a cell at index " + i);
     }
 
-    return new ByteBufferChunkCell(buf, offsetOfCell, lengthOfCell, cellSeqID);
+    return new ByteBufferChunkKeyValue(buf, offsetOfCell, lengthOfCell, cellSeqID);
   }
 }

@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Scan < Command
       def help
-        return <<-EOF
+        <<-EOF
 Scan a table; pass table name and optionally a dictionary of scanner
 specifications.  Scanner specifications may include one or more of:
 TIMERANGE, FILTER, LIMIT, STARTROW, STOPROW, ROWPREFIXFILTER, TIMESTAMP,
@@ -38,7 +38,7 @@ Filter Language document attached to the HBASE-4176 JIRA
 
 If you wish to see metrics regarding the execution of the scan, the
 ALL_METRICS boolean should be set to true. Alternatively, if you would
-prefer to see only a subset of the metrics, the METRICS array can be 
+prefer to see only a subset of the metrics, the METRICS array can be
 defined to include the names of only the metrics you care about.
 
 Some examples:
@@ -56,7 +56,7 @@ Some examples:
   hbase> scan 't1', {FILTER =>
     org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
   hbase> scan 't1', {CONSISTENCY => 'TIMELINE'}
-For setting the Operation Attributes 
+For setting the Operation Attributes
   hbase> scan 't1', { COLUMNS => ['c1', 'c2'], ATTRIBUTES => {'mykey' => 'myvalue'}}
   hbase> scan 't1', { COLUMNS => ['c1', 'c2'], AUTHORIZATIONS => ['PRIVATE','SECRET']}
 For experts, there is an additional option -- CACHE_BLOCKS -- which
@@ -74,14 +74,14 @@ Disabled by default.  Example:
 
 Besides the default 'toStringBinary' format, 'scan' supports custom formatting
 by column.  A user can define a FORMATTER by adding it to the column name in
-the scan specification.  The FORMATTER can be stipulated: 
+the scan specification.  The FORMATTER can be stipulated:
 
  1. either as a org.apache.hadoop.hbase.util.Bytes method name (e.g, toInt, toString)
  2. or as a custom class followed by method name: e.g. 'c(MyFormatterClass).format'.
 
-Example formatting cf:qualifier1 and cf:qualifier2 both as Integers: 
+Example formatting cf:qualifier1 and cf:qualifier2 both as Integers:
   hbase> scan 't1', {COLUMNS => ['cf:qualifier1:toInt',
-    'cf:qualifier2:c(org.apache.hadoop.hbase.util.Bytes).toInt'] } 
+    'cf:qualifier2:c(org.apache.hadoop.hbase.util.Bytes).toInt'] }
 
 Note that you can specify a FORMATTER by column only (cf:qualifier). You can set a
 formatter for all columns (including, all key parts) using the "FORMATTER"
@@ -107,27 +107,27 @@ EOF
         scan(table(table), args)
       end
 
-      #internal command that actually does the scanning
+      # internal command that actually does the scanning
       def scan(table, args = {})
-        formatter.header(["ROW", "COLUMN+CELL"])
+        formatter.header(['ROW', 'COLUMN+CELL'])
 
         scan = table._hash_to_scan(args)
-        #actually do the scanning
+        # actually do the scanning
         @start_time = Time.now
         count, is_stale = table._scan_internal(args, scan) do |row, cells|
-          formatter.row([ row, cells ])
+          formatter.row([row, cells])
         end
         @end_time = Time.now
 
         formatter.footer(count, is_stale)
         # if scan metrics were enabled, print them after the results
-        if (scan != nil && scan.isScanMetricsEnabled())
-          formatter.scan_metrics(scan.getScanMetrics(), args["METRICS"])
+        if !scan.nil? && scan.isScanMetricsEnabled
+          formatter.scan_metrics(scan.getScanMetrics, args['METRICS'])
         end
       end
     end
   end
 end
 
-#Add the method table.scan that calls Scan.scan
-::Hbase::Table.add_shell_command("scan")
+# Add the method table.scan that calls Scan.scan
+::Hbase::Table.add_shell_command('scan')

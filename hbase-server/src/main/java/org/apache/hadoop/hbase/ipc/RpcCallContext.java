@@ -18,8 +18,9 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetAddress;
+import java.util.Optional;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.security.User;
 
@@ -48,16 +49,18 @@ public interface RpcCallContext {
   boolean isClientCellBlockSupported();
 
   /**
-   * Returns the user credentials associated with the current RPC request or
-   * <code>null</code> if no credentials were provided.
+   * Returns the user credentials associated with the current RPC request or not present if no
+   * credentials were provided.
    * @return A User
    */
-  User getRequestUser();
+  Optional<User> getRequestUser();
 
   /**
-   * @return Current request's user name or null if none ongoing.
+   * @return Current request's user name or not present if none ongoing.
    */
-  String getRequestUserName();
+  default Optional<String> getRequestUserName() {
+    return getRequestUser().map(User::getShortName);
+  }
 
   /**
    * @return Address of remote client in this call

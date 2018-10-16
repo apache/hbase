@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.util.Random;
 
@@ -25,7 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 
 /**
  * A {@link RegionSplitPolicy} implementation which splits a region
@@ -47,7 +48,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     Configuration conf = getConf();
-    HTableDescriptor desc = region.getTableDesc();
+    TableDescriptor desc = region.getTableDescriptor();
     if (desc != null) {
       this.desiredMaxFileSize = desc.getMaxFileSize();
     }
@@ -71,7 +72,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
     boolean force = region.shouldForceSplit();
     boolean foundABigStore = false;
 
-    for (Store store : region.getStores()) {
+    for (HStore store : region.getStores()) {
       // If any of the stores are unable to split (eg they contain reference files)
       // then don't split
       if ((!store.canSplit())) {

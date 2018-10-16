@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -70,17 +70,8 @@ public final class VersionInfoUtil {
   /**
    * @return the versionInfo extracted from the current RpcCallContext
    */
-  private static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
-    RpcCallContext call = RpcServer.getCurrentCall();
-    return call != null ? call.getClientVersionInfo() : null;
-  }
-
-  /**
-   * @return the version number extracted from the current RpcCallContext as int.
-   *         (e.g. 0x0103004 is 1.3.4)
-   */
-  public static int getCurrentClientVersionNumber() {
-    return getVersionNumber(getCurrentClientVersionInfo());
+  public static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
+    return RpcServer.getCurrentCall().map(RpcCallContext::getClientVersionInfo).orElse(null);
   }
 
 
@@ -103,7 +94,7 @@ public final class VersionInfoUtil {
    * @param versionInfo the VersionInfo object to pack
    * @return the version number as int. (e.g. 0x0103004 is 1.3.4)
    */
-  private static int getVersionNumber(final HBaseProtos.VersionInfo versionInfo) {
+  public static int getVersionNumber(final HBaseProtos.VersionInfo versionInfo) {
     if (versionInfo != null) {
       try {
         final String[] components = getVersionComponents(versionInfo);

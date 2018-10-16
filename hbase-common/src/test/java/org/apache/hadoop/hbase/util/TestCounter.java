@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +16,23 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
-import java.util.concurrent.CountDownLatch;
 
+import java.util.concurrent.CountDownLatch;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestCounter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCounter.class);
+
   private static final int[] THREAD_COUNTS = {1, 10, 100};
   private static final int DATA_COUNT = 1000000;
 

@@ -21,16 +21,18 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Helper class for all utilities related to archival/retrieval of HFiles
  */
-public class HFileArchiveUtil {
+@InterfaceAudience.Private
+public final class HFileArchiveUtil {
   private HFileArchiveUtil() {
     // non-external instantiation - util class
   }
@@ -61,7 +63,7 @@ public class HFileArchiveUtil {
    *         not be archived
    */
   public static Path getStoreArchivePath(Configuration conf,
-                                         HRegionInfo region,
+                                         RegionInfo region,
                                          Path tabledir,
       byte[] family) throws IOException {
     return getStoreArchivePath(conf, region, family);
@@ -76,7 +78,7 @@ public class HFileArchiveUtil {
    *         not be archived
    */
   public static Path getStoreArchivePath(Configuration conf,
-                                         HRegionInfo region,
+                                         RegionInfo region,
       byte[] family) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     Path tableArchiveDir = getTableArchivePath(rootDir, region.getTable());
@@ -146,7 +148,7 @@ public class HFileArchiveUtil {
   }
 
   /**
-   * Get the full path to the archive directory on the configured 
+   * Get the full path to the archive directory on the configured
    * {@link org.apache.hadoop.hbase.master.MasterFileSystem}
    * @param conf to look for archive directory name and root directory. Cannot be null. Notes for
    *          testing: requires a FileSystem root directory to be specified.
@@ -158,7 +160,7 @@ public class HFileArchiveUtil {
   }
 
   /**
-   * Get the full path to the archive directory on the configured 
+   * Get the full path to the archive directory on the configured
    * {@link org.apache.hadoop.hbase.master.MasterFileSystem}
    * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
    *          the archive path)
@@ -167,7 +169,7 @@ public class HFileArchiveUtil {
   private static Path getArchivePath(final Path rootdir) {
     return new Path(rootdir, HConstants.HFILE_ARCHIVE_DIRECTORY);
   }
-  
+
   /*
    * @return table name given archive file path
    */

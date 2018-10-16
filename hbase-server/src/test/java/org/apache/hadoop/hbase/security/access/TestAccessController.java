@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,29 +18,34 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -51,7 +56,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -68,12 +72,13 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest;
@@ -92,51 +97,52 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
-import org.apache.hadoop.hbase.master.locking.LockProcedure.LockType;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
+import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
  * Performs authorization checks for common operations, according to different
@@ -144,14 +150,12 @@ import com.google.protobuf.ServiceException;
  */
 @Category({SecurityTests.class, LargeTests.class})
 public class TestAccessController extends SecureTestUtil {
-  private static final Log LOG = LogFactory.getLog(TestAccessController.class);
 
-  static {
-    Logger.getLogger(AccessController.class).setLevel(Level.TRACE);
-    Logger.getLogger(AccessControlFilter.class).setLevel(Level.TRACE);
-    Logger.getLogger(TableAuthManager.class).setLevel(Level.TRACE);
-  }
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAccessController.class);
 
+  private static final Logger LOG = LoggerFactory.getLogger(TestAccessController.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
@@ -212,6 +216,11 @@ public class TestAccessController extends SecureTestUtil {
     conf = TEST_UTIL.getConfiguration();
     // Up the handlers; this test needs more than usual.
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
+
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+      MyShellBasedUnixGroupsMapping.class.getName());
+    UserGroupInformation.setConfiguration(conf);
+
     // Enable security
     enableSecurity(conf);
     // In this particular test case, we can't use SecureBulkLoadEndpoint because its doAs will fail
@@ -224,16 +233,15 @@ public class TestAccessController extends SecureTestUtil {
     conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
 
     TEST_UTIL.startMiniCluster();
-    MasterCoprocessorHost cpHost =
+    MasterCoprocessorHost masterCpHost =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
-    cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
-    ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(AccessController.class.getName());
-    CP_ENV = cpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
-      Coprocessor.PRIORITY_HIGHEST, 1, conf);
-    RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
+    masterCpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
+    ACCESS_CONTROLLER = masterCpHost.findCoprocessor(AccessController.class);
+    CP_ENV = masterCpHost.createEnvironment(
+        ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RegionServerCoprocessorHost rsCpHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
       .getRegionServerCoprocessorHost();
-    RSCP_ENV = rsHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
-      Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RSCP_ENV = rsCpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
@@ -277,10 +285,9 @@ public class TestAccessController extends SecureTestUtil {
     htd.setOwner(USER_OWNER);
     createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
 
-    Region region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
+    HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
-    RCP_ENV = rcpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
-      Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RCP_ENV = rcpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Set up initial grants
 
@@ -316,12 +323,15 @@ public class TestAccessController extends SecureTestUtil {
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
 
     assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
+    int size = 0;
     try {
-      assertEquals(5, AccessControlClient.getUserPermissions(systemUserConnection,
-          TEST_TABLE.toString()).size());
+      size = AccessControlClient.getUserPermissions(systemUserConnection, TEST_TABLE.toString())
+          .size();
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
+      fail("error during call of AccessControlClient.getUserPermissions.");
     }
+    assertEquals(5, size);
   }
 
   private static void cleanUp() throws Exception {
@@ -340,7 +350,7 @@ public class TestAccessController extends SecureTestUtil {
         TEST_TABLE.getNamespaceAsString()).size());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testUnauthorizedShutdown() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override public Object run() throws Exception {
@@ -353,7 +363,7 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testUnauthorizedStopMaster() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override public Object run() throws Exception {
@@ -367,7 +377,7 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSecurityCapabilities() throws Exception {
     List<SecurityCapability> capabilities = TEST_UTIL.getConnection().getAdmin()
       .getSecurityCapabilities();
@@ -377,14 +387,14 @@ public class TestAccessController extends SecureTestUtil {
       capabilities.contains(SecurityCapability.CELL_AUTHORIZATION));
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableCreate() throws Exception {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContext.createAndPrepare(CP_ENV, null), htd, null);
+        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
         return null;
       }
     };
@@ -397,7 +407,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableModify() throws Exception {
     AccessTestAction modifyTable = new AccessTestAction() {
       @Override
@@ -405,8 +415,10 @@ public class TestAccessController extends SecureTestUtil {
         HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
         htd.addFamily(new HColumnDescriptor("fam_" + User.getCurrent().getShortName()));
-        ACCESS_CONTROLLER.preModifyTable(ObserverContext.createAndPrepare(CP_ENV, null),
-            TEST_TABLE, htd);
+        ACCESS_CONTROLLER.preModifyTable(ObserverContextImpl.createAndPrepare(CP_ENV),
+            TEST_TABLE,
+            null,  // not needed by AccessController
+            htd);
         return null;
       }
     };
@@ -416,13 +428,13 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(modifyTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableDelete() throws Exception {
     AccessTestAction deleteTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER
-            .preDeleteTable(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE);
+            .preDeleteTable(ObserverContextImpl.createAndPrepare(CP_ENV), TEST_TABLE);
         return null;
       }
     };
@@ -432,13 +444,13 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(deleteTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableTruncate() throws Exception {
     AccessTestAction truncateTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER
-            .preTruncateTable(ObserverContext.createAndPrepare(CP_ENV, null),
+            .preTruncateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
               TEST_TABLE);
         return null;
       }
@@ -449,63 +461,12 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
-  public void testAddColumn() throws Exception {
-    final HColumnDescriptor hcd = new HColumnDescriptor("fam_new");
-    AccessTestAction action = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preAddColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE,
-          hcd);
-        return null;
-      }
-    };
-
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
-      USER_GROUP_ADMIN);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
-  }
-
-  @Test (timeout=180000)
-  public void testModifyColumn() throws Exception {
-    final HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
-    hcd.setMaxVersions(10);
-    AccessTestAction action = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preModifyColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null),
-          TEST_TABLE, hcd);
-        return null;
-      }
-    };
-
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF,
-      USER_GROUP_CREATE, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
-  }
-
-  @Test (timeout=180000)
-  public void testDeleteColumn() throws Exception {
-    AccessTestAction action = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null),
-          TEST_TABLE, TEST_FAMILY);
-        return null;
-      }
-    };
-
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF,
-        USER_GROUP_CREATE, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
-  }
-
-  @Test (timeout=180000)
+  @Test
   public void testTableDisable() throws Exception {
     AccessTestAction disableTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDisableTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           TEST_TABLE);
         return null;
       }
@@ -514,7 +475,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction disableAclTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDisableTable(ObserverContextImpl.createAndPrepare(CP_ENV),
             AccessControlLists.ACL_TABLE_NAME);
         return null;
       }
@@ -529,13 +490,13 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_CREATE, USER_GROUP_ADMIN, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableEnable() throws Exception {
     AccessTestAction enableTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER
-            .preEnableTable(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE);
+            .preEnableTable(ObserverContextImpl.createAndPrepare(CP_ENV), TEST_TABLE);
         return null;
       }
     };
@@ -575,17 +536,19 @@ public class TestAccessController extends SecureTestUtil {
     }
 
     @Override
-    protected void serializeStateData(OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
       TestProcedureProtos.TestTableDDLStateData.Builder testTableDDLMsg =
           TestProcedureProtos.TestTableDDLStateData.newBuilder()
           .setTableName(tableName.getNameAsString());
-      testTableDDLMsg.build().writeDelimitedTo(stream);
+      serializer.serialize(testTableDDLMsg.build());
     }
 
     @Override
-    protected void deserializeStateData(InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
       TestProcedureProtos.TestTableDDLStateData testTableDDLMsg =
-          TestProcedureProtos.TestTableDDLStateData.parseDelimitedFrom(stream);
+          serializer.deserialize(TestProcedureProtos.TestTableDDLStateData.class);
       tableName = TableName.valueOf(testTableDDLMsg.getTableName());
     }
 
@@ -604,58 +567,59 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testAbortProcedure() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final ProcedureExecutor<MasterProcedureEnv> procExec =
-        TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
-    Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
-    proc.setOwner(USER_OWNER);
-    final long procId = procExec.submitProcedure(proc);
-
+    long procId = 1;
     AccessTestAction abortProcedureAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER
-        .preAbortProcedure(ObserverContext.createAndPrepare(CP_ENV, null), procExec, procId);
+        ACCESS_CONTROLLER.preAbortProcedure(ObserverContextImpl.createAndPrepare(CP_ENV), procId);
        return null;
       }
     };
 
     verifyAllowed(abortProcedureAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyAllowed(abortProcedureAction, USER_OWNER);
-    verifyDenied(
-      abortProcedureAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
-  public void testListProcedures() throws Exception {
+  public void testGetProcedures() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec =
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
     proc.setOwner(USER_OWNER);
-    final long procId = procExec.submitProcedure(proc);
-    final List<ProcedureInfo> procInfoList = procExec.listProcedures();
+    procExec.submitProcedure(proc);
+    final List<Procedure<MasterProcedureEnv>> procList = procExec.getProcedures();
 
-    AccessTestAction listProceduresAction = new AccessTestAction() {
+    AccessTestAction getProceduresAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        List<ProcedureInfo> procInfoListClone = new ArrayList<>(procInfoList.size());
-        for(ProcedureInfo pi : procInfoList) {
-          procInfoListClone.add(pi.clone());
-        }
         ACCESS_CONTROLLER
-        .postListProcedures(ObserverContext.createAndPrepare(CP_ENV, null), procInfoListClone);
+        .postGetProcedures(ObserverContextImpl.createAndPrepare(CP_ENV));
        return null;
       }
     };
 
-    verifyAllowed(listProceduresAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyAllowed(listProceduresAction, USER_OWNER);
+    verifyAllowed(getProceduresAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyAllowed(getProceduresAction, USER_OWNER);
     verifyIfNull(
-      listProceduresAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
+      getProceduresAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
+  public void testGetLocks() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetLocks(ObserverContextImpl.createAndPrepare(CP_ENV));
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE,
+      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
   public void testMove() throws Exception {
     List<HRegionLocation> regions;
     try (RegionLocator locator = systemUserConnection.getRegionLocator(TEST_TABLE)) {
@@ -667,7 +631,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preMove(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preMove(ObserverContextImpl.createAndPrepare(CP_ENV),
           hri, server, server);
         return null;
       }
@@ -678,7 +642,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAssign() throws Exception {
     List<HRegionLocation> regions;
     try (RegionLocator locator = systemUserConnection.getRegionLocator(TEST_TABLE)) {
@@ -689,7 +653,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preAssign(ObserverContext.createAndPrepare(CP_ENV, null), hri);
+        ACCESS_CONTROLLER.preAssign(ObserverContextImpl.createAndPrepare(CP_ENV), hri);
         return null;
       }
     };
@@ -699,7 +663,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testUnassign() throws Exception {
     List<HRegionLocation> regions;
     try (RegionLocator locator = systemUserConnection.getRegionLocator(TEST_TABLE)) {
@@ -710,7 +674,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preUnassign(ObserverContext.createAndPrepare(CP_ENV, null), hri, false);
+        ACCESS_CONTROLLER.preUnassign(ObserverContextImpl.createAndPrepare(CP_ENV), hri, false);
         return null;
       }
     };
@@ -720,7 +684,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRegionOffline() throws Exception {
     List<HRegionLocation> regions;
     try (RegionLocator locator = systemUserConnection.getRegionLocator(TEST_TABLE)) {
@@ -731,7 +695,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRegionOffline(ObserverContext.createAndPrepare(CP_ENV, null), hri);
+        ACCESS_CONTROLLER.preRegionOffline(ObserverContextImpl.createAndPrepare(CP_ENV), hri);
         return null;
       }
     };
@@ -741,12 +705,12 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSetSplitOrMergeEnabled() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetSplitOrMergeEnabled(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSetSplitOrMergeEnabled(ObserverContextImpl.createAndPrepare(CP_ENV),
           true, MasterSwitchType.MERGE);
         return null;
       }
@@ -757,12 +721,12 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testBalance() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preBalance(ObserverContext.createAndPrepare(CP_ENV, null));
+        ACCESS_CONTROLLER.preBalance(ObserverContextImpl.createAndPrepare(CP_ENV));
         return null;
       }
     };
@@ -772,12 +736,12 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testBalanceSwitch() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preBalanceSwitch(ObserverContext.createAndPrepare(CP_ENV, null), true);
+        ACCESS_CONTROLLER.preBalanceSwitch(ObserverContextImpl.createAndPrepare(CP_ENV), true);
         return null;
       }
     };
@@ -787,12 +751,12 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testShutdown() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preShutdown(ObserverContext.createAndPrepare(CP_ENV, null));
+        ACCESS_CONTROLLER.preShutdown(ObserverContextImpl.createAndPrepare(CP_ENV));
         return null;
       }
     };
@@ -802,12 +766,12 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testStopMaster() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preStopMaster(ObserverContext.createAndPrepare(CP_ENV, null));
+        ACCESS_CONTROLLER.preStopMaster(ObserverContextImpl.createAndPrepare(CP_ENV));
         return null;
       }
     };
@@ -823,7 +787,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(action, USER_NONE, USER_RO, USER_GROUP_ADMIN, USER_GROUP_READ, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSplitWithSplitRow() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     createTestTable(tableName);
@@ -831,7 +795,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preSplitRegion(
-            ObserverContext.createAndPrepare(CP_ENV, null),
+            ObserverContextImpl.createAndPrepare(CP_ENV),
             tableName,
             TEST_ROW);
         return null;
@@ -843,37 +807,13 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
-  public void testMergeRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    createTestTable(tableName);
-    try {
-      final List<HRegion> regions = TEST_UTIL.getHBaseCluster().findRegionsForTable(tableName);
-      assertTrue("not enough regions: " + regions.size(), regions.size() >= 2);
-
-      AccessTestAction action = new AccessTestAction() {
-        @Override
-        public Object run() throws Exception {
-          ACCESS_CONTROLLER.preMerge(ObserverContext.createAndPrepare(RSCP_ENV, null),
-            regions.get(0), regions.get(1));
-          return null;
-        }
-      };
-
-      verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
-      verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-        USER_GROUP_WRITE, USER_GROUP_CREATE);
-    } finally {
-      deleteTable(TEST_UTIL, tableName);
-    }
-  }
-
-  @Test (timeout=180000)
+  @Test
   public void testFlush() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preFlush(ObserverContext.createAndPrepare(RCP_ENV, null));
+        ACCESS_CONTROLLER.preFlush(ObserverContextImpl.createAndPrepare(RCP_ENV),
+          FlushLifeCycleTracker.DUMMY);
         return null;
       }
     };
@@ -883,13 +823,13 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCompact() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCompact(ObserverContext.createAndPrepare(RCP_ENV, null), null, null,
-          ScanType.COMPACT_RETAIN_DELETES);
+        ACCESS_CONTROLLER.preCompact(ObserverContextImpl.createAndPrepare(RCP_ENV), null, null,
+          ScanType.COMPACT_RETAIN_DELETES, null, null);
         return null;
       }
     };
@@ -911,7 +851,7 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRead() throws Exception {
     // get action
     AccessTestAction getAction = new AccessTestAction() {
@@ -951,7 +891,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyRead(scanAction);
   }
 
-  @Test (timeout=180000)
+  @Test
   // test put, delete, increment
   public void testWrite() throws Exception {
     // put action
@@ -991,7 +931,7 @@ public class TestAccessController extends SecureTestUtil {
         Increment inc = new Increment(TEST_ROW);
         inc.addColumn(TEST_FAMILY, TEST_QUALIFIER, 1);
         try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(TEST_TABLE);) {
+            Table t = conn.getTable(TEST_TABLE)) {
           t.increment(inc);
         }
         return null;
@@ -1000,7 +940,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyWrite(incrementAction);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testReadWrite() throws Exception {
     // action for checkAndDelete
     AccessTestAction checkAndDeleteAction = new AccessTestAction() {
@@ -1009,9 +949,9 @@ public class TestAccessController extends SecureTestUtil {
         Delete d = new Delete(TEST_ROW);
         d.addFamily(TEST_FAMILY);
         try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(TEST_TABLE);) {
-          t.checkAndDelete(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
-              Bytes.toBytes("test_value"), d);
+            Table t = conn.getTable(TEST_TABLE)) {
+          t.checkAndMutate(TEST_ROW, TEST_FAMILY).qualifier(TEST_QUALIFIER)
+              .ifEquals(Bytes.toBytes("test_value")).thenDelete(d);
         }
         return null;
       }
@@ -1025,9 +965,9 @@ public class TestAccessController extends SecureTestUtil {
         Put p = new Put(TEST_ROW);
         p.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
         try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(TEST_TABLE);) {
-          t.checkAndPut(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
-              Bytes.toBytes("test_value"), p);
+            Table t = conn.getTable(TEST_TABLE)) {
+          t.checkAndMutate(TEST_ROW, TEST_FAMILY).qualifier(TEST_QUALIFIER)
+              .ifEquals(Bytes.toBytes("test_value")).thenPut(p);
         }
         return null;
       }
@@ -1035,7 +975,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyReadWrite(checkAndPut);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testBulkLoad() throws Exception {
     try {
       FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -1074,7 +1014,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  public class BulkLoadHelper {
+  public static class BulkLoadHelper {
     private final FileSystem fs;
     private final Path loadPath;
     private final Configuration conf;
@@ -1152,7 +1092,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAppend() throws Exception {
 
     AccessTestAction appendAction = new AccessTestAction() {
@@ -1163,7 +1103,7 @@ public class TestAccessController extends SecureTestUtil {
         Put put = new Put(row);
         put.addColumn(TEST_FAMILY, qualifier, Bytes.toBytes(1));
         Append append = new Append(row);
-        append.add(TEST_FAMILY, qualifier, Bytes.toBytes(2));
+        append.addColumn(TEST_FAMILY, qualifier, Bytes.toBytes(2));
         try(Connection conn = ConnectionFactory.createConnection(conf);
             Table t = conn.getTable(TEST_TABLE)) {
           t.put(put);
@@ -1179,7 +1119,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_ADMIN);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGrantRevoke() throws Exception {
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
@@ -1229,7 +1169,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME);) {
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
@@ -1261,7 +1201,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPostGrantRevoke() throws Exception {
     final TableName tableName =
         TableName.valueOf("TempTable");
@@ -1294,7 +1234,7 @@ public class TestAccessController extends SecureTestUtil {
           p.addColumn(family2, qualifier, Bytes.toBytes("v2"));
 
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table t = conn.getTable(tableName);) {
+              Table t = conn.getTable(tableName)) {
             t.put(p);
           }
           return null;
@@ -1321,7 +1261,7 @@ public class TestAccessController extends SecureTestUtil {
           Put p = new Put(Bytes.toBytes("a"));
           p.addColumn(family2, qualifier, Bytes.toBytes("v2"));
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table t = conn.getTable(tableName);) {
+              Table t = conn.getTable(tableName)) {
             t.put(p);
           }
           return null;
@@ -1335,7 +1275,7 @@ public class TestAccessController extends SecureTestUtil {
           g.addFamily(family1);
           g.addFamily(family2);
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table t = conn.getTable(tableName);) {
+              Table t = conn.getTable(tableName)) {
             t.get(g);
           }
           return null;
@@ -1515,7 +1455,7 @@ public class TestAccessController extends SecureTestUtil {
     return perms.contains(userPermission);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPostGrantRevokeAtQualifierLevel() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] family1 = Bytes.toBytes("f1");
@@ -1618,7 +1558,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPermissionList() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] family1 = Bytes.toBytes("f1");
@@ -1748,7 +1688,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGlobalPermissionList() throws Exception {
     List<UserPermission> perms;
     Table acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
@@ -1761,7 +1701,7 @@ public class TestAccessController extends SecureTestUtil {
       acl.close();
     }
 
-    List<String> superUsers = Superusers.getSuperUsers();
+    Collection<String> superUsers = Superusers.getSuperUsers();
     List<UserPermission> adminPerms = new ArrayList<>(superUsers.size() + 1);
     adminPerms.add(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
       AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW")));
@@ -1782,7 +1722,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(action, USER_CREATE, USER_RW, USER_NONE, USER_RO);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCheckPermissions() throws Exception {
     // --------------------------------------
     // test global permissions
@@ -1949,12 +1889,12 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testStopRegionServer() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preStopRegionServer(ObserverContext.createAndPrepare(RSCP_ENV, null));
+        ACCESS_CONTROLLER.preStopRegionServer(ObserverContextImpl.createAndPrepare(RSCP_ENV));
         return null;
       }
     };
@@ -1964,12 +1904,12 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRollWALWriterRequest() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRollWALWriterRequest(ObserverContext.createAndPrepare(RSCP_ENV, null));
+        ACCESS_CONTROLLER.preRollWALWriterRequest(ObserverContextImpl.createAndPrepare(RSCP_ENV));
         return null;
       }
     };
@@ -1979,12 +1919,12 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testOpenRegion() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preOpen(ObserverContext.createAndPrepare(RCP_ENV, null));
+        ACCESS_CONTROLLER.preOpen(ObserverContextImpl.createAndPrepare(RCP_ENV));
         return null;
       }
     };
@@ -1994,12 +1934,12 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCloseRegion() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preClose(ObserverContext.createAndPrepare(RCP_ENV, null), false);
+        ACCESS_CONTROLLER.preClose(ObserverContextImpl.createAndPrepare(RCP_ENV), false);
         return null;
       }
     };
@@ -2009,18 +1949,16 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSnapshot() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
-    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
-    builder.setName(TEST_TABLE.getNameAsString() + "-snapshot");
-    builder.setTable(TEST_TABLE.getNameAsString());
-    final SnapshotDescription snapshot = builder.build();
+    final SnapshotDescription snapshot = new SnapshotDescription(
+        TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE);
     AccessTestAction snapshotAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;
       }
@@ -2029,7 +1967,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction deleteAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot);
         return null;
       }
@@ -2038,7 +1976,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction restoreAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;
       }
@@ -2047,7 +1985,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction cloneAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot, null);
         return null;
       }
@@ -2070,19 +2008,17 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSnapshotWithOwner() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
-    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
-    builder.setName(TEST_TABLE.getNameAsString() + "-snapshot");
-    builder.setTable(TEST_TABLE.getNameAsString());
-    builder.setOwner(USER_OWNER.getName());
-    final SnapshotDescription snapshot = builder.build();
+    final SnapshotDescription snapshot = new SnapshotDescription(
+        TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE, null, USER_OWNER.getName());
+
     AccessTestAction snapshotAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
             snapshot, htd);
         return null;
       }
@@ -2094,7 +2030,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction deleteAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot);
         return null;
       }
@@ -2106,7 +2042,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction restoreAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;
       }
@@ -2118,7 +2054,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction cloneAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;
       }
@@ -2128,7 +2064,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGlobalAuthorizationForNewRegisteredRS() throws Exception {
     LOG.debug("Test for global authorization for a new registered RegionServer.");
     MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
@@ -2164,7 +2100,7 @@ public class TestAccessController extends SecureTestUtil {
 
       final int RETRIES_LIMIT = 10;
       int retries = 0;
-      while (newRs.getOnlineRegions(TEST_TABLE2).size() < 1 && retries < RETRIES_LIMIT) {
+      while (newRs.getRegions(TEST_TABLE2).size() < 1 && retries < RETRIES_LIMIT) {
         LOG.debug("Waiting for region to be opened. Already retried " + retries
             + " times.");
         try {
@@ -2191,7 +2127,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableDescriptorsEnumeration() throws Exception {
     User TABLE_ADMIN = User.createUserForTesting(conf, "UserA", new String[0]);
 
@@ -2213,7 +2149,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-              Admin admin = conn.getAdmin();) {
+              Admin admin = conn.getAdmin()) {
             return admin.getTableDescriptor(TEST_TABLE);
           }
         }
@@ -2235,7 +2171,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableNameEnumeration() throws Exception {
     AccessTestAction listTablesAction = new AccessTestAction() {
       @Override
@@ -2257,7 +2193,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyIfEmptyList(listTablesAction, USER_NONE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableDeletion() throws Exception {
     User TABLE_ADMIN = User.createUserForTesting(conf, "TestUser", new String[0]);
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -2288,21 +2224,25 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   private void createTestTable(TableName tname) throws Exception {
+    createTestTable(tname, TEST_FAMILY);
+  }
+
+  private void createTestTable(TableName tname, byte[] cf) throws Exception {
     HTableDescriptor htd = new HTableDescriptor(tname);
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
+    HColumnDescriptor hcd = new HColumnDescriptor(cf);
     hcd.setMaxVersions(100);
     htd.addFamily(hcd);
     htd.setOwner(USER_OWNER);
     createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testNamespaceUserGrant() throws Exception {
     AccessTestAction getAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(TEST_TABLE);) {
+            Table t = conn.getTable(TEST_TABLE)) {
           return t.get(new Get(TEST_ROW));
         }
       }
@@ -2320,7 +2260,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(getAction, USER_NONE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControlClientGrantRevoke() throws Exception {
     // Create user for testing, who has no READ privileges by default.
     User testGrantRevoke = User.createUserForTesting(conf, "testGrantRevoke", new String[0]);
@@ -2328,7 +2268,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(TEST_TABLE);) {
+            Table t = conn.getTable(TEST_TABLE)) {
           return t.get(new Get(TEST_ROW));
         }
       }
@@ -2359,7 +2299,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(getAction, testGrantRevoke);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControlClientGlobalGrantRevoke() throws Exception {
     // Create user for testing, who has no READ privileges by default.
     User testGlobalGrantRevoke = User.createUserForTesting(conf,
@@ -2379,31 +2319,33 @@ public class TestAccessController extends SecureTestUtil {
     // Grant table READ permissions to testGlobalGrantRevoke.
     String userName = testGlobalGrantRevoke.getShortName();
     try {
-      grantGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection,
-          userName, Permission.Action.READ);
+      grantGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+        Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.grant. ", e);
     }
     try {
       // Now testGlobalGrantRevoke should be able to read also
       verifyAllowed(getAction, testGlobalGrantRevoke);
-
-      // Revoke table READ permission to testGlobalGrantRevoke.
-      try {
-        revokeGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection,
-          userName, Permission.Action.READ);
-      } catch (Throwable e) {
-        LOG.error("error during call of AccessControlClient.revoke ", e);
-      }
-
-      // Now testGlobalGrantRevoke shouldn't be able read
-      verifyDenied(getAction, testGlobalGrantRevoke);
-    } finally {
+    } catch (Exception e) {
       revokeGlobal(TEST_UTIL, userName, Permission.Action.READ);
+      throw e;
     }
+
+    // Revoke table READ permission to testGlobalGrantRevoke.
+    try {
+      revokeGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+        Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke ", e);
+    }
+
+    // Now testGlobalGrantRevoke shouldn't be able read
+    verifyDenied(getAction, testGlobalGrantRevoke);
+
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testAccessControlClientMultiGrantRevoke() throws Exception {
     User testGrantRevoke =
         User.createUserForTesting(conf, "testGrantRevoke", new String[0]);
@@ -2526,7 +2468,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(putAction, testGrantRevoke);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControlClientGrantRevokeOnNamespace() throws Exception {
     // Create user for testing, who has no READ privileges by default.
     User testNS = User.createUserForTesting(conf, "testNS", new String[0]);
@@ -2534,7 +2476,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(TEST_TABLE);) {
+            Table t = conn.getTable(TEST_TABLE)) {
           return t.get(new Get(TEST_ROW));
         }
       }
@@ -2546,33 +2488,33 @@ public class TestAccessController extends SecureTestUtil {
     String namespace = TEST_TABLE.getNamespaceAsString();
     // Grant namespace READ to testNS, this should supersede any table permissions
     try {
-      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
-        namespace, Permission.Action.READ);
+      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName, namespace,
+        Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.grant. ", e);
     }
     try {
       // Now testNS should be able to read also
       verifyAllowed(getAction, testNS);
-
-      // Revoke namespace READ to testNS, this should supersede any table permissions
-      try {
-        revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
-          namespace, Permission.Action.READ);
-      } catch (Throwable e) {
-        LOG.error("error during call of AccessControlClient.revoke ", e);
-      }
-
-      // Now testNS shouldn't be able read
-      verifyDenied(getAction, testNS);
-    } finally {
+    } catch (Exception e) {
       revokeFromNamespace(TEST_UTIL, userName, namespace, Permission.Action.READ);
+      throw e;
     }
+
+    // Revoke namespace READ to testNS, this should supersede any table permissions
+    try {
+      revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+        namespace, Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke ", e);
+    }
+
+    // Now testNS shouldn't be able read
+    verifyDenied(getAction, testNS);
   }
 
 
-  public static class PingCoprocessor extends PingService implements Coprocessor,
-      CoprocessorService {
+  public static class PingCoprocessor extends PingService implements RegionCoprocessor {
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException { }
@@ -2581,8 +2523,8 @@ public class TestAccessController extends SecureTestUtil {
     public void stop(CoprocessorEnvironment env) throws IOException { }
 
     @Override
-    public Service getService() {
-      return this;
+    public Iterable<Service> getServices() {
+      return Collections.singleton(this);
     }
 
     @Override
@@ -2616,13 +2558,13 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCoprocessorExec() throws Exception {
     // Set up our ping endpoint service on all regions of our test table
     for (JVMClusterUtil.RegionServerThread thread:
         TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
       HRegionServer rs = thread.getRegionServer();
-      for (Region region: rs.getOnlineRegions(TEST_TABLE)) {
+      for (HRegion region: rs.getRegions(TEST_TABLE)) {
         region.getCoprocessorHost().load(PingCoprocessor.class,
           Coprocessor.PRIORITY_USER, conf);
       }
@@ -2642,7 +2584,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table t = conn.getTable(TEST_TABLE);) {
+              Table t = conn.getTable(TEST_TABLE)) {
             BlockingRpcChannel service = t.coprocessorService(HConstants.EMPTY_BYTE_ARRAY);
             PingCoprocessor.newBlockingStub(service).noop(null, NoopRequest.newBuilder().build());
           }
@@ -2667,12 +2609,12 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSetQuota() throws Exception {
     AccessTestAction setUserQuotaAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetUserQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSetUserQuota(ObserverContextImpl.createAndPrepare(CP_ENV),
           null, null);
         return null;
       }
@@ -2681,7 +2623,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction setUserTableQuotaAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetUserQuota(ObserverContext.createAndPrepare(CP_ENV, null), null,
+        ACCESS_CONTROLLER.preSetUserQuota(ObserverContextImpl.createAndPrepare(CP_ENV), null,
           TEST_TABLE, null);
         return null;
       }
@@ -2690,7 +2632,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction setUserNamespaceQuotaAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetUserQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSetUserQuota(ObserverContextImpl.createAndPrepare(CP_ENV),
           null, (String)null, null);
         return null;
       }
@@ -2699,7 +2641,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction setTableQuotaAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetTableQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSetTableQuota(ObserverContextImpl.createAndPrepare(CP_ENV),
           TEST_TABLE, null);
         return null;
       }
@@ -2708,7 +2650,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction setNamespaceQuotaAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetNamespaceQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSetNamespaceQuota(ObserverContextImpl.createAndPrepare(CP_ENV),
           null, null);
         return null;
       }
@@ -2734,7 +2676,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGetNamespacePermission() throws Exception {
     String namespace = "testGetNamespacePermission";
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
@@ -2777,7 +2719,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTruncatePerms() throws Exception {
     try {
       List<UserPermission> existingPerms = AccessControlClient.getUserPermissions(
@@ -2800,7 +2742,7 @@ public class TestAccessController extends SecureTestUtil {
     return new PrivilegedAction<List<UserPermission>>() {
       @Override
       public List<UserPermission> run() {
-        try(Connection conn = ConnectionFactory.createConnection(conf);) {
+        try(Connection conn = ConnectionFactory.createConnection(conf)) {
           return AccessControlClient.getUserPermissions(conn, regex);
         } catch (Throwable e) {
           LOG.error("error during call of AccessControlClient.getUserPermissions.", e);
@@ -2810,7 +2752,7 @@ public class TestAccessController extends SecureTestUtil {
     };
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControlClientUserPerms() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     createTestTable(tableName);
@@ -2829,7 +2771,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControllerUserPermsRegexHandling() throws Exception {
     User testRegexHandler = User.createUserForTesting(conf, "testRegexHandling", new String[0]);
 
@@ -2886,21 +2828,19 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_ADMIN);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPrepareAndCleanBulkLoad() throws Exception {
     AccessTestAction prepareBulkLoadAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.prePrepareBulkLoad(ObserverContext.createAndPrepare(RCP_ENV, null),
-          null);
+        ACCESS_CONTROLLER.prePrepareBulkLoad(ObserverContextImpl.createAndPrepare(RCP_ENV));
         return null;
       }
     };
     AccessTestAction cleanupBulkLoadAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCleanupBulkLoad(ObserverContext.createAndPrepare(RCP_ENV, null),
-          null);
+        ACCESS_CONTROLLER.preCleanupBulkLoad(ObserverContextImpl.createAndPrepare(RCP_ENV));
         return null;
       }
     };
@@ -2908,15 +2848,13 @@ public class TestAccessController extends SecureTestUtil {
     verifyAnyCreate(cleanupBulkLoadAction);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testReplicateLogEntries() throws Exception {
     AccessTestAction replicateLogEntriesAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preReplicateLogEntries(ObserverContext.createAndPrepare(RSCP_ENV, null),
-          null, null);
-        ACCESS_CONTROLLER.postReplicateLogEntries(ObserverContext.createAndPrepare(RSCP_ENV, null),
-          null, null);
+        ACCESS_CONTROLLER.preReplicateLogEntries(ObserverContextImpl.createAndPrepare(RSCP_ENV));
+        ACCESS_CONTROLLER.postReplicateLogEntries(ObserverContextImpl.createAndPrepare(RSCP_ENV));
         return null;
       }
     };
@@ -2927,86 +2865,11 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testMoveServers() throws Exception {
-    AccessTestAction action1 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preMoveServers(ObserverContext.createAndPrepare(CP_ENV, null),
-            null, null);
-        return null;
-      }
-    };
-
-    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
-    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
-  }
-
-  @Test
-  public void testMoveTables() throws Exception {
-    AccessTestAction action1 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preMoveTables(ObserverContext.createAndPrepare(CP_ENV, null),
-            null, null);
-        return null;
-      }
-    };
-
-    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
-    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
-  }
-
-  @Test
-  public void testAddGroup() throws Exception {
-    AccessTestAction action1 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preAddRSGroup(ObserverContext.createAndPrepare(CP_ENV, null),
-            null);
-        return null;
-      }
-    };
-
-    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
-    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
-  }
-
-  @Test
-  public void testRemoveGroup() throws Exception {
-    AccessTestAction action1 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRemoveRSGroup(ObserverContext.createAndPrepare(CP_ENV, null),
-            null);
-        return null;
-      }
-    };
-
-    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
-    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
-  }
-
-  @Test
-  public void testBalanceGroup() throws Exception {
-    AccessTestAction action1 = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preBalanceRSGroup(ObserverContext.createAndPrepare(CP_ENV, null),
-            null);
-        return null;
-      }
-    };
-
-    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
-    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
-  }
-
-  @Test
   public void testAddReplicationPeer() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preAddReplicationPeer(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preAddReplicationPeer(ObserverContextImpl.createAndPrepare(CP_ENV),
           "test", null);
         return null;
       }
@@ -3021,7 +2884,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRemoveReplicationPeer(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preRemoveReplicationPeer(ObserverContextImpl.createAndPrepare(CP_ENV),
           "test");
         return null;
       }
@@ -3036,7 +2899,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preEnableReplicationPeer(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preEnableReplicationPeer(ObserverContextImpl.createAndPrepare(CP_ENV),
           "test");
         return null;
       }
@@ -3051,7 +2914,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDisableReplicationPeer(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDisableReplicationPeer(ObserverContextImpl.createAndPrepare(CP_ENV),
           "test");
         return null;
       }
@@ -3067,7 +2930,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preGetReplicationPeerConfig(
-          ObserverContext.createAndPrepare(CP_ENV, null), "test");
+          ObserverContextImpl.createAndPrepare(CP_ENV), "test");
         return null;
       }
     };
@@ -3082,7 +2945,22 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preUpdateReplicationPeerConfig(
-          ObserverContext.createAndPrepare(CP_ENV, null), "test", new ReplicationPeerConfig());
+          ObserverContextImpl.createAndPrepare(CP_ENV), "test", new ReplicationPeerConfig());
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testTransitSyncReplicationPeerState() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preTransitReplicationPeerSyncReplicationState(
+          ObserverContextImpl.createAndPrepare(CP_ENV), "test", SyncReplicationState.NONE);
         return null;
       }
     };
@@ -3096,7 +2974,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preListReplicationPeers(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preListReplicationPeers(ObserverContextImpl.createAndPrepare(CP_ENV),
           "test");
         return null;
       }
@@ -3127,20 +3005,22 @@ public class TestAccessController extends SecureTestUtil {
 
     AccessTestAction namespaceLockAction = new AccessTestAction() {
       @Override public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRequestLock(ObserverContext.createAndPrepare(CP_ENV, null), namespace,
-            null, null, LockType.EXCLUSIVE, null);
+        ACCESS_CONTROLLER.preRequestLock(ObserverContextImpl.createAndPrepare(CP_ENV), namespace,
+            null, null, null);
         return null;
       }
     };
     verifyAllowed(namespaceLockAction, SUPERUSER, USER_ADMIN);
     verifyDenied(namespaceLockAction, globalRWXUser, tableACUser, namespaceUser, tableRWXUser);
     grantOnNamespace(TEST_UTIL, namespaceUser.getShortName(), namespace, Action.ADMIN);
+    // Why I need this pause? I don't need it elsewhere.
+    Threads.sleep(1000);
     verifyAllowed(namespaceLockAction, namespaceUser);
 
     AccessTestAction tableLockAction = new AccessTestAction() {
       @Override public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRequestLock(ObserverContext.createAndPrepare(CP_ENV, null),
-            null, tableName, null, LockType.EXCLUSIVE, null);
+        ACCESS_CONTROLLER.preRequestLock(ObserverContextImpl.createAndPrepare(CP_ENV),
+            null, tableName, null, null);
         return null;
       }
     };
@@ -3152,8 +3032,8 @@ public class TestAccessController extends SecureTestUtil {
 
     AccessTestAction regionsLockAction = new AccessTestAction() {
       @Override public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRequestLock(ObserverContext.createAndPrepare(CP_ENV, null),
-            null, null, regionInfos, LockType.EXCLUSIVE, null);
+        ACCESS_CONTROLLER.preRequestLock(ObserverContextImpl.createAndPrepare(CP_ENV),
+            null, null, regionInfos, null);
         return null;
       }
     };
@@ -3166,12 +3046,542 @@ public class TestAccessController extends SecureTestUtil {
     LockProcedure proc = new LockProcedure(conf, tableName, LockType.EXCLUSIVE, "test", null);
     AccessTestAction regionLockHeartbeatAction = new AccessTestAction() {
       @Override public Object run() throws Exception {
-        ACCESS_CONTROLLER.preLockHeartbeat(ObserverContext.createAndPrepare(CP_ENV, null),
-            proc, false);
+        ACCESS_CONTROLLER.preLockHeartbeat(ObserverContextImpl.createAndPrepare(CP_ENV),
+            proc.getTableName(), proc.getDescription());
         return null;
       }
     };
     verifyAllowed(regionLockHeartbeatAction, SUPERUSER, USER_ADMIN, namespaceUser, tableACUser);
     verifyDenied(regionLockHeartbeatAction, globalRWXUser, tableRWXUser);
+  }
+
+  @Test
+  public void testAccessControlRevokeOnlyFewPermission() throws Throwable {
+    TableName tname = TableName.valueOf("revoke");
+    try {
+      TEST_UTIL.createTable(tname, TEST_FAMILY);
+      User testUserPerms = User.createUserForTesting(conf, "revokePerms", new String[0]);
+      Permission.Action[] actions = { Action.READ, Action.WRITE };
+      AccessControlClient.grant(TEST_UTIL.getConnection(), tname, testUserPerms.getShortName(),
+        null, null, actions);
+
+      List<UserPermission> userPermissions = AccessControlClient
+          .getUserPermissions(TEST_UTIL.getConnection(), tname.getNameAsString());
+      assertEquals(2, userPermissions.size());
+
+      AccessControlClient.revoke(TEST_UTIL.getConnection(), tname, testUserPerms.getShortName(),
+        null, null, Action.WRITE);
+
+      userPermissions = AccessControlClient.getUserPermissions(TEST_UTIL.getConnection(),
+        tname.getNameAsString());
+      assertEquals(2, userPermissions.size());
+
+      Permission.Action[] expectedAction = { Action.READ };
+      boolean userFound = false;
+      for (UserPermission p : userPermissions) {
+        if (testUserPerms.getShortName().equals(Bytes.toString(p.getUser()))) {
+          assertArrayEquals(expectedAction, p.getActions());
+          userFound = true;
+          break;
+        }
+      }
+      assertTrue(userFound);
+    } finally {
+      TEST_UTIL.deleteTable(tname);
+    }
+  }
+
+  @Test
+  public void testGetClusterStatus() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetClusterMetrics(ObserverContextImpl.createAndPrepare(CP_ENV));
+        return null;
+      }
+    };
+
+    verifyAllowed(
+        action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testExecuteProcedures() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preExecuteProcedures(ObserverContextImpl.createAndPrepare(RSCP_ENV));
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER, USER_ADMIN);
+  }
+
+  @Test(timeout = 180000)
+  public void testGetUserPermissions() throws Throwable {
+    Connection conn = null;
+    try {
+      conn = ConnectionFactory.createConnection(conf);
+      User nSUser1 = User.createUserForTesting(conf, "nsuser1", new String[0]);
+      User nSUser2 = User.createUserForTesting(conf, "nsuser2", new String[0]);
+      User nSUser3 = User.createUserForTesting(conf, "nsuser3", new String[0]);
+
+      // Global access groups
+      User globalGroupUser1 =
+          User.createUserForTesting(conf, "globalGroupUser1", new String[] { "group_admin" });
+      User globalGroupUser2 = User.createUserForTesting(conf, "globalGroupUser2",
+        new String[] { "group_admin", "group_create" });
+      // Namespace access groups
+      User nsGroupUser1 =
+          User.createUserForTesting(conf, "nsGroupUser1", new String[] { "ns_group1" });
+      User nsGroupUser2 =
+          User.createUserForTesting(conf, "nsGroupUser2", new String[] { "ns_group2" });
+      // table Access groups
+      User tableGroupUser1 =
+          User.createUserForTesting(conf, "tableGroupUser1", new String[] { "table_group1" });
+      User tableGroupUser2 =
+          User.createUserForTesting(conf, "tableGroupUser2", new String[] { "table_group2" });
+
+      // Create namespaces
+      String nsPrefix = "testNS";
+      final String namespace1 = nsPrefix + "1";
+      NamespaceDescriptor desc1 = NamespaceDescriptor.create(namespace1).build();
+      createNamespace(TEST_UTIL, desc1);
+      String namespace2 = nsPrefix + "2";
+      NamespaceDescriptor desc2 = NamespaceDescriptor.create(namespace2).build();
+      createNamespace(TEST_UTIL, desc2);
+
+      // Grant namespace permission
+      grantOnNamespace(TEST_UTIL, nSUser1.getShortName(), namespace1, Permission.Action.ADMIN);
+      grantOnNamespace(TEST_UTIL, nSUser3.getShortName(), namespace1, Permission.Action.READ);
+      grantOnNamespace(TEST_UTIL, toGroupEntry("ns_group1"), namespace1, Permission.Action.ADMIN);
+      grantOnNamespace(TEST_UTIL, nSUser2.getShortName(), namespace2, Permission.Action.ADMIN);
+      grantOnNamespace(TEST_UTIL, nSUser3.getShortName(), namespace2, Permission.Action.ADMIN);
+      grantOnNamespace(TEST_UTIL, toGroupEntry("ns_group2"), namespace2, Permission.Action.READ,
+        Permission.Action.WRITE);
+
+      // Create tables
+      TableName table1 = TableName.valueOf(namespace1 + TableName.NAMESPACE_DELIM + "t1");
+      TableName table2 = TableName.valueOf(namespace2 + TableName.NAMESPACE_DELIM + "t2");
+      byte[] TEST_FAMILY2 = Bytes.toBytes("f2");
+      byte[] TEST_QUALIFIER2 = Bytes.toBytes("q2");
+      createTestTable(table1, TEST_FAMILY);
+      createTestTable(table2, TEST_FAMILY2);
+
+      // Grant table permissions
+      grantOnTable(TEST_UTIL, toGroupEntry("table_group1"), table1, null, null,
+        Permission.Action.ADMIN);
+      grantOnTable(TEST_UTIL, USER_ADMIN.getShortName(), table1, null, null,
+        Permission.Action.ADMIN);
+      grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(), table1, TEST_FAMILY, null,
+        Permission.Action.ADMIN);
+      grantOnTable(TEST_UTIL, USER_RW.getShortName(), table1, TEST_FAMILY, TEST_QUALIFIER,
+        Permission.Action.READ);
+      grantOnTable(TEST_UTIL, USER_RW.getShortName(), table1, TEST_FAMILY, TEST_QUALIFIER2,
+        Permission.Action.WRITE);
+
+      grantOnTable(TEST_UTIL, toGroupEntry("table_group2"), table2, null, null,
+        Permission.Action.ADMIN);
+      grantOnTable(TEST_UTIL, USER_ADMIN.getShortName(), table2, null, null,
+        Permission.Action.ADMIN);
+      grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(), table2, TEST_FAMILY2, null,
+        Permission.Action.ADMIN);
+      grantOnTable(TEST_UTIL, USER_RW.getShortName(), table2, TEST_FAMILY2, TEST_QUALIFIER,
+        Permission.Action.READ);
+      grantOnTable(TEST_UTIL, USER_RW.getShortName(), table2, TEST_FAMILY2, TEST_QUALIFIER2,
+        Permission.Action.WRITE);
+
+      List<UserPermission> userPermissions = null;
+      Collection<String> superUsers = Superusers.getSuperUsers();
+      int superUserCount = superUsers.size();
+
+      // Global User ACL
+      validateGlobalUserACLForGetUserPermissions(conn, nSUser1, globalGroupUser1, globalGroupUser2,
+        superUsers, superUserCount);
+
+      // Namespace ACL
+      validateNamespaceUserACLForGetUserPermissions(conn, nSUser1, nSUser3, nsGroupUser1,
+        nsGroupUser2, nsPrefix, namespace1, namespace2);
+
+      // Table + Users
+      validateTableACLForGetUserPermissions(conn, nSUser1, tableGroupUser1, tableGroupUser2,
+        nsPrefix, table1, table2, TEST_QUALIFIER2, superUsers);
+
+      // exception scenarios
+
+      try {
+        // test case with table name as null
+        assertEquals(3, AccessControlClient.getUserPermissions(conn, null, TEST_FAMILY).size());
+        fail("this should have thrown IllegalArgumentException");
+      } catch (IllegalArgumentException ex) {
+        // expected
+      }
+      try {
+        // test case with table name as emplty
+        assertEquals(3, AccessControlClient
+            .getUserPermissions(conn, HConstants.EMPTY_STRING, TEST_FAMILY).size());
+        fail("this should have thrown IllegalArgumentException");
+      } catch (IllegalArgumentException ex) {
+        // expected
+      }
+      try {
+        // test case with table name as namespace name
+        assertEquals(3,
+          AccessControlClient.getUserPermissions(conn, "@" + namespace2, TEST_FAMILY).size());
+        fail("this should have thrown IllegalArgumentException");
+      } catch (IllegalArgumentException ex) {
+        // expected
+      }
+
+      // Clean the table and namespace
+      deleteTable(TEST_UTIL, table1);
+      deleteTable(TEST_UTIL, table2);
+      deleteNamespace(TEST_UTIL, namespace1);
+      deleteNamespace(TEST_UTIL, namespace2);
+    } finally {
+      if (conn != null) {
+        conn.close();
+      }
+    }
+  }
+
+  @Test(timeout = 180000)
+  public void testHasPermission() throws Throwable {
+    Connection conn = null;
+    try {
+      conn = ConnectionFactory.createConnection(conf);
+      // Create user and set namespace ACL
+      User user1 = User.createUserForTesting(conf, "testHasPermissionUser1", new String[0]);
+      // Grant namespace permission
+      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, conn, user1.getShortName(),
+        NamespaceDescriptor.DEFAULT_NAMESPACE.getName(), Permission.Action.ADMIN,
+        Permission.Action.CREATE, Permission.Action.READ);
+
+      // Create user and set table ACL
+      User user2 = User.createUserForTesting(conf, "testHasPermissionUser2", new String[0]);
+      // Grant namespace permission
+      grantOnTableUsingAccessControlClient(TEST_UTIL, conn, user2.getShortName(), TEST_TABLE,
+        TEST_FAMILY, TEST_QUALIFIER, Permission.Action.READ, Permission.Action.WRITE);
+
+      // Verify action privilege
+      AccessTestAction hasPermissionAction = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          try (Connection conn = ConnectionFactory.createConnection(conf);
+              Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            Permission.Action[] actions = { Permission.Action.READ, Permission.Action.WRITE };
+            AccessControlUtil.hasPermission(null, protocol, TEST_TABLE, TEST_FAMILY,
+              HConstants.EMPTY_BYTE_ARRAY, "dummy", actions);
+          }
+          return null;
+        }
+      };
+      verifyAllowed(hasPermissionAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN, USER_OWNER,
+        USER_ADMIN_CF, user1);
+      verifyDenied(hasPermissionAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, user2);
+
+      // Check for global user
+      assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, USER_ADMIN.getShortName(),
+        Permission.Action.READ, Permission.Action.WRITE, Permission.Action.CREATE,
+        Permission.Action.ADMIN));
+      assertFalse(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, USER_ADMIN.getShortName(),
+        Permission.Action.READ, Permission.Action.WRITE, Permission.Action.CREATE,
+        Permission.Action.ADMIN, Permission.Action.EXEC));
+
+      // Check for namespace access user
+      assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, user1.getShortName(),
+        Permission.Action.ADMIN, Permission.Action.CREATE));
+      assertFalse(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, user1.getShortName(),
+        Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.EXEC));
+
+      // Check for table owner
+      assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, USER_OWNER.getShortName(),
+        Permission.Action.READ, Permission.Action.WRITE, Permission.Action.EXEC,
+        Permission.Action.CREATE, Permission.Action.ADMIN));
+
+      // Check for table user
+      assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, USER_CREATE.getShortName(),
+        Permission.Action.READ, Permission.Action.WRITE));
+      assertFalse(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, USER_RO.getShortName(),
+        Permission.Action.READ, Permission.Action.WRITE));
+
+      // Check for family access user
+      assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(), TEST_FAMILY,
+        HConstants.EMPTY_BYTE_ARRAY, USER_RO.getShortName(), Permission.Action.READ));
+      assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(), TEST_FAMILY,
+        HConstants.EMPTY_BYTE_ARRAY, USER_RW.getShortName(), Permission.Action.READ,
+        Permission.Action.WRITE));
+      assertFalse(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, USER_ADMIN_CF.getShortName(),
+        Permission.Action.ADMIN, Permission.Action.CREATE));
+      assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(), TEST_FAMILY,
+        HConstants.EMPTY_BYTE_ARRAY, USER_ADMIN_CF.getShortName(), Permission.Action.ADMIN,
+        Permission.Action.CREATE));
+      assertFalse(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(), TEST_FAMILY,
+        HConstants.EMPTY_BYTE_ARRAY, USER_ADMIN_CF.getShortName(), Permission.Action.READ));
+
+      // Check for qualifier access user
+      assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(), TEST_FAMILY,
+        TEST_QUALIFIER, user2.getShortName(), Permission.Action.READ, Permission.Action.WRITE));
+      assertFalse(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(), TEST_FAMILY,
+        TEST_QUALIFIER, user2.getShortName(), Permission.Action.EXEC, Permission.Action.READ));
+      assertFalse(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+        HConstants.EMPTY_BYTE_ARRAY, TEST_QUALIFIER, USER_RW.getShortName(),
+        Permission.Action.WRITE, Permission.Action.READ));
+
+      // exception scenarios
+      try {
+        // test case with table name as null
+        assertTrue(AccessControlClient.hasPermission(conn, null, HConstants.EMPTY_BYTE_ARRAY,
+          HConstants.EMPTY_BYTE_ARRAY, null, Permission.Action.READ));
+        fail("this should have thrown IllegalArgumentException");
+      } catch (IllegalArgumentException ex) {
+        // expected
+      }
+      try {
+        // test case with username as null
+        assertTrue(AccessControlClient.hasPermission(conn, TEST_TABLE.getNameAsString(),
+          HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, null, Permission.Action.READ));
+        fail("this should have thrown IllegalArgumentException");
+      } catch (IllegalArgumentException ex) {
+        // expected
+      }
+
+      revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, conn, user1.getShortName(),
+        NamespaceDescriptor.DEFAULT_NAMESPACE.getName(), Permission.Action.ADMIN,
+        Permission.Action.CREATE, Permission.Action.READ);
+      revokeFromTableUsingAccessControlClient(TEST_UTIL, conn, user2.getShortName(), TEST_TABLE,
+        TEST_FAMILY, TEST_QUALIFIER, Permission.Action.READ, Permission.Action.WRITE);
+    } finally {
+      if (conn != null) {
+        conn.close();
+      }
+    }
+  }
+
+  /*
+   * Validate Global User ACL
+   */
+  private void validateGlobalUserACLForGetUserPermissions(final Connection conn, User nSUser1,
+      User globalGroupUser1, User globalGroupUser2, Collection<String> superUsers,
+      int superUserCount) throws Throwable {
+    // Verify action privilege
+    AccessTestAction globalUserPermissionAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
+          AccessControlService.BlockingInterface protocol =
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.getUserPermissions(null, protocol, "dummy");
+        }
+        return null;
+      }
+    };
+    verifyAllowed(globalUserPermissionAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(globalUserPermissionAction, USER_GROUP_CREATE, USER_GROUP_READ, USER_GROUP_WRITE);
+
+    // Validate global user permission
+    List<UserPermission> userPermissions;
+    assertEquals(5 + superUserCount, AccessControlClient.getUserPermissions(conn, null).size());
+    assertEquals(5 + superUserCount,
+      AccessControlClient.getUserPermissions(conn, HConstants.EMPTY_STRING).size());
+    assertEquals(5 + superUserCount,
+      AccessControlClient.getUserPermissions(conn, null, HConstants.EMPTY_STRING).size());
+    userPermissions = AccessControlClient.getUserPermissions(conn, null, USER_ADMIN.getName());
+    verifyGetUserPermissionResult(userPermissions, 1, null, null, USER_ADMIN.getName(), superUsers);
+    assertEquals(0, AccessControlClient.getUserPermissions(conn, null, nSUser1.getName()).size());
+    // Global group user ACL
+    assertEquals(1,
+      AccessControlClient.getUserPermissions(conn, null, globalGroupUser1.getName()).size());
+    assertEquals(2,
+      AccessControlClient.getUserPermissions(conn, null, globalGroupUser2.getName()).size());
+  }
+
+  /*
+   * Validate Namespace User ACL
+   */
+  private void validateNamespaceUserACLForGetUserPermissions(final Connection conn, User nSUser1,
+      User nSUser3, User nsGroupUser1, User nsGroupUser2, String nsPrefix, final String namespace1,
+      String namespace2) throws Throwable {
+    AccessTestAction namespaceUserPermissionAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
+          AccessControlService.BlockingInterface protocol =
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.getUserPermissions(null, protocol, Bytes.toBytes(namespace1), "dummy");
+        }
+        return null;
+      }
+    };
+    verifyAllowed(namespaceUserPermissionAction, SUPERUSER, USER_GROUP_ADMIN, USER_ADMIN, nSUser1,
+      nsGroupUser1);
+    verifyDenied(namespaceUserPermissionAction, USER_GROUP_CREATE, USER_GROUP_READ,
+      USER_GROUP_WRITE, nSUser3, nsGroupUser2);
+
+    List<UserPermission> userPermissions;
+    assertEquals(6, AccessControlClient.getUserPermissions(conn, "@" + nsPrefix + ".*").size());
+    assertEquals(3, AccessControlClient.getUserPermissions(conn, "@" + namespace1).size());
+    assertEquals(3, AccessControlClient
+        .getUserPermissions(conn, "@" + namespace1, HConstants.EMPTY_STRING).size());
+    userPermissions =
+        AccessControlClient.getUserPermissions(conn, "@" + namespace1, nSUser1.getName());
+    verifyGetUserPermissionResult(userPermissions, 1, null, null, nSUser1.getName(), null);
+    userPermissions =
+        AccessControlClient.getUserPermissions(conn, "@" + namespace1, nSUser3.getName());
+    verifyGetUserPermissionResult(userPermissions, 1, null, null, nSUser3.getName(), null);
+    assertEquals(0,
+      AccessControlClient.getUserPermissions(conn, "@" + namespace1, USER_ADMIN.getName()).size());
+    // Namespace group user ACL
+    assertEquals(1, AccessControlClient
+        .getUserPermissions(conn, "@" + namespace1, nsGroupUser1.getName()).size());
+    assertEquals(1, AccessControlClient
+        .getUserPermissions(conn, "@" + namespace2, nsGroupUser2.getName()).size());
+  }
+
+  /*
+   * Validate Table User ACL
+   */
+  private void validateTableACLForGetUserPermissions(final Connection conn, User nSUser1,
+      User tableGroupUser1, User tableGroupUser2, String nsPrefix, TableName table1,
+      TableName table2, byte[] TEST_QUALIFIER2, Collection<String> superUsers) throws Throwable {
+    AccessTestAction tableUserPermissionAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
+          AccessControlService.BlockingInterface protocol =
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.getUserPermissions(null, protocol, TEST_TABLE, TEST_FAMILY,
+            TEST_QUALIFIER, "dummy");
+        }
+        return null;
+      }
+    };
+    verifyAllowed(tableUserPermissionAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_ADMIN_CF);
+    verifyDenied(tableUserPermissionAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_CREATE);
+
+    List<UserPermission> userPermissions;
+    assertEquals(12, AccessControlClient.getUserPermissions(conn, nsPrefix + ".*").size());
+    assertEquals(6, AccessControlClient.getUserPermissions(conn, table1.getNameAsString()).size());
+    assertEquals(6, AccessControlClient
+        .getUserPermissions(conn, table1.getNameAsString(), HConstants.EMPTY_STRING).size());
+    userPermissions = AccessControlClient.getUserPermissions(conn, table1.getNameAsString(),
+      USER_ADMIN_CF.getName());
+    verifyGetUserPermissionResult(userPermissions, 1, null, null, USER_ADMIN_CF.getName(), null);
+    assertEquals(0, AccessControlClient
+        .getUserPermissions(conn, table1.getNameAsString(), nSUser1.getName()).size());
+    // Table group user ACL
+    assertEquals(1, AccessControlClient
+        .getUserPermissions(conn, table1.getNameAsString(), tableGroupUser1.getName()).size());
+    assertEquals(1, AccessControlClient
+        .getUserPermissions(conn, table2.getNameAsString(), tableGroupUser2.getName()).size());
+
+    // Table Users + CF
+    assertEquals(12, AccessControlClient
+        .getUserPermissions(conn, nsPrefix + ".*", HConstants.EMPTY_BYTE_ARRAY).size());
+    userPermissions = AccessControlClient.getUserPermissions(conn, nsPrefix + ".*", TEST_FAMILY);
+    verifyGetUserPermissionResult(userPermissions, 3, TEST_FAMILY, null, null, null);
+    assertEquals(0, AccessControlClient
+        .getUserPermissions(conn, table1.getNameAsString(), Bytes.toBytes("dummmyCF")).size());
+
+    // Table Users + CF + User
+    assertEquals(3,
+      AccessControlClient
+          .getUserPermissions(conn, table1.getNameAsString(), TEST_FAMILY, HConstants.EMPTY_STRING)
+          .size());
+    userPermissions = AccessControlClient.getUserPermissions(conn, table1.getNameAsString(),
+      TEST_FAMILY, USER_ADMIN_CF.getName());
+    verifyGetUserPermissionResult(userPermissions, 1, null, null, USER_ADMIN_CF.getName(),
+      superUsers);
+    assertEquals(0, AccessControlClient
+        .getUserPermissions(conn, table1.getNameAsString(), TEST_FAMILY, nSUser1.getName()).size());
+
+    // Table Users + CF + CQ
+    assertEquals(3, AccessControlClient.getUserPermissions(conn, table1.getNameAsString(),
+      TEST_FAMILY, HConstants.EMPTY_BYTE_ARRAY).size());
+    assertEquals(1, AccessControlClient
+        .getUserPermissions(conn, table1.getNameAsString(), TEST_FAMILY, TEST_QUALIFIER).size());
+    assertEquals(1, AccessControlClient
+        .getUserPermissions(conn, table1.getNameAsString(), TEST_FAMILY, TEST_QUALIFIER2).size());
+    assertEquals(2, AccessControlClient.getUserPermissions(conn, table1.getNameAsString(),
+      HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, USER_RW.getName()).size());
+    assertEquals(0, AccessControlClient
+        .getUserPermissions(conn, table1.getNameAsString(), TEST_FAMILY, Bytes.toBytes("dummmyCQ"))
+        .size());
+
+    // Table Users + CF + CQ + User
+    assertEquals(3, AccessControlClient.getUserPermissions(conn, table1.getNameAsString(),
+      TEST_FAMILY, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_STRING).size());
+    assertEquals(1, AccessControlClient.getUserPermissions(conn, table1.getNameAsString(),
+      TEST_FAMILY, TEST_QUALIFIER, USER_RW.getName()).size());
+    assertEquals(1, AccessControlClient.getUserPermissions(conn, table1.getNameAsString(),
+      TEST_FAMILY, TEST_QUALIFIER2, USER_RW.getName()).size());
+    assertEquals(0, AccessControlClient.getUserPermissions(conn, table1.getNameAsString(),
+      TEST_FAMILY, TEST_QUALIFIER2, nSUser1.getName()).size());
+  }
+
+  /*
+   * Validate the user permission against the specified column family, column qualifier and user
+   * name.
+   */
+  private void verifyGetUserPermissionResult(List<UserPermission> userPermissions, int resultCount,
+      byte[] cf, byte[] cq, String userName, Collection<String> superUsers) {
+    assertEquals(resultCount, userPermissions.size());
+
+    for (UserPermission perm : userPermissions) {
+      if (cf != null) {
+        assertTrue(Bytes.equals(cf, perm.getFamily()));
+      }
+      if (cq != null) {
+        assertTrue(Bytes.equals(cq, perm.getQualifier()));
+      }
+      if (userName != null
+          && (superUsers == null || !superUsers.contains(Bytes.toString(perm.getUser())))) {
+        assertTrue(userName.equals(Bytes.toString(perm.getUser())));
+      }
+    }
+  }
+
+  /*
+   * Dummy ShellBasedUnixGroupsMapping class to retrieve the groups for the test users.
+   */
+  public static class MyShellBasedUnixGroupsMapping extends ShellBasedUnixGroupsMapping
+      implements GroupMappingServiceProvider {
+    @Override
+    public List<String> getGroups(String user) throws IOException {
+      if (user.equals("globalGroupUser1")) {
+        return Arrays.asList(new String[] { "group_admin" });
+      } else if (user.equals("globalGroupUser2")) {
+        return Arrays.asList(new String[] { "group_admin", "group_create" });
+      } else if (user.equals("nsGroupUser1")) {
+        return Arrays.asList(new String[] { "ns_group1" });
+      } else if (user.equals("nsGroupUser2")) {
+        return Arrays.asList(new String[] { "ns_group2" });
+      } else if (user.equals("tableGroupUser1")) {
+        return Arrays.asList(new String[] { "table_group1" });
+      } else if (user.equals("tableGroupUser2")) {
+        return Arrays.asList(new String[] { "table_group2" });
+      } else {
+        return super.getGroups(user);
+      }
+    }
   }
 }

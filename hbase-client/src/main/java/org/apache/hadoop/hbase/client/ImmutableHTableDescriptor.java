@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -28,19 +28,17 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Read-only table descriptor.
  */
 @Deprecated // deprecated for hbase 2.0, remove for hbase 3.0. see HTableDescriptor.
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class ImmutableHTableDescriptor extends HTableDescriptor {
 
   @Override
   protected HColumnDescriptor toHColumnDescriptor(ColumnFamilyDescriptor desc) {
     if (desc == null) {
       return null;
-    } else if (desc instanceof ModifyableColumnFamilyDescriptor) {
-      return new ImmutableHColumnDescriptor((ModifyableColumnFamilyDescriptor) desc);
     } else if (desc instanceof HColumnDescriptor) {
       return new ImmutableHColumnDescriptor((HColumnDescriptor) desc);
     } else {
-      return new ImmutableHColumnDescriptor(new ModifyableColumnFamilyDescriptor(desc));
+      return new ImmutableHColumnDescriptor(desc);
     }
   }
   /*
@@ -49,6 +47,11 @@ public class ImmutableHTableDescriptor extends HTableDescriptor {
    */
   public ImmutableHTableDescriptor(final HTableDescriptor desc) {
     super(desc, false);
+  }
+
+  public ImmutableHTableDescriptor(final TableDescriptor desc) {
+    super(desc instanceof ModifyableTableDescriptor ?
+      (ModifyableTableDescriptor) desc : new ModifyableTableDescriptor(desc.getTableName(), desc));
   }
 
   @Override

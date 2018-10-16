@@ -18,42 +18,44 @@
 
 package org.apache.hadoop.hbase.security.token;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Synchronizes token encryption keys across cluster nodes.
  */
 @InterfaceAudience.Private
-public class ZKSecretWatcher extends ZooKeeperListener {
+public class ZKSecretWatcher extends ZKListener {
   private static final String DEFAULT_ROOT_NODE = "tokenauth";
   private static final String DEFAULT_KEYS_PARENT = "keys";
-  private static final Log LOG = LogFactory.getLog(ZKSecretWatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKSecretWatcher.class);
 
   private AuthenticationTokenSecretManager secretManager;
   private String baseKeyZNode;
   private String keysParentZNode;
 
   public ZKSecretWatcher(Configuration conf,
-      ZooKeeperWatcher watcher,
+      ZKWatcher watcher,
       AuthenticationTokenSecretManager secretManager) {
     super(watcher);
     this.secretManager = secretManager;
     String keyZNodeParent = conf.get("zookeeper.znode.tokenauth.parent", DEFAULT_ROOT_NODE);
-    this.baseKeyZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, keyZNodeParent);
-    this.keysParentZNode = ZKUtil.joinZNode(baseKeyZNode, DEFAULT_KEYS_PARENT);
+    this.baseKeyZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, keyZNodeParent);
+    this.keysParentZNode = ZNodePaths.joinZNode(baseKeyZNode, DEFAULT_KEYS_PARENT);
   }
 
   public void start() throws KeeperException {
@@ -76,7 +78,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
             ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
         refreshNodes(nodes);
       } catch (KeeperException ke) {
-        LOG.fatal("Error reading data from zookeeper", ke);
+        LOG.error(HBaseMarkers.FATAL, "Error reading data from zookeeper", ke);
         watcher.abort("Error reading new key znode "+path, ke);
       }
     }
@@ -109,10 +111,10 @@ public class ZKSecretWatcher extends ZooKeeperListener {
             new AuthenticationKey());
         secretManager.addKey(key);
       } catch (KeeperException ke) {
-        LOG.fatal("Error reading data from zookeeper", ke);
+        LOG.error(HBaseMarkers.FATAL, "Error reading data from zookeeper", ke);
         watcher.abort("Error reading updated key znode "+path, ke);
       } catch (IOException ioe) {
-        LOG.fatal("Error reading key writables", ioe);
+        LOG.error(HBaseMarkers.FATAL, "Error reading key writables", ioe);
         watcher.abort("Error reading key writables from znode "+path, ioe);
       }
     }
@@ -127,7 +129,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
             ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
         refreshNodes(nodes);
       } catch (KeeperException ke) {
-        LOG.fatal("Error reading data from zookeeper", ke);
+        LOG.error(HBaseMarkers.FATAL, "Error reading data from zookeeper", ke);
         watcher.abort("Error reading changed keys from zookeeper", ke);
       }
     }
@@ -151,15 +153,15 @@ public class ZKSecretWatcher extends ZooKeeperListener {
             data, new AuthenticationKey());
         secretManager.addKey(key);
       } catch (IOException ioe) {
-        LOG.fatal("Failed reading new secret key for id '" + keyId +
-            "' from zk", ioe);
+        LOG.error(HBaseMarkers.FATAL, "Failed reading new secret key for id '" +
+            keyId + "' from zk", ioe);
         watcher.abort("Error deserializing key from znode "+path, ioe);
       }
     }
   }
 
   private String getKeyNode(int keyId) {
-    return ZKUtil.joinZNode(keysParentZNode, Integer.toString(keyId));
+    return ZNodePaths.joinZNode(keysParentZNode, Integer.toString(keyId));
   }
 
   public void removeKeyFromZK(AuthenticationKey key) {
@@ -169,8 +171,8 @@ public class ZKSecretWatcher extends ZooKeeperListener {
     } catch (KeeperException.NoNodeException nne) {
       LOG.error("Non-existent znode "+keyZNode+" for key "+key.getKeyId(), nne);
     } catch (KeeperException ke) {
-      LOG.fatal("Failed removing znode "+keyZNode+" for key "+key.getKeyId(),
-          ke);
+      LOG.error(HBaseMarkers.FATAL, "Failed removing znode "+keyZNode+" for key "+
+          key.getKeyId(), ke);
       watcher.abort("Unhandled zookeeper error removing znode "+keyZNode+
           " for key "+key.getKeyId(), ke);
     }
@@ -183,7 +185,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
       // TODO: is there any point in retrying beyond what ZK client does?
       ZKUtil.createSetData(watcher, keyZNode, keyData);
     } catch (KeeperException ke) {
-      LOG.fatal("Unable to synchronize master key "+key.getKeyId()+
+      LOG.error(HBaseMarkers.FATAL, "Unable to synchronize master key "+key.getKeyId()+
           " to znode "+keyZNode, ke);
       watcher.abort("Unable to synchronize secret key "+
           key.getKeyId()+" in zookeeper", ke);
@@ -204,7 +206,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
         ZKUtil.createSetData(watcher, keyZNode, keyData);
       }
     } catch (KeeperException ke) {
-      LOG.fatal("Unable to update master key "+key.getKeyId()+
+      LOG.error(HBaseMarkers.FATAL, "Unable to update master key "+key.getKeyId()+
           " in znode "+keyZNode);
       watcher.abort("Unable to synchronize secret key "+
           key.getKeyId()+" in zookeeper", ke);
@@ -213,7 +215,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
       watcher.abort("Failed serializing key "+key.getKeyId(), ioe);
     }
   }
-  
+
   /**
    * refresh keys
    */
@@ -223,11 +225,11 @@ public class ZKSecretWatcher extends ZooKeeperListener {
           ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
       refreshNodes(nodes);
     } catch (KeeperException ke) {
-      LOG.fatal("Error reading data from zookeeper", ke);
+      LOG.error(HBaseMarkers.FATAL, "Error reading data from zookeeper", ke);
       watcher.abort("Error reading changed keys from zookeeper", ke);
     }
   }
-  
+
   /**
    * get token keys parent node
    * @return token keys parent node

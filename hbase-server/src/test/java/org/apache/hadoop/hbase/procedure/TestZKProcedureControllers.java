@@ -27,28 +27,29 @@ import static org.mockito.Mockito.verify;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Test zookeeper-based, procedure controllers
@@ -56,7 +57,11 @@ import com.google.common.collect.Lists;
 @Category({MasterTests.class, MediumTests.class})
 public class TestZKProcedureControllers {
 
-  private static final Log LOG = LogFactory.getLog(TestZKProcedureControllers.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestZKProcedureControllers.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKProcedureControllers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final String COHORT_NODE_NAME = "expected";
   private static final String CONTROLLER_NODE_NAME = "controller";
@@ -78,9 +83,9 @@ public class TestZKProcedureControllers {
    * Smaller test to just test the actuation on the cohort member
    * @throws Exception on failure
    */
-  @Test(timeout = 60000)
+  @Test
   public void testSimpleZKCohortMemberController() throws Exception {
-    ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
+    ZKWatcher watcher = UTIL.getZooKeeperWatcher();
     final String operationName = "instanceTest";
 
     final Subprocedure sub = Mockito.mock(Subprocedure.class);
@@ -131,17 +136,17 @@ public class TestZKProcedureControllers {
     LOG.debug("Commit node:" + commit + ", exists:" + ZKUtil.checkExists(watcher, commit));
     committed.await();
 
-    verify(monitor, never()).receive(Mockito.any(ForeignException.class));
+    verify(monitor, never()).receive(Mockito.any());
     // XXX: broken due to composition.
 //    verify(member, never()).getManager().controllerConnectionFailure(Mockito.anyString(),
-//      Mockito.any(IOException.class));
+//      Mockito.any());
     // cleanup after the test
     ZKUtil.deleteNodeRecursively(watcher, controller.getZkController().getBaseZnode());
     assertEquals("Didn't delete prepare node", -1, ZKUtil.checkExists(watcher, prepare));
     assertEquals("Didn't delete commit node", -1, ZKUtil.checkExists(watcher, commit));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testZKCoordinatorControllerWithNoCohort() throws Exception {
     final String operationName = "no cohort controller test";
     final byte[] data = new byte[] { 1, 2, 3 };
@@ -150,7 +155,7 @@ public class TestZKProcedureControllers {
     runMockCommitWithOrchestratedControllers(startCohortFirst, operationName, data);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testZKCoordinatorControllerWithSingleMemberCohort() throws Exception {
     final String operationName = "single member controller test";
     final byte[] data = new byte[] { 1, 2, 3 };
@@ -159,7 +164,7 @@ public class TestZKProcedureControllers {
     runMockCommitWithOrchestratedControllers(startCohortFirst, operationName, data, "cohort");
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testZKCoordinatorControllerMultipleCohort() throws Exception {
     final String operationName = "multi member controller test";
     final byte[] data = new byte[] { 1, 2, 3 };
@@ -172,7 +177,7 @@ public class TestZKProcedureControllers {
 
   private void runMockCommitWithOrchestratedControllers(StartControllers controllers,
       String operationName, byte[] data, String... cohort) throws Exception {
-    ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
+    ZKWatcher watcher = UTIL.getZooKeeperWatcher();
     List<String> expected = Lists.newArrayList(cohort);
 
     final Subprocedure sub = Mockito.mock(Subprocedure.class);
@@ -248,7 +253,7 @@ public class TestZKProcedureControllers {
 
   public void runEarlyPrepareNodes(StartControllers controllers, String operationName, byte[] data,
       String... cohort) throws Exception {
-    ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
+    ZKWatcher watcher = UTIL.getZooKeeperWatcher();
     List<String> expected = Lists.newArrayList(cohort);
 
     final Subprocedure sub = Mockito.mock(Subprocedure.class);
@@ -345,7 +350,7 @@ public class TestZKProcedureControllers {
   /**
    * Verify that the prepare, commit and abort nodes for the operation are removed from zookeeper
    */
-  private void verifyZooKeeperClean(String operationName, ZooKeeperWatcher watcher,
+  private void verifyZooKeeperClean(String operationName, ZKWatcher watcher,
       ZKProcedureUtil controller) throws Exception {
     String prepare = ZKProcedureUtil.getAcquireBarrierNode(controller, operationName);
     String commit = ZKProcedureUtil.getReachedBarrierNode(controller, operationName);
@@ -363,7 +368,7 @@ public class TestZKProcedureControllers {
 //    verify(member, Mockito.times(cohortSize)).submitSubprocedure(Mockito.eq(operationName),
 //      (byte[]) Mockito.argThat(new ArrayEquals(data)));
     Mockito.verify(member,
-      Mockito.atLeast(cohortSize)).submitSubprocedure(Mockito.any(Subprocedure.class));
+      Mockito.atLeast(cohortSize)).submitSubprocedure(Mockito.any());
 
   }
 
@@ -384,18 +389,18 @@ public class TestZKProcedureControllers {
    */
   private abstract class StartControllers {
     public abstract Pair<ZKProcedureCoordinator, List<ZKProcedureMemberRpcs>> start(
-        ZooKeeperWatcher watcher, String operationName,
-        ProcedureCoordinator coordinator, String controllerName,
-        ProcedureMember member, List<String> cohortNames) throws Exception;
+            ZKWatcher watcher, String operationName,
+            ProcedureCoordinator coordinator, String controllerName,
+            ProcedureMember member, List<String> cohortNames) throws Exception;
   }
 
   private final StartControllers startCoordinatorFirst = new StartControllers() {
 
     @Override
     public Pair<ZKProcedureCoordinator, List<ZKProcedureMemberRpcs>> start(
-        ZooKeeperWatcher watcher, String operationName,
-        ProcedureCoordinator coordinator, String controllerName,
-        ProcedureMember member, List<String> expected) throws Exception {
+            ZKWatcher watcher, String operationName,
+            ProcedureCoordinator coordinator, String controllerName,
+            ProcedureMember member, List<String> expected) throws Exception {
       // start the controller
       ZKProcedureCoordinator controller = new ZKProcedureCoordinator(
           watcher, operationName, CONTROLLER_NODE_NAME);
@@ -421,9 +426,9 @@ public class TestZKProcedureControllers {
 
     @Override
     public Pair<ZKProcedureCoordinator, List<ZKProcedureMemberRpcs>> start(
-        ZooKeeperWatcher watcher, String operationName,
-        ProcedureCoordinator coordinator, String controllerName,
-        ProcedureMember member, List<String> expected) throws Exception {
+            ZKWatcher watcher, String operationName,
+            ProcedureCoordinator coordinator, String controllerName,
+            ProcedureMember member, List<String> expected) throws Exception {
 
       // make a cohort controller for each expected node
       List<ZKProcedureMemberRpcs> cohortControllers = new ArrayList<>();

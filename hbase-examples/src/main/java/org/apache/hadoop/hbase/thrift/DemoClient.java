@@ -31,13 +31,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.sasl.Sasl;
-
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
@@ -49,24 +47,30 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSaslClientTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * See the instructions under hbase-examples/README.txt
  */
+@InterfaceAudience.Private
 public class DemoClient {
+  private static final Logger LOG = LoggerFactory.getLogger(DemoClient.class);
 
     static protected int port;
     static protected String host;
     CharsetDecoder decoder = null;
 
     private static boolean secure = false;
+    private static String serverPrincipal = "hbase";
 
     public static void main(String[] args) throws Exception {
 
-        if (args.length < 2 || args.length > 3) {
+        if (args.length < 2 || args.length > 4 || (args.length > 2 && !isBoolean(args[2]))) {
 
             System.out.println("Invalid arguments!");
-            System.out.println("Usage: DemoClient host port [secure=false]");
+            System.out.println("Usage: DemoClient host port [secure=false [server-principal=hbase] ]");
 
             System.exit(-1);
         }
@@ -75,6 +79,10 @@ public class DemoClient {
         host = args[0];
         if (args.length > 2) {
           secure = Boolean.parseBoolean(args[2]);
+        }
+
+        if (args.length == 4) {
+          serverPrincipal = args[3];
         }
 
         final DemoClient client = new DemoClient();
@@ -86,6 +94,10 @@ public class DemoClient {
               return null;
             }
           });
+    }
+
+    private static boolean isBoolean(String s){
+      return Boolean.TRUE.toString().equalsIgnoreCase(s) || Boolean.FALSE.toString().equalsIgnoreCase(s);
     }
 
     DemoClient() {
@@ -101,15 +113,15 @@ public class DemoClient {
         }
     }
 
-    // Helper to translate strings to UTF8 bytes
-    private byte[] bytes(String s) {
-        try {
-            return s.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-            return null;
-        }
+  // Helper to translate strings to UTF8 bytes
+  private byte[] bytes(String s) {
+    try {
+      return s.getBytes("UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      LOG.error("CharSetName {} not supported", s, e);
+      return null;
     }
+  }
 
     private void run() throws Exception {
         TTransport transport = new TSocket(host, port);
@@ -123,7 +135,7 @@ public class DemoClient {
            * The HBase cluster must be secure, allow proxy user.
            */
           transport = new TSaslClientTransport("GSSAPI", null,
-            "hbase", // Thrift server user name, should be an authorized proxy user.
+            serverPrincipal, // Thrift server user name, should be an authorized proxy user.
             host, // Thrift server domain
             saslProperties, null, transport);
         }

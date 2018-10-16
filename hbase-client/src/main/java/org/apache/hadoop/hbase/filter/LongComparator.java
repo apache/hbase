@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A long comparator which numerical compares against the specified byte array
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class LongComparator extends ByteArrayComparable {
   private long longValue;
 
@@ -66,8 +67,8 @@ public class LongComparator extends ByteArrayComparable {
     }
 
     /**
-     * @param pbBytes A pb serialized {@link BinaryComparator} instance
-     * @return An instance of {@link BinaryComparator} made from <code>bytes</code>
+     * @param pbBytes A pb serialized {@link LongComparator} instance
+     * @return An instance of {@link LongComparator} made from <code>bytes</code>
      * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
      * @see #toByteArray
      */

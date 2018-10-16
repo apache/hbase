@@ -20,39 +20,35 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.math.BigInteger;
-
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
@@ -62,10 +58,18 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.OptionBuilder;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 /**
  * The {@link RegionSplitter} class provides several utilities to help in the
@@ -140,7 +144,7 @@ import com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public class RegionSplitter {
-  private static final Log LOG = LogFactory.getLog(RegionSplitter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionSplitter.class);
 
   /**
    * A generic interface for the RegionSplitter code to use for all it's
@@ -176,6 +180,17 @@ public class RegionSplitter {
      *         length of the returned array should be numRegions-1.
      */
     byte[][] split(int numRegions);
+
+    /**
+     * Some MapReduce jobs may want to run multiple mappers per region,
+     * this is intended for such usecase.
+     *
+     * @param start first row (inclusive)
+     * @param end last row (exclusive)
+     * @param numSplits number of splits to generate
+     * @param inclusive whether start and end are returned as split points
+     */
+    byte[][] split(byte[] start, byte[] end, int numSplits, boolean inclusive);
 
     /**
      * In HBase, the first row is represented by an empty byte array. This might
@@ -258,6 +273,12 @@ public class RegionSplitter {
    * <li>bin/hbase org.apache.hadoop.hbase.util.RegionSplitter -c 60 -f test:rs
    * myTable HexStringSplit
    * </ul>
+   * <li>create a table named 'myTable' with 50 pre-split regions,
+   * assuming the keys are decimal-encoded ASCII:
+   * <ul>
+   * <li>bin/hbase org.apache.hadoop.hbase.util.RegionSplitter -c 50
+   * myTable DecimalStringSplit
+   * </ul>
    * <li>perform a rolling split of 'myTable' (i.e. 60 =&gt; 120 regions), # 2
    * outstanding splits at a time, assuming keys are uniformly distributed
    * bytes:
@@ -267,9 +288,9 @@ public class RegionSplitter {
    * </ul>
    * </ul>
    *
-   * There are two SplitAlgorithms built into RegionSplitter, HexStringSplit
-   * and UniformSplit. These are different strategies for choosing region
-   * boundaries. See their source code for details.
+   * There are three SplitAlgorithms built into RegionSplitter, HexStringSplit,
+   * DecimalStringSplit, and UniformSplit. These are different strategies for
+   * choosing region boundaries. See their source code for details.
    *
    * @param args
    *          Usage: RegionSplitter &lt;TABLE&gt; &lt;SPLITALGORITHM&gt;
@@ -310,7 +331,7 @@ public class RegionSplitter {
     opt.addOption(null, "lastrow", true,
         "Last Row in Table for Split Algorithm");
     opt.addOption(null, "risky", false,
-        "Skip verification steps to complete quickly."
+        "Skip verification steps to complete quickly. "
             + "STRONGLY DISCOURAGED for production systems.  ");
     CommandLine cmd = new GnuParser().parse(opt, args);
 
@@ -335,11 +356,12 @@ public class RegionSplitter {
     boolean oneOperOnly = createTable ^ rollingSplit;
 
     if (2 != cmd.getArgList().size() || !oneOperOnly || cmd.hasOption("h")) {
-      new HelpFormatter().printHelp("RegionSplitter <TABLE> <SPLITALGORITHM>\n"+
-          "SPLITALGORITHM is a java class name of a class implementing " +
-          "SplitAlgorithm, or one of the special strings HexStringSplit " +
-          "or UniformSplit, which are built-in split algorithms. " +
+      new HelpFormatter().printHelp("bin/hbase regionsplitter <TABLE> <SPLITALGORITHM>\n"+
+          "SPLITALGORITHM is the java class name of a class implementing " +
+          "SplitAlgorithm, or one of the special strings HexStringSplit or " +
+          "DecimalStringSplit or UniformSplit, which are built-in split algorithms. " +
           "HexStringSplit treats keys as hexadecimal ASCII, and " +
+          "DecimalStringSplit treats keys as decimal ASCII, and " +
           "UniformSplit treats keys as arbitrary bytes.", opt);
       return;
     }
@@ -378,16 +400,16 @@ public class RegionSplitter {
     LOG.debug("Creating table " + tableName + " with " + columnFamilies.length
         + " column families.  Presplitting to " + splitCount + " regions");
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (String cf : columnFamilies) {
-      desc.addFamily(new HColumnDescriptor(Bytes.toBytes(cf)));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf));
     }
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       Admin admin = connection.getAdmin();
       try {
         Preconditions.checkArgument(!admin.tableExists(tableName),
           "Table already exists: " + tableName);
-        admin.createTable(desc, splitAlgo.split(splitCount));
+        admin.createTable(builder.build(), splitAlgo.split(splitCount));
       } finally {
         admin.close();
       }
@@ -411,12 +433,12 @@ public class RegionSplitter {
    * Alternative getCurrentNrHRS which is no longer available.
    * @param connection
    * @return Rough count of regionservers out on cluster.
-   * @throws IOException 
+   * @throws IOException if a remote or network exception occurs
    */
   private static int getRegionServerCount(final Connection connection) throws IOException {
     try (Admin admin = connection.getAdmin()) {
-      ClusterStatus status = admin.getClusterStatus();
-      Collection<ServerName> servers = status.getServers();
+      ClusterMetrics status = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
+      Collection<ServerName> servers = status.getLiveServerMetrics().keySet();
       return servers == null || servers.isEmpty()? 0: servers.size();
     }
   }
@@ -644,6 +666,8 @@ public class RegionSplitter {
     // their simple class name instead of a fully qualified class name.
     if(splitClassName.equals(HexStringSplit.class.getSimpleName())) {
       splitClass = HexStringSplit.class;
+    } else if (splitClassName.equals(DecimalStringSplit.class.getSimpleName())) {
+      splitClass = DecimalStringSplit.class;
     } else if (splitClassName.equals(UniformSplit.class.getSimpleName())) {
       splitClass = UniformSplit.class;
     } else {
@@ -661,7 +685,7 @@ public class RegionSplitter {
       }
     }
     try {
-      return splitClass.asSubclass(SplitAlgorithm.class).newInstance();
+      return splitClass.asSubclass(SplitAlgorithm.class).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new IOException("Problem loading split algorithm: ", e);
     }
@@ -684,9 +708,9 @@ public class RegionSplitter {
     FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
     // Clear the cache to forcibly refresh region information
     ((ClusterConnection)connection).clearRegionCache();
-    HTableDescriptor htd = null;
+    TableDescriptor htd = null;
     try (Table table = connection.getTable(tableName)) {
-      htd = table.getTableDescriptor();
+      htd = table.getDescriptor();
     }
     try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
 
@@ -704,7 +728,7 @@ public class RegionSplitter {
           }
         } catch (NoServerForRegionException nsfre) {
           // NSFRE will occur if the old hbase:meta entry has no server assigned
-          LOG.info(nsfre);
+          LOG.info(nsfre.toString(), nsfre);
           logicalSplitting.add(region);
           continue;
         }
@@ -725,7 +749,7 @@ public class RegionSplitter {
 
             // Check every Column Family for that region -- check does not have references.
             boolean refFound = false;
-            for (HColumnDescriptor c : htd.getFamilies()) {
+            for (ColumnFamilyDescriptor c : htd.getColumnFamilies()) {
               if ((refFound = regionFs.hasReferences(c.getNameAsString()))) {
                 break;
               }
@@ -760,7 +784,7 @@ public class RegionSplitter {
    * @param conf
    * @param tableName
    * @return A Pair where first item is table dir and second is the split file.
-   * @throws IOException 
+   * @throws IOException if a remote or network exception occurs
    */
   private static Pair<Path, Path> getTableDirAndSplitFile(final Configuration conf,
       final TableName tableName)
@@ -778,7 +802,7 @@ public class RegionSplitter {
       getTableDirAndSplitFile(connection.getConfiguration(), tableName);
     Path tableDir = tableDirAndSplitFile.getFirst();
     Path splitFile = tableDirAndSplitFile.getSecond();
- 
+
     FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
 
     // Using strings because (new byte[]{0}).equals(new byte[]{0}) == false
@@ -877,16 +901,54 @@ public class RegionSplitter {
    * Since this split algorithm uses hex strings as keys, it is easy to read &amp;
    * write in the shell but takes up more space and may be non-intuitive.
    */
-  public static class HexStringSplit implements SplitAlgorithm {
+  public static class HexStringSplit extends NumberStringSplit {
     final static String DEFAULT_MIN_HEX = "00000000";
     final static String DEFAULT_MAX_HEX = "FFFFFFFF";
+    final static int RADIX_HEX = 16;
 
-    String firstRow = DEFAULT_MIN_HEX;
-    BigInteger firstRowInt = BigInteger.ZERO;
-    String lastRow = DEFAULT_MAX_HEX;
-    BigInteger lastRowInt = new BigInteger(lastRow, 16);
-    int rowComparisonLength = lastRow.length();
+    public HexStringSplit() {
+      super(DEFAULT_MIN_HEX, DEFAULT_MAX_HEX, RADIX_HEX);
+    }
 
+  }
+
+  /**
+   * The format of a DecimalStringSplit region boundary is the ASCII representation of
+   * reversed sequential number, or any other uniformly distributed decimal value.
+   * Row are decimal-encoded long values in the range
+   * <b>"00000000" =&gt; "99999999"</b> and are left-padded with zeros to keep the
+   * same order lexicographically as if they were binary.
+   */
+  public static class DecimalStringSplit extends NumberStringSplit {
+    final static String DEFAULT_MIN_DEC = "00000000";
+    final static String DEFAULT_MAX_DEC = "99999999";
+    final static int RADIX_DEC = 10;
+
+    public DecimalStringSplit() {
+      super(DEFAULT_MIN_DEC, DEFAULT_MAX_DEC, RADIX_DEC);
+    }
+
+  }
+
+  public abstract static class NumberStringSplit implements SplitAlgorithm {
+
+    String firstRow;
+    BigInteger firstRowInt;
+    String lastRow;
+    BigInteger lastRowInt;
+    int rowComparisonLength;
+    int radix;
+
+    NumberStringSplit(String minRow, String maxRow, int radix) {
+      this.firstRow = minRow;
+      this.lastRow = maxRow;
+      this.radix = radix;
+      this.firstRowInt = BigInteger.ZERO;
+      this.lastRowInt = new BigInteger(lastRow, this.radix);
+      this.rowComparisonLength = lastRow.length();
+    }
+
+    @Override
     public byte[] split(byte[] start, byte[] end) {
       BigInteger s = convertToBigInteger(start);
       BigInteger e = convertToBigInteger(end);
@@ -894,6 +956,7 @@ public class RegionSplitter {
       return convertToByte(split2(s, e));
     }
 
+    @Override
     public byte[][] split(int n) {
       Preconditions.checkArgument(lastRowInt.compareTo(firstRowInt) > 0,
           "last row (%s) is configured less than first row (%s)", lastRow,
@@ -914,34 +977,74 @@ public class RegionSplitter {
       return convertToBytes(splits);
     }
 
+    @Override
+    public byte[][] split(byte[] start, byte[] end, int numSplits, boolean inclusive) {
+      BigInteger s = convertToBigInteger(start);
+      BigInteger e = convertToBigInteger(end);
+
+      Preconditions.checkArgument(e.compareTo(s) > 0,
+                      "last row (%s) is configured less than first row (%s)", rowToStr(end),
+                      end);
+      // +1 to range because the last row is inclusive
+      BigInteger range = e.subtract(s).add(BigInteger.ONE);
+      Preconditions.checkState(range.compareTo(BigInteger.valueOf(numSplits)) >= 0,
+              "split granularity (%s) is greater than the range (%s)", numSplits, range);
+
+      BigInteger[] splits = new BigInteger[numSplits - 1];
+      BigInteger sizeOfEachSplit = range.divide(BigInteger.valueOf(numSplits));
+      for (int i = 1; i < numSplits; i++) {
+        // NOTE: this means the last region gets all the slop.
+        // This is not a big deal if we're assuming n << MAXHEX
+        splits[i - 1] = s.add(sizeOfEachSplit.multiply(BigInteger
+                .valueOf(i)));
+      }
+
+      if (inclusive) {
+        BigInteger[] inclusiveSplitPoints = new BigInteger[numSplits + 1];
+        inclusiveSplitPoints[0] = convertToBigInteger(start);
+        inclusiveSplitPoints[numSplits] = convertToBigInteger(end);
+        System.arraycopy(splits, 0, inclusiveSplitPoints, 1, splits.length);
+        return convertToBytes(inclusiveSplitPoints);
+      } else {
+        return convertToBytes(splits);
+      }
+    }
+
+    @Override
     public byte[] firstRow() {
       return convertToByte(firstRowInt);
     }
 
+    @Override
     public byte[] lastRow() {
       return convertToByte(lastRowInt);
     }
 
+    @Override
     public void setFirstRow(String userInput) {
       firstRow = userInput;
-      firstRowInt = new BigInteger(firstRow, 16);
+      firstRowInt = new BigInteger(firstRow, radix);
     }
 
+    @Override
     public void setLastRow(String userInput) {
       lastRow = userInput;
-      lastRowInt = new BigInteger(lastRow, 16);
+      lastRowInt = new BigInteger(lastRow, radix);
       // Precondition: lastRow > firstRow, so last's length is the greater
       rowComparisonLength = lastRow.length();
     }
 
+    @Override
     public byte[] strToRow(String in) {
-      return convertToByte(new BigInteger(in, 16));
+      return convertToByte(new BigInteger(in, radix));
     }
 
+    @Override
     public String rowToStr(byte[] row) {
       return Bytes.toStringBinary(row);
     }
 
+    @Override
     public String separator() {
       return " ";
     }
@@ -988,8 +1091,8 @@ public class RegionSplitter {
      * @param pad padding length
      * @return byte corresponding to input BigInteger
      */
-    public static byte[] convertToByte(BigInteger bigInteger, int pad) {
-      String bigIntegerString = bigInteger.toString(16);
+    public byte[] convertToByte(BigInteger bigInteger, int pad) {
+      String bigIntegerString = bigInteger.toString(radix);
       bigIntegerString = StringUtils.leftPad(bigIntegerString, pad, '0');
       return Bytes.toBytes(bigIntegerString);
     }
@@ -1011,7 +1114,7 @@ public class RegionSplitter {
      * @return the corresponding BigInteger
      */
     public BigInteger convertToBigInteger(byte[] row) {
-      return (row.length > 0) ? new BigInteger(Bytes.toString(row), 16)
+      return (row.length > 0) ? new BigInteger(Bytes.toString(row), radix)
           : BigInteger.ZERO;
     }
 
@@ -1035,6 +1138,7 @@ public class RegionSplitter {
     byte[] firstRowBytes = ArrayUtils.EMPTY_BYTE_ARRAY;
     byte[] lastRowBytes =
             new byte[] {xFF, xFF, xFF, xFF, xFF, xFF, xFF, xFF};
+    @Override
     public byte[] split(byte[] start, byte[] end) {
       return Bytes.split(start, end, 1)[1];
     }
@@ -1055,6 +1159,32 @@ public class RegionSplitter {
       // remove endpoints, which are included in the splits list
 
       return splits == null? null: Arrays.copyOfRange(splits, 1, splits.length - 1);
+    }
+
+    @Override
+    public byte[][] split(byte[] start, byte[] end, int numSplits, boolean inclusive) {
+      if (Arrays.equals(start, HConstants.EMPTY_BYTE_ARRAY)) {
+        start = firstRowBytes;
+      }
+      if (Arrays.equals(end, HConstants.EMPTY_BYTE_ARRAY)) {
+        end = lastRowBytes;
+      }
+      Preconditions.checkArgument(
+              Bytes.compareTo(end, start) > 0,
+              "last row (%s) is configured less than first row (%s)",
+              Bytes.toStringBinary(end),
+              Bytes.toStringBinary(start));
+
+      byte[][] splits = Bytes.split(start, end, true,
+              numSplits - 1);
+      Preconditions.checkState(splits != null,
+              "Could not calculate input splits with given user input: " + this);
+      if (inclusive) {
+        return splits;
+      } else {
+        // remove endpoints, which are included in the splits list
+        return Arrays.copyOfRange(splits, 1, splits.length - 1);
+      }
     }
 
     @Override

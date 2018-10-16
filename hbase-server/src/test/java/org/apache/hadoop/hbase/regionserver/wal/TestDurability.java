@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
@@ -23,20 +22,22 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
@@ -52,8 +53,11 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -63,8 +67,13 @@ import org.junit.runners.Parameterized.Parameters;
  * Tests for WAL write durability
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestDurability {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDurability.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static FileSystem FS;
   private static MiniDFSCluster CLUSTER;
@@ -77,6 +86,9 @@ public class TestDurability {
 
   @Parameter
   public String walProvider;
+
+  @Rule
+  public TestName name = new TestName();
 
   @Parameters(name = "{index}: provider={0}")
   public static Iterable<Object[]> data() {
@@ -111,12 +123,12 @@ public class TestDurability {
 
   @Test
   public void testDurability() throws Exception {
-    final WALFactory wals = new WALFactory(CONF, null, ServerName.valueOf("TestDurability",
-        16010, System.currentTimeMillis()).toString());
-    byte[] tableName = Bytes.toBytes("TestDurability");
-    final WAL wal = wals.getWAL(tableName, null);
-    HRegion region = createHRegion(tableName, "region", wal, Durability.USE_DEFAULT);
-    HRegion deferredRegion = createHRegion(tableName, "deferredRegion", wal, Durability.ASYNC_WAL);
+    WALFactory wals = new WALFactory(CONF,
+        ServerName.valueOf("TestDurability", 16010, System.currentTimeMillis()).toString());
+    HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
+    WAL wal = region.getWAL();
+    HRegion deferredRegion = createHRegion(region.getTableDescriptor(), region.getRegionInfo(),
+      "deferredRegion", wal, Durability.ASYNC_WAL);
 
     region.put(newPut(null));
     verifyWALCount(wals, wal, 1);
@@ -175,11 +187,10 @@ public class TestDurability {
     byte[] col3 = Bytes.toBytes("col3");
 
     // Setting up region
-    final WALFactory wals = new WALFactory(CONF, null,
+    WALFactory wals = new WALFactory(CONF,
         ServerName.valueOf("TestIncrement", 16010, System.currentTimeMillis()).toString());
-    byte[] tableName = Bytes.toBytes("TestIncrement");
-    final WAL wal = wals.getWAL(tableName, null);
-    HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);
+    HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
+    WAL wal = region.getWAL();
 
     // col1: amount = 0, 1 write back to WAL
     Increment inc1 = new Increment(row1);
@@ -231,8 +242,8 @@ public class TestDurability {
     assertEquals(3, Bytes.toLong(res.getValue(FAMILY, col3)));
     verifyWALCount(wals, wal, 4);
   }
-  
-  /*
+
+  /**
    * Test when returnResults set to false in increment it should not return the result instead it
    * resturn null.
    */
@@ -242,12 +253,11 @@ public class TestDurability {
     byte[] col1 = Bytes.toBytes("col1");
 
     // Setting up region
-    final WALFactory wals = new WALFactory(CONF, null,
-        ServerName.valueOf("testIncrementWithReturnResultsSetToFalse", 16010,
-            System.currentTimeMillis()).toString());
-    byte[] tableName = Bytes.toBytes("testIncrementWithReturnResultsSetToFalse");
-    final WAL wal = wals.getWAL(tableName, null);
-    HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);
+    WALFactory wals = new WALFactory(CONF,
+        ServerName
+            .valueOf("testIncrementWithReturnResultsSetToFalse", 16010, System.currentTimeMillis())
+            .toString());
+    HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
 
     Increment inc1 = new Increment(row1);
     inc1.setReturnResults(false);
@@ -270,28 +280,38 @@ public class TestDurability {
     WAL.Reader reader = wals.createReader(FS, walPath);
     int count = 0;
     WAL.Entry entry = new WAL.Entry();
-    while (reader.next(entry) != null) count++;
+    while (reader.next(entry) != null) {
+      count++;
+    }
     reader.close();
     assertEquals(expected, count);
   }
 
   // lifted from TestAtomicOperation
-  private HRegion createHRegion (byte [] tableName, String callingMethod,
-      WAL log, Durability durability)
-    throws IOException {
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-      htd.setDurability(durability);
-      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-      htd.addFamily(hcd);
-      HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-      Path path = new Path(DIR + callingMethod);
-      if (FS.exists(path)) {
-        if (!FS.delete(path, true)) {
-          throw new IOException("Failed delete of " + path);
-        }
+  private HRegion createHRegion(WALFactory wals, Durability durability) throws IOException {
+    TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^A-Za-z0-9-_]", "_"));
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
+    Path path = new Path(DIR, tableName.getNameAsString());
+    if (FS.exists(path)) {
+      if (!FS.delete(path, true)) {
+        throw new IOException("Failed delete of " + path);
       }
-      ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-      return HRegion.createHRegion(info, path, CONF, htd, log);
     }
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    return HRegion.createHRegion(info, path, CONF, htd, wals.getWAL(info));
+  }
 
+  private HRegion createHRegion(TableDescriptor td, RegionInfo info, String dir, WAL wal,
+      Durability durability) throws IOException {
+    Path path = new Path(DIR, dir);
+    if (FS.exists(path)) {
+      if (!FS.delete(path, true)) {
+        throw new IOException("Failed delete of " + path);
+      }
+    }
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    return HRegion.createHRegion(info, path, CONF, td, wal);
+  }
 }

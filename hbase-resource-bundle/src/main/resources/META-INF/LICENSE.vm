@@ -896,8 +896,7 @@ facade for Java, which can be obtained at:
     * http://www.slf4j.org/
 #end
 ## Supplemental from commons-math
-## parameter two-and-three true = updated to also cover commons-math 2, just 3 otherwise
-#macro(commons_math_license $two-and-three)
+#macro(commons_math_license)
 ----
 APACHE COMMONS MATH DERIVATIVE WORKS:
 
@@ -910,10 +909,6 @@ are reproduced below.
 For the lmder, lmpar and qrsolv Fortran routine from minpack and translated in
 the LevenbergMarquardtOptimizer class in package
 org.apache.commons.math3.optimization.general
-#if(${two-and-three})
-and package
-org.apache.commons.math.optimization.general
-#end
 Original source copyright and license statement:
 
 Minpack Copyright Notice (1999) University of Chicago.  All rights reserved
@@ -972,9 +967,7 @@ POSSIBILITY OF SUCH LOSS OR DAMAGES.
 Copyright and license statement for the odex Fortran routine developed by
 E. Hairer and G. Wanner and translated in GraggBulirschStoerIntegrator class
 in package org.apache.commons.math3.ode.nonstiff:
-#if(${two-and-three})
-and in package org.apache.commons.math.ode.nonstiff:
-#end
+
 
 Copyright (c) 2004, Ernst Hairer
 
@@ -1000,60 +993,11 @@ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-===============================================================================
-
-Copyright and license statement for the original lapack fortran routines
-translated in EigenDecompositionImpl class in package
-org.apache.commons.math3.linear:
-#if(${two-and-three})
-and package
-org.apache.commons.math.linear:
-#end
-
-Copyright (c) 1992-2008 The University of Tennessee.  All rights reserved.
-
-$COPYRIGHT$
-
-Additional copyrights may follow
-
-$HEADER$
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-- Redistributions of source code must retain the above copyright
-  notice, this list of conditions and the following disclaimer.
-
-- Redistributions in binary form must reproduce the above copyright
-  notice, this list of conditions and the following disclaimer listed
-  in this license in the documentation and/or other materials
-  provided with the distribution.
-
-- Neither the name of the copyright holders nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ===============================================================================
 
 Copyright and license statement for the original Mersenne twister C
 routines translated in MersenneTwister class in package
 org.apache.commons.math3.random:
-#if(${two-and-three})
-and package
-org.apache.commons.math.random:
-#end
 
    Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
    All rights reserved.
@@ -1087,191 +1031,103 @@ org.apache.commons.math.random:
 
 ===============================================================================
 
-The class "org.apache.commons.math3.exception.util.LocalizedFormatsTest" is
-an adapted version of "OrekitMessagesTest" test class for the Orekit library
-The "org.apache.commons.math3.analysis.interpolation.HermiteInterpolator"
-has been imported from the Orekit space flight dynamics library.
-
-Th Orekit library is described at:
-  https://www.orekit.org/forge/projects/orekit
-The original files are distributed under the terms of the Apache 2 license
-which is: Copyright 2010 CS Communication & SystÃ¨mes
-
-#end
-## Supplemental from commons-math if just commons-math 2 is present
-#macro(commons_math_two_license)
-----
-APACHE COMMONS MATH DERIVATIVE WORKS:
-
-The Apache commons-math library includes a number of subcomponents
-whose implementation is derived from original sources written
-in C or Fortran.  License terms of the original sources
-are reproduced below.
+The initial code for shuffling an array (originally in class
+"org.apache.commons.math3.random.RandomDataGenerator", now replaced by
+a method in class "org.apache.commons.math3.util.MathArrays") was
+inspired from the algorithm description provided in
+"Algorithms", by Ian Craw and John Pulham (University of Aberdeen 1999).
+The textbook (containing a proof that the shuffle is uniformly random) is
+available here:
+  http://citeseerx.ist.psu.edu/viewdoc/download;?doi=10.1.1.173.1898&rep=rep1&type=pdf
 
 ===============================================================================
-For the lmder, lmpar and qrsolv Fortran routine from minpack and translated in
-the LevenbergMarquardtOptimizer class in package
-org.apache.commons.math.optimization.general
-Original source copyright and license statement:
+License statement for the direction numbers in the resource files for Sobol sequences.
 
-Minpack Copyright Notice (1999) University of Chicago.  All rights reserved
+-----------------------------------------------------------------------------
+Licence pertaining to sobol.cc and the accompanying sets of direction numbers
 
-Redistribution and use in source and binary forms, with or
-without modification, are permitted provided that the
-following conditions are met:
-
-1. Redistributions of source code must retain the above
-copyright notice, this list of conditions and the following
-disclaimer.
-
-2. Redistributions in binary form must reproduce the above
-copyright notice, this list of conditions and the following
-disclaimer in the documentation and/or other materials
-provided with the distribution.
-
-3. The end-user documentation included with the
-redistribution, if any, must include the following
-acknowledgment:
-
-   "This product includes software developed by the
-   University of Chicago, as Operator of Argonne National
-   Laboratory.
-
-Alternately, this acknowledgment may appear in the software
-itself, if and wherever such third-party acknowledgments
-normally appear.
-
-4. WARRANTY DISCLAIMER. THE SOFTWARE IS SUPPLIED "AS IS"
-WITHOUT WARRANTY OF ANY KIND. THE COPYRIGHT HOLDER, THE
-UNITED STATES, THE UNITED STATES DEPARTMENT OF ENERGY, AND
-THEIR EMPLOYEES: (1) DISCLAIM ANY WARRANTIES, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO ANY IMPLIED WARRANTIES
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE
-OR NON-INFRINGEMENT, (2) DO NOT ASSUME ANY LEGAL LIABILITY
-OR RESPONSIBILITY FOR THE ACCURACY, COMPLETENESS, OR
-USEFULNESS OF THE SOFTWARE, (3) DO NOT REPRESENT THAT USE OF
-THE SOFTWARE WOULD NOT INFRINGE PRIVATELY OWNED RIGHTS, (4)
-DO NOT WARRANT THAT THE SOFTWARE WILL FUNCTION
-UNINTERRUPTED, THAT IT IS ERROR-FREE OR THAT ANY ERRORS WILL
-BE CORRECTED.
-
-5. LIMITATION OF LIABILITY. IN NO EVENT WILL THE COPYRIGHT
-HOLDER, THE UNITED STATES, THE UNITED STATES DEPARTMENT OF
-ENERGY, OR THEIR EMPLOYEES: BE LIABLE FOR ANY INDIRECT,
-INCIDENTAL, CONSEQUENTIAL, SPECIAL OR PUNITIVE DAMAGES OF
-ANY KIND OR NATURE, INCLUDING BUT NOT LIMITED TO LOSS OF
-PROFITS OR LOSS OF DATA, FOR ANY REASON WHATSOEVER, WHETHER
-SUCH LIABILITY IS ASSERTED ON THE BASIS OF CONTRACT, TORT
-(INCLUDING NEGLIGENCE OR STRICT LIABILITY), OR OTHERWISE,
-EVEN IF ANY OF SAID PARTIES HAS BEEN WARNED OF THE
-POSSIBILITY OF SUCH LOSS OR DAMAGES.
-===============================================================================
-
-Copyright and license statement for the odex Fortran routine developed by
-E. Hairer and G. Wanner and translated in GraggBulirschStoerIntegrator class
-in package org.apache.commons.math.ode.nonstiff:
-
-Copyright (c) 2004, Ernst Hairer
+-----------------------------------------------------------------------------
+Copyright (c) 2008, Frances Y. Kuo and Stephen Joe
+All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
+modification, are permitted provided that the following conditions are met:
 
-- Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
 
-- Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    * Neither the names of the copyright holders nor the names of the
+      University of New South Wales and the University of Waikato
+      and its contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ===============================================================================
 
-Copyright and license statement for the original lapack fortran routines
-translated in EigenDecompositionImpl class in package
-org.apache.commons.math.linear:
-
-Copyright (c) 1992-2008 The University of Tennessee.  All rights reserved.
-
-$COPYRIGHT$
-
-Additional copyrights may follow
-
-$HEADER$
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-- Redistributions of source code must retain the above copyright
-  notice, this list of conditions and the following disclaimer.
-
-- Redistributions in binary form must reproduce the above copyright
-  notice, this list of conditions and the following disclaimer listed
-  in this license in the documentation and/or other materials
-  provided with the distribution.
-
-- Neither the name of the copyright holders nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+The initial commit of package "org.apache.commons.math3.ml.neuralnet" is
+an adapted version of code developed in the context of the Data Processing
+and Analysis Consortium (DPAC) of the "Gaia" project of the European Space
+Agency (ESA).
 ===============================================================================
 
-Copyright and license statement for the original Mersenne twister C
-routines translated in MersenneTwister class in package
-org.apache.commons.math.random:
+The initial commit of the class "org.apache.commons.math3.special.BesselJ" is
+an adapted version of code translated from the netlib Fortran program, rjbesl
+http://www.netlib.org/specfun/rjbesl by R.J. Cody at Argonne National
+Laboratory (USA).  There is no license or copyright statement included with the
+original Fortran sources.
+===============================================================================
 
-   Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
-   All rights reserved.
 
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions
-   are met:
+The BracketFinder (package org.apache.commons.math3.optimization.univariate)
+and PowellOptimizer (package org.apache.commons.math3.optimization.general)
+classes are based on the Python code in module "optimize.py" (version 0.5)
+developed by Travis E. Oliphant for the SciPy library (http://www.scipy.org/)
+Copyright © 2003-2009 SciPy Developers.
 
-     1. Redistributions of source code must retain the above copyright
-        notice, this list of conditions and the following disclaimer.
+SciPy license
+Copyright © 2001, 2002 Enthought, Inc.
+All rights reserved.
 
-     2. Redistributions in binary form must reproduce the above copyright
-        notice, this list of conditions and the following disclaimer in the
-        documentation and/or other materials provided with the distribution.
+Copyright © 2003-2013 SciPy Developers.
+All rights reserved.
 
-     3. The names of its contributors may not be used to endorse or promote
-        products derived from this software without specific prior written
-        permission.
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
 
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+    * Neither the name of Enthought nor the names of the SciPy Developers may
+      be used to endorse or promote products derived from this software without
+      specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ===============================================================================
 #end
 ## Hadoop supplemental
@@ -1472,18 +1328,19 @@ You can redistribute it and/or modify it under either the terms of the
 ## gather up EPL 1.0 works
 #set($epl = [])
 ## track commons-math
-#set($commons-math-two = false)
-#set($commons-math-three = false)
+#set($commons-math = false)
 ## track if we need jruby additionals.
 #set($jruby = false)
 ## track hadoops
 #set($hadoop = false)
-## Whitelist of licenses that it's safe to not aggregate as above.
+## Whitelist of lower-case licenses that it's safe to not aggregate as above.
 ## Note that this doesn't include ALv2 or the aforementioned aggregate
 ## license mentions.
 ##
 ## See this FAQ link for justifications: https://www.apache.org/legal/resolved.html
-#set($non_aggregate_fine = [ 'Public Domain', 'New BSD license', 'BSD license', 'Mozilla Public License Version 1.1', 'Mozilla Public License Version 2.0', 'Creative Commons Attribution License, Version 2.5' ])
+##
+## NB: This list is later compared as lower-case. New entries must also be all lower-case
+#set($non_aggregate_fine = [ 'public domain', 'new bsd license', 'bsd license', 'bsd', 'bsd 2-clause license', 'mozilla public license version 1.1', 'mozilla public license version 2.0', 'creative commons attribution license, version 2.5' ])
 ## include LICENSE sections for anything not under ASL2.0
 #foreach( ${dep} in ${projects} )
 ## if there are no licenses we'll fail the build later, so
@@ -1518,11 +1375,8 @@ ${dep.scm.url}
 #end
 #set($aggregated=false)
 ## Check for our set of known dependencies that require manual LICENSE additions.
-#if($dep.artifactId.equals("commons-math"))
-#set($commons-math-two=true)
-#end
 #if($dep.artifactId.equals("commons-math3"))
-#set($commons-math-three=true)
+#set($commons-math=true)
 #end
 #if($dep.artifactId.equals("jruby-complete"))
 #set($jruby=true)
@@ -1550,7 +1404,27 @@ ${dep.scm.url}
 #thrift_license()
 #end
 ## Note that this will fail the build if we don't have a license. update supplemental-models.
-#if( !(${dep.licenses[0].name.contains("Apache License, Version 2.0")} || ${dep.licenses[0].name.contains("The Apache Software License, Version 2.0")}) )
+#if( ${dep.licenses.isEmpty()} )
+--
+ERROR: ${dep.name} dependency found without license information!
+
+Please find the appropriate license and update supplemental-models.xml or
+revert the change that added this dependency.
+
+More info on the dependency:
+
+<groupId>${dep.groupId}</groupId>
+<artifactId>${dep.artifactId}</artifactId>
+<version>${dep.version}</version>
+
+maven central search
+g:${dep.groupId} AND a:${dep.artifactId} AND v:${dep.version}
+
+project website
+${dep.url}
+project source
+${dep.scm.url}
+#elseif( !(${dep.licenses[0].name.contains("Apache License, Version 2.0")} || ${dep.licenses[0].name.contains("The Apache Software License, Version 2.0")}) )
 #if( ${dep.licenses[0].name.contains("CDDL")} )
 #if( ${dep.licenses[0].name.contains("1.0")} )
 #set($aggregated = $cddl_1_0.add($dep))
@@ -1574,9 +1448,11 @@ ${dep.scm.url}
 --
 This product includes ${dep.name} licensed under the ${dep.licenses[0].name}.
 
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
 ${dep.licenses[0].comments}
-#if(!(${non_aggregate_fine.contains($dep.licenses[0].name)}))
-Please check ^^^^^^^^^^^^ this License for acceptability here:
+#end
+#if(!(${non_aggregate_fine.contains($dep.licenses[0].name.toLowerCase())}))
+ERROR: Please check ^^^^^^^^^^^^ this License for acceptability here:
 
 https://www.apache.org/legal/resolved
 
@@ -1596,12 +1472,6 @@ project website
 ${dep.url}
 project source
 ${dep.scm.url}
-
-## fail the template. If you're looking at the source LICENSE.vm
-## file based on a stacktrace or exception message, you need to find
-## the generated LICENSE file that has the actual dependency info printed.
-#set($empty = [])
-${empty[0]}
 #end
 #end
 #end
@@ -1609,10 +1479,8 @@ ${empty[0]}
 #if($hadoop)
 #hadoop_license()
 #end
-#if($commons-math-three)
-#commons_math_license($commons-math-two)
-#elseif($commons-math-two)
-#commons_math_two_license()
+#if($commons-math)
+#commons_math_license()
 #end
 #if(!(${mit.isEmpty()}))
 ====
@@ -1620,7 +1488,7 @@ ${empty[0]}
 This product includes the following works licensed under the MIT license:
 
 #foreach($dep in $mit)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
@@ -1655,7 +1523,7 @@ THE SOFTWARE.
 This product includes the following works licensed under the BSD 3-Clause license:
 
 #foreach($dep in $bsd3)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
@@ -1696,7 +1564,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 This product includes the following works licensed under the CDDL 1.0 license:
 
 #foreach($dep in $cddl_1_0)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
@@ -1953,7 +1821,7 @@ the State of California, with venue lying in Santa Clara County, California.
 This product includes the following works licensed under the CDDL 1.1 license:
 
 #foreach($dep in $cddl_1_1)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}
@@ -2251,7 +2119,7 @@ the State of California, with venue lying in Santa Clara County, California.
 This product includes the following works licensed under the Common Public License Version 1.0:
 
 #foreach($dep in $cpl)
-#if( !(${dep.licenses[0].comments.isEmpty()}) )
+#if( $dep.licenses[0].comments && !$dep.licenses[0].comments.empty )
   * ${dep.name}, ${dep.licenses[0].comments}
 #else
   * ${dep.name}

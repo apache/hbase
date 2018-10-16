@@ -29,9 +29,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
@@ -46,18 +44,21 @@ import org.apache.hadoop.hbase.procedure.RegionServerProcedureManager;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.procedure.SubprocedureFactory;
 import org.apache.hadoop.hbase.procedure.ZKProcedureMemberRpcs;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This manager class handles flushing of the regions for table on a {@link HRegionServer}.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class RegionServerFlushTableProcedureManager extends RegionServerProcedureManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerFlushTableProcedureManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RegionServerFlushTableProcedureManager.class);
 
   private static final String CONCURENT_FLUSH_TASKS_KEY =
       "hbase.flush.procedure.region.concurrentTasks";
@@ -139,7 +140,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     }
 
     // check to see if this server is hosting any regions for the table
-    List<Region> involvedRegions;
+    List<HRegion> involvedRegions;
     try {
       involvedRegions = getRegionsToFlush(table);
     } catch (IOException e1) {
@@ -174,8 +175,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * @return the list of online regions. Empty list is returned if no regions.
    * @throws IOException
    */
-  private List<Region> getRegionsToFlush(String table) throws IOException {
-    return rss.getOnlineRegions(TableName.valueOf(table));
+  private List<HRegion> getRegionsToFlush(String table) throws IOException {
+    return (List<HRegion>) rss.getRegions(TableName.valueOf(table));
   }
 
   public class FlushTableSubprocedureBuilder implements SubprocedureFactory {
@@ -319,7 +320,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
   @Override
   public void initialize(RegionServerServices rss) throws KeeperException {
     this.rss = rss;
-    ZooKeeperWatcher zkw = rss.getZooKeeper();
+    ZKWatcher zkw = rss.getZooKeeper();
     this.memberRpcs = new ZKProcedureMemberRpcs(zkw,
       MasterFlushTableProcedureManager.FLUSH_TABLE_PROCEDURE_SIGNATURE);
 

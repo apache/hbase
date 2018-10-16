@@ -44,24 +44,6 @@ table, enable or disable the table, and start and stop HBase.
 
 Apart from downloading HBase, this procedure should take less than 10 minutes.
 
-[[loopback.ip]]
-[NOTE]
-====
-.Loopback IP - HBase 0.94.x and earlier
-
-Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1.
-Ubuntu and some other distributions default to 127.0.1.1 and this will cause
-problems for you. See link:http://devving.com/?p=414[Why does HBase care about /etc/hosts?] for detail
-
-The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble.
-[listing]
-----
-127.0.0.1 localhost
-127.0.0.1 ubuntu.ubuntu-domain ubuntu
-----
-This issue has been fixed in hbase-0.96.0 and beyond.
-====
-
 === JDK Version Requirements
 
 HBase requires that a JDK be installed.
@@ -70,7 +52,7 @@ See <<java,Java>> for information about supported JDK versions.
 === Get Started with HBase
 
 .Procedure: Download, Configure, and Start HBase in Standalone Mode
-. Choose a download site from this list of link:http://www.apache.org/dyn/closer.cgi/hbase/[Apache Download Mirrors].
+. Choose a download site from this list of link:https://www.apache.org/dyn/closer.lua/hbase/[Apache Download Mirrors].
   Click on the suggested top link.
   This will take you to a mirror of _HBase Releases_.
   Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem.
@@ -100,7 +82,7 @@ JAVA_HOME=/usr
 +
 
 . Edit _conf/hbase-site.xml_, which is the main HBase configuration file.
-  At this time, you only need to specify the directory on the local filesystem where HBase and ZooKeeper write data.
+  At this time, you need to specify the directory on the local filesystem where HBase and ZooKeeper write data and acknowledge some risks.
   By default, a new directory is created under /tmp.
   Many servers are configured to delete the contents of _/tmp_ upon reboot, so you should store the data elsewhere.
   The following configuration will store HBase's data in the _hbase_ directory, in the home directory of the user called `testuser`.
@@ -120,6 +102,21 @@ JAVA_HOME=/usr
     <name>hbase.zookeeper.property.dataDir</name>
     <value>/home/testuser/zookeeper</value>
   </property>
+  <property>
+    <name>hbase.unsafe.stream.capability.enforce</name>
+    <value>false</value>
+    <description>
+      Controls whether HBase will check for stream capabilities (hflush/hsync).
+
+      Disable this if you intend to run on LocalFileSystem, denoted by a rootdir
+      with the 'file://' scheme, but be mindful of the NOTE below.
+
+      WARNING: Setting this to false blinds you to potential data loss and
+      inconsistent system state in the event of process and/or node failures. If
+      HBase is complaining of an inability to use hsync or hflush it's most
+      likely not a false positive.
+    </description>
+  </property>
 </configuration>
 ----
 ====
@@ -129,7 +126,14 @@ HBase will do this for you.  If you create the directory,
 HBase will attempt to do a migration, which is not what you want.
 +
 NOTE: The _hbase.rootdir_ in the above example points to a directory
-in the _local filesystem_. The 'file:/' prefix is how we denote local filesystem.
+in the _local filesystem_. The 'file://' prefix is how we denote local
+filesystem. You should take the WARNING present in the configuration example
+to heart. In standalone mode HBase makes use of the local filesystem abstraction
+from the Apache Hadoop project. That abstraction doesn't provide the durability
+promises that HBase needs to operate safely. This is fine for local development
+and testing use cases where the cost of cluster failure is well contained. It is
+not appropriate for production deployments; eventually you will lose data.
+
 To home HBase on an existing instance of HDFS, set the _hbase.rootdir_ to point at a
 directory up on your instance: e.g. _hdfs://namenode.example.org:8020/hbase_.
 For more on this variant, see the section below on Standalone HBase over HDFS.
@@ -145,7 +149,7 @@ NOTE: Java needs to be installed and available.
 If you get an error indicating that Java is not installed,
 but it is on your system, perhaps in a non-standard location,
 edit the _conf/hbase-env.sh_ file and modify the `JAVA_HOME`
-setting to point to the directory that contains _bin/java_ your system.
+setting to point to the directory that contains _bin/java_ on your system.
 
 
 [[shell_exercises]]
@@ -181,7 +185,7 @@ hbase(main):001:0> create 'test', 'cf'
 
 . List Information About your Table
 +
-Use the `list` command to
+Use the `list` command to confirm your table exists
 +
 ----
 hbase(main):002:0> list 'test'
@@ -190,6 +194,22 @@ test
 1 row(s) in 0.0180 seconds
 
 => ["test"]
+----
+
++
+Now use the `describe` command to see details, including configuration defaults
++
+----
+hbase(main):003:0> describe 'test'
+Table test is ENABLED
+test
+COLUMN FAMILIES DESCRIPTION
+{NAME => 'cf', VERSIONS => '1', EVICT_BLOCKS_ON_CLOSE => 'false', NEW_VERSION_BEHAVIOR => 'false', KEEP_DELETED_CELLS => 'FALSE', CACHE_DATA_ON_WRITE =>
+'false', DATA_BLOCK_ENCODING => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', REPLICATION_SCOPE => '0', BLOOMFILTER => 'ROW', CACHE_INDEX_ON_WRITE => 'f
+alse', IN_MEMORY => 'false', CACHE_BLOOMS_ON_WRITE => 'false', PREFETCH_BLOCKS_ON_OPEN => 'false', COMPRESSION => 'NONE', BLOCKCACHE => 'true', BLOCKSIZE
+ => '65536'}
+1 row(s)
+Took 0.9998 seconds
 ----
 
 . Put data into your table.
@@ -307,7 +327,7 @@ You can skip the HDFS configuration to continue storing your data in the local f
 This procedure assumes that you have configured Hadoop and HDFS on your local system and/or a remote
 system, and that they are running and available. It also assumes you are using Hadoop 2.
 The guide on
-link:http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html[Setting up a Single Node Cluster]
+link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html[Setting up a Single Node Cluster]
 in the Hadoop documentation is a good starting point.
 ====
 
@@ -320,8 +340,7 @@ This procedure will create a totally new directory where HBase will store its da
 . Configure HBase.
 +
 Edit the _hbase-site.xml_ configuration.
-First, add the following property.
-which directs HBase to run in distributed mode, with one JVM instance per daemon.
+First, add the following property which directs HBase to run in distributed mode, with one JVM instance per daemon.
 +
 [source,xml]
 ----
@@ -333,7 +352,7 @@ which directs HBase to run in distributed mode, with one JVM instance per daemon
 ----
 +
 Next, change the `hbase.rootdir` from the local filesystem to the address of your HDFS instance, using the `hdfs:////` URI syntax.
-In this example, HDFS is running on the localhost at port 8020.
+In this example, HDFS is running on the localhost at port 8020. Be sure to either remove the entry for `hbase.unsafe.stream.capability.enforce` or set it to true.
 +
 [source,xml]
 ----
@@ -385,12 +404,12 @@ The HMaster server controls the HBase cluster.
 You can start up to 9 backup HMaster servers, which makes 10 total HMasters, counting the primary.
 To start a backup HMaster, use the `local-master-backup.sh`.
 For each backup master you want to start, add a parameter representing the port offset for that master.
-Each HMaster uses three ports (16010, 16020, and 16030 by default). The port offset is added to these ports, so using an offset of 2, the backup HMaster would use ports 16012, 16022, and 16032.
-The following command starts 3 backup servers using ports 16012/16022/16032, 16013/16023/16033, and 16015/16025/16035.
+Each HMaster uses two ports (16000 and 16010 by default). The port offset is added to these ports, so using an offset of 2, the backup HMaster would use ports 16002 and 16012.
+The following command starts 3 backup servers using ports 16002/16012, 16003/16013, and 16005/16015.
 +
 ----
 
-$ ./bin/local-master-backup.sh 2 3 5
+$ ./bin/local-master-backup.sh start 2 3 5
 ----
 +
 To kill a backup master without killing the entire cluster, you need to find its process ID (PID). The PID is stored in a file with a name like _/tmp/hbase-USER-X-master.pid_.
@@ -411,10 +430,10 @@ Running multiple HRegionServers on the same system can be useful for testing in 
 The `local-regionservers.sh` command allows you to run multiple RegionServers.
 It works in a similar way to the `local-master-backup.sh` command, in that each parameter you provide represents the port offset for an instance.
 Each RegionServer requires two ports, and the default ports are 16020 and 16030.
-However, the base ports for additional RegionServers are not the default ports since the default ports are used by the HMaster, which is also a RegionServer since HBase version 1.0.0.
-The base ports are 16200 and 16300 instead.
-You can run 99 additional RegionServers that are not a HMaster or backup HMaster, on a server.
-The following command starts four additional RegionServers, running on sequential ports starting at 16202/16302 (base ports 16200/16300 plus 2).
+Since HBase version 1.1.0, HMaster doesn't use region server ports, this leaves 10 ports (16020 to 16029 and 16030 to 16039) to be used for RegionServers.
+For supporting additional RegionServers, set environment variables HBASE_RS_BASE_PORT and HBASE_RS_INFO_BASE_PORT to appropriate values before running script `local-regionservers.sh`.
+e.g. With values 16200 and 16300 for base ports, 99 additional RegionServers can be supported, on a server.
+The following command starts four additional RegionServers, running on sequential ports starting at 16022/16032 (base ports 16020/16030 plus 2).
 +
 ----
 
@@ -494,15 +513,14 @@ $ cat id_rsa.pub >> ~/.ssh/authorized_keys
 
 . Test password-less login.
 +
-If you performed the procedure correctly, if you SSH from `node-a` to either of the other nodes, using the same username, you should not be prompted for a password.
+If you performed the procedure correctly, you should not be prompted for a password when you SSH from `node-a` to either of the other nodes using the same username.
 
 . Since `node-b` will run a backup Master, repeat the procedure above, substituting `node-b` everywhere you see `node-a`.
   Be sure not to overwrite your existing _.ssh/authorized_keys_ files, but concatenate the new key onto the existing file using the `>>` operator rather than the `>` operator.
 
 .Procedure: Prepare `node-a`
 
-`node-a` will run your primary master and ZooKeeper processes, but no RegionServers.
-. Stop the RegionServer from starting on `node-a`.
+`node-a` will run your primary master and ZooKeeper processes, but no RegionServers. Stop the RegionServer from starting on `node-a`.
 
 . Edit _conf/regionservers_ and remove the line which contains `localhost`. Add lines with the hostnames or IP addresses for `node-b` and `node-c`.
 +
@@ -519,7 +537,7 @@ In this demonstration, the hostname is `node-b.example.com`.
 . Configure ZooKeeper
 +
 In reality, you should carefully consider your ZooKeeper configuration.
-You can find out more about configuring ZooKeeper in <<zookeeper,zookeeper>>.
+You can find out more about configuring ZooKeeper in <<zookeeper,zookeeper>> section.
 This configuration will direct HBase to start and manage a ZooKeeper instance on each node of the cluster.
 +
 On `node-a`, edit _conf/hbase-site.xml_ and add the following properties.
@@ -586,18 +604,14 @@ On each node of the cluster, run the `jps` command and verify that the correct p
 You may see additional Java processes running on your servers as well, if they are used for other purposes.
 +
 .`node-a` `jps` Output
-====
 ----
-
 $ jps
 20355 Jps
 20071 HQuorumPeer
 20137 HMaster
 ----
-====
 +
 .`node-b` `jps` Output
-====
 ----
 $ jps
 15930 HRegionServer
@@ -605,25 +619,22 @@ $ jps
 15838 HQuorumPeer
 16010 HMaster
 ----
-====
 +
-.`node-a` `jps` Output
-====
+.`node-c` `jps` Output
 ----
 $ jps
 13901 Jps
 13639 HQuorumPeer
 13737 HRegionServer
 ----
-====
 +
 .ZooKeeper Process Name
 [NOTE]
 ====
 The `HQuorumPeer` process is a ZooKeeper instance which is controlled and started by HBase.
-If you use ZooKeeper this way, it is limited to one instance per cluster node, , and is appropriate for testing only.
+If you use ZooKeeper this way, it is limited to one instance per cluster node and is appropriate for testing only.
 If ZooKeeper is run outside of HBase, the process is called `QuorumPeer`.
-For more about ZooKeeper configuration, including using an external ZooKeeper instance with HBase, see <<zookeeper,zookeeper>>.
+For more about ZooKeeper configuration, including using an external ZooKeeper instance with HBase, see <<zookeeper,zookeeper>> section.
 ====
 
 . Browse to the Web UI.
@@ -637,15 +648,15 @@ Master and 60030 for each RegionServer to 16010 for the Master and 16030 for the
 +
 If everything is set up correctly, you should be able to connect to the UI for the Master
 `http://node-a.example.com:16010/` or the secondary master at `http://node-b.example.com:16010/`
-for the secondary master, using a web browser.
+ using a web browser.
 If you can connect via `localhost` but not from another host, check your firewall rules.
 You can see the web UI for each of the RegionServers at port 16030 of their IP addresses, or by
 clicking their links in the web UI for the Master.
 
 . Test what happens when nodes or services disappear.
 +
-With a three-node cluster like you have configured, things will not be very resilient.
-Still, you can test what happens when the primary Master or a RegionServer disappears, by killing the processes and watching the logs.
+With a three-node cluster you have configured, things will not be very resilient.
+You can still test the behavior of the primary Master or a RegionServer by killing the associated processes and watching the logs.
 
 
 === Where to go next

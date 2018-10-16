@@ -18,27 +18,26 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
-
 import java.io.IOException;
 import java.util.Arrays;
+
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Normalization plan to split region.
  */
 @InterfaceAudience.Private
 public class SplitNormalizationPlan implements NormalizationPlan {
-  private static final Log LOG = LogFactory.getLog(SplitNormalizationPlan.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(SplitNormalizationPlan.class.getName());
 
-  private HRegionInfo regionInfo;
+  private RegionInfo regionInfo;
   private byte[] splitPoint;
 
-  public SplitNormalizationPlan(HRegionInfo regionInfo, byte[] splitPoint) {
+  public SplitNormalizationPlan(RegionInfo regionInfo, byte[] splitPoint) {
     this.regionInfo = regionInfo;
     this.splitPoint = splitPoint;
   }
@@ -48,11 +47,11 @@ public class SplitNormalizationPlan implements NormalizationPlan {
     return PlanType.SPLIT;
   }
 
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return regionInfo;
   }
 
-  public void setRegionInfo(HRegionInfo regionInfo) {
+  public void setRegionInfo(RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
   }
 

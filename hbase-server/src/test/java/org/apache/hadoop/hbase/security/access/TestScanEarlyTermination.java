@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import java.util.UUID;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.TestTableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -44,26 +44,25 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.TestTableName;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestScanEarlyTermination extends SecureTestUtil {
-  private static final Log LOG = LogFactory.getLog(TestScanEarlyTermination.class);
 
-  static {
-    Logger.getLogger(AccessController.class).setLevel(Level.TRACE);
-    Logger.getLogger(AccessControlFilter.class).setLevel(Level.TRACE);
-    Logger.getLogger(TableAuthManager.class).setLevel(Level.TRACE);
-  }
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScanEarlyTermination.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestScanEarlyTermination.class);
 
   @Rule
   public TestTableName TEST_TABLE = new TestTableName();
@@ -96,10 +95,10 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
     AccessController ac = (AccessController)
       cpHost.findCoprocessor(AccessController.class.getName());
-    cpHost.createEnvironment(AccessController.class, ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    cpHost.createEnvironment(ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
     RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
         .getRegionServerCoprocessorHost();
-    rsHost.createEnvironment(AccessController.class, ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    rsHost.createEnvironment(ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
     TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
@@ -157,7 +156,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", UUID.randomUUID().toString());
+        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
         Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
@@ -184,7 +183,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", UUID.randomUUID().toString());
+        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
         Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
@@ -210,7 +209,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", UUID.randomUUID().toString());
+        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
         Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
@@ -234,7 +233,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", UUID.randomUUID().toString());
+        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
         Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
@@ -262,7 +261,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
-        conf.set("testkey", UUID.randomUUID().toString());
+        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
         Table t = connection.getTable(TEST_TABLE.getTableName());
         try {

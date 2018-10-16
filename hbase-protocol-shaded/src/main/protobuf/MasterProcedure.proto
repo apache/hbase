@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 package hbase.pb;
 
 option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
@@ -26,6 +27,7 @@ option optimize_for = SPEED;
 import "HBase.proto";
 import "RPC.proto";
 import "Snapshot.proto";
+import "Replication.proto";
 
 // ============================================================================
 //  WARNING - Compatibility rules
@@ -147,52 +149,6 @@ message DeleteNamespaceStateData {
   optional NamespaceDescriptor namespace_descriptor = 2;
 }
 
-enum AddColumnFamilyState {
-  ADD_COLUMN_FAMILY_PREPARE = 1;
-  ADD_COLUMN_FAMILY_PRE_OPERATION = 2;
-  ADD_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR = 3;
-  ADD_COLUMN_FAMILY_POST_OPERATION = 4;
-  ADD_COLUMN_FAMILY_REOPEN_ALL_REGIONS = 5;
-}
-
-message AddColumnFamilyStateData {
-  required UserInformation user_info = 1;
-  required TableName table_name = 2;
-  required ColumnFamilySchema columnfamily_schema = 3;
-  optional TableSchema unmodified_table_schema = 4;
-}
-
-enum ModifyColumnFamilyState {
-  MODIFY_COLUMN_FAMILY_PREPARE = 1;
-  MODIFY_COLUMN_FAMILY_PRE_OPERATION = 2;
-  MODIFY_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR = 3;
-  MODIFY_COLUMN_FAMILY_POST_OPERATION = 4;
-  MODIFY_COLUMN_FAMILY_REOPEN_ALL_REGIONS = 5;
-}
-
-message ModifyColumnFamilyStateData {
-  required UserInformation user_info = 1;
-  required TableName table_name = 2;
-  required ColumnFamilySchema columnfamily_schema = 3;
-  optional TableSchema unmodified_table_schema = 4;
-}
-
-enum DeleteColumnFamilyState {
-  DELETE_COLUMN_FAMILY_PREPARE = 1;
-  DELETE_COLUMN_FAMILY_PRE_OPERATION = 2;
-  DELETE_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR = 3;
-  DELETE_COLUMN_FAMILY_DELETE_FS_LAYOUT = 4;
-  DELETE_COLUMN_FAMILY_POST_OPERATION = 5;
-  DELETE_COLUMN_FAMILY_REOPEN_ALL_REGIONS = 6;
-}
-
-message DeleteColumnFamilyStateData {
-  required UserInformation user_info = 1;
-  required TableName table_name = 2;
-  required bytes columnfamily_name = 3;
-  optional TableSchema unmodified_table_schema = 4;
-}
-
 enum EnableTableState {
   ENABLE_TABLE_PREPARE = 1;
   ENABLE_TABLE_PRE_OPERATION = 2;
@@ -215,6 +171,7 @@ enum DisableTableState {
   DISABLE_TABLE_MARK_REGIONS_OFFLINE = 4;
   DISABLE_TABLE_SET_DISABLED_TABLE_STATE = 5;
   DISABLE_TABLE_POST_OPERATION = 6;
+  DISABLE_TABLE_ADD_REPLICATION_BARRIER = 7;
 }
 
 message DisableTableStateData {
@@ -285,11 +242,13 @@ enum SplitTableRegionState {
   SPLIT_TABLE_REGION_PRE_OPERATION = 2;
   SPLIT_TABLE_REGION_CLOSE_PARENT_REGION = 3;
   SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS = 4;
-  SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_PONR = 5;
-  SPLIT_TABLE_REGION_UPDATE_META = 6;
-  SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_PONR = 7;
-  SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS = 8;
-  SPLIT_TABLE_REGION_POST_OPERATION = 9;
+  SPLIT_TABLE_REGION_WRITE_MAX_SEQUENCE_ID_FILE = 5;
+  SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_META = 6;
+  SPLIT_TABLE_REGION_UPDATE_META = 7;
+  SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_META = 8;
+  SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS = 9;
+  SPLIT_TABLE_REGION_POST_OPERATION = 10;
+  SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS = 11;
 }
 
 message SplitTableRegionStateData {
@@ -301,16 +260,16 @@ message SplitTableRegionStateData {
 enum MergeTableRegionsState {
   MERGE_TABLE_REGIONS_PREPARE = 1;
   MERGE_TABLE_REGIONS_PRE_OPERATION = 2;
-  MERGE_TABLE_REGIONS_MOVE_REGION_TO_SAME_RS = 3;
-  MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION = 4;
-  MERGE_TABLE_REGIONS_SET_MERGING_TABLE_STATE = 5;
-  MERGE_TABLE_REGIONS_CLOSE_REGIONS = 6;
-  MERGE_TABLE_REGIONS_CREATE_MERGED_REGION = 7;
-  MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION = 8;
-  MERGE_TABLE_REGIONS_UPDATE_META = 9;
-  MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION = 10;
-  MERGE_TABLE_REGIONS_OPEN_MERGED_REGION = 11;
-  MERGE_TABLE_REGIONS_POST_OPERATION = 12;
+  MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION = 3;
+  MERGE_TABLE_REGIONS_CLOSE_REGIONS = 4;
+  MERGE_TABLE_REGIONS_CREATE_MERGED_REGION = 5;
+  MERGE_TABLE_REGIONS_WRITE_MAX_SEQUENCE_ID_FILE = 6;
+  MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION = 7;
+  MERGE_TABLE_REGIONS_UPDATE_META = 8;
+  MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION = 9;
+  MERGE_TABLE_REGIONS_OPEN_MERGED_REGION = 10;
+  MERGE_TABLE_REGIONS_POST_OPERATION = 11;
+  MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS = 12;
 }
 
 message MergeTableRegionsStateData {
@@ -323,24 +282,39 @@ message MergeTableRegionsStateData {
 
 message ServerCrashStateData {
   required ServerName server_name = 1;
-  optional bool distributed_log_replay = 2;
+  // optional bool DEPRECATED_distributed_log_replay = 2;
   repeated RegionInfo regions_on_crashed_server = 3;
   repeated RegionInfo regions_assigned = 4;
   optional bool carrying_meta = 5;
   optional bool should_split_wal = 6 [default = true];
 }
 
+message RecoverMetaStateData {
+  optional ServerName failed_meta_server = 1;
+  optional bool should_split_wal = 2 [default = true];
+  optional int32 replica_id = 3 [default = 0];
+}
+
 enum ServerCrashState {
   SERVER_CRASH_START = 1;
-  SERVER_CRASH_PROCESS_META = 2;
+  SERVER_CRASH_PROCESS_META = 2[deprecated=true];
   SERVER_CRASH_GET_REGIONS = 3;
-  SERVER_CRASH_NO_SPLIT_LOGS = 4;
+  SERVER_CRASH_NO_SPLIT_LOGS = 4[deprecated=true];
   SERVER_CRASH_SPLIT_LOGS = 5;
-  SERVER_CRASH_PREPARE_LOG_REPLAY = 6;
+  // Removed SERVER_CRASH_PREPARE_LOG_REPLAY = 6;
   // Removed SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;
   SERVER_CRASH_ASSIGN = 8;
   SERVER_CRASH_WAIT_ON_ASSIGN = 9;
+  SERVER_CRASH_SPLIT_META_LOGS = 10;
+  SERVER_CRASH_ASSIGN_META = 11;
+  SERVER_CRASH_HANDLE_RIT2 = 20[deprecated=true];
   SERVER_CRASH_FINISH = 100;
+}
+
+enum RecoverMetaState {
+  RECOVER_META_PREPARE = 0;
+  RECOVER_META_SPLIT_LOGS = 1;
+  RECOVER_META_ASSIGN_REGIONS = 2;
 }
 
 enum RegionTransitionState {
@@ -354,6 +328,8 @@ message AssignRegionStateData {
   required RegionInfo region_info = 2;
   optional bool force_new_plan = 3 [default = false];
   optional ServerName target_server = 4;
+  // Current attempt index used for expotential backoff when stuck
+  optional int32 attempt = 5;
 }
 
 message UnassignRegionStateData {
@@ -366,9 +342,13 @@ message UnassignRegionStateData {
   // server we will send the unassign rpc too.
   optional ServerName hosting_server = 5;
   optional bool force = 4 [default = false];
+  optional bool remove_after_unassigning = 6 [default = false];
+  // Current attempt index used for expotential backoff when stuck
+  optional int32 attempt = 7;
 }
 
 enum MoveRegionState {
+  MOVE_REGION_PREPARE = 0;
   MOVE_REGION_UNASSIGN = 1;
   MOVE_REGION_ASSIGN = 2;
 }
@@ -376,7 +356,8 @@ enum MoveRegionState {
 message MoveRegionStateData {
   optional RegionInfo region_info = 1;
   required ServerName source_server = 2;
-  required ServerName destination_server = 3;
+  // if destination server not specified, its selected with load balancer
+  optional ServerName destination_server = 3;
 }
 
 enum GCRegionState {
@@ -399,4 +380,170 @@ message GCMergedRegionsStateData {
   required RegionInfo parent_a = 1;
   required RegionInfo parent_b = 2;
   required RegionInfo merged_child = 3;
+}
+
+enum PeerModificationState {
+  PRE_PEER_MODIFICATION = 1;
+  UPDATE_PEER_STORAGE = 2;
+  REFRESH_PEER_ON_RS = 3;
+  SERIAL_PEER_REOPEN_REGIONS = 4;
+  SERIAL_PEER_UPDATE_LAST_PUSHED_SEQ_ID = 5;
+  SERIAL_PEER_SET_PEER_ENABLED = 6;
+  SERIAL_PEER_ENABLE_PEER_REFRESH_PEER_ON_RS = 7;
+  POST_PEER_MODIFICATION = 8;
+}
+
+enum PeerSyncReplicationStateTransitionState {
+  PRE_PEER_SYNC_REPLICATION_STATE_TRANSITION = 1;
+  SET_PEER_NEW_SYNC_REPLICATION_STATE = 2;
+  REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_BEGIN = 3;
+  REPLAY_REMOTE_WAL_IN_PEER = 4;
+  REMOVE_ALL_REPLICATION_QUEUES_IN_PEER = 5;
+  REOPEN_ALL_REGIONS_IN_PEER = 6;
+  TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE = 7;
+  REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_END = 8;
+  SYNC_REPLICATION_SET_PEER_ENABLED = 9;
+  SYNC_REPLICATION_ENABLE_PEER_REFRESH_PEER_ON_RS = 10;
+  CREATE_DIR_FOR_REMOTE_WAL = 11;
+  POST_PEER_SYNC_REPLICATION_STATE_TRANSITION = 12;
+}
+
+message PeerModificationStateData {
+  required string peer_id = 1;
+}
+
+enum PeerModificationType {
+  ADD_PEER = 1;
+  REMOVE_PEER = 2;
+  ENABLE_PEER = 3;
+  DISABLE_PEER = 4;
+  UPDATE_PEER_CONFIG = 5;
+  TRANSIT_SYNC_REPLICATION_STATE = 6;
+}
+
+message RefreshPeerStateData {
+  required string peer_id = 1;
+  required PeerModificationType type = 2;
+  required ServerName target_server = 3;
+    /** We need multiple stages for sync replication state transition **/
+  optional uint32 stage = 4 [default = 0];
+}
+
+message RefreshPeerParameter {
+  required string peer_id = 1;
+  required PeerModificationType type = 2;
+  required ServerName target_server = 3;
+  /** We need multiple stages for sync replication state transition **/
+  optional uint32 stage = 4 [default = 0];;
+}
+
+message PeerProcedureStateData {
+  required string peer_id = 1;
+}
+
+message AddPeerStateData {
+  required ReplicationPeer peer_config = 1;
+  required bool enabled = 2;
+}
+
+message UpdatePeerConfigStateData {
+  required ReplicationPeer peer_config = 1;
+  optional ReplicationPeer old_peer_config = 2;
+  required bool enabled = 3;
+}
+
+message RemovePeerStateData {
+  optional ReplicationPeer peer_config = 1;
+}
+
+message EnablePeerStateData {
+}
+
+message DisablePeerStateData {
+}
+
+enum ReopenTableRegionsState {
+  REOPEN_TABLE_REGIONS_GET_REGIONS = 1;
+  REOPEN_TABLE_REGIONS_REOPEN_REGIONS = 2;
+  REOPEN_TABLE_REGIONS_CONFIRM_REOPENED = 3;
+}
+
+message ReopenTableRegionsStateData {
+  required TableName table_name = 1;
+  repeated RegionLocation region = 2;
+}
+
+enum InitMetaState {
+   INIT_META_ASSIGN_META = 1;
+}
+
+message InitMetaStateData {
+}
+
+message TransitPeerSyncReplicationStateStateData {
+  /** Could be null if we fail in pre check, so optional */
+  optional SyncReplicationState fromState = 1;
+  required SyncReplicationState toState = 2;
+}
+
+enum RecoverStandbyState {
+  RENAME_SYNC_REPLICATION_WALS_DIR = 1;
+  REGISTER_PEER_TO_WORKER_STORAGE = 2;
+  DISPATCH_WALS = 3;
+  UNREGISTER_PEER_FROM_WORKER_STORAGE = 4;
+  SNAPSHOT_SYNC_REPLICATION_WALS_DIR = 5;
+}
+
+enum SyncReplicationReplayWALState {
+  ASSIGN_WORKER = 1;
+  DISPATCH_WALS_TO_WORKER = 2;
+  RELEASE_WORKER = 3;
+}
+
+message RecoverStandbyStateData {
+  required bool serial  = 1;
+}
+
+message SyncReplicationReplayWALStateData {
+  required string peer_id = 1;
+  repeated string wal = 2;
+}
+
+message SyncReplicationReplayWALRemoteStateData {
+  required string peer_id = 1;
+  repeated string wal = 2;
+  required ServerName target_server = 3;
+}
+
+message ReplaySyncReplicationWALParameter {
+  required string peer_id = 1;
+  repeated string wal = 2;
+}
+
+enum RegionStateTransitionState {
+  REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE = 1;
+  REGION_STATE_TRANSITION_OPEN = 2;
+  REGION_STATE_TRANSITION_CONFIRM_OPENED = 3;
+  REGION_STATE_TRANSITION_CLOSE = 4;
+  REGION_STATE_TRANSITION_CONFIRM_CLOSED = 5;
+}
+
+message RegionStateTransitionStateData {
+  required RegionStateTransitionState initialState = 1;
+  required RegionStateTransitionState lastState = 2;
+  optional ServerName assign_candidate = 3;
+  required bool force_new_plan = 4;
+}
+
+message RegionRemoteProcedureBaseStateData {
+  required RegionInfo region = 1;
+  required ServerName target_server = 2;
+  required bool dispatched = 3;
+}
+
+message OpenRegionProcedureStateData {
+}
+
+message CloseRegionProcedureStateData {
+  optional ServerName assign_candidate = 1;
 }

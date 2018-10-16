@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 
 /**
@@ -31,12 +31,21 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
     extends StateMachineProcedure<MasterProcedureEnv, TState>
     implements TableProcedureInterface {
 
+  private final ProcedurePrepareLatch syncLatch;
+
   protected AbstractStateMachineNamespaceProcedure() {
     // Required by the Procedure framework to create the procedure on replay
+    syncLatch = null;
   }
 
   protected AbstractStateMachineNamespaceProcedure(final MasterProcedureEnv env) {
+    this(env, null);
+  }
+
+  protected AbstractStateMachineNamespaceProcedure(final MasterProcedureEnv env,
+      final ProcedurePrepareLatch latch) {
     this.setOwner(env.getRequestUser());
+    this.syncLatch = latch;
   }
 
   protected abstract String getNamespaceName();
@@ -57,8 +66,12 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   }
 
   @Override
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+    return env.waitInitialized(this);
+  }
+
+  @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return LockState.LOCK_EVENT_WAIT;
     if (env.getProcedureScheduler().waitNamespaceExclusiveLock(this, getNamespaceName())) {
       return LockState.LOCK_EVENT_WAIT;
     }
@@ -68,5 +81,9 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     env.getProcedureScheduler().wakeNamespaceExclusiveLock(this, getNamespaceName());
+  }
+
+  protected void releaseSyncLatch() {
+    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
   }
 }

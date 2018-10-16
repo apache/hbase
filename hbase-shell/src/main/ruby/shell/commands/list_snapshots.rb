@@ -22,7 +22,7 @@ module Shell
   module Commands
     class ListSnapshots < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all snapshots taken (by printing the names and relative information).
 Optional regular expression parameter could be used to filter the output
 by snapshot name.
@@ -33,17 +33,17 @@ Examples:
 EOF
       end
 
-      def command(regex = ".*")
-        formatter.header([ "SNAPSHOT", "TABLE + CREATION TIME"])
+      def command(regex = '.*')
+        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
 
         list = admin.list_snapshot(regex)
         list.each do |snapshot|
-          creation_time = Time.at(snapshot.getCreationTime() / 1000).to_s
-          formatter.row([ snapshot.getName, snapshot.getTable + " (" + creation_time + ")" ])
+          creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
+          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
         end
 
         formatter.footer(list.size)
-        return list.map { |s| s.getName() }
+        list.map(&:getName)
       end
     end
   end

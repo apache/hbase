@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Delete < Command
       def help
-        return <<-EOF
+        <<-EOF
 Put a delete cell value at specified table/row/column and optionally
 timestamp coordinates.  Deletes must match the deleted cell's
 coordinates exactly.  When scanning, a delete cell suppresses older
@@ -48,11 +48,11 @@ EOF
       def delete(table, row, column,
                  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
         @start_time = Time.now
-        table._delete_internal(row, column, timestamp, args)
+        table._delete_internal(row, column, timestamp, args, false)
       end
     end
   end
 end
 
-#Add the method table.delete that calls delete.delete
-::Hbase::Table.add_shell_command("delete")
+# Add the method table.delete that calls delete.delete
+::Hbase::Table.add_shell_command('delete')

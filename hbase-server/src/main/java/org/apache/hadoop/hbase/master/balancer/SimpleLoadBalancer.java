@@ -28,19 +28,18 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -57,7 +56,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SimpleLoadBalancer extends BaseLoadBalancer {
-  private static final Log LOG = LogFactory.getLog(SimpleLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SimpleLoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());
 
   private RegionInfoComparator riComparator = new RegionInfoComparator();
@@ -77,9 +76,9 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
     private int nextRegionForUnload;
     private int numRegionsAdded;
-    private List<HRegionInfo> hriList;
+    private List<RegionInfo> hriList;
 
-    public BalanceInfo(int nextRegionForUnload, int numRegionsAdded, List<HRegionInfo> hriList) {
+    public BalanceInfo(int nextRegionForUnload, int numRegionsAdded, List<RegionInfo> hriList) {
       this.nextRegionForUnload = nextRegionForUnload;
       this.numRegionsAdded = numRegionsAdded;
       this.hriList = hriList;
@@ -97,7 +96,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       this.numRegionsAdded = numAdded;
     }
 
-    List<HRegionInfo> getHriList() {
+    List<RegionInfo> getHriList() {
       return hriList;
     }
 
@@ -107,11 +106,12 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
   }
 
-  public void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad){
+  @Override
+  public void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad){
     serverLoadList = new ArrayList<>();
     float sum = 0;
-    for(Map.Entry<TableName, Map<ServerName, List<HRegionInfo>>> clusterEntry : clusterLoad.entrySet()){
-      for(Map.Entry<ServerName, List<HRegionInfo>> entry : clusterEntry.getValue().entrySet()){
+    for(Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> clusterEntry : clusterLoad.entrySet()){
+      for(Map.Entry<ServerName, List<RegionInfo>> entry : clusterEntry.getValue().entrySet()){
         if(entry.getKey().equals(masterServerName)) continue; // we shouldn't include master as potential assignee
         serverLoadList.add(new ServerAndLoad(entry.getKey(), entry.getValue().size()));
         sum += entry.getValue().size();
@@ -245,7 +245,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    */
   @Override
   public List<RegionPlan> balanceCluster(
-      Map<ServerName, List<HRegionInfo>> clusterMap) {
+      Map<ServerName, List<RegionInfo>> clusterMap) {
     List<RegionPlan> regionsToReturn = balanceMasterRegions(clusterMap);
     if (regionsToReturn != null || clusterMap == null || clusterMap.size() <= 1) {
       return regionsToReturn;
@@ -267,7 +267,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
     ClusterLoadState cs = new ClusterLoadState(clusterMap);
     int numServers = cs.getNumServers();
-    NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
+    NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad = cs.getServersByLoad();
     int numRegions = cs.getNumRegions();
     float average = cs.getLoadAverage();
     int max = (int)Math.ceil(average);
@@ -291,7 +291,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // flag used to fetch regions from head and tail of list, alternately
     boolean fetchFromTail = false;
     Map<ServerName, BalanceInfo> serverBalanceInfo = new TreeMap<>();
-    for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
+    for (Map.Entry<ServerAndLoad, List<RegionInfo>> server:
         serversByLoad.descendingMap().entrySet()) {
       ServerAndLoad sal = server.getKey();
       int load = sal.getLoad();
@@ -300,14 +300,14 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         continue;
       }
       serversOverloaded++;
-      List<HRegionInfo> regions = server.getValue();
+      List<RegionInfo> regions = server.getValue();
       int numToOffload = Math.min(load - max, regions.size());
       // account for the out-of-band regions which were assigned to this server
       // after some other region server crashed
       Collections.sort(regions, riComparator);
       int numTaken = 0;
       for (int i = 0; i <= numToOffload; ) {
-        HRegionInfo hri = regions.get(i); // fetch from head
+        RegionInfo hri = regions.get(i); // fetch from head
         if (fetchFromTail) {
           hri = regions.get(regions.size() - 1 - i);
         }
@@ -330,7 +330,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
     Map<ServerName, Integer> underloadedServers = new HashMap<>();
     int maxToTake = numRegions - min;
-    for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
+    for (Map.Entry<ServerAndLoad, List<RegionInfo>> server:
         serversByLoad.entrySet()) {
       if (maxToTake == 0) break; // no more to take
       int load = server.getKey().getLoad();
@@ -378,14 +378,14 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // If we need more to fill min, grab one from each most loaded until enough
     if (neededRegions != 0) {
       // Walk down most loaded, grabbing one from each until we get enough
-      for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server :
+      for (Map.Entry<ServerAndLoad, List<RegionInfo>> server :
         serversByLoad.descendingMap().entrySet()) {
         BalanceInfo balanceInfo =
           serverBalanceInfo.get(server.getKey().getServerName());
         int idx =
           balanceInfo == null ? 0 : balanceInfo.getNextRegionForUnload();
         if (idx >= server.getValue().size()) break;
-        HRegionInfo region = server.getValue().get(idx);
+        RegionInfo region = server.getValue().get(idx);
         if (region.isMetaRegion()) continue; // Don't move meta regions.
         regionsToMove.add(new RegionPlan(region, server.getKey().getServerName(), null));
         balanceInfo.setNumRegionsAdded(balanceInfo.getNumRegionsAdded() - 1);
@@ -402,7 +402,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // Assign each underloaded up to the min, then if leftovers, assign to max
 
     // Walk down least loaded, assigning to each to fill up to min
-    for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server :
+    for (Map.Entry<ServerAndLoad, List<RegionInfo>> server :
         serversByLoad.entrySet()) {
       int regionCount = server.getKey().getLoad();
       if (regionCount >= min) break;
@@ -434,7 +434,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         ", numServers=" + numServers + ", serversOverloaded=" + serversOverloaded +
         ", serversUnderloaded=" + serversUnderloaded);
       StringBuilder sb = new StringBuilder();
-      for (Map.Entry<ServerName, List<HRegionInfo>> e: clusterMap.entrySet()) {
+      for (Map.Entry<ServerName, List<RegionInfo>> e: clusterMap.entrySet()) {
         if (sb.length() > 0) sb.append(", ");
         sb.append(e.getKey().toString());
         sb.append(" ");
@@ -481,10 +481,10 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       BalanceInfo balanceInfo = serverBalanceInfo.get(serverload.getServerName());
       setLoad(serverLoadList, i, balanceInfo.getNumRegionsAdded());
       if (balanceInfo.getHriList().size() + balanceInfo.getNumRegionsAdded() == max) {
-        HRegionInfo hriToPlan;
+        RegionInfo hriToPlan;
         if (balanceInfo.getHriList().isEmpty()) {
           LOG.debug("During balanceOverall, we found " + serverload.getServerName()
-                  + " has no HRegionInfo, no operation needed");
+                  + " has no RegionInfo, no operation needed");
           continue;
         } else if (balanceInfo.getNextRegionForUnload() >= balanceInfo.getHriList().size()) {
           continue;
@@ -587,7 +587,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
   @Override
   public List<RegionPlan> balanceCluster(TableName tableName,
-      Map<ServerName, List<HRegionInfo>> clusterState) throws HBaseIOException {
+      Map<ServerName, List<RegionInfo>> clusterState) throws HBaseIOException {
     LOG.debug("Start Generate Balance plan for table: " + tableName);
     return balanceCluster(clusterState);
   }

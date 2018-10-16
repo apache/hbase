@@ -24,17 +24,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Stripe implementation of StoreFlusher. Flushes files either into L0 file w/o metadata, or
@@ -42,12 +41,12 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class StripeStoreFlusher extends StoreFlusher {
-  private static final Log LOG = LogFactory.getLog(StripeStoreFlusher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeStoreFlusher.class);
   private final Object flushLock = new Object();
   private final StripeCompactionPolicy policy;
   private final StripeCompactionPolicy.StripeInformationProvider stripes;
 
-  public StripeStoreFlusher(Configuration conf, Store store,
+  public StripeStoreFlusher(Configuration conf, HStore store,
       StripeCompactionPolicy policy, StripeStoreFileManager stripes) {
     super(conf, store);
     this.policy = policy;
@@ -56,16 +55,14 @@ public class StripeStoreFlusher extends StoreFlusher {
 
   @Override
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
-      MonitoredTask status, ThroughputController throughputController) throws IOException {
+      MonitoredTask status, ThroughputController throughputController,
+      FlushLifeCycleTracker tracker) throws IOException {
     List<Path> result = new ArrayList<>();
     int cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint);
-    if (scanner == null) {
-      return result; // NULL scanner returned from coprocessor hooks means skip normal processing
-    }
+    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint, tracker);
 
     // Let policy select flush method.
     StripeFlushRequest req = this.policy.selectFlush(store.getComparator(), this.stripes,
@@ -75,8 +72,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     StripeMultiFileWriter mw = null;
     try {
       mw = req.createWriter(); // Writer according to the policy.
-      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(
-          snapshot.getTimeRangeTracker(), cellsCount);
+      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(cellsCount);
       StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
       mw.init(storeScanner, factory);
 
@@ -104,18 +100,12 @@ public class StripeStoreFlusher extends StoreFlusher {
     return result;
   }
 
-  private StripeMultiFileWriter.WriterFactory createWriterFactory(
-      final TimeRangeTracker tracker, final long kvCount) {
+  private StripeMultiFileWriter.WriterFactory createWriterFactory(final long kvCount) {
     return new StripeMultiFileWriter.WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        StoreFileWriter writer = store.createWriterInTmp(
-            kvCount, store.getFamily().getCompressionType(),
-            /* isCompaction = */ false,
-            /* includeMVCCReadpoint = */ true,
-            /* includesTags = */ true,
-            /* shouldDropBehind = */ false,
-            tracker);
+        StoreFileWriter writer = store.createWriterInTmp(kvCount,
+            store.getColumnFamilyDescriptor().getCompressionType(), false, true, true, false);
         return writer;
       }
     };

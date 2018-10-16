@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,27 +21,31 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestPrefetch {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestPrefetch.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -73,10 +77,35 @@ public class TestPrefetch {
     assertTrue(cc.shouldPrefetchOnOpen());
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testPrefetch() throws Exception {
-    Path storeFile = writeStoreFile();
+    Path storeFile = writeStoreFile("TestPrefetch");
     readStoreFile(storeFile);
+  }
+
+  @Test
+  public void testPrefetchRace() throws Exception {
+    for (int i = 0; i < 10; i++) {
+      Path storeFile = writeStoreFile("TestPrefetchRace-" + i);
+      readStoreFileLikeScanner(storeFile);
+    }
+  }
+
+  /**
+   * Read a storefile in the same manner as a scanner -- using non-positional reads and
+   * without waiting for prefetch to complete.
+   */
+  private void readStoreFileLikeScanner(Path storeFilePath) throws Exception {
+    // Open the file
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
+    do {
+      long offset = 0;
+      while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+        HFileBlock block = reader.readBlock(offset, -1, false, /*pread=*/false,
+            false, true, null, null);
+        offset += block.getOnDiskSizeWithHeader();
+      }
+    } while (!reader.prefetchComplete());
   }
 
   private void readStoreFile(Path storeFilePath) throws Exception {
@@ -104,14 +133,14 @@ public class TestPrefetch {
     }
   }
 
-  private Path writeStoreFile() throws IOException {
-    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), "TestPrefetch");
+  private Path writeStoreFile(String fname) throws IOException {
+    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
     HFileContext meta = new HFileContextBuilder()
       .withBlockSize(DATA_BLOCK_SIZE)
       .build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(storeFileParentDir)
-      .withComparator(CellComparator.COMPARATOR)
+      .withComparator(CellComparatorImpl.COMPARATOR)
       .withFileContext(meta)
       .build();
 

@@ -18,27 +18,26 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
+  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
   import="java.util.Collections"
   import="java.util.Comparator"
   import="java.util.ArrayList"
   import="java.util.Date"
   import="java.util.List"
   import="java.util.Set"
-  import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
-  import="org.apache.hadoop.hbase.ProcedureInfo"
-  import="org.apache.hadoop.hbase.procedure2.LockInfo"
+  import="org.apache.hadoop.hbase.master.procedure.ProcedureDescriber"
+  import="org.apache.hadoop.hbase.procedure2.LockedResource"
+  import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
   import="org.apache.hadoop.hbase.procedure2.store.wal.ProcedureWALFile"
   import="org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore"
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
-
+  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
 %>
 <%
-  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
+  HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
   WALProcedureStore walStore = master.getWalProcedureStore();
 
@@ -47,61 +46,23 @@
   long millisFromLastRoll = walStore.getMillisFromLastRoll();
   ArrayList<ProcedureWALFile> procedureWALFiles = walStore.getActiveLogs();
   Set<ProcedureWALFile> corruptedWALFiles = walStore.getCorruptedLogs();
-  List<ProcedureInfo> procedures = procExecutor.listProcedures();
-  Collections.sort(procedures, new Comparator<ProcedureInfo>() {
+  List<Procedure<MasterProcedureEnv>> procedures = procExecutor.getProcedures();
+  Collections.sort(procedures, new Comparator<Procedure>() {
     @Override
-    public int compare(ProcedureInfo lhs, ProcedureInfo rhs) {
-      long cmp = lhs.getParentId() - rhs.getParentId();
+    public int compare(Procedure lhs, Procedure rhs) {
+      long cmp = lhs.getParentProcId() - rhs.getParentProcId();
       cmp = cmp != 0 ? cmp : lhs.getProcId() - rhs.getProcId();
       return cmp < 0 ? -1 : cmp > 0 ? 1 : 0;
     }
   });
 
-  List<LockInfo> locks = master.listLocks();
+  List<LockedResource> lockedResources = master.getLocks();
+  pageContext.setAttribute("pageTitle", "HBase Master Procedures: " + master.getServerName());
 %>
-<!--[if IE]>
-<!DOCTYPE html>
-<![endif]-->
-<?xml version="1.0" encoding="UTF-8" ?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8" />
-    <title>HBase Master Procedures: <%= master.getServerName() %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="" />
-    <meta name="author" content="" />
+<jsp:include page="header.jsp">
+    <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet" />
-    <link href="/static/css/hbase.css" rel="stylesheet" />
-  </head>
-<body>
-<div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-        </div>
-        <div class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
-        </div><!--/.nav-collapse -->
-    </div>
-</div>
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
@@ -118,17 +79,19 @@
         <th>Start Time</th>
         <th>Last Update</th>
         <th>Errors</th>
+        <th>Parameters</th>
     </tr>
-    <% for (ProcedureInfo procInfo : procedures) { %>
+    <% for (Procedure<?> proc : procedures) { %>
       <tr>
-        <td><%= procInfo.getProcId() %></td>
-        <td><%= procInfo.hasParentId() ? procInfo.getParentId() : "" %></td>
-        <td><%= escapeXml(procInfo.getProcState().toString()) %></td>
-        <td><%= escapeXml(procInfo.getProcOwner()) %></td>
-        <td><%= escapeXml(procInfo.getProcName()) %></td>
-        <td><%= new Date(procInfo.getSubmittedTime()) %></td>
-        <td><%= new Date(procInfo.getLastUpdate()) %></td>
-        <td><%= escapeXml(procInfo.isFailed() ? procInfo.getException().getMessage() : "") %></td>
+        <td><%= proc.getProcId() %></td>
+        <td><%= proc.hasParent() ? proc.getParentProcId() : "" %></td>
+        <td><%= escapeXml(proc.getState().toString() + (proc.isBypass() ? "(Bypass)" : "")) %></td>
+        <td><%= proc.hasOwner() ? escapeXml(proc.getOwner()) : "" %></td>
+        <td><%= escapeXml(proc.getProcName()) %></td>
+        <td><%= new Date(proc.getSubmittedTime()) %></td>
+        <td><%= new Date(proc.getLastUpdate()) %></td>
+        <td><%= escapeXml(proc.isFailed() ? proc.getException().unwrapRemoteIOException().getMessage() : "") %></td>
+        <td><%= escapeXml(ProcedureDescriber.describeParameters(proc)) %></td>
       </tr>
     <% } %>
   </table>
@@ -169,7 +132,7 @@
             <%    ProcedureWALFile pwf = procedureWALFiles.get(i); %>
             <tr>
               <td> <%= pwf.getLogId() %></td>
-              <td> <%= StringUtils.humanSize(pwf.getSize()) %> </td>
+              <td> <%= TraditionalBinaryPrefix.long2String(pwf.getSize(), "B", 1) %> </td>
               <td> <%= new Date(pwf.getTimestamp()) %> </td>
               <td> <%= escapeXml(pwf.toString()) %> </td>
             </tr>
@@ -191,7 +154,7 @@
           <% for (ProcedureWALFile cwf:corruptedWALFiles) { %>
           <tr>
             <td> <%= cwf.getLogId() %></td>
-            <td> <%= StringUtils.humanSize(cwf.getSize()) %> </td>
+            <td> <%= TraditionalBinaryPrefix.long2String(cwf.getSize(), "B", 1) %> </td>
             <td> <%= new Date(cwf.getTimestamp()) %> </td>
             <td> <%= escapeXml(cwf.toString()) %> </td>
           </tr>
@@ -228,8 +191,8 @@
             <td> <%= new Date(syncMetrics.getTimestamp()) %></td>
             <td> <%= StringUtils.humanTimeDiff(syncMetrics.getSyncWaitMs()) %></td>
             <td> <%= syncMetrics.getSyncedEntries() %></td>
-            <td> <%= StringUtils.humanSize(syncMetrics.getTotalSyncedBytes()) %></td>
-            <td> <%= StringUtils.humanSize(syncMetrics.getSyncedPerSec()) %></td>
+            <td> <%= TraditionalBinaryPrefix.long2String(syncMetrics.getTotalSyncedBytes(), "B", 1) %></td>
+            <td> <%= TraditionalBinaryPrefix.long2String((long)syncMetrics.getSyncedPerSec(), "B", 1) %></td>
           </tr>
           <%} %>
         </table>
@@ -244,46 +207,38 @@
           <h1>Locks</h1>
       </div>
   </div>
-  <% for (LockInfo lock : locks) { %>
-    <h2><%= lock.getResourceType() %>: <%= lock.getResourceName() %></h2>
+  <% for (LockedResource lockedResource : lockedResources) { %>
+    <h2><%= lockedResource.getResourceType() %>: <%= lockedResource.getResourceName() %></h2>
     <%
-      switch (lock.getLockType()) {
+      switch (lockedResource.getLockType()) {
       case EXCLUSIVE:
     %>
     <p>Lock type: EXCLUSIVE</p>
-    <p>Owner procedure ID: <%= lock.getExclusiveLockOwnerProcedure().getProcId() %></p>
+    <p>Owner procedure: <%= escapeXml(ProcedureDescriber.describe(lockedResource.getExclusiveLockOwnerProcedure())) %></p>
     <%
         break;
       case SHARED:
     %>
     <p>Lock type: SHARED</p>
-    <p>Number of shared locks: <%= lock.getSharedLockCount() %></p>
+    <p>Number of shared locks: <%= lockedResource.getSharedLockCount() %></p>
     <%
         break;
       }
 
-      List<LockInfo.WaitingProcedure> waitingProcedures = lock.getWaitingProcedures();
+      List<Procedure<?>> waitingProcedures = lockedResource.getWaitingProcedures();
 
       if (!waitingProcedures.isEmpty()) {
     %>
-	    <h3>Waiting procedures</h3>
-	    <table class="table table-striped" width="90%" >
-		    <tr>
-		      <th>Lock type</th>
-		      <th>Procedure ID</th>
-		    </tr>
-		    <% for (LockInfo.WaitingProcedure waitingProcedure : waitingProcedures) { %>
-		      <tr>
-	          <td><%= waitingProcedure.getLockType() %></td>
-	          <td><%= waitingProcedure.getProcedure().getProcId() %></td>
-		      </tr>
-		    <% } %>
-	    </table>
+        <h3>Waiting procedures</h3>
+        <table class="table table-striped" width="90%" >
+        <% for (Procedure<?> proc : procedures) { %>
+         <tr>
+            <td><%= escapeXml(ProcedureDescriber.describe(proc)) %></td>
+          </tr>
+        <% } %>
+        </table>
     <% } %>
   <% } %>
 </div>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
-</body>
-</html>
+<jsp:include page="footer.jsp" />

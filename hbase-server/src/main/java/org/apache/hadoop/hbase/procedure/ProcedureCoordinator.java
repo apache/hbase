@@ -29,14 +29,14 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 
-import com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 
 /**
  * This is the master side of a distributed complex procedure execution.
@@ -46,7 +46,7 @@ import com.google.common.collect.MapMaker;
  */
 @InterfaceAudience.Private
 public class ProcedureCoordinator {
-  private static final Log LOG = LogFactory.getLog(ProcedureCoordinator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureCoordinator.class);
 
   final static long KEEP_ALIVE_MILLIS_DEFAULT = 5000;
   final static long TIMEOUT_MILLIS_DEFAULT = 60000;

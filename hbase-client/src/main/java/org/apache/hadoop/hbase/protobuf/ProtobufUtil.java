@@ -17,31 +17,43 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
+import static org.apache.hadoop.hbase.protobuf.ProtobufMagic.PB_MAGIC;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableSet;
-
+import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Cell.Type;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
@@ -59,6 +71,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
@@ -78,7 +91,9 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,17 +101,7 @@ import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.ipc.RemoteException;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.Parser;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Protobufs utility.
@@ -108,17 +113,10 @@ import com.google.protobuf.TextFormat;
  * @see ProtobufUtil
  */
 // TODO: Generate this class from the shaded version.
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(
-  value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", justification="None. Address sometime.")
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class.
 public final class ProtobufUtil {
   private ProtobufUtil() {
   }
-
-  /**
-   * Primitive type to class mapping.
-   */
-  private final static Map<String, Class<?>> PRIMITIVES = new HashMap<>();
 
   /**
    * Many results are simple: no cell, exists true or false. To save on object creations,
@@ -168,24 +166,18 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Dynamic class loader to load filter/comparators
-   */
-  private final static ClassLoader CLASS_LOADER;
+    * Dynamic class loader to load filter/comparators
+    */
+  private final static class ClassLoaderHolder {
+    private final static ClassLoader CLASS_LOADER;
 
-  static {
-    ClassLoader parent = ProtobufUtil.class.getClassLoader();
-    Configuration conf = HBaseConfiguration.create();
-    CLASS_LOADER = new DynamicClassLoader(conf, parent);
-
-    PRIMITIVES.put(Boolean.TYPE.getName(), Boolean.TYPE);
-    PRIMITIVES.put(Byte.TYPE.getName(), Byte.TYPE);
-    PRIMITIVES.put(Character.TYPE.getName(), Character.TYPE);
-    PRIMITIVES.put(Short.TYPE.getName(), Short.TYPE);
-    PRIMITIVES.put(Integer.TYPE.getName(), Integer.TYPE);
-    PRIMITIVES.put(Long.TYPE.getName(), Long.TYPE);
-    PRIMITIVES.put(Float.TYPE.getName(), Float.TYPE);
-    PRIMITIVES.put(Double.TYPE.getName(), Double.TYPE);
-    PRIMITIVES.put(Void.TYPE.getName(), Void.TYPE);
+    static {
+      ClassLoader parent = ProtobufUtil.class.getClassLoader();
+      Configuration conf = HBaseConfiguration.create();
+      CLASS_LOADER = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)
+        () -> new DynamicClassLoader(conf, parent)
+      );
+    }
   }
 
   /**
@@ -197,7 +189,7 @@ public final class ProtobufUtil {
    * byte array that is <code>bytes.length</code> plus {@link ProtobufMagic#PB_MAGIC}.length.
    */
   public static byte [] prependPBMagic(final byte [] bytes) {
-    return Bytes.add(ProtobufMagic.PB_MAGIC, bytes);
+    return Bytes.add(PB_MAGIC, bytes);
   }
 
   /**
@@ -222,10 +214,11 @@ public final class ProtobufUtil {
    * @param bytes bytes to check
    * @throws DeserializationException if we are missing the pb magic prefix
    */
-  public static void expectPBMagicPrefix(final byte [] bytes) throws DeserializationException {
+  public static void expectPBMagicPrefix(final byte[] bytes) throws DeserializationException {
     if (!isPBMagicPrefix(bytes)) {
-      throw new DeserializationException("Missing pb magic " +
-          Bytes.toString(ProtobufMagic.PB_MAGIC) + " prefix");
+      String bytesPrefix = bytes == null ? "null" : Bytes.toStringBinary(bytes, 0, PB_MAGIC.length);
+      throw new DeserializationException(
+          "Missing pb magic " + Bytes.toString(PB_MAGIC) + " prefix, bytes: " + bytesPrefix);
     }
   }
 
@@ -249,6 +242,21 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Return the Exception thrown by the remote server wrapped in
+   * ServiceException as cause. RemoteException are left untouched.
+   *
+   * @param e ServiceException that wraps IO exception thrown by the server
+   * @return Exception wrapped in ServiceException.
+   */
+  public static IOException getServiceException(org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
+    Throwable t = e.getCause();
+    if (ExceptionUtil.isInterrupt(t)) {
+      return ExceptionUtil.asInterrupt(t);
+    }
+    return t instanceof IOException ? (IOException) t : new HBaseIOException(t);
+  }
+
+  /**
    * Like {@link #getRemoteException(ServiceException)} but more generic, able to handle more than
    * just {@link ServiceException}. Prefer this method to
    * {@link #getRemoteException(ServiceException)} because trying to
@@ -262,7 +270,7 @@ public final class ProtobufUtil {
   private static IOException makeIOExceptionOfException(Exception e) {
     Throwable t = e;
     if (e instanceof ServiceException ||
-        e instanceof org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException) {
+        e instanceof org.apache.hbase.thirdparty.com.google.protobuf.ServiceException) {
       t = e.getCause();
     }
     if (ExceptionUtil.isInterrupt(t)) {
@@ -384,12 +392,13 @@ public final class ProtobufUtil {
     if (proto.getCfTimeRangeCount() > 0) {
       for (HBaseProtos.ColumnFamilyTimeRange cftr : proto.getCfTimeRangeList()) {
         TimeRange timeRange = protoToTimeRange(cftr.getTimeRange());
-        get.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(), timeRange);
+        get.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(),
+            timeRange.getMin(), timeRange.getMax());
       }
     }
     if (proto.hasTimeRange()) {
       TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
-      get.setTimeRange(timeRange);
+      get.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     if (proto.hasFilter()) {
       FilterProtos.Filter filter = proto.getFilter();
@@ -488,6 +497,7 @@ public final class ProtobufUtil {
         throw new IllegalArgumentException("row cannot be null");
       }
       // The proto has the metadata and the data itself
+      ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
       for (ColumnValue column: proto.getColumnValueList()) {
         byte[] family = column.getFamily().toByteArray();
         for (QualifierValue qv: column.getQualifierValueList()) {
@@ -495,10 +505,6 @@ public final class ProtobufUtil {
             throw new DoNotRetryIOException(
                 "Missing required field: qualifier value");
           }
-          ByteBuffer qualifier =
-              qv.hasQualifier() ? qv.getQualifier().asReadOnlyByteBuffer() : null;
-          ByteBuffer value =
-              qv.hasValue() ? qv.getValue().asReadOnlyByteBuffer() : null;
           long ts = timestamp;
           if (qv.hasTimestamp()) {
             ts = qv.getTimestamp();
@@ -507,21 +513,43 @@ public final class ProtobufUtil {
           if (qv.hasTags()) {
             allTagsBytes = qv.getTags().toByteArray();
             if(qv.hasDeleteType()) {
-              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
-              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
-                  fromDeleteType(qv.getDeleteType()), null, allTagsBytes));
+              put.add(cellBuilder.clear()
+                  .setRow(put.getRow())
+                  .setFamily(family)
+                  .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                  .setTimestamp(ts)
+                  .setType(fromDeleteType(qv.getDeleteType()).getCode())
+                  .setTags(allTagsBytes)
+                  .build());
             } else {
-              List<Tag> tags = TagUtil.asList(allTagsBytes, 0, (short)allTagsBytes.length);
-              Tag[] tagsArray = new Tag[tags.size()];
-              put.addImmutable(family, qualifier, ts, value, tags.toArray(tagsArray));
+              put.add(cellBuilder.clear()
+                  .setRow(put.getRow())
+                  .setFamily(family)
+                  .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                  .setTimestamp(ts)
+                  .setType(Cell.Type.Put)
+                  .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null)
+                  .setTags(allTagsBytes)
+                  .build());
             }
           } else {
             if(qv.hasDeleteType()) {
-              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
-              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
-                  fromDeleteType(qv.getDeleteType())));
+              put.add(cellBuilder.clear()
+                  .setRow(put.getRow())
+                  .setFamily(family)
+                  .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                  .setTimestamp(ts)
+                  .setType(fromDeleteType(qv.getDeleteType()).getCode())
+                  .build());
             } else{
-              put.addImmutable(family, qualifier, ts, value);
+              put.add(cellBuilder.clear()
+                  .setRow(put.getRow())
+                  .setFamily(family)
+                  .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
+                  .setTimestamp(ts)
+                  .setType(Type.Put)
+                  .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null)
+                  .build());
             }
           }
         }
@@ -579,7 +607,7 @@ public final class ProtobufUtil {
           delete =
             new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
         }
-        delete.addDeleteMarker(cell);
+        delete.add(cell);
       }
     } else {
       if (delete == null) {
@@ -616,6 +644,62 @@ public final class ProtobufUtil {
     return delete;
   }
 
+  @FunctionalInterface
+  private interface ConsumerWithException <T, U> {
+    void accept(T t, U u) throws IOException;
+  }
+
+  private static <T extends Mutation> T toDelta(Function<Bytes, T> supplier, ConsumerWithException<T, Cell> consumer,
+      final MutationProto proto, final CellScanner cellScanner) throws IOException {
+    byte[] row = proto.hasRow() ? proto.getRow().toByteArray() : null;
+    T mutation = row == null ? null : supplier.apply(new Bytes(row));
+    int cellCount = proto.hasAssociatedCellCount() ? proto.getAssociatedCellCount() : 0;
+    if (cellCount > 0) {
+      // The proto has metadata only and the data is separate to be found in the cellScanner.
+      if (cellScanner == null) {
+        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
+                toShortString(proto));
+      }
+      for (int i = 0; i < cellCount; i++) {
+        if (!cellScanner.advance()) {
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
+                  " no cell returned: " + toShortString(proto));
+        }
+        Cell cell = cellScanner.current();
+        if (mutation == null) {
+          mutation = supplier.apply(new Bytes(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+        }
+        consumer.accept(mutation, cell);
+      }
+    } else {
+      if (mutation == null) {
+        throw new IllegalArgumentException("row cannot be null");
+      }
+      for (ColumnValue column : proto.getColumnValueList()) {
+        byte[] family = column.getFamily().toByteArray();
+        for (QualifierValue qv : column.getQualifierValueList()) {
+          byte[] qualifier = qv.getQualifier().toByteArray();
+          if (!qv.hasValue()) {
+            throw new DoNotRetryIOException(
+                    "Missing required field: qualifier value");
+          }
+          byte[] value = qv.getValue().toByteArray();
+          byte[] tags = null;
+          if (qv.hasTags()) {
+            tags = qv.getTags().toByteArray();
+          }
+          consumer.accept(mutation, CellUtil.createCell(mutation.getRow(), family, qualifier, qv.getTimestamp(),
+                  KeyValue.Type.Put, value, tags));
+        }
+      }
+    }
+    mutation.setDurability(toDurability(proto.getDurability()));
+    for (NameBytesPair attribute : proto.getAttributeList()) {
+      mutation.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
+    }
+    return mutation;
+  }
+
   /**
    * Convert a protocol buffer Mutate to an Append
    * @param cellScanner
@@ -624,54 +708,36 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
-  throws IOException {
+          throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.APPEND : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
-    Append append = null;
-    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
-    if (cellCount > 0) {
-      // The proto has metadata only and the data is separate to be found in the cellScanner.
-      if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-          toShortString(proto));
-      }
-      for (int i = 0; i < cellCount; i++) {
-        if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + toShortString(proto));
-        }
-        Cell cell = cellScanner.current();
-        if (append == null) {
-          append = new Append(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-        }
-        append.add(cell);
-      }
-    } else {
-      append = new Append(row);
-      for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv: column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
-          if (!qv.hasValue()) {
-            throw new DoNotRetryIOException(
-              "Missing required field: qualifier value");
-          }
-          byte[] value = qv.getValue().toByteArray();
-          byte[] tags = null;
-          if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
-          }
-          append.add(CellUtil.createCell(row, family, qualifier, qv.getTimestamp(),
-              KeyValue.Type.Put, value, tags));
-        }
-      }
-    }
-    append.setDurability(toDurability(proto.getDurability()));
-    for (NameBytesPair attribute: proto.getAttributeList()) {
-      append.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
+    Append append = toDelta((Bytes row) -> new Append(row.get(), row.getOffset(), row.getLength()),
+        Append::add, proto, cellScanner);
+    if (proto.hasTimeRange()) {
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      append.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     return append;
+  }
+
+  /**
+   * Convert a protocol buffer Mutate to an Increment
+   *
+   * @param proto the protocol buffer Mutate to convert
+   * @return the converted client Increment
+   * @throws IOException
+   */
+  public static Increment toIncrement(final MutationProto proto, final CellScanner cellScanner)
+          throws IOException {
+    MutationType type = proto.getMutateType();
+    assert type == MutationType.INCREMENT : type.name();
+    Increment increment = toDelta((Bytes row) -> new Increment(row.get(), row.getOffset(), row.getLength()),
+            Increment::add, proto, cellScanner);
+    if (proto.hasTimeRange()) {
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      increment.setTimeRange(timeRange.getMin(), timeRange.getMax());
+    }
+    return increment;
   }
 
   /**
@@ -693,67 +759,6 @@ public final class ProtobufUtil {
       return toPut(proto, null);
     }
     throw new IOException("Unknown mutation type " + type);
-  }
-
-  /**
-   * Convert a protocol buffer Mutate to an Increment
-   *
-   * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Increment
-   * @throws IOException
-   */
-  public static Increment toIncrement(final MutationProto proto, final CellScanner cellScanner)
-  throws IOException {
-    MutationType type = proto.getMutateType();
-    assert type == MutationType.INCREMENT : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
-    Increment increment = null;
-    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
-    if (cellCount > 0) {
-      // The proto has metadata only and the data is separate to be found in the cellScanner.
-      if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-          TextFormat.shortDebugString(proto));
-      }
-      for (int i = 0; i < cellCount; i++) {
-        if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + TextFormat.shortDebugString(proto));
-        }
-        Cell cell = cellScanner.current();
-        if (increment == null) {
-          increment = new Increment(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-        }
-        increment.add(cell);
-      }
-    } else {
-      increment = new Increment(row);
-      for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv: column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
-          if (!qv.hasValue()) {
-            throw new DoNotRetryIOException("Missing required field: qualifier value");
-          }
-          byte[] value = qv.getValue().toByteArray();
-          byte[] tags = null;
-          if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
-          }
-          increment.add(CellUtil.createCell(row, family, qualifier, qv.getTimestamp(),
-              KeyValue.Type.Put, value, tags));
-        }
-      }
-    }
-    if (proto.hasTimeRange()) {
-      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
-      increment.setTimeRange(timeRange.getMin(), timeRange.getMax());
-    }
-    increment.setDurability(toDurability(proto.getDurability()));
-    for (NameBytesPair attribute : proto.getAttributeList()) {
-      increment.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    return increment;
   }
 
   /**
@@ -805,7 +810,7 @@ public final class ProtobufUtil {
     }
     if (proto.hasTimeRange()) {
       TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
-      get.setTimeRange(timeRange);
+      get.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     for (NameBytesPair attribute : proto.getAttributeList()) {
       get.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
@@ -868,20 +873,13 @@ public final class ProtobufUtil {
       scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand);
     }
     scanBuilder.setMaxVersions(scan.getMaxVersions());
-    for (Entry<byte[], TimeRange> cftr : scan.getColumnFamilyTimeRange().entrySet()) {
-      HBaseProtos.ColumnFamilyTimeRange.Builder b = HBaseProtos.ColumnFamilyTimeRange.newBuilder();
-      b.setColumnFamily(ByteStringer.wrap(cftr.getKey()));
-      b.setTimeRange(timeRangeToProto(cftr.getValue()));
-      scanBuilder.addCfTimeRange(b);
-    }
-    TimeRange timeRange = scan.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      scanBuilder.setTimeRange(timeRangeBuilder.build());
-    }
+    scan.getColumnFamilyTimeRange().forEach((cf, timeRange) -> {
+      scanBuilder.addCfTimeRange(HBaseProtos.ColumnFamilyTimeRange.newBuilder()
+        .setColumnFamily(ByteStringer.wrap(cf))
+        .setTimeRange(toTimeRange(timeRange))
+        .build());
+    });
+    scanBuilder.setTimeRange(toTimeRange(scan.getTimeRange()));
     Map<String, byte[]> attributes = scan.getAttributesMap();
     if (!attributes.isEmpty()) {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
@@ -993,12 +991,13 @@ public final class ProtobufUtil {
     if (proto.getCfTimeRangeCount() > 0) {
       for (HBaseProtos.ColumnFamilyTimeRange cftr : proto.getCfTimeRangeList()) {
         TimeRange timeRange = protoToTimeRange(cftr.getTimeRange());
-        scan.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(), timeRange);
+        scan.setColumnFamilyTimeRange(cftr.getColumnFamily().toByteArray(),
+            timeRange.getMin(), timeRange.getMax());
       }
     }
     if (proto.hasTimeRange()) {
       TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
-      scan.setTimeRange(timeRange);
+      scan.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
     if (proto.hasFilter()) {
       FilterProtos.Filter filter = proto.getFilter();
@@ -1068,20 +1067,12 @@ public final class ProtobufUtil {
     if (get.getFilter() != null) {
       builder.setFilter(ProtobufUtil.toFilter(get.getFilter()));
     }
-    for (Entry<byte[], TimeRange> cftr : get.getColumnFamilyTimeRange().entrySet()) {
-      HBaseProtos.ColumnFamilyTimeRange.Builder b = HBaseProtos.ColumnFamilyTimeRange.newBuilder();
-      b.setColumnFamily(ByteStringer.wrap(cftr.getKey()));
-      b.setTimeRange(timeRangeToProto(cftr.getValue()));
-      builder.addCfTimeRange(b);
-    }
-    TimeRange timeRange = get.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      builder.setTimeRange(timeRangeBuilder.build());
-    }
+    get.getColumnFamilyTimeRange().forEach((cf, timeRange) ->
+      builder.addCfTimeRange(HBaseProtos.ColumnFamilyTimeRange.newBuilder()
+        .setColumnFamily(ByteStringer.wrap(cf))
+        .setTimeRange(toTimeRange(timeRange)).build())
+    );
+    builder.setTimeRange(toTimeRange(get.getTimeRange()));
     Map<String, byte[]> attributes = get.getAttributesMap();
     if (!attributes.isEmpty()) {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
@@ -1127,66 +1118,6 @@ public final class ProtobufUtil {
     return builder.build();
   }
 
-  static void setTimeRange(final MutationProto.Builder builder, final TimeRange timeRange) {
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      builder.setTimeRange(timeRangeBuilder.build());
-    }
-  }
-
-  /**
-   * Convert a client Increment to a protobuf Mutate.
-   *
-   * @param increment
-   * @return the converted mutate
-   */
-  public static MutationProto toMutation(
-    final Increment increment, final MutationProto.Builder builder, long nonce) {
-    builder.setRow(ByteStringer.wrap(increment.getRow()));
-    builder.setMutateType(MutationType.INCREMENT);
-    builder.setDurability(toDurability(increment.getDurability()));
-    if (nonce != HConstants.NO_NONCE) {
-      builder.setNonce(nonce);
-    }
-    TimeRange timeRange = increment.getTimeRange();
-    setTimeRange(builder, timeRange);
-    ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
-    QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[], List<Cell>> family: increment.getFamilyCellMap().entrySet()) {
-      columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
-      columnBuilder.clearQualifierValue();
-      List<Cell> values = family.getValue();
-      if (values != null && values.size() > 0) {
-        for (Cell cell: values) {
-          valueBuilder.clear();
-          valueBuilder.setQualifier(ByteStringer.wrap(
-              cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
-          valueBuilder.setValue(ByteStringer.wrap(
-              cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
-          if (cell.getTagsLength() > 0) {
-            valueBuilder.setTags(ByteStringer.wrap(cell.getTagsArray(),
-                cell.getTagsOffset(), cell.getTagsLength()));
-          }
-          columnBuilder.addQualifierValue(valueBuilder.build());
-        }
-      }
-      builder.addColumnValue(columnBuilder.build());
-    }
-    Map<String, byte[]> attributes = increment.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute : attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
-        builder.addAttribute(attributeBuilder.build());
-      }
-    }
-    return builder.build();
-  }
-
   public static MutationProto toMutation(final MutationType type, final Mutation mutation)
     throws IOException {
     return toMutation(type, mutation, HConstants.NO_NONCE);
@@ -1216,6 +1147,12 @@ public final class ProtobufUtil {
     builder = getMutationBuilderAndSetCommonFields(type, mutation, builder);
     if (nonce != HConstants.NO_NONCE) {
       builder.setNonce(nonce);
+    }
+    if (type == MutationType.INCREMENT) {
+      builder.setTimeRange(toTimeRange(((Increment) mutation).getTimeRange()));
+    }
+    if (type == MutationType.APPEND) {
+      builder.setTimeRange(toTimeRange(((Append) mutation).getTimeRange()));
     }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
@@ -1273,7 +1210,10 @@ public final class ProtobufUtil {
     getMutationBuilderAndSetCommonFields(type, mutation, builder);
     builder.setAssociatedCellCount(mutation.size());
     if (mutation instanceof Increment) {
-      setTimeRange(builder, ((Increment)mutation).getTimeRange());
+      builder.setTimeRange(toTimeRange(((Increment)mutation).getTimeRange()));
+    }
+    if (mutation instanceof Append) {
+      builder.setTimeRange(toTimeRange(((Append)mutation).getTimeRange()));
     }
     if (nonce != HConstants.NO_NONCE) {
       builder.setNonce(nonce);
@@ -1293,7 +1233,7 @@ public final class ProtobufUtil {
     builder.setRow(ByteStringer.wrap(mutation.getRow()));
     builder.setMutateType(type);
     builder.setDurability(toDurability(mutation.getDurability()));
-    builder.setTimestamp(mutation.getTimeStamp());
+    builder.setTimestamp(mutation.getTimestamp());
     Map<String, byte[]> attributes = mutation.getAttributesMap();
     if (!attributes.isEmpty()) {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
@@ -1384,8 +1324,9 @@ public final class ProtobufUtil {
     }
 
     List<Cell> cells = new ArrayList<>(values.size());
+    ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (CellProtos.Cell c : values) {
-      cells.add(toCell(c));
+      cells.add(toCell(builder, c));
     }
     return Result.create(cells, null, proto.getStale(), proto.getPartial());
   }
@@ -1426,8 +1367,9 @@ public final class ProtobufUtil {
 
     if (!values.isEmpty()){
       if (cells == null) cells = new ArrayList<>(values.size());
+      ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
       for (CellProtos.Cell c: values) {
-        cells.add(toCell(c));
+        cells.add(toCell(builder, c));
       }
     }
 
@@ -1463,8 +1405,7 @@ public final class ProtobufUtil {
     String funcName = "parseFrom";
     byte [] value = proto.getSerializedComparator().toByteArray();
     try {
-      Class<? extends ByteArrayComparable> c =
-        (Class<? extends ByteArrayComparable>)Class.forName(type, true, CLASS_LOADER);
+      Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
       Method parseFrom = c.getMethod(funcName, byte[].class);
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
@@ -1487,8 +1428,7 @@ public final class ProtobufUtil {
     final byte [] value = proto.getSerializedFilter().toByteArray();
     String funcName = "parseFrom";
     try {
-      Class<? extends Filter> c =
-        (Class<? extends Filter>)Class.forName(type, true, CLASS_LOADER);
+      Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
       Method parseFrom = c.getMethod(funcName, byte[].class);
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
@@ -1574,7 +1514,7 @@ public final class ProtobufUtil {
     String type = parameter.getName();
     try {
       Class<? extends Throwable> c =
-        (Class<? extends Throwable>)Class.forName(type, true, CLASS_LOADER);
+        (Class<? extends Throwable>)Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
       Constructor<? extends Throwable> cn = null;
       try {
         cn = c.getDeclaredConstructor(String.class);
@@ -1619,7 +1559,7 @@ public final class ProtobufUtil {
 
 
   /**
-   * @see {@link #buildGetServerInfoRequest()}
+   * @see #buildGetServerInfoRequest()
    */
   private static GetServerInfoRequest GET_SERVER_INFO_REQUEST =
     GetServerInfoRequest.newBuilder().build();
@@ -1686,15 +1626,15 @@ public final class ProtobufUtil {
     return kvbuilder.build();
   }
 
-  public static Cell toCell(final CellProtos.Cell cell) {
-    // Doing this is going to kill us if we do it for all data passed.
-    // St.Ack 20121205
-    return CellUtil.createCell(cell.getRow().toByteArray(),
-      cell.getFamily().toByteArray(),
-      cell.getQualifier().toByteArray(),
-      cell.getTimestamp(),
-      (byte)cell.getCellType().getNumber(),
-      cell.getValue().toByteArray());
+  public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell) {
+    return cellBuilder.clear()
+            .setRow(cell.getRow().toByteArray())
+            .setFamily(cell.getFamily().toByteArray())
+            .setQualifier(cell.getQualifier().toByteArray())
+            .setTimestamp(cell.getTimestamp())
+            .setType((byte) cell.getCellType().getNumber())
+            .setValue(cell.getValue().toByteArray())
+            .build();
   }
 
   /**
@@ -1747,14 +1687,6 @@ public final class ProtobufUtil {
     codedInput.setSizeLimit(length);
     builder.mergeFrom(codedInput);
     codedInput.checkLastTagWas(0);
-  }
-
-  private static HBaseProtos.TimeRange.Builder timeRangeToProto(TimeRange timeRange) {
-    HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-    timeRangeBuilder.setFrom(timeRange.getMin());
-    timeRangeBuilder.setTo(timeRange.getMax());
-    return timeRangeBuilder;
   }
 
   private static TimeRange protoToTimeRange(HBaseProtos.TimeRange timeRange) throws IOException {
@@ -1837,5 +1769,25 @@ public final class ProtobufUtil {
     String hostname = Addressing.parseHostname(str);
     int port = Addressing.parsePort(str);
     return ServerName.valueOf(hostname, port, -1L);
+  }
+
+  public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
+    RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
+    for(HBaseProtos.ServerName el: proto.getServersList()) {
+      RSGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
+    }
+    for(HBaseProtos.TableName pTableName: proto.getTablesList()) {
+      RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
+    }
+    return RSGroupInfo;
+  }
+
+  public static HBaseProtos.TimeRange toTimeRange(TimeRange timeRange) {
+    if (timeRange == null) {
+      timeRange = TimeRange.allTime();
+    }
+    return HBaseProtos.TimeRange.newBuilder().setFrom(timeRange.getMin())
+      .setTo(timeRange.getMax())
+      .build();
   }
 }

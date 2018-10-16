@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ListNamespaceTables < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all tables that are members of the namespace.
 Examples:
 
@@ -30,11 +30,11 @@ EOF
       end
 
       def command(namespace)
-        formatter.header([ "TABLE" ])
+        formatter.header(['TABLE'])
 
         list = admin.list_namespace_tables(namespace)
         list.each do |table|
-          formatter.row([ table ])
+          formatter.row([table])
         end
 
         formatter.footer(list.size)

@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.group.ChannelGroup;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelInboundHandlerAdapter;
+import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Decoder for rpc request.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {
@@ -48,10 +49,8 @@ class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {
   @Override
   public void channelActive(ChannelHandlerContext ctx) throws Exception {
     allChannels.add(ctx.channel());
-    if (NettyRpcServer.LOG.isDebugEnabled()) {
-      NettyRpcServer.LOG.debug("Connection from " + ctx.channel().remoteAddress() +
-          "; # active connections: " + (allChannels.size() - 1));
-    }
+    NettyRpcServer.LOG.trace("Connection {}; # active connections={}",
+        ctx.channel().remoteAddress(), (allChannels.size() - 1));
     super.channelActive(ctx);
   }
 
@@ -66,21 +65,16 @@ class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     allChannels.remove(ctx.channel());
-    if (NettyRpcServer.LOG.isDebugEnabled()) {
-      NettyRpcServer.LOG.debug("Disconnecting client: " + ctx.channel().remoteAddress() +
-          ". Number of active connections: " + (allChannels.size() - 1));
-    }
+    NettyRpcServer.LOG.trace("Disconnection {}; # active connections={}",
+        ctx.channel().remoteAddress(), (allChannels.size() - 1));
     super.channelInactive(ctx);
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
     allChannels.remove(ctx.channel());
-    if (NettyRpcServer.LOG.isDebugEnabled()) {
-      NettyRpcServer.LOG.debug("Connection from " + ctx.channel().remoteAddress() +
-          " catch unexpected exception from downstream.",
-        e.getCause());
-    }
+    NettyRpcServer.LOG.trace("Connection {}; caught unexpected downstream exception.",
+        ctx.channel().remoteAddress(), e.getCause());
     ctx.channel().close();
   }
 }

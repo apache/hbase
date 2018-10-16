@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The listener interface for receiving region state events.
@@ -31,22 +32,22 @@ public interface RegionStateListener {
   /**
    * Process region split event.
    *
-   * @param hri An instance of HRegionInfo
+   * @param hri An instance of RegionInfo
    * @throws IOException
    */
-  void onRegionSplit(HRegionInfo hri) throws IOException;
+  void onRegionSplit(RegionInfo hri) throws IOException;
 
   /**
    * Process region split reverted event.
    *
-   * @param hri An instance of HRegionInfo
+   * @param hri An instance of RegionInfo
    * @throws IOException Signals that an I/O exception has occurred.
    */
-  void onRegionSplitReverted(HRegionInfo hri) throws IOException;
+  void onRegionSplitReverted(RegionInfo hri) throws IOException;
 
   /**
    * Process region merge event.
    * @throws IOException
    */
-  void onRegionMerged(HRegionInfo mergedRegion) throws IOException;
+  void onRegionMerged(RegionInfo mergedRegion) throws IOException;
 }

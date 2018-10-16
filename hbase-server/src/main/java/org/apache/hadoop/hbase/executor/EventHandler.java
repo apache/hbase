@@ -21,13 +21,14 @@ package org.apache.hadoop.hbase.executor;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstract base class for all HBase event handlers. Subclasses should
@@ -52,7 +53,7 @@ import org.apache.htrace.TraceScope;
  */
 @InterfaceAudience.Private
 public abstract class EventHandler implements Runnable, Comparable<Runnable> {
-  private static final Log LOG = LogFactory.getLog(EventHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EventHandler.class);
 
   // type of event this object represents
   protected EventType eventType;
@@ -74,7 +75,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * Default base class constructor.
    */
   public EventHandler(Server server, EventType eventType) {
-    this.parent = Trace.currentSpan();
+    this.parent = Tracer.getCurrentSpan();
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();
@@ -99,13 +100,10 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
 
   @Override
   public void run() {
-    TraceScope chunk = Trace.startSpan(this.getClass().getSimpleName(), parent);
-    try {
+    try (TraceScope scope = TraceUtil.createTrace(this.getClass().getSimpleName(), parent)) {
       process();
     } catch(Throwable t) {
       handleException(t);
-    } finally {
-      chunk.close();
     }
   }
 

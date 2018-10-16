@@ -27,11 +27,12 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore.ChoreServicer;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * ChoreService is a service that can be used to schedule instances of {@link ScheduledChore} to run
@@ -54,7 +55,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class ChoreService implements ChoreServicer {
-  private static final Log LOG = LogFactory.getLog(ChoreService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ChoreService.class);
 
   /**
    * The minimum number of threads in the core pool of the underlying ScheduledThreadPoolExecutor
@@ -112,7 +113,7 @@ public class ChoreService implements ChoreServicer {
   /**
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
    *          spawned by this service
-   * @param corePoolSize The initial size to set the core pool of the ScheduledThreadPoolExecutor 
+   * @param corePoolSize The initial size to set the core pool of the ScheduledThreadPoolExecutor
    *          to during initialization. The default size is 1, but specifying a larger size may be
    *          beneficial if you know that 1 thread will not be enough.
    * @param jitter Should chore service add some jitter for all of the scheduled chores. When set
@@ -246,7 +247,7 @@ public class ChoreService implements ChoreServicer {
    */
   static class ChoreServiceThreadFactory implements ThreadFactory {
     private final String threadPrefix;
-    private final static String THREAD_NAME_SUFFIX = "_Chore_";
+    private final static String THREAD_NAME_SUFFIX = ".Chore.";
     private AtomicInteger threadNumber = new AtomicInteger(1);
 
     /**
@@ -330,7 +331,7 @@ public class ChoreService implements ChoreServicer {
     scheduledChores.clear();
     choresMissingStartTime.clear();
   }
-  
+
   /**
    * @return true when the service is shutdown and thus cannot be used anymore
    */

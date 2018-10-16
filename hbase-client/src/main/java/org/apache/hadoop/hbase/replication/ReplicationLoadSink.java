@@ -10,27 +10,37 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A HBase ReplicationLoad to present MetricsSink information
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class ReplicationLoadSink {
-  private long ageOfLastAppliedOp;
-  private long timeStampsOfLastAppliedOp;
+  private final long ageOfLastAppliedOp;
+  private final long timestampsOfLastAppliedOp;
 
-  public ReplicationLoadSink(long age, long timeStamp) {
+  // TODO: add the builder for this class
+  @InterfaceAudience.Private
+  public ReplicationLoadSink(long age, long timestamp) {
     this.ageOfLastAppliedOp = age;
-    this.timeStampsOfLastAppliedOp = timeStamp;
+    this.timestampsOfLastAppliedOp = timestamp;
   }
 
   public long getAgeOfLastAppliedOp() {
     return this.ageOfLastAppliedOp;
   }
 
+  /**
+   * @deprecated Since hbase-2.0.0. Will be removed in 3.0.0.
+   * @see #getTimestampsOfLastAppliedOp()
+   */
+  @Deprecated
   public long getTimeStampsOfLastAppliedOp() {
-    return this.timeStampsOfLastAppliedOp;
+    return getTimestampsOfLastAppliedOp();
   }
 
+  public long getTimestampsOfLastAppliedOp() {
+    return this.timestampsOfLastAppliedOp;
+  }
 }

@@ -26,7 +26,7 @@ String bcv = "";
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.regionserver.HRegionServer;
-org.apache.hadoop.hbase.HRegionInfo;
+org.apache.hadoop.hbase.client.RegionInfo;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -44,15 +44,13 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 <%java>
   ServerInfo serverInfo = ProtobufUtil.getServerInfo(null, regionServer.getRSRpcServices());
   ServerName serverName = ProtobufUtil.toServerName(serverInfo.getServerName());
-  List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(regionServer.getRSRpcServices());
+  List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(regionServer.getRSRpcServices());
   MasterAddressTracker masterAddressTracker = regionServer.getMasterAddressTracker();
   ServerName masterServerName = masterAddressTracker == null ? null
     : masterAddressTracker.getMasterAddress();
   int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMasterInfoPort();
 </%java>
-<!--[if IE]>
 <!DOCTYPE html>
-<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>
@@ -81,6 +79,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
             <div class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
                 <li class="active"><a href="/">Home</a></li>
+                <li><a href="/processRS.jsp">Process Metrics</a></li>
                 <li><a href="/logs/">Local Logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug Dump</a></li>
@@ -109,12 +108,12 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     </section>
 
     <section>
-    <& ../common/TaskMonitorTmpl; filter = filter &>
+    <h2>Block Cache</h2>
+    <& BlockCacheTmpl; cacheConfig = regionServer.getCacheConfig(); config = regionServer.getConfiguration() &>
     </section>
 
     <section>
-    <h2>Block Cache</h2>
-    <& BlockCacheTmpl; cacheConfig = regionServer.getCacheConfig(); config = regionServer.getConfiguration() &>
+    <& ../common/TaskMonitorTmpl; filter = filter &>
     </section>
 
     <section>
@@ -122,6 +121,10 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     <& RegionListTmpl; regionServer = regionServer; onlineRegions = onlineRegions; &>
     </section>
 
+    <section>
+    <h2>Replication Status</h1>
+    <& ReplicationStatusTmpl; regionServer = regionServer; &>
+    </section>
 
     <section>
     <h2>Software Attributes</h2>

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown if the region server log directory exists (which indicates another
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class RegionServerRunningException extends IOException {
-  private static final long serialVersionUID = 1L << 31 - 1L;
+  private static final long serialVersionUID = (1L << 31) - 1L;
 
   /** Default Constructor */
   public RegionServerRunningException() {

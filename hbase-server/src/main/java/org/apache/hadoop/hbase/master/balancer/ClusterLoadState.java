@@ -21,28 +21,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Class used to hold the current state of the cluster and how balanced it is.
  */
+@InterfaceAudience.Private
 public class ClusterLoadState {
-  private final Map<ServerName, List<HRegionInfo>> clusterState;
-  private final NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad;
+  private final Map<ServerName, List<RegionInfo>> clusterState;
+  private final NavigableMap<ServerAndLoad, List<RegionInfo>> serversByLoad;
   private boolean emptyRegionServerPresent = false;
   private int numRegions = 0;
   private int numServers = 0;
 
-  public ClusterLoadState(Map<ServerName, List<HRegionInfo>> clusterState) {
+  public ClusterLoadState(Map<ServerName, List<RegionInfo>> clusterState) {
     this.numRegions = 0;
     this.numServers = clusterState.size();
     this.clusterState = clusterState;
     serversByLoad = new TreeMap<>();
     // Iterate so we can count regions as we build the map
-    for (Map.Entry<ServerName, List<HRegionInfo>> server : clusterState.entrySet()) {
-      List<HRegionInfo> regions = server.getValue();
+    for (Map.Entry<ServerName, List<RegionInfo>> server : clusterState.entrySet()) {
+      List<RegionInfo> regions = server.getValue();
       int sz = regions.size();
       if (sz == 0) emptyRegionServerPresent = true;
       numRegions += sz;
@@ -50,11 +51,11 @@ public class ClusterLoadState {
     }
   }
 
-  Map<ServerName, List<HRegionInfo>> getClusterState() {
+  Map<ServerName, List<RegionInfo>> getClusterState() {
     return clusterState;
   }
 
-  NavigableMap<ServerAndLoad, List<HRegionInfo>> getServersByLoad() {
+  NavigableMap<ServerAndLoad, List<RegionInfo>> getServersByLoad() {
     return serversByLoad;
   }
 

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,13 +21,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest;
@@ -59,29 +60,32 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestServerCustomProtocol {
-  private static final Log LOG = LogFactory.getLog(TestServerCustomProtocol.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestServerCustomProtocol.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestServerCustomProtocol.class);
   static final String WHOAREYOU = "Who are you?";
   static final String NOBODY = "nobody";
   static final String HELLO = "Hello, ";
 
   /* Test protocol implementation */
-  public static class PingHandler extends PingProtos.PingService
-  implements Coprocessor, CoprocessorService {
+  public static class PingHandler extends PingProtos.PingService implements RegionCoprocessor {
     private int counter = 0;
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
-      if (env instanceof RegionCoprocessorEnvironment) return;
+      if (env instanceof RegionCoprocessorEnvironment) {
+        return;
+      }
       throw new CoprocessorException("Must be loaded on a table region!");
     }
 
@@ -113,9 +117,13 @@ public class TestServerCustomProtocol {
     @Override
     public void hello(RpcController controller, HelloRequest request,
         RpcCallback<HelloResponse> done) {
-      if (!request.hasName()) done.run(HelloResponse.newBuilder().setResponse(WHOAREYOU).build());
-      else if (request.getName().equals(NOBODY)) done.run(HelloResponse.newBuilder().build());
-      else done.run(HelloResponse.newBuilder().setResponse(HELLO + request.getName()).build());
+      if (!request.hasName()) {
+        done.run(HelloResponse.newBuilder().setResponse(WHOAREYOU).build());
+      } else if (request.getName().equals(NOBODY)) {
+        done.run(HelloResponse.newBuilder().build());
+      } else {
+        done.run(HelloResponse.newBuilder().setResponse(HELLO + request.getName()).build());
+      }
     }
 
     @Override
@@ -125,8 +133,8 @@ public class TestServerCustomProtocol {
     }
 
     @Override
-    public Service getService() {
-      return this;
+    public Iterable<Service> getServices() {
+      return Collections.singleton(this);
     }
   }
 
@@ -150,19 +158,19 @@ public class TestServerCustomProtocol {
   }
 
   @Before
-  public void before()  throws Exception {
+  public void before() throws Exception {
     final byte[][] SPLIT_KEYS = new byte[][] { ROW_B, ROW_C };
     Table table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
 
-    Put puta = new Put( ROW_A );
+    Put puta = new Put(ROW_A);
     puta.addColumn(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
     table.put(puta);
 
-    Put putb = new Put( ROW_B );
+    Put putb = new Put(ROW_B);
     putb.addColumn(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
     table.put(putb);
 
-    Put putc = new Put( ROW_C );
+    Put putc = new Put(ROW_C);
     putc.addColumn(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
     table.put(putc);
   }
@@ -231,7 +239,7 @@ public class TestServerCustomProtocol {
   }
 
   private Map<byte [], String> hello(final Table table, final String send, final String response)
-  throws ServiceException, Throwable {
+          throws ServiceException, Throwable {
     Map<byte [], String> results = hello(table, send);
     for (Map.Entry<byte [], String> e: results.entrySet()) {
       assertEquals("Invalid custom protocol response", response, e.getValue());
@@ -240,13 +248,12 @@ public class TestServerCustomProtocol {
   }
 
   private Map<byte [], String> hello(final Table table, final String send)
-  throws ServiceException, Throwable {
+          throws ServiceException, Throwable {
     return hello(table, send, null, null);
   }
 
   private Map<byte [], String> hello(final Table table, final String send, final byte [] start,
-      final byte [] end)
-  throws ServiceException, Throwable {
+          final byte [] end) throws ServiceException, Throwable {
     return table.coprocessorService(PingProtos.PingService.class,
         start, end,
         new Batch.Call<PingProtos.PingService, String>() {
@@ -255,7 +262,9 @@ public class TestServerCustomProtocol {
             CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.HelloResponse> rpcCallback =
               new CoprocessorRpcUtils.BlockingRpcCallback<>();
             PingProtos.HelloRequest.Builder builder = PingProtos.HelloRequest.newBuilder();
-            if (send != null) builder.setName(send);
+            if (send != null) {
+              builder.setName(send);
+            }
             instance.hello(null, builder.build(), rpcCallback);
             PingProtos.HelloResponse r = rpcCallback.get();
             return r != null && r.hasResponse()? r.getResponse(): null;
@@ -264,8 +273,7 @@ public class TestServerCustomProtocol {
   }
 
   private Map<byte [], String> compoundOfHelloAndPing(final Table table, final byte [] start,
-      final byte [] end)
-  throws ServiceException, Throwable {
+          final byte [] end) throws ServiceException, Throwable {
     return table.coprocessorService(PingProtos.PingService.class,
         start, end,
         new Batch.Call<PingProtos.PingService, String>() {
@@ -283,9 +291,8 @@ public class TestServerCustomProtocol {
         });
   }
 
-  private Map<byte [], String> noop(final Table table, final byte [] start,
-      final byte [] end)
-  throws ServiceException, Throwable {
+  private Map<byte [], String> noop(final Table table, final byte [] start, final byte [] end)
+          throws ServiceException, Throwable {
     return table.coprocessorService(PingProtos.PingService.class, start, end,
         new Batch.Call<PingProtos.PingService, String>() {
           @Override
@@ -320,7 +327,7 @@ public class TestServerCustomProtocol {
       // rows from 1 region
       assertEquals(1, results.size());
       verifyRegionResults(locator, results, ROW_A);
-  
+
       final String name = "NAME";
       results = hello(table, name, null, ROW_A);
       // Should have gotten results for 1 of the three regions only since we specified
@@ -343,12 +350,12 @@ public class TestServerCustomProtocol {
       // test,,1355943549657.c65d4822d8bdecc033a96451f3a0f55d.
       // test,bbb,1355943549661.110393b070dd1ed93441e0bc9b3ffb7e.
       // test,ccc,1355943549665.c3d6d125141359cbbd2a43eaff3cdf74.
-  
+
       Map<byte [], String> results = ping(table, null, ROW_A);
       // Should contain first region only.
       assertEquals(1, results.size());
       verifyRegionResults(locator, results, ROW_A);
-  
+
       // Test start row + empty end
       results = ping(table, ROW_BC, null);
       assertEquals(2, results.size());
@@ -358,7 +365,7 @@ public class TestServerCustomProtocol {
         results.get(loc.getRegionInfo().getRegionName()));
       verifyRegionResults(locator, results, ROW_B);
       verifyRegionResults(locator, results, ROW_C);
-  
+
       // test empty start + end
       results = ping(table, null, ROW_BC);
       // should contain the first 2 regions
@@ -368,7 +375,7 @@ public class TestServerCustomProtocol {
       loc = locator.getRegionLocation(ROW_C, true);
       assertNull("Should be missing region for row ccc (past stop row)",
           results.get(loc.getRegionInfo().getRegionName()));
-  
+
       // test explicit start + end
       results = ping(table, ROW_AB, ROW_BC);
       // should contain first 2 regions
@@ -378,7 +385,7 @@ public class TestServerCustomProtocol {
       loc = locator.getRegionLocation(ROW_C, true);
       assertNull("Should be missing region for row ccc (past stop row)",
           results.get(loc.getRegionInfo().getRegionName()));
-  
+
       // test single region
       results = ping(table, ROW_B, ROW_BC);
       // should only contain region bbb
@@ -394,7 +401,7 @@ public class TestServerCustomProtocol {
   }
 
   private Map<byte [], String> ping(final Table table, final byte [] start, final byte [] end)
-  throws ServiceException, Throwable {
+          throws ServiceException, Throwable {
     return table.coprocessorService(PingProtos.PingService.class, start, end,
       new Batch.Call<PingProtos.PingService, String>() {
         @Override
@@ -407,8 +414,8 @@ public class TestServerCustomProtocol {
   private static String doPing(PingProtos.PingService instance) throws IOException {
     CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.PingResponse> rpcCallback =
         new CoprocessorRpcUtils.BlockingRpcCallback<>();
-      instance.ping(null, PingProtos.PingRequest.newBuilder().build(), rpcCallback);
-      return rpcCallback.get().getPong();
+    instance.ping(null, PingProtos.PingRequest.newBuilder().build(), rpcCallback);
+    return rpcCallback.get().getPong();
   }
 
   @Test
@@ -456,18 +463,17 @@ public class TestServerCustomProtocol {
     }
   }
 
-  private void verifyRegionResults(RegionLocator table,
-      Map<byte[],String> results, byte[] row) throws Exception {
+  private void verifyRegionResults(RegionLocator table, Map<byte[],String> results, byte[] row)
+          throws Exception {
     verifyRegionResults(table, results, "pong", row);
   }
 
-  private void verifyRegionResults(RegionLocator regionLocator,
-      Map<byte[], String> results, String expected, byte[] row)
-  throws Exception {
+  private void verifyRegionResults(RegionLocator regionLocator, Map<byte[], String> results,
+          String expected, byte[] row) throws Exception {
     for (Map.Entry<byte [], String> e: results.entrySet()) {
       LOG.info("row=" + Bytes.toString(row) + ", expected=" + expected +
-       ", result key=" + Bytes.toString(e.getKey()) +
-       ", value=" + e.getValue());
+        ", result key=" + Bytes.toString(e.getKey()) +
+        ", value=" + e.getValue());
     }
     HRegionLocation loc = regionLocator.getRegionLocation(row, true);
     byte[] region = loc.getRegionInfo().getRegionName();

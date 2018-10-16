@@ -19,10 +19,11 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
@@ -56,9 +57,9 @@ class VisibilityLabelFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell cell) throws IOException {
+  public ReturnCode filterCell(final Cell cell) throws IOException {
     if (curFamily.getBytes() == null
-        || !(CellUtil.matchingFamily(cell, curFamily.getBytes(), curFamily.getOffset(),
+        || !(PrivateCellUtil.matchingFamily(cell, curFamily.getBytes(), curFamily.getOffset(),
             curFamily.getLength()))) {
       curFamily.set(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
       // For this family, all the columns can have max of curFamilyMaxVersions versions. No need to
@@ -68,9 +69,8 @@ class VisibilityLabelFilter extends FilterBase {
       // Family is changed. Just unset curQualifier.
       curQualifier.unset();
     }
-    if (curQualifier.getBytes() == null
-        || !(CellUtil.matchingQualifier(cell, curQualifier.getBytes(), curQualifier.getOffset(),
-            curQualifier.getLength()))) {
+    if (curQualifier.getBytes() == null || !(PrivateCellUtil.matchingQualifier(cell,
+      curQualifier.getBytes(), curQualifier.getOffset(), curQualifier.getLength()))) {
       curQualifier.set(cell.getQualifierArray(), cell.getQualifierOffset(),
           cell.getQualifierLength());
       curQualMetVersions = 0;
@@ -89,5 +89,23 @@ class VisibilityLabelFilter extends FilterBase {
     this.curQualifier.unset();
     this.curFamilyMaxVersions = 0;
     this.curQualMetVersions = 0;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof VisibilityLabelFilter)) {
+      return false;
+    }
+    if(this == obj){
+      return true;
+    }
+    VisibilityLabelFilter f = (VisibilityLabelFilter)obj;
+    return this.expEvaluator.equals(f.expEvaluator) &&
+      this.cfVsMaxVersions.equals(f.cfVsMaxVersions);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.expEvaluator, this.cfVsMaxVersions);
   }
 }

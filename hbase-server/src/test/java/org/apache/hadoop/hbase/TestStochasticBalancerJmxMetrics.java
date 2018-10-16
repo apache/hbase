@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
@@ -28,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
@@ -36,10 +34,8 @@ import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.balancer.BalancerTestBase;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
@@ -49,17 +45,25 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.FixMethodOrder;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MiscTests.class, MediumTests.class })
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Ignore
 public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
-  private static final Log LOG = LogFactory.getLog(TestStochasticBalancerJmxMetrics.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStochasticBalancerJmxMetrics.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestStochasticBalancerJmxMetrics.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static int connectorPort = 61120;
   private static StochasticLoadBalancer loadBalancer;
@@ -120,7 +124,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
   /**
    * In Ensemble mode, there should be only one ensemble table
    */
-  @Test (timeout=60000)
+  @Test
   public void testJmxMetrics_EnsembleMode() throws Exception {
     loadBalancer = new StochasticLoadBalancer();
 
@@ -128,7 +132,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     loadBalancer.setConf(conf);
 
     TableName tableName = HConstants.ENSEMBLE_TABLE_NAME;
-    Map<ServerName, List<HRegionInfo>> clusterState = mockClusterServers(mockCluster_ensemble);
+    Map<ServerName, List<RegionInfo>> clusterState = mockClusterServers(mockCluster_ensemble);
     loadBalancer.balanceCluster(tableName, clusterState);
 
     String[] tableNames = new String[] { tableName.getNameAsString() };
@@ -149,14 +153,14 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
   /**
    * In per-table mode, each table has a set of metrics
    */
-  @Test (timeout=60000)
+  @Test
   public void testJmxMetrics_PerTableMode() throws Exception {
     loadBalancer = new StochasticLoadBalancer();
 
     conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, true);
     loadBalancer.setConf(conf);
 
-    // NOTE the size is normally set in setClusterStatus, for test purpose, we set it manually
+    // NOTE the size is normally set in setClusterMetrics, for test purpose, we set it manually
     // Tables: hbase:namespace, table1, table2
     // Functions: costFunctions, overall
     String[] functionNames = loadBalancer.getCostFunctionNames();
@@ -164,7 +168,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
     // table 1
     TableName tableName = TableName.valueOf(TABLE_NAME_1);
-    Map<ServerName, List<HRegionInfo>> clusterState = mockClusterServers(mockCluster_pertable_1);
+    Map<ServerName, List<RegionInfo>> clusterState = mockClusterServers(mockCluster_pertable_1);
     loadBalancer.balanceCluster(tableName, clusterState);
 
     // table 2
@@ -204,7 +208,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
   /**
    * Read the attributes from Hadoop->HBase->Master->Balancer in JMX
-   * @throws IOException 
+   * @throws IOException
    */
   private Set<String> readJmxMetrics() throws IOException {
     JMXConnector connector = null;

@@ -22,24 +22,72 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-
 import junit.framework.TestCase;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestBytes extends TestCase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBytes.class);
+
+  private static void setUnsafe(boolean value) throws Exception {
+    Field field = Bytes.class.getDeclaredField("UNSAFE_UNALIGNED");
+    field.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    int oldModifiers = field.getModifiers();
+    modifiersField.setInt(field, oldModifiers & ~Modifier.FINAL);
+    try {
+      field.set(null, value);
+    } finally {
+      modifiersField.setInt(field, oldModifiers);
+    }
+    assertEquals(Bytes.UNSAFE_UNALIGNED, value);
+  }
+
+  public void testShort() throws Exception  {
+    testShort(false);
+  }
+
+  public void testShortUnsafe() throws Exception  {
+    testShort(true);
+  }
+
+  private static void testShort(boolean unsafe) throws Exception  {
+    setUnsafe(unsafe);
+    try {
+      for (short n : Arrays.asList(
+              Short.MIN_VALUE,
+              (short) -100,
+              (short) -1,
+              (short) 0,
+              (short) 1,
+              (short) 300,
+              Short.MAX_VALUE)) {
+        byte[] bytes = Bytes.toBytes(n);
+        assertEquals(Bytes.toShort(bytes, 0, bytes.length), n);
+      }
+    } finally {
+      setUnsafe(UnsafeAvailChecker.unaligned());
+    }
+  }
+
   public void testNullHashCode() {
     byte [] b = null;
     Exception ee = null;
@@ -158,9 +206,9 @@ public class TestBytes extends TestCase {
     float [] floats = {-1f, 123.123f, Float.MAX_VALUE};
     for (int i = 0; i < floats.length; i++) {
       byte [] b = Bytes.toBytes(floats[i]);
-      assertEquals(floats[i], Bytes.toFloat(b));
+      assertEquals(floats[i], Bytes.toFloat(b), 0.0f);
       byte [] b2 = bytesWithOffset(b);
-      assertEquals(floats[i], Bytes.toFloat(b2, 1));
+      assertEquals(floats[i], Bytes.toFloat(b2, 1), 0.0f);
     }
   }
 
@@ -168,9 +216,9 @@ public class TestBytes extends TestCase {
     double [] doubles = {Double.MIN_VALUE, Double.MAX_VALUE};
     for (int i = 0; i < doubles.length; i++) {
       byte [] b = Bytes.toBytes(doubles[i]);
-      assertEquals(doubles[i], Bytes.toDouble(b));
+      assertEquals(doubles[i], Bytes.toDouble(b), 0.0);
       byte [] b2 = bytesWithOffset(b);
-      assertEquals(doubles[i], Bytes.toDouble(b2, 1));
+      assertEquals(doubles[i], Bytes.toDouble(b2, 1), 0.0);
     }
   }
 
@@ -419,18 +467,18 @@ public class TestBytes extends TestCase {
 
   public void testToStringBinary_toBytesBinary_Reversable() throws Exception {
     String bytes = Bytes.toStringBinary(Bytes.toBytes(2.17));
-    assertEquals(2.17, Bytes.toDouble(Bytes.toBytesBinary(bytes)), 0);        
+    assertEquals(2.17, Bytes.toDouble(Bytes.toBytesBinary(bytes)), 0);
   }
 
   public void testUnsignedBinarySearch(){
     byte[] bytes = new byte[]{0,5,123,127,-128,-100,-1};
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)5), 1);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)127), 3);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-128), 4);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-100), 5);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-1), 6);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)2), -1-1);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-5), -6-1);
+    Assert.assertEquals(1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)5));
+    Assert.assertEquals(3, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)127));
+    Assert.assertEquals(4, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-128));
+    Assert.assertEquals(5, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-100));
+    Assert.assertEquals(6, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-1));
+    Assert.assertEquals(-1-1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)2));
+    Assert.assertEquals(-6-1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-5));
   }
 
   public void testUnsignedIncrement(){
@@ -448,7 +496,7 @@ public class TestBytes extends TestCase {
     int c2 = Bytes.toInt(Bytes.unsignedCopyAndIncrement(c), 0);
     Assert.assertTrue(c2==256);
   }
-  
+
   public void testIndexOf() {
     byte[] array = Bytes.toBytes("hello");
     assertEquals(1, Bytes.indexOf(array, (byte) 'e'));
@@ -458,7 +506,7 @@ public class TestBytes extends TestCase {
     assertEquals(2, Bytes.indexOf(array, Bytes.toBytes("ll")));
     assertEquals(-1, Bytes.indexOf(array, Bytes.toBytes("hll")));
   }
-  
+
   public void testContains() {
     byte[] array = Bytes.toBytes("hello world");
     assertTrue(Bytes.contains(array, (byte) 'e'));
@@ -468,7 +516,7 @@ public class TestBytes extends TestCase {
     assertTrue(Bytes.contains(array, Bytes.toBytes("ello")));
     assertFalse(Bytes.contains(array, Bytes.toBytes("owo")));
   }
-  
+
   public void testZero() {
     byte[] array = Bytes.toBytes("hello");
     Bytes.zero(array);
@@ -496,7 +544,7 @@ public class TestBytes extends TestCase {
       Assert.assertEquals(i, b[i]);
     }
   }
-  
+
   public void testToFromHex() {
     List<String> testStrings = new ArrayList<>(8);
     testStrings.addAll(Arrays.asList(new String[] {
@@ -516,7 +564,7 @@ public class TestBytes extends TestCase {
       String result = Bytes.toHex(byteData);
       Assert.assertTrue(testString.equalsIgnoreCase(result));
     }
-    
+
     List<byte[]> testByteData = new ArrayList<>(5);
     testByteData.addAll(Arrays.asList(new byte[][] {
       new byte[0],
@@ -528,12 +576,11 @@ public class TestBytes extends TestCase {
     Random r = new Random();
     for (int i = 0; i < 20; i++)
     {
-      
       byte[] bytes = new byte[r.nextInt(100)];
       r.nextBytes(bytes);
       testByteData.add(bytes);
     }
-    
+
     for (byte[] testData : testByteData)
     {
       String hexString = Bytes.toHex(testData);

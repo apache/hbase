@@ -25,15 +25,16 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Store cells following every row's start offset, so we can binary search to a row's cells.
@@ -107,7 +108,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
       dup.limit(sourceAsBuffer.position() + onDiskSize);
       return dup.slice();
     } else {
-      RowIndexSeekerV1 seeker = new RowIndexSeekerV1(CellComparator.COMPARATOR,
+      RowIndexSeekerV1 seeker = new RowIndexSeekerV1(CellComparatorImpl.COMPARATOR,
           decodingCtx);
       seeker.setCurrentBuffer(new SingleByteBuff(sourceAsBuffer));
       List<Cell> kvs = new ArrayList<>();

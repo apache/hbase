@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Wraps an existing {@link DataType} implementation as a fixed-length
@@ -47,25 +47,39 @@ public class FixedLengthWrapper<T> implements DataType<T> {
   /**
    * Retrieve the maximum length (in bytes) of encoded values.
    */
-  public int getLength() { return length; }
+  public int getLength() {
+    return length;
+  }
 
   @Override
-  public boolean isOrderPreserving() { return base.isOrderPreserving(); }
+  public boolean isOrderPreserving() {
+    return base.isOrderPreserving();
+  }
 
   @Override
-  public Order getOrder() { return base.getOrder(); }
+  public Order getOrder() {
+    return base.getOrder();
+  }
 
   @Override
-  public boolean isNullable() { return base.isNullable(); }
+  public boolean isNullable() {
+    return base.isNullable();
+  }
 
   @Override
-  public boolean isSkippable() { return true; }
+  public boolean isSkippable() {
+    return true;
+  }
 
   @Override
-  public int encodedLength(T val) { return length; }
+  public int encodedLength(T val) {
+    return length;
+  }
 
   @Override
-  public Class<T> encodedClass() { return base.encodedClass(); }
+  public Class<T> encodedClass() {
+    return base.encodedClass();
+  }
 
   @Override
   public int skip(PositionedByteRange src) {
@@ -99,7 +113,9 @@ public class FixedLengthWrapper<T> implements DataType<T> {
           + ") exceeds max length (" + length + ").");
     }
     // TODO: is the zero-padding appropriate?
-    for (; written < length; written++) { dst.put((byte) 0x00); }
+    for (; written < length; written++) {
+      dst.put((byte) 0x00);
+    }
     return written;
   }
 }

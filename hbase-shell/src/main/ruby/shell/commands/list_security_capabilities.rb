@@ -19,7 +19,7 @@ module Shell
   module Commands
     class ListSecurityCapabilities < Command
       def help
-        return <<-EOF
+        <<-EOF
 List supported security capabilities
 
 Example:
@@ -27,20 +27,18 @@ Example:
 EOF
       end
 
-      def command()
-        begin
-          list = admin.get_security_capabilities
-          list.each do |s|
-            puts s.getName
-          end
-          return list.map { |s| s.getName() }
-        rescue Exception => e
-          if e.to_s.include? "UnsupportedOperationException"
-            puts "ERROR: Master does not support getSecurityCapabilities"
-            return []
-          end
-          raise e
+      def command
+        list = admin.get_security_capabilities
+        list.each do |s|
+          puts s.getName
         end
+        return list.map(&:getName)
+      rescue Exception => e
+        if e.to_s.include? 'UnsupportedOperationException'
+          puts 'ERROR: Master does not support getSecurityCapabilities'
+          return []
+        end
+        raise e
       end
     end
   end

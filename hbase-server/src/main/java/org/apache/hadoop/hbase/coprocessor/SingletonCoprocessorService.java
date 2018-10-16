@@ -19,14 +19,16 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import com.google.protobuf.Service;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 /**
  * Coprocessor endpoints registered once per server and providing protobuf services should implement
  * this interface and return the {@link Service} instance via {@link #getService()}.
+ * @deprecated Since 2.0. Will be removed in 3.0
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface SingletonCoprocessorService {

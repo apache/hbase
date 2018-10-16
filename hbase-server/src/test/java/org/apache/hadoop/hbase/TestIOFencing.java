@@ -20,42 +20,47 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 
 /**
  * Test for the case where a regionserver going down has enough cycles to do damage to regions that
@@ -78,7 +83,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, LargeTests.class})
 public class TestIOFencing {
-  private static final Log LOG = LogFactory.getLog(TestIOFencing.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestIOFencing.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestIOFencing.class);
   static {
     // Uncomment the following lines if more verbosity is needed for
     // debugging (see HBASE-12285 for details).
@@ -91,14 +101,14 @@ public class TestIOFencing {
   }
 
   public abstract static class CompactionBlockerRegion extends HRegion {
-    volatile int compactCount = 0;
+    AtomicInteger compactCount = new AtomicInteger();
     volatile CountDownLatch compactionsBlocked = new CountDownLatch(0);
     volatile CountDownLatch compactionsWaiting = new CountDownLatch(0);
 
     @SuppressWarnings("deprecation")
     public CompactionBlockerRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
+        FileSystem fs, Configuration confParam, RegionInfo info,
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
 
@@ -122,28 +132,28 @@ public class TestIOFencing {
     }
 
     @Override
-    public boolean compact(CompactionContext compaction, Store store,
+    public boolean compact(CompactionContext compaction, HStore store,
         ThroughputController throughputController) throws IOException {
       try {
         return super.compact(compaction, store, throughputController);
       } finally {
-        compactCount++;
+        compactCount.getAndIncrement();
       }
     }
 
     @Override
-    public boolean compact(CompactionContext compaction, Store store,
+    public boolean compact(CompactionContext compaction, HStore store,
         ThroughputController throughputController, User user) throws IOException {
       try {
         return super.compact(compaction, store, throughputController, user);
       } finally {
-        compactCount++;
+        compactCount.getAndIncrement();
       }
     }
 
     public int countStoreFiles() {
       int count = 0;
-      for (Store store : stores.values()) {
+      for (HStore store : stores.values()) {
         count += store.getStorefilesCount();
       }
       return count;
@@ -157,8 +167,8 @@ public class TestIOFencing {
   public static class BlockCompactionsInPrepRegion extends CompactionBlockerRegion {
 
     public BlockCompactionsInPrepRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
+        FileSystem fs, Configuration confParam, RegionInfo info,
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
     @Override
@@ -180,26 +190,26 @@ public class TestIOFencing {
    */
   public static class BlockCompactionsInCompletionRegion extends CompactionBlockerRegion {
     public BlockCompactionsInCompletionRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
+        FileSystem fs, Configuration confParam, RegionInfo info,
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
     @Override
-    protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
+    protected HStore instantiateHStore(final ColumnFamilyDescriptor family) throws IOException {
       return new BlockCompactionsInCompletionHStore(this, family, this.conf);
     }
   }
 
   public static class BlockCompactionsInCompletionHStore extends HStore {
     CompactionBlockerRegion r;
-    protected BlockCompactionsInCompletionHStore(HRegion region, HColumnDescriptor family,
+    protected BlockCompactionsInCompletionHStore(HRegion region, ColumnFamilyDescriptor family,
         Configuration confParam) throws IOException {
       super(region, family, confParam);
       r = (CompactionBlockerRegion) region;
     }
 
     @Override
-    protected void completeCompaction(Collection<StoreFile> compactedFiles) throws IOException {
+    protected void completeCompaction(Collection<HStoreFile> compactedFiles) throws IOException {
       try {
         r.compactionsWaiting.countDown();
         r.compactionsBlocked.await();
@@ -320,7 +330,7 @@ public class TestIOFencing {
         @Override
         public boolean evaluate() throws Exception {
           Region newRegion = newServer.getOnlineRegion(REGION_NAME);
-          return newRegion != null && !newRegion.isRecovering();
+          return newRegion != null;
         }
       });
 
@@ -334,7 +344,7 @@ public class TestIOFencing {
       }
       LOG.info("Allowing compaction to proceed");
       compactingRegion.allowCompactions();
-      while (compactingRegion.compactCount == 0) {
+      while (compactingRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
       }
       // The server we killed stays up until the compaction that was started before it was killed
@@ -347,7 +357,7 @@ public class TestIOFencing {
         FIRST_BATCH_COUNT + SECOND_BATCH_COUNT);
       admin.majorCompact(TABLE_NAME);
       startWaitTime = System.currentTimeMillis();
-      while (newRegion.compactCount == 0) {
+      while (newRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
         assertTrue("New region never compacted",
           System.currentTimeMillis() - startWaitTime < 180000);
@@ -365,7 +375,7 @@ public class TestIOFencing {
           Thread.sleep(1000);
         }
       }
-      if (policy == MemoryCompactionPolicy.EAGER) {
+      if (policy == MemoryCompactionPolicy.EAGER || policy == MemoryCompactionPolicy.ADAPTIVE) {
         assertTrue(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT >= count);
       } else {
         assertEquals(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT, count);

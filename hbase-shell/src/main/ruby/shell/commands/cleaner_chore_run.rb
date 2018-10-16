@@ -20,15 +20,16 @@ module Shell
   module Commands
     class CleanerChoreRun < Command
       def help
-        return <<-EOF
+        <<-EOF
 Cleaner chore command for garbage collection of HFiles and WAL files.
 
   hbase> cleaner_chore_run
 
 EOF
       end
-      def command()
-        admin.cleaner_chore_run()
+
+      def command
+        admin.cleaner_chore_run
       end
     end
   end

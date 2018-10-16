@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Class used to create metrics sources for Thrift and Thrift2 servers.
@@ -30,25 +30,31 @@ public class MetricsThriftServerSourceFactoryImpl implements MetricsThriftServer
    * A singleton used to make sure that only one thrift metrics source per server type is ever
    * created.
    */
-  private static enum FactoryStorage {
+  private enum FactoryStorage {
     INSTANCE;
-    MetricsThriftServerSourceImpl thriftOne = new MetricsThriftServerSourceImpl(METRICS_NAME,
-        METRICS_DESCRIPTION,
-        THRIFT_ONE_METRICS_CONTEXT,
-        THRIFT_ONE_JMX_CONTEXT);
-    MetricsThriftServerSourceImpl thriftTwo = new MetricsThriftServerSourceImpl(METRICS_NAME,
-        METRICS_DESCRIPTION,
-        THRIFT_TWO_METRICS_CONTEXT,
-        THRIFT_TWO_JMX_CONTEXT);
+    MetricsThriftServerSourceImpl thriftOne;
+    MetricsThriftServerSourceImpl thriftTwo;
   }
 
   @Override
   public MetricsThriftServerSource createThriftOneSource() {
+    if (FactoryStorage.INSTANCE.thriftOne == null) {
+      FactoryStorage.INSTANCE.thriftOne = new MetricsThriftServerSourceImpl(METRICS_NAME,
+          METRICS_DESCRIPTION,
+          THRIFT_ONE_METRICS_CONTEXT,
+          THRIFT_ONE_JMX_CONTEXT);
+    }
     return FactoryStorage.INSTANCE.thriftOne;
   }
 
   @Override
   public MetricsThriftServerSource createThriftTwoSource() {
+    if (FactoryStorage.INSTANCE.thriftTwo == null) {
+      FactoryStorage.INSTANCE.thriftTwo = new MetricsThriftServerSourceImpl(METRICS_NAME,
+          METRICS_DESCRIPTION,
+          THRIFT_TWO_METRICS_CONTEXT,
+          THRIFT_TWO_JMX_CONTEXT);
+    }
     return FactoryStorage.INSTANCE.thriftTwo;
   }
 }

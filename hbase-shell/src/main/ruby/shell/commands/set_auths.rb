@@ -19,7 +19,7 @@ module Shell
   module Commands
     class SetAuths < Command
       def help
-        return <<-EOF
+        <<-EOF
 Add a set of visibility labels for a user or group
 Syntax : set_auths 'user',[label1, label2]
 

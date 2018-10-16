@@ -22,13 +22,13 @@ package org.apache.hadoop.hbase.ipc;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * RPC Executor that uses different queues for reads and writes.
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class RWQueueRpcExecutor extends RpcExecutor {
-  private static final Log LOG = LogFactory.getLog(RWQueueRpcExecutor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RWQueueRpcExecutor.class);
 
   public static final String CALL_QUEUE_READ_SHARE_CONF_KEY =
       "hbase.ipc.server.callqueue.read.ratio";

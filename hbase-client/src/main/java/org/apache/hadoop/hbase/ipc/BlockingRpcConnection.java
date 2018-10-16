@@ -24,10 +24,6 @@ import static org.apache.hadoop.hbase.ipc.IPCUtil.isFatalConnectionException;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.write;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message.Builder;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -47,18 +43,33 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
-
 import javax.security.sasl.SaslException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
+import org.apache.hadoop.hbase.security.SaslUtil;
+import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.htrace.core.TraceScope;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -66,17 +77,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHea
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
-import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
-import org.apache.hadoop.hbase.security.SaslUtil;
-import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ExceptionUtil;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
 
 /**
  * Thread that reads responses and notifies callers. Each connection owns a socket connected to a
@@ -86,7 +86,7 @@ import org.apache.htrace.TraceScope;
 @InterfaceAudience.Private
 class BlockingRpcConnection extends RpcConnection implements Runnable {
 
-  private static final Log LOG = LogFactory.getLog(BlockingRpcConnection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BlockingRpcConnection.class);
 
   private final BlockingRpcClient rpcClient;
 
@@ -264,8 +264,16 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         /*
          * The max number of retries is 45, which amounts to 20s*45 = 15 minutes retries.
          */
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received exception in connection setup.\n" +
+              StringUtils.stringifyException(toe));
+        }
         handleConnectionFailure(timeoutFailures++, this.rpcClient.maxRetries, toe);
       } catch (IOException ie) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received exception in connection setup.\n" +
+              StringUtils.stringifyException(ie));
+        }
         handleConnectionFailure(ioFailures++, this.rpcClient.maxRetries, ie);
       }
     }
@@ -297,8 +305,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       ExceptionUtil.rethrowIfInterrupt(ie);
     }
 
-    LOG.info("Retrying connect to server: " + remoteId.getAddress() + " after sleeping "
-        + this.rpcClient.failureSleep + "ms. Already tried " + curRetries + " time(s).");
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Retrying connect to server: " + remoteId.getAddress() +
+        " after sleeping " + this.rpcClient.failureSleep + "ms. Already tried " + curRetries +
+        " time(s).");
+    }
   }
 
   /*
@@ -382,7 +393,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (shouldAuthenticateOverKrb()) {
           if (currRetries < maxRetries) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Exception encountered while connecting to " + "the server : " + ex);
+              LOG.debug("Exception encountered while connecting to " +
+                "the server : " + StringUtils.stringifyException(ex));
             }
             // try re-login
             relogin();
@@ -408,7 +420,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (ex instanceof SaslException) {
           String msg = "SASL authentication failed."
               + " The most likely cause is missing or invalid credentials." + " Consider 'kinit'.";
-          LOG.fatal(msg, ex);
+          LOG.error(HBaseMarkers.FATAL, msg, ex);
           throw new RuntimeException(msg, ex);
         }
         throw new IOException(ex);
@@ -488,7 +500,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       closeSocket();
       IOException e = ExceptionUtil.asInterrupt(t);
       if (e == null) {
-        this.rpcClient.failedServers.addToFailedServers(remoteId.address);
+        this.rpcClient.failedServers.addToFailedServers(remoteId.address, t);
         if (t instanceof LinkageError) {
           // probably the hbase hadoop version does not match the running hadoop version
           e = new DoNotRetryIOException(t);
@@ -557,8 +569,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
       waitingConnectionHeaderResponse = false;
     } catch (SocketTimeoutException ste) {
-      LOG.fatal("Can't get the connection header response for rpc timeout, please check if" +
-          " server has the correct configuration to support the additional function.", ste);
+      LOG.error(HBaseMarkers.FATAL, "Can't get the connection header response for rpc timeout, "
+          + "please check if server has the correct configuration to support the additional "
+          + "function.", ste);
       // timeout when waiting the connection header response, ignore the additional function
       throw new IOException("Timeout while waiting connection header response", ste);
     }
@@ -574,7 +587,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
 
   private void tracedWriteRequest(Call call) throws IOException {
-    try (TraceScope ignored = Trace.startSpan("RpcClientImpl.tracedWriteRequest", call.span)) {
+    try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
+          call.span)) {
       writeRequest(call);
     }
   }
@@ -609,7 +623,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     // pending calls map.
     try {
       call.callStats.setRequestSizeBytes(write(this.out, requestHeader, call.param, cellBlock));
-    } catch (IOException e) {
+    } catch (Throwable t) {
+      if(LOG.isTraceEnabled()) {
+        LOG.trace("Error while writing call, call_id:" + call.id, t);
+      }
+      IOException e = IPCUtil.toIOE(t);
       closeConn(e);
       return;
     }

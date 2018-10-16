@@ -18,17 +18,18 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -38,8 +39,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Handles synchronization of access control list entries and updates
@@ -51,22 +52,22 @@ import java.util.concurrent.atomic.AtomicReference;
  * trigger updates in the {@link TableAuthManager} permission cache.
  */
 @InterfaceAudience.Private
-public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable {
-  private static final Log LOG = LogFactory.getLog(ZKPermissionWatcher.class);
+public class ZKPermissionWatcher extends ZKListener implements Closeable {
+  private static final Logger LOG = LoggerFactory.getLogger(ZKPermissionWatcher.class);
   // parent node for permissions lists
   static final String ACL_NODE = "acl";
-  TableAuthManager authManager;
-  String aclZNode;
-  CountDownLatch initialized = new CountDownLatch(1);
-  AtomicReference<List<ZKUtil.NodeAndData>> nodes = new AtomicReference<>(null);
-  ExecutorService executor;
+  private final TableAuthManager authManager;
+  private final String aclZNode;
+  private final CountDownLatch initialized = new CountDownLatch(1);
+  private final ExecutorService executor;
+  private Future<?> childrenChangedFuture;
 
-  public ZKPermissionWatcher(ZooKeeperWatcher watcher,
+  public ZKPermissionWatcher(ZKWatcher watcher,
       TableAuthManager authManager, Configuration conf) {
     super(watcher);
     this.authManager = authManager;
     String aclZnodeParent = conf.get("zookeeper.znode.acl.parent", ACL_NODE);
-    this.aclZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, aclZnodeParent);
+    this.aclZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, aclZnodeParent);
     executor = Executors.newSingleThreadExecutor(
       new DaemonThreadFactory("zk-permission-watcher"));
   }
@@ -82,7 +83,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
               List<ZKUtil.NodeAndData> existing =
                   ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
               if (existing != null) {
-                refreshNodes(existing, null);
+                refreshNodes(existing);
               }
               return null;
             }
@@ -126,7 +127,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
           try {
             List<ZKUtil.NodeAndData> nodes =
                 ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-            refreshNodes(nodes, null);
+            refreshNodes(nodes);
           } catch (KeeperException ke) {
             LOG.error("Error reading data from zookeeper", ke);
             // only option is to abort
@@ -179,42 +180,37 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
     }
   }
 
+
   @Override
   public void nodeChildrenChanged(final String path) {
     waitUntilStarted();
     if (path.equals(aclZNode)) {
       try {
-        List<ZKUtil.NodeAndData> nodeList =
+        final List<ZKUtil.NodeAndData> nodeList =
             ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-        while (!nodes.compareAndSet(null, nodeList)) {
-          try {
-            Thread.sleep(20);
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted while setting node list", e);
-            Thread.currentThread().interrupt();
+        // preempt any existing nodeChildrenChanged event processing
+        if (childrenChangedFuture != null && !childrenChangedFuture.isDone()) {
+          boolean cancelled = childrenChangedFuture.cancel(true);
+          if (!cancelled) {
+            // task may have finished between our check and attempted cancel, this is fine.
+            if (! childrenChangedFuture.isDone()) {
+              LOG.warn("Could not cancel processing node children changed event, " +
+                  "please file a JIRA and attach logs if possible.");
+            }
           }
         }
+        childrenChangedFuture = asyncProcessNodeUpdate(() -> refreshNodes(nodeList));
       } catch (KeeperException ke) {
         LOG.error("Error reading data from zookeeper for path "+path, ke);
         watcher.abort("ZooKeeper error get node children for path "+path, ke);
       }
-      asyncProcessNodeUpdate(new Runnable() {
-        // allows subsequent nodeChildrenChanged event to preempt current processing of
-        // nodeChildrenChanged event
-        @Override
-        public void run() {
-          List<ZKUtil.NodeAndData> nodeList = nodes.get();
-          nodes.set(null);
-          refreshNodes(nodeList, nodes);
-        }
-      });
     }
   }
 
-  private void asyncProcessNodeUpdate(Runnable runnable) {
+  private Future<?> asyncProcessNodeUpdate(Runnable runnable) {
     if (!executor.isShutdown()) {
       try {
-        executor.submit(runnable);
+        return executor.submit(runnable);
       } catch (RejectedExecutionException e) {
         if (executor.isShutdown()) {
           LOG.warn("aclZNode changed after ZKPermissionWatcher was shutdown");
@@ -223,12 +219,13 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
         }
       }
     }
+    return null; // No task launched so there will be nothing to cancel later
   }
 
-  private void refreshNodes(List<ZKUtil.NodeAndData> nodes, AtomicReference ref) {
+  private void refreshNodes(List<ZKUtil.NodeAndData> nodes) {
     for (ZKUtil.NodeAndData n : nodes) {
-      if (ref != null && ref.get() != null) {
-        // there is a newer list
+      if (Thread.interrupted()) {
+        // Use Thread.interrupted so that we clear interrupt status
         break;
       }
       if (n.isEmpty()) continue;
@@ -245,7 +242,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
 
   private void refreshAuthManager(String entry, byte[] nodeData) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Updating permissions cache from node "+entry+" with data: "+
+      LOG.debug("Updating permissions cache from {} with data {}", entry,
           Bytes.toStringBinary(nodeData));
     }
     if(AccessControlLists.isNamespaceEntry(entry)) {
@@ -263,8 +260,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    */
   public void writeToZookeeper(byte[] entry, byte[] permsData) {
     String entryName = Bytes.toString(entry);
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, entryName);
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, entryName);
 
     try {
       ZKUtil.createWithParents(watcher, zkNode);
@@ -281,8 +278,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    * @param tableName
    */
   public void deleteTableACLNode(final TableName tableName) {
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, tableName.getNameAsString());
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, tableName.getNameAsString());
 
     try {
       ZKUtil.deleteNode(watcher, zkNode);
@@ -298,8 +295,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    * Delete the acl notify node of namespace
    */
   public void deleteNamespaceACLNode(final String namespace) {
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, AccessControlLists.NAMESPACE_PREFIX + namespace);
+    String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, AccessControlLists.NAMESPACE_PREFIX + namespace);
 
     try {
       ZKUtil.deleteNode(watcher, zkNode);

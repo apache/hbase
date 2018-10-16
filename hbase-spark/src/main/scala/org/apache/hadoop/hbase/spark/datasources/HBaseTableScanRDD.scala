@@ -19,14 +19,13 @@ package org.apache.hadoop.hbase.spark.datasources
 
 import java.util.ArrayList
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.spark._
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.spark.datasources.HBaseResources._
 import org.apache.hadoop.hbase.util.ShutdownHookManager
-import org.apache.spark.sql.datasources.hbase.Field
-import org.apache.spark.{SparkEnv, TaskContext, Logging, Partition}
+import org.apache.spark.{SparkEnv, TaskContext, Partition}
 import org.apache.spark.rdd.RDD
 
 import scala.collection.mutable
@@ -36,7 +35,8 @@ class HBaseTableScanRDD(relation: HBaseRelation,
                        val hbaseContext: HBaseContext,
                        @transient val filter: Option[SparkSQLPushDownFilter] = None,
                         val columns: Seq[Field] = Seq.empty
-     )extends RDD[Result](relation.sqlContext.sparkContext, Nil) with Logging  {
+     ) extends RDD[Result](relation.sqlContext.sparkContext, Nil)
+  {
   private def sparkConf = SparkEnv.get.conf
   @transient var ranges = Seq.empty[Range]
   @transient var points = Seq.empty[Array[Byte]]
@@ -265,6 +265,7 @@ class HBaseTableScanRDD(relation: HBaseRelation,
   }
 }
 
+@InterfaceAudience.Private
 case class SerializedFilter(b: Option[Array[Byte]])
 
 object SerializedFilter {
@@ -277,13 +278,14 @@ object SerializedFilter {
   }
 }
 
+@InterfaceAudience.Private
 private[hbase] case class HBaseRegion(
     override val index: Int,
     val start: Option[HBaseType] = None,
     val end: Option[HBaseType] = None,
     val server: Option[String] = None) extends Partition
 
-
+@InterfaceAudience.Private
 private[hbase] case class HBaseScanPartition(
     override val index: Int,
     val regions: HBaseRegion,
@@ -291,6 +293,7 @@ private[hbase] case class HBaseScanPartition(
     val points: Seq[Array[Byte]],
     val sf: SerializedFilter) extends Partition
 
+@InterfaceAudience.Private
 case class RDDResources(set: mutable.HashSet[Resource]) {
   def addResource(s: Resource) {
     set += s

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.errorhandling;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is an interface for a cooperative exception throwing mechanism.  Implementations are

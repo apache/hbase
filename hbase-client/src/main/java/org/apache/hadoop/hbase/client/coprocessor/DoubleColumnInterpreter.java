@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
@@ -48,7 +48,7 @@ public class DoubleColumnInterpreter extends ColumnInterpreter<Double, Double,
       throws IOException {
     if (c == null || c.getValueLength() != Bytes.SIZEOF_DOUBLE)
       return null;
-    return CellUtil.getValueAsDouble(c);
+    return PrivateCellUtil.getValueAsDouble(c);
   }
 
   @Override

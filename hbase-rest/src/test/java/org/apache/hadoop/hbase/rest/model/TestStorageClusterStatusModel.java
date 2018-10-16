@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
-import java.util.Iterator;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
+import java.util.Iterator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterStatusModel> {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStorageClusterStatusModel.class);
 
   public TestStorageClusterStatusModel() throws Exception {
     super(StorageClusterStatusModel.class);
@@ -40,12 +46,12 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
       "<DeadNodes/><LiveNodes>" +
       "<Node heapSizeMB=\"128\" maxHeapSizeMB=\"1024\" name=\"test1\" requests=\"0\" startCode=\"1245219839331\">" +
       "<Region currentCompactedKVs=\"1\" memstoreSizeMB=\"0\" name=\"aGJhc2U6cm9vdCwsMA==\" readRequestsCount=\"1\" " +
-      "rootIndexSizeKB=\"1\" storefileIndexSizeMB=\"0\" storefileSizeMB=\"0\" storefiles=\"1\" stores=\"1\" " +
+      "rootIndexSizeKB=\"1\" storefileIndexSizeKB=\"0\" storefileSizeMB=\"0\" storefiles=\"1\" stores=\"1\" " +
       "totalCompactingKVs=\"1\" totalStaticBloomSizeKB=\"1\" totalStaticIndexSizeKB=\"1\" writeRequestsCount=\"2\"/>" +
       "</Node>" +
       "<Node heapSizeMB=\"512\" maxHeapSizeMB=\"1024\" name=\"test2\" requests=\"0\" startCode=\"1245239331198\">" +
       "<Region currentCompactedKVs=\"1\" memstoreSizeMB=\"0\" name=\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\" " +
-      "readRequestsCount=\"1\" rootIndexSizeKB=\"1\" storefileIndexSizeMB=\"0\" storefileSizeMB=\"0\" " +
+      "readRequestsCount=\"1\" rootIndexSizeKB=\"1\" storefileIndexSizeKB=\"0\" storefileSizeMB=\"0\" " +
       "storefiles=\"1\" stores=\"1\" totalCompactingKVs=\"1\" totalStaticBloomSizeKB=\"1\" " +
       "totalStaticIndexSizeKB=\"1\" writeRequestsCount=\"2\"/></Node></LiveNodes></ClusterStatus>";
 
@@ -61,83 +67,86 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     AS_JSON =
       "{\"regions\":2,\"requests\":0,\"averageLoad\":1.0,\"LiveNodes\":[{\"name\":\"test1\"," +
           "\"Region\":[{\"name\":\"aGJhc2U6cm9vdCwsMA==\",\"stores\":1,\"storefiles\":1," +
-          "\"storefileSizeMB\":0,\"memstoreSizeMB\":0,\"storefileIndexSizeMB\":0," +
-          "\"readRequestsCount\":1,\"writeRequestsCount\":2,\"rootIndexSizeKB\":1," +
-          "\"totalStaticIndexSizeKB\":1,\"totalStaticBloomSizeKB\":1,\"totalCompactingKVs\":1," +
-          "\"currentCompactedKVs\":1}],\"requests\":0,\"startCode\":1245219839331," +
-          "\"heapSizeMB\":128,\"maxHeapSizeMB\":1024},{\"name\":\"test2\"," +
-          "\"Region\":[{\"name\":\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\",\"stores\":1," +
-          "\"storefiles\":1,\"storefileSizeMB\":0,\"memstoreSizeMB\":0,\"storefileIndexSizeMB\":0," +
-          "\"readRequestsCount\":1,\"writeRequestsCount\":2,\"rootIndexSizeKB\":1," +
-          "\"totalStaticIndexSizeKB\":1,\"totalStaticBloomSizeKB\":1,\"totalCompactingKVs\":1," +
-          "\"currentCompactedKVs\":1}],\"requests\":0,\"startCode\":1245239331198," +
-          "\"heapSizeMB\":512,\"maxHeapSizeMB\":1024}],\"DeadNodes\":[]}";
+          "\"storefileSizeMB\":0,\"memStoreSizeMB\":0,\"storefileIndexSizeKB\":0," +
+          "\"readRequestsCount\":1,\"cpRequestsCount\":1,\"writeRequestsCount\":2," +
+          "\"rootIndexSizeKB\":1,\"totalStaticIndexSizeKB\":1,\"totalStaticBloomSizeKB\":1," +
+          "\"totalCompactingKVs\":1,\"currentCompactedKVs\":1}],\"requests\":0," +
+          "\"startCode\":1245219839331,\"heapSizeMB\":128,\"maxHeapSizeMB\":1024}," +
+          "{\"name\":\"test2\",\"Region\":[{\"name\":\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\"," +
+          "\"stores\":1,\"storefiles\":1,\"storefileSizeMB\":0,\"memStoreSizeMB\":0," +
+          "\"storefileIndexSizeKB\":0,\"readRequestsCount\":1,\"cpRequestsCount\":1," +
+          "\"writeRequestsCount\":2,\"rootIndexSizeKB\":1,\"totalStaticIndexSizeKB\":1," +
+          "\"totalStaticBloomSizeKB\":1,\"totalCompactingKVs\":1,\"currentCompactedKVs\":1}]," +
+          "\"requests\":0,\"startCode\":1245239331198,\"heapSizeMB\":512," +
+          "\"maxHeapSizeMB\":1024}],\"DeadNodes\":[]}";
   }
 
+  @Override
   protected StorageClusterStatusModel buildTestModel() {
     StorageClusterStatusModel model = new StorageClusterStatusModel();
     model.setRegions(2);
     model.setRequests(0);
     model.setAverageLoad(1.0);
     model.addLiveNode("test1", 1245219839331L, 128, 1024)
-      .addRegion(Bytes.toBytes("hbase:root,,0"), 1, 1, 0, 0, 0, 1, 2, 1, 1, 1, 1, 1);
+      .addRegion(Bytes.toBytes("hbase:root,,0"), 1, 1, 0, 0, 0, 1, 1, 2, 1, 1, 1, 1, 1);
     model.addLiveNode("test2", 1245239331198L, 512, 1024)
       .addRegion(Bytes.toBytes(TableName.META_TABLE_NAME+",,1246000043724"),1, 1, 0, 0, 0,
-          1, 2, 1, 1, 1, 1, 1);
+          1, 1, 2, 1, 1, 1, 1, 1);
     return model;
   }
 
+  @Override
   protected void checkModel(StorageClusterStatusModel model) {
-    assertEquals(model.getRegions(), 2);
-    assertEquals(model.getRequests(), 0);
-    assertEquals(model.getAverageLoad(), 1.0);
+    assertEquals(2, model.getRegions());
+    assertEquals(0, model.getRequests());
+    assertEquals(1.0, model.getAverageLoad(), 0.0);
     Iterator<StorageClusterStatusModel.Node> nodes =
       model.getLiveNodes().iterator();
     StorageClusterStatusModel.Node node = nodes.next();
-    assertEquals(node.getName(), "test1");
-    assertEquals(node.getStartCode(), 1245219839331L);
-    assertEquals(node.getHeapSizeMB(), 128);
-    assertEquals(node.getMaxHeapSizeMB(), 1024);
-    Iterator<StorageClusterStatusModel.Node.Region> regions = 
+    assertEquals("test1", node.getName());
+    assertEquals(1245219839331L, node.getStartCode());
+    assertEquals(128, node.getHeapSizeMB());
+    assertEquals(1024, node.getMaxHeapSizeMB());
+    Iterator<StorageClusterStatusModel.Node.Region> regions =
       node.getRegions().iterator();
     StorageClusterStatusModel.Node.Region region = regions.next();
     assertTrue(Bytes.toString(region.getName()).equals(
         "hbase:root,,0"));
-    assertEquals(region.getStores(), 1);
-    assertEquals(region.getStorefiles(), 1);
-    assertEquals(region.getStorefileSizeMB(), 0);
-    assertEquals(region.getMemstoreSizeMB(), 0);
-    assertEquals(region.getStorefileIndexSizeMB(), 0);
-    assertEquals(region.getReadRequestsCount(), 1);
-    assertEquals(region.getWriteRequestsCount(), 2);
-    assertEquals(region.getRootIndexSizeKB(), 1);
-    assertEquals(region.getTotalStaticIndexSizeKB(), 1);
-    assertEquals(region.getTotalStaticBloomSizeKB(), 1);
-    assertEquals(region.getTotalCompactingKVs(), 1);
-    assertEquals(region.getCurrentCompactedKVs(), 1);
+    assertEquals(1, region.getStores());
+    assertEquals(1, region.getStorefiles());
+    assertEquals(0, region.getStorefileSizeMB());
+    assertEquals(0, region.getMemStoreSizeMB());
+    assertEquals(0, region.getStorefileIndexSizeKB());
+    assertEquals(1, region.getReadRequestsCount());
+    assertEquals(2, region.getWriteRequestsCount());
+    assertEquals(1, region.getRootIndexSizeKB());
+    assertEquals(1, region.getTotalStaticIndexSizeKB());
+    assertEquals(1, region.getTotalStaticBloomSizeKB());
+    assertEquals(1, region.getTotalCompactingKVs());
+    assertEquals(1, region.getCurrentCompactedKVs());
     assertFalse(regions.hasNext());
     node = nodes.next();
-    assertEquals(node.getName(), "test2");
-    assertEquals(node.getStartCode(), 1245239331198L);
-    assertEquals(node.getHeapSizeMB(), 512);
-    assertEquals(node.getMaxHeapSizeMB(), 1024);
+    assertEquals("test2", node.getName());
+    assertEquals(1245239331198L, node.getStartCode());
+    assertEquals(512, node.getHeapSizeMB());
+    assertEquals(1024, node.getMaxHeapSizeMB());
     regions = node.getRegions().iterator();
     region = regions.next();
     assertEquals(Bytes.toString(region.getName()),
         TableName.META_TABLE_NAME+",,1246000043724");
-    assertEquals(region.getStores(), 1);
-    assertEquals(region.getStorefiles(), 1);
-    assertEquals(region.getStorefileSizeMB(), 0);
-    assertEquals(region.getMemstoreSizeMB(), 0);
-    assertEquals(region.getStorefileIndexSizeMB(), 0);
-    assertEquals(region.getReadRequestsCount(), 1);
-    assertEquals(region.getWriteRequestsCount(), 2);
-    assertEquals(region.getRootIndexSizeKB(), 1);
-    assertEquals(region.getTotalStaticIndexSizeKB(), 1);
-    assertEquals(region.getTotalStaticBloomSizeKB(), 1);
-    assertEquals(region.getTotalCompactingKVs(), 1);
-    assertEquals(region.getCurrentCompactedKVs(), 1);
-    
+    assertEquals(1, region.getStores());
+    assertEquals(1, region.getStorefiles());
+    assertEquals(0, region.getStorefileSizeMB());
+    assertEquals(0, region.getMemStoreSizeMB());
+    assertEquals(0, region.getStorefileIndexSizeKB());
+    assertEquals(1, region.getReadRequestsCount());
+    assertEquals(2, region.getWriteRequestsCount());
+    assertEquals(1, region.getRootIndexSizeKB());
+    assertEquals(1, region.getTotalStaticIndexSizeKB());
+    assertEquals(1, region.getTotalStaticBloomSizeKB());
+    assertEquals(1, region.getTotalCompactingKVs());
+    assertEquals(1, region.getCurrentCompactedKVs());
+
     assertFalse(regions.hasNext());
     assertFalse(nodes.hasNext());
   }

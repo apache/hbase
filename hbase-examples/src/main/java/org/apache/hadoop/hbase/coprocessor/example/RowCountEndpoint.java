@@ -18,27 +18,26 @@
 
 package org.apache.hadoop.hbase.coprocessor.example;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Sample coprocessor endpoint exposing a Service interface for counting rows and key values.
@@ -48,8 +47,8 @@ import com.google.protobuf.Service;
  * hbase-examples/src/main/protobuf/Examples.proto.
  * </p>
  */
-public class RowCountEndpoint extends ExampleProtos.RowCountService
-    implements Coprocessor, CoprocessorService {
+@InterfaceAudience.Private
+public class RowCountEndpoint extends ExampleProtos.RowCountService implements RegionCoprocessor {
   private RegionCoprocessorEnvironment env;
 
   public RowCountEndpoint() {
@@ -59,8 +58,8 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
    * Just returns a reference to this object, which implements the RowCounterService interface.
    */
   @Override
-  public Service getService() {
-    return this;
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   /**

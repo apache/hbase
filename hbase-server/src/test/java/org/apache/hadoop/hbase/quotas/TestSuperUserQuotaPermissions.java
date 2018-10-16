@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,11 +26,9 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -47,17 +46,25 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class to verify that the HBase superuser can override quotas.
  */
 @Category(MediumTests.class)
 public class TestSuperUserQuotaPermissions {
-  private static final Log LOG = LogFactory.getLog(TestSuperUserQuotaPermissions.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSuperUserQuotaPermissions.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSuperUserQuotaPermissions.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   // Default to the user running the tests
   private static final String SUPERUSER_NAME = System.getProperty("user.name");
@@ -267,6 +274,7 @@ public class TestSuperUserQuotaPermissions {
 
   private <T> T doAsUser(UserGroupInformation ugi, Callable<T> task) throws Exception {
     return ugi.doAs(new PrivilegedExceptionAction<T>() {
+      @Override
       public T run() throws Exception {
         return task.call();
       }

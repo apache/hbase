@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
@@ -34,19 +32,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -61,26 +59,33 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 @Category({IOTests.class, MediumTests.class})
 public class TestHFileBlockIndex {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileBlockIndex.class);
+
   @Parameters
   public static Collection<Object[]> compressionAlgorithms() {
-    return HBaseTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED;
+    return HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED;
   }
 
   public TestHFileBlockIndex(Compression.Algorithm compr) {
     this.compr = compr;
   }
 
-  private static final Log LOG = LogFactory.getLog(TestHFileBlockIndex.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlockIndex.class);
 
   private static final int NUM_DATA_BLOCKS = 1000;
   private static final HBaseTestingUtility TEST_UTIL =
@@ -212,7 +217,7 @@ public class TestHFileBlockIndex {
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
         new HFileBlockIndex.CellBasedKeyBlockIndexReader(
-            CellComparator.COMPARATOR, numLevels, brw);
+            CellComparatorImpl.COMPARATOR, numLevels, brw);
 
     indexReader.readRootIndex(blockReader.blockRange(rootIndexOffset,
         fileSize).nextBlockWithBlockType(BlockType.ROOT_INDEX), numRootEntries);
@@ -229,8 +234,8 @@ public class TestHFileBlockIndex {
       HFileBlock b =
           indexReader.seekToDataBlock(keyOnlyKey, null, true,
             true, false, null);
-      if (CellComparator.COMPARATOR.compare(keyOnlyKey, firstKeyInFile,
-          0, firstKeyInFile.length) < 0) {
+      if (PrivateCellUtil.compare(CellComparatorImpl.COMPARATOR, keyOnlyKey, firstKeyInFile, 0,
+        firstKeyInFile.length) < 0) {
         assertTrue(b == null);
         ++i;
         continue;
@@ -374,7 +379,7 @@ public class TestHFileBlockIndex {
 
     // Make sure the keys are increasing.
     for (int i = 0; i < keys.size() - 1; ++i)
-      assertTrue(CellComparator.COMPARATOR.compare(
+      assertTrue(CellComparatorImpl.COMPARATOR.compare(
           new KeyValue.KeyOnlyKeyValue(keys.get(i), 0, keys.get(i).length),
           new KeyValue.KeyOnlyKeyValue(keys.get(i + 1), 0, keys.get(i + 1).length)) < 0);
 
@@ -413,7 +418,7 @@ public class TestHFileBlockIndex {
       KeyValue.KeyOnlyKeyValue cell = new KeyValue.KeyOnlyKeyValue(
           arrayHoldingKey, searchKey.length / 2, searchKey.length);
       int searchResult = BlockIndexReader.binarySearchNonRootIndex(cell,
-          new MultiByteBuff(nonRootIndex), CellComparator.COMPARATOR);
+          new MultiByteBuff(nonRootIndex), CellComparatorImpl.COMPARATOR);
       String lookupFailureMsg = "Failed to look up key #" + i + " ("
           + Bytes.toStringBinary(searchKey) + ")";
 
@@ -439,7 +444,7 @@ public class TestHFileBlockIndex {
       // higher-level API function.s
       boolean locateBlockResult =
           (BlockIndexReader.locateNonRootIndexEntry(new MultiByteBuff(nonRootIndex), cell,
-          CellComparator.COMPARATOR) != -1);
+          CellComparatorImpl.COMPARATOR) != -1);
 
       if (i == 0) {
         assertFalse(locateBlockResult);
@@ -570,14 +575,14 @@ public class TestHFileBlockIndex {
    boolean hasArrayIndexOutOfBoundsException = false;
    try {
      // get the mid-key.
-     reader.midkey();
+     reader.midKey();
    } catch (ArrayIndexOutOfBoundsException e) {
      hasArrayIndexOutOfBoundsException = true;
    } finally {
      reader.close();
    }
 
-   // to check if ArrayIndexOutOfBoundsException occured
+   // to check if ArrayIndexOutOfBoundsException occurred
    assertFalse(hasArrayIndexOutOfBoundsException);
  }
 
@@ -635,7 +640,7 @@ public class TestHFileBlockIndex {
           values[i] = CellUtil.cloneValue(kv);
           keyStrSet.add(Bytes.toStringBinary(k));
           if (i > 0) {
-            assertTrue((CellComparator.COMPARATOR.compare(kv, keys[i - 1],
+            assertTrue((PrivateCellUtil.compare(CellComparatorImpl.COMPARATOR, kv, keys[i - 1],
                 0, keys[i - 1].length)) > 0);
           }
         }
@@ -648,8 +653,8 @@ public class TestHFileBlockIndex {
       assertEquals(expectedNumLevels,
           reader.getTrailer().getNumDataIndexLevels());
 
-      assertTrue(Bytes.equals(keys[0], ((KeyValue)reader.getFirstKey()).getKey()));
-      assertTrue(Bytes.equals(keys[NUM_KV - 1], ((KeyValue)reader.getLastKey()).getKey()));
+      assertTrue(Bytes.equals(keys[0], ((KeyValue)reader.getFirstKey().get()).getKey()));
+      assertTrue(Bytes.equals(keys[NUM_KV - 1], ((KeyValue)reader.getLastKey().get()).getKey()));
       LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
 
       for (boolean pread : new boolean[] { false, true }) {
@@ -705,7 +710,7 @@ public class TestHFileBlockIndex {
       // Validate the mid-key.
       assertEquals(
           Bytes.toStringBinary(blockKeys.get((blockKeys.size() - 1) / 2)),
-          reader.midkey());
+          reader.midKey());
 
       assertEquals(UNCOMPRESSED_INDEX_SIZES[testI],
           reader.getTrailer().getUncompressedDataIndexSize());
@@ -739,12 +744,12 @@ public class TestHFileBlockIndex {
         valueRead);
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testIntermediateLevelIndicesWithLargeKeys() throws IOException {
     testIntermediateLevelIndicesWithLargeKeys(16);
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testIntermediateLevelIndicesWithLargeKeysWithMinNumEntries() throws IOException {
     // because of the large rowKeys, we will end up with a 50-level block index without sanity check
     testIntermediateLevelIndicesWithLargeKeys(2);

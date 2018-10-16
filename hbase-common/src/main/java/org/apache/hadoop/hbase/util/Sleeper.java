@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Sleeper for current thread.
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class Sleeper {
-  private static final Log LOG = LogFactory.getLog(Sleeper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Sleeper.class);
   private final int period;
   private final Stoppable stopper;
   private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;
@@ -50,13 +50,6 @@ public class Sleeper {
   }
 
   /**
-   * Sleep for period.
-   */
-  public void sleep() {
-    sleep(System.currentTimeMillis());
-  }
-
-  /**
    * If currently asleep, stops sleeping; if not asleep, will skip the next
    * sleep cycle.
    */
@@ -68,28 +61,24 @@ public class Sleeper {
   }
 
   /**
-   * Sleep for period adjusted by passed <code>startTime</code>
-   * @param startTime Time some task started previous to now.  Time to sleep
-   * will be docked current time minus passed <code>startTime</code>.
+   * Sleep for period.
    */
-  public void sleep(final long startTime) {
+  public void sleep() {
+    sleep(this.period);
+  }
+
+  public void sleep(long sleepTime) {
     if (this.stopper.isStopped()) {
       return;
     }
     long now = System.currentTimeMillis();
-    long waitTime = this.period - (now - startTime);
-    if (waitTime > this.period) {
-      LOG.warn("Calculated wait time > " + this.period +
-        "; setting to this.period: " + System.currentTimeMillis() + ", " +
-        startTime);
-      waitTime = this.period;
-    }
-    while (waitTime > 0) {
+    long currentSleepTime = sleepTime;
+    while (currentSleepTime > 0) {
       long woke = -1;
       try {
         synchronized (sleepLock) {
           if (triggerWake) break;
-          sleepLock.wait(waitTime);
+          sleepLock.wait(currentSleepTime);
         }
         woke = System.currentTimeMillis();
         long slept = woke - now;
@@ -108,7 +97,7 @@ public class Sleeper {
       }
       // Recalculate waitTime.
       woke = (woke == -1)? System.currentTimeMillis(): woke;
-      waitTime = this.period - (woke - startTime);
+      currentSleepTime = this.period - (woke - now);
     }
     synchronized(sleepLock) {
       triggerWake = false;

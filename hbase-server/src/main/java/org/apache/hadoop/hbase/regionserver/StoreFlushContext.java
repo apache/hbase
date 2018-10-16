@@ -20,10 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A package protected interface for a store flushing.
@@ -34,12 +33,11 @@ interface StoreFlushContext {
 
   /**
    * Prepare for a store flush (create snapshot)
-   *
    * Requires pausing writes.
-   *
    * A very short operation.
+   * @return The size of snapshot to flush
    */
-  void prepare();
+  MemStoreSize prepare();
 
   /**
    * Flush the cache (create the new store file)
@@ -59,7 +57,7 @@ interface StoreFlushContext {
    *
    * A very short operation
    *
-   * @return
+   * @return whether compaction is required
    * @throws IOException
    */
   boolean commit(MonitoredTask status) throws IOException;

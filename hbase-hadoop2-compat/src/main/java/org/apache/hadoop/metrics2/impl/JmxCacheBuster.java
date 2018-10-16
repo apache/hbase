@@ -22,15 +22,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * JMX caches the beans that have been exported; even after the values are removed from hadoop's
@@ -41,8 +41,8 @@ import com.google.common.annotations.VisibleForTesting;
  * are package private.
  */
 @InterfaceAudience.Private
-public class JmxCacheBuster {
-  private static final Log LOG = LogFactory.getLog(JmxCacheBuster.class);
+public final class JmxCacheBuster {
+  private static final Logger LOG = LoggerFactory.getLogger(JmxCacheBuster.class);
   private static AtomicReference<ScheduledFuture> fut = new AtomicReference<>(null);
   private static MetricsExecutor executor = new MetricsExecutorImpl();
   private static AtomicBoolean stopped = new AtomicBoolean(false);

@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.security.token.Token;
@@ -36,7 +36,7 @@ import org.apache.hadoop.security.token.Token;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FsDelegationToken {
-  private static final Log LOG = LogFactory.getLog(FsDelegationToken.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FsDelegationToken.class);
 
   private final UserProvider userProvider;
   private final String renewer;

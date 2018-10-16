@@ -19,14 +19,14 @@
 package org.apache.hadoop.hbase.security.access;
 
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -179,7 +179,7 @@ public class ShadedAccessControlUtil {
         org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission.Builder builder =
             org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission
                 .newBuilder();
-        builder.setNamespaceName(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        builder.setNamespaceName(org.apache.hbase.thirdparty.com.google.protobuf.ByteString
             .copyFromUtf8(tablePerm.getNamespace()));
         Permission.Action[] actions = perm.getActions();
         if (actions != null) {
@@ -273,5 +273,16 @@ public class ShadedAccessControlUtil {
       builder.addUserPermissions(userPermBuilder.build());
     }
     return builder.build();
+  }
+
+  /**
+   * Converts a user permission proto to a client user permission object.
+   *
+   * @param proto the protobuf UserPermission
+   * @return the converted UserPermission
+   */
+  public static UserPermission toUserPermission(org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission proto) {
+    return new UserPermission(proto.getUser().toByteArray(),
+        toTablePermission(proto.getPermission()));
   }
 }

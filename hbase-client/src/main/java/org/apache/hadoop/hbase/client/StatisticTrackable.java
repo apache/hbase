@@ -17,7 +17,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Parent interface for an object to get updates about per-region statistics.

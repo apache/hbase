@@ -13,16 +13,16 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RowIndexEncoderV1 {
-  private static final Log LOG = LogFactory.getLog(RowIndexEncoderV1.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowIndexEncoderV1.class);
 
   /** The Cell previously appended. */
   private Cell lastCell = null;
@@ -57,7 +57,7 @@ public class RowIndexEncoderV1 {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = CellComparator.COMPARATOR.compareRows(lastCell, cell);
+      int keyComp = CellComparatorImpl.COMPARATOR.compareRows(lastCell, cell);
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
             + " previous. Current cell = " + cell + ", lastCell = " + lastCell);

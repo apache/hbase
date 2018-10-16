@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -27,9 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TimestampTestBase.FlushCache;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
@@ -45,10 +41,13 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
@@ -56,10 +55,15 @@ import org.junit.rules.TestName;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestMultiVersions {
-  private static final Log LOG = LogFactory.getLog(TestMultiVersions.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultiVersions.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiVersions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Admin admin;
-  
+
   private static final int NUM_SLAVES = 3;
 
   @Rule
@@ -85,7 +89,7 @@ public class TestMultiVersions {
   * Tests user specifiable time stamps putting, getting and scanning.  Also
    * tests same in presence of deletes.  Test cores are written so can be
    * run against an HRegion and against an HTable: i.e. both local and remote.
-   * 
+   *
    * <p>Port of old TestTimestamp test to here so can better utilize the spun
    * up cluster running more than a single test per spin up.  Keep old tests'
    * crazyness.
@@ -101,6 +105,7 @@ public class TestMultiVersions {
     // TODO: Remove these deprecated classes or pull them in here if this is
     // only test using them.
     TimestampTestBase.doTestDelete(table, new FlushCache() {
+      @Override
       public void flushcache() throws IOException {
         UTIL.getHBaseCluster().flushcache();
       }
@@ -109,6 +114,7 @@ public class TestMultiVersions {
     // Perhaps drop and readd the table between tests so the former does
     // not pollute this latter?  Or put into separate tests.
     TimestampTestBase.doTestTimestampScanning(table, new FlushCache() {
+      @Override
       public void flushcache() throws IOException {
         UTIL.getMiniHBaseCluster().flushcache();
       }
@@ -144,7 +150,9 @@ public class TestMultiVersions {
     table.close();
     UTIL.shutdownMiniHBaseCluster();
     LOG.debug("HBase cluster shut down -- restarting");
-    UTIL.startMiniHBaseCluster(1, NUM_SLAVES);
+    StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numRegionServers(NUM_SLAVES).build();
+    UTIL.startMiniHBaseCluster(option);
     // Make a new connection.
     table = UTIL.getConnection().getTable(desc.getTableName());
     // Overwrite previous value
@@ -184,7 +192,7 @@ public class TestMultiVersions {
    * Port of old TestScanMultipleVersions test here so can better utilize the
    * spun up cluster running more than just a single test.  Keep old tests
    * crazyness.
-   * 
+   *
    * <p>Tests five cases of scans and timestamps.
    * @throws Exception
    */
@@ -232,7 +240,7 @@ public class TestMultiVersions {
       for (int j = 0; j < timestamp.length; j++) {
         Get get = new Get(rows[i]);
         get.addFamily(HConstants.CATALOG_FAMILY);
-        get.setTimeStamp(timestamp[j]);
+        get.setTimestamp(timestamp[j]);
         Result result = table.get(get);
         int cellCount = 0;
         for(@SuppressWarnings("unused")Cell kv : result.listCells()) {
@@ -280,7 +288,7 @@ public class TestMultiVersions {
 
     count = 0;
     scan = new Scan();
-    scan.setTimeStamp(1000L);
+    scan.setTimestamp(1000L);
     scan.addFamily(HConstants.CATALOG_FAMILY);
 
     s = table.getScanner(scan);
@@ -316,7 +324,7 @@ public class TestMultiVersions {
 
     count = 0;
     scan = new Scan();
-    scan.setTimeStamp(100L);
+    scan.setTimestamp(100L);
     scan.addFamily(HConstants.CATALOG_FAMILY);
 
     s = table.getScanner(scan);

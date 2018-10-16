@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,16 +18,14 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -41,9 +38,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test transitions of state across the master.  Sets up the cluster once and
@@ -51,7 +51,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterTransitions {
-  private static final Log LOG = LogFactory.getLog(TestMasterTransitions.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterTransitions.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterTransitions.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLENAME = TableName.valueOf("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
@@ -101,13 +106,13 @@ public class TestMasterTransitions {
     private final HServerAddress metaAddress;
     private final MiniHBaseCluster cluster;
     private final int otherServerIndex;
-    private final HRegionInfo hri;
+    private final RegionInfo hri;
     private int closeCount = 0;
     static final int SERVER_DURATION = 3 * 1000;
     static final int CLOSE_DURATION = 1 * 1000;
 
     HBase2428Listener(final MiniHBaseCluster c, final HServerAddress metaAddress,
-        final HRegionInfo closingHRI, final int otherServerIndex) {
+        final RegionInfo closingHRI, final int otherServerIndex) {
       this.cluster = c;
       this.metaAddress = metaAddress;
       this.hri = closingHRI;
@@ -193,7 +198,8 @@ public class TestMasterTransitions {
    * in.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a>
    */
-  @Ignore @Test  (timeout=300000) public void testRegionCloseWhenNoMetaHBase2428()
+  @Ignore @Test
+  public void testRegionCloseWhenNoMetaHBase2428()
   throws Exception {
     /*
     LOG.info("Running testRegionCloseWhenNoMetaHBase2428");
@@ -211,7 +217,7 @@ public class TestMasterTransitions {
     final HRegionServer metaHRS = cluster.getRegionServer(metaIndex);
 
     // Get a region out on the otherServer.
-    final HRegionInfo hri =
+    final RegionInfo hri =
       otherServer.getOnlineRegions().iterator().next().getRegionInfo();
 
     // Add our RegionServerOperationsListener
@@ -248,7 +254,8 @@ public class TestMasterTransitions {
    * If confusion between old and new, purportedly meta never comes back.  Test
    * that meta gets redeployed.
    */
-  @Ignore @Test (timeout=300000) public void testAddingServerBeforeOldIsDead2413()
+  @Ignore @Test
+  public void testAddingServerBeforeOldIsDead2413()
   throws IOException {
     /*
     LOG.info("Running testAddingServerBeforeOldIsDead2413");
@@ -311,7 +318,7 @@ public class TestMasterTransitions {
     private final Collection<HRegion> copyOfOnlineRegions;
     // This is the region that was in transition on the server we aborted. Test
     // passes if this region comes back online successfully.
-    private HRegionInfo regionToFind;
+    private RegionInfo regionToFind;
 
     HBase2482Listener(final HRegionServer victim) {
       this.victim = victim;
@@ -375,7 +382,8 @@ public class TestMasterTransitions {
    * done.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a>
    */
-  @Ignore @Test (timeout=300000) public void testKillRSWithOpeningRegion2482()
+  @Ignore @Test
+  public void testKillRSWithOpeningRegion2482()
   throws Exception {
     /*
     LOG.info("Running testKillRSWithOpeningRegion2482");
@@ -443,7 +451,7 @@ public class TestMasterTransitions {
     return countOfRegions;
   }
 
-  private void assertRegionIsBackOnline(final HRegionInfo hri)
+  private void assertRegionIsBackOnline(final RegionInfo hri)
   throws IOException {
     // Region should have an entry in its startkey because of addRowToEachRegion.
     byte [] row = getStartKey(hri);
@@ -490,7 +498,7 @@ public class TestMasterTransitions {
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     ResultScanner s = meta.getScanner(scan);
     for (Result r = null; (r = s.next()) != null;) {
-      HRegionInfo hri = MetaTableAccessor.getHRegionInfo(r);
+      RegionInfo hri = MetaTableAccessor.getRegionInfo(r);
       if (hri == null) break;
       if (!hri.getTable().equals(TABLENAME)) {
         continue;
@@ -518,7 +526,7 @@ public class TestMasterTransitions {
    * @param hri
    * @return Start key for hri (If start key is '', then return 'aaa'.
    */
-  private static byte [] getStartKey(final HRegionInfo hri) {
+  private static byte [] getStartKey(final RegionInfo hri) {
     return Bytes.equals(HConstants.EMPTY_START_ROW, hri.getStartKey())?
         Bytes.toBytes("aaa"): hri.getStartKey();
   }

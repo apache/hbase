@@ -21,7 +21,7 @@ module Shell
   module Commands
     class DescribeNamespace < Command
       def help
-        return <<-EOF
+        <<-EOF
 Describe the named namespace. For example:
   hbase> describe_namespace 'ns1'
 EOF
@@ -30,8 +30,8 @@ EOF
       def command(namespace)
         desc = admin.describe_namespace(namespace)
 
-        formatter.header([ "DESCRIPTION" ], [ 64 ])
-        formatter.row([ desc ], true, [ 64 ])
+        formatter.header(['DESCRIPTION'], [64])
+        formatter.row([desc], true, [64])
       end
     end
   end

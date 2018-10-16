@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class PressureAwareThroughputController extends Configured implements
     ThroughputController, Stoppable {
-  private static final Log LOG = LogFactory.getLog(PressureAwareThroughputController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PressureAwareThroughputController.class);
 
   /**
    * Stores the information of one controlled compaction.
@@ -89,7 +90,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
     if (speed >= 1E15) { // large enough to say it is unlimited
       return "unlimited";
     } else {
-      return String.format("%.2f MB/sec", speed / 1024 / 1024);
+      return String.format("%.2f MB/second", speed / 1024 / 1024);
     }
   }
 
@@ -121,7 +122,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
       // do not log too much
       if (now - operation.lastLogTime > 5L * 1000) {
         LOG.debug("deltaSize: " + deltaSize + " bytes; elapseTime: " + elapsedTime + " ns");
-        LOG.debug(opName + " sleep " + sleepTime + " ms because current throughput is "
+        LOG.debug(opName + " sleep=" + sleepTime + "ms because current throughput is "
             + throughputDesc(deltaSize, elapsedTime) + ", max allowed is "
             + throughputDesc(maxThroughputPerOperation) + ", already slept "
             + operation.numberOfSleeps + " time(s) and total slept time is "

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,10 +23,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -36,19 +33,27 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 @Category(LargeTests.class)
 public class TestSizeFailures {
-  private static final Log LOG = LogFactory.getLog(TestSizeFailures.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSizeFailures.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSizeFailures.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   protected static int SLAVES = 1;
   private static TableName TABLENAME;
-  private static final int NUM_ROWS = 1000 * 1000, NUM_COLS = 10;
+  private static final int NUM_ROWS = 1000 * 1000, NUM_COLS = 9;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -124,7 +129,7 @@ public class TestSizeFailures {
       long rowsObserved = entry.getKey();
       long entriesObserved = entry.getValue();
 
-      // Verify that we see 1M rows and 10M cells
+      // Verify that we see 1M rows and 9M cells
       assertEquals(NUM_ROWS, rowsObserved);
       assertEquals(NUM_ROWS * NUM_COLS, entriesObserved);
     }
@@ -147,7 +152,7 @@ public class TestSizeFailures {
       long rowsObserved = entry.getKey();
       long entriesObserved = entry.getValue();
 
-      // Verify that we see 1M rows and 10M cells
+      // Verify that we see 1M rows and 9M cells
       assertEquals(NUM_ROWS, rowsObserved);
       assertEquals(NUM_ROWS * NUM_COLS, entriesObserved);
     }
@@ -161,8 +166,8 @@ public class TestSizeFailures {
    * @return An entry where the first item is rows observed and the second is entries observed.
    */
   private Entry<Long,Long> sumTable(ResultScanner scanner) {
-    long rowsObserved = 0l;
-    long entriesObserved = 0l;
+    long rowsObserved = 0L;
+    long entriesObserved = 0L;
 
     // Read all the records in the table
     for (Result result : scanner) {

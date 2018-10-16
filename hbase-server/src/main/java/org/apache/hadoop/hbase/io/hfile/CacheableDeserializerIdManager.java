@@ -18,41 +18,57 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class is used to manage the identifiers for
- * {@link CacheableDeserializer}
+ * This class is used to manage the identifiers for {@link CacheableDeserializer}.
+ * All deserializers are registered with this Manager via the
+ * {@link #registerDeserializer(CacheableDeserializer)}}. On registration, we return an
+ * int *identifier* for this deserializer. The int identifier is passed to
+ * {@link #getDeserializer(int)}} to obtain the registered deserializer instance.
  */
 @InterfaceAudience.Private
 public class CacheableDeserializerIdManager {
-  private static final Map<Integer, CacheableDeserializer<Cacheable>> registeredDeserializers = new HashMap<>();
+  private static final Map<Integer, CacheableDeserializer<Cacheable>> registeredDeserializers =
+      new ConcurrentHashMap<>();
   private static final AtomicInteger identifier = new AtomicInteger(0);
 
   /**
-   * Register the given cacheable deserializer and generate an unique identifier
-   * id for it
-   * @param cd
+   * Register the given {@link Cacheable} -- usually an hfileblock instance, these implement
+   * the Cacheable Interface -- deserializer and generate an unique identifier id for it and return
+   * this as our result.
    * @return the identifier of given cacheable deserializer
+   * @see #getDeserializer(int)
    */
   public static int registerDeserializer(CacheableDeserializer<Cacheable> cd) {
     int idx = identifier.incrementAndGet();
-    synchronized (registeredDeserializers) {
-      registeredDeserializers.put(idx, cd);
-    }
+    // No synchronization here because keys will be unique
+    registeredDeserializers.put(idx, cd);
     return idx;
   }
 
   /**
-   * Get the cacheable deserializer as the given identifier Id
-   * @param id
-   * @return CacheableDeserializer
+   * Get the cacheable deserializer registered at the given identifier Id.
+   * @see #registerDeserializer(CacheableDeserializer)
    */
   public static CacheableDeserializer<Cacheable> getDeserializer(int id) {
     return registeredDeserializers.get(id);
+  }
+
+  /**
+   * Snapshot a map of the current identifiers to class names for reconstruction on reading out
+   * of a file.
+   */
+  public static Map<Integer,String> save() {
+    // No synchronization here because weakly consistent view should be good enough
+    // The assumed risk is that we might not see a new serializer that comes in while iterating,
+    // but with a synchronized block, we won't see it anyway
+    return registeredDeserializers.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getClass().getName()));
   }
 }

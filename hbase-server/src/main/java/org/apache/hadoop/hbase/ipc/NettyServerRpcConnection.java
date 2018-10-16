@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -26,18 +26,18 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.htrace.TraceInfo;
 
 /**
  * RpcConnection implementation for netty rpc server.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyServerRpcConnection extends ServerRpcConnection {
@@ -118,9 +118,9 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   @Override
   public NettyServerCall createCall(int id, final BlockingService service,
       final MethodDescriptor md, RequestHeader header, Message param, CellScanner cellScanner,
-      long size, TraceInfo tinfo, final InetAddress remoteAddress, int timeout,
+      long size, final InetAddress remoteAddress, int timeout,
       CallCleanup reqCleanup) {
-    return new NettyServerCall(id, service, md, header, param, cellScanner, this, size, tinfo,
+    return new NettyServerCall(id, service, md, header, param, cellScanner, this, size,
         remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
         this.rpcServer.cellBlockBuilder, reqCleanup);
   }

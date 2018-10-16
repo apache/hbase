@@ -19,19 +19,25 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestOrderedBytes {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestOrderedBytes.class);
 
   // integer constants for testing Numeric code paths
   static final Long[] I_VALS =
@@ -872,24 +878,32 @@ public class TestOrderedBytes {
   @Test
   public void testBlobVar() {
     byte[][] vals =
-        { "".getBytes(), "foo".getBytes(), "foobarbazbub".getBytes(),
-          { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-            (byte) 0xaa, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
-          { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-            (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
-          { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-            (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-            (byte) 0xaa, (byte) 0xaa, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
-          { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-            (byte) 0x55, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
-          { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-            (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55 },
-          { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-            (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-            (byte) 0x55, (byte) 0x55, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
-          "1".getBytes(), "22".getBytes(), "333".getBytes(), "4444".getBytes(),
-          "55555".getBytes(), "666666".getBytes(), "7777777".getBytes(), "88888888".getBytes()
-        };
+      { Bytes.toBytes(""),
+        Bytes.toBytes("foo"),
+        Bytes.toBytes("foobarbazbub"),
+        { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+          (byte) 0xaa, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
+        { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+          (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
+        { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+          (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+          (byte) 0xaa, (byte) 0xaa, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
+        { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+          (byte) 0x55, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
+        { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+          (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55 },
+        { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+          (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+          (byte) 0x55, (byte) 0x55, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
+        Bytes.toBytes("1"),
+        Bytes.toBytes("22"),
+        Bytes.toBytes("333"),
+        Bytes.toBytes("4444"),
+        Bytes.toBytes("55555"),
+        Bytes.toBytes("666666"),
+        Bytes.toBytes("7777777"),
+        Bytes.toBytes("88888888")
+      };
 
     /*
      * assert encoded values match decoded values. encode into target buffer
@@ -959,7 +973,9 @@ public class TestOrderedBytes {
   @Test
   public void testBlobCopy() {
     byte[][] vals =
-      { "".getBytes(), "foo".getBytes(), "foobarbazbub".getBytes(),
+      { Bytes.toBytes(""),
+        Bytes.toBytes("foo"),
+        Bytes.toBytes("foobarbazbub"),
         { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
           (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
         { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
@@ -1034,9 +1050,9 @@ public class TestOrderedBytes {
       byte[] a = new byte[3 + (Order.ASCENDING == ord ? 1 : 2) + 2];
       PositionedByteRange buf =
           new SimplePositionedMutableByteRange(a, 1, 3 + (Order.ASCENDING == ord ? 1 : 2));
-      OrderedBytes.encodeBlobCopy(buf, "foobarbaz".getBytes(), 3, 3, ord);
+      OrderedBytes.encodeBlobCopy(buf, Bytes.toBytes("foobarbaz"), 3, 3, ord);
       buf.setPosition(0);
-      assertArrayEquals("bar".getBytes(), OrderedBytes.decodeBlobCopy(buf));
+      assertArrayEquals(Bytes.toBytes("bar"), OrderedBytes.decodeBlobCopy(buf));
     }
   }
 
@@ -1240,7 +1256,7 @@ public class TestOrderedBytes {
     buff.setPosition(0);
     assertEquals(OrderedBytes.length(buff), cnt);
     for (int i = 0; i < cnt; i++) {
-      assertEquals(OrderedBytes.isEncodedValue(buff), true);
+      assertTrue(OrderedBytes.isEncodedValue(buff));
       OrderedBytes.skip(buff);
     }
   }

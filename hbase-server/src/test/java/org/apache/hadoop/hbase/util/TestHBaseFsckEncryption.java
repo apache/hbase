@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,11 +25,10 @@ import java.security.Key;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,9 +41,10 @@ import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -53,11 +53,16 @@ import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsckEncryption {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHBaseFsckEncryption.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -130,20 +135,20 @@ public class TestHBaseFsckEncryption {
 
     // Insure HBck doesn't consider them corrupt
     HBaseFsck res = HbckTestingUtil.doHFileQuarantine(conf, htd.getTableName());
-    assertEquals(res.getRetCode(), 0);
+    assertEquals(0, res.getRetCode());
     HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
-    assertEquals(hfcc.getCorrupted().size(), 0);
-    assertEquals(hfcc.getFailures().size(), 0);
-    assertEquals(hfcc.getQuarantined().size(), 0);
-    assertEquals(hfcc.getMissing().size(), 0);
+    assertEquals(0, hfcc.getCorrupted().size());
+    assertEquals(0, hfcc.getFailures().size());
+    assertEquals(0, hfcc.getQuarantined().size());
+    assertEquals(0, hfcc.getMissing().size());
   }
 
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
-    for (Region region:
-        TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {
-      for (Store store: region.getStores()) {
-        for (StoreFile storefile: store.getStorefiles()) {
+    for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
+        .getRegions(htd.getTableName())) {
+      for (HStore store : ((HRegion) region).getStores()) {
+        for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
         }
       }

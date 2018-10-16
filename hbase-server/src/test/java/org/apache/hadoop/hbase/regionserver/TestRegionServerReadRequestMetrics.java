@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,46 +17,69 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-
+@Ignore // Depends on Master being able to host regions. Needs fixing.
 @Category(MediumTests.class)
 public class TestRegionServerReadRequestMetrics {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionServerReadRequestMetrics.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRegionServerReadRequestMetrics.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private static final byte[] CF1 = "c1".getBytes();
@@ -80,19 +102,25 @@ public class TestRegionServerReadRequestMetrics {
   private static Admin admin;
   private static Collection<ServerName> serverNames;
   private static Table table;
-  private static List<HRegionInfo> tableRegions;
+  private static RegionInfo regionInfo;
 
   private static Map<Metric, Long> requestsMap = new HashMap<>();
   private static Map<Metric, Long> requestsMapPrev = new HashMap<>();
 
   @BeforeClass
   public static void setUpOnce() throws Exception {
+    // Default starts one regionserver only.
+    TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
+    // TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
-    serverNames = admin.getClusterStatus().getServers();
+    serverNames = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+      .getLiveServerMetrics().keySet();
     table = createTable();
     putData();
-    tableRegions = admin.getTableRegions(TABLE_NAME);
+    List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
+    assertEquals("Table " + TABLE_NAME + " should have 1 region", 1, regions.size());
+    regionInfo = regions.get(0);
 
     for (Metric metric : Metric.values()) {
       requestsMap.put(metric, 0L);
@@ -101,14 +129,11 @@ public class TestRegionServerReadRequestMetrics {
   }
 
   private static Table createTable() throws IOException {
-    HTableDescriptor td = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor cd1 = new HColumnDescriptor(CF1);
-    td.addFamily(cd1);
-    HColumnDescriptor cd2 = new HColumnDescriptor(CF2);
-    cd2.setTimeToLive(TTL);
-    td.addFamily(cd2);
-
-    admin.createTable(td);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME);
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1));
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2).setTimeToLive(TTL)
+        .build());
+    admin.createTable(builder.build());
     return TEST_UTIL.getConnection().getTable(TABLE_NAME);
   }
 
@@ -121,8 +146,16 @@ public class TestRegionServerReadRequestMetrics {
 
     assertEquals(expectedReadRequests,
       requestsMap.get(Metric.REGION_READ) - requestsMapPrev.get(Metric.REGION_READ));
-    assertEquals(expectedReadRequests,
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
+    if (tablesOnMaster) {
+      // If NO tables on master, then the single regionserver in this test carries user-space
+      // tables and the meta table. The first time through, the read will be inflated by meta
+      // lookups. We don't know which test will be first through since junit randomizes. This
+      // method is used by a bunch of tests. Just do this check if master is hosting (system)
+      // regions only.
+      assertEquals(expectedReadRequests,
       requestsMap.get(Metric.SERVER_READ) - requestsMapPrev.get(Metric.SERVER_READ));
+    }
     assertEquals(expectedFilteredReadRequests,
       requestsMap.get(Metric.FILTERED_REGION_READ)
         - requestsMapPrev.get(Metric.FILTERED_REGION_READ));
@@ -142,21 +175,20 @@ public class TestRegionServerReadRequestMetrics {
     boolean metricsUpdated = false;
     for (int i = 0; i < MAX_TRY; i++) {
       for (ServerName serverName : serverNames) {
-        serverLoad = admin.getClusterStatus().getLoad(serverName);
+        serverLoad = new ServerLoad(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+          .getLiveServerMetrics().get(serverName));
 
         Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
-        for (HRegionInfo tableRegion : tableRegions) {
-          RegionLoad regionLoad = regionsLoad.get(tableRegion.getRegionName());
-          if (regionLoad != null) {
-            regionLoadOuter = regionLoad;
-            for (Metric metric : Metric.values()) {
-              if (getReadRequest(serverLoad, regionLoad, metric) > requestsMapPrev.get(metric)) {
-                for (Metric metricInner : Metric.values()) {
-                  requestsMap.put(metricInner, getReadRequest(serverLoad, regionLoad, metricInner));
-                }
-                metricsUpdated = true;
-                break;
+        RegionLoad regionLoad = regionsLoad.get(regionInfo.getRegionName());
+        if (regionLoad != null) {
+          regionLoadOuter = regionLoad;
+          for (Metric metric : Metric.values()) {
+            if (getReadRequest(serverLoad, regionLoad, metric) > requestsMapPrev.get(metric)) {
+              for (Metric metricInner : Metric.values()) {
+                requestsMap.put(metricInner, getReadRequest(serverLoad, regionLoad, metricInner));
               }
+              metricsUpdated = true;
+              break;
             }
           }
         }
@@ -278,13 +310,13 @@ public class TestRegionServerReadRequestMetrics {
     put = new Put(ROW1);
     put.addColumn(CF1, COL2, VAL2);
     boolean checkAndPut =
-      table.checkAndPut(ROW1, CF1, COL2, CompareFilter.CompareOp.EQUAL, VAL2, put);
+        table.checkAndMutate(ROW1, CF1).qualifier(COL2).ifEquals(VAL2).thenPut(put);
     resultCount = checkAndPut ? 1 : 0;
     testReadRequests(resultCount, 1, 0);
 
     // test for append
     append = new Append(ROW1);
-    append.add(CF1, COL2, VAL2);
+    append.addColumn(CF1, COL2, VAL2);
     result = table.append(append);
     resultCount = result.isEmpty() ? 0 : 1;
     testReadRequests(resultCount, 1, 0);
@@ -295,11 +327,12 @@ public class TestRegionServerReadRequestMetrics {
     RowMutations rm = new RowMutations(ROW1);
     rm.add(put);
     boolean checkAndMutate =
-      table.checkAndMutate(ROW1, CF1, COL1, CompareFilter.CompareOp.EQUAL, VAL1, rm);
+        table.checkAndMutate(ROW1, CF1).qualifier(COL1).ifEquals(VAL1).thenMutate(rm);
     resultCount = checkAndMutate ? 1 : 0;
     testReadRequests(resultCount, 1, 0);
   }
 
+  @Ignore // HBASE-19785
   @Test
   public void testReadRequestsCountWithFilter() throws Exception {
     int resultCount;
@@ -346,6 +379,7 @@ public class TestRegionServerReadRequestMetrics {
 //    testReadRequests(resultCount, 0, 1);
   }
 
+  @Ignore // HBASE-19785
   @Test
   public void testReadRequestsCountWithDeletedRow() throws Exception {
     try {
@@ -380,6 +414,92 @@ public class TestRegionServerReadRequestMetrics {
         resultCount++;
       }
       testReadRequests(resultCount, 2, 1);
+    }
+  }
+
+  @Ignore // See HBASE-19785
+  @Test
+  public void testReadRequestsWithCoprocessor() throws Exception {
+    TableName tableName = TableName.valueOf("testReadRequestsWithCoprocessor");
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1));
+    builder.setCoprocessor(ScanRegionCoprocessor.class.getName());
+    admin.createTable(builder.build());
+
+    try {
+      TEST_UTIL.waitTableAvailable(tableName);
+      List<RegionInfo> regionInfos = admin.getRegions(tableName);
+      assertEquals("Table " + TABLE_NAME + " should have 1 region", 1, regionInfos.size());
+      boolean success = true;
+      int i = 0;
+      for (; i < MAX_TRY; i++) {
+        try {
+          testReadRequests(regionInfos.get(0).getRegionName(), 3);
+        } catch (Throwable t) {
+          LOG.warn("Got exception when try " + i + " times", t);
+          Thread.sleep(SLEEP_MS);
+          success = false;
+        }
+        if (success) {
+          break;
+        }
+      }
+      if (i == MAX_TRY) {
+        fail("Failed to get right read requests metric after try " + i + " times");
+      }
+    } finally {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
+  }
+
+  private void testReadRequests(byte[] regionName, int expectedReadRequests) throws Exception {
+    for (ServerName serverName : serverNames) {
+      ServerLoad serverLoad = new ServerLoad(admin.getClusterMetrics(
+        EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().get(serverName));
+      Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
+      RegionLoad regionLoad = regionsLoad.get(regionName);
+      if (regionLoad != null) {
+        LOG.debug("server read request is " + serverLoad.getReadRequestsCount()
+            + ", region read request is " + regionLoad.getReadRequestsCount());
+        assertEquals(3, serverLoad.getReadRequestsCount());
+        assertEquals(3, regionLoad.getReadRequestsCount());
+      }
+    }
+  }
+
+  public static class ScanRegionCoprocessor implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
+    public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+      RegionCoprocessorEnvironment env = c.getEnvironment();
+      Region region = env.getRegion();
+      try {
+        putData(region);
+        RegionScanner scanner = region.getScanner(new Scan());
+        List<Cell> result = new LinkedList<>();
+        while (scanner.next(result)) {
+          result.clear();
+        }
+      } catch (Exception e) {
+        LOG.warn("Got exception in coprocessor", e);
+      }
+    }
+
+    private void putData(Region region) throws Exception {
+      Put put = new Put(ROW1);
+      put.addColumn(CF1, COL1, VAL1);
+      region.put(put);
+      put = new Put(ROW2);
+      put.addColumn(CF1, COL1, VAL1);
+      region.put(put);
+      put = new Put(ROW3);
+      put.addColumn(CF1, COL1, VAL1);
+      region.put(put);
     }
   }
 

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,14 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
+import com.codahale.metrics.Counter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -32,12 +32,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -47,28 +44,32 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.Level;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
@@ -77,11 +78,12 @@ import org.junit.experimental.categories.Category;
 @Category({MediumTests.class, ClientTests.class})
 @SuppressWarnings("deprecation")
 public class TestReplicasClient {
-  private static final Log LOG = LogFactory.getLog(TestReplicasClient.class);
 
-  static {
-    ((Log4JLogger)RpcRetryingCallerImpl.LOG).getLogger().setLevel(Level.ALL);
-  }
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicasClient.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicasClient.class);
 
   private static final int NB_SERVERS = 1;
   private static Table table = null;
@@ -98,14 +100,21 @@ public class TestReplicasClient {
   /**
    * This copro is used to synchronize the tests.
    */
-  public static class SlowMeCopro implements RegionObserver {
+  public static class SlowMeCopro implements RegionCoprocessor, RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(0);
     static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
     static final AtomicInteger countOfNext = new AtomicInteger(0);
-    private static final AtomicReference<CountDownLatch> cdl =
+    private static final AtomicReference<CountDownLatch> primaryCdl =
+        new AtomicReference<>(new CountDownLatch(0));
+    private static final AtomicReference<CountDownLatch> secondaryCdl =
         new AtomicReference<>(new CountDownLatch(0));
     Random r = new Random();
     public SlowMeCopro() {
+    }
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
     }
 
     @Override
@@ -115,10 +124,9 @@ public class TestReplicasClient {
     }
 
     @Override
-    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Scan scan, final RegionScanner s) throws IOException {
+    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan) throws IOException {
       slowdownCode(e);
-      return s;
     }
 
     @Override
@@ -139,7 +147,8 @@ public class TestReplicasClient {
 
     private void slowdownCode(final ObserverContext<RegionCoprocessorEnvironment> e) {
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() == 0) {
-        CountDownLatch latch = getCdl().get();
+        LOG.info("We're the primary replicas.");
+        CountDownLatch latch = getPrimaryCdl().get();
         try {
           if (sleepTime.get() > 0) {
             LOG.info("Sleeping for " + sleepTime.get() + " ms");
@@ -152,15 +161,31 @@ public class TestReplicasClient {
             }
           }
         } catch (InterruptedException e1) {
-          LOG.error(e1);
+          LOG.error(e1.toString(), e1);
         }
       } else {
         LOG.info("We're not the primary replicas.");
+        CountDownLatch latch = getSecondaryCdl().get();
+        try {
+          if (latch.getCount() > 0) {
+            LOG.info("Waiting for the secondary counterCountDownLatch");
+            latch.await(2, TimeUnit.MINUTES); // To help the tests to finish.
+            if (latch.getCount() > 0) {
+              throw new RuntimeException("Can't wait more");
+            }
+          }
+        } catch (InterruptedException e1) {
+          LOG.error(e1.toString(), e1);
+        }
       }
     }
 
-    public static AtomicReference<CountDownLatch> getCdl() {
-      return cdl;
+    public static AtomicReference<CountDownLatch> getPrimaryCdl() {
+      return primaryCdl;
+    }
+
+    public static AtomicReference<CountDownLatch> getSecondaryCdl() {
+      return secondaryCdl;
     }
   }
 
@@ -170,6 +195,7 @@ public class TestReplicasClient {
     HTU.getConfiguration().setInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
     HTU.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
+    HTU.getConfiguration().setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
     ConnectionUtils.setupMasterlessConnection(HTU.getConfiguration());
     HTU.startMiniCluster(NB_SERVERS);
 
@@ -238,17 +264,17 @@ public class TestReplicasClient {
     } catch (Exception e){}
     // first version is '0'
     AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
-      getRS().getServerName(), hri, null, null);
+      getRS().getServerName(), hri, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().getRSRpcServices().openRegion(null, orr);
-    Assert.assertEquals(responseOpen.getOpeningStateCount(), 1);
-    Assert.assertEquals(responseOpen.getOpeningState(0),
-      AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED);
+    Assert.assertEquals(1, responseOpen.getOpeningStateCount());
+    Assert.assertEquals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED,
+        responseOpen.getOpeningState(0));
     checkRegionIsOpened(hri);
   }
 
   private void closeRegion(HRegionInfo hri) throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
-      getRS().getServerName(), hri.getEncodedName());
+      getRS().getServerName(), hri.getRegionName());
     AdminProtos.CloseRegionResponse responseClose = getRS()
         .getRSRpcServices().closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
@@ -289,7 +315,7 @@ public class TestReplicasClient {
   public void testUseRegionWithoutReplica() throws Exception {
     byte[] b1 = "testUseRegionWithoutReplica".getBytes();
     openRegion(hriSecondary);
-    SlowMeCopro.getCdl().set(new CountDownLatch(0));
+    SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(0));
     try {
       Get g = new Get(b1);
       Result r = table.get(g);
@@ -345,14 +371,14 @@ public class TestReplicasClient {
     byte[] b1 = "testGetNoResultStaleRegionWithReplica".getBytes();
     openRegion(hriSecondary);
 
-    SlowMeCopro.getCdl().set(new CountDownLatch(1));
+    SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
     try {
       Get g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       Result r = table.get(g);
       Assert.assertTrue(r.isStale());
     } finally {
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       closeRegion(hriSecondary);
     }
   }
@@ -462,13 +488,13 @@ public class TestReplicasClient {
       LOG.info("sleep and is not stale done");
 
       // But if we ask for stale we will get it
-      SlowMeCopro.getCdl().set(new CountDownLatch(1));
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertTrue(r.getColumnCells(f, b1).isEmpty());
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
 
       LOG.info("stale done");
 
@@ -481,14 +507,14 @@ public class TestReplicasClient {
       LOG.info("exists not stale done");
 
       // exists works on stale but don't see the put
-      SlowMeCopro.getCdl().set(new CountDownLatch(1));
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setCheckExistenceOnly(true);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertFalse("The secondary has stale data", r.getExists());
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       LOG.info("exists stale before flush done");
 
       flushRegion(hriPrimary);
@@ -497,28 +523,28 @@ public class TestReplicasClient {
       Thread.sleep(1000 + REFRESH_PERIOD * 2);
 
       // get works and is not stale
-      SlowMeCopro.getCdl().set(new CountDownLatch(1));
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertFalse(r.isEmpty());
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       LOG.info("stale done");
 
       // exists works on stale and we see the put after the flush
-      SlowMeCopro.getCdl().set(new CountDownLatch(1));
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setCheckExistenceOnly(true);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertTrue(r.getExists());
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       LOG.info("exists stale after flush done");
 
     } finally {
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       SlowMeCopro.sleepTime.set(0);
       Delete d = new Delete(b1);
       table.delete(d);
@@ -526,6 +552,72 @@ public class TestReplicasClient {
     }
   }
 
+  @Test
+  public void testHedgedRead() throws Exception {
+    byte[] b1 = "testHedgedRead".getBytes();
+    openRegion(hriSecondary);
+
+    try {
+      // A simple put works, even if there here a second replica
+      Put p = new Put(b1);
+      p.addColumn(f, b1, b1);
+      table.put(p);
+      LOG.info("Put done");
+
+      // A get works and is not stale
+      Get g = new Get(b1);
+      Result r = table.get(g);
+      Assert.assertFalse(r.isStale());
+      Assert.assertFalse(r.getColumnCells(f, b1).isEmpty());
+      LOG.info("get works and is not stale done");
+
+      //reset
+      ClusterConnection connection = (ClusterConnection) HTU.getConnection();
+      Counter hedgedReadOps = connection.getConnectionMetrics().hedgedReadOps;
+      Counter hedgedReadWin = connection.getConnectionMetrics().hedgedReadWin;
+      hedgedReadOps.dec(hedgedReadOps.getCount());
+      hedgedReadWin.dec(hedgedReadWin.getCount());
+
+      // Wait a little on the main region, just enough to happen once hedged read
+      // and hedged read did not returned faster
+      int primaryCallTimeoutMicroSecond = connection.getConnectionConfiguration().getPrimaryCallTimeoutMicroSecond();
+      SlowMeCopro.sleepTime.set(TimeUnit.MICROSECONDS.toMillis(primaryCallTimeoutMicroSecond));
+      SlowMeCopro.getSecondaryCdl().set(new CountDownLatch(1));
+      g = new Get(b1);
+      g.setConsistency(Consistency.TIMELINE);
+      r = table.get(g);
+      Assert.assertFalse(r.isStale());
+      Assert.assertFalse(r.getColumnCells(f, b1).isEmpty());
+      Assert.assertEquals(1, hedgedReadOps.getCount());
+      Assert.assertEquals(0, hedgedReadWin.getCount());
+      SlowMeCopro.sleepTime.set(0);
+      SlowMeCopro.getSecondaryCdl().get().countDown();
+      LOG.info("hedged read occurred but not faster");
+
+
+      // But if we ask for stale we will get it and hedged read returned faster
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
+      g = new Get(b1);
+      g.setConsistency(Consistency.TIMELINE);
+      r = table.get(g);
+      Assert.assertTrue(r.isStale());
+      Assert.assertTrue(r.getColumnCells(f, b1).isEmpty());
+      Assert.assertEquals(2, hedgedReadOps.getCount());
+      Assert.assertEquals(1, hedgedReadWin.getCount());
+      SlowMeCopro.getPrimaryCdl().get().countDown();
+      LOG.info("hedged read occurred and faster");
+
+    } finally {
+      SlowMeCopro.getPrimaryCdl().get().countDown();
+      SlowMeCopro.getSecondaryCdl().get().countDown();
+      SlowMeCopro.sleepTime.set(0);
+      Delete d = new Delete(b1);
+      table.delete(d);
+      closeRegion(hriSecondary);
+    }
+  }
+
+  @Ignore // Disabled because it is flakey. Fails 17% on constrained GCE. %3 on Apache.
   @Test
   public void testCancelOfMultiGet() throws Exception {
     openRegion(hriSecondary);
@@ -550,7 +642,7 @@ public class TestReplicasClient {
       AsyncProcess ap = ((ClusterConnection) HTU.getConnection()).getAsyncProcess();
 
       // Make primary slowdown
-      SlowMeCopro.getCdl().set(new CountDownLatch(1));
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
 
       List<Get> gets = new ArrayList<>();
       Get g = new Get(b1);
@@ -588,7 +680,7 @@ public class TestReplicasClient {
         Assert.assertTrue(m.isCancelled());
       }
     } finally {
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       SlowMeCopro.sleepTime.set(0);
       SlowMeCopro.slowDownNext.set(false);
       SlowMeCopro.countOfNext.set(0);
@@ -654,7 +746,7 @@ public class TestReplicasClient {
       SlowMeCopro.slowDownNext.set(false);
       SlowMeCopro.countOfNext.set(0);
     } finally {
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       SlowMeCopro.sleepTime.set(0);
       SlowMeCopro.slowDownNext.set(false);
       SlowMeCopro.countOfNext.set(0);
@@ -735,7 +827,7 @@ public class TestReplicasClient {
       SlowMeCopro.slowDownNext.set(false);
       SlowMeCopro.countOfNext.set(0);
     } finally {
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       SlowMeCopro.sleepTime.set(0);
       SlowMeCopro.slowDownNext.set(false);
       SlowMeCopro.countOfNext.set(0);

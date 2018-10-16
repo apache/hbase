@@ -24,12 +24,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -39,7 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
 
-  private static final Log LOG = LogFactory.getLog(StripeMultiFileWriter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeMultiFileWriter.class);
 
   protected final CellComparator comparator;
   protected List<StoreFileWriter> existingWriters;
@@ -297,7 +298,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
         sanityCheckLeft(left, cell);
         doCreateWriter = true;
       } else if (lastRowInCurrentWriter != null
-          && !CellUtil.matchingRow(cell, lastRowInCurrentWriter, 0,
+          && !PrivateCellUtil.matchingRows(cell, lastRowInCurrentWriter, 0,
             lastRowInCurrentWriter.length)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Stopping to use a writer after [" + Bytes.toString(lastRowInCurrentWriter)

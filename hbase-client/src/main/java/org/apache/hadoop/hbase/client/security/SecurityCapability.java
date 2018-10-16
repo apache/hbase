@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.client.security;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Available security capabilities
@@ -32,7 +32,7 @@ public enum SecurityCapability {
   CELL_AUTHORIZATION(3),
   CELL_VISIBILITY(4);
 
-  private int value;
+  private final int value;
 
   public int getValue() {
     return value;
@@ -57,5 +57,4 @@ public enum SecurityCapability {
         throw new IllegalArgumentException("Unknown SecurityCapability value " + value);
     }
   }
-};
-
+}

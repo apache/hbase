@@ -17,38 +17,10 @@
  */
 package org.apache.hadoop.hbase.client.example;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.util.concurrent.GlobalEventExecutor;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -56,13 +28,39 @@ import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RawAsyncTable;
 import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
+import org.apache.hbase.thirdparty.io.netty.bootstrap.ServerBootstrap;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelInitializer;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioServerSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.http.DefaultFullHttpResponse;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.http.FullHttpRequest;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.http.HttpHeaderNames;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.http.HttpObjectAggregator;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.http.HttpServerCodec;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.http.HttpVersion;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.http.QueryStringDecoder;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
- * A simple example on how to use {@link RawAsyncTable} to write a fully asynchronous HTTP proxy
- * server. The {@link AsyncConnection} will share the same event loop with the HTTP server.
+ * A simple example on how to use {@link org.apache.hadoop.hbase.client.AsyncTable} to write a fully
+ * asynchronous HTTP proxy server. The {@link AsyncConnection} will share the same event loop with
+ * the HTTP server.
  * <p>
  * The request URL is:
  *
@@ -73,6 +71,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Use HTTP GET to fetch data, and use HTTP PUT to put data. Encode the value as the request content
  * when doing PUT.
  */
+@InterfaceAudience.Private
 public class HttpProxyExample {
 
   private final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
@@ -139,7 +138,7 @@ public class HttpProxyExample {
       DefaultFullHttpResponse resp;
       if (content.isPresent()) {
         ByteBuf buf =
-            ctx.alloc().buffer().writeBytes(content.get().getBytes(StandardCharsets.UTF_8));
+            ctx.alloc().buffer().writeBytes(Bytes.toBytes(content.get()));
         resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, buf);
         resp.headers().set(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
       } else {
@@ -160,7 +159,7 @@ public class HttpProxyExample {
 
     private void get(ChannelHandlerContext ctx, FullHttpRequest req) {
       Params params = parse(req);
-      conn.getRawTable(TableName.valueOf(params.table)).get(new Get(Bytes.toBytes(params.row))
+      conn.getTable(TableName.valueOf(params.table)).get(new Get(Bytes.toBytes(params.row))
           .addColumn(Bytes.toBytes(params.family), Bytes.toBytes(params.qualifier)))
           .whenComplete((r, e) -> {
             if (e != null) {
@@ -181,7 +180,7 @@ public class HttpProxyExample {
       Params params = parse(req);
       byte[] value = new byte[req.content().readableBytes()];
       req.content().readBytes(value);
-      conn.getRawTable(TableName.valueOf(params.table)).put(new Put(Bytes.toBytes(params.row))
+      conn.getTable(TableName.valueOf(params.table)).put(new Put(Bytes.toBytes(params.row))
           .addColumn(Bytes.toBytes(params.family), Bytes.toBytes(params.qualifier), value))
           .whenComplete((r, e) -> {
             if (e != null) {

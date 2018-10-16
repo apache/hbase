@@ -1,6 +1,4 @@
-/*
- * Copyright The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,13 +31,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -50,12 +46,20 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestChecksum {
-  private static final Log LOG = LogFactory.getLog(TestHFileBlock.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestChecksum.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlock.class);
 
   static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
       NONE, GZ };
@@ -178,7 +182,7 @@ public class TestChecksum {
         }
         os.close();
 
-        // Use hbase checksums. 
+        // Use hbase checksums.
         assertEquals(true, hfs.useHBaseChecksum());
 
         // Do a read that purposely introduces checksum verification failures.
@@ -193,7 +197,7 @@ public class TestChecksum {
         HFileBlock b = hbr.readBlockData(0, -1, pread, false);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
-        assertEquals(algo == GZ ? 2173 : 4936, 
+        assertEquals(algo == GZ ? 2173 : 4936,
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         // read data back from the hfile, exclude header and checksum
         ByteBuff bb = b.unpack(meta, hbr).getBufferWithoutHeader(); // read back data
@@ -209,7 +213,7 @@ public class TestChecksum {
         // A single instance of hbase checksum failure causes the reader to
         // switch off hbase checksum verification for the next 100 read
         // requests. Verify that this is correct.
-        for (int i = 0; i < 
+        for (int i = 0; i <
              HFileBlock.CHECKSUM_VERIFICATION_NUM_IO_THRESHOLD + 1; i++) {
           b = hbr.readBlockData(0, -1, pread, false);
           assertEquals(0, HFile.getAndResetChecksumFailuresCount());
@@ -225,9 +229,9 @@ public class TestChecksum {
         assertEquals(0, HFile.getAndResetChecksumFailuresCount());
         is.close();
 
-        // Now, use a completely new reader. Switch off hbase checksums in 
+        // Now, use a completely new reader. Switch off hbase checksums in
         // the configuration. In this case, we should not detect
-        // any retries within hbase. 
+        // any retries within hbase.
         HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
@@ -237,7 +241,7 @@ public class TestChecksum {
         b.sanityCheck();
         b = b.unpack(meta, hbr);
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
-        assertEquals(algo == GZ ? 2173 : 4936, 
+        assertEquals(algo == GZ ? 2173 : 4936,
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         // read data back from the hfile, exclude header and checksum
         bb = b.getBufferWithoutHeader(); // read back data
@@ -265,7 +269,7 @@ public class TestChecksum {
     Compression.Algorithm algo = NONE;
     for (boolean pread : new boolean[] { false, true }) {
       for (int bytesPerChecksum : BYTES_PER_CHECKSUM) {
-        Path path = new Path(TEST_UTIL.getDataTestDir(), "checksumChunk_" + 
+        Path path = new Path(TEST_UTIL.getDataTestDir(), "checksumChunk_" +
                              algo + bytesPerChecksum);
         FSDataOutputStream os = fs.create(path);
         HFileContext meta = new HFileContextBuilder()
@@ -301,7 +305,7 @@ public class TestChecksum {
                    ", dataSize=" + dataSize +
                    ", expectedChunks=" + expectedChunks);
 
-        // Verify hbase checksums. 
+        // Verify hbase checksums.
         assertEquals(true, hfs.useHBaseChecksum());
 
         // Read data back from file.

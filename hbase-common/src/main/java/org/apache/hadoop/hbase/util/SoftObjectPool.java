@@ -20,14 +20,13 @@ package org.apache.hadoop.hbase.util;
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ObjectPool.ObjectFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@code SoftReference} based shared object pool.
  * The objects are kept in soft references and
  * associated with keys which are identified by the {@code equals} method.
- * The objects are created by {@link ObjectFactory} on demand.
+ * The objects are created by ObjectFactory on demand.
  * The object creation is expected to be lightweight,
  * and the objects may be excessively created and discarded.
  * Thread safe.

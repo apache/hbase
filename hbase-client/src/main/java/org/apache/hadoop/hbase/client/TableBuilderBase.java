@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Base class for all table builders.
@@ -36,8 +36,6 @@ abstract class TableBuilderBase implements TableBuilder {
 
   protected int writeRpcTimeout;
 
-  protected long writeBufferSize;
-
   TableBuilderBase(TableName tableName, ConnectionConfiguration connConf) {
     if (tableName == null) {
       throw new IllegalArgumentException("Given table name is null");
@@ -48,7 +46,6 @@ abstract class TableBuilderBase implements TableBuilder {
     this.rpcTimeout = connConf.getRpcTimeout();
     this.readRpcTimeout = connConf.getReadRpcTimeout();
     this.writeRpcTimeout = connConf.getWriteRpcTimeout();
-    this.writeBufferSize = connConf.getWriteBufferSize();
   }
 
   @Override
@@ -72,12 +69,6 @@ abstract class TableBuilderBase implements TableBuilder {
   @Override
   public TableBuilderBase setWriteRpcTimeout(int timeout) {
     this.writeRpcTimeout = timeout;
-    return this;
-  }
-
-  @Override
-  public TableBuilder setWriteBufferSize(long writeBufferSize) {
-    this.writeBufferSize = writeBufferSize;
     return this;
   }
 }

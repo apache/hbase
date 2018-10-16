@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.quotas;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.quotas.OperationQuota.OperationType;
 
 /**
@@ -35,13 +35,13 @@ class NoopQuotaLimiter implements QuotaLimiter {
   }
 
   @Override
-  public void checkQuota(long estimateWriteSize, long estimateReadSize)
-      throws ThrottlingException {
+  public void checkQuota(long writeReqs, long estimateWriteSize, long readReqs,
+      long estimateReadSize) throws RpcThrottlingException {
     // no-op
   }
 
   @Override
-  public void grabQuota(long writeSize, long readSize) {
+  public void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize) {
     // no-op
   }
 

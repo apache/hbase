@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.PatternLayout;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Logger class that buffers before trying to log to the specified console.
@@ -40,6 +40,7 @@ public class AsyncConsoleAppender extends AsyncAppender {
     consoleAppender.setTarget(value);
   }
 
+  @Override
   public void activateOptions() {
     consoleAppender.activateOptions();
     super.activateOptions();

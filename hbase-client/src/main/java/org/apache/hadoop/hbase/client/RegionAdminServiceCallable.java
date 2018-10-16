@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -51,7 +51,6 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
   protected final TableName tableName;
   protected final byte[] row;
   protected final int replicaId;
-  protected final static int MIN_WAIT_DEAD_SERVER = 10000;
 
   public RegionAdminServiceCallable(ClusterConnection connection,
       RpcControllerFactory rpcControllerFactory, TableName tableName, byte[] row) {
@@ -136,12 +135,7 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
 
   @Override
   public long sleep(long pause, int tries) {
-    long sleep = ConnectionUtils.getPauseTime(pause, tries);
-    if (sleep < MIN_WAIT_DEAD_SERVER
-        && (location == null || connection.isDeadServer(location.getServerName()))) {
-      sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
-    }
-    return sleep;
+    return ConnectionUtils.getPauseTime(pause, tries);
   }
 
   public static RegionLocations getRegionLocations(

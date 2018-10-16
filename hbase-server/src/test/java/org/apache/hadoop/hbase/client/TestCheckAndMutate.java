@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,101 +17,129 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 @Category(MediumTests.class)
 public class TestCheckAndMutate {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCheckAndMutate.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final byte[] ROWKEY = Bytes.toBytes("12345");
+  private static final byte[] FAMILY = Bytes.toBytes("cf");
 
   @Rule
   public TestName name = new TestName();
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  private Table createTable()
+  throws IOException, InterruptedException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
+    TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
+    return table;
+  }
+
+  private void putOneRow(Table table) throws IOException {
+    Put put = new Put(ROWKEY);
+    put.addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"));
+    put.addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"));
+    put.addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"));
+    table.put(put);
+  }
+
+  private void getOneRowAndAssertAllExist(final Table table) throws IOException {
+    Get get = new Get(ROWKEY);
+    Result result = table.get(get);
+    assertTrue("Column A value should be a",
+      Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("A"))).equals("a"));
+    assertTrue("Column B value should be b",
+      Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))).equals("b"));
+    assertTrue("Column C value should be c",
+      Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("C"))).equals("c"));
+  }
+
+  private void getOneRowAndAssertAllButCExist(final Table table) throws IOException {
+    Get get = new Get(ROWKEY);
+    Result result = table.get(get);
+    assertTrue("Column A value should be a",
+      Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("A"))).equals("a"));
+    assertTrue("Column B value should be b",
+      Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))).equals("b"));
+    assertTrue("Column C should not exist",
+    result.getValue(FAMILY, Bytes.toBytes("C")) == null);
+  }
+
+  private RowMutations makeRowMutationsWithColumnCDeleted() throws IOException {
+    RowMutations rm = new RowMutations(ROWKEY, 2);
+    Put put = new Put(ROWKEY);
+    put.addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"));
+    put.addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"));
+    rm.add(put);
+    Delete del = new Delete(ROWKEY);
+    del.addColumn(FAMILY, Bytes.toBytes("C"));
+    rm.add(del);
+    return rm;
+  }
+
+  private RowMutations getBogusRowMutations() throws IOException {
+    Put p = new Put(ROWKEY);
+    byte[] value = new byte[0];
+    p.addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, new byte[]{'A'}, value);
+    RowMutations rm = new RowMutations(ROWKEY);
+    rm.add(p);
+    return rm;
+  }
+
   @Test
   public void testCheckAndMutate() throws Throwable {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final byte[] rowKey = Bytes.toBytes("12345");
-    final byte[] family = Bytes.toBytes("cf");
-    Table table = TEST_UTIL.createTable(tableName, family);
-    TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
-    try {
+    try (Table table = createTable()) {
       // put one row
-      Put put = new Put(rowKey);
-      put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
-      put.addColumn(family, Bytes.toBytes("B"), Bytes.toBytes("b"));
-      put.addColumn(family, Bytes.toBytes("C"), Bytes.toBytes("c"));
-      table.put(put);
+      putOneRow(table);
       // get row back and assert the values
-      Get get = new Get(rowKey);
-      Result result = table.get(get);
-      assertTrue("Column A value should be a",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a"));
-      assertTrue("Column B value should be b",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b"));
-      assertTrue("Column C value should be c",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("C"))).equals("c"));
+      getOneRowAndAssertAllExist(table);
 
       // put the same row again with C column deleted
-      RowMutations rm = new RowMutations(rowKey, 2);
-      put = new Put(rowKey);
-      put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
-      put.addColumn(family, Bytes.toBytes("B"), Bytes.toBytes("b"));
-      rm.add(put);
-      Delete del = new Delete(rowKey);
-      del.addColumn(family, Bytes.toBytes("C"));
-      rm.add(del);
-      boolean res = table.checkAndMutate(rowKey, family, Bytes.toBytes("A"), CompareFilter.CompareOp.EQUAL,
-          Bytes.toBytes("a"), rm);
+      RowMutations rm = makeRowMutationsWithColumnCDeleted();
+      boolean res = table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
+          .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
       assertTrue(res);
 
       // get row back and assert the values
-      get = new Get(rowKey);
-      result = table.get(get);
-      assertTrue("Column A value should be a",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a"));
-      assertTrue("Column B value should be b",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b"));
-      assertTrue("Column C should not exist",
-          result.getValue(family, Bytes.toBytes("C")) == null);
+      getOneRowAndAssertAllButCExist(table);
 
       //Test that we get a region level exception
       try {
-        Put p = new Put(rowKey);
-        byte[] value = new byte[0];
-        p.addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, new byte[]{'A'}, value);
-        rm = new RowMutations(rowKey);
-        rm.add(p);
-        table.checkAndMutate(rowKey, family, Bytes.toBytes("A"), CompareFilter.CompareOp.EQUAL,
-            Bytes.toBytes("a"), rm);
+        rm = getBogusRowMutations();
+        table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
+            .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
         fail("Expected NoSuchColumnFamilyException");
       } catch (RetriesExhaustedWithDetailsException e) {
         try {
@@ -121,8 +148,40 @@ public class TestCheckAndMutate {
           // expected
         }
       }
-    } finally {
-      table.close();
     }
   }
+
+  @Test
+  public void testCheckAndMutateWithBuilder() throws Throwable {
+    try (Table table = createTable()) {
+      // put one row
+      putOneRow(table);
+      // get row back and assert the values
+      getOneRowAndAssertAllExist(table);
+
+      // put the same row again with C column deleted
+      RowMutations rm = makeRowMutationsWithColumnCDeleted();
+      boolean res = table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
+          .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
+      assertTrue(res);
+
+      // get row back and assert the values
+      getOneRowAndAssertAllButCExist(table);
+
+      //Test that we get a region level exception
+      try {
+        rm = getBogusRowMutations();
+        table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
+            .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
+        fail("Expected NoSuchColumnFamilyException");
+      } catch (RetriesExhaustedWithDetailsException e) {
+        try {
+          throw e.getCause(0);
+        } catch (NoSuchColumnFamilyException e1) {
+          // expected
+        }
+      }
+    }
+  }
+
 }

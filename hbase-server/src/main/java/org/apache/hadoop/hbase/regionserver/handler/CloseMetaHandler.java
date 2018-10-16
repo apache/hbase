@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.handler;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Handles closing of the meta region on a region server.
@@ -33,7 +33,7 @@ public class CloseMetaHandler extends CloseRegionHandler {
   // Called when regionserver determines its to go down; not master orchestrated
   public CloseMetaHandler(final Server server,
       final RegionServerServices rsServices,
-      final HRegionInfo regionInfo,
+      final RegionInfo regionInfo,
       final boolean abort) {
     super(server, rsServices, regionInfo, abort, EventType.M_RS_CLOSE_META, null);
   }

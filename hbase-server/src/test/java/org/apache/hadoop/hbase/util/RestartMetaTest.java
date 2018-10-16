@@ -18,9 +18,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +30,9 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * A command-line tool that spins up a local process-based cluster, loads
@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
  */
 public class RestartMetaTest extends AbstractHBaseTool {
 
-  private static final Log LOG = LogFactory.getLog(RestartMetaTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestartMetaTest.class);
 
   /** The number of region servers used if not specified */
   private static final int DEFAULT_NUM_RS = 2;
@@ -81,7 +81,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
     // start the writers
     LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(
       minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey,
-      LoadTestTool.DEFAULT_COLUMN_FAMILY);
+      HFileTestUtil.DEFAULT_COLUMN_FAMILY);
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
     writer.start(startKey, endKey, numThreads);
@@ -101,7 +101,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     // create tables if needed
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, TABLE_NAME,
-        LoadTestTool.DEFAULT_COLUMN_FAMILY, Compression.Algorithm.NONE,
+        HFileTestUtil.DEFAULT_COLUMN_FAMILY, Compression.Algorithm.NONE,
         DataBlockEncoding.NONE);
 
     LOG.debug("Loading data....\n\n");
@@ -143,8 +143,8 @@ public class RestartMetaTest extends AbstractHBaseTool {
   @Override
   protected void addOptions() {
     addOptWithArg(OPT_NUM_RS, "Number of Region Servers");
-    addOptWithArg(LoadTestTool.OPT_DATA_BLOCK_ENCODING,
-        LoadTestTool.OPT_DATA_BLOCK_ENCODING_USAGE);
+    addOptWithArg(HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
+        HFileTestUtil.OPT_DATA_BLOCK_ENCODING_USAGE);
   }
 
   @Override

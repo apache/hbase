@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.Stoppable;
@@ -44,4 +44,10 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
    * this method is used to pass some instance into subclass
    * */
   void init(Map<String, Object> params);
+
+  /**
+   * Used to do some initialize work before every period clean
+   */
+  default void preClean() {
+  }
 }

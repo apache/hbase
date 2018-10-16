@@ -15,40 +15,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.NonceKey;
-import org.apache.hadoop.hbase.util.Threads;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureNonce {
-  private static final Log LOG = LogFactory.getLog(TestProcedureNonce.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureNonce.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureNonce.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 2;
 
@@ -69,11 +71,11 @@ public class TestProcedureNonce {
 
     logDir = new Path(testDir, "proc-logs");
     procEnv = new TestProcEnv();
-    procStore = ProcedureTestingUtility.createStore(htu.getConfiguration(), fs, logDir);
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
+    procStore = ProcedureTestingUtility.createStore(htu.getConfiguration(), logDir);
+    procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procExecutor.testing = new ProcedureExecutor.Testing();
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
   @After
@@ -83,7 +85,7 @@ public class TestProcedureNonce {
     fs.delete(logDir, true);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testCompletedProcWithSameNonce() throws Exception {
     final long nonceGroup = 123;
     final long nonce = 2222;
@@ -105,11 +107,11 @@ public class TestProcedureNonce {
     // we should get back the old procId
     assertEquals(procId, procExecutor.registerNonce(nonceKey));
 
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testRunningProcWithSameNonce() throws Exception {
     final long nonceGroup = 456;
     final long nonce = 33333;
@@ -140,7 +142,7 @@ public class TestProcedureNonce {
     // we should get back the old procId
     assertEquals(procId, procExecutor.registerNonce(nonceKey));
 
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
   }
 
@@ -157,16 +159,16 @@ public class TestProcedureNonce {
       new IOException("test failure"));
 
     final long procId = procExecutor.registerNonce(nonceKey);
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcFailed(result);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testConcurrentNonceRegistration() throws IOException {
     testConcurrentNonceRegistration(true, 567, 44444);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testConcurrentNonceRegistrationWithRollback() throws IOException {
     testConcurrentNonceRegistration(false, 890, 55555);
   }

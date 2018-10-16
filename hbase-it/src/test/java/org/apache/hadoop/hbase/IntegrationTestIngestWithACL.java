@@ -21,8 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.security.User;
@@ -32,6 +31,9 @@ import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+
 /**
  * /**
  * An Integration class for tests that does something with the cluster while running

@@ -22,8 +22,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,6 +41,11 @@ import org.junit.rules.TestName;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncTableNoncedRetry {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncTableNoncedRetry.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
@@ -102,10 +108,10 @@ public class TestAsyncTableNoncedRetry {
 
   @Test
   public void testAppend() throws InterruptedException, ExecutionException {
-    RawAsyncTable table = ASYNC_CONN.getRawTable(TABLE_NAME);
-    Result result = table.append(new Append(row).add(FAMILY, QUALIFIER, VALUE)).get();
+    AsyncTable<?> table = ASYNC_CONN.getTable(TABLE_NAME);
+    Result result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)).get();
     assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
-    result = table.append(new Append(row).add(FAMILY, QUALIFIER, VALUE)).get();
+    result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)).get();
     // the second call should have no effect as we always generate the same nonce.
     assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
     result = table.get(new Get(row)).get();
@@ -114,7 +120,7 @@ public class TestAsyncTableNoncedRetry {
 
   @Test
   public void testIncrement() throws InterruptedException, ExecutionException {
-    RawAsyncTable table = ASYNC_CONN.getRawTable(TABLE_NAME);
+    AsyncTable<?> table = ASYNC_CONN.getTable(TABLE_NAME);
     assertEquals(1L, table.incrementColumnValue(row, FAMILY, QUALIFIER, 1L).get().longValue());
     // the second call should have no effect as we always generate the same nonce.
     assertEquals(1L, table.incrementColumnValue(row, FAMILY, QUALIFIER, 1L).get().longValue());

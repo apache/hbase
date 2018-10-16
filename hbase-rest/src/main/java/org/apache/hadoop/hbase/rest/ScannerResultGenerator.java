@@ -22,14 +22,11 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -38,12 +35,15 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class ScannerResultGenerator extends ResultGenerator {
 
-  private static final Log LOG =
-    LogFactory.getLog(ScannerResultGenerator.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(ScannerResultGenerator.class);
 
   public static Filter buildFilterFromModel(final ScannerModel model) 
       throws Exception {
@@ -80,7 +80,7 @@ public class ScannerResultGenerator extends ResultGenerator {
       if (rowspec.hasColumns()) {
         byte[][] columns = rowspec.getColumns();
         for (byte[] column: columns) {
-          byte[][] split = KeyValue.parseColumn(column);
+          byte[][] split = CellUtil.parseColumn(column);
           if (split.length == 1) {
             scan.addFamily(split[0]);
           } else if (split.length == 2) {
@@ -115,6 +115,7 @@ public class ScannerResultGenerator extends ResultGenerator {
     return id;
   }
 
+  @Override
   public void close() {
     if (scanner != null) {
       scanner.close();
@@ -122,6 +123,7 @@ public class ScannerResultGenerator extends ResultGenerator {
     }
   }
 
+  @Override
   public boolean hasNext() {
     if (cache != null) {
       return true;
@@ -145,6 +147,7 @@ public class ScannerResultGenerator extends ResultGenerator {
     return cached != null;
   }
 
+  @Override
   public Cell next() {
     if (cache != null) {
       Cell kv = cache;
@@ -187,10 +190,12 @@ public class ScannerResultGenerator extends ResultGenerator {
     return null;
   }
 
+  @Override
   public void putBack(Cell kv) {
     this.cache = kv;
   }
 
+  @Override
   public void remove() {
     throw new UnsupportedOperationException("remove not supported");
   }

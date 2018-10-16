@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
@@ -27,22 +26,26 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.AfterClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHBaseConfiguration {
 
-  private static final Log LOG = LogFactory.getLog(TestHBaseConfiguration.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHBaseConfiguration.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseConfiguration.class);
 
   private static HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
@@ -192,10 +195,9 @@ public class TestHBaseConfiguration {
       }
       // Instantiate Hadoop CredentialProviderFactory
       try {
-        hadoopCredProviderFactory = hadoopCredProviderFactoryClz.newInstance();
-      } catch (InstantiationException e) {
-        return false;
-      } catch (IllegalAccessException e) {
+        hadoopCredProviderFactory =
+          hadoopCredProviderFactoryClz.getDeclaredConstructor().newInstance();
+      } catch (Exception e) {
         return false;
       }
 

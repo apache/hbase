@@ -19,18 +19,17 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.htrace.TraceInfo;
 
 /**
  * Interface of all necessary to carry out a RPC method invocation on the server.
@@ -133,9 +132,4 @@ public interface RpcCall extends RpcCallContext {
    * @return A short string format of this call without possibly lengthy params
    */
   String toShortString();
-
-  /**
-   * @return TraceInfo attached to this call.
-   */
-  TraceInfo getTraceInfo();
 }

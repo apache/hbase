@@ -22,13 +22,16 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Query matcher for user scan.
@@ -51,11 +54,17 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
 
   protected final TimeRange tr;
 
+  private final int versionsAfterFilter;
+
+  private int count = 0;
+
+  private Cell curColCell = null;
+
   private static Cell createStartKey(Scan scan, ScanInfo scanInfo) {
     if (scan.includeStartRow()) {
       return createStartKeyFromRow(scan.getStartRow(), scanInfo);
     } else {
-      return CellUtil.createLastOnRow(scan.getStartRow());
+      return PrivateCellUtil.createLastOnRow(scan.getStartRow());
     }
   }
 
@@ -64,6 +73,13 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     super(createStartKey(scan, scanInfo), scanInfo, columns, oldestUnexpiredTS, now);
     this.hasNullColumn = hasNullColumn;
     this.filter = scan.getFilter();
+    if (this.filter != null) {
+      this.versionsAfterFilter =
+          scan.isRaw() ? scan.getMaxVersions() : Math.min(scan.getMaxVersions(),
+            scanInfo.getMaxVersions());
+    } else {
+      this.versionsAfterFilter = 0;
+    }
     this.stopRow = scan.getStopRow();
     TimeRange timeRange = scan.getColumnFamilyTimeRange().get(scanInfo.getFamily());
     if (timeRange == null) {
@@ -97,6 +113,14 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     }
   }
 
+  @Override
+  public void beforeShipped() throws IOException {
+    super.beforeShipped();
+    if (curColCell != null) {
+      this.curColCell = KeyValueUtil.toNewKeyCell(this.curColCell);
+    }
+  }
+
   protected final MatchCode matchColumn(Cell cell, long timestamp, byte typeByte)
       throws IOException {
     int tsCmp = tr.compare(timestamp);
@@ -107,57 +131,127 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       return columns.getNextRowOrNextColumn(cell);
     }
     // STEP 1: Check if the column is part of the requested columns
-    MatchCode colChecker = columns.checkColumn(cell, typeByte);
-    if (colChecker != MatchCode.INCLUDE) {
-      return colChecker;
-    }
-    ReturnCode filterResponse = ReturnCode.SKIP;
-    // STEP 2: Yes, the column is part of the requested columns. Check if filter is present
-    if (filter != null) {
-      // STEP 3: Filter the key value and return if it filters out
-      filterResponse = filter.filterKeyValue(cell);
-      switch (filterResponse) {
-        case SKIP:
-          return MatchCode.SKIP;
-        case NEXT_COL:
-          return columns.getNextRowOrNextColumn(cell);
-        case NEXT_ROW:
-          return MatchCode.SEEK_NEXT_ROW;
-        case SEEK_NEXT_USING_HINT:
-          return MatchCode.SEEK_NEXT_USING_HINT;
-        default:
-          // It means it is either include or include and seek next
-          break;
-      }
+    MatchCode matchCode = columns.checkColumn(cell, typeByte);
+    if (matchCode != MatchCode.INCLUDE) {
+      return matchCode;
     }
     /*
-     * STEP 4: Reaching this step means the column is part of the requested columns and either
-     * the filter is null or the filter has returned INCLUDE or INCLUDE_AND_NEXT_COL response.
-     * Now check the number of versions needed. This method call returns SKIP, INCLUDE,
-     * INCLUDE_AND_SEEK_NEXT_ROW, INCLUDE_AND_SEEK_NEXT_COL.
-     *
-     * FilterResponse            ColumnChecker               Desired behavior
-     * INCLUDE                   SKIP                        row has already been included, SKIP.
-     * INCLUDE                   INCLUDE                     INCLUDE
-     * INCLUDE                   INCLUDE_AND_SEEK_NEXT_COL   INCLUDE_AND_SEEK_NEXT_COL
-     * INCLUDE                   INCLUDE_AND_SEEK_NEXT_ROW   INCLUDE_AND_SEEK_NEXT_ROW
-     * INCLUDE_AND_SEEK_NEXT_COL SKIP                        row has already been included, SKIP.
-     * INCLUDE_AND_SEEK_NEXT_COL INCLUDE                     INCLUDE_AND_SEEK_NEXT_COL
-     * INCLUDE_AND_SEEK_NEXT_COL INCLUDE_AND_SEEK_NEXT_COL   INCLUDE_AND_SEEK_NEXT_COL
-     * INCLUDE_AND_SEEK_NEXT_COL INCLUDE_AND_SEEK_NEXT_ROW   INCLUDE_AND_SEEK_NEXT_ROW
-     *
-     * In all the above scenarios, we return the column checker return value except for
-     * FilterResponse (INCLUDE_AND_SEEK_NEXT_COL) and ColumnChecker(INCLUDE)
+     * STEP 2: check the number of versions needed. This method call returns SKIP, SEEK_NEXT_COL,
+     * INCLUDE, INCLUDE_AND_SEEK_NEXT_COL, or INCLUDE_AND_SEEK_NEXT_ROW.
      */
-    colChecker = columns.checkVersions(cell, timestamp, typeByte, false);
-    if (filterResponse == ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW) {
-      if (colChecker != MatchCode.SKIP) {
-        return MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
-      }
-      return MatchCode.SEEK_NEXT_ROW;
+    matchCode = columns.checkVersions(cell, timestamp, typeByte, false);
+    switch (matchCode) {
+      case SKIP:
+        return MatchCode.SKIP;
+      case SEEK_NEXT_COL:
+        return MatchCode.SEEK_NEXT_COL;
+      default:
+        // It means it is INCLUDE, INCLUDE_AND_SEEK_NEXT_COL or INCLUDE_AND_SEEK_NEXT_ROW.
+        assert matchCode == MatchCode.INCLUDE || matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL
+            || matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
+        break;
     }
-    return (filterResponse == ReturnCode.INCLUDE_AND_NEXT_COL && colChecker == MatchCode.INCLUDE)
-        ? MatchCode.INCLUDE_AND_SEEK_NEXT_COL : colChecker;
+
+    return filter == null ? matchCode : mergeFilterResponse(cell, matchCode,
+      filter.filterCell(cell));
+  }
+
+  /**
+   * Call this when scan has filter. Decide the desired behavior by checkVersions's MatchCode and
+   * filterCell's ReturnCode. Cell may be skipped by filter, so the column versions in result may be
+   * less than user need. It need to check versions again when filter and columnTracker both include
+   * the cell. <br/>
+   *
+   * <pre>
+   * ColumnChecker                FilterResponse               Desired behavior
+   * INCLUDE                      SKIP                         SKIP
+   * INCLUDE                      NEXT_COL                     SEEK_NEXT_COL or SEEK_NEXT_ROW
+   * INCLUDE                      NEXT_ROW                     SEEK_NEXT_ROW
+   * INCLUDE                      SEEK_NEXT_USING_HINT         SEEK_NEXT_USING_HINT
+   * INCLUDE                      INCLUDE                      INCLUDE
+   * INCLUDE                      INCLUDE_AND_NEXT_COL         INCLUDE_AND_SEEK_NEXT_COL
+   * INCLUDE                      INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_COL    SKIP                         SEEK_NEXT_COL
+   * INCLUDE_AND_SEEK_NEXT_COL    NEXT_COL                     SEEK_NEXT_COL or SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_COL    NEXT_ROW                     SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_COL    SEEK_NEXT_USING_HINT         SEEK_NEXT_USING_HINT
+   * INCLUDE_AND_SEEK_NEXT_COL    INCLUDE                      INCLUDE_AND_SEEK_NEXT_COL
+   * INCLUDE_AND_SEEK_NEXT_COL    INCLUDE_AND_NEXT_COL         INCLUDE_AND_SEEK_NEXT_COL
+   * INCLUDE_AND_SEEK_NEXT_COL    INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_ROW    SKIP                         SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_ROW    NEXT_COL                     SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_ROW    NEXT_ROW                     SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_ROW    SEEK_NEXT_USING_HINT         SEEK_NEXT_USING_HINT
+   * INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE                      INCLUDE_AND_SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_NEXT_COL         INCLUDE_AND_SEEK_NEXT_ROW
+   * INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_SEEK_NEXT_ROW
+   * </pre>
+   */
+  private final MatchCode mergeFilterResponse(Cell cell, MatchCode matchCode,
+      ReturnCode filterResponse) {
+    switch (filterResponse) {
+      case SKIP:
+        if (matchCode == MatchCode.INCLUDE) {
+          return MatchCode.SKIP;
+        } else if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
+          return MatchCode.SEEK_NEXT_COL;
+        } else if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+          return MatchCode.SEEK_NEXT_ROW;
+        }
+        break;
+      case NEXT_COL:
+        if (matchCode == MatchCode.INCLUDE || matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
+          return columns.getNextRowOrNextColumn(cell);
+        } else if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+          return MatchCode.SEEK_NEXT_ROW;
+        }
+        break;
+      case NEXT_ROW:
+        return MatchCode.SEEK_NEXT_ROW;
+      case SEEK_NEXT_USING_HINT:
+        return MatchCode.SEEK_NEXT_USING_HINT;
+      case INCLUDE:
+        break;
+      case INCLUDE_AND_NEXT_COL:
+        if (matchCode == MatchCode.INCLUDE) {
+          matchCode = MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
+        }
+        break;
+      case INCLUDE_AND_SEEK_NEXT_ROW:
+        matchCode = MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
+        break;
+      default:
+        throw new RuntimeException("UNEXPECTED");
+    }
+
+    // It means it is INCLUDE, INCLUDE_AND_SEEK_NEXT_COL or INCLUDE_AND_SEEK_NEXT_ROW.
+    assert matchCode == MatchCode.INCLUDE || matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL
+        || matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
+
+    // We need to make sure that the number of cells returned will not exceed max version in scan
+    // when the match code is INCLUDE* case.
+    if (curColCell == null || !CellUtil.matchingRowColumn(cell, curColCell)) {
+      count = 0;
+      curColCell = cell;
+    }
+    count += 1;
+
+    if (count > versionsAfterFilter) {
+      // when the number of cells exceed max version in scan, we should return SEEK_NEXT_COL match
+      // code, but if current code is INCLUDE_AND_SEEK_NEXT_ROW, we can optimize to choose the max
+      // step between SEEK_NEXT_COL and INCLUDE_AND_SEEK_NEXT_ROW, which is SEEK_NEXT_ROW.
+      if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+        matchCode = MatchCode.SEEK_NEXT_ROW;
+      } else {
+        matchCode = MatchCode.SEEK_NEXT_COL;
+      }
+    }
+    if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL || matchCode == MatchCode.SEEK_NEXT_COL) {
+      // Update column tracker to next column, As we use the column hint from the tracker to seek
+      // to next cell (HBASE-19749)
+      columns.doneWithColumn(cell);
+    }
+    return matchCode;
   }
 
   protected abstract boolean isGet();
@@ -184,30 +278,18 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
   public static UserScanQueryMatcher create(Scan scan, ScanInfo scanInfo,
       NavigableSet<byte[]> columns, long oldestUnexpiredTS, long now,
       RegionCoprocessorHost regionCoprocessorHost) throws IOException {
-    int maxVersions = scan.isRaw() ? scan.getMaxVersions()
-        : Math.min(scan.getMaxVersions(), scanInfo.getMaxVersions());
-    boolean hasNullColumn;
-    ColumnTracker columnTracker;
-    if (columns == null || columns.isEmpty()) {
-      // there is always a null column in the wildcard column query.
-      hasNullColumn = true;
-      // use a specialized scan for wildcard column tracker.
-      columnTracker = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersions,
-          oldestUnexpiredTS);
-    } else {
-      // We can share the ExplicitColumnTracker, diff is we reset
-      // between rows, not between storefiles.
-      // whether there is null column in the explicit column query
-      hasNullColumn = columns.first().length == 0;
-      columnTracker = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(), maxVersions,
-          oldestUnexpiredTS);
-    }
+    boolean hasNullColumn =
+        !(columns != null && columns.size() != 0 && columns.first().length != 0);
+    Pair<DeleteTracker, ColumnTracker> trackers = getTrackers(regionCoprocessorHost, columns,
+        scanInfo, oldestUnexpiredTS, scan);
+    DeleteTracker deleteTracker = trackers.getFirst();
+    ColumnTracker columnTracker = trackers.getSecond();
     if (scan.isRaw()) {
       return RawScanQueryMatcher.create(scan, scanInfo, columnTracker, hasNullColumn,
         oldestUnexpiredTS, now);
     } else {
-      return NormalUserScanQueryMatcher.create(scan, scanInfo, columnTracker, hasNullColumn,
-        oldestUnexpiredTS, now, regionCoprocessorHost);
+      return NormalUserScanQueryMatcher.create(scan, scanInfo, columnTracker, deleteTracker,
+          hasNullColumn, oldestUnexpiredTS, now);
     }
   }
 }

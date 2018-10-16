@@ -17,20 +17,22 @@
  */
 package org.apache.hadoop.hbase.regionserver.snapshot;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
+import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
+import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager.SnapshotSubprocedurePool;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -45,16 +47,19 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class FlushSnapshotSubprocedure extends Subprocedure {
-  private static final Log LOG = LogFactory.getLog(FlushSnapshotSubprocedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushSnapshotSubprocedure.class);
 
-  private final List<Region> regions;
+  private final List<HRegion> regions;
   private final SnapshotDescription snapshot;
   private final SnapshotSubprocedurePool taskManager;
   private boolean snapshotSkipFlush = false;
 
+  // the maximum number of attempts we flush
+  final static int MAX_RETRIES = 3;
+
   public FlushSnapshotSubprocedure(ProcedureMember member,
       ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
-      List<Region> regions, SnapshotDescription snapshot,
+      List<HRegion> regions, SnapshotDescription snapshot,
       SnapshotSubprocedurePool taskManager) {
     super(member, snapshot.getName(), errorListener, wakeFrequency, timeout);
     this.snapshot = snapshot;
@@ -69,10 +74,18 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
   /**
    * Callable for adding files to snapshot manifest working dir.  Ready for multithreading.
    */
-  private class RegionSnapshotTask implements Callable<Void> {
-    Region region;
-    RegionSnapshotTask(Region region) {
+  public static class RegionSnapshotTask implements Callable<Void> {
+    private HRegion region;
+    private boolean skipFlush;
+    private ForeignExceptionDispatcher monitor;
+    private SnapshotDescription snapshotDesc;
+
+    public RegionSnapshotTask(HRegion region, SnapshotDescription snapshotDesc,
+        boolean skipFlush, ForeignExceptionDispatcher monitor) {
       this.region = region;
+      this.skipFlush = skipFlush;
+      this.monitor = monitor;
+      this.snapshotDesc = snapshotDesc;
     }
 
     @Override
@@ -82,10 +95,10 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
       // snapshots that involve multiple regions and regionservers.  It is still possible to have
       // an interleaving such that globally regions are missing, so we still need the verification
       // step.
-      LOG.debug("Starting region operation on " + region);
-      region.startRegionOperation();
+      LOG.debug("Starting snapshot operation on " + region);
+      region.startRegionOperation(Operation.SNAPSHOT);
       try {
-        if (snapshotSkipFlush) {
+        if (skipFlush) {
         /*
          * This is to take an online-snapshot without force a coordinated flush to prevent pause
          * The snapshot type is defined inside the snapshot description. FlushSnapshotSubprocedure
@@ -96,22 +109,37 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
           LOG.debug("take snapshot without flush memstore first");
         } else {
           LOG.debug("Flush Snapshotting region " + region.toString() + " started...");
-          FlushResult res = region.flush(true);
-          if (res.getResult() == FlushResult.Result.CANNOT_FLUSH) {
-            // CANNOT_FLUSH may mean that a flush is already on-going
-            // we need to wait for that flush to complete
-            region.waitForFlushes();
+          boolean succeeded = false;
+          long readPt = region.getReadPoint(IsolationLevel.READ_COMMITTED);
+          for (int i = 0; i < MAX_RETRIES; i++) {
+            FlushResult res = region.flush(true);
+            if (res.getResult() == FlushResult.Result.CANNOT_FLUSH) {
+              // CANNOT_FLUSH may mean that a flush is already on-going
+              // we need to wait for that flush to complete
+              region.waitForFlushes();
+              if (region.getMaxFlushedSeqId() >= readPt) {
+                // writes at the start of the snapshot have been persisted
+                succeeded = true;
+                break;
+              }
+            } else {
+              succeeded = true;
+              break;
+            }
+          }
+          if (!succeeded) {
+            throw new IOException("Unable to complete flush after " + MAX_RETRIES + " attempts");
           }
         }
-        ((HRegion)region).addRegionToSnapshot(snapshot, monitor);
-        if (snapshotSkipFlush) {
+        region.addRegionToSnapshot(snapshotDesc, monitor);
+        if (skipFlush) {
           LOG.debug("... SkipFlush Snapshotting region " + region.toString() + " completed.");
         } else {
           LOG.debug("... Flush Snapshotting region " + region.toString() + " completed.");
         }
       } finally {
-        LOG.debug("Closing region operation on " + region);
-        region.closeRegionOperation();
+        LOG.debug("Closing snapshot operation on " + region);
+        region.closeRegionOperation(Operation.SNAPSHOT);
       }
       return null;
     }
@@ -133,9 +161,9 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
     }
 
     // Add all hfiles already existing in region.
-    for (Region region : regions) {
+    for (HRegion region : regions) {
       // submit one task per region for parallelize by region.
-      taskManager.submitTask(new RegionSnapshotTask(region));
+      taskManager.submitTask(new RegionSnapshotTask(region, snapshot, snapshotSkipFlush, monitor));
       monitor.rethrowException();
     }
 

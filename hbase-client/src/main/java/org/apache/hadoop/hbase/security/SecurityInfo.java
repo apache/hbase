@@ -20,12 +20,13 @@ package org.apache.hadoop.hbase.security;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Maps RPC protocol interfaces to required configuration
@@ -37,13 +38,19 @@ public class SecurityInfo {
   // populate info for known services
   static {
     infos.put(AdminProtos.AdminService.getDescriptor().getName(),
-        new SecurityInfo("hbase.regionserver.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
+        new SecurityInfo("hbase.regionserver.kerberos.principal",
+            Kind.HBASE_AUTH_TOKEN));
     infos.put(ClientProtos.ClientService.getDescriptor().getName(),
-        new SecurityInfo("hbase.regionserver.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
+        new SecurityInfo("hbase.regionserver.kerberos.principal",
+            Kind.HBASE_AUTH_TOKEN));
     infos.put(MasterService.getDescriptor().getName(),
         new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
     infos.put(RegionServerStatusProtos.RegionServerStatusService.getDescriptor().getName(),
         new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
+    infos.put(MasterProtos.HbckService.getDescriptor().getName(),
+        new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
+    // NOTE: IF ADDING A NEW SERVICE, BE SURE TO UPDATE HBasePolicyProvider ALSO ELSE
+    // new Service will not be found when all is Kerberized!!!!
   }
 
   /**

@@ -20,17 +20,21 @@ package org.apache.hadoop.hbase.spark.example.datasources
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData
 import org.apache.hadoop.hbase.spark.AvroSerdes
-import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
-import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.hadoop.hbase.spark.datasources.HBaseTableCatalog
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import org.apache.yetus.audience.InterfaceAudience
 
 /**
  * @param col0 Column #0, Type is String
  * @param col1 Column #1, Type is Array[Byte]
  */
+@InterfaceAudience.Private
 case class AvroHBaseRecord(col0: String,
                            col1: Array[Byte])
-
+@InterfaceAudience.Private
 object AvroHBaseRecord {
   val schemaString =
     s"""{"namespace": "example.avro",
@@ -58,7 +62,7 @@ object AvroHBaseRecord {
     favoriteArray.add(s"number${i}")
     favoriteArray.add(s"number${i+1}")
     user.put("favorite_array", favoriteArray)
-    import collection.JavaConverters._
+    import scala.collection.JavaConverters._
     val favoriteMap = Map[String, Int](("key1" -> i), ("key2" -> (i+1))).asJava
     user.put("favorite_map", favoriteMap)
     val avroByte = AvroSerdes.serialize(user, avroSchema)
@@ -66,6 +70,7 @@ object AvroHBaseRecord {
   }
 }
 
+@InterfaceAudience.Private
 object AvroSource {
   def catalog = s"""{
                     |"table":{"namespace":"default", "name":"ExampleAvrotable"},
@@ -119,14 +124,14 @@ object AvroSource {
       .save()
 
     val df = withCatalog(catalog)
-    df.show
+    df.show()
     df.printSchema()
     df.registerTempTable("ExampleAvrotable")
     val c = sqlContext.sql("select count(1) from ExampleAvrotable")
-    c.show
+    c.show()
 
     val filtered = df.select($"col0", $"col1.favorite_array").where($"col0" === "name001")
-    filtered.show
+    filtered.show()
     val collected = filtered.collect()
     if (collected(0).getSeq[String](1)(0) != "number1") {
       throw new UserCustomizedSampleException("value invalid")
@@ -141,7 +146,7 @@ object AvroSource {
       .format("org.apache.hadoop.hbase.spark")
       .save()
     val newDF = withCatalog(avroCatalogInsert)
-    newDF.show
+    newDF.show()
     newDF.printSchema()
     if(newDF.count() != 256) {
       throw new UserCustomizedSampleException("value invalid")
@@ -149,10 +154,10 @@ object AvroSource {
 
     df.filter($"col1.name" === "name005" || $"col1.name" <= "name005")
       .select("col0", "col1.favorite_color", "col1.favorite_number")
-      .show
+      .show()
 
     df.filter($"col1.name" <= "name005" || $"col1.name".contains("name007"))
       .select("col0", "col1.favorite_color", "col1.favorite_number")
-      .show
+      .show()
   }
 }

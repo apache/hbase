@@ -24,20 +24,21 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.BaseConfigurable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Provide an instance of a user. Allows custom {@link User} creation.
@@ -98,11 +99,11 @@ public class UserProvider extends BaseConfigurable {
           }
 
           // Provide the reload function that uses the executor thread.
-          public ListenableFuture<String[]> reload(final String k,
-                                                   String[] oldValue) throws Exception {
+          @Override
+          public ListenableFuture<String[]> reload(final String k, String[] oldValue)
+              throws Exception {
 
             return executor.submit(new Callable<String[]>() {
-
               @Override
               public String[] call() throws Exception {
                 return getGroupStrings(k);
@@ -160,6 +161,15 @@ public class UserProvider extends BaseConfigurable {
   }
 
   /**
+   * In secure environment, if a user specified his keytab and principal,
+   * a hbase client will try to login with them. Otherwise, hbase client will try to obtain
+   * ticket(through kinit) from system.
+   */
+  public boolean shouldLoginFromKeytab() {
+    return User.shouldLoginFromKeytab(this.getConf());
+  }
+
+  /**
    * @return the current user within the current execution context
    * @throws IOException if the user cannot be loaded
    */
@@ -181,7 +191,8 @@ public class UserProvider extends BaseConfigurable {
 
   /**
    * Log in the current process using the given configuration keys for the credential file and login
-   * principal.
+   * principal. It is for SPN(Service Principal Name) login. SPN should be this format,
+   * servicename/fully.qualified.domain.name@REALM.
    * <p>
    * <strong>This is only applicable when running on secure Hadoop</strong> -- see
    * org.apache.hadoop.security.SecurityUtil#login(Configuration,String,String,String). On regular
@@ -195,5 +206,16 @@ public class UserProvider extends BaseConfigurable {
   public void login(String fileConfKey, String principalConfKey, String localhost)
       throws IOException {
     User.login(getConf(), fileConfKey, principalConfKey, localhost);
+  }
+
+  /**
+   * Login with given keytab and principal. This can be used for both SPN(Service Principal Name)
+   * and UPN(User Principal Name) which format should be clientname@REALM.
+   * @param fileConfKey config name for client keytab
+   * @param principalConfKey config name for client principal
+   * @throws IOException underlying exception from UserGroupInformation.loginUserFromKeytab
+   */
+  public void login(String fileConfKey, String principalConfKey) throws IOException {
+    User.login(getConf().get(fileConfKey), getConf().get(principalConfKey));
   }
 }

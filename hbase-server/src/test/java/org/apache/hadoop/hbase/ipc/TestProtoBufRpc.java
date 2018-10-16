@@ -26,20 +26,17 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -47,7 +44,12 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 
 /**
  * Test for testing protocol buffer based RPC mechanism. This test depends on test.proto definition
@@ -57,6 +59,11 @@ import com.google.common.collect.Lists;
 @RunWith(Parameterized.class)
 @Category({ RPCTests.class, MediumTests.class })
 public class TestProtoBufRpc {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProtoBufRpc.class);
+
   public final static String ADDRESS = "localhost";
   public static int PORT = 0;
   private InetSocketAddress isa;
@@ -99,7 +106,7 @@ public class TestProtoBufRpc {
     server.stop();
   }
 
-  @Test (expected=org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException.class
+  @Test (expected=org.apache.hbase.thirdparty.com.google.protobuf.ServiceException.class
       /*Thrown when we call stub.error*/)
   public void testProtoBufRpc() throws Exception {
     RpcClient rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
@@ -112,7 +119,7 @@ public class TestProtoBufRpc {
       // Test echo method
       EchoRequestProto echoRequest = EchoRequestProto.newBuilder().setMessage("hello").build();
       EchoResponseProto echoResponse = stub.echo(null, echoRequest);
-      assertEquals(echoResponse.getMessage(), "hello");
+      assertEquals("hello", echoResponse.getMessage());
 
       stub.error(null, emptyRequest);
       fail("Expected exception is not thrown");

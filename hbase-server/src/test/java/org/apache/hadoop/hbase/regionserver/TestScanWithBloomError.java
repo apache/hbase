@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,14 +29,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -49,13 +46,17 @@ import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test a multi-column scanner when there is a Bloom filter false-positive.
@@ -65,8 +66,12 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestScanWithBloomError {
 
-  private static final Log LOG =
-    LogFactory.getLog(TestScanWithBloomError.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScanWithBloomError.class);
+
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestScanWithBloomError.class);
 
   private static final String TABLE_NAME = "ScanWithBloomError";
   private static final String FAMILY = "myCF";
@@ -75,7 +80,7 @@ public class TestScanWithBloomError {
   private static final String QUALIFIER_PREFIX = "qual";
   private static final byte[] ROW_BYTES = Bytes.toBytes(ROW);
   private static NavigableSet<Integer> allColIds = new TreeSet<>();
-  private Region region;
+  private HRegion region;
   private BloomType bloomType;
   private FileSystem fs;
   private Configuration conf;
@@ -99,6 +104,8 @@ public class TestScanWithBloomError {
   public void setUp() throws IOException{
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
+    conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
+    conf.set(BloomFilterUtil.DELIMITER_KEY, "#");
   }
 
   @Test
@@ -121,7 +128,7 @@ public class TestScanWithBloomError {
     LOG.info("Scanning column set: " + Arrays.toString(colSet));
     Scan scan = new Scan(ROW_BYTES, ROW_BYTES);
     addColumnSetToScan(scan, colSet);
-    RegionScannerImpl scanner = (RegionScannerImpl) region.getScanner(scan);
+    RegionScannerImpl scanner = region.getScanner(scan);
     KeyValueHeap storeHeap = scanner.getStoreHeapForTesting();
     assertEquals(0, storeHeap.getHeap().size());
     StoreScanner storeScanner =

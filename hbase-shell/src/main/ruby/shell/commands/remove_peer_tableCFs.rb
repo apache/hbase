@@ -21,7 +21,7 @@ module Shell
   module Commands
     class RemovePeerTableCFs < Command
       def help
-        return <<-EOF
+        <<-EOF
 Remove a table / table-cf from the table-cfs config for the specified peer
 Examples:
 
@@ -34,6 +34,10 @@ EOF
 
       def command(id, table_cfs)
         replication_admin.remove_peer_tableCFs(id, table_cfs)
+      end
+
+      def command_name
+        'remove_peer_tableCFs'
       end
     end
   end

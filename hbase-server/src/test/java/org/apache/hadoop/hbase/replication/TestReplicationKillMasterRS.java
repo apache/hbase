@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -26,12 +28,15 @@ import org.junit.experimental.categories.Category;
  * Runs the TestReplicationKillRS test and selects the RS to kill in the master cluster
  * Do not add other tests in this class.
  */
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationKillMasterRS extends TestReplicationKillRS {
 
-  @Test(timeout=300000)
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationKillMasterRS.class);
+
+  @Test
   public void killOneMasterRS() throws Exception {
     loadTableAndKillRS(utility1);
   }
-
 }

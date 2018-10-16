@@ -23,44 +23,43 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.Callable;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Threads;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.BytesValue;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 public class ProcedureTestingUtility {
-  private static final Log LOG = LogFactory.getLog(ProcedureTestingUtility.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureTestingUtility.class);
 
   private ProcedureTestingUtility() {
   }
 
-  public static ProcedureStore createStore(final Configuration conf, final FileSystem fs,
-      final Path baseDir) throws IOException {
-    return createWalStore(conf, fs, baseDir);
+  public static ProcedureStore createStore(final Configuration conf, final Path dir)
+      throws IOException {
+    return createWalStore(conf, dir);
   }
 
-  public static WALProcedureStore createWalStore(final Configuration conf, final FileSystem fs,
-      final Path walDir) throws IOException {
-    return new WALProcedureStore(conf, fs, walDir, new WALProcedureStore.LeaseRecovery() {
+  public static WALProcedureStore createWalStore(final Configuration conf, final Path dir)
+      throws IOException {
+    return new WALProcedureStore(conf, dir, null, new WALProcedureStore.LeaseRecovery() {
       @Override
       public void recoverFileLease(FileSystem fs, Path path) throws IOException {
         // no-op
@@ -69,12 +68,18 @@ public class ProcedureTestingUtility {
   }
 
   public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor) throws Exception {
-    restart(procExecutor, false, true, null, null);
+    restart(procExecutor, false, true, null, null, null);
   }
 
-  public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor,
-      final boolean avoidTestKillDuringRestart, final boolean failOnCorrupted,
-      final Callable<Void> stopAction, final Callable<Void> startAction)
+  public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
+      boolean abortOnCorruption) throws IOException {
+    procExecutor.init(numThreads, abortOnCorruption);
+    procExecutor.startWorkers();
+  }
+
+  public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor,
+      boolean avoidTestKillDuringRestart, boolean failOnCorrupted, Callable<Void> stopAction,
+      Callable<Void> actionBeforeStartWorker, Callable<Void> startAction)
       throws Exception {
     final ProcedureStore procStore = procExecutor.getStore();
     final int storeThreads = procExecutor.getCorePoolSize();
@@ -100,7 +105,11 @@ public class ProcedureTestingUtility {
     // re-start
     LOG.info("RESTART - Start");
     procStore.start(storeThreads);
-    procExecutor.start(execThreads, failOnCorrupted);
+    procExecutor.init(execThreads, failOnCorrupted);
+    if (actionBeforeStartWorker != null) {
+      actionBeforeStartWorker.call();
+    }
+    procExecutor.startWorkers();
     if (startAction != null) {
       startAction.call();
     }
@@ -135,6 +144,12 @@ public class ProcedureTestingUtility {
     }
   }
 
+  public static <TEnv> void setKillIfHasParent(ProcedureExecutor<TEnv> procExecutor,
+      boolean value) {
+    createExecutorTesting(procExecutor);
+    procExecutor.testing.killIfHasParent = value;
+  }
+
   public static <TEnv> void setKillIfSuspended(ProcedureExecutor<TEnv> procExecutor,
       boolean value) {
     createExecutorTesting(procExecutor);
@@ -163,6 +178,13 @@ public class ProcedureTestingUtility {
     assertSingleExecutorForKillTests(procExecutor);
   }
 
+  public static <TEnv> void toggleKillAfterStoreUpdate(ProcedureExecutor<TEnv> procExecutor) {
+    createExecutorTesting(procExecutor);
+    procExecutor.testing.killAfterStoreUpdate = !procExecutor.testing.killAfterStoreUpdate;
+    LOG.warn("Set Kill after store update to: " + procExecutor.testing.killAfterStoreUpdate);
+    assertSingleExecutorForKillTests(procExecutor);
+  }
+
   public static <TEnv> void setKillAndToggleBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
       boolean value) {
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, value);
@@ -185,7 +207,7 @@ public class ProcedureTestingUtility {
     NoopProcedureStore procStore = new NoopProcedureStore();
     ProcedureExecutor<TEnv> procExecutor = new ProcedureExecutor<>(conf, env, procStore);
     procStore.start(1);
-    procExecutor.start(1, false);
+    initAndStartWorkers(procExecutor, 1, false);
     try {
       return submitAndWait(procExecutor, proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
     } finally {
@@ -259,45 +281,45 @@ public class ProcedureTestingUtility {
 
   public static <TEnv> void assertProcNotFailed(ProcedureExecutor<TEnv> procExecutor,
       long procId) {
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     assertTrue("expected procedure result", result != null);
     assertProcNotFailed(result);
   }
 
-  public static void assertProcNotFailed(final ProcedureInfo result) {
+  public static void assertProcNotFailed(final Procedure<?> result) {
     assertFalse("found exception: " + result.getException(), result.isFailed());
   }
 
   public static <TEnv> Throwable assertProcFailed(final ProcedureExecutor<TEnv> procExecutor,
       final long procId) {
-    ProcedureInfo result = procExecutor.getResult(procId);
+    Procedure<?> result = procExecutor.getResult(procId);
     assertTrue("expected procedure result", result != null);
     return assertProcFailed(result);
   }
 
-  public static Throwable assertProcFailed(final ProcedureInfo result) {
+  public static Throwable assertProcFailed(final Procedure<?> result) {
     assertEquals(true, result.isFailed());
     LOG.info("procId=" + result.getProcId() + " exception: " + result.getException().getMessage());
     return getExceptionCause(result);
   }
 
-  public static void assertIsAbortException(final ProcedureInfo result) {
+  public static void assertIsAbortException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
     assertTrue("expected abort exception, got "+ cause, cause instanceof ProcedureAbortedException);
   }
 
-  public static void assertIsTimeoutException(final ProcedureInfo result) {
+  public static void assertIsTimeoutException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
     assertTrue("expected TimeoutIOException, got " + cause, cause instanceof TimeoutIOException);
   }
 
-  public static void assertIsIllegalArgumentException(final ProcedureInfo result) {
+  public static void assertIsIllegalArgumentException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
     assertTrue("expected IllegalArgumentIOException, got " + cause,
       cause instanceof IllegalArgumentIOException);
   }
 
-  public static Throwable getExceptionCause(final ProcedureInfo procInfo) {
+  public static Throwable getExceptionCause(final Procedure<?> procInfo) {
     assert procInfo.isFailed();
     Throwable cause = procInfo.getException().getCause();
     return cause == null ? procInfo.getException() : cause;
@@ -368,11 +390,13 @@ public class ProcedureTestingUtility {
     protected boolean abort(TEnv env) { return false; }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
   }
 
@@ -417,19 +441,23 @@ public class ProcedureTestingUtility {
     }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
-      StreamUtils.writeRawVInt32(stream, data != null ? data.length : 0);
-      if (data != null) stream.write(data);
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      ByteString dataString = ByteString.copyFrom((data == null) ? new byte[0] : data);
+      BytesValue.Builder builder = BytesValue.newBuilder().setValue(dataString);
+      serializer.serialize(builder.build());
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
-      int len = StreamUtils.readRawVarint32(stream);
-      if (len > 0) {
-        data = new byte[len];
-        stream.read(data);
-      } else {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
+      BytesValue bytesValue = serializer.deserialize(BytesValue.class);
+      ByteString dataString = bytesValue.getValue();
+
+      if (dataString.isEmpty()) {
         data = null;
+      } else {
+        data = dataString.toByteArray();
       }
     }
 
@@ -447,7 +475,7 @@ public class ProcedureTestingUtility {
 
   public static class LoadCounter implements ProcedureStore.ProcedureLoader {
     private final ArrayList<Procedure> corrupted = new ArrayList<>();
-    private final ArrayList<ProcedureInfo> completed = new ArrayList<>();
+    private final ArrayList<Procedure> completed = new ArrayList<>();
     private final ArrayList<Procedure> runnable = new ArrayList<>();
 
     private Set<Long> procIds;
@@ -485,7 +513,7 @@ public class ProcedureTestingUtility {
       return runnable.size();
     }
 
-    public ArrayList<ProcedureInfo> getCompleted() {
+    public ArrayList<Procedure> getCompleted() {
       return completed;
     }
 
@@ -524,12 +552,12 @@ public class ProcedureTestingUtility {
       while (procIter.hasNext()) {
         long procId;
         if (procIter.isNextFinished()) {
-          ProcedureInfo proc = procIter.nextAsProcedureInfo();
+          Procedure<?> proc = procIter.next();
           procId = proc.getProcId();
           LOG.debug("loading completed procId=" + procId + ": " + proc);
           completed.add(proc);
         } else {
-          Procedure proc = procIter.nextAsProcedure();
+          Procedure proc = procIter.next();
           procId = proc.getProcId();
           LOG.debug("loading runnable procId=" + procId + ": " + proc);
           runnable.add(proc);
@@ -543,7 +571,7 @@ public class ProcedureTestingUtility {
     @Override
     public void handleCorrupted(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        Procedure proc = procIter.nextAsProcedure();
+        Procedure proc = procIter.next();
         LOG.debug("corrupted procId=" + proc.getProcId() + ": " + proc);
         corrupted.add(proc);
       }

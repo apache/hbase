@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.spark
 
 import java.io.Serializable
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This object will hold optional data for how a given column family's

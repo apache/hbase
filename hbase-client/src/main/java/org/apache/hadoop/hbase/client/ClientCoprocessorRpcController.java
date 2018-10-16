@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Client side rpc controller for coprocessor implementation. It is only used to pass error.

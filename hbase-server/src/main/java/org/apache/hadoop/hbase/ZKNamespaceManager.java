@@ -18,24 +18,25 @@
 
 package org.apache.hadoop.hbase;
 
-import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * Class servers two purposes:
@@ -47,14 +48,14 @@ import java.util.concurrent.ConcurrentSkipListMap;
  *
  */
 @InterfaceAudience.Private
-public class ZKNamespaceManager extends ZooKeeperListener {
-  private static final Log LOG = LogFactory.getLog(ZKNamespaceManager.class);
+public class ZKNamespaceManager extends ZKListener {
+  private static final Logger LOG = LoggerFactory.getLogger(ZKNamespaceManager.class);
   private final String nsZNode;
-  private volatile NavigableMap<String,NamespaceDescriptor> cache;
+  private final NavigableMap<String,NamespaceDescriptor> cache;
 
-  public ZKNamespaceManager(ZooKeeperWatcher zkw) throws IOException {
+  public ZKNamespaceManager(ZKWatcher zkw) throws IOException {
     super(zkw);
-    nsZNode = zkw.znodePaths.namespaceZNode;
+    nsZNode = zkw.getZNodePaths().namespaceZNode;
     cache = new ConcurrentSkipListMap<>();
   }
 
@@ -73,6 +74,10 @@ public class ZKNamespaceManager extends ZooKeeperListener {
     } catch (KeeperException e) {
       throw new IOException("Failed to initialize ZKNamespaceManager", e);
     }
+  }
+
+  public void stop() throws IOException {
+    this.watcher.unregisterListener(this);
   }
 
   public NamespaceDescriptor get(String name) {
@@ -165,7 +170,7 @@ public class ZKNamespaceManager extends ZooKeeperListener {
   }
 
   private void deleteNamespace(String name) throws IOException {
-    String zNode = ZKUtil.joinZNode(nsZNode, name);
+    String zNode = ZNodePaths.joinZNode(nsZNode, name);
     try {
       ZKUtil.deleteNode(watcher, zNode);
     } catch (KeeperException e) {
@@ -180,7 +185,7 @@ public class ZKNamespaceManager extends ZooKeeperListener {
   }
 
   private void writeNamespace(NamespaceDescriptor ns) throws IOException {
-    String zNode = ZKUtil.joinZNode(nsZNode, ns.getName());
+    String zNode = ZNodePaths.joinZNode(nsZNode, ns.getName());
     try {
       ZKUtil.createWithParents(watcher, zNode);
       ZKUtil.updateExistingNodeData(watcher, zNode,
@@ -197,8 +202,8 @@ public class ZKNamespaceManager extends ZooKeeperListener {
       String path = n.getNode();
       String namespace = ZKUtil.getNodeName(path);
       byte[] nodeData = n.getData();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Updating namespace cache from node "+namespace+" with data: "+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Updating namespace cache from node " + namespace + " with data: " +
             Bytes.toStringBinary(nodeData));
       }
       NamespaceDescriptor ns =

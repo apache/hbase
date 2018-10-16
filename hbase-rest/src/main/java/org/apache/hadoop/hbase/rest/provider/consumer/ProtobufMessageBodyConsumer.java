@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 
 import javax.ws.rs.Consumes;
@@ -32,9 +33,9 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.Provider;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 
@@ -47,8 +48,8 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 @InterfaceAudience.Private
 public class ProtobufMessageBodyConsumer
     implements MessageBodyReader<ProtobufMessageHandler> {
-  private static final Log LOG =
-    LogFactory.getLog(ProtobufMessageBodyConsumer.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(ProtobufMessageBodyConsumer.class);
 
   @Override
   public boolean isReadable(Class<?> type, Type genericType,
@@ -63,7 +64,7 @@ public class ProtobufMessageBodyConsumer
       throws IOException, WebApplicationException {
     ProtobufMessageHandler obj = null;
     try {
-      obj = type.newInstance();
+      obj = type.getDeclaredConstructor().newInstance();
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       byte[] buffer = new byte[4096];
       int read;
@@ -78,9 +79,8 @@ public class ProtobufMessageBodyConsumer
           inputStream);
       }
       obj = obj.getObjectFromMessage(baos.toByteArray());
-    } catch (InstantiationException e) {
-      throw new WebApplicationException(e);
-    } catch (IllegalAccessException e) {
+    } catch (InstantiationException | NoSuchMethodException | InvocationTargetException
+        | IllegalAccessException e) {
       throw new WebApplicationException(e);
     }
     return obj;

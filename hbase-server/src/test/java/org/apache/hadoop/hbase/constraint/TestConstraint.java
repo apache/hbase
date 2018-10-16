@@ -23,33 +23,39 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Do the complex testing of constraints against a minicluster
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestConstraint {
-  private static final Log LOG = LogFactory
-      .getLog(TestConstraint.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestConstraint.class);
+
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestConstraint.class);
 
   private static HBaseTestingUtility util;
   private static final TableName tableName = TableName.valueOf("test");
@@ -85,7 +91,7 @@ public class TestConstraint {
     try {
       // test that we don't fail on a valid put
       Put put = new Put(row1);
-      byte[] value = Integer.toString(10).getBytes();
+      byte[] value = Bytes.toBytes(Integer.toString(10));
       byte[] qualifier = new byte[0];
       put.addColumn(dummy, qualifier, value);
       table.put(put);
@@ -100,7 +106,7 @@ public class TestConstraint {
    * @throws Exception
    */
   @SuppressWarnings("unchecked")
-  @Test(timeout = 60000)
+  @Test
   public void testConstraintFails() throws Exception {
 
     // create the table
@@ -119,18 +125,13 @@ public class TestConstraint {
     // test that we do fail on violation
     Put put = new Put(row1);
     byte[] qualifier = new byte[0];
-    put.addColumn(dummy, qualifier, "fail".getBytes());
+    put.addColumn(dummy, qualifier, Bytes.toBytes("fail"));
     LOG.warn("Doing put in table");
     try {
       table.put(put);
       fail("This put should not have suceeded - AllFailConstraint was not run!");
-    } catch (RetriesExhaustedWithDetailsException e) {
-      List<Throwable> causes = e.getCauses();
-      assertEquals(
-          "More than one failure cause - should only be the failure constraint exception",
-          1, causes.size());
-      Throwable t = causes.get(0);
-      assertEquals(ConstraintException.class, t.getClass());
+    } catch (ConstraintException e) {
+      // expected
     }
     table.close();
   }
@@ -163,7 +164,7 @@ public class TestConstraint {
       // test that we don't fail because its disabled
       Put put = new Put(row1);
       byte[] qualifier = new byte[0];
-      put.addColumn(dummy, qualifier, "pass".getBytes());
+      put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
       table.put(put);
     } finally {
       table.close();
@@ -196,7 +197,7 @@ public class TestConstraint {
       // test that we do fail on violation
       Put put = new Put(row1);
       byte[] qualifier = new byte[0];
-      put.addColumn(dummy, qualifier, "pass".getBytes());
+      put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
       LOG.warn("Doing put in table");
       table.put(put);
     } finally {
@@ -229,7 +230,7 @@ public class TestConstraint {
     // test that we do fail on violation
     Put put = new Put(row1);
     byte[] qualifier = new byte[0];
-    put.addColumn(dummy, qualifier, "pass".getBytes());
+    put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
 
     try{
     table.put(put);

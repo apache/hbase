@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} that encodes variable-length values encoded using

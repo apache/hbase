@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -25,11 +24,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
@@ -39,15 +36,23 @@ import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Unit tests to test retrieving table/region compaction state*/
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestCompactionState {
-  private static final Log LOG = LogFactory.getLog(TestCompactionState.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactionState.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionState.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Random random = new Random();
 
@@ -64,22 +69,22 @@ public class TestCompactionState {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testMajorCompaction() throws IOException, InterruptedException {
     compaction(name.getMethodName(), 8, CompactionState.MAJOR, false);
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testMinorCompaction() throws IOException, InterruptedException {
     compaction(name.getMethodName(), 15, CompactionState.MINOR, false);
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testMajorCompactionOnFamily() throws IOException, InterruptedException {
     compaction(name.getMethodName(), 8, CompactionState.MAJOR, true);
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testMinorCompactionOnFamily() throws IOException, InterruptedException {
     compaction(name.getMethodName(), 15, CompactionState.MINOR, true);
   }
@@ -138,7 +143,7 @@ public class TestCompactionState {
       ht = TEST_UTIL.createTable(table, families);
       loadData(ht, families, 3000, flushes);
       HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-      List<Region> regions = rs.getOnlineRegions(table);
+      List<HRegion> regions = rs.getRegions(table);
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countBefore > 0); // there should be some data files
@@ -206,13 +211,13 @@ public class TestCompactionState {
   }
 
   private static int countStoreFilesInFamily(
-      List<Region> regions, final byte[] family) {
+      List<HRegion> regions, final byte[] family) {
     return countStoreFilesInFamilies(regions, new byte[][]{family});
   }
 
-  private static int countStoreFilesInFamilies(List<Region> regions, final byte[][] families) {
+  private static int countStoreFilesInFamilies(List<HRegion> regions, final byte[][] families) {
     int count = 0;
-    for (Region region: regions) {
+    for (HRegion region: regions) {
       count += region.getStoreFileList(families).size();
     }
     return count;
@@ -235,5 +240,5 @@ public class TestCompactionState {
       TEST_UTIL.flush();
       puts.clear();
     }
-  } 
+  }
 }

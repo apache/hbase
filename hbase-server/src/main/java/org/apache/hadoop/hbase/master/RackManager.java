@@ -22,9 +22,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -37,7 +37,7 @@ import org.apache.hadoop.net.ScriptBasedMapping;
  */
 @InterfaceAudience.Private
 public class RackManager {
-  private static final Log LOG = LogFactory.getLog(RackManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RackManager.class);
   public static final String UNKNOWN_RACK = "Unknown Rack";
 
   private DNSToSwitchMapping switchMapping;

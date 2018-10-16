@@ -24,8 +24,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
@@ -37,16 +35,19 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A MultiThreadUpdater that helps to work with ACL
  */
 public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
-  private static final Log LOG = LogFactory.getLog(MultiThreadedUpdaterWithACL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedUpdaterWithACL.class);
   private final static String COMMA= ",";
   private User userOwner;
   /**
@@ -124,8 +125,8 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
               res = localTable.get(get);
             }
           } catch (IOException ie) {
-            LOG.warn("Failed to get the row for key = [" + get.getRow() + "], column family = ["
-                + Bytes.toString(cf) + "]", ie);
+            LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow()) +
+                "], column family = [" + Bytes.toString(cf) + "]", ie);
           }
           return res;
         }
@@ -138,7 +139,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
         try {
           if (!users.containsKey(userNames[mod])) {
             if (User.isHBaseSecurityEnabled(conf)) {
-              realUserUgi = LoadTestTool.loginAndReturnUGI(conf, userNames[mod]);
+              realUserUgi = HBaseKerberosUtils.loginAndReturnUGI(conf, userNames[mod]);
             } else {
               realUserUgi = UserGroupInformation.createRemoteUser(userNames[mod]);
             }
@@ -150,8 +151,8 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           Result result = (Result) user.runAs(action);
           return result;
         } catch (Exception ie) {
-          LOG.warn("Failed to get the row for key = [" + get.getRow() + "], column family = ["
-              + Bytes.toString(cf) + "]", ie);
+          LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow()) +
+              "], column family = [" + Bytes.toString(cf) + "]", ie);
         }
       }
       // This means that no users were present
@@ -232,9 +233,9 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           } else if (m instanceof Append) {
             table.append((Append) m);
           } else if (m instanceof Put) {
-            table.checkAndPut(row, cf, q, v, (Put) m);
+            table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenPut((Put) m);
           } else if (m instanceof Delete) {
-            table.checkAndDelete(row, cf, q, v, (Delete) m);
+            table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete) m);
           } else {
             throw new IllegalArgumentException("unsupported mutation "
                 + m.getClass().getSimpleName());

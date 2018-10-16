@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.Serializable;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A generic class for pairs.

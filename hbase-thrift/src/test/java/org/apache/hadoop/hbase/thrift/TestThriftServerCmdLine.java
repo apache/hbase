@@ -1,20 +1,19 @@
-/*
- * Copyright The Apache Software Foundation
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.thrift;
 
@@ -25,9 +24,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -45,13 +42,16 @@ import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Start the HBase Thrift server on a random port through the command-line
@@ -61,8 +61,12 @@ import com.google.common.base.Joiner;
 @RunWith(Parameterized.class)
 public class TestThriftServerCmdLine {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestThriftServerCmdLine.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestThriftServerCmdLine.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestThriftServerCmdLine.class);
 
   private final ImplType implType;
   private boolean specifyFramed;
@@ -90,8 +94,9 @@ public class TestThriftServerCmdLine {
             continue;
           }
           for (boolean specifyCompact : new boolean[] {false, true}) {
-            parameters.add(new Object[]{implType, specifyFramed,
-                specifyBindIP, specifyCompact});
+            parameters.add(new Object[] {
+              implType, specifyFramed, specifyBindIP, specifyCompact
+            });
           }
         }
       }
@@ -149,7 +154,7 @@ public class TestThriftServerCmdLine {
     cmdLineThread.start();
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testRunThriftServer() throws Exception {
     List<String> args = new ArrayList<>();
     if (implType != null) {
@@ -160,7 +165,7 @@ public class TestThriftServerCmdLine {
     port = HBaseTestingUtility.randomFreePort();
     args.add("-" + ThriftServer.PORT_OPTION);
     args.add(String.valueOf(port));
-    args.add("-infoport");
+    args.add("-" + ThriftServer.INFOPORT_OPTION);
     int infoPort = HBaseTestingUtility.randomFreePort();
     args.add(String.valueOf(infoPort));
 

@@ -20,15 +20,15 @@
 
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 
 /**
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ClassSize {
-  private static final Log LOG = LogFactory.getLog(ClassSize.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClassSize.class);
 
   /** Array overhead */
   public static final int ARRAY;
@@ -89,6 +89,15 @@ public class ClassSize {
   /** Overhead for ConcurrentSkipListMap Entry */
   public static final int CONCURRENT_SKIPLISTMAP_ENTRY;
 
+  /** Overhead for CellFlatMap */
+  public static final int CELL_FLAT_MAP;
+
+  /** Overhead for CellChunkMap */
+  public static final int CELL_CHUNK_MAP;
+
+  /** Overhead for Cell Chunk Map Entry */
+  public static final int CELL_CHUNK_MAP_ENTRY;
+
   /** Overhead for CellArrayMap */
   public static final int CELL_ARRAY_MAP;
 
@@ -119,8 +128,11 @@ public class ClassSize {
   /** Overhead for timerange */
   public static final int TIMERANGE;
 
-  /** Overhead for TimeRangeTracker */
-  public static final int TIMERANGE_TRACKER;
+  /** Overhead for SyncTimeRangeTracker */
+  public static final int SYNC_TIMERANGE_TRACKER;
+
+  /** Overhead for NonSyncTimeRangeTracker */
+  public static final int NON_SYNC_TIMERANGE_TRACKER;
 
   /** Overhead for CellSkipListSet */
   public static final int CELL_SET;
@@ -159,8 +171,8 @@ public class ClassSize {
       return  ((num + 7) >> 3) << 3;
     }
 
-    long sizeOf(byte[] b, int len) {
-      return align(arrayHeaderSize() + len);
+    long sizeOfByteArray(int len) {
+      return align(ARRAY + len);
     }
   }
 
@@ -184,7 +196,7 @@ public class ClassSize {
         return (int) UnsafeAccess.theUnsafe.objectFieldOffset(
           HeaderSize.class.getDeclaredField("a"));
       } catch (NoSuchFieldException | SecurityException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
       }
       return super.headerSize();
     }
@@ -204,8 +216,8 @@ public class ClassSize {
 
     @Override
     @SuppressWarnings("static-access")
-    long sizeOf(byte[] b, int len) {
-      return align(arrayHeaderSize() + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
+    long sizeOfByteArray(int len) {
+      return align(ARRAY + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
     }
   }
 
@@ -275,13 +287,17 @@ public class ClassSize {
     // The size changes from jdk7 to jdk8, estimate the size rather than use a conditional
     CONCURRENT_SKIPLISTMAP = (int) estimateBase(ConcurrentSkipListMap.class, false);
 
-    // CELL_ARRAY_MAP is the size of an instance of CellArrayMap class, which extends
-    // CellFlatMap class. CellArrayMap object containing a ref to an Array, so
-    // OBJECT + REFERENCE + ARRAY
     // CellFlatMap object contains two integers, one boolean and one reference to object, so
     // 2*INT + BOOLEAN + REFERENCE
-    CELL_ARRAY_MAP = align(OBJECT + 2*Bytes.SIZEOF_INT + Bytes.SIZEOF_BOOLEAN
-        + ARRAY + 2*REFERENCE);
+    CELL_FLAT_MAP = OBJECT + 2*Bytes.SIZEOF_INT + Bytes.SIZEOF_BOOLEAN + REFERENCE;
+
+    // CELL_ARRAY_MAP is the size of an instance of CellArrayMap class, which extends
+    // CellFlatMap class. CellArrayMap object containing a ref to an Array of Cells
+    CELL_ARRAY_MAP = align(CELL_FLAT_MAP + REFERENCE + ARRAY);
+
+    // CELL_CHUNK_MAP is the size of an instance of CellChunkMap class, which extends
+    // CellFlatMap class. CellChunkMap object containing a ref to an Array of Chunks
+    CELL_CHUNK_MAP = align(CELL_FLAT_MAP + REFERENCE + ARRAY);
 
     CONCURRENT_SKIPLISTMAP_ENTRY = align(
         align(OBJECT + (3 * REFERENCE)) + /* one node per entry */
@@ -289,6 +305,12 @@ public class ClassSize {
 
     // REFERENCE in the CellArrayMap all the rest is counted in KeyValue.heapSize()
     CELL_ARRAY_MAP_ENTRY = align(REFERENCE);
+
+    // The Cell Representation in the CellChunkMap, the Cell object size shouldn't be counted
+    // in KeyValue.heapSize()
+    // each cell-representation requires three integers for chunkID (reference to the ByteBuffer),
+    // offset and length, and one long for seqID
+    CELL_CHUNK_MAP_ENTRY = 3*Bytes.SIZEOF_INT + Bytes.SIZEOF_LONG;
 
     REENTRANT_LOCK = align(OBJECT + (3 * REFERENCE));
 
@@ -306,8 +328,11 @@ public class ClassSize {
 
     TIMERANGE = align(ClassSize.OBJECT + Bytes.SIZEOF_LONG * 2 + Bytes.SIZEOF_BOOLEAN);
 
-    TIMERANGE_TRACKER = align(ClassSize.OBJECT + 2 * REFERENCE);
-    CELL_SET = align(OBJECT + REFERENCE);
+    SYNC_TIMERANGE_TRACKER = align(ClassSize.OBJECT + 2 * REFERENCE);
+
+    NON_SYNC_TIMERANGE_TRACKER = align(ClassSize.OBJECT + 2 * Bytes.SIZEOF_LONG);
+
+    CELL_SET = align(OBJECT + REFERENCE + Bytes.SIZEOF_INT);
 
     STORE_SERVICES = align(OBJECT + REFERENCE + ATOMIC_LONG);
   }
@@ -444,8 +469,34 @@ public class ClassSize {
     return model != null && model.equals("32");
   }
 
-  public static long sizeOf(byte[] b, int len) {
-    return memoryLayout.sizeOf(b, len);
+  /**
+   * Calculate the memory consumption (in byte) of a byte array,
+   * including the array header and the whole backing byte array.
+   *
+   * If the whole byte array is occupied (not shared with other objects), please use this function.
+   * If not, please use {@link #sizeOfByteArray(int)} instead.
+   *
+   * @param b the byte array
+   * @return the memory consumption (in byte) of the whole byte array
+   */
+  public static long sizeOf(byte[] b) {
+    return memoryLayout.sizeOfByteArray(b.length);
+  }
+
+  /**
+   * Calculate the memory consumption (in byte) of a part of a byte array,
+   * including the array header and the part of the backing byte array.
+   *
+   * This function is used when the byte array backs multiple objects.
+   * For example, in {@link org.apache.hadoop.hbase.KeyValue},
+   * multiple KeyValue objects share a same backing byte array ({@link org.apache.hadoop.hbase.KeyValue#bytes}).
+   * Also see {@link org.apache.hadoop.hbase.KeyValue#heapSize()}.
+   *
+   * @param len the length (in byte) used partially in the backing byte array
+   * @return the memory consumption (in byte) of the part of the byte array
+   */
+  public static long sizeOfByteArray(int len) {
+    return memoryLayout.sizeOfByteArray(len);
   }
 
 }

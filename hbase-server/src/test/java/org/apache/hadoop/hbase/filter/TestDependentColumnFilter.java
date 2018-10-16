@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.assertEquals;
@@ -27,11 +25,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -49,12 +46,20 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({FilterTests.class, SmallTests.class})
 public class TestDependentColumnFilter {
-  private static final Log LOG = LogFactory.getLog(TestDependentColumnFilter.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDependentColumnFilter.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestDependentColumnFilter.class);
   private static final byte[][] ROWS = {
     Bytes.toBytes("test1"),Bytes.toBytes("test2")
   };
@@ -153,7 +158,7 @@ public class TestDependentColumnFilter {
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
       Arrays.sort(results.toArray(new Cell[results.size()]),
-          CellComparator.COMPARATOR);
+          CellComparatorImpl.COMPARATOR);
       LOG.info("counter=" + i + ", " + results);
       if (results.isEmpty()) break;
       cells += results.size();
@@ -192,7 +197,7 @@ public class TestDependentColumnFilter {
 
     // include a comparator operation
     filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, false,
-        CompareOp.EQUAL, new BinaryComparator(MATCH_VAL));
+    CompareOperator.EQUAL, new BinaryComparator(MATCH_VAL));
     scan = new Scan();
     scan.setFilter(filter);
     scan.setMaxVersions(Integer.MAX_VALUE);
@@ -209,7 +214,7 @@ public class TestDependentColumnFilter {
 
     // include a comparator operation and drop comparator
     filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true,
-        CompareOp.EQUAL, new BinaryComparator(MATCH_VAL));
+    CompareOperator.EQUAL, new BinaryComparator(MATCH_VAL));
     scan = new Scan();
     scan.setFilter(filter);
     scan.setMaxVersions(Integer.MAX_VALUE);
@@ -233,11 +238,11 @@ public class TestDependentColumnFilter {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
     List<Cell> accepted = new ArrayList<>();
     for(Cell val : testVals) {
-      if(filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
+      if(filter.filterCell(val) == ReturnCode.INCLUDE) {
         accepted.add(val);
       }
     }
-    assertEquals("check all values accepted from filterKeyValue", 5, accepted.size());
+    assertEquals("check all values accepted from filterCell", 5, accepted.size());
 
     filter.filterRowCells(accepted);
     assertEquals("check filterRow(List<KeyValue>) dropped cell without corresponding column entry", 4, accepted.size());
@@ -246,7 +251,7 @@ public class TestDependentColumnFilter {
     filter = new DependentColumnFilter(FAMILIES[1], QUALIFIER, true);
     accepted.clear();
     for(KeyValue val : testVals) {
-        if(filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
+        if(filter.filterCell(val) == ReturnCode.INCLUDE) {
           accepted.add(val);
         }
       }
@@ -268,7 +273,7 @@ public class TestDependentColumnFilter {
       filter.toString().contains("null"));
 
     // Test constructor with explicit null comparator
-    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOp.EQUAL, null);
+    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL, null);
     assertNotNull(filter.toString());
     assertTrue("check string contains 'null' as compatator is null",
       filter.toString().contains("null"));
@@ -277,7 +282,7 @@ public class TestDependentColumnFilter {
   @Test
   public void testToStringWithNonNullComparator() {
     Filter filter =
-        new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOp.EQUAL,
+        new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL,
             new BinaryComparator(MATCH_VAL));
     assertNotNull(filter.toString());
     assertTrue("check string contains comparator value", filter.toString().contains("match"));

@@ -25,15 +25,21 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestSequenceIdAccounting {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSequenceIdAccounting.class);
+
   private static final byte [] ENCODED_REGION_NAME = Bytes.toBytes("r");
   private static final byte [] FAMILY_NAME = Bytes.toBytes("cf");
   private static final Set<byte[]> FAMILIES;

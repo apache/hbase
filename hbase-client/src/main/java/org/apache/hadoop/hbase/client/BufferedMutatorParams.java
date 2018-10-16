@@ -20,9 +20,8 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Parameters for instantiating a {@link BufferedMutator}.
@@ -34,6 +33,8 @@ public class BufferedMutatorParams implements Cloneable {
 
   private final TableName tableName;
   private long writeBufferSize = UNSET;
+  private long writeBufferPeriodicFlushTimeoutMs = UNSET;
+  private long writeBufferPeriodicFlushTimerTickMs = UNSET;
   private int maxKeyValueSize = UNSET;
   private ExecutorService pool = null;
   private String implementationClassName = null;
@@ -85,6 +86,30 @@ public class BufferedMutatorParams implements Cloneable {
    */
   public BufferedMutatorParams writeBufferSize(long writeBufferSize) {
     this.writeBufferSize = writeBufferSize;
+    return this;
+  }
+
+  public long getWriteBufferPeriodicFlushTimeoutMs() {
+    return writeBufferPeriodicFlushTimeoutMs;
+  }
+
+  /**
+   * Set the max timeout before the buffer is automatically flushed.
+   */
+  public BufferedMutatorParams setWriteBufferPeriodicFlushTimeoutMs(long timeoutMs) {
+    this.writeBufferPeriodicFlushTimeoutMs = timeoutMs;
+    return this;
+  }
+
+  public long getWriteBufferPeriodicFlushTimerTickMs() {
+    return writeBufferPeriodicFlushTimerTickMs;
+  }
+
+  /**
+   * Set the TimerTick how often the buffer timeout if checked.
+   */
+  public BufferedMutatorParams setWriteBufferPeriodicFlushTimerTickMs(long timerTickMs) {
+    this.writeBufferPeriodicFlushTimerTickMs = timerTickMs;
     return this;
   }
 
@@ -151,13 +176,16 @@ public class BufferedMutatorParams implements Cloneable {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="CN_IDIOM_NO_SUPER_CALL",
     justification="The clone below is complete")
+  @Override
   public BufferedMutatorParams clone() {
     BufferedMutatorParams clone = new BufferedMutatorParams(this.tableName);
-    clone.writeBufferSize = this.writeBufferSize;
-    clone.maxKeyValueSize = maxKeyValueSize;
-    clone.pool = this.pool;
-    clone.listener = this.listener;
-    clone.implementationClassName = this.implementationClassName;
+    clone.writeBufferSize                     = this.writeBufferSize;
+    clone.writeBufferPeriodicFlushTimeoutMs   = this.writeBufferPeriodicFlushTimeoutMs;
+    clone.writeBufferPeriodicFlushTimerTickMs = this.writeBufferPeriodicFlushTimerTickMs;
+    clone.maxKeyValueSize                     = this.maxKeyValueSize;
+    clone.pool                                = this.pool;
+    clone.listener                            = this.listener;
+    clone.implementationClassName             = this.implementationClassName;
     return clone;
   }
 }

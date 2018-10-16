@@ -21,29 +21,30 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityReplicationEndpoint.class);
-  private ReplicationEndpoint delegator;
-  private VisibilityLabelService visibilityLabelsService;
+  private static final Logger LOG = LoggerFactory.getLogger(VisibilityReplicationEndpoint.class);
+
+  private final ReplicationEndpoint delegator;
+  private final VisibilityLabelService visibilityLabelsService;
 
   public VisibilityReplicationEndpoint(ReplicationEndpoint endpoint,
       VisibilityLabelService visibilityLabelsService) {
@@ -58,7 +59,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
 
   @Override
   public void peerConfigUpdated(ReplicationPeerConfig rpc){
-
+    delegator.peerConfigUpdated(rpc);
   }
 
   @Override
@@ -100,7 +101,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
                 continue;
               }
               // Recreate the cell with the new tags and the existing tags
-              Cell newCell = CellUtil.createCell(cell, nonVisTags);
+              Cell newCell = PrivateCellUtil.createCell(cell, nonVisTags);
               newEdit.add(newCell);
             } else {
               newEdit.add(cell);
@@ -109,7 +110,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
             newEdit.add(cell);
           }
         }
-        newEntries.add(new Entry(entry.getKey(), newEdit));
+        newEntries.add(new Entry((entry.getKey()), newEdit));
       }
       replicateContext.setEntries(newEntries);
       return delegator.replicate(replicateContext);
@@ -135,32 +136,44 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
 
   @Override
   public boolean isRunning() {
-    return delegator.isRunning();
+    return this.delegator.isRunning();
   }
 
   @Override
-  public ListenableFuture<State> start() {
-    return delegator.start();
+  public boolean isStarting() {return this.delegator.isStarting();}
+
+  @Override
+  public void start() {
+    this.delegator.start();
   }
 
   @Override
-  public State startAndWait() {
-    return delegator.startAndWait();
+  public void awaitRunning() {
+    this.delegator.awaitRunning();
   }
 
   @Override
-  public State state() {
-    return delegator.state();
+  public void awaitRunning(long timeout, TimeUnit unit) throws TimeoutException {
+    this.delegator.awaitRunning(timeout, unit);
   }
 
   @Override
-  public ListenableFuture<State> stop() {
-    return delegator.stop();
+  public void stop() {
+    this.delegator.stop();
   }
 
   @Override
-  public State stopAndWait() {
-    return delegator.stopAndWait();
+  public void awaitTerminated() {
+    this.delegator.awaitTerminated();
   }
 
+  @Override
+  public void awaitTerminated(long timeout, TimeUnit unit) throws TimeoutException {
+    this.delegator.awaitTerminated(timeout, unit);
+  }
+
+  @Override
+  public Throwable failureCause() {
+    return this.delegator.failureCause();
+  }
 }

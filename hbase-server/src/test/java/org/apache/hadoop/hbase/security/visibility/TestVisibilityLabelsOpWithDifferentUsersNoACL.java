@@ -21,12 +21,13 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -38,15 +39,19 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import com.google.protobuf.ByteString;
-
 @Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVisibilityLabelsOpWithDifferentUsersNoACL.class);
+
   private static final String PRIVATE = "private";
   private static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -85,6 +90,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
   public void testLabelsTableOpsWithDifferentUsers() throws Throwable {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
@@ -96,9 +102,10 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     VisibilityLabelsResponse response = SUPERUSER.runAs(action);
     assertTrue(response.getResult(0).getException().getValue().isEmpty());
     assertTrue(response.getResult(1).getException().getValue().isEmpty());
-    
+
     // Ideally this should not be allowed.  this operation should fail or do nothing.
     action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user3");
@@ -115,6 +122,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
 
     PrivilegedExceptionAction<GetAuthsResponse> action1 =
         new PrivilegedExceptionAction<GetAuthsResponse>() {
+      @Override
       public GetAuthsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.getAuths(conn, "user1");
@@ -136,8 +144,9 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     assertTrue(authsList.contains(CONFIDENTIAL));
     assertTrue(authsList.contains(PRIVATE));
 
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action2 = 
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action2 =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.clearAuths(conn, new String[] {
@@ -160,8 +169,9 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
   }
 
   private static void addLabels() throws Exception {
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, CONFIDENTIAL, PRIVATE };
         try (Connection conn = ConnectionFactory.createConnection(conf)) {

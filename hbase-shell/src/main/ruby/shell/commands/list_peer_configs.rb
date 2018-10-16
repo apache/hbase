@@ -19,7 +19,7 @@ module Shell
   module Commands
     class ListPeerConfigs < Command
       def help
-        return <<-EOF
+        <<-EOF
           No-argument method that outputs the replication peer configuration for each peer defined on this cluster.
         EOF
       end
@@ -30,9 +30,9 @@ module Shell
           peer_configs.each do |peer_config_entry|
             peer_id = peer_config_entry[0]
             peer_config = peer_config_entry[1]
-            formatter.row(["PeerId", peer_id])
+            formatter.row(['PeerId', peer_id])
             GetPeerConfig.new(@shell).format_peer_config(peer_config)
-            formatter.row([" "])
+            formatter.row([' '])
           end
         end
         peer_configs

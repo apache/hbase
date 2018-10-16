@@ -22,13 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
@@ -255,15 +256,28 @@ public class AccessControlClient {
    * along with the list of superusers would be returned. Else, no rows get returned.
    * @param connection The Connection instance to use
    * @param tableRegex The regular expression string to match against
-   * @return - returns an array of UserPermissions
+   * @return List of UserPermissions
    * @throws Throwable
    */
   public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex)
       throws Throwable {
-    /** TODO: Pass an rpcController
-    HBaseRpcController controller
-      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
-      */
+    return getUserPermissions(connection, tableRegex, HConstants.EMPTY_STRING);
+  }
+
+  /**
+   * List all the userPermissions matching the given table pattern and user name.
+   * @param connection Connection
+   * @param tableRegex The regular expression string to match against
+   * @param userName User name, if empty then all user permissions will be retrieved.
+   * @return List of UserPermissions
+   * @throws Throwable on failure
+   */
+  public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex,
+      String userName) throws Throwable {
+    /**
+     * TODO: Pass an rpcController HBaseRpcController controller = ((ClusterConnection)
+     * connection).getRpcControllerFactory().newController();
+     */
     List<UserPermission> permList = new ArrayList<>();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
       try (Admin admin = connection.getAdmin()) {
@@ -272,25 +286,167 @@ public class AccessControlClient {
             AccessControlProtos.AccessControlService.newBlockingStub(service);
         HTableDescriptor[] htds = null;
         if (tableRegex == null || tableRegex.isEmpty()) {
-          permList = AccessControlUtil.getUserPermissions(null, protocol);
-        } else if (tableRegex.charAt(0) == '@') {  // Namespaces
+          permList = AccessControlUtil.getUserPermissions(null, protocol, userName);
+        } else if (tableRegex.charAt(0) == '@') { // Namespaces
           String namespaceRegex = tableRegex.substring(1);
-          for (NamespaceDescriptor nsds : admin.listNamespaceDescriptors()) {  // Read out all namespaces
+          for (NamespaceDescriptor nsds : admin.listNamespaceDescriptors()) { // Read out all
+                                                                              // namespaces
             String namespace = nsds.getName();
-            if (namespace.matches(namespaceRegex)) {  // Match the given namespace regex?
+            if (namespace.matches(namespaceRegex)) { // Match the given namespace regex?
               permList.addAll(AccessControlUtil.getUserPermissions(null, protocol,
-                Bytes.toBytes(namespace)));
+                Bytes.toBytes(namespace), userName));
             }
           }
-        } else {  // Tables
+        } else { // Tables
           htds = admin.listTables(Pattern.compile(tableRegex), true);
-          for (HTableDescriptor hd : htds) {
-            permList.addAll(AccessControlUtil.getUserPermissions(null, protocol,
-              hd.getTableName()));
+          for (HTableDescriptor htd : htds) {
+            permList.addAll(AccessControlUtil.getUserPermissions(null, protocol, htd.getTableName(),
+              null, null, userName));
           }
         }
       }
     }
     return permList;
+  }
+
+  /**
+   * List all the userPermissions matching the given table pattern and column family.
+   * @param connection Connection
+   * @param tableRegex The regular expression string to match against. It shouldn't be null, empty
+   *          or a namespace regular expression.
+   * @param columnFamily Column family
+   * @return List of UserPermissions
+   * @throws Throwable on failure
+   */
+  public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex,
+      byte[] columnFamily) throws Throwable {
+    return getUserPermissions(connection, tableRegex, columnFamily, null, HConstants.EMPTY_STRING);
+  }
+
+  /**
+   * List all the userPermissions matching the given table pattern, column family and user name.
+   * @param connection Connection
+   * @param tableRegex The regular expression string to match against. It shouldn't be null, empty
+   *          or a namespace regular expression.
+   * @param columnFamily Column family
+   * @param userName User name, if empty then all user permissions will be retrieved.
+   * @return List of UserPermissions
+   * @throws Throwable on failure
+   */
+  public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex,
+      byte[] columnFamily, String userName) throws Throwable {
+    return getUserPermissions(connection, tableRegex, columnFamily, null, userName);
+  }
+
+  /**
+   * List all the userPermissions matching the given table pattern, column family and column
+   * qualifier.
+   * @param connection Connection
+   * @param tableRegex The regular expression string to match against. It shouldn't be null, empty
+   *          or a namespace regular expression.
+   * @param columnFamily Column family
+   * @param columnQualifier Column qualifier
+   * @return List of UserPermissions
+   * @throws Throwable on failure
+   */
+  public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex,
+      byte[] columnFamily, byte[] columnQualifier) throws Throwable {
+    return getUserPermissions(connection, tableRegex, columnFamily, columnQualifier,
+      HConstants.EMPTY_STRING);
+  }
+
+  /**
+   * List all the userPermissions matching the given table pattern, column family and column
+   * qualifier.
+   * @param connection Connection
+   * @param tableRegex The regular expression string to match against. It shouldn't be null, empty
+   *          or a namespace regular expression.
+   * @param columnFamily Column family
+   * @param columnQualifier Column qualifier
+   * @param userName User name, if empty then all user permissions will be retrieved.
+   * @return List of UserPermissions
+   * @throws Throwable on failure
+   */
+  public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex,
+      byte[] columnFamily, byte[] columnQualifier, String userName) throws Throwable {
+    if (tableRegex == null || tableRegex.isEmpty() || tableRegex.charAt(0) == '@') {
+      throw new IllegalArgumentException("Table name can't be null or empty or a namespace.");
+    }
+    /**
+     * TODO: Pass an rpcController HBaseRpcController controller = ((ClusterConnection)
+     * connection).getRpcControllerFactory().newController();
+     */
+    List<UserPermission> permList = new ArrayList<UserPermission>();
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      try (Admin admin = connection.getAdmin()) {
+        CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
+        BlockingInterface protocol =
+            AccessControlProtos.AccessControlService.newBlockingStub(service);
+        HTableDescriptor[] htds = admin.listTables(Pattern.compile(tableRegex), true);
+        // Retrieve table permissions
+        for (HTableDescriptor htd : htds) {
+          permList.addAll(AccessControlUtil.getUserPermissions(null, protocol, htd.getTableName(),
+            columnFamily, columnQualifier, userName));
+        }
+      }
+    }
+    return permList;
+  }
+
+  /**
+   * Validates whether specified user has permission to perform actions on the mentioned table,
+   * column family or column qualifier.
+   * @param connection Connection
+   * @param tableName Table name, it shouldn't be null or empty.
+   * @param columnFamily The column family. Optional argument, can be empty. If empty then
+   *          validation will happen at table level.
+   * @param columnQualifier The column qualifier. Optional argument, can be empty. If empty then
+   *          validation will happen at table and column family level. columnQualifier will not be
+   *          considered if columnFamily is passed as null or empty.
+   * @param userName User name, it shouldn't be null or empty.
+   * @param actions Actions
+   * @return true if access allowed to the specified user, otherwise false.
+   * @throws Throwable on failure
+   */
+  public static boolean hasPermission(Connection connection, String tableName, String columnFamily,
+      String columnQualifier, String userName, Permission.Action... actions) throws Throwable {
+    return hasPermission(connection, tableName, Bytes.toBytes(columnFamily),
+      Bytes.toBytes(columnQualifier), userName, actions);
+  }
+
+  /**
+   * Validates whether specified user has permission to perform actions on the mentioned table,
+   * column family or column qualifier.
+   * @param connection Connection
+   * @param tableName Table name, it shouldn't be null or empty.
+   * @param columnFamily The column family. Optional argument, can be empty. If empty then
+   *          validation will happen at table level.
+   * @param columnQualifier The column qualifier. Optional argument, can be empty. If empty then
+   *          validation will happen at table and column family level. columnQualifier will not be
+   *          considered if columnFamily is passed as null or empty.
+   * @param userName User name, it shouldn't be null or empty.
+   * @param actions Actions
+   * @return true if access allowed to the specified user, otherwise false.
+   * @throws Throwable on failure
+   */
+  public static boolean hasPermission(Connection connection, String tableName, byte[] columnFamily,
+      byte[] columnQualifier, String userName, Permission.Action... actions) throws Throwable {
+    if (StringUtils.isEmpty(tableName) || StringUtils.isEmpty(userName)) {
+      throw new IllegalArgumentException("Table and user name can't be null or empty.");
+    }
+    boolean hasPermission = false;
+    /**
+     * todo: pass an rpccontroller hbaserpccontroller controller = ((clusterconnection)
+     * connection).getrpccontrollerfactory().newcontroller();
+     */
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
+      BlockingInterface protocol =
+          AccessControlProtos.AccessControlService.newBlockingStub(service);
+      // Check whether user has permission
+      hasPermission = AccessControlUtil.hasPermission(null, protocol, TableName.valueOf(tableName),
+        columnFamily, columnQualifier, userName, actions);
+    }
+    return hasPermission;
   }
 }

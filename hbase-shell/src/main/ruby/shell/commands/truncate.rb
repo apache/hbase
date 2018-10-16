@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Truncate < Command
       def help
-        return <<-EOF
+        <<-EOF
   Disables, drops and recreates the specified table.
 EOF
       end
@@ -29,7 +29,6 @@ EOF
       def command(table)
         admin.truncate(table)
       end
-
     end
   end
 end

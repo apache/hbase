@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.Cell;
@@ -38,9 +39,10 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -211,14 +213,14 @@ public class Result implements CellScannable, CellScanner {
    * Return the array of Cells backing this Result instance.
    *
    * The array is sorted from smallest -&gt; largest using the
-   * {@link CellComparator#COMPARATOR}.
+   * {@link CellComparator}.
    *
    * The array only contains what your Get or Scan specifies and no more.
    * For example if you request column "A" 1 version you will have at most 1
    * Cell in the array. If you request column "A" with 2 version you will
    * have at most 2 Cells, with the first one being the newer timestamp and
    * the second being the older timestamp (this is the sort order defined by
-   * {@link CellComparator#COMPARATOR}).  If columns don't exist, they won't be
+   * {@link CellComparator}).  If columns don't exist, they won't be
    * present in the result. Therefore if you ask for 1 version all columns,
    * it is safe to iterate over this array and expect to see 1 Cell for
    * each column and no more.
@@ -244,7 +246,7 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Return the Cells for the specific column.  The Cells are sorted in
-   * the {@link CellComparator#COMPARATOR} order.  That implies the first entry in
+   * the {@link CellComparator} order.  That implies the first entry in
    * the list is the most recent column.  If the query (Scan or Get) only
    * requested 1 version the list will contain at most 1 entry.  If the column
    * did not exist in the result set (either the column does not exist
@@ -295,13 +297,13 @@ public class Result implements CellScannable, CellScanner {
     byte[] familyNotNull = notNullBytes(family);
     byte[] qualifierNotNull = notNullBytes(qualifier);
     Cell searchTerm =
-        CellUtil.createFirstOnRow(kvs[0].getRowArray(),
+        PrivateCellUtil.createFirstOnRow(kvs[0].getRowArray(),
             kvs[0].getRowOffset(), kvs[0].getRowLength(),
             familyNotNull, 0, (byte)familyNotNull.length,
             qualifierNotNull, 0, qualifierNotNull.length);
 
     // pos === ( -(insertion point) - 1)
-    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.COMPARATOR);
+    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.getInstance());
     // never will exact match
     if (pos < 0) {
       pos = (pos+1) * -1;
@@ -346,7 +348,7 @@ public class Result implements CellScannable, CellScanner {
         qualifier, qoffset, qlength);
 
     // pos === ( -(insertion point) - 1)
-    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.COMPARATOR);
+    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.getInstance());
     // never will exact match
     if (pos < 0) {
       pos = (pos+1) * -1;
@@ -406,7 +408,8 @@ public class Result implements CellScannable, CellScanner {
     if (pos == -1) {
       return null;
     }
-    if (CellUtil.matchingColumn(kvs[pos], family, foffset, flength, qualifier, qoffset, qlength)) {
+    if (PrivateCellUtil.matchingColumn(kvs[pos], family, foffset, flength, qualifier, qoffset,
+      qlength)) {
       return kvs[pos];
     }
     return null;
@@ -856,7 +859,7 @@ public class Result implements CellScannable, CellScanner {
       return size;
     }
     for (Cell c : result.rawCells()) {
-      size += CellUtil.estimatedHeapSizeOf(c);
+      size += PrivateCellUtil.estimatedSizeOfCell(c);
     }
     return size;
   }
@@ -883,14 +886,23 @@ public class Result implements CellScannable, CellScanner {
 
   @Override
   public Cell current() {
-    if (cells == null) return null;
-    return (cellScannerIndex < 0)? null: this.cells[cellScannerIndex];
+    if (cells == null
+            || cellScannerIndex == INITIAL_CELLSCANNER_INDEX
+            || cellScannerIndex >= cells.length)
+      return null;
+    return this.cells[cellScannerIndex];
   }
 
   @Override
   public boolean advance() {
     if (cells == null) return false;
-    return ++cellScannerIndex < this.cells.length;
+    cellScannerIndex++;
+    if (cellScannerIndex < this.cells.length) {
+      return true;
+    } else if (cellScannerIndex == this.cells.length) {
+      return false;
+    }
+    throw new NoSuchElementException("Cannot advance beyond the last cell");
   }
 
   public Boolean getExists() {

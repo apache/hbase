@@ -21,17 +21,18 @@ package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A binary comparator which lexicographically compares against the specified
  * byte array using {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class NullComparator extends ByteArrayComparable {
 
   public NullComparator() {
@@ -67,6 +68,7 @@ public class NullComparator extends ByteArrayComparable {
   /**
    * @return The comparator serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     ComparatorProtos.NullComparator.Builder builder =
       ComparatorProtos.NullComparator.newBuilder();
@@ -95,6 +97,7 @@ public class NullComparator extends ByteArrayComparable {
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof NullComparator)) return false;

@@ -18,25 +18,26 @@
  */
 package org.apache.hadoop.hbase.master.locking;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.util.NonceKey;
-
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Functions to acquire lock on table/namespace/regions.
  */
 @InterfaceAudience.Private
 public final class LockManager {
-  private static final Log LOG = LogFactory.getLog(LockManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LockManager.class);
   private final HMaster master;
   private final RemoteLocks remoteLocks;
 
@@ -50,16 +51,16 @@ public final class LockManager {
   }
 
   public MasterLock createMasterLock(final String namespace,
-      final LockProcedure.LockType type, final String description) {
+      final LockType type, final String description) {
     return new MasterLock(namespace, type, description);
   }
 
   public MasterLock createMasterLock(final TableName tableName,
-      final LockProcedure.LockType type, final String description) {
+      final LockType type, final String description) {
     return new MasterLock(tableName, type, description);
   }
 
-  public MasterLock createMasterLock(final HRegionInfo[] regionInfos, final String description) {
+  public MasterLock createMasterLock(final RegionInfo[] regionInfos, final String description) {
     return new MasterLock(regionInfos, description);
   }
 
@@ -80,14 +81,14 @@ public final class LockManager {
   public class MasterLock {
     private final String namespace;
     private final TableName tableName;
-    private final HRegionInfo[] regionInfos;
-    private final LockProcedure.LockType type;
+    private final RegionInfo[] regionInfos;
+    private final LockType type;
     private final String description;
 
     private LockProcedure proc = null;
 
     public MasterLock(final String namespace,
-        final LockProcedure.LockType type, final String description) {
+        final LockType type, final String description) {
       this.namespace = namespace;
       this.tableName = null;
       this.regionInfos = null;
@@ -96,7 +97,7 @@ public final class LockManager {
     }
 
     public MasterLock(final TableName tableName,
-        final LockProcedure.LockType type, final String description) {
+        final LockType type, final String description) {
       this.namespace = null;
       this.tableName = tableName;
       this.regionInfos = null;
@@ -104,11 +105,11 @@ public final class LockManager {
       this.description = description;
     }
 
-    public MasterLock(final HRegionInfo[] regionInfos, final String description) {
+    public MasterLock(final RegionInfo[] regionInfos, final String description) {
       this.namespace = null;
       this.tableName = null;
       this.regionInfos = regionInfos;
-      this.type = LockProcedure.LockType.EXCLUSIVE;
+      this.type = LockType.EXCLUSIVE;
       this.description = description;
     }
 
@@ -203,7 +204,7 @@ public final class LockManager {
    * locks, regular heartbeats are required to keep the lock held.
    */
   public class RemoteLocks {
-    public long requestNamespaceLock(final String namespace, final LockProcedure.LockType type,
+    public long requestNamespaceLock(final String namespace, final LockType type,
         final String description, final NonceKey nonceKey)
         throws IllegalArgumentException, IOException {
       master.getMasterCoprocessorHost().preRequestLock(namespace, null, null, type, description);
@@ -214,7 +215,7 @@ public final class LockManager {
       return proc.getProcId();
     }
 
-    public long requestTableLock(final TableName tableName, final LockProcedure.LockType type,
+    public long requestTableLock(final TableName tableName, final LockType type,
         final String description, final NonceKey nonceKey)
         throws IllegalArgumentException, IOException {
       master.getMasterCoprocessorHost().preRequestLock(null, tableName, null, type, description);
@@ -228,16 +229,16 @@ public final class LockManager {
     /**
      * @throws IllegalArgumentException if all regions are not from same table.
      */
-    public long requestRegionsLock(final HRegionInfo[] regionInfos, final String description,
+    public long requestRegionsLock(final RegionInfo[] regionInfos, final String description,
         final NonceKey nonceKey)
     throws IllegalArgumentException, IOException {
       master.getMasterCoprocessorHost().preRequestLock(null, null, regionInfos,
-            LockProcedure.LockType.EXCLUSIVE, description);
+            LockType.EXCLUSIVE, description);
       final LockProcedure proc = new LockProcedure(master.getConfiguration(), regionInfos,
-          LockProcedure.LockType.EXCLUSIVE, description, null);
+          LockType.EXCLUSIVE, description, null);
       submitProcedure(proc, nonceKey);
       master.getMasterCoprocessorHost().postRequestLock(null, null, regionInfos,
-            LockProcedure.LockType.EXCLUSIVE, description);
+            LockType.EXCLUSIVE, description);
       return proc.getProcId();
     }
 

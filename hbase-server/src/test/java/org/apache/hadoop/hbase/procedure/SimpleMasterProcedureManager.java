@@ -23,22 +23,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SimpleMasterProcedureManager extends MasterProcedureManager {
 
   public static final String SIMPLE_SIGNATURE = "simple_test";
   public static final String SIMPLE_DATA = "simple_test_data";
 
-  private static final Log LOG = LogFactory.getLog(SimpleMasterProcedureManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SimpleMasterProcedureManager.class);
 
   private MasterServices master;
   private ProcedureCoordinator coordinator;
@@ -112,6 +114,10 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
     // return the first value for testing
     return returnData.values().iterator().next();
   }
+
+  @Override
+  public void checkPermissions(ProcedureDescription desc, AccessChecker accessChecker, User user)
+      throws IOException {}
 
   @Override
   public boolean isProcedureDone(ProcedureDescription desc) throws IOException {

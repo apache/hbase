@@ -25,19 +25,19 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.regex.Pattern;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test setting values in the descriptor
@@ -45,7 +45,12 @@ import org.junit.rules.TestName;
 @Category({MiscTests.class, SmallTests.class})
 @Deprecated
 public class TestHTableDescriptor {
-  private static final Log LOG = LogFactory.getLog(TestHTableDescriptor.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHTableDescriptor.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHTableDescriptor.class);
 
   @Rule
   public TestName name = new TestName();
@@ -108,7 +113,7 @@ public class TestHTableDescriptor {
     assertEquals(v, deserializedHtd.getMaxFileSize());
     assertTrue(deserializedHtd.isReadOnly());
     assertEquals(Durability.ASYNC_WAL, deserializedHtd.getDurability());
-    assertEquals(deserializedHtd.getRegionReplication(), 2);
+    assertEquals(2, deserializedHtd.getRegionReplication());
   }
 
   /**

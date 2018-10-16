@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,27 +27,33 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.ArgumentMatcher;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 
 /**
  * Test case for {@link TableSpaceQuotaSnapshotNotifier}.
  */
 @Category(SmallTests.class)
 public class TestTableSpaceQuotaViolationNotifier {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableSpaceQuotaViolationNotifier.class);
 
   private TableSpaceQuotaSnapshotNotifier notifier;
   private Connection conn;
@@ -77,22 +84,13 @@ public class TestTableSpaceQuotaViolationNotifier {
 
     notifier.transitionTable(tn, snapshot);
 
-    verify(quotaTable).put(argThat(new SingleCellPutMatcher(expectedPut)));
-  }
-
-  /**
-   * Parameterized for Puts.
-   */
-  private static class SingleCellPutMatcher extends SingleCellMutationMatcher<Put> {
-    private SingleCellPutMatcher(Put expected) {
-      super(expected);
-    }
+    verify(quotaTable).put(argThat(new SingleCellMutationMatcher<Put>(expectedPut)));
   }
 
   /**
    * Quick hack to verify a Mutation with one column.
    */
-  private static class SingleCellMutationMatcher<T> extends ArgumentMatcher<T> {
+  final private static class SingleCellMutationMatcher<T> implements ArgumentMatcher<T> {
     private final Mutation expected;
 
     private SingleCellMutationMatcher(Mutation expected) {
@@ -100,7 +98,7 @@ public class TestTableSpaceQuotaViolationNotifier {
     }
 
     @Override
-    public boolean matches(Object argument) {
+    public boolean matches(T argument) {
       if (!expected.getClass().isAssignableFrom(argument.getClass())) {
         return false;
       }

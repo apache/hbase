@@ -24,9 +24,8 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Immutable POJO class for representing a table name.
@@ -141,7 +140,8 @@ public final class TableName implements Comparable<TableName> {
       throw new IllegalArgumentException("Name is null or empty");
     }
 
-    int namespaceDelimIndex = com.google.common.primitives.Bytes.lastIndexOf(tableName,
+    int namespaceDelimIndex =
+      org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.lastIndexOf(tableName,
         (byte) NAMESPACE_DELIM);
     if (namespaceDelimIndex < 0){
       isLegalTableQualifierName(tableName);
@@ -412,7 +412,7 @@ public final class TableName implements Comparable<TableName> {
 
     for (TableName tn : tableCache) {
       if (qualifierAsString.equals(tn.getQualifierAsString()) &&
-          namespaceAsString.equals(tn.getNameAsString())) {
+          namespaceAsString.equals(tn.getNamespaceAsString())) {
         return tn;
       }
     }
@@ -435,7 +435,8 @@ public final class TableName implements Comparable<TableName> {
       }
     }
 
-    int namespaceDelimIndex = com.google.common.primitives.Bytes.lastIndexOf(fullName,
+    int namespaceDelimIndex =
+      org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.lastIndexOf(fullName,
         (byte) NAMESPACE_DELIM);
 
     if (namespaceDelimIndex < 0) {
@@ -534,19 +535,4 @@ public final class TableName implements Comparable<TableName> {
     return this.nameAsString.compareTo(tableName.getNameAsString());
   }
 
-  /**
-   * Get the appropriate row comparator for this table.
-   *
-   * @return The comparator.
-   * @deprecated The comparator is an internal property of the table. Should
-   * not have been exposed here
-   */
-  @InterfaceAudience.Private
-  @Deprecated
-  public KVComparator getRowComparator() {
-     if(TableName.META_TABLE_NAME.equals(this)) {
-      return KeyValue.META_COMPARATOR;
-    }
-    return KeyValue.COMPARATOR;
-  }
 }

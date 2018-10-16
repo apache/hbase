@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase;
 
 import java.util.Map;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
@@ -52,7 +52,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   public static final String CACHE_INDEX_ON_WRITE = ColumnFamilyDescriptorBuilder.CACHE_INDEX_ON_WRITE;
   public static final String CACHE_BLOOMS_ON_WRITE = ColumnFamilyDescriptorBuilder.CACHE_BLOOMS_ON_WRITE;
   public static final String EVICT_BLOCKS_ON_CLOSE = ColumnFamilyDescriptorBuilder.EVICT_BLOCKS_ON_CLOSE;
-  public static final String CACHE_DATA_IN_L1 = ColumnFamilyDescriptorBuilder.CACHE_DATA_IN_L1;
+  public static final String CACHE_DATA_IN_L1 = "CACHE_DATA_IN_L1";
   public static final String PREFETCH_BLOCKS_ON_OPEN = ColumnFamilyDescriptorBuilder.PREFETCH_BLOCKS_ON_OPEN;
   public static final String BLOCKSIZE = ColumnFamilyDescriptorBuilder.BLOCKSIZE;
   public static final String LENGTH = "LENGTH";
@@ -87,7 +87,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   public static final KeepDeletedCells DEFAULT_KEEP_DELETED = ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED;
   public static final boolean DEFAULT_BLOCKCACHE = ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKCACHE;
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_ON_WRITE;
-  public static final boolean DEFAULT_CACHE_DATA_IN_L1 = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_IN_L1;
+  public static final boolean DEFAULT_CACHE_DATA_IN_L1 = false;
   public static final boolean DEFAULT_CACHE_INDEX_ON_WRITE = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_INDEX_ON_WRITE;
   public static final int DEFAULT_BLOCKSIZE = ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKSIZE;
   public static final String DEFAULT_BLOOMFILTER =  ColumnFamilyDescriptorBuilder.DEFAULT_BLOOMFILTER.name();
@@ -97,14 +97,21 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   public static final boolean DEFAULT_EVICT_BLOCKS_ON_CLOSE = ColumnFamilyDescriptorBuilder.DEFAULT_EVICT_BLOCKS_ON_CLOSE;
   public static final boolean DEFAULT_COMPRESS_TAGS = ColumnFamilyDescriptorBuilder.DEFAULT_COMPRESS_TAGS;
   public static final boolean DEFAULT_PREFETCH_BLOCKS_ON_OPEN = ColumnFamilyDescriptorBuilder.DEFAULT_PREFETCH_BLOCKS_ON_OPEN;
+  public static final String NEW_VERSION_BEHAVIOR = ColumnFamilyDescriptorBuilder.NEW_VERSION_BEHAVIOR;
+  public static final boolean DEFAULT_NEW_VERSION_BEHAVIOR = ColumnFamilyDescriptorBuilder.DEFAULT_NEW_VERSION_BEHAVIOR;
   protected final ModifyableColumnFamilyDescriptor delegatee;
+
   /**
    * Construct a column descriptor specifying only the family name
    * The other attributes are defaulted.
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and may not contain a <code>:</code>
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
+   *             Use {@link ColumnFamilyDescriptorBuilder#of(String)}.
    */
+  @Deprecated
   public HColumnDescriptor(final String familyName) {
     this(Bytes.toBytes(familyName));
   }
@@ -115,7 +122,11 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and may not contain a <code>:</code>
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
+   *             Use {@link ColumnFamilyDescriptorBuilder#of(byte[])}.
    */
+  @Deprecated
   public HColumnDescriptor(final byte [] familyName) {
     this(new ModifyableColumnFamilyDescriptor(familyName));
   }
@@ -124,8 +135,13 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    * Constructor.
    * Makes a deep copy of the supplied descriptor.
    * Can make a modifiable descriptor from an UnmodifyableHColumnDescriptor.
+   *
    * @param desc The descriptor.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
+   *             Use {@link ColumnFamilyDescriptorBuilder#copy(ColumnFamilyDescriptor)}.
    */
+  @Deprecated
   public HColumnDescriptor(HColumnDescriptor desc) {
     this(desc, true);
   }
@@ -205,9 +221,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * @param key Key whose key and value we're to remove from HCD parameters.
    */
-  public HColumnDescriptor remove(final byte [] key) {
+  public void remove(final byte [] key) {
     getDelegateeForModification().removeValue(new Bytes(key));
-    return this;
   }
 
   /**
@@ -408,6 +423,22 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return this;
   }
 
+  /**
+   * By default, HBase only consider timestamp in versions. So a previous Delete with higher ts
+   * will mask a later Put with lower ts. Set this to true to enable new semantics of versions.
+   * We will also consider mvcc in versions. See HBASE-15968 for details.
+   */
+  @Override
+  public boolean isNewVersionBehavior() {
+    return delegatee.isNewVersionBehavior();
+  }
+
+  public HColumnDescriptor setNewVersionBehavior(boolean newVersionBehavior) {
+    getDelegateeForModification().setNewVersionBehavior(newVersionBehavior);
+    return this;
+  }
+
+
   @Override
   public int getTimeToLive() {
     return delegatee.getTimeToLive();
@@ -504,18 +535,16 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return this;
   }
 
-  @Override
-  public boolean isCacheDataInL1() {
-    return delegatee.isCacheDataInL1();
-  }
-
   /**
-   * @param value true if we should cache data blocks in the L1 cache (if block cache deploy
-   * has more than one tier; e.g. we are using CombinedBlockCache).
+   * This is a noop call from HBase 2.0 onwards
+   *
    * @return this (for chained invocation)
+   * @deprecated Since 2.0 and will be removed in 3.0 with out any replacement. Caching data in on
+   *             heap Cache, when there are both on heap LRU Cache and Bucket Cache will no longer
+   *             be supported from 2.0.
    */
+  @Deprecated
   public HColumnDescriptor setCacheDataInL1(boolean value) {
-    getDelegateeForModification().setCacheDataInL1(value);
     return this;
   }
 
@@ -608,13 +637,10 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
-      return false;
+    if (obj instanceof HColumnDescriptor) {
+      return delegatee.equals(((HColumnDescriptor) obj).delegatee);
     }
-    if (!(obj instanceof HColumnDescriptor)) {
-      return false;
-    }
-    return compareTo((HColumnDescriptor)obj) == 0;
+    return false;
   }
 
   /**
@@ -627,7 +653,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   @Override
   public int compareTo(HColumnDescriptor other) {
-    return delegatee.compareTo(other.delegatee);
+    return COMPARATOR.compare(this, other);
   }
 
   /**
@@ -676,9 +702,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * Remove a configuration setting represented by the key.
    */
-  public HColumnDescriptor removeConfiguration(final String key) {
+  public void removeConfiguration(final String key) {
     getDelegateeForModification().removeConfiguration(key);
-    return this;
   }
 
   @Override

@@ -22,14 +22,14 @@ import java.util
 import java.util.UUID
 import javax.management.openmbean.KeyAlreadyExistsException
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem
 import org.apache.hadoop.hbase._
 import org.apache.hadoop.hbase.io.compress.Compression
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding
 import org.apache.hadoop.hbase.io.hfile.{HFile, CacheConfig, HFileContextBuilder, HFileWriterImpl}
-import org.apache.hadoop.hbase.regionserver.{HStore, StoreFile, StoreFileWriter, BloomType}
+import org.apache.hadoop.hbase.regionserver.{HStore, HStoreFile, StoreFileWriter, BloomType}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.mapred.JobConf
 import org.apache.spark.broadcast.Broadcast
@@ -39,7 +39,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.spark.HBaseRDDFunctions._
 import org.apache.hadoop.hbase.client._
 import scala.reflect.ClassTag
-import org.apache.spark.{Logging, SerializableWritable, SparkContext}
+import org.apache.spark.{SerializableWritable, SparkContext}
 import org.apache.hadoop.hbase.mapreduce.{TableMapReduceUtil,
 TableInputFormat, IdentityTableMapper}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
@@ -60,12 +60,12 @@ import scala.collection.mutable
   * to the working and managing the life cycle of Connections.
  */
 @InterfaceAudience.Public
-class HBaseContext(@transient sc: SparkContext,
+class HBaseContext(@transient val sc: SparkContext,
                    @transient val config: Configuration,
                    val tmpHdfsConfgFile: String = null)
   extends Serializable with Logging {
 
-  @transient var credentials = SparkHadoopUtil.get.getCurrentUserCredentials()
+  @transient var credentials = UserGroupInformation.getCurrentUser().getCredentials()
   @transient var tmpHdfsConfiguration:Configuration = config
   @transient var appliedCredentials = false
   @transient val job = Job.getInstance(config)
@@ -233,9 +233,11 @@ class HBaseContext(@transient sc: SparkContext,
   }
 
   def applyCreds[T] (){
-    credentials = SparkHadoopUtil.get.getCurrentUserCredentials()
+    credentials = UserGroupInformation.getCurrentUser().getCredentials()
 
-    logDebug("appliedCredentials:" + appliedCredentials + ",credentials:" + credentials)
+    if (log.isDebugEnabled) {
+      logDebug("appliedCredentials:" + appliedCredentials + ",credentials:" + credentials)
+    }
 
     if (!appliedCredentials && credentials != null) {
       appliedCredentials = true
@@ -626,86 +628,90 @@ class HBaseContext(@transient sc: SparkContext,
       throw new FileAlreadyExistsException("Path " + stagingDir + " already exists")
     }
     val conn = HBaseConnectionCache.getConnection(config)
-    val regionLocator = conn.getRegionLocator(tableName)
-    val startKeys = regionLocator.getStartKeys
-    if (startKeys.length == 0) {
-      logInfo("Table " + tableName.toString + " was not found")
-    }
-    val defaultCompressionStr = config.get("hfile.compression",
-      Compression.Algorithm.NONE.getName)
-    val hfileCompression = HFileWriterImpl
-      .compressionByName(defaultCompressionStr)
-    val nowTimeStamp = System.currentTimeMillis()
-    val tableRawName = tableName.getName
+    try {
+      val regionLocator = conn.getRegionLocator(tableName)
+      val startKeys = regionLocator.getStartKeys
+      if (startKeys.length == 0) {
+        logInfo("Table " + tableName.toString + " was not found")
+      }
+      val defaultCompressionStr = config.get("hfile.compression",
+        Compression.Algorithm.NONE.getName)
+      val hfileCompression = HFileWriterImpl
+        .compressionByName(defaultCompressionStr)
+      val nowTimeStamp = System.currentTimeMillis()
+      val tableRawName = tableName.getName
 
-    val familyHFileWriteOptionsMapInternal =
-      new util.HashMap[ByteArrayWrapper, FamilyHFileWriteOptions]
+      val familyHFileWriteOptionsMapInternal =
+        new util.HashMap[ByteArrayWrapper, FamilyHFileWriteOptions]
 
-    val entrySetIt = familyHFileWriteOptionsMap.entrySet().iterator()
+      val entrySetIt = familyHFileWriteOptionsMap.entrySet().iterator()
 
-    while (entrySetIt.hasNext) {
-      val entry = entrySetIt.next()
-      familyHFileWriteOptionsMapInternal.put(new ByteArrayWrapper(entry.getKey), entry.getValue)
-    }
+      while (entrySetIt.hasNext) {
+        val entry = entrySetIt.next()
+        familyHFileWriteOptionsMapInternal.put(new ByteArrayWrapper(entry.getKey), entry.getValue)
+      }
 
-    val regionSplitPartitioner =
-      new BulkLoadPartitioner(startKeys)
+      val regionSplitPartitioner =
+        new BulkLoadPartitioner(startKeys)
 
-    //This is where all the magic happens
-    //Here we are going to do the following things
-    // 1. FlapMap every row in the RDD into key column value tuples
-    // 2. Then we are going to repartition sort and shuffle
-    // 3. Finally we are going to write out our HFiles
-    rdd.flatMap( r => flatMap(r)).
-      repartitionAndSortWithinPartitions(regionSplitPartitioner).
-      hbaseForeachPartition(this, (it, conn) => {
+      //This is where all the magic happens
+      //Here we are going to do the following things
+      // 1. FlapMap every row in the RDD into key column value tuples
+      // 2. Then we are going to repartition sort and shuffle
+      // 3. Finally we are going to write out our HFiles
+      rdd.flatMap( r => flatMap(r)).
+        repartitionAndSortWithinPartitions(regionSplitPartitioner).
+        hbaseForeachPartition(this, (it, conn) => {
 
-      val conf = broadcastedConf.value.value
-      val fs = FileSystem.get(conf)
-      val writerMap = new mutable.HashMap[ByteArrayWrapper, WriterLength]
-      var previousRow:Array[Byte] = HConstants.EMPTY_BYTE_ARRAY
-      var rollOverRequested = false
-      val localTableName = TableName.valueOf(tableRawName)
+          val conf = broadcastedConf.value.value
+          val fs = FileSystem.get(conf)
+          val writerMap = new mutable.HashMap[ByteArrayWrapper, WriterLength]
+          var previousRow:Array[Byte] = HConstants.EMPTY_BYTE_ARRAY
+          var rollOverRequested = false
+          val localTableName = TableName.valueOf(tableRawName)
 
-      //Here is where we finally iterate through the data in this partition of the
-      //RDD that has been sorted and partitioned
-      it.foreach{ case (keyFamilyQualifier, cellValue:Array[Byte]) =>
+          //Here is where we finally iterate through the data in this partition of the
+          //RDD that has been sorted and partitioned
+          it.foreach{ case (keyFamilyQualifier, cellValue:Array[Byte]) =>
 
-        val wl = writeValueToHFile(keyFamilyQualifier.rowKey,
-          keyFamilyQualifier.family,
-          keyFamilyQualifier.qualifier,
-          cellValue,
-          nowTimeStamp,
-          fs,
-          conn,
-          localTableName,
-          conf,
-          familyHFileWriteOptionsMapInternal,
-          hfileCompression,
-          writerMap,
-          stagingDir)
+            val wl = writeValueToHFile(keyFamilyQualifier.rowKey,
+              keyFamilyQualifier.family,
+              keyFamilyQualifier.qualifier,
+              cellValue,
+              nowTimeStamp,
+              fs,
+              conn,
+              localTableName,
+              conf,
+              familyHFileWriteOptionsMapInternal,
+              hfileCompression,
+              writerMap,
+              stagingDir)
 
-        rollOverRequested = rollOverRequested || wl.written > maxSize
+            rollOverRequested = rollOverRequested || wl.written > maxSize
 
-        //This will only roll if we have at least one column family file that is
-        //bigger then maxSize and we have finished a given row key
-        if (rollOverRequested && Bytes.compareTo(previousRow, keyFamilyQualifier.rowKey) != 0) {
+            //This will only roll if we have at least one column family file that is
+            //bigger then maxSize and we have finished a given row key
+            if (rollOverRequested && Bytes.compareTo(previousRow, keyFamilyQualifier.rowKey) != 0) {
+              rollWriters(fs, writerMap,
+                regionSplitPartitioner,
+                previousRow,
+                compactionExclude)
+              rollOverRequested = false
+            }
+
+            previousRow = keyFamilyQualifier.rowKey
+          }
+          //We have finished all the data so lets close up the writers
           rollWriters(fs, writerMap,
             regionSplitPartitioner,
             previousRow,
             compactionExclude)
           rollOverRequested = false
-        }
-
-        previousRow = keyFamilyQualifier.rowKey
-      }
-      //We have finished all the data so lets close up the writers
-      rollWriters(fs, writerMap,
-        regionSplitPartitioner,
-        previousRow,
-        compactionExclude)
-      rollOverRequested = false
-    })
+        })
+    } finally {
+      if(null != conn) conn.close()
+    }
   }
 
   /**
@@ -757,117 +763,121 @@ class HBaseContext(@transient sc: SparkContext,
       throw new FileAlreadyExistsException("Path " + stagingDir + " already exists")
     }
     val conn = HBaseConnectionCache.getConnection(config)
-    val regionLocator = conn.getRegionLocator(tableName)
-    val startKeys = regionLocator.getStartKeys
-    if (startKeys.length == 0) {
-      logInfo("Table " + tableName.toString + " was not found")
-    }
-    val defaultCompressionStr = config.get("hfile.compression",
-      Compression.Algorithm.NONE.getName)
-    val defaultCompression = HFileWriterImpl
-      .compressionByName(defaultCompressionStr)
-    val nowTimeStamp = System.currentTimeMillis()
-    val tableRawName = tableName.getName
+    try {
+      val regionLocator = conn.getRegionLocator(tableName)
+      val startKeys = regionLocator.getStartKeys
+      if (startKeys.length == 0) {
+        logInfo("Table " + tableName.toString + " was not found")
+      }
+      val defaultCompressionStr = config.get("hfile.compression",
+        Compression.Algorithm.NONE.getName)
+      val defaultCompression = HFileWriterImpl
+        .compressionByName(defaultCompressionStr)
+      val nowTimeStamp = System.currentTimeMillis()
+      val tableRawName = tableName.getName
 
-    val familyHFileWriteOptionsMapInternal =
-      new util.HashMap[ByteArrayWrapper, FamilyHFileWriteOptions]
+      val familyHFileWriteOptionsMapInternal =
+        new util.HashMap[ByteArrayWrapper, FamilyHFileWriteOptions]
 
-    val entrySetIt = familyHFileWriteOptionsMap.entrySet().iterator()
+      val entrySetIt = familyHFileWriteOptionsMap.entrySet().iterator()
 
-    while (entrySetIt.hasNext) {
-      val entry = entrySetIt.next()
-      familyHFileWriteOptionsMapInternal.put(new ByteArrayWrapper(entry.getKey), entry.getValue)
-    }
-
-    val regionSplitPartitioner =
-      new BulkLoadPartitioner(startKeys)
-
-    //This is where all the magic happens
-    //Here we are going to do the following things
-    // 1. FlapMap every row in the RDD into key column value tuples
-    // 2. Then we are going to repartition sort and shuffle
-    // 3. Finally we are going to write out our HFiles
-    rdd.map( r => mapFunction(r)).
-      repartitionAndSortWithinPartitions(regionSplitPartitioner).
-      hbaseForeachPartition(this, (it, conn) => {
-
-      val conf = broadcastedConf.value.value
-      val fs = FileSystem.get(conf)
-      val writerMap = new mutable.HashMap[ByteArrayWrapper, WriterLength]
-      var previousRow:Array[Byte] = HConstants.EMPTY_BYTE_ARRAY
-      var rollOverRequested = false
-      val localTableName = TableName.valueOf(tableRawName)
-
-      //Here is where we finally iterate through the data in this partition of the
-      //RDD that has been sorted and partitioned
-      it.foreach{ case (rowKey:ByteArrayWrapper,
-      familiesQualifiersValues:FamiliesQualifiersValues) =>
-
-
-        if (Bytes.compareTo(previousRow, rowKey.value) == 0) {
-          throw new KeyAlreadyExistsException("The following key was sent to the " +
-            "HFile load more then one: " + Bytes.toString(previousRow))
-        }
-
-        //The family map is a tree map so the families will be sorted
-        val familyIt = familiesQualifiersValues.familyMap.entrySet().iterator()
-        while (familyIt.hasNext) {
-          val familyEntry = familyIt.next()
-
-          val family = familyEntry.getKey.value
-
-          val qualifierIt = familyEntry.getValue.entrySet().iterator()
-
-          //The qualifier map is a tree map so the families will be sorted
-          while (qualifierIt.hasNext) {
-
-            val qualifierEntry = qualifierIt.next()
-            val qualifier = qualifierEntry.getKey
-            val cellValue = qualifierEntry.getValue
-
-            writeValueToHFile(rowKey.value,
-              family,
-              qualifier.value, // qualifier
-              cellValue, // value
-              nowTimeStamp,
-              fs,
-              conn,
-              localTableName,
-              conf,
-              familyHFileWriteOptionsMapInternal,
-              defaultCompression,
-              writerMap,
-              stagingDir)
-
-            previousRow = rowKey.value
-          }
-
-          writerMap.values.foreach( wl => {
-            rollOverRequested = rollOverRequested || wl.written > maxSize
-
-            //This will only roll if we have at least one column family file that is
-            //bigger then maxSize and we have finished a given row key
-            if (rollOverRequested) {
-              rollWriters(fs, writerMap,
-                regionSplitPartitioner,
-                previousRow,
-                compactionExclude)
-              rollOverRequested = false
-            }
-          })
-        }
+      while (entrySetIt.hasNext) {
+        val entry = entrySetIt.next()
+        familyHFileWriteOptionsMapInternal.put(new ByteArrayWrapper(entry.getKey), entry.getValue)
       }
 
-      //This will get a writer for the column family
-      //If there is no writer for a given column family then
-      //it will get created here.
-      //We have finished all the data so lets close up the writers
-      rollWriters(fs, writerMap,
-        regionSplitPartitioner,
-        previousRow,
-        compactionExclude)
-      rollOverRequested = false
-    })
+      val regionSplitPartitioner =
+        new BulkLoadPartitioner(startKeys)
+
+      //This is where all the magic happens
+      //Here we are going to do the following things
+      // 1. FlapMap every row in the RDD into key column value tuples
+      // 2. Then we are going to repartition sort and shuffle
+      // 3. Finally we are going to write out our HFiles
+      rdd.map( r => mapFunction(r)).
+        repartitionAndSortWithinPartitions(regionSplitPartitioner).
+        hbaseForeachPartition(this, (it, conn) => {
+
+          val conf = broadcastedConf.value.value
+          val fs = FileSystem.get(conf)
+          val writerMap = new mutable.HashMap[ByteArrayWrapper, WriterLength]
+          var previousRow:Array[Byte] = HConstants.EMPTY_BYTE_ARRAY
+          var rollOverRequested = false
+          val localTableName = TableName.valueOf(tableRawName)
+
+          //Here is where we finally iterate through the data in this partition of the
+          //RDD that has been sorted and partitioned
+          it.foreach{ case (rowKey:ByteArrayWrapper,
+          familiesQualifiersValues:FamiliesQualifiersValues) =>
+
+
+            if (Bytes.compareTo(previousRow, rowKey.value) == 0) {
+              throw new KeyAlreadyExistsException("The following key was sent to the " +
+                "HFile load more then one: " + Bytes.toString(previousRow))
+            }
+
+            //The family map is a tree map so the families will be sorted
+            val familyIt = familiesQualifiersValues.familyMap.entrySet().iterator()
+            while (familyIt.hasNext) {
+              val familyEntry = familyIt.next()
+
+              val family = familyEntry.getKey.value
+
+              val qualifierIt = familyEntry.getValue.entrySet().iterator()
+
+              //The qualifier map is a tree map so the families will be sorted
+              while (qualifierIt.hasNext) {
+
+                val qualifierEntry = qualifierIt.next()
+                val qualifier = qualifierEntry.getKey
+                val cellValue = qualifierEntry.getValue
+
+                writeValueToHFile(rowKey.value,
+                  family,
+                  qualifier.value, // qualifier
+                  cellValue, // value
+                  nowTimeStamp,
+                  fs,
+                  conn,
+                  localTableName,
+                  conf,
+                  familyHFileWriteOptionsMapInternal,
+                  defaultCompression,
+                  writerMap,
+                  stagingDir)
+
+                previousRow = rowKey.value
+              }
+
+              writerMap.values.foreach( wl => {
+                rollOverRequested = rollOverRequested || wl.written > maxSize
+
+                //This will only roll if we have at least one column family file that is
+                //bigger then maxSize and we have finished a given row key
+                if (rollOverRequested) {
+                  rollWriters(fs, writerMap,
+                    regionSplitPartitioner,
+                    previousRow,
+                    compactionExclude)
+                  rollOverRequested = false
+                }
+              })
+            }
+          }
+
+          //This will get a writer for the column family
+          //If there is no writer for a given column family then
+          //it will get created here.
+          //We have finished all the data so lets close up the writers
+          rollWriters(fs, writerMap,
+            regionSplitPartitioner,
+            previousRow,
+            compactionExclude)
+          rollOverRequested = false
+        })
+    } finally {
+      if(null != conn) conn.close()
+    }
   }
 
   /**
@@ -917,7 +927,7 @@ class HBaseContext(@transient sc: SparkContext,
     new WriterLength(0,
       new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
         .withBloomType(BloomType.valueOf(familyOptions.bloomType))
-        .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext)
+        .withComparator(CellComparator.getInstance()).withFileContext(hFileContext)
         .withFilePath(new Path(familydir, "_" + UUID.randomUUID.toString.replaceAll("-", "")))
         .withFavoredNodes(favoredNodes).build())
 
@@ -1075,13 +1085,13 @@ class HBaseContext(@transient sc: SparkContext,
                                previousRow: Array[Byte],
                                compactionExclude: Boolean): Unit = {
     if (w != null) {
-      w.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
+      w.appendFileInfo(HStoreFile.BULKLOAD_TIME_KEY,
         Bytes.toBytes(System.currentTimeMillis()))
-      w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
+      w.appendFileInfo(HStoreFile.BULKLOAD_TASK_KEY,
         Bytes.toBytes(regionSplitPartitioner.getPartition(previousRow)))
-      w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,
+      w.appendFileInfo(HStoreFile.MAJOR_COMPACTION_KEY,
         Bytes.toBytes(true))
-      w.appendFileInfo(StoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
+      w.appendFileInfo(HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
         Bytes.toBytes(compactionExclude))
       w.appendTrackedTimestampsToMetadata()
       w.close()
@@ -1110,6 +1120,7 @@ class HBaseContext(@transient sc: SparkContext,
   class WriterLength(var written:Long, val writer:StoreFileWriter)
 }
 
+@InterfaceAudience.Private
 object LatestHBaseContextCache {
   var latest:HBaseContext = null
 }

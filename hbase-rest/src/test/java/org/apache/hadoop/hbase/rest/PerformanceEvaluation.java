@@ -34,14 +34,13 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -61,7 +60,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
@@ -93,6 +91,8 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Script used evaluating Stargate performance and scalability.  Runs a SG
@@ -111,7 +111,8 @@ import org.apache.hadoop.util.ToolRunner;
  * runs an individual client. Each client does about 1GB of data.
  */
 public class PerformanceEvaluation extends Configured implements Tool {
-  protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(PerformanceEvaluation.class);
 
   private static final int DEFAULT_ROW_PREFIX_LENGTH = 16;
   private static final int ROW_LENGTH = 1000;
@@ -220,8 +221,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   /**
    *  This class works as the InputSplit of Performance Evaluation
-   *  MapReduce InputFormat, and the Record Value of RecordReader. 
-   *  Each map task will only read one record from a PeInputSplit, 
+   *  MapReduce InputFormat, and the Record Value of RecordReader.
+   *  Each map task will only read one record from a PeInputSplit,
    *  the record value is the PeInputSplit itself.
    */
   public static class PeInputSplit extends InputSplit implements Writable {
@@ -417,7 +418,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
 
         key = NullWritable.get();
-        value = (PeInputSplit)split;
+        value = split;
 
         readOver = true;
         return true;
@@ -489,10 +490,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return clazz;
     }
 
+    @Override
     protected void map(NullWritable key, PeInputSplit value, final Context context)
            throws IOException, InterruptedException {
 
       Status status = new Status() {
+        @Override
         public void setStatus(String msg) {
            context.setStatus(msg);
         }
@@ -634,6 +637,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
                 perClientRows, R,
                  flushCommits, writeToWAL, useTags, noOfTags, connection, new Status() {
+                   @Override
                    public void setStatus(final String msg) throws IOException {
                      LOG.info("client-" + getName() + " " + msg);
                    }
@@ -950,11 +954,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static abstract class TableTest extends Test {
     protected Table table;
-    
+
     public TableTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
     }
 
+    @Override
     void testSetup() throws IOException {
       this.table = connection.getTable(tableName);
     }
@@ -974,10 +979,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.flushCommits = options.isFlushCommits();
     }
 
+    @Override
     void testSetup() throws IOException {
       this.mutator = connection.getBufferedMutator(tableName);
     }
 
+    @Override
     void testTakedown()  throws IOException {
       if (flushCommits) {
         this.mutator.flush();
@@ -1213,7 +1220,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class FilteredScanTest extends TableTest {
-    protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
+    protected static final Logger LOG = LoggerFactory.getLogger(FilteredScanTest.class.getName());
 
     FilteredScanTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
@@ -1235,7 +1242,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     protected Scan constructScan(byte[] valuePrefix) throws IOException {
       Filter filter = new SingleColumnValueFilter(
-          FAMILY_NAME, QUALIFIER_NAME, CompareFilter.CompareOp.EQUAL,
+          FAMILY_NAME, QUALIFIER_NAME, CompareOperator.EQUAL,
           new BinaryComparator(valuePrefix)
       );
       Scan scan = new Scan();
@@ -1326,6 +1333,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   private void runNIsOne(final Class<? extends Test> cmd) {
     Status status = new Status() {
+      @Override
       public void setStatus(String msg) throws IOException {
         LOG.info(msg);
       }

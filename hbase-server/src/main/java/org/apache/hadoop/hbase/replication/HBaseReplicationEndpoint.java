@@ -24,38 +24,36 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.AuthFailedException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link BaseReplicationEndpoint} for replication endpoints whose
  * target cluster is an HBase cluster.
  */
 @InterfaceAudience.Private
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MT_CORRECTNESS",
-  justification="Thinks zkw needs to be synchronized access but should be fine as is.")
 public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   implements Abortable {
 
-  private static final Log LOG = LogFactory.getLog(HBaseReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseReplicationEndpoint.class);
 
-  private ZooKeeperWatcher zkw = null; // FindBugs: MT_CORRECTNESS
+  private ZKWatcher zkw = null;
 
   private List<ServerName> regionServers = new ArrayList<>(0);
   private long lastRegionServerUpdate;
 
-  protected void disconnect() {
+  protected synchronized void disconnect() {
     if (zkw != null) {
       zkw.close();
     }
@@ -76,6 +74,16 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
         LOG.warn("Creation of ZookeeperWatcher failed for peer " + clusterKey, io);
       }
     }
+  }
+
+  @Override
+  public void start() {
+    startAsync();
+  }
+
+  @Override
+  public void stop() {
+    stopAsync();
   }
 
   @Override
@@ -113,7 +121,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Get the ZK connection to this peer
    * @return zk connection
    */
-  protected ZooKeeperWatcher getZkw() {
+  protected synchronized ZKWatcher getZkw() {
     return zkw;
   }
 
@@ -121,9 +129,9 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Closes the current ZKW (if not null) and creates a new one
    * @throws IOException If anything goes wrong connecting
    */
-  void reloadZkWatcher() throws IOException {
+  synchronized void reloadZkWatcher() throws IOException {
     if (zkw != null) zkw.close();
-    zkw = new ZooKeeperWatcher(ctx.getConfiguration(),
+    zkw = new ZKWatcher(ctx.getConfiguration(),
         "connection to cluster: " + ctx.getPeerId(), this);
     getZkw().registerListener(new PeerRegionServerListener(this));
   }
@@ -145,9 +153,10 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * @param zkw zk connection to use
    * @return list of region server addresses or an empty list if the slave is unavailable
    */
-  protected static List<ServerName> fetchSlavesAddresses(ZooKeeperWatcher zkw)
+  protected static List<ServerName> fetchSlavesAddresses(ZKWatcher zkw)
       throws KeeperException {
-    List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.znodePaths.rsZNode);
+    List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
+            zkw.getZNodePaths().rsZNode);
     if (children == null) {
       return Collections.emptyList();
     }
@@ -200,7 +209,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   /**
    * Tracks changes to the list of region servers in a peer's cluster.
    */
-  public static class PeerRegionServerListener extends ZooKeeperListener {
+  public static class PeerRegionServerListener extends ZKListener {
 
     private final HBaseReplicationEndpoint replicationEndpoint;
     private final String regionServerListNode;
@@ -208,7 +217,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     public PeerRegionServerListener(HBaseReplicationEndpoint replicationPeer) {
       super(replicationPeer.getZkw());
       this.replicationEndpoint = replicationPeer;
-      this.regionServerListNode = replicationEndpoint.getZkw().znodePaths.rsZNode;
+      this.regionServerListNode = replicationEndpoint.getZkw().getZNodePaths().rsZNode;
     }
 
     @Override

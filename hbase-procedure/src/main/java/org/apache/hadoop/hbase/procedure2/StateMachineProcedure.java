@@ -19,17 +19,18 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.StateMachineProcedureData;
 
 /**
@@ -47,19 +48,34 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.StateMa
 @InterfaceStability.Evolving
 public abstract class StateMachineProcedure<TEnvironment, TState>
     extends Procedure<TEnvironment> {
-  private static final Log LOG = LogFactory.getLog(StateMachineProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StateMachineProcedure.class);
 
   private static final int EOF_STATE = Integer.MIN_VALUE;
 
   private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private Flow stateFlow = Flow.HAS_MORE_STATE;
-  private int stateCount = 0;
+  protected int stateCount = 0;
   private int[] states = null;
 
   private List<Procedure<TEnvironment>> subProcList = null;
 
-  protected enum Flow {
+  protected final int getCycles() {
+    return cycles;
+  }
+
+  /**
+   * Cycles on same state. Good for figuring if we are stuck.
+   */
+  private int cycles = 0;
+
+  /**
+   * Ordinal of the previous state. So we can tell if we are progressing or not.
+   */
+  private int previousState;
+
+  @VisibleForTesting
+  public enum Flow {
     HAS_MORE_STATE,
     NO_MORE_STATE,
   }
@@ -126,10 +142,15 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * Add a child procedure to execute
    * @param subProcedure the child procedure
    */
-  protected void addChildProcedure(Procedure<TEnvironment>... subProcedure) {
-    if (subProcedure == null) return;
+  protected <T extends Procedure<TEnvironment>> void addChildProcedure(
+      @SuppressWarnings("unchecked") T... subProcedure) {
+    if (subProcedure == null) {
+      return;
+    }
     final int len = subProcedure.length;
-    if (len == 0) return;
+    if (len == 0) {
+      return;
+    }
     if (subProcList == null) {
       subProcList = new ArrayList<>(len);
     }
@@ -152,6 +173,19 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       if (stateCount == 0) {
         setNextState(getStateId(state));
       }
+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(state  + " " + this + "; cycles=" + this.cycles);
+      }
+      // Keep running count of cycles
+      if (getStateId(state) != this.previousState) {
+        this.previousState = getStateId(state);
+        this.cycles = 0;
+      } else {
+        this.cycles++;
+      }
+
+      LOG.trace("{}", this);
       stateFlow = executeFromState(env, state);
       if (!hasMoreState()) setNextState(EOF_STATE);
       if (subProcList != null && !subProcList.isEmpty()) {
@@ -172,30 +206,24 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     try {
       updateTimestamp();
       rollbackState(env, getCurrentState());
-      stateCount--;
     } finally {
+      stateCount--;
       updateTimestamp();
     }
   }
 
-  private boolean isEofState() {
+  protected boolean isEofState() {
     return stateCount > 0 && states[stateCount-1] == EOF_STATE;
   }
 
   @Override
   protected boolean abort(final TEnvironment env) {
-    final boolean isDebugEnabled = LOG.isDebugEnabled();
-    final TState state = getCurrentState();
-    if (isDebugEnabled) {
-      LOG.debug("abort requested for " + this + " state=" + state);
-    }
-
+    LOG.debug("Abort requested for {}", this);
     if (hasMoreState()) {
       aborted.set(true);
       return true;
-    } else if (isDebugEnabled) {
-      LOG.debug("ignoring abort request on state=" + state + " for " + this);
     }
+    LOG.debug("Ignoring abort request on {}", this);
     return false;
   }
 
@@ -235,6 +263,16 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   /**
+   * This method is used from test code as it cannot be assumed that state transition will happen
+   * sequentially. Some procedures may skip steps/ states, some may add intermediate steps in
+   * future.
+   */
+  @VisibleForTesting
+  public int getCurrentStateId() {
+    return getStateId(getCurrentState());
+  }
+
+  /**
    * Set the next state for the procedure.
    * @param stateId the ordinal() of the state enum (or state id)
    */
@@ -259,17 +297,19 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   @Override
-  protected void serializeStateData(final OutputStream stream) throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
     StateMachineProcedureData.Builder data = StateMachineProcedureData.newBuilder();
     for (int i = 0; i < stateCount; ++i) {
       data.addState(states[i]);
     }
-    data.build().writeDelimitedTo(stream);
+    serializer.serialize(data.build());
   }
 
   @Override
-  protected void deserializeStateData(final InputStream stream) throws IOException {
-    StateMachineProcedureData data = StateMachineProcedureData.parseDelimitedFrom(stream);
+  protected void deserializeStateData(ProcedureStateSerializer serializer)
+      throws IOException {
+    StateMachineProcedureData data = serializer.deserialize(StateMachineProcedureData.class);
     stateCount = data.getStateCount();
     if (stateCount > 0) {
       states = new int[stateCount];

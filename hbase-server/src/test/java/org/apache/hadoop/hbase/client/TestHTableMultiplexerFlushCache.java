@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -34,17 +34,22 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ LargeTests.class, ClientTests.class })
 public class TestHTableMultiplexerFlushCache {
-  private static final Log LOG = LogFactory.getLog(TestHTableMultiplexerFlushCache.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHTableMultiplexerFlushCache.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHTableMultiplexerFlushCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[] QUALIFIER1 = Bytes.toBytes("testQualifier_1");
@@ -98,9 +103,9 @@ public class TestHTableMultiplexerFlushCache {
     Table htable = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
 
-    HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(), 
+    HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(),
       PER_REGIONSERVER_QUEUE_SIZE);
-    
+
     try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       byte[][] startRows = r.getStartKeys();
       byte[] row = startRows[1];
@@ -156,7 +161,7 @@ public class TestHTableMultiplexerFlushCache {
     ServerName newServer = null;
     // Find a new server to move that region to
     for (int i = 0; i < SLAVES; i++) {
-      HRegionServer rs = hbaseCluster.getRegionServer(0);
+      HRegionServer rs = hbaseCluster.getRegionServer(i);
       if (!rs.getServerName().equals(originalServer.getServerName())) {
         newServer = rs.getServerName();
         break;

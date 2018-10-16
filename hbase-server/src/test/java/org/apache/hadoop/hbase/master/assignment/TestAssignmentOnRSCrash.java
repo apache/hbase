@@ -15,39 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
-
-import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
-import org.apache.hadoop.hbase.util.Bytes;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Category({MasterTests.class, LargeTests.class})
 public class TestAssignmentOnRSCrash {
-  private static final Log LOG = LogFactory.getLog(TestAssignmentOnRSCrash.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAssignmentOnRSCrash.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentOnRSCrash.class);
 
   private static final TableName TEST_TABLE = TableName.valueOf("testb");
   private static final String FAMILY_STR = "f";
@@ -78,22 +82,22 @@ public class TestAssignmentOnRSCrash {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKillRsWithUserRegionWithData() throws Exception {
     testCrashRsWithUserRegion(true, true);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKillRsWithUserRegionWithoutData() throws Exception {
     testCrashRsWithUserRegion(true, false);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStopRsWithUserRegionWithData() throws Exception {
     testCrashRsWithUserRegion(false, true);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStopRsWithUserRegionWithoutData() throws Exception {
     testCrashRsWithUserRegion(false, false);
   }
@@ -102,7 +106,7 @@ public class TestAssignmentOnRSCrash {
       throws Exception {
     final int NROWS = 100;
     int nkilled = 0;
-    for (HRegionInfo hri: UTIL.getHBaseAdmin().getTableRegions(TEST_TABLE)) {
+    for (RegionInfo hri: UTIL.getHBaseAdmin().getTableRegions(TEST_TABLE)) {
       ServerName serverName = AssignmentTestingUtil.getServerHoldingRegion(UTIL, hri);
       if (AssignmentTestingUtil.isServerHoldingMeta(UTIL, serverName)) continue;
 
@@ -129,19 +133,19 @@ public class TestAssignmentOnRSCrash {
     assertTrue("expected RSs to be killed", nkilled > 0);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testKillRsWithMetaRegion() throws Exception {
     testCrashRsWithMetaRegion(true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testStopRsWithMetaRegion() throws Exception {
     testCrashRsWithMetaRegion(false);
   }
 
   private void testCrashRsWithMetaRegion(final boolean kill) throws Exception {
     int nkilled = 0;
-    for (HRegionInfo hri: AssignmentTestingUtil.getMetaRegions(UTIL)) {
+    for (RegionInfo hri: AssignmentTestingUtil.getMetaRegions(UTIL)) {
       ServerName serverName = AssignmentTestingUtil.crashRsWithRegion(UTIL, hri, kill);
 
       // wait for region to enter in transition and then to get out of transition
@@ -159,7 +163,7 @@ public class TestAssignmentOnRSCrash {
     assertTrue("expected RSs to be killed", nkilled > 0);
   }
 
-  private void testInsert(final HRegionInfo hri, final int nrows) throws IOException {
+  private void testInsert(final RegionInfo hri, final int nrows) throws IOException {
     final Table table = UTIL.getConnection().getTable(hri.getTable());
     for (int i = 0; i < nrows; ++i) {
       final byte[] row = Bytes.add(hri.getStartKey(), Bytes.toBytes(i));
@@ -169,7 +173,7 @@ public class TestAssignmentOnRSCrash {
     }
   }
 
-  public int testGet(final HRegionInfo hri, final int nrows) throws IOException {
+  public int testGet(final RegionInfo hri, final int nrows) throws IOException {
     int nresults = 0;
     final Table table = UTIL.getConnection().getTable(hri.getTable());
     for (int i = 0; i < nrows; ++i) {

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,15 +18,12 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.net.ConnectException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -35,38 +31,47 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 
 /**
  * Test {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestMetaTableLocator {
-  private static final Log LOG = LogFactory.getLog(TestMetaTableLocator.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetaTableLocator.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableLocator.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final ServerName SN =
       ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
-  private ZooKeeperWatcher watcher;
+  private ZKWatcher watcher;
   private Abortable abortable;
 
   @BeforeClass public static void beforeClass() throws Exception {
@@ -91,7 +96,7 @@ public class TestMetaTableLocator {
         return false;
       }
     };
-    this.watcher = new ZooKeeperWatcher(UTIL.getConfiguration(),
+    this.watcher = new ZKWatcher(UTIL.getConfiguration(),
       this.getClass().getSimpleName(), this.abortable, true);
   }
 
@@ -128,14 +133,14 @@ public class TestMetaTableLocator {
       assertEquals(state, MetaTableLocator.getMetaRegionState(this.watcher).getState());
     }
     MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
-    assertEquals(mtl.getMetaRegionLocation(this.watcher), SN);
+    assertEquals(SN, mtl.getMetaRegionLocation(this.watcher));
     assertEquals(RegionState.State.OPEN,
       MetaTableLocator.getMetaRegionState(this.watcher).getState());
 
     mtl.deleteMetaLocation(this.watcher);
     assertNull(MetaTableLocator.getMetaRegionState(this.watcher).getServerName());
-    assertEquals(MetaTableLocator.getMetaRegionState(this.watcher).getState(),
-      RegionState.State.OFFLINE);
+    assertEquals(RegionState.State.OFFLINE,
+        MetaTableLocator.getMetaRegionState(this.watcher).getState());
     assertNull(mtl.getMetaRegionLocation(this.watcher));
   }
 
@@ -250,7 +255,7 @@ public class TestMetaTableLocator {
       Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
     Mockito.when(implementation.getRegionInfo((RpcController)Mockito.any(),
       (GetRegionInfoRequest)Mockito.any())).thenThrow(connectException);
-    Mockito.when(connection.getAdmin(Mockito.any(ServerName.class))).
+    Mockito.when(connection.getAdmin(Mockito.any())).
       thenReturn(implementation);
         RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
         Mockito.when(controllerFactory.newController()).thenReturn(
@@ -325,12 +330,12 @@ public class TestMetaTableLocator {
       thenReturn(anyLocation);
     if (admin != null) {
       // If a call to getHRegionConnection, return this implementation.
-      Mockito.when(connection.getAdmin(Mockito.any(ServerName.class))).
+      Mockito.when(connection.getAdmin(Mockito.any())).
         thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this implementation.
-      Mockito.when(connection.getClient(Mockito.any(ServerName.class))).
+      Mockito.when(connection.getClient(Mockito.any())).
         thenReturn(client);
     }
     return connection;

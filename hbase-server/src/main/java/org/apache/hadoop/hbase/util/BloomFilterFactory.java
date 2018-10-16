@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,33 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.io.DataInput;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterBase;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Handles Bloom filter initialization based on configuration and serialized
- * metadata in the reader and writer of {@link org.apache.hadoop.hbase.regionserver.StoreFile}.
+ * Handles Bloom filter initialization based on configuration and serialized metadata in the reader
+ * and writer of {@link org.apache.hadoop.hbase.regionserver.HStoreFile}.
  */
 @InterfaceAudience.Private
 public final class BloomFilterFactory {
 
-  private static final Log LOG =
-      LogFactory.getLog(BloomFilterFactory.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BloomFilterFactory.class.getName());
 
   /** This class should not be instantiated. */
   private BloomFilterFactory() {}
@@ -155,7 +153,7 @@ public final class BloomFilterFactory {
 
   /**
    * Creates a new general (Row or RowCol) Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.StoreFile} writing.
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
    *
    * @param conf
    * @param cacheConf
@@ -196,14 +194,14 @@ public final class BloomFilterFactory {
     // In case of compound Bloom filters we ignore the maxKeys hint.
     CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
         err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
-        bloomType == BloomType.ROWCOL ? CellComparator.COMPARATOR : null, bloomType);
+        bloomType == BloomType.ROWCOL ? CellComparatorImpl.COMPARATOR : null, bloomType);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }
 
   /**
    * Creates a new Delete Family Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.StoreFile} writing.
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
    * @param conf
    * @param cacheConf
    * @param maxKeys an estimate of the number of keys we expect to insert.
@@ -231,4 +229,4 @@ public final class BloomFilterFactory {
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }
-};
+}

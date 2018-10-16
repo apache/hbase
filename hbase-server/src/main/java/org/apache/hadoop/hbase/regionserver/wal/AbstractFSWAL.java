@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static com.google.common.base.Preconditions.*;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
+import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
+import com.lmax.disruptor.RingBuffer;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.management.MemoryType;
@@ -29,9 +32,8 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -41,41 +43,43 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.commons.lang.mutable.MutableLong;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CollectionUtils;
-import org.apache.hadoop.hbase.util.DrainBarrier;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
+import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.NullScope;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.lmax.disruptor.RingBuffer;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS. Only one
@@ -104,9 +108,9 @@ import com.lmax.disruptor.RingBuffer;
  * (Need to keep our own file lengths, not rely on HDFS).
  */
 @InterfaceAudience.Private
-public abstract class AbstractFSWAL<W> implements WAL {
+public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
-  private static final Log LOG = LogFactory.getLog(AbstractFSWAL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractFSWAL.class);
 
   protected static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
 
@@ -164,15 +168,17 @@ public abstract class AbstractFSWAL<W> implements WAL {
    */
   protected final SequenceIdAccounting sequenceIdAccounting = new SequenceIdAccounting();
 
-  /** The barrier used to ensure that close() waits for all log rolls and flushes to finish. */
-  protected final DrainBarrier closeBarrier = new DrainBarrier();
-
   protected final long slowSyncNs;
 
   private final long walSyncTimeoutNs;
 
   // If > than this size, roll the log.
   protected final long logrollsize;
+
+  /**
+   * Block size to use writing files.
+   */
+  protected final long blocksize;
 
   /*
    * If more than this many logs, force flush of oldest region to oldest edit goes to disk. If too
@@ -218,6 +224,9 @@ public abstract class AbstractFSWAL<W> implements WAL {
    */
   volatile W writer;
 
+  // Last time to check low replication on hlog's pipeline
+  private long lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
+
   protected volatile boolean closed = false;
 
   protected final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -226,7 +235,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
    * an IllegalArgumentException if used to compare paths from different wals.
    */
   final Comparator<Path> LOG_NAME_COMPARATOR =
-      (o1, o2) -> Long.compare(getFileNumFromFileName(o1), getFileNumFromFileName(o2));
+    (o1, o2) -> Long.compare(getFileNumFromFileName(o1), getFileNumFromFileName(o2));
 
   private static final class WalProps {
 
@@ -252,18 +261,15 @@ public abstract class AbstractFSWAL<W> implements WAL {
    * Map of WAL log file to properties. The map is sorted by the log file creation timestamp
    * (contained in the log file name).
    */
-  protected ConcurrentNavigableMap<Path, WalProps> walFile2Props = new ConcurrentSkipListMap<>(
-      LOG_NAME_COMPARATOR);
+  protected ConcurrentNavigableMap<Path, WalProps> walFile2Props =
+    new ConcurrentSkipListMap<>(LOG_NAME_COMPARATOR);
 
   /**
-   * Map of {@link SyncFuture}s keyed by Handler objects. Used so we reuse SyncFutures.
+   * Map of {@link SyncFuture}s owned by Thread objects. Used so we reuse SyncFutures.
+   * Thread local is used so JVM can GC the terminated thread for us. See HBASE-21228
    * <p>
-   * TODO: Reuse FSWALEntry's rather than create them anew each time as we do SyncFutures here.
-   * <p>
-   * TODO: Add a FSWalEntry and SyncFuture as thread locals on handlers rather than have them get
-   * them from this Map?
    */
-  private final ConcurrentMap<Thread, SyncFuture> syncFuturesByHandler;
+  private final ThreadLocal<SyncFuture> cachedSyncFutures;
 
   /**
    * The class name of the runtime implementation, used as prefix for logging/tracing.
@@ -297,7 +303,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
   }
 
   private int calculateMaxLogFiles(Configuration conf, long logRollSize) {
-    Pair<Long, MemoryType> globalMemstoreSize = MemorySizeUtil.getGlobalMemstoreSize(conf);
+    Pair<Long, MemoryType> globalMemstoreSize = MemorySizeUtil.getGlobalMemStoreSize(conf);
     return (int) ((globalMemstoreSize.getFirst() * 2) / logRollSize);
   }
 
@@ -307,8 +313,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
     // be stuck and make no progress if the buffer is filled with appends only and there is no
     // sync. If no sync, then the handlers will be outstanding just waiting on sync completion
     // before they return.
-    int preallocatedEventCount = this.conf.getInt("hbase.regionserver.wal.disruptor.event.count",
-      1024 * 16);
+    int preallocatedEventCount =
+      this.conf.getInt("hbase.regionserver.wal.disruptor.event.count", 1024 * 16);
     checkArgument(preallocatedEventCount >= 0,
       "hbase.regionserver.wal.disruptor.event.count must > 0");
     int floor = Integer.highestOneBit(preallocatedEventCount);
@@ -342,17 +348,18 @@ public abstract class AbstractFSWAL<W> implements WAL {
     }
 
     // If prefix is null||empty then just name it wal
-    this.walFilePrefix = prefix == null || prefix.isEmpty() ? "wal"
-        : URLEncoder.encode(prefix, "UTF8");
+    this.walFilePrefix =
+      prefix == null || prefix.isEmpty() ? "wal" : URLEncoder.encode(prefix, "UTF8");
     // we only correctly differentiate suffices when numeric ones start with '.'
     if (suffix != null && !(suffix.isEmpty()) && !(suffix.startsWith(WAL_FILE_NAME_DELIMITER))) {
-      throw new IllegalArgumentException("WAL suffix must start with '" + WAL_FILE_NAME_DELIMITER
-          + "' but instead was '" + suffix + "'");
+      throw new IllegalArgumentException("WAL suffix must start with '" + WAL_FILE_NAME_DELIMITER +
+        "' but instead was '" + suffix + "'");
     }
     // Now that it exists, set the storage policy for the entire directory of wal files related to
     // this FSHLog instance
-    FSUtils.setStoragePolicy(fs, conf, this.walDir, HConstants.WAL_STORAGE_POLICY,
-      HConstants.DEFAULT_WAL_STORAGE_POLICY);
+    String storagePolicy =
+        conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
+    CommonFSUtils.setStoragePolicy(fs, this.walDir, storagePolicy);
     this.walFileSuffix = (suffix == null) ? "" : URLEncoder.encode(suffix, "UTF8");
     this.prefixPathStr = new Path(walDir, walFilePrefix + WAL_FILE_NAME_DELIMITER).toString();
 
@@ -366,7 +373,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
         }
         if (walFileSuffix.isEmpty()) {
           // in the case of the null suffix, we need to ensure the filename ends with a timestamp.
-          return org.apache.commons.lang.StringUtils
+          return org.apache.commons.lang3.StringUtils
               .isNumeric(fileNameString.substring(prefixPathStr.length()));
         } else if (!fileNameString.endsWith(walFileSuffix)) {
           return false;
@@ -376,7 +383,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
     };
 
     if (failIfWALExists) {
-      final FileStatus[] walFiles = FSUtils.listStatus(fs, walDir, ourFiles);
+      final FileStatus[] walFiles = CommonFSUtils.listStatus(fs, walDir, ourFiles);
       if (null != walFiles && 0 != walFiles.length) {
         throw new IOException("Target WAL already exists within directory " + walDir);
       }
@@ -390,31 +397,41 @@ public abstract class AbstractFSWAL<W> implements WAL {
     }
     this.coprocessorHost = new WALCoprocessorHost(this, conf);
 
-    // Get size to roll log at. Roll at 95% of HDFS block size so we avoid crossing HDFS blocks
-    // (it costs a little x'ing bocks)
-    final long blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
-      FSUtils.getDefaultBlockSize(this.fs, this.walDir));
-    this.logrollsize = (long) (blocksize
-        * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
-
-    boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
-    if (maxLogsDefined) {
-      LOG.warn("'hbase.regionserver.maxlogs' was deprecated.");
-    }
+    // Schedule a WAL roll when the WAL is 50% of the HDFS block size. Scheduling at 50% of block
+    // size should make it so WAL rolls before we get to the end-of-block (Block transitions cost
+    // some latency). In hbase-1 we did this differently. We scheduled a roll when we hit 95% of
+    // the block size but experience from the field has it that this was not enough time for the
+    // roll to happen before end-of-block. So the new accounting makes WALs of about the same
+    // size as those made in hbase-1 (to prevent surprise), we now have default block size as
+    // 2 times the DFS default: i.e. 2 * DFS default block size rolling at 50% full will generally
+    // make similar size logs to 1 * DFS default block size rolling at 95% full. See HBASE-19148.
+    this.blocksize = WALUtil.getWALBlockSize(this.conf, this.fs, this.walDir);
+    float multiplier = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.5f);
+    this.logrollsize = (long)(this.blocksize * multiplier);
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
       Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
 
-    LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize="
-        + StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix="
-        + walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
+    LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
+      StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
+      walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
     this.slowSyncNs = TimeUnit.MILLISECONDS
         .toNanos(conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS));
     this.walSyncTimeoutNs = TimeUnit.MILLISECONDS
         .toNanos(conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS));
-    int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
-    // Presize our map of SyncFutures by handler objects.
-    this.syncFuturesByHandler = new ConcurrentHashMap<>(maxHandlersCount);
+    this.cachedSyncFutures = new ThreadLocal<SyncFuture>() {
+      @Override
+      protected SyncFuture initialValue() {
+        return new SyncFuture();
+      }
+    };
     this.implClassName = getClass().getSimpleName();
+  }
+
+  /**
+   * Used to initialize the WAL. Usually just call rollWriter to create the first log writer.
+   */
+  public void init() throws IOException {
+    rollWriter();
   }
 
   @Override
@@ -434,42 +451,32 @@ public abstract class AbstractFSWAL<W> implements WAL {
 
   @Override
   public Long startCacheFlush(byte[] encodedRegionName, Set<byte[]> families) {
-    if (!closeBarrier.beginOp()) {
-      LOG.info("Flush not started for " + Bytes.toString(encodedRegionName) + "; server closing.");
-      return null;
-    }
     return this.sequenceIdAccounting.startCacheFlush(encodedRegionName, families);
   }
 
   @Override
   public Long startCacheFlush(byte[] encodedRegionName, Map<byte[], Long> familyToSeq) {
-    if (!closeBarrier.beginOp()) {
-      LOG.info("Flush not started for " + Bytes.toString(encodedRegionName) + "; server closing.");
-      return null;
-    }
     return this.sequenceIdAccounting.startCacheFlush(encodedRegionName, familyToSeq);
   }
 
   @Override
   public void completeCacheFlush(byte[] encodedRegionName) {
     this.sequenceIdAccounting.completeCacheFlush(encodedRegionName);
-    closeBarrier.endOp();
   }
 
   @Override
   public void abortCacheFlush(byte[] encodedRegionName) {
     this.sequenceIdAccounting.abortCacheFlush(encodedRegionName);
-    closeBarrier.endOp();
   }
 
   @Override
-  public long getEarliestMemstoreSeqNum(byte[] encodedRegionName) {
+  public long getEarliestMemStoreSeqNum(byte[] encodedRegionName) {
     // Used by tests. Deprecated as too subtle for general usage.
     return this.sequenceIdAccounting.getLowestSequenceId(encodedRegionName);
   }
 
   @Override
-  public long getEarliestMemstoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
+  public long getEarliestMemStoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
     // This method is used by tests and for figuring if we should flush or not because our
     // sequenceids are too old. It is also used reporting the master our oldest sequenceid for use
     // figuring what edits can be skipped during log recovery. getEarliestMemStoreSequenceId
@@ -584,8 +591,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
     int logCount = getNumRolledLogFiles();
     if (logCount > this.maxLogs && logCount > 0) {
       Map.Entry<Path, WalProps> firstWALEntry = this.walFile2Props.firstEntry();
-      regions = this.sequenceIdAccounting
-          .findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
+      regions =
+        this.sequenceIdAccounting.findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
     }
     if (regions != null) {
       StringBuilder sb = new StringBuilder();
@@ -595,8 +602,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
         }
         sb.append(Bytes.toStringBinary(regions[i]));
       }
-      LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs + "; forcing flush of "
-          + regions.length + " regions(s): " + sb.toString());
+      LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs +
+        "; forcing flush of " + regions.length + " regions(s): " + sb.toString());
     }
     return regions;
   }
@@ -647,7 +654,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
       }
     }
     LOG.info("Archiving " + p + " to " + newPath);
-    if (!FSUtils.renameAndSetModifyTime(this.fs, p, newPath)) {
+    if (!CommonFSUtils.renameAndSetModifyTime(this.fs, p, newPath)) {
       throw new IOException("Unable to rename " + p + " to " + newPath);
     }
     // Tell our listeners that a log has been archived.
@@ -658,9 +665,26 @@ public abstract class AbstractFSWAL<W> implements WAL {
     }
   }
 
+  protected final void logRollAndSetupWalProps(Path oldPath, Path newPath, long oldFileLen) {
+    int oldNumEntries = this.numEntries.getAndSet(0);
+    String newPathString = newPath != null ? CommonFSUtils.getPath(newPath) : null;
+    if (oldPath != null) {
+      this.walFile2Props.put(oldPath,
+        new WalProps(this.sequenceIdAccounting.resetHighest(), oldFileLen));
+      this.totalLogSize.addAndGet(oldFileLen);
+      LOG.info("Rolled WAL {} with entries={}, filesize={}; new WAL {}",
+        CommonFSUtils.getPath(oldPath), oldNumEntries, StringUtils.byteDesc(oldFileLen),
+        newPathString);
+    } else {
+      LOG.info("New WAL {}", newPathString);
+    }
+  }
+
   /**
+   * <p>
    * Cleans up current writer closing it and then puts in place the passed in
    * <code>nextWriter</code>.
+   * </p>
    * <p>
    * <ul>
    * <li>In the case of creating a new WAL, oldPath will be null.</li>
@@ -669,43 +693,36 @@ public abstract class AbstractFSWAL<W> implements WAL {
    * <li>In the case of closing out this FSHLog with no further use newPath and nextWriter will be
    * null.</li>
    * </ul>
+   * </p>
    * @param oldPath may be null
    * @param newPath may be null
    * @param nextWriter may be null
    * @return the passed in <code>newPath</code>
    * @throws IOException if there is a problem flushing or closing the underlying FS
    */
+  @VisibleForTesting
   Path replaceWriter(Path oldPath, Path newPath, W nextWriter) throws IOException {
-    TraceScope scope = Trace.startSpan("FSHFile.replaceWriter");
-    try {
-      long oldFileLen = doReplaceWriter(oldPath, newPath, nextWriter);
-      int oldNumEntries = this.numEntries.getAndSet(0);
-      final String newPathString = (null == newPath ? null : FSUtils.getPath(newPath));
-      if (oldPath != null) {
-        this.walFile2Props.put(oldPath,
-          new WalProps(this.sequenceIdAccounting.resetHighest(), oldFileLen));
-        this.totalLogSize.addAndGet(oldFileLen);
-        LOG.info("Rolled WAL " + FSUtils.getPath(oldPath) + " with entries=" + oldNumEntries
-            + ", filesize=" + StringUtils.byteDesc(oldFileLen) + "; new WAL " + newPathString);
-      } else {
-        LOG.info("New WAL " + newPathString);
-      }
+    try (TraceScope scope = TraceUtil.createTrace("FSHFile.replaceWriter")) {
+      doReplaceWriter(oldPath, newPath, nextWriter);
       return newPath;
-    } finally {
-      scope.close();
     }
   }
 
-  protected Span blockOnSync(final SyncFuture syncFuture) throws IOException {
+  protected final void blockOnSync(SyncFuture syncFuture) throws IOException {
     // Now we have published the ringbuffer, halt the current thread until we get an answer back.
     try {
-      syncFuture.get(walSyncTimeoutNs);
-      return syncFuture.getSpan();
+      if (syncFuture != null) {
+        if (closed) {
+          throw new IOException("WAL has been closed");
+        } else {
+          syncFuture.get(walSyncTimeoutNs);
+        }
+      }
     } catch (TimeoutIOException tioe) {
       // SyncFuture reuse by thread, if TimeoutIOException happens, ringbuffer
       // still refer to it, so if this thread use it next time may get a wrong
       // result.
-      this.syncFuturesByHandler.remove(Thread.currentThread());
+      this.cachedSyncFutures.remove();
       throw tioe;
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted", ie);
@@ -730,21 +747,15 @@ public abstract class AbstractFSWAL<W> implements WAL {
   public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
     rollWriterLock.lock();
     try {
+      if (this.closed) {
+        throw new WALClosedException("WAL has been closed");
+      }
       // Return if nothing to flush.
       if (!force && this.writer != null && this.numEntries.get() <= 0) {
         return null;
       }
       byte[][] regionsToFlush = null;
-      if (this.closed) {
-        LOG.debug("WAL closed. Skipping rolling of writer");
-        return regionsToFlush;
-      }
-      if (!closeBarrier.beginOp()) {
-        LOG.debug("WAL closing. Skipping rolling of writer");
-        return regionsToFlush;
-      }
-      TraceScope scope = Trace.startSpan("FSHLog.rollWriter");
-      try {
+      try (TraceScope scope = TraceUtil.createTrace("FSHLog.rollWriter")) {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
         // Any exception from here on is catastrophic, non-recoverable so we currently abort.
@@ -754,18 +765,20 @@ public abstract class AbstractFSWAL<W> implements WAL {
         newPath = replaceWriter(oldPath, newPath, nextWriter);
         tellListenersAboutPostLogRoll(oldPath, newPath);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Create new " + implClassName + " writer with pipeline: "
-              + Arrays.toString(getPipeline()));
+          LOG.debug("Create new " + implClassName + " writer with pipeline: " +
+            Arrays.toString(getPipeline()));
         }
         // Can we delete any of the old log files?
         if (getNumRolledLogFiles() > 0) {
           cleanOldLogs();
           regionsToFlush = findRegionsToForceFlush();
         }
-      } finally {
-        closeBarrier.endOp();
-        assert scope == NullScope.INSTANCE || !scope.isDetached();
-        scope.close();
+      } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
+        // If the underlying FileSystem can't do what we ask, treat as IO failure so
+        // we'll abort.
+        throw new IOException(
+            "Underlying FileSystem can't meet stream requirements. See RS log " + "for details.",
+            exception);
       }
       return regionsToFlush;
     } finally {
@@ -788,8 +801,9 @@ public abstract class AbstractFSWAL<W> implements WAL {
    * Get the backing files associated with this WAL.
    * @return may be null if there are no files.
    */
-  protected FileStatus[] getFiles() throws IOException {
-    return FSUtils.listStatus(fs, walDir, ourFiles);
+  @VisibleForTesting
+  FileStatus[] getFiles() throws IOException {
+    return CommonFSUtils.listStatus(fs, walDir, ourFiles);
   }
 
   @Override
@@ -798,20 +812,18 @@ public abstract class AbstractFSWAL<W> implements WAL {
       return;
     }
     closed = true;
-    try {
-      // Prevent all further flushing and rolling.
-      closeBarrier.stopAndDrainOps();
-    } catch (InterruptedException e) {
-      LOG.error("Exception while waiting for cache flushes and log rolls", e);
-      Thread.currentThread().interrupt();
-    }
     // Tell our listeners that the log is closing
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
         i.logCloseRequested();
       }
     }
-    doShutdown();
+    rollWriterLock.lock();
+    try {
+      doShutdown();
+    } finally {
+      rollWriterLock.unlock();
+    }
   }
 
   @Override
@@ -828,7 +840,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
           }
         }
 
-        if (!FSUtils.renameAndSetModifyTime(fs, file.getPath(), p)) {
+        if (!CommonFSUtils.renameAndSetModifyTime(fs, file.getPath(), p)) {
           throw new IOException("Unable to rename " + file.getPath() + " to " + p);
         }
         // Tell our listeners that a log was archived.
@@ -838,7 +850,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
           }
         }
       }
-      LOG.debug("Moved " + files.length + " WAL file(s) to " + FSUtils.getPath(this.walArchiveDir));
+      LOG.debug(
+        "Moved " + files.length + " WAL file(s) to " + CommonFSUtils.getPath(this.walArchiveDir));
     }
     LOG.info("Closed WAL: " + toString());
   }
@@ -857,13 +870,11 @@ public abstract class AbstractFSWAL<W> implements WAL {
     sequenceIdAccounting.updateStore(encodedRegionName, familyName, sequenceid, onlyIfGreater);
   }
 
-  protected SyncFuture getSyncFuture(long sequence, Span span) {
-    return CollectionUtils
-        .computeIfAbsent(syncFuturesByHandler, Thread.currentThread(), SyncFuture::new)
-        .reset(sequence, span);
+  protected final SyncFuture getSyncFuture(long sequence) {
+    return cachedSyncFutures.get().reset(sequence);
   }
 
-  protected void requestLogRoll(boolean tooFewReplicas) {
+  protected final void requestLogRoll(boolean tooFewReplicas) {
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
         i.logRollRequested(tooFewReplicas);
@@ -889,7 +900,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
     // Noop
   }
 
-  protected boolean append(W writer, FSWALEntry entry) throws IOException {
+  protected final boolean append(W writer, FSWALEntry entry) throws IOException {
     // TODO: WORK ON MAKING THIS APPEND FASTER. DOING WAY TOO MUCH WORK WITH CPs, PBing, etc.
     atHeadOfRingBufferEventHandlerAppend();
     long start = EnvironmentEdgeManager.currentTime();
@@ -904,12 +915,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
     }
 
     // Coprocessor hook.
-    if (!coprocessorHost.preWALWrite(entry.getHRegionInfo(), entry.getKey(), entry.getEdit())) {
-      if (entry.getEdit().isReplay()) {
-        // Set replication scope null so that this won't be replicated
-        entry.getKey().serializeReplicationScope(false);
-      }
-    }
+    coprocessorHost.preWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
     if (!listeners.isEmpty()) {
       for (WALActionsListener i : listeners) {
         i.visitLogEntryBeforeWrite(entry.getKey(), entry.getEdit());
@@ -919,8 +925,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
     assert highestUnsyncedTxid < entry.getTxid();
     highestUnsyncedTxid = entry.getTxid();
     sequenceIdAccounting.update(encodedRegionName, entry.getFamilyNames(), regionSequenceId,
-      entry.isInMemstore());
-    coprocessorHost.postWALWrite(entry.getHRegionInfo(), entry.getKey(), entry.getEdit());
+      entry.isInMemStore());
+    coprocessorHost.postWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
     // Update metrics.
     postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
     numEntries.incrementAndGet();
@@ -931,7 +937,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
     long len = 0;
     if (!listeners.isEmpty()) {
       for (Cell cell : e.getEdit().getCells()) {
-        len += CellUtil.estimatedSerializedSizeOf(cell);
+        len += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       for (WALActionsListener listener : listeners) {
         listener.postAppend(len, elapsedTime, e.getKey(), e.getEdit());
@@ -940,11 +946,11 @@ public abstract class AbstractFSWAL<W> implements WAL {
     return len;
   }
 
-  protected void postSync(final long timeInNanos, final int handlerSyncs) {
+  protected final void postSync(final long timeInNanos, final int handlerSyncs) {
     if (timeInNanos > this.slowSyncNs) {
       String msg = new StringBuilder().append("Slow sync cost: ").append(timeInNanos / 1000000)
           .append(" ms, current pipeline: ").append(Arrays.toString(getPipeline())).toString();
-      Trace.addTimelineAnnotation(msg);
+      TraceUtil.addTimelineAnnotation(msg);
       LOG.info(msg);
     }
     if (!listeners.isEmpty()) {
@@ -954,22 +960,22 @@ public abstract class AbstractFSWAL<W> implements WAL {
     }
   }
 
-  protected long stampSequenceIdAndPublishToRingBuffer(HRegionInfo hri, WALKey key, WALEdit edits,
-      boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
+  protected final long stampSequenceIdAndPublishToRingBuffer(RegionInfo hri, WALKeyImpl key,
+      WALEdit edits, boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
       throws IOException {
     if (this.closed) {
-      throw new IOException("Cannot append; log is closed, regionName = " + hri.getRegionNameAsString());
+      throw new IOException(
+          "Cannot append; log is closed, regionName = " + hri.getRegionNameAsString());
     }
-    TraceScope scope = Trace.startSpan(implClassName + ".append");
     MutableLong txidHolder = new MutableLong();
     MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin(() -> {
       txidHolder.setValue(ringBuffer.next());
     });
     long txid = txidHolder.longValue();
-    try {
+    try (TraceScope scope = TraceUtil.createTrace(implClassName + ".append")) {
       FSWALEntry entry = new FSWALEntry(txid, key, edits, hri, inMemstore);
       entry.stampRegionSequenceId(we);
-      ringBuffer.get(txid).load(entry, scope.detach());
+      ringBuffer.get(txid).load(entry);
     } finally {
       ringBuffer.publish(txid);
     }
@@ -978,8 +984,29 @@ public abstract class AbstractFSWAL<W> implements WAL {
 
   @Override
   public String toString() {
-    return implClassName + " " + walFilePrefix + ":" + walFileSuffix + "(num "
-        + filenum + ")";
+    return implClassName + " " + walFilePrefix + ":" + walFileSuffix + "(num " + filenum + ")";
+  }
+
+  /**
+   * if the given {@code path} is being written currently, then return its length.
+   * <p>
+   * This is used by replication to prevent replicating unacked log entries. See
+   * https://issues.apache.org/jira/browse/HBASE-14004 for more details.
+   */
+  @Override
+  public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
+    rollWriterLock.lock();
+    try {
+      Path currentPath = getOldPath();
+      if (path.equals(currentPath)) {
+        W writer = this.writer;
+        return writer != null ? OptionalLong.of(writer.getLength()) : OptionalLong.empty();
+      } else {
+        return OptionalLong.empty();
+      }
+    } finally {
+      rollWriterLock.unlock();
+    }
   }
 
   /**
@@ -995,20 +1022,39 @@ public abstract class AbstractFSWAL<W> implements WAL {
    * this append; otherwise, you will just have to wait on the WriteEntry to get filled in.
    */
   @Override
-  public abstract long append(HRegionInfo info, WALKey key, WALEdit edits, boolean inMemstore)
+  public abstract long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
       throws IOException;
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;
 
-  protected abstract W createWriterInstance(Path path) throws IOException;
+  protected abstract W createWriterInstance(Path path)
+      throws IOException, CommonFSUtils.StreamLacksCapabilityException;
 
-  /**
-   * @return old wal file size
-   */
-  protected abstract long doReplaceWriter(Path oldPath, Path newPath, W nextWriter)
+  protected abstract void doReplaceWriter(Path oldPath, Path newPath, W nextWriter)
       throws IOException;
 
   protected abstract void doShutdown() throws IOException;
+
+  protected abstract boolean doCheckLogLowReplication();
+
+  public void checkLogLowReplication(long checkInterval) {
+    long now = EnvironmentEdgeManager.currentTime();
+    if (now - lastTimeCheckLowReplication < checkInterval) {
+      return;
+    }
+    // Will return immediately if we are in the middle of a WAL log roll currently.
+    if (!rollWriterLock.tryLock()) {
+      return;
+    }
+    try {
+      lastTimeCheckLowReplication = now;
+      if (doCheckLogLowReplication()) {
+        requestLogRoll(true);
+      }
+    } finally {
+      rollWriterLock.unlock();
+    }
+  }
 
   /**
    * This method gets the pipeline for the current WAL.
@@ -1021,4 +1067,68 @@ public abstract class AbstractFSWAL<W> implements WAL {
    */
   @VisibleForTesting
   abstract int getLogReplication();
+
+  private static void split(final Configuration conf, final Path p) throws IOException {
+    FileSystem fs = FSUtils.getWALFileSystem(conf);
+    if (!fs.exists(p)) {
+      throw new FileNotFoundException(p.toString());
+    }
+    if (!fs.getFileStatus(p).isDirectory()) {
+      throw new IOException(p + " is not a directory");
+    }
+
+    final Path baseDir = FSUtils.getWALRootDir(conf);
+    Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    if (conf.getBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR,
+      AbstractFSWALProvider.DEFAULT_SEPARATE_OLDLOGDIR)) {
+      archiveDir = new Path(archiveDir, p.getName());
+    }
+    WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALFactory.getInstance(conf));
+  }
+
+  private static void usage() {
+    System.err.println("Usage: AbstractFSWAL <ARGS>");
+    System.err.println("Arguments:");
+    System.err.println(" --dump  Dump textual representation of passed one or more files");
+    System.err.println("         For example: " +
+      "AbstractFSWAL --dump hdfs://example.com:9000/hbase/WALs/MACHINE/LOGFILE");
+    System.err.println(" --split Split the passed directory of WAL logs");
+    System.err.println(
+      "         For example: AbstractFSWAL --split hdfs://example.com:9000/hbase/WALs/DIR");
+  }
+
+  /**
+   * Pass one or more log file names and it will either dump out a text version on
+   * <code>stdout</code> or split the specified log files.
+   */
+  public static void main(String[] args) throws IOException {
+    if (args.length < 2) {
+      usage();
+      System.exit(-1);
+    }
+    // either dump using the WALPrettyPrinter or split, depending on args
+    if (args[0].compareTo("--dump") == 0) {
+      WALPrettyPrinter.run(Arrays.copyOfRange(args, 1, args.length));
+    } else if (args[0].compareTo("--perf") == 0) {
+      LOG.error(HBaseMarkers.FATAL, "Please use the WALPerformanceEvaluation tool instead. i.e.:");
+      LOG.error(HBaseMarkers.FATAL,
+        "\thbase org.apache.hadoop.hbase.wal.WALPerformanceEvaluation --iterations " + args[1]);
+      System.exit(-1);
+    } else if (args[0].compareTo("--split") == 0) {
+      Configuration conf = HBaseConfiguration.create();
+      for (int i = 1; i < args.length; i++) {
+        try {
+          Path logPath = new Path(args[i]);
+          FSUtils.setFsDefault(conf, logPath);
+          split(conf, logPath);
+        } catch (IOException t) {
+          t.printStackTrace(System.err);
+          System.exit(-1);
+        }
+      }
+    } else {
+      usage();
+      System.exit(-1);
+    }
+  }
 }

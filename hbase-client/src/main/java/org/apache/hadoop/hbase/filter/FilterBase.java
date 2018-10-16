@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Abstract base class to help you implement new Filters.  Common "ignore" or NOOP type
@@ -112,7 +112,7 @@ public abstract class FilterBase extends Filter {
 
   /**
    * Filters that never filter by rows based on previously gathered state from
-   * {@link #filterKeyValue(Cell)} can inherit this implementation that
+   * {@link #filterCell(Cell)} can inherit this implementation that
    * never filters a row.
    *
    * {@inheritDoc}
@@ -128,6 +128,7 @@ public abstract class FilterBase extends Filter {
    *
    * {@inheritDoc}
    */
+  @Override
   public Cell getNextCellHint(Cell currentCell) throws IOException {
     return null;
   }
@@ -138,6 +139,7 @@ public abstract class FilterBase extends Filter {
    *
    * {@inheritDoc}
    */
+  @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
     return true;
   }
@@ -155,6 +157,7 @@ public abstract class FilterBase extends Filter {
   /**
    * Return filter's info for debugging and logging purpose.
    */
+  @Override
   public String toString() {
     return this.getClass().getSimpleName();
   }
@@ -162,6 +165,7 @@ public abstract class FilterBase extends Filter {
   /**
    * Return length 0 byte array for Filters that don't require special serialization
    */
+  @Override
   public byte[] toByteArray() throws IOException {
     return new byte[0];
   }
@@ -173,6 +177,7 @@ public abstract class FilterBase extends Filter {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter other) {
     return true;
   }

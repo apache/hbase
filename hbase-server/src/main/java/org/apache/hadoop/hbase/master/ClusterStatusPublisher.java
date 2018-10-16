@@ -20,23 +20,6 @@
 
 package org.apache.hadoop.hbase.master;
 
-
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ChannelFactory;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.util.internal.StringUtil;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -51,16 +34,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -68,6 +48,23 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
+import org.apache.hbase.thirdparty.io.netty.bootstrap.ChannelFactory;
+import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelException;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.DatagramChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.DatagramPacket;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.InternetProtocolFamily;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioDatagramChannel;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.MessageToMessageEncoder;
+import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 
 
 /**
@@ -121,10 +118,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
     this.master = master;
     this.messagePeriod = conf.getInt(STATUS_PUBLISH_PERIOD, DEFAULT_STATUS_PUBLISH_PERIOD);
     try {
-      this.publisher = publisherClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new IOException("Can't create publisher " + publisherClass.getName(), e);
-    } catch (IllegalAccessException e) {
+      this.publisher = publisherClass.getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
       throw new IOException("Can't create publisher " + publisherClass.getName(), e);
     }
     this.publisher.connect(conf);
@@ -139,7 +134,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
   @Override
   protected void chore() {
-    if (!connected) {
+    if (!isConnected()) {
       return;
     }
 
@@ -161,23 +156,22 @@ public class ClusterStatusPublisher extends ScheduledChore {
     // We're reusing an existing protobuf message, but we don't send everything.
     // This could be extended in the future, for example if we want to send stuff like the
     //  hbase:meta server name.
-    ClusterStatus cs = new ClusterStatus(VersionInfo.getVersion(),
-        master.getMasterFileSystem().getClusterId().toString(),
-        null,
-        sns,
-        master.getServerName(),
-        null,
-        null,
-        null,
-        null);
-
-
-    publisher.publish(cs);
+    publisher.publish(ClusterMetricsBuilder.newBuilder()
+      .setHBaseVersion(VersionInfo.getVersion())
+      .setClusterId(master.getMasterFileSystem().getClusterId().toString())
+      .setMasterName(master.getServerName())
+      .setDeadServerNames(sns)
+      .build());
   }
 
-  protected void cleanup() {
+  @Override
+  protected synchronized void cleanup() {
     connected = false;
     publisher.close();
+  }
+
+  private synchronized boolean isConnected() {
+    return this.connected;
   }
 
   /**
@@ -193,8 +187,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
     }
 
     // We're sending the new deads first.
-    List<Map.Entry<ServerName, Integer>> entries = new ArrayList<>();
-    entries.addAll(lastSent.entrySet());
+    List<Map.Entry<ServerName, Integer>> entries = new ArrayList<>(lastSent.entrySet());
     Collections.sort(entries, new Comparator<Map.Entry<ServerName, Integer>>() {
       @Override
       public int compare(Map.Entry<ServerName, Integer> o1, Map.Entry<ServerName, Integer> o2) {
@@ -237,7 +230,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
     void connect(Configuration conf) throws IOException;
 
-    void publish(ClusterStatus cs);
+    void publish(ClusterMetrics cs);
 
     @Override
     void close();
@@ -258,6 +251,9 @@ public class ClusterStatusPublisher extends ScheduledChore {
           HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
       int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
           HConstants.DEFAULT_STATUS_MULTICAST_PORT);
+      String bindAddress = conf.get(HConstants.STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS,
+        HConstants.DEFAULT_STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS);
+      String niName = conf.get(HConstants.STATUS_MULTICAST_NI_NAME);
 
       final InetAddress ina;
       try {
@@ -270,24 +266,34 @@ public class ClusterStatusPublisher extends ScheduledChore {
       final InetSocketAddress isa = new InetSocketAddress(mcAddress, port);
 
       InternetProtocolFamily family;
-      InetAddress localAddress;
-      if (ina instanceof Inet6Address) {
-        localAddress = Addressing.getIp6Address();
-        family = InternetProtocolFamily.IPv6;
-      }else{
-        localAddress = Addressing.getIp4Address();
-        family = InternetProtocolFamily.IPv4;
+      NetworkInterface ni;
+      if (niName != null) {
+        if (ina instanceof Inet6Address) {
+          family = InternetProtocolFamily.IPv6;
+        } else {
+          family = InternetProtocolFamily.IPv4;
+        }
+        ni = NetworkInterface.getByName(niName);
+      } else {
+        InetAddress localAddress;
+        if (ina instanceof Inet6Address) {
+          localAddress = Addressing.getIp6Address();
+          family = InternetProtocolFamily.IPv6;
+        } else {
+          localAddress = Addressing.getIp4Address();
+          family = InternetProtocolFamily.IPv4;
+        }
+        ni = NetworkInterface.getByInetAddress(localAddress);
       }
-      NetworkInterface ni = NetworkInterface.getByInetAddress(localAddress);
 
       Bootstrap b = new Bootstrap();
       b.group(group)
-      .channelFactory(new HBaseDatagramChannelFactory<Channel>(NioDatagramChannel.class, family))
-      .option(ChannelOption.SO_REUSEADDR, true)
-      .handler(new ClusterStatusEncoder(isa));
+        .channelFactory(new HBaseDatagramChannelFactory<Channel>(NioDatagramChannel.class, family))
+        .option(ChannelOption.SO_REUSEADDR, true)
+        .handler(new ClusterMetricsEncoder(isa));
 
       try {
-        channel = (DatagramChannel) b.bind(new InetSocketAddress(0)).sync().channel();
+        channel = (DatagramChannel) b.bind(bindAddress, 0).sync().channel();
         channel.joinGroup(ina, ni, null, channel.newPromise()).sync();
         channel.connect(isa).sync();
       } catch (InterruptedException e) {
@@ -296,49 +302,51 @@ public class ClusterStatusPublisher extends ScheduledChore {
       }
     }
 
-    private static final class HBaseDatagramChannelFactory<T extends Channel> implements ChannelFactory<T> {
+    private static final class HBaseDatagramChannelFactory<T extends Channel>
+      implements ChannelFactory<T> {
       private final Class<? extends T> clazz;
       private InternetProtocolFamily family;
 
       HBaseDatagramChannelFactory(Class<? extends T> clazz, InternetProtocolFamily family) {
-          this.clazz = clazz;
-          this.family = family;
+        this.clazz = clazz;
+        this.family = family;
       }
 
       @Override
       public T newChannel() {
-          try {
-            return ReflectionUtils.instantiateWithCustomCtor(clazz.getName(),
-              new Class[] { InternetProtocolFamily.class }, new Object[] { family });
+        try {
+          return ReflectionUtils.instantiateWithCustomCtor(clazz.getName(),
+            new Class[] { InternetProtocolFamily.class }, new Object[] { family });
 
-          } catch (Throwable t) {
-              throw new ChannelException("Unable to create Channel from class " + clazz, t);
-          }
+        } catch (Throwable t) {
+          throw new ChannelException("Unable to create Channel from class " + clazz, t);
+        }
       }
 
       @Override
       public String toString() {
-          return StringUtil.simpleClassName(clazz) + ".class";
+        return StringUtil.simpleClassName(clazz) + ".class";
       }
-  }
+    }
 
-    private static class ClusterStatusEncoder extends MessageToMessageEncoder<ClusterStatus> {
+    private static final class ClusterMetricsEncoder
+        extends MessageToMessageEncoder<ClusterMetrics> {
       final private InetSocketAddress isa;
 
-      private ClusterStatusEncoder(InetSocketAddress isa) {
+      private ClusterMetricsEncoder(InetSocketAddress isa) {
         this.isa = isa;
       }
 
       @Override
       protected void encode(ChannelHandlerContext channelHandlerContext,
-                            ClusterStatus clusterStatus, List<Object> objects) {
-        ClusterStatusProtos.ClusterStatus csp = ProtobufUtil.convert(clusterStatus);
-        objects.add(new DatagramPacket(Unpooled.wrappedBuffer(csp.toByteArray()), isa));
+        ClusterMetrics clusterStatus, List<Object> objects) {
+        objects.add(new DatagramPacket(Unpooled.wrappedBuffer(
+          ClusterMetricsBuilder.toClusterStatus(clusterStatus).toByteArray()), isa));
       }
     }
 
     @Override
-    public void publish(ClusterStatus cs) {
+    public void publish(ClusterMetrics cs) {
       channel.writeAndFlush(cs).syncUninterruptibly();
     }
 

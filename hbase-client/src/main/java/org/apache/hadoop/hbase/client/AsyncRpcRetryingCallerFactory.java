@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
-import io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 
 /**
  * Factory to create an AsyncRpcRetryCaller.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class AsyncRpcRetryingCallerFactory {
@@ -152,7 +153,7 @@ class AsyncRpcRetryingCallerFactory {
 
     private ScanResultCache resultCache;
 
-    private RawScanResultConsumer consumer;
+    private AdvancedScanResultConsumer consumer;
 
     private ClientService.Interface stub;
 
@@ -191,7 +192,7 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public ScanSingleRegionCallerBuilder consumer(RawScanResultConsumer consumer) {
+    public ScanSingleRegionCallerBuilder consumer(AdvancedScanResultConsumer consumer) {
       this.consumer = consumer;
       return this;
     }
@@ -378,7 +379,7 @@ class AsyncRpcRetryingCallerFactory {
     return new MasterRequestCallerBuilder<>();
   }
 
-  public class AdminRequestCallerBuilder<T> extends BuilderBase{
+  public class AdminRequestCallerBuilder<T> extends BuilderBase {
     // TODO: maybe we can reuse AdminRequestCallerBuild, MasterRequestCallerBuild etc.
 
     private AsyncAdminRequestRetryingCaller.Callable<T> callable;
@@ -426,8 +427,8 @@ class AsyncRpcRetryingCallerFactory {
 
     public AsyncAdminRequestRetryingCaller<T> build() {
       return new AsyncAdminRequestRetryingCaller<T>(retryTimer, conn, pauseNs, maxAttempts,
-          operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, serverName, checkNotNull(callable,
-            "action is null"));
+          operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, checkNotNull(serverName,
+            "serverName is null"), checkNotNull(callable, "action is null"));
     }
 
     public CompletableFuture<T> call() {
@@ -437,5 +438,66 @@ class AsyncRpcRetryingCallerFactory {
 
   public <T> AdminRequestCallerBuilder<T> adminRequest(){
     return new AdminRequestCallerBuilder<>();
+  }
+
+  public class ServerRequestCallerBuilder<T> extends BuilderBase {
+
+    private AsyncServerRequestRpcRetryingCaller.Callable<T> callable;
+
+    private long operationTimeoutNs = -1L;
+
+    private long rpcTimeoutNs = -1L;
+
+    private ServerName serverName;
+
+    public ServerRequestCallerBuilder<T> action(
+        AsyncServerRequestRpcRetryingCaller.Callable<T> callable) {
+      this.callable = callable;
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> operationTimeout(long operationTimeout, TimeUnit unit) {
+      this.operationTimeoutNs = unit.toNanos(operationTimeout);
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> rpcTimeout(long rpcTimeout, TimeUnit unit) {
+      this.rpcTimeoutNs = unit.toNanos(rpcTimeout);
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> pause(long pause, TimeUnit unit) {
+      this.pauseNs = unit.toNanos(pause);
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> maxAttempts(int maxAttempts) {
+      this.maxAttempts = maxAttempts;
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> startLogErrorsCnt(int startLogErrorsCnt) {
+      this.startLogErrorsCnt = startLogErrorsCnt;
+      return this;
+    }
+
+    public ServerRequestCallerBuilder<T> serverName(ServerName serverName) {
+      this.serverName = serverName;
+      return this;
+    }
+
+    public AsyncServerRequestRpcRetryingCaller<T> build() {
+      return new AsyncServerRequestRpcRetryingCaller<T>(retryTimer, conn, pauseNs, maxAttempts,
+          operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, checkNotNull(serverName,
+            "serverName is null"), checkNotNull(callable, "action is null"));
+    }
+
+    public CompletableFuture<T> call() {
+      return build().call();
+    }
+  }
+
+  public <T> ServerRequestCallerBuilder<T> serverRequest() {
+    return new ServerRequestCallerBuilder<>();
   }
 }

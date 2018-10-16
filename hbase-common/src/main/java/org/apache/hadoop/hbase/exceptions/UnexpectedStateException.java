@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class UnexpectedStateException extends HBaseIOException {

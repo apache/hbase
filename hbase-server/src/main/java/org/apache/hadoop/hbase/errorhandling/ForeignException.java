@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage;
@@ -157,7 +157,7 @@ public class ForeignException extends IOException {
    * @param bytes
    * @return the ForeignExcpetion instance
    * @throws InvalidProtocolBufferException if there was deserialization problem this is thrown.
-   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException 
+   * @throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException 
    */
   public static ForeignException deserialize(byte[] bytes)
   throws IOException {

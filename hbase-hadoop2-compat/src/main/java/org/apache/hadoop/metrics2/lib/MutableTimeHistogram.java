@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Extended histogram implementation with counters for metric time ranges.
@@ -28,7 +28,7 @@ import org.apache.hadoop.metrics2.MetricsInfo;
 public class MutableTimeHistogram extends MutableRangeHistogram {
   private final static String RANGE_TYPE = "TimeRangeCount";
   private final static long[] RANGES =
-      { 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 60000, 120000, 300000, 600000 };
+    { 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 60000, 120000, 300000, 600000 };
 
   public MutableTimeHistogram(MetricsInfo info) {
     this(info.name(), info.description());

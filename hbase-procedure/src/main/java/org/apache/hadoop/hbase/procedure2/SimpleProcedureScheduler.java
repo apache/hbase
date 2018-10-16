@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.procedure2;
 
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Simple scheduler for procedures
@@ -78,12 +78,13 @@ public class SimpleProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   @Override
-  public List<LockInfo> listLocks() {
+  public List<LockedResource> getLocks() {
     return Collections.emptyList();
   }
 
   @Override
-  public LockInfo getLockInfoForResource(LockInfo.ResourceType resourceType, String resourceName) {
+  public LockedResource getLockResource(LockedResourceType resourceType,
+      String resourceName) {
     return null;
   }
 }

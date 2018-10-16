@@ -23,22 +23,24 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Compressor;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Encapsulates a data block compressed using a particular encoding algorithm.
@@ -57,6 +59,16 @@ public class EncodedDataBlock {
   private final HFileBlockEncodingContext encodingCtx;
   private HFileContext meta;
 
+  private final DataBlockEncoding encoding;
+
+  // The is for one situation that there are some cells includes tags and others are not.
+  // isTagsLenZero stores if cell tags length is zero before doing encoding since we need
+  // to check cell tags length is zero or not after decoding.
+  // Encoders ROW_INDEX_V1 would abandon tags segment if tags is 0 after decode cells to
+  // byte array, other encoders won't do that. So we have to find a way to add tagsLen zero
+  // in the decoded byte array.
+  private List<Boolean> isTagsLenZero = new ArrayList<>();
+
   /**
    * Create a buffer which will be encoded using dataBlockEncoder.
    * @param dataBlockEncoder Algorithm used for compression.
@@ -69,6 +81,7 @@ public class EncodedDataBlock {
     Preconditions.checkNotNull(encoding,
         "Cannot create encoded data block with null encoder");
     this.dataBlockEncoder = dataBlockEncoder;
+    this.encoding = encoding;
     encodingCtx = dataBlockEncoder.newDataBlockEncodingContext(encoding,
         HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
     this.rawKVs = rawKVs;
@@ -90,6 +103,7 @@ public class EncodedDataBlock {
 
     return new Iterator<Cell>() {
       private ByteBuffer decompressedData = null;
+      private Iterator<Boolean> it = isTagsLenZero.iterator();
 
       @Override
       public boolean hasNext() {
@@ -116,10 +130,18 @@ public class EncodedDataBlock {
         int vlen = decompressedData.getInt();
         int tagsLen = 0;
         ByteBufferUtils.skip(decompressedData, klen + vlen);
-        // Read the tag length in case when steam contain tags
+        // Read the tag length in case when stream contain tags
         if (meta.isIncludesTags()) {
-          tagsLen = ((decompressedData.get() & 0xff) << 8) ^ (decompressedData.get() & 0xff);
-          ByteBufferUtils.skip(decompressedData, tagsLen);
+          boolean noTags = true;
+          if (it.hasNext()) {
+            noTags = it.next();
+          }
+          // ROW_INDEX_V1 will not put tagsLen back in cell if it is zero, there is no need
+          // to read short here.
+          if (!(encoding.equals(DataBlockEncoding.ROW_INDEX_V1) && noTags)) {
+            tagsLen = ((decompressedData.get() & 0xff) << 8) ^ (decompressedData.get() & 0xff);
+            ByteBufferUtils.skip(decompressedData, tagsLen);
+          }
         }
         KeyValue kv = new KeyValue(decompressedData.array(), offset,
             (int) KeyValue.getKeyValueDataStructureSize(klen, vlen, tagsLen));
@@ -228,6 +250,7 @@ public class EncodedDataBlock {
    */
   public byte[] encodeData() {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    byte [] baosBytes = null;
     try {
       baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
       DataOutputStream out = new DataOutputStream(baos);
@@ -246,6 +269,7 @@ public class EncodedDataBlock {
         if (this.meta.isIncludesTags()) {
           tagsLength = ((in.get() & 0xff) << 8) ^ (in.get() & 0xff);
           ByteBufferUtils.skip(in, tagsLength);
+          this.isTagsLenZero.add(tagsLength == 0);
         }
         if (this.meta.isIncludesMvcc()) {
           memstoreTS = ByteBufferUtils.readVLong(in);
@@ -255,29 +279,31 @@ public class EncodedDataBlock {
         kv.setSequenceId(memstoreTS);
         this.dataBlockEncoder.encode(kv, encodingCtx, out);
       }
-      BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
-      baos.writeTo(stream);
-      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, stream.buf);
+      // Below depends on BAOS internal behavior. toByteArray makes a copy of bytes so far.
+      baos.flush();
+      baosBytes = baos.toByteArray();
+      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, baosBytes);
+      // In endBlockEncoding(encodingCtx, out, baosBytes), Encoder ROW_INDEX_V1 write integer in
+      // out while the others write integer in baosBytes(byte array). We need to add
+      // baos.toByteArray() after endBlockEncoding again to make sure the integer writes in
+      // outputstream with Encoder ROW_INDEX_V1 dump to byte array (baosBytes).
+      // The if branch is necessary because Encoders excepts ROW_INDEX_V1 write integer in
+      // baosBytes directly, without if branch and do toByteArray() again, baosBytes won't
+      // contains the integer wrotten in endBlockEncoding.
+      if (this.encoding.equals(DataBlockEncoding.ROW_INDEX_V1)) {
+        baosBytes = baos.toByteArray();
+      }
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in encoding part of algorithm %s. " +
           "Probably it requested more bytes than are available.",
           toString()), e);
     }
-    return baos.toByteArray();
-  }
-
-  private static class BufferGrabbingByteArrayOutputStream extends ByteArrayOutputStream {
-    private byte[] buf;
-
-    @Override
-    public void write(byte[] b, int off, int len) {
-      this.buf = b;
-    }
+    return baosBytes;
   }
 
   @Override
   public String toString() {
-    return dataBlockEncoder.toString();
+    return encoding.name();
   }
 }

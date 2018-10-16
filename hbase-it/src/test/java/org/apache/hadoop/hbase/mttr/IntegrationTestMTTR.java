@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mttr;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeFalse;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,14 +28,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.NamespaceExistException;
@@ -42,7 +38,6 @@ import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
@@ -50,29 +45,34 @@ import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingTableAction;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.FatalConnectionException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
-import org.apache.htrace.impl.AlwaysSampler;
+import org.apache.htrace.core.AlwaysSampler;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.TraceScope;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.base.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Integration test that should benchmark how fast HBase can recover from failures. This test starts
@@ -120,7 +120,7 @@ public class IntegrationTestMTTR {
    * Constants.
    */
   private static final byte[] FAMILY = Bytes.toBytes("d");
-  private static final Log LOG = LogFactory.getLog(IntegrationTestMTTR.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestMTTR.class);
   private static long sleepTime;
   private static final String SLEEP_TIME_KEY = "hbase.IntegrationTestMTTR.sleeptime";
   private static final long SLEEP_TIME_DEFAULT = 60 * 1000l;
@@ -232,15 +232,17 @@ public class IntegrationTestMTTR {
     }
 
     // Create the table.  If this fails then fail everything.
-    HTableDescriptor tableDescriptor = new HTableDescriptor(tableName);
+    TableDescriptor tableDescriptor = util.getAdmin().getDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
 
     // Make the max file size huge so that splits don't happen during the test.
-    tableDescriptor.setMaxFileSize(Long.MAX_VALUE);
+    builder.setMaxFileSize(Long.MAX_VALUE);
 
-    HColumnDescriptor descriptor = new HColumnDescriptor(FAMILY);
-    descriptor.setMaxVersions(1);
-    tableDescriptor.addFamily(descriptor);
-    util.getAdmin().createTable(tableDescriptor);
+    ColumnFamilyDescriptorBuilder colDescriptorBldr =
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    colDescriptorBldr.setMaxVersions(1);
+    builder.setColumnFamily(colDescriptorBldr.build());
+    util.getAdmin().createTable(builder.build());
 
     // Setup the table for LoadTestTool
     int ret = loadTool.run(new String[]{"-tn", loadTableName.getNameAsString(), "-init_only"});
@@ -267,6 +269,15 @@ public class IntegrationTestMTTR {
     loadTool = null;
   }
 
+  private static boolean tablesOnMaster() {
+    boolean ret = true;
+    String value = util.getConfiguration().get("hbase.balancer.tablesOnMaster");
+    if( value != null && value.equalsIgnoreCase("none")) {
+      ret = false;
+    }
+    return ret;
+  }
+
   @Test
   public void testRestartRsHoldingTable() throws Exception {
     run(new ActionCallable(restartRSAction), "RestartRsHoldingTableAction");
@@ -274,6 +285,7 @@ public class IntegrationTestMTTR {
 
   @Test
   public void testKillRsHoldingMeta() throws Exception {
+    assumeFalse(tablesOnMaster());
     run(new ActionCallable(restartMetaAction), "KillRsHoldingMeta");
   }
 
@@ -339,7 +351,7 @@ public class IntegrationTestMTTR {
 
     long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
 
-    Objects.ToStringHelper helper = Objects.toStringHelper("MTTRResults")
+    MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper("MTTRResults")
         .add("putResults", resultPuts)
         .add("scanResults", resultScan)
         .add("adminResults", resultAdmin)
@@ -357,7 +369,7 @@ public class IntegrationTestMTTR {
    */
   private static class TimingResult {
     DescriptiveStatistics stats = new DescriptiveStatistics();
-    ArrayList<Long> traces = new ArrayList<>(10);
+    ArrayList<String> traces = new ArrayList<>(10);
 
     /**
      * Add a result to this aggregate result.
@@ -365,15 +377,18 @@ public class IntegrationTestMTTR {
      * @param span Span.  To be kept if the time taken was over 1 second
      */
     public void addResult(long time, Span span) {
+      if (span == null) {
+        return;
+      }
       stats.addValue(TimeUnit.MILLISECONDS.convert(time, TimeUnit.NANOSECONDS));
       if (TimeUnit.SECONDS.convert(time, TimeUnit.NANOSECONDS) >= 1) {
-        traces.add(span.getTraceId());
+        traces.add(span.getTracerId());
       }
     }
 
     @Override
     public String toString() {
-      Objects.ToStringHelper helper = Objects.toStringHelper(this)
+      MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this)
           .add("numResults", stats.getN())
           .add("minTime", stats.getMin())
           .add("meanTime", stats.getMean())
@@ -407,12 +422,15 @@ public class IntegrationTestMTTR {
       final int maxIterations = 10;
       int numAfterDone = 0;
       int resetCount = 0;
+      TraceUtil.addSampler(AlwaysSampler.INSTANCE);
       // Keep trying until the rs is back up and we've gotten a put through
       while (numAfterDone < maxIterations) {
         long start = System.nanoTime();
-        TraceScope scope = null;
-        try {
-          scope = Trace.startSpan(getSpanName(), AlwaysSampler.INSTANCE);
+        Span span = null;
+        try (TraceScope scope = TraceUtil.createTrace(getSpanName())) {
+          if (scope != null) {
+            span = scope.getSpan();
+          }
           boolean actionResult = doAction();
           if (actionResult && future.isDone()) {
             numAfterDone++;
@@ -458,12 +476,8 @@ public class IntegrationTestMTTR {
             LOG.info("Too many unexpected Exceptions. Aborting.", e);
             throw e;
           }
-        } finally {
-          if (scope != null) {
-            scope.close();
-          }
         }
-        result.addResult(System.nanoTime() - start, scope.getSpan());
+        result.addResult(System.nanoTime() - start, span);
       }
       return result;
     }
@@ -603,7 +617,8 @@ public class IntegrationTestMTTR {
     @Override
     public Boolean call() throws Exception {
       int colsPerKey = 10;
-      int numServers = util.getHBaseClusterInterface().getInitialClusterStatus().getServersSize();
+      int numServers = util.getHBaseClusterInterface().getInitialClusterMetrics()
+        .getLiveServerMetrics().size();
       int numKeys = numServers * 5000;
       int writeThreads = 10;
 

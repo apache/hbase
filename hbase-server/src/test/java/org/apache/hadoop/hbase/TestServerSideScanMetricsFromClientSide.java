@@ -1,12 +1,19 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase;
 
@@ -16,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -26,7 +32,6 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
@@ -38,11 +43,17 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestServerSideScanMetricsFromClientSide {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestServerSideScanMetricsFromClientSide.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static Table TABLE = null;
@@ -144,7 +155,7 @@ public class TestServerSideScanMetricsFromClientSide {
       assertTrue(result.rawCells() != null);
       assertTrue(result.rawCells().length == 1);
 
-      CELL_HEAP_SIZE = CellUtil.estimatedHeapSizeOf(result.rawCells()[0]);
+      CELL_HEAP_SIZE = PrivateCellUtil.estimatedSizeOfCell(result.rawCells()[0]);
       scanner.close();
     }
 
@@ -205,21 +216,22 @@ public class TestServerSideScanMetricsFromClientSide {
     }
 
     // The filter should filter out all rows, but we still expect to see every row.
-    Filter filter = new RowFilter(CompareOp.EQUAL, new BinaryComparator("xyz".getBytes()));
+    Filter filter =
+        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
     scan = new Scan(baseScan);
     scan.setFilter(filter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
 
     // Filter should pass on all rows
     SingleColumnValueFilter singleColumnValueFilter =
-        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.EQUAL, VALUE);
+        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.EQUAL, VALUE);
     scan = new Scan(baseScan);
     scan.setFilter(singleColumnValueFilter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
 
     // Filter should filter out all rows
     singleColumnValueFilter =
-        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.NOT_EQUAL, VALUE);
+        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.NOT_EQUAL, VALUE);
     scan = new Scan(baseScan);
     scan.setFilter(singleColumnValueFilter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
@@ -255,7 +267,8 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, null, 0);
 
     // Row filter doesn't match any row key. All rows should be filtered
-    Filter filter = new RowFilter(CompareOp.EQUAL, new BinaryComparator("xyz".getBytes()));
+    Filter filter =
+        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Filter will return results containing only the first key. Number of entire rows filtered
@@ -269,20 +282,21 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, filter, 0);
 
     // Column prefix will NOT find any matching qualifier on any row. All rows should be filtered
-    filter = new ColumnPrefixFilter("xyz".getBytes());
+    filter = new ColumnPrefixFilter(Bytes.toBytes("xyz"));
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Matching column value should exist in each row. No rows should be filtered.
-    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.EQUAL, VALUE);
+    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.EQUAL, VALUE);
     testRowsFilteredMetric(baseScan, filter, 0);
 
     // No matching column value should exist in any row. Filter all rows
-    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.NOT_EQUAL, VALUE);
+    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0],
+      CompareOperator.NOT_EQUAL, VALUE);
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     List<Filter> filters = new ArrayList<>();
-    filters.add(new RowFilter(CompareOp.EQUAL, new BinaryComparator(ROWS[0])));
-    filters.add(new RowFilter(CompareOp.EQUAL, new BinaryComparator(ROWS[3])));
+    filters.add(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROWS[0])));
+    filters.add(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROWS[3])));
     int numberOfMatchingRowFilters = filters.size();
     filter = new FilterList(Operator.MUST_PASS_ONE, filters);
     testRowsFilteredMetric(baseScan, filter, ROWS.length - numberOfMatchingRowFilters);
@@ -294,7 +308,7 @@ public class TestServerSideScanMetricsFromClientSide {
     for (int family = 0; family < FAMILIES.length; family++) {
       for (int qualifier = 0; qualifier < QUALIFIERS.length; qualifier++) {
         filters.add(new SingleColumnValueExcludeFilter(FAMILIES[family], QUALIFIERS[qualifier],
-            CompareOp.EQUAL, VALUE));
+          CompareOperator.EQUAL, VALUE));
       }
     }
     filter = new FilterList(Operator.MUST_PASS_ONE, filters);

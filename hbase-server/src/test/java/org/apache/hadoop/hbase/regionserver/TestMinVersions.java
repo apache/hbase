@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,21 +23,22 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -49,6 +49,11 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestMinVersions {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMinVersions.class);
+
   HBaseTestingUtility hbu = HBaseTestingUtility.createLocalHTU();
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
@@ -68,7 +73,7 @@ public class TestMinVersions {
   public void testGetClosestBefore() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 1, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -118,7 +123,7 @@ public class TestMinVersions {
     // keep 3 versions minimum
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
@@ -173,7 +178,7 @@ public class TestMinVersions {
   public void testDelete() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -232,7 +237,7 @@ public class TestMinVersions {
   public void testMemStore() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -308,7 +313,7 @@ public class TestMinVersions {
     // 1 version minimum, 1000 versions maximum, ttl = 1s
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -400,7 +405,7 @@ public class TestMinVersions {
   public void testFilters() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     final byte [] c1 = COLUMNS[1];
 
     // 2s in the past
@@ -431,24 +436,27 @@ public class TestMinVersions {
       tss.add(ts-1);
       tss.add(ts-2);
 
+      // Sholud only get T2, versions is 2, so T1 is gone from user view.
       Get g = new Get(T1);
       g.addColumn(c1,c1);
       g.setFilter(new TimestampsFilter(tss));
       g.setMaxVersions();
       Result r = region.get(g);
-      checkResult(r, c1, T2,T1);
+      checkResult(r, c1, T2);
 
+      // Sholud only get T2, versions is 2, so T1 is gone from user view.
       g = new Get(T1);
       g.addColumn(c0,c0);
       g.setFilter(new TimestampsFilter(tss));
       g.setMaxVersions();
       r = region.get(g);
-      checkResult(r, c0, T2,T1);
+      checkResult(r, c0, T2);
 
       // now flush/compact
       region.flush(true);
       region.compact(true);
 
+      // After flush/compact, the result should be consistent with previous result
       g = new Get(T1);
       g.addColumn(c1,c1);
       g.setFilter(new TimestampsFilter(tss));
@@ -456,6 +464,7 @@ public class TestMinVersions {
       r = region.get(g);
       checkResult(r, c1, T2);
 
+      // After flush/compact, the result should be consistent with previous result
       g = new Get(T1);
       g.addColumn(c0,c0);
       g.setFilter(new TimestampsFilter(tss));

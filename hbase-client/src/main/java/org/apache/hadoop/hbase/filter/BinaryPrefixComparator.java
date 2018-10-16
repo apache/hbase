@@ -21,14 +21,14 @@ package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A comparator which compares against a specified byte array, but only compares
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * {@link BinaryComparator}.
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class BinaryPrefixComparator extends ByteArrayComparable {
 
   /**
@@ -63,6 +64,7 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
   /**
    * @return The comparator serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     ComparatorProtos.BinaryPrefixComparator.Builder builder =
       ComparatorProtos.BinaryPrefixComparator.newBuilder();
@@ -92,6 +94,7 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof BinaryPrefixComparator)) return false;

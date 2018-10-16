@@ -26,13 +26,13 @@ import javax.servlet.ServletContext;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
+import org.glassfish.jersey.servlet.ServletContainer;
 
-import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 /**
  * A representation of the collection of versions of the REST gateway software
@@ -75,8 +75,9 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
       System.getProperty("os.version") + ' ' +
       System.getProperty("os.arch");
     serverVersion = context.getServerInfo();
-    jerseyVersion = ServletContainer.class.getPackage()
-      .getImplementationVersion();
+    jerseyVersion = ServletContainer.class.getPackage().getImplementationVersion();
+    // Currently, this will always be null because the manifest doesn't have any useful information
+    if (jerseyVersion == null) jerseyVersion = "";
   }
 
   /**

@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 
 package hbase.pb;
 
@@ -44,6 +45,11 @@ message ReplicationPeer {
   repeated TableCF table_cfs = 5;
   repeated bytes namespaces = 6;
   optional int64 bandwidth = 7;
+  optional bool replicate_all = 8;
+  repeated TableCF exclude_table_cfs = 9;
+  repeated bytes exclude_namespaces = 10;
+  optional bool serial = 11;
+  optional string remoteWALDir = 12;
 }
 
 /**
@@ -58,12 +64,26 @@ message ReplicationState {
 }
 
 /**
+ * Indicate the state of the current cluster in a synchronous replication peer.
+ */
+message SyncReplicationState {
+  enum State {
+    NONE = 0;
+    ACTIVE = 1;
+    DOWNGRADE_ACTIVE = 2;
+    STANDBY = 3;
+  }
+  required State state = 1;
+}
+
+/**
  * Used by replication. Description of the replication peer.
  */
 message ReplicationPeerDescription {
   required string id = 1;
   required ReplicationState state = 2;
   required ReplicationPeer config = 3;
+  optional SyncReplicationState syncReplicationState = 4;
 }
 
 /**
@@ -76,9 +96,11 @@ message ReplicationHLogPosition {
 message AddReplicationPeerRequest {
   required string peer_id = 1;
   required ReplicationPeer peer_config = 2;
+  required ReplicationState peer_state = 3;
 }
 
 message AddReplicationPeerResponse {
+  optional uint64 proc_id = 1;
 }
 
 message RemoveReplicationPeerRequest {
@@ -86,6 +108,7 @@ message RemoveReplicationPeerRequest {
 }
 
 message RemoveReplicationPeerResponse {
+  optional uint64 proc_id = 1;
 }
 
 message EnableReplicationPeerRequest {
@@ -93,6 +116,7 @@ message EnableReplicationPeerRequest {
 }
 
 message EnableReplicationPeerResponse {
+  optional uint64 proc_id = 1;
 }
 
 message DisableReplicationPeerRequest {
@@ -100,6 +124,7 @@ message DisableReplicationPeerRequest {
 }
 
 message DisableReplicationPeerResponse {
+  optional uint64 proc_id = 1;
 }
 
 message GetReplicationPeerConfigRequest {
@@ -117,6 +142,7 @@ message UpdateReplicationPeerConfigRequest {
 }
 
 message UpdateReplicationPeerConfigResponse {
+  optional uint64 proc_id = 1;
 }
 
 message ListReplicationPeersRequest {
@@ -125,4 +151,13 @@ message ListReplicationPeersRequest {
 
 message ListReplicationPeersResponse {
   repeated ReplicationPeerDescription peer_desc = 1;
+}
+
+message TransitReplicationPeerSyncReplicationStateRequest {
+  required string peer_id = 1;
+  required SyncReplicationState syncReplicationState = 2;
+}
+
+message TransitReplicationPeerSyncReplicationStateResponse {
+  required uint64 proc_id = 1;
 }

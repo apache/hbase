@@ -50,8 +50,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * An abstract implementation of the ByteRange API
@@ -189,9 +189,9 @@ public abstract class AbstractByteRange implements ByteRange {
   public short getShort(int index) {
     int offset = this.offset + index;
     short n = 0;
-    n ^= bytes[offset] & 0xFF;
-    n <<= 8;
-    n ^= bytes[offset + 1] & 0xFF;
+    n = (short) ((n ^ bytes[offset]) & 0xFF);
+    n = (short) (n << 8);
+    n = (short) ((n ^ bytes[offset + 1]) & 0xFF);
     return n;
   }
 
@@ -313,6 +313,20 @@ public abstract class AbstractByteRange implements ByteRange {
 
   protected void clearHashCache() {
     hash = UNSET_HASH_VALUE;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof ByteRange)) {
+      return false;
+    }
+    return compareTo((ByteRange) obj) == 0;
   }
 
   /**

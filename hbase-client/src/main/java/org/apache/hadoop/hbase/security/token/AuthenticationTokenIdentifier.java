@@ -22,7 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.io.Text;
@@ -186,5 +186,12 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
   @Override
   public int hashCode() {
     return (int)sequenceNumber;
+  }
+
+  @Override
+  public String toString() {
+    return "(username=" + username + ", keyId="
+            + keyId + ", issueDate=" + issueDate
+            + ", expirationDate=" + expirationDate + ", sequenceNumber=" + sequenceNumber + ")";
   }
 }

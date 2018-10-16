@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,26 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
+import static org.junit.Assert.*;
+
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
-import static org.junit.Assert.*;
-
 @Category({RPCTests.class, SmallTests.class})
 public class TestRpcMetrics {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRpcMetrics.class);
+
   public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   @Test
@@ -70,6 +74,9 @@ public class TestRpcMetrics {
     HELPER.assertGauge("numCallsInPriorityQueue", 104, serverSource);
     HELPER.assertGauge("numOpenConnections", 105, serverSource);
     HELPER.assertGauge("numActiveHandler", 106, serverSource);
+    HELPER.assertGauge("numActiveGeneralHandler", 201, serverSource);
+    HELPER.assertGauge("numActivePriorityHandler", 202, serverSource);
+    HELPER.assertGauge("numActiveReplicationHandler", 203, serverSource);
     HELPER.assertGauge("numActiveWriteHandler", 50, serverSource);
     HELPER.assertGauge("numActiveReadHandler", 50, serverSource);
     HELPER.assertGauge("numActiveScanHandler", 6, serverSource);
@@ -133,7 +140,7 @@ public class TestRpcMetrics {
     HELPER.assertCounter("exceptions", 1, serverSource);
 
     mrpc.exception(new RegionMovedException(ServerName.parseServerName("localhost:60020"), 100));
-    mrpc.exception(new RegionTooBusyException());
+    mrpc.exception(new RegionTooBusyException("Some region"));
     mrpc.exception(new OutOfOrderScannerNextException());
     mrpc.exception(new NotServingRegionException());
     HELPER.assertCounter("exceptions.RegionMovedException", 1, serverSource);

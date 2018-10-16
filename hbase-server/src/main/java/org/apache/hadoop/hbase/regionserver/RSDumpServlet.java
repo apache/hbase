@@ -26,7 +26,8 @@ import java.util.Date;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.ipc.CallQueueInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.monitoring.LogMonitoring;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
@@ -55,62 +56,67 @@ public class RSDumpServlet extends StateDumpServlet {
     }
 
     OutputStream os = response.getOutputStream();
-    PrintWriter out = new PrintWriter(os);
+    try (PrintWriter out = new PrintWriter(os)) {
 
-    out.println("RegionServer status for " + hrs.getServerName()
+      out.println("RegionServer status for " + hrs.getServerName()
         + " as of " + new Date());
 
-    out.println("\n\nVersion Info:");
-    out.println(LINE);
-    dumpVersionInfo(out);
+      out.println("\n\nVersion Info:");
+      out.println(LINE);
+      dumpVersionInfo(out);
 
-    out.println("\n\nTasks:");
-    out.println(LINE);
-    TaskMonitor.get().dumpAsText(out);
+      out.println("\n\nTasks:");
+      out.println(LINE);
+      TaskMonitor.get().dumpAsText(out);
 
-    out.println("\n\nRowLocks:");
-    out.println(LINE);
-    dumpRowLock(hrs, out);
+      out.println("\n\nRowLocks:");
+      out.println(LINE);
+      dumpRowLock(hrs, out);
 
-    out.println("\n\nExecutors:");
-    out.println(LINE);
-    dumpExecutors(hrs.getExecutorService(), out);
+      out.println("\n\nExecutors:");
+      out.println(LINE);
+      dumpExecutors(hrs.getExecutorService(), out);
 
-    out.println("\n\nStacks:");
-    out.println(LINE);
-    PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
-    Threads.printThreadInfo(ps, "");
-    ps.flush();
+      out.println("\n\nStacks:");
+      out.println(LINE);
+      PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
+      Threads.printThreadInfo(ps, "");
+      ps.flush();
 
-    out.println("\n\nRS Configuration:");
-    out.println(LINE);
-    Configuration conf = hrs.getConfiguration();
-    out.flush();
-    conf.writeXml(os);
-    os.flush();
+      out.println("\n\nRS Configuration:");
+      out.println(LINE);
+      Configuration conf = hrs.getConfiguration();
+      out.flush();
+      conf.writeXml(os);
+      os.flush();
 
-    out.println("\n\nLogs");
-    out.println(LINE);
-    long tailKb = getTailKbParam(request);
-    LogMonitoring.dumpTailOfLogs(out, tailKb);
+      out.println("\n\nLogs");
+      out.println(LINE);
+      long tailKb = getTailKbParam(request);
+      LogMonitoring.dumpTailOfLogs(out, tailKb);
 
-    out.println("\n\nRS Queue:");
-    out.println(LINE);
-    if(isShowQueueDump(conf)) {
-      dumpQueue(hrs, out);
+      out.println("\n\nRS Queue:");
+      out.println(LINE);
+      if (isShowQueueDump(conf)) {
+        dumpQueue(hrs, out);
+      }
+
+      out.println("\n\nCall Queue Summary:");
+      out.println(LINE);
+      dumpCallQueues(hrs, out);
+
+      out.flush();
     }
-
-    out.flush();
   }
 
   public static void dumpRowLock(HRegionServer hrs, PrintWriter out) {
     StringBuilder sb = new StringBuilder();
-    for (Region region : hrs.getOnlineRegions()) {
+    for (Region region : hrs.getRegions()) {
       HRegion hRegion = (HRegion)region;
       if (hRegion.getLockedRows().size() > 0) {
         for (HRegion.RowLockContext rowLockContext : hRegion.getLockedRows().values()) {
           sb.setLength(0);
-          sb.append(hRegion.getTableDesc().getTableName()).append(",")
+          sb.append(hRegion.getTableDescriptor().getTableName()).append(",")
             .append(hRegion.getRegionInfo().getEncodedName()).append(",");
           sb.append(rowLockContext.toString());
           out.println(sb.toString());
@@ -135,4 +141,32 @@ public class RSDumpServlet extends StateDumpServlet {
       out.println(hrs.cacheFlusher.dumpQueue());
     }
   }
+
+
+  public static void dumpCallQueues(HRegionServer hrs, PrintWriter out) {
+    CallQueueInfo callQueueInfo = hrs.rpcServices.rpcServer.getScheduler().getCallQueueInfo();
+
+    for(String queueName: callQueueInfo.getCallQueueNames()) {
+
+      out.println("\nQueue Name: " + queueName);
+
+      long totalCallCount = 0L, totalCallSize = 0L;
+      for (String methodName: callQueueInfo.getCalledMethodNames(queueName)) {
+        long thisMethodCount, thisMethodSize;
+        thisMethodCount = callQueueInfo.getCallMethodCount(queueName, methodName);
+        thisMethodSize = callQueueInfo.getCallMethodSize(queueName, methodName);
+
+        out.println("Method in call: "+methodName);
+        out.println("Total call count for method: "+thisMethodCount);
+        out.println("Total call size for method (bytes): "+thisMethodSize);
+
+        totalCallCount += thisMethodCount;
+        totalCallSize += thisMethodSize;
+      }
+      out.println("Total call count for queue: "+totalCallCount);
+      out.println("Total call size for queue (bytes): "+totalCallSize);
+    }
+
+  }
+
 }

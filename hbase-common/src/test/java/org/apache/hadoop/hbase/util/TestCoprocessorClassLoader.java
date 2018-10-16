@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,22 +17,23 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -42,6 +42,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestCoprocessorClassLoader {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCoprocessorClassLoader.class);
 
   private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
@@ -87,8 +91,11 @@ public class TestCoprocessorClassLoader {
   private void checkingLibJarName(String jarName, String libPrefix) throws Exception {
     File tmpFolder = new File(ClassLoaderTestHelper.localDirPath(conf), "tmp");
     if (tmpFolder.exists()) { // Clean up the tmp folder
-      for (File f: tmpFolder.listFiles()) {
-        f.delete();
+      File[] files = tmpFolder.listFiles();
+      if (files != null) {
+        for (File f: files) {
+          f.delete();
+        }
       }
     }
     String className = "CheckingLibJarName";
@@ -102,10 +109,13 @@ public class TestCoprocessorClassLoader {
     ClassLoader classLoader = CoprocessorClassLoader.getClassLoader(path, parent, "112", conf);
     assertNotNull("Classloader should be created", classLoader);
     String fileToLookFor = "." + className + ".jar";
-    for (String f: tmpFolder.list()) {
-      if (f.endsWith(fileToLookFor) && f.contains(jarName)) {
-        // Cool, found it;
-        return;
+    String[] files = tmpFolder.list();
+    if (files != null) {
+      for (String f: files) {
+        if (f.endsWith(fileToLookFor) && f.contains(jarName)) {
+          // Cool, found it;
+          return;
+        }
       }
     }
     fail("Could not find the expected lib jar file");

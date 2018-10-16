@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,40 +24,47 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestScannerFromBucketCache {
-  private static final Log LOG = LogFactory.getLog(TestScannerFromBucketCache.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScannerFromBucketCache.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannerFromBucketCache.class);
   @Rule
   public TestName name = new TestName();
 
@@ -71,16 +77,12 @@ public class TestScannerFromBucketCache {
   // Test names
   private TableName tableName;
 
-  private void setUp(boolean offheap, boolean useBucketCache) throws IOException {
+  private void setUp(boolean useBucketCache) throws IOException {
     test_util = HBaseTestingUtility.createLocalHTU();
     conf = test_util.getConfiguration();
     if (useBucketCache) {
       conf.setInt("hbase.bucketcache.size", 400);
-      if (offheap) {
-        conf.setStrings("hbase.bucketcache.ioengine", "offheap");
-      } else {
-        conf.setStrings("hbase.bucketcache.ioengine", "heap");
-      }
+      conf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
       conf.setInt("hbase.bucketcache.writer.threads", 10);
       conf.setFloat("hfile.block.cache.size", 0.2f);
       conf.setFloat("hbase.regionserver.global.memstore.size", 0.1f);
@@ -102,7 +104,7 @@ public class TestScannerFromBucketCache {
 
   @Test
   public void testBasicScanWithLRUCache() throws IOException {
-    setUp(false, false);
+    setUp(false);
     byte[] row1 = Bytes.toBytes("row1");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -122,14 +124,14 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // do the scan again and verify. This time it should be from the lru cache
       actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
 
     } finally {
@@ -140,7 +142,7 @@ public class TestScannerFromBucketCache {
 
   @Test
   public void testBasicScanWithOffheapBucketCache() throws IOException {
-    setUp(true, true);
+    setUp(true);
     byte[] row1 = Bytes.toBytes("row1offheap");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -160,7 +162,7 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // Wait for the bucket cache threads to move the data to offheap
       Thread.sleep(500);
@@ -169,7 +171,7 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertTrue(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
 
     } catch (InterruptedException e) {
@@ -181,7 +183,7 @@ public class TestScannerFromBucketCache {
 
   @Test
   public void testBasicScanWithOffheapBucketCacheWithMBB() throws IOException {
-    setUp(true, true);
+    setUp(true);
     byte[] row1 = Bytes.toBytes("row1offheap");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -201,7 +203,7 @@ public class TestScannerFromBucketCache {
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
         assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // Wait for the bucket cache threads to move the data to offheap
       Thread.sleep(500);
@@ -225,44 +227,6 @@ public class TestScannerFromBucketCache {
       }
 
     } catch (InterruptedException e) {
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
-  }
-
-  @Test
-  public void testBasicScanWithOnheapBucketCache() throws IOException {
-    setUp(false, true);
-    byte[] row1 = Bytes.toBytes("row1onheap");
-    byte[] qf1 = Bytes.toBytes("qualifier1");
-    byte[] qf2 = Bytes.toBytes("qualifier2");
-    byte[] fam1 = Bytes.toBytes("famonheap");
-
-    long ts1 = 1; // System.currentTimeMillis();
-    long ts2 = ts1 + 1;
-    long ts3 = ts1 + 2;
-
-    // Setting up region
-    String method = this.getName();
-    this.region = initHRegion(tableName, method, conf, test_util, fam1);
-    try {
-      List<Cell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, false);
-
-      List<Cell> actual = performScan(row1, fam1);
-      // Verify result
-      for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
-      }
-      // do the scan again and verify. This time it should be from the bucket cache in onheap mode
-      actual = performScan(row1, fam1);
-      // Verify result
-      for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
-      }
-
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
@@ -307,7 +271,7 @@ public class TestScannerFromBucketCache {
     put.add(kv21);
     region.put(put);
     region.flush(true);
-    Store store = region.getStore(fam1);
+    HStore store = region.getStore(fam1);
     while (store.getStorefilesCount() <= 0) {
       try {
         Thread.sleep(20);

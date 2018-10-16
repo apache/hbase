@@ -22,10 +22,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 @InterfaceStability.Evolving
 public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
-  private static final Log LOG = LogFactory.getLog(SnapshotHFileCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotHFileCleaner.class);
 
   /**
    * Conf key for the frequency to attempt to refresh the cache of hfiles currently used in
@@ -76,7 +76,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
 
   @Override
   public void init(Map<String, Object> params) {
-    if (params.containsKey(HMaster.MASTER)) {
+    if (params != null && params.containsKey(HMaster.MASTER)) {
       this.master = (MasterServices) params.get(HMaster.MASTER);
     }
   }
@@ -86,6 +86,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
     return false;
   }
 
+  @Override
   public void setConf(final Configuration conf) {
     super.setConf(conf);
     try {
@@ -95,6 +96,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
       Path rootDir = FSUtils.getRootDir(conf);
       cache = new SnapshotFileCache(fs, rootDir, cacheRefreshPeriod, cacheRefreshPeriod,
           "snapshot-hfile-cleaner-cache-refresher", new SnapshotFileCache.SnapshotFileInspector() {
+            @Override
             public Collection<String> filesUnderSnapshot(final Path snapshotDir)
                 throws IOException {
               return SnapshotReferenceUtil.getHFileNames(conf, fs, snapshotDir);

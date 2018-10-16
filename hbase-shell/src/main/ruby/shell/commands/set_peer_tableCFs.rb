@@ -20,13 +20,15 @@
 
 module Shell
   module Commands
-    class SetPeerTableCFs< Command
+    class SetPeerTableCFs < Command
       def help
-        return <<-EOF
+        <<-EOF
   Set the replicable table-cf config for the specified peer.
 
-  Can't set a table to table-cfs config if it's namespace already was in
-  namespaces config of this peer.
+  Note:
+  1. The replicate_all flag need to be false when set the replicable table-cfs.
+  2. Can't set a table to table-cfs config if it's namespace already was in
+     namespaces config of this peer.
 
   Examples:
 

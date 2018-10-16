@@ -37,17 +37,7 @@ import java.util.SortedMap;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionGroup;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -59,15 +49,15 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -77,6 +67,19 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.OptionGroup;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.Counter;
@@ -96,7 +99,7 @@ import com.codahale.metrics.Timer;
 @InterfaceStability.Evolving
 public class HFilePrettyPrinter extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(HFilePrettyPrinter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFilePrettyPrinter.class);
 
   private Options options = new Options();
 
@@ -320,7 +323,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       if (this.isSeekToRow) {
         // seek to the first kv on this row
         shouldScanKeysValues =
-          (scanner.seekTo(CellUtil.createFirstOnRow(this.row)) != -1);
+          (scanner.seekTo(PrivateCellUtil.createFirstOnRow(this.row)) != -1);
       } else {
         shouldScanKeysValues = scanner.seekTo();
       }
@@ -377,7 +380,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     do {
       Cell cell = scanner.getCell();
       if (row != null && row.length != 0) {
-        int result = CellComparator.COMPARATOR.compareRows(cell, row, 0, row.length);
+        int result = CellComparator.getInstance().compareRows(cell, row, 0, row.length);
         if (result > 0) {
           break;
         } else if (result < 0) {
@@ -396,8 +399,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
               + Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
                   cell.getValueLength()));
           int i = 0;
-          List<Tag> tags = TagUtil.asList(cell.getTagsArray(), cell.getTagsOffset(),
-              cell.getTagsLength());
+          List<Tag> tags = PrivateCellUtil.getTags(cell);
           for (Tag tag : tags) {
             out.print(String.format(" T[%d]: %s", i++, tag.toString()));
           }
@@ -406,7 +408,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
       // check if rows are in order
       if (checkRow && pCell != null) {
-        if (CellComparator.COMPARATOR.compareRows(pCell, cell) > 0) {
+        if (CellComparator.getInstance().compareRows(pCell, cell) > 0) {
           err.println("WARNING, previous row is greater then"
               + " current row\n\tfilename -> " + file + "\n\tprevious -> "
               + CellUtil.getCellKeyAsString(pCell) + "\n\tcurrent  -> "
@@ -422,7 +424,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
               + "\n\tfilename -> " + file + "\n\tkeyvalue -> "
               + CellUtil.getCellKeyAsString(cell));
         }
-        if (pCell != null && CellComparator.compareFamilies(pCell, cell) != 0) {
+        if (pCell != null && CellComparator.getInstance().compareFamilies(pCell, cell) != 0) {
           err.println("WARNING, previous kv has different family"
               + " compared to current key\n\tfilename -> " + file
               + "\n\tprevious -> " + CellUtil.getCellKeyAsString(pCell)
@@ -439,7 +441,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           System.err.println("ERROR, wrong value format in mob reference cell "
             + CellUtil.getCellKeyAsString(cell));
         } else {
-          TableName tn = TableName.valueOf(TagUtil.cloneValue(tnTag));
+          TableName tn = TableName.valueOf(Tag.cloneValue(tnTag));
           String mobFileName = MobUtils.getMobFileName(cell);
           boolean exist = mobFileExists(fs, tn, mobFileName,
             Bytes.toString(CellUtil.cloneFamily(cell)), foundMobFiles, missingMobFiles);
@@ -529,22 +531,34 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     out.println("Fileinfo:");
     for (Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
       out.print(FOUR_SPACES + Bytes.toString(e.getKey()) + " = ");
-      if (Bytes.compareTo(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY")) == 0) {
-        long seqid = Bytes.toLong(e.getValue());
-        out.println(seqid);
-      } else if (Bytes.compareTo(e.getKey(), Bytes.toBytes("TIMERANGE")) == 0) {
-        TimeRangeTracker timeRangeTracker = TimeRangeTracker.getTimeRangeTracker(e.getValue());
+      if (Bytes.equals(e.getKey(), HStoreFile.MAX_SEQ_ID_KEY)
+          || Bytes.equals(e.getKey(), HStoreFile.DELETE_FAMILY_COUNT)
+          || Bytes.equals(e.getKey(), HStoreFile.EARLIEST_PUT_TS)
+          || Bytes.equals(e.getKey(), HFileWriterImpl.MAX_MEMSTORE_TS_KEY)
+          || Bytes.equals(e.getKey(), FileInfo.CREATE_TIME_TS)
+          || Bytes.equals(e.getKey(), HStoreFile.BULKLOAD_TIME_KEY)) {
+        out.println(Bytes.toLong(e.getValue()));
+      } else if (Bytes.equals(e.getKey(), HStoreFile.TIMERANGE_KEY)) {
+        TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(e.getValue());
         out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
-      } else if (Bytes.compareTo(e.getKey(), FileInfo.AVG_KEY_LEN) == 0
-          || Bytes.compareTo(e.getKey(), FileInfo.AVG_VALUE_LEN) == 0) {
+      } else if (Bytes.equals(e.getKey(), FileInfo.AVG_KEY_LEN)
+          || Bytes.equals(e.getKey(), FileInfo.AVG_VALUE_LEN)
+          || Bytes.equals(e.getKey(), HFileWriterImpl.KEY_VALUE_VERSION)
+          || Bytes.equals(e.getKey(), FileInfo.MAX_TAGS_LEN)) {
         out.println(Bytes.toInt(e.getValue()));
+      } else if (Bytes.equals(e.getKey(), HStoreFile.MAJOR_COMPACTION_KEY)
+          || Bytes.equals(e.getKey(), FileInfo.TAGS_COMPRESSED)
+          || Bytes.equals(e.getKey(), HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY)) {
+        out.println(Bytes.toBoolean(e.getValue()));
+      } else if (Bytes.equals(e.getKey(), FileInfo.LASTKEY)) {
+        out.println(new KeyValue.KeyOnlyKeyValue(e.getValue()).toString());
       } else {
         out.println(Bytes.toStringBinary(e.getValue()));
       }
     }
 
     try {
-      out.println("Mid-key: " + (CellUtil.getCellKeyAsString(reader.midkey())));
+      out.println("Mid-key: " + reader.midKey().map(CellUtil::getCellKeyAsString));
     } catch (Exception e) {
       out.println ("Unable to retrieve the midkey");
     }
@@ -604,7 +618,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     public void collect(Cell cell) {
       valLen.update(cell.getValueLength());
       if (prevCell != null &&
-          CellComparator.COMPARATOR.compareRows(prevCell, cell) != 0) {
+          CellComparator.getInstance().compareRows(prevCell, cell) != 0) {
         // new row
         collectRow();
       }

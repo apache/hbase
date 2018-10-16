@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 
 package hbase.pb;
 
@@ -71,25 +72,21 @@ message LockProcedureData {
   optional bool is_master_lock = 6 [default = false];
 }
 
-enum ResourceType {
-  RESOURCE_TYPE_SERVER = 1;
-  RESOURCE_TYPE_NAMESPACE = 2;
-  RESOURCE_TYPE_TABLE = 3;
-  RESOURCE_TYPE_REGION = 4;
+enum LockedResourceType {
+  SERVER = 1;
+  NAMESPACE = 2;
+  TABLE = 3;
+  REGION = 4;
+  PEER = 5;
 }
 
-message WaitingProcedure {
-  required LockType lock_type = 1;
-  required Procedure procedure = 2;
-}
-
-message LockInfo {
-  required ResourceType resource_type = 1;
+message LockedResource {
+  required LockedResourceType resource_type = 1;
   optional string resource_name = 2;
   required LockType lock_type = 3;
   optional Procedure exclusive_lock_owner_procedure = 4;
   optional int32 shared_lock_count = 5;
-  repeated WaitingProcedure waitingProcedures = 6;
+  repeated Procedure waitingProcedures = 6;
 }
 
 service LockService {

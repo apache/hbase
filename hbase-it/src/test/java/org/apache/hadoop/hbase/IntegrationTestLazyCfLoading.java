@@ -23,9 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -33,22 +30,23 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
-import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Integration test that verifies lazy CF loading during scans by doing repeated scans
@@ -72,7 +70,7 @@ public class IntegrationTestLazyCfLoading {
   private static final int WRITER_THREADS = 10;
   private static final int WAIT_BETWEEN_SCANS_MS = 1000;
 
-  private static final Log LOG = LogFactory.getLog(IntegrationTestLazyCfLoading.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestLazyCfLoading.class);
   private IntegrationTestingUtility util = new IntegrationTestingUtility();
   private final DataGenerator dataGen = new DataGenerator();
 
@@ -165,7 +163,7 @@ public class IntegrationTestLazyCfLoading {
 
     public Filter getScanFilter() {
       SingleColumnValueFilter scf = new SingleColumnValueFilter(ESSENTIAL_CF, FILTER_COLUMN,
-          CompareFilter.CompareOp.EQUAL, Bytes.toBytes(ACCEPTED_VALUE));
+          CompareOperator.EQUAL, Bytes.toBytes(ACCEPTED_VALUE));
       scf.setFilterIfMissing(true);
       return scf;
     }
@@ -195,7 +193,8 @@ public class IntegrationTestLazyCfLoading {
       hcd.setDataBlockEncoding(blockEncoding);
       htd.addFamily(hcd);
     }
-    int serverCount = util.getHBaseClusterInterface().getClusterStatus().getServersSize();
+    int serverCount = util.getHBaseClusterInterface().getClusterMetrics()
+      .getLiveServerMetrics().size();
     byte[][] splits = new RegionSplitter.HexStringSplit().split(serverCount * REGIONS_PER_SERVER);
     util.getAdmin().createTable(htd, splits);
     LOG.info("Created table");
@@ -222,7 +221,8 @@ public class IntegrationTestLazyCfLoading {
     Configuration conf = util.getConfiguration();
     String timeoutKey = String.format(TIMEOUT_KEY, this.getClass().getSimpleName());
     long maxRuntime = conf.getLong(timeoutKey, DEFAULT_TIMEOUT_MINUTES);
-    long serverCount = util.getHBaseClusterInterface().getClusterStatus().getServersSize();
+    long serverCount = util.getHBaseClusterInterface().getClusterMetrics()
+      .getLiveServerMetrics().size();
     long keysToWrite = serverCount * KEYS_TO_WRITE_PER_SERVER;
     Connection connection = ConnectionFactory.createConnection(conf);
     Table table = connection.getTable(TABLE_NAME);

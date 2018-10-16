@@ -27,7 +27,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * If user setBatch(5) and rpc returns 3+5+5+5+3 cells, we should return 5+5+5+5+1 to user. setBatch
  * doesn't mean setAllowPartialResult(true).
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 public class BatchScanResultCache implements ScanResultCache {
@@ -134,7 +135,7 @@ public class BatchScanResultCache implements ScanResultCache {
           // there is a row change
           regroupedResults.add(createCompletedResult());
         }
-      } else if (lastResultPartial && !CellUtil.matchingRow(lastCell, result.getRow())) {
+      } else if (lastResultPartial && !CellUtil.matchingRows(lastCell, result.getRow())) {
         // As for batched scan we may return partial results to user if we reach the batch limit, so
         // here we need to use lastCell to determine if there is row change and increase
         // numberOfCompleteRows.

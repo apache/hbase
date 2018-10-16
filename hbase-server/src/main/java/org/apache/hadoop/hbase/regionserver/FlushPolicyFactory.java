@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -36,7 +37,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class FlushPolicyFactory {
 
-  private static final Log LOG = LogFactory.getLog(FlushPolicyFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushPolicyFactory.class);
 
   public static final String HBASE_FLUSH_POLICY_KEY = "hbase.regionserver.flush.policy";
 
@@ -47,7 +48,7 @@ public class FlushPolicyFactory {
    * Create the FlushPolicy configured for the given table.
    */
   public static FlushPolicy create(HRegion region, Configuration conf) throws IOException {
-    Class<? extends FlushPolicy> clazz = getFlushPolicyClass(region.getTableDesc(), conf);
+    Class<? extends FlushPolicy> clazz = getFlushPolicyClass(region.getTableDescriptor(), conf);
     FlushPolicy policy = ReflectionUtils.newInstance(clazz, conf);
     policy.configureForRegion(region);
     return policy;
@@ -56,7 +57,7 @@ public class FlushPolicyFactory {
   /**
    * Get FlushPolicy class for the given table.
    */
-  public static Class<? extends FlushPolicy> getFlushPolicyClass(HTableDescriptor htd,
+  public static Class<? extends FlushPolicy> getFlushPolicyClass(TableDescriptor htd,
       Configuration conf) throws IOException {
     String className = htd.getFlushPolicyClassName();
     if (className == null) {

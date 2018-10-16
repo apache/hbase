@@ -21,7 +21,7 @@ module Shell
   module Commands
     class CreateNamespace < Command
       def help
-        return <<-EOF
+        <<-EOF
 Create namespace; pass namespace name,
 and optionally a dictionary of namespace configuration.
 Examples:

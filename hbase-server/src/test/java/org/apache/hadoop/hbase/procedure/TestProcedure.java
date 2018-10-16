@@ -28,12 +28,13 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -42,6 +43,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedure {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedure.class);
 
   ProcedureCoordinator coord;
 
@@ -52,7 +57,7 @@ public class TestProcedure {
     when(coord.getRpcs()).thenReturn(comms); // make it not null
   }
 
-  class LatchedProcedure extends Procedure {
+  static class LatchedProcedure extends Procedure {
     CountDownLatch startedAcquireBarrier = new CountDownLatch(1);
     CountDownLatch startedDuringBarrier = new CountDownLatch(1);
     CountDownLatch completedProcedure = new CountDownLatch(1);
@@ -77,13 +82,13 @@ public class TestProcedure {
     public void sendGlobalBarrierComplete() {
       completedProcedure.countDown();
     }
-  };
+  }
 
   /**
    * With a single member, verify ordered execution.  The Coordinator side is run in a separate
    * thread so we can only trigger from members and wait for particular state latches.
    */
-  @Test(timeout = 60000)
+  @Test
   public void testSingleMember() throws Exception {
     // The member
     List<String> members =  new ArrayList<>();
@@ -93,6 +98,7 @@ public class TestProcedure {
     final LatchedProcedure procspy = spy(proc);
     // coordinator: start the barrier procedure
     new Thread() {
+      @Override
       public void run() {
         procspy.call();
       }
@@ -124,10 +130,10 @@ public class TestProcedure {
     proc.completedProcedure.await();
     verify(procspy).sendGlobalBarrierReached();
     verify(procspy).sendGlobalBarrierComplete();
-    verify(procspy, never()).receive(any(ForeignException.class));
+    verify(procspy, never()).receive(any());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMultipleMember() throws Exception {
     // 2 members
     List<String> members =  new ArrayList<>();
@@ -139,6 +145,7 @@ public class TestProcedure {
     final LatchedProcedure procspy = spy(proc);
     // start the barrier procedure
     new Thread() {
+      @Override
       public void run() {
         procspy.call();
       }
@@ -176,10 +183,10 @@ public class TestProcedure {
     procspy.completedProcedure.await();
     verify(procspy).sendGlobalBarrierReached();
     verify(procspy).sendGlobalBarrierComplete();
-    verify(procspy, never()).receive(any(ForeignException.class));
+    verify(procspy, never()).receive(any());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testErrorPropagation() throws Exception {
     List<String> members =  new ArrayList<>();
     members.add("member");
@@ -192,6 +199,7 @@ public class TestProcedure {
 
     // start the barrier procedure
     Thread t = new Thread() {
+      @Override
       public void run() {
         procspy.call();
       }
@@ -204,7 +212,7 @@ public class TestProcedure {
     verify(procspy).sendGlobalBarrierComplete();
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testBarrieredErrorPropagation() throws Exception {
     List<String> members =  new ArrayList<>();
     members.add("member");
@@ -214,6 +222,7 @@ public class TestProcedure {
 
     // start the barrier procedure
     Thread t = new Thread() {
+      @Override
       public void run() {
         procspy.call();
       }

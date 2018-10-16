@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -31,7 +31,7 @@ import org.apache.hadoop.security.token.TokenSelector;
 @InterfaceAudience.Private
 public class AuthenticationTokenSelector
     implements TokenSelector<AuthenticationTokenIdentifier> {
-  private static final Log LOG = LogFactory.getLog(AuthenticationTokenSelector.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AuthenticationTokenSelector.class);
 
   public AuthenticationTokenSelector() {
   }

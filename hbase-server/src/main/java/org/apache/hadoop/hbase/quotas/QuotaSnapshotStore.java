@@ -20,9 +20,10 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
@@ -32,15 +33,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
  */
 @InterfaceAudience.Private
 public interface QuotaSnapshotStore<T> {
-
-  /**
-   * The current state of a table with respect to the policy set forth by a quota.
-   */
-  @InterfaceAudience.Private
-  public enum ViolationState {
-    IN_VIOLATION,
-    IN_OBSERVANCE,
-  }
 
   /**
    * Singleton to represent a table without a quota defined. It is never in violation.
@@ -77,7 +69,7 @@ public interface QuotaSnapshotStore<T> {
    *
    * @param subject The filter criteria. Only regions belonging to this parameter will be returned
    */
-  Iterable<Entry<HRegionInfo,Long>> filterBySubject(T subject);
+  Iterable<Entry<RegionInfo,Long>> filterBySubject(T subject);
 
   /**
    * Persists the current {@link SpaceQuotaSnapshot} for the {@code subject}.
@@ -90,7 +82,7 @@ public interface QuotaSnapshotStore<T> {
   /**
    * Updates {@code this} with the latest snapshot of filesystem use by region.
    *
-   * @param regionUsage A map of {@code HRegionInfo} objects to their filesystem usage in bytes
+   * @param regionUsage A map of {@code RegionInfo} objects to their filesystem usage in bytes
    */
-  void setRegionUsage(Map<HRegionInfo,Long> regionUsage);
+  void setRegionUsage(Map<RegionInfo,Long> regionUsage);
 }

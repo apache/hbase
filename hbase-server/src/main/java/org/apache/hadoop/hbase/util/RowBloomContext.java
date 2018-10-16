@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.LAST_BLOOM_KEY;
+
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Handles ROW bloom related context. It works with both ByteBufferedCell and byte[] backed cells
@@ -36,10 +38,11 @@ public class RowBloomContext extends BloomContext {
     super(bloomFilterWriter, comparator);
   }
 
+  @Override
   public void addLastBloomKey(Writer writer) throws IOException {
     if (this.getLastCell() != null) {
       byte[] key = CellUtil.copyRow(this.getLastCell());
-      writer.appendFileInfo(StoreFile.LAST_BLOOM_KEY, key);
+      writer.appendFileInfo(LAST_BLOOM_KEY, key);
     }
   }
 

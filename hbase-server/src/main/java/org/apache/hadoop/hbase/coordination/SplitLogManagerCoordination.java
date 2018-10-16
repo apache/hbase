@@ -20,19 +20,16 @@
 package org.apache.hadoop.hbase.coordination;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Coordination for SplitLogManager. It creates and works with tasks for split log operations<BR>
@@ -41,24 +38,15 @@ import com.google.common.annotations.VisibleForTesting;
  * {@link #remainingTasksInCoordination()} and waits until it become zero.
  * <P>
  * Methods required for task life circle: <BR>
- * {@link #markRegionsRecovering(ServerName, Set)} mark regions for log replaying. Used by
- * {@link org.apache.hadoop.hbase.master.MasterFileSystem} <BR>
- * {@link #removeRecoveringRegions(Set, Boolean)} make regions cleanup that previous were marked as
- * recovering. Called after all tasks processed <BR>
- * {@link #removeStaleRecoveringRegions(Set)} remove stale recovering. called by
- * {@link org.apache.hadoop.hbase.master.MasterFileSystem} after Active Master is initialized <BR>
- * {@link #getLastRecoveryTime()} required for garbage collector and should indicate when the last
- * recovery has been made<BR>
  * {@link #checkTaskStillAvailable(String)} Check that task is still there <BR>
  * {@link #checkTasks()} check for unassigned tasks and resubmit them
  */
 @InterfaceAudience.Private
 public interface SplitLogManagerCoordination {
-
   /**
    * Detail class that shares data between coordination and split log manager
    */
-  public static class SplitLogManagerDetails {
+  class SplitLogManagerDetails {
     final private ConcurrentMap<String, Task> tasks;
     final private MasterServices master;
     final private Set<String> failedDeletions;
@@ -117,27 +105,9 @@ public interface SplitLogManagerCoordination {
   String prepareTask(String taskName);
 
   /**
-   * Mark regions in recovering state for distributed log replay
-   * @param serverName server name
-   * @param userRegions set of regions to be marked
-   * @throws IOException in case of failure
-   * @throws InterruptedIOException
-   */
-  void markRegionsRecovering(final ServerName serverName, Set<HRegionInfo> userRegions)
-      throws IOException, InterruptedIOException;
-
-  /**
    * tells Coordination that it should check for new tasks
    */
   void checkTasks();
-
-  /**
-   * It removes recovering regions from Coordination
-   * @param serverNames servers which are just recovered
-   * @param isMetaRecovery whether current recovery is for the meta region on
-   *          <code>serverNames</code>
-   */
-  void removeRecoveringRegions(Set<String> serverNames, Boolean isMetaRecovery) throws IOException;
 
   /**
    * Return the number of remaining tasks
@@ -149,23 +119,6 @@ public interface SplitLogManagerCoordination {
    * @param task node to check
    */
   void checkTaskStillAvailable(String task);
-
-  /**
-   * Change the recovery mode.
-   * @param b the recovery mode state
-   * @throws InterruptedIOException
-   * @throws IOException in case of failure
-   */
-  void setRecoveryMode(boolean b) throws InterruptedIOException, IOException;
-
-  /**
-   * Removes known stale servers
-   * @param knownServers set of previously failed servers
-   * @throws IOException in case of failure
-   * @throws InterruptedIOException
-   */
-  void removeStaleRecoveringRegions(Set<String> knownServers) throws IOException,
-      InterruptedIOException;
 
   /**
    * Resubmit the task in case if found unassigned or failed
@@ -186,28 +139,6 @@ public interface SplitLogManagerCoordination {
    * @param taskName to be removed
    */
   void deleteTask(String taskName);
-
-  /**
-   * @return shows whether the log recovery mode is in replaying state
-   */
-  boolean isReplaying();
-
-  /**
-   * @return shows whether the log recovery mode is in splitting state
-   */
-  boolean isSplitting();
-
-  /**
-   * @return the time of last attempt to recover
-   */
-  long getLastRecoveryTime();
-
-  /**
-   * Temporary function, mostly for UTs. In the regular code isReplaying or isSplitting should be
-   * used.
-   * @return the current log recovery mode.
-   */
-  RecoveryMode getRecoveryMode();
 
   /**
    * Support method to init constants such as timeout. Mostly required for UTs.

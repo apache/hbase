@@ -26,21 +26,22 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.ByteBufferCell;
+import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -59,7 +60,7 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Private
 public class HFileWriterImpl implements HFile.Writer {
-  private static final Log LOG = LogFactory.getLog(HFileWriterImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileWriterImpl.class);
 
   private static final long UNSET = -1;
 
@@ -176,7 +177,7 @@ public class HFileWriterImpl implements HFile.Writer {
     } else {
       this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
     }
-    this.comparator = comparator != null? comparator: CellComparator.COMPARATOR;
+    this.comparator = comparator != null ? comparator : CellComparator.getInstance();
 
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
@@ -238,7 +239,7 @@ public class HFileWriterImpl implements HFile.Writer {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = comparator.compareKeyIgnoresMvcc(lastCell, cell);
+      int keyComp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, lastCell, cell);
 
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
@@ -340,7 +341,7 @@ public class HFileWriterImpl implements HFile.Writer {
     int onDiskSize = blockWriter.getOnDiskSizeWithHeader();
     Cell indexEntry =
       getMidpoint(this.comparator, lastCellOfPreviousBlock, firstCellInBlock);
-    dataBlockIndexWriter.addEntry(CellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
+    dataBlockIndexWriter.addEntry(PrivateCellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
       lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
     if (cacheConf.shouldCacheDataOnWrite()) {
@@ -382,34 +383,35 @@ public class HFileWriterImpl implements HFile.Writer {
           + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
     }
     byte[] midRow;
-    boolean bufferBacked = left instanceof ByteBufferCell && right instanceof ByteBufferCell;
+    boolean bufferBacked = left instanceof ByteBufferExtendedCell
+        && right instanceof ByteBufferExtendedCell;
     if (diff < 0) {
       // Left row is < right row.
       if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferCell) left).getRowByteBuffer(),
-            ((ByteBufferCell) left).getRowPosition(), left.getRowLength(),
-            ((ByteBufferCell) right).getRowByteBuffer(),
-            ((ByteBufferCell) right).getRowPosition(), right.getRowLength());
+        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getRowByteBuffer(),
+            ((ByteBufferExtendedCell) left).getRowPosition(), left.getRowLength(),
+            ((ByteBufferExtendedCell) right).getRowByteBuffer(),
+            ((ByteBufferExtendedCell) right).getRowPosition(), right.getRowLength());
       } else {
         midRow = getMinimumMidpointArray(left.getRowArray(), left.getRowOffset(),
             left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
       }
       // If midRow is null, just return 'right'. Can't do optimization.
       if (midRow == null) return right;
-      return CellUtil.createFirstOnRow(midRow);
+      return PrivateCellUtil.createFirstOnRow(midRow);
     }
     // Rows are same. Compare on families.
-    diff = CellComparator.compareFamilies(left, right);
+    diff = comparator.compareFamilies(left, right);
     if (diff > 0) {
       throw new IllegalArgumentException("Left family sorts after right family; left="
           + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
     }
     if (diff < 0) {
       if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferCell) left).getFamilyByteBuffer(),
-            ((ByteBufferCell) left).getFamilyPosition(), left.getFamilyLength(),
-            ((ByteBufferCell) right).getFamilyByteBuffer(),
-            ((ByteBufferCell) right).getFamilyPosition(), right.getFamilyLength());
+        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
+            ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(),
+            ((ByteBufferExtendedCell) right).getFamilyByteBuffer(),
+            ((ByteBufferExtendedCell) right).getFamilyPosition(), right.getFamilyLength());
       } else {
         midRow = getMinimumMidpointArray(left.getFamilyArray(), left.getFamilyOffset(),
             left.getFamilyLength(), right.getFamilyArray(), right.getFamilyOffset(),
@@ -418,20 +420,20 @@ public class HFileWriterImpl implements HFile.Writer {
       // If midRow is null, just return 'right'. Can't do optimization.
       if (midRow == null) return right;
       // Return new Cell where we use right row and then a mid sort family.
-      return CellUtil.createFirstOnRowFamily(right, midRow, 0, midRow.length);
+      return PrivateCellUtil.createFirstOnRowFamily(right, midRow, 0, midRow.length);
     }
     // Families are same. Compare on qualifiers.
-    diff = CellComparator.compareQualifiers(left, right);
+    diff = comparator.compareQualifiers(left, right);
     if (diff > 0) {
       throw new IllegalArgumentException("Left qualifier sorts after right qualifier; left="
           + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
     }
     if (diff < 0) {
       if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferCell) left).getQualifierByteBuffer(),
-            ((ByteBufferCell) left).getQualifierPosition(), left.getQualifierLength(),
-            ((ByteBufferCell) right).getQualifierByteBuffer(),
-            ((ByteBufferCell) right).getQualifierPosition(), right.getQualifierLength());
+        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
+            ((ByteBufferExtendedCell) left).getQualifierPosition(), left.getQualifierLength(),
+            ((ByteBufferExtendedCell) right).getQualifierByteBuffer(),
+            ((ByteBufferExtendedCell) right).getQualifierPosition(), right.getQualifierLength());
       } else {
         midRow = getMinimumMidpointArray(left.getQualifierArray(), left.getQualifierOffset(),
             left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
@@ -440,7 +442,7 @@ public class HFileWriterImpl implements HFile.Writer {
       // If midRow is null, just return 'right'. Can't do optimization.
       if (midRow == null) return right;
       // Return new Cell where we use right row and family and then a mid sort qualifier.
-      return CellUtil.createFirstOnRowCol(right, midRow, 0, midRow.length);
+      return PrivateCellUtil.createFirstOnRowCol(right, midRow, 0, midRow.length);
     }
     // No opportunity for optimization. Just return right key.
     return right;
@@ -737,7 +739,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
     blockWriter.write(cell);
 
-    totalKeyLength += CellUtil.estimatedSerializedSizeOfKey(cell);
+    totalKeyLength += PrivateCellUtil.estimatedSerializedSizeOfKey(cell);
     totalValueLength += cell.getValueLength();
 
     // Are we the first key in this block?
@@ -775,7 +777,7 @@ public class HFileWriterImpl implements HFile.Writer {
     if (lastCell != null) {
       // Make a copy. The copy is stuffed into our fileinfo map. Needs a clean
       // byte buffer. Won't take a tuple.
-      byte [] lastKey = CellUtil.getCellKeySerializedAsKeyValueKey(this.lastCell);
+      byte [] lastKey = PrivateCellUtil.getCellKeySerializedAsKeyValueKey(this.lastCell);
       fileInfo.append(FileInfo.LASTKEY, lastKey, false);
     }
 
@@ -790,11 +792,7 @@ public class HFileWriterImpl implements HFile.Writer {
     int avgValueLen =
         entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
     fileInfo.append(FileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
-    if (hFileContext.getDataBlockEncoding() == DataBlockEncoding.PREFIX_TREE) {
-      // In case of Prefix Tree encoding, we always write tags information into HFiles even if all
-      // KVs are having no tags.
-      fileInfo.append(FileInfo.MAX_TAGS_LEN, Bytes.toBytes(this.maxTagsLength), false);
-    } else if (hFileContext.isIncludesTags()) {
+    if (hFileContext.isIncludesTags()) {
       // When tags are not being written in this file, MAX_TAGS_LEN is excluded
       // from the FileInfo
       fileInfo.append(FileInfo.MAX_TAGS_LEN, Bytes.toBytes(this.maxTagsLength), false);

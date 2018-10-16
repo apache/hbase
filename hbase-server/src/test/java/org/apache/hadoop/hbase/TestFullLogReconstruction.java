@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,33 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MiscTests.class, LargeTests.class })
 public class TestFullLogReconstruction {
 
-  private final static HBaseTestingUtility
-      TEST_UTIL = new HBaseTestingUtility();
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFullLogReconstruction.class);
+
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final static TableName TABLE_NAME = TableName.valueOf("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
@@ -57,22 +58,17 @@ public class TestFullLogReconstruction {
     TEST_UTIL.startMiniCluster(3);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   /**
-   * Test the whole reconstruction loop. Build a table with regions aaa to zzz
-   * and load every one of them multiple times with the same date and do a flush
-   * at some point. Kill one of the region servers and scan the table. We should
-   * see all the rows.
-   * @throws Exception
+   * Test the whole reconstruction loop. Build a table with regions aaa to zzz and load every one of
+   * them multiple times with the same date and do a flush at some point. Kill one of the region
+   * servers and scan the table. We should see all the rows.
    */
-  @Test (timeout=300000)
+  @Test
   public void testReconstruction() throws Exception {
     Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAMILY);
 
@@ -82,11 +78,26 @@ public class TestFullLogReconstruction {
 
     assertEquals(initialCount, count);
 
-    for(int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
       TEST_UTIL.loadTable(table, FAMILY);
     }
-
+    RegionServerThread rsThread = TEST_UTIL.getHBaseCluster().getRegionServerThreads().get(0);
     TEST_UTIL.expireRegionServerSession(0);
+    // make sure that the RS is fully down before reading, so that we will read the data from other
+    // RSes.
+    TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        return !rsThread.isAlive();
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return rsThread.getRegionServer() + " is still alive";
+      }
+    });
+
     int newCount = TEST_UTIL.countRows(table);
     assertEquals(count, newCount);
     table.close();

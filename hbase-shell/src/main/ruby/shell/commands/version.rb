@@ -21,16 +21,16 @@ module Shell
   module Commands
     class Version < Command
       def help
-        return <<-EOF
+        <<-EOF
 Output this HBase version
 EOF
       end
 
       def command
         # Output version.
-        puts "#{org.apache.hadoop.hbase.util.VersionInfo.getVersion()}, " +
-             "r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision()}, " +
-             "#{org.apache.hadoop.hbase.util.VersionInfo.getDate()}"
+        puts "#{org.apache.hadoop.hbase.util.VersionInfo.getVersion}, " \
+             "r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision}, " \
+             "#{org.apache.hadoop.hbase.util.VersionInfo.getDate}"
       end
     end
   end

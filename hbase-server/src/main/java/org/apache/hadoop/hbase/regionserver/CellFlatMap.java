@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -28,8 +30,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NavigableMap;
 import java.util.Set;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -44,7 +44,7 @@ import org.apache.commons.logging.LogFactory;
  */
 @InterfaceAudience.Private
 public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
-  private static final Log LOG = LogFactory.getLog(CellFlatMap.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CellFlatMap.class);
   private final Comparator<? super Cell> comparator;
   protected int minCellIdx   = 0;   // the index of the minimal cell (for sub-sets)
   protected int maxCellIdx   = 0;   // the index of the cell after the maximal cell (for sub-sets)
@@ -83,7 +83,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
     int end = maxCellIdx - 1;
 
     while (begin <= end) {
-      int mid = (begin + end) >>> 1;
+      int mid = begin + ((end - begin) >> 1);
       Cell midCell = getCell(mid);
       int compareRes = comparator.compare(midCell, needle);
 
@@ -282,37 +282,85 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
   }
 
   // -------------------------------- Entry's getters --------------------------------
-  // all interfaces returning Entries are unsupported because we are dealing only with the keys
+
+  private static class CellFlatMapEntry implements Entry<Cell, Cell> {
+    private final Cell cell;
+
+    public CellFlatMapEntry (Cell cell) {
+      this.cell = cell;
+    }
+
+    @Override
+    public Cell getKey() {
+      return cell;
+    }
+
+    @Override
+    public Cell getValue() {
+      return cell;
+    }
+
+    @Override
+    public Cell setValue(Cell value) {
+      throw new UnsupportedOperationException();
+    }
+  }
+
   @Override
   public Entry<Cell, Cell> lowerEntry(Cell k) {
-    throw new UnsupportedOperationException();
+    Cell cell = lowerKey(k);
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> higherEntry(Cell k) {
-    throw new UnsupportedOperationException();
+    Cell cell = higherKey(k);
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> ceilingEntry(Cell k) {
-    throw new UnsupportedOperationException();
+    Cell cell = ceilingKey(k);
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> floorEntry(Cell k) {
-    throw new UnsupportedOperationException();
+    Cell cell = floorKey(k);
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> firstEntry() {
-    throw new UnsupportedOperationException();
+    Cell cell = firstKey();
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
   @Override
   public Entry<Cell, Cell> lastEntry() {
-    throw new UnsupportedOperationException();
+    Cell cell = lastKey();
+    if (cell == null) {
+      return null;
+    }
+    return new CellFlatMapEntry(cell);
   }
 
+  // The following 2 methods (pollFirstEntry, pollLastEntry) are unsupported because these are updating methods.
   @Override
   public Entry<Cell, Cell> pollFirstEntry() {
     throw new UnsupportedOperationException();
@@ -322,7 +370,6 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
   public Entry<Cell, Cell> pollLastEntry() {
     throw new UnsupportedOperationException();
   }
-
 
   // -------------------------------- Updates --------------------------------
   // All updating methods below are unsupported.

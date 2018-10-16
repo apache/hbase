@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
@@ -26,18 +24,19 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -56,6 +55,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -63,6 +63,8 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for data blocks, non-root
@@ -72,7 +74,11 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestCacheOnWriteInSchema {
 
-  private static final Log LOG = LogFactory.getLog(TestCacheOnWriteInSchema.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCacheOnWriteInSchema.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
   @Rule public TestName name = new TestName();
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
@@ -106,18 +112,19 @@ public class TestCacheOnWriteInSchema {
       return blockType == blockType1 || blockType == blockType2;
     }
 
-    public void modifyFamilySchema(HColumnDescriptor family) {
+    public ColumnFamilyDescriptorBuilder modifyFamilySchema(ColumnFamilyDescriptorBuilder builder) {
       switch (this) {
-      case DATA_BLOCKS:
-        family.setCacheDataOnWrite(true);
-        break;
-      case BLOOM_BLOCKS:
-        family.setCacheBloomsOnWrite(true);
-        break;
-      case INDEX_BLOCKS:
-        family.setCacheIndexesOnWrite(true);
-        break;
+        case DATA_BLOCKS:
+          builder.setCacheDataOnWrite(true);
+          break;
+        case BLOOM_BLOCKS:
+          builder.setCacheBloomsOnWrite(true);
+          break;
+        case INDEX_BLOCKS:
+          builder.setCacheIndexesOnWrite(true);
+          break;
       }
+      return builder;
     }
   }
 
@@ -158,23 +165,22 @@ public class TestCacheOnWriteInSchema {
     fs = HFileSystem.get(conf);
 
     // Create the schema
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setBloomFilterType(BloomType.ROWCOL);
-    cowType.modifyFamilySchema(hcd);
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    htd.addFamily(hcd);
+    ColumnFamilyDescriptor hcd = cowType
+        .modifyFamilySchema(
+          ColumnFamilyDescriptorBuilder.newBuilder(family).setBloomFilterType(BloomType.ROWCOL))
+        .build();
+    TableDescriptor htd =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setColumnFamily(hcd).build();
 
     // Create a store based on the schema
-    final String id = TestCacheOnWriteInSchema.class.getName();
-    final Path logdir = new Path(FSUtils.getRootDir(conf),
-      AbstractFSWALProvider.getWALDirectoryName(id));
+    String id = TestCacheOnWriteInSchema.class.getName();
+    Path logdir = new Path(FSUtils.getRootDir(conf), AbstractFSWALProvider.getWALDirectoryName(id));
     fs.delete(logdir, true);
 
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    walFactory = new WALFactory(conf, null, id);
+    RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+    walFactory = new WALFactory(conf, id);
 
-    region = TEST_UTIL.createLocalHRegion(info, htd,
-        walFactory.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()));
+    region = TEST_UTIL.createLocalHRegion(info, htd, walFactory.getWAL(info));
     store = new HStore(region, hcd, conf);
   }
 
@@ -208,7 +214,7 @@ public class TestCacheOnWriteInSchema {
   public void testCacheOnWriteInSchema() throws IOException {
     // Write some random data into the store
     StoreFileWriter writer = store.createWriterInTmp(Integer.MAX_VALUE,
-        HFile.DEFAULT_COMPRESSION_ALGORITHM, false, true, false);
+        HFile.DEFAULT_COMPRESSION_ALGORITHM, false, true, false, false);
     writeStoreFile(writer);
     writer.close();
     // Verify the block types of interest were cached on write
@@ -218,7 +224,7 @@ public class TestCacheOnWriteInSchema {
   private void readStoreFile(Path path) throws IOException {
     CacheConfig cacheConf = store.getCacheConfig();
     BlockCache cache = cacheConf.getBlockCache();
-    StoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.ROWCOL, true);
+    HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.ROWCOL, true);
     sf.initReader();
     HFile.Reader reader = sf.getReader().getHFileReader();
     try {

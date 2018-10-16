@@ -15,13 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,12 +37,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -46,26 +52,15 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -73,12 +68,22 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
 /**
  * This class attempts to unit test bulk HLog loading.
  */
 @Category(SmallTests.class)
 public class TestBulkLoad {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBulkLoad.class);
 
   @ClassRule
   public static TemporaryFolder testFolder = new TemporaryFolder();
@@ -108,19 +113,20 @@ public class TestBulkLoad {
     storeFileName = (new Path(storeFileName)).getName();
     List<String> storeFileNames = new ArrayList<>();
     storeFileNames.add(storeFileName);
-    when(log.append(any(HRegionInfo.class), any(WALKey.class),
+    when(log.append(any(), any(),
             argThat(bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(),
                     familyName, storeFileNames)),
-            any(boolean.class))).thenAnswer(new Answer() {
-      public Object answer(InvocationOnMock invocation) {
-        WALKey walKey = invocation.getArgumentAt(1, WALKey.class);
-        MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-        if (mvcc != null) {
-          MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-          walKey.setWriteEntry(we);
-        }
-        return 01L;
-      };
+            anyBoolean())).thenAnswer(new Answer() {
+              @Override
+              public Object answer(InvocationOnMock invocation) {
+                WALKeyImpl walKey = invocation.getArgument(1);
+                MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+                if (mvcc != null) {
+                  MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+                  walKey.setWriteEntry(we);
+                }
+                return 01L;
+              }
     });
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1)
         .bulkLoadHFiles(familyPaths, false, null);
@@ -134,18 +140,19 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadSingleFamilyHLog() throws IOException {
-    when(log.append(any(HRegionInfo.class),
-            any(WALKey.class), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            any(boolean.class))).thenAnswer(new Answer() {
-      public Object answer(InvocationOnMock invocation) {
-        WALKey walKey = invocation.getArgumentAt(1, WALKey.class);
-        MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-        if (mvcc != null) {
-          MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-          walKey.setWriteEntry(we);
-        }
-        return 01L;
-      };
+    when(log.append(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
+            anyBoolean())).thenAnswer(new Answer() {
+              @Override
+              public Object answer(InvocationOnMock invocation) {
+                WALKeyImpl walKey = invocation.getArgument(1);
+                MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+                if (mvcc != null) {
+                  MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+                  walKey.setWriteEntry(we);
+                }
+                return 01L;
+              }
     });
     testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1), false, null);
     verify(log).sync(anyLong());
@@ -153,18 +160,19 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadManyFamilyHLog() throws IOException {
-    when(log.append(any(HRegionInfo.class),
-            any(WALKey.class), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            any(boolean.class))).thenAnswer(new Answer() {
+    when(log.append(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
+            anyBoolean())).thenAnswer(new Answer() {
+              @Override
               public Object answer(InvocationOnMock invocation) {
-                WALKey walKey = invocation.getArgumentAt(1, WALKey.class);
+                WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
                 if (mvcc != null) {
                   MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
                   walKey.setWriteEntry(we);
                 }
                 return 01L;
-              };
+              }
             });
     testRegionWithFamilies(family1, family2).bulkLoadHFiles(withFamilyPathsFor(family1, family2),
             false, null);
@@ -173,18 +181,19 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadManyFamilyHLogEvenWhenTableNameNamespaceSpecified() throws IOException {
-    when(log.append(any(HRegionInfo.class),
-            any(WALKey.class), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            any(boolean.class))).thenAnswer(new Answer() {
-      public Object answer(InvocationOnMock invocation) {
-        WALKey walKey = invocation.getArgumentAt(1, WALKey.class);
-        MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-        if (mvcc != null) {
-          MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-          walKey.setWriteEntry(we);
-        }
-        return 01L;
-      };
+    when(log.append(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
+            anyBoolean())).thenAnswer(new Answer() {
+              @Override
+              public Object answer(InvocationOnMock invocation) {
+                WALKeyImpl walKey = invocation.getArgument(1);
+                MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+                if (mvcc != null) {
+                  MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+                  walKey.setWriteEntry(we);
+                }
+                return 01L;
+              }
     });
     TableName tableName = TableName.valueOf("test", "test");
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1, family2)
@@ -281,7 +290,7 @@ public class TestBulkLoad {
         writer.append(new KeyValue(CellUtil.createCell(randomBytes,
             family,
             randomBytes,
-            0l,
+            0L,
             KeyValue.Type.Put.getCode(),
             randomBytes)));
       } finally {

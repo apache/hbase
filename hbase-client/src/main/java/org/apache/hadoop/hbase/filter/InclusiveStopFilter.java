@@ -23,14 +23,14 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A Filter that stops after the given row.  There is no "RowStopFilter" because
@@ -51,20 +51,28 @@ public class InclusiveStopFilter extends FilterBase {
     return this.stopRowKey;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     if (done) return ReturnCode.NEXT_ROW;
     return ReturnCode.INCLUDE;
   }
 
+  @Override
   public boolean filterRowKey(Cell firstRowCell) {
     // if stopRowKey is <= buffer, then true, filter row.
     if (filterAllRemaining()) return true;
-    int cmp = CellComparator.COMPARATOR.compareRows(firstRowCell, stopRowKey, 0, stopRowKey.length);
+    int cmp = CellComparator.getInstance().compareRows(firstRowCell, stopRowKey, 0, stopRowKey.length);
     done = reversed ? cmp < 0 : cmp > 0;
     return done;
   }
 
+  @Override
   public boolean filterAllRemaining() {
     return done;
   }
@@ -79,6 +87,7 @@ public class InclusiveStopFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.InclusiveStopFilter.Builder builder =
       FilterProtos.InclusiveStopFilter.newBuilder();
@@ -105,10 +114,11 @@ public class InclusiveStopFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof InclusiveStopFilter)) return false;
@@ -120,5 +130,15 @@ public class InclusiveStopFilter extends FilterBase {
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + Bytes.toStringBinary(this.stopRowKey);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return Bytes.hashCode(this.stopRowKey);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,9 +21,6 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
@@ -34,33 +31,34 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.DNS;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.DNS;
 
 /**
  * Utility used by client connections.
@@ -68,7 +66,7 @@ import org.apache.hadoop.net.DNS;
 @InterfaceAudience.Private
 public final class ConnectionUtils {
 
-  private static final Log LOG = LogFactory.getLog(ConnectionUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConnectionUtils.class);
 
   private ConnectionUtils() {
   }
@@ -95,20 +93,6 @@ public final class ConnectionUtils {
   }
 
   /**
-   * Adds / subs an up to 50% jitter to a pause time. Minimum is 1.
-   * @param pause the expected pause.
-   * @param jitter the jitter ratio, between 0 and 1, exclusive.
-   */
-  public static long addJitter(final long pause, final float jitter) {
-    float lag = pause * (ThreadLocalRandom.current().nextFloat() - 0.5f) * jitter;
-    long newPause = pause + (long) lag;
-    if (newPause <= 0) {
-      return 1;
-    }
-    return newPause;
-  }
-
-  /**
    * @param conn The connection for which to replace the generator.
    * @param cnm Replaces the nonce generator used, for testing.
    * @return old nonce generator.
@@ -125,16 +109,58 @@ public final class ConnectionUtils {
    * @param log Used to log what we set in here.
    */
   public static void setServerSideHConnectionRetriesConfig(final Configuration c, final String sn,
-      final Log log) {
+      final Logger log) {
     // TODO: Fix this. Not all connections from server side should have 10 times the retries.
     int hcRetries = c.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     // Go big. Multiply by 10. If we can't get to meta after this many retries
     // then something seriously wrong.
-    int serversideMultiplier = c.getInt("hbase.client.serverside.retries.multiplier", 10);
+    int serversideMultiplier = c.getInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER,
+      HConstants.DEFAULT_HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER);
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     log.info(sn + " server-side Connection retries=" + retries);
+  }
+
+  /**
+   * A ClusterConnection that will short-circuit RPC making direct invocations against the
+   * localhost if the invocation target is 'this' server; save on network and protobuf
+   * invocations.
+   */
+  // TODO This has to still do PB marshalling/unmarshalling stuff. Check how/whether we can avoid.
+  @VisibleForTesting // Class is visible so can assert we are short-circuiting when expected.
+  public static class ShortCircuitingClusterConnection extends ConnectionImplementation {
+    private final ServerName serverName;
+    private final AdminService.BlockingInterface localHostAdmin;
+    private final ClientService.BlockingInterface localHostClient;
+
+    private ShortCircuitingClusterConnection(Configuration conf, ExecutorService pool, User user,
+        ServerName serverName, AdminService.BlockingInterface admin,
+        ClientService.BlockingInterface client)
+    throws IOException {
+      super(conf, pool, user);
+      this.serverName = serverName;
+      this.localHostAdmin = admin;
+      this.localHostClient = client;
+    }
+
+    @Override
+    public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
+      return serverName.equals(sn) ? this.localHostAdmin : super.getAdmin(sn);
+    }
+
+    @Override
+    public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
+      return serverName.equals(sn) ? this.localHostClient : super.getClient(sn);
+    }
+
+    @Override
+    public MasterKeepAliveConnection getMaster() throws IOException {
+      if (this.localHostClient instanceof MasterService.BlockingInterface) {
+        return new ShortCircuitMasterConnection((MasterService.BlockingInterface)this.localHostClient);
+      }
+      return super.getMaster();
+    }
   }
 
   /**
@@ -156,27 +182,7 @@ public final class ConnectionUtils {
     if (user == null) {
       user = UserProvider.instantiate(conf).getCurrent();
     }
-    return new ConnectionImplementation(conf, pool, user) {
-      @Override
-      public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
-        return serverName.equals(sn) ? admin : super.getAdmin(sn);
-      }
-
-      @Override
-      public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
-        return serverName.equals(sn) ? client : super.getClient(sn);
-      }
-
-      @Override
-      public MasterKeepAliveConnection getKeepAliveMasterService()
-          throws MasterNotRunningException {
-        if (!(client instanceof MasterService.BlockingInterface)) {
-          return super.getKeepAliveMasterService();
-        } else {
-          return new ShortCircuitMasterConnection((MasterService.BlockingInterface) client);
-        }
-      }
-    };
+    return new ShortCircuitingClusterConnection(conf, pool, user, serverName, admin, client);
   }
 
   /**
@@ -314,7 +320,7 @@ public final class ConnectionUtils {
     long estimatedHeapSizeOfResult = 0;
     // We don't make Iterator here
     for (Cell cell : rs.rawCells()) {
-      estimatedHeapSizeOfResult += CellUtil.estimatedHeapSizeOf(cell);
+      estimatedHeapSizeOfResult += PrivateCellUtil.estimatedSizeOfCell(cell);
     }
     return estimatedHeapSizeOfResult;
   }
@@ -325,11 +331,12 @@ public final class ConnectionUtils {
       return result;
     }
     // not the same row
-    if (!CellUtil.matchingRow(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
+    if (!PrivateCellUtil.matchingRows(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
       return result;
     }
     Cell[] rawCells = result.rawCells();
-    int index = Arrays.binarySearch(rawCells, keepCellsAfter, CellComparator::compareWithoutRow);
+    int index =
+        Arrays.binarySearch(rawCells, keepCellsAfter, CellComparator.getInstance()::compareWithoutRow);
     if (index < 0) {
       index = -index - 1;
     } else {
@@ -371,7 +378,7 @@ public final class ConnectionUtils {
     }
   }
 
-  static boolean noMoreResultsForScan(Scan scan, HRegionInfo info) {
+  static boolean noMoreResultsForScan(Scan scan, RegionInfo info) {
     if (isEmptyStopRow(info.getEndKey())) {
       return true;
     }
@@ -385,7 +392,7 @@ public final class ConnectionUtils {
     return c > 0 || (c == 0 && !scan.includeStopRow());
   }
 
-  static boolean noMoreResultsForReverseScan(Scan scan, HRegionInfo info) {
+  static boolean noMoreResultsForReverseScan(Scan scan, RegionInfo info) {
     if (isEmptyStartRow(info.getStartKey())) {
       return true;
     }
@@ -455,7 +462,7 @@ public final class ConnectionUtils {
     long resultSize = 0;
     for (Result rr : rrs) {
       for (Cell cell : rr.rawCells()) {
-        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
+        resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
     }
     scanMetrics.countOfBytesInResults.addAndGet(resultSize);

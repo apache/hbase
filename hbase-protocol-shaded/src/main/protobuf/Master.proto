@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 
 // All to do with the Master.  Includes schema management since these
 // changes are run by the Master process.
@@ -81,20 +82,6 @@ message MoveRegionRequest {
 message MoveRegionResponse {
 }
 
- /**
- * Dispatch merging the specified regions.
- */
-message DispatchMergingRegionsRequest {
-  required RegionSpecifier region_a = 1;
-  required RegionSpecifier region_b = 2;
-  optional bool forcible = 3 [default = false];
-  optional uint64 nonce_group = 4 [default = 0];
-  optional uint64 nonce = 5 [default = 0];
-}
-
-message DispatchMergingRegionsResponse {
-  optional uint64 proc_id = 1;
-}
 
 /**
  * Merging the specified regions in a table.
@@ -136,7 +123,7 @@ message OfflineRegionResponse {
 
 message SplitTableRegionRequest {
   required RegionInfo region_info = 1;
-  required bytes split_row = 2;
+  optional bytes split_row = 2;
   optional uint64 nonce_group = 3 [default = 0];
   optional uint64 nonce = 4 [default = 0];
 }
@@ -498,7 +485,9 @@ message GetTableStateResponse {
   required TableState table_state = 1;
 }
 
+
 message GetClusterStatusRequest {
+  repeated Option options = 1;
 }
 
 message GetClusterStatusResponse {
@@ -557,18 +546,18 @@ message AbortProcedureResponse {
   required bool is_procedure_aborted = 1;
 }
 
-message ListProceduresRequest {
+message GetProceduresRequest {
 }
 
-message ListProceduresResponse {
+message GetProceduresResponse {
   repeated Procedure procedure = 1;
 }
 
-message ListLocksRequest {
+message GetLocksRequest {
 }
 
-message ListLocksResponse {
-  repeated LockInfo lock = 1;
+message GetLocksResponse {
+  repeated LockedResource lock = 1;
 }
 
 message SetQuotaRequest {
@@ -614,25 +603,35 @@ message SecurityCapabilitiesResponse {
   repeated Capability capabilities = 1;
 }
 
-message ListDrainingRegionServersRequest {
+message ListDecommissionedRegionServersRequest {
 }
 
-message ListDrainingRegionServersResponse {
- repeated ServerName server_name = 1;
+message ListDecommissionedRegionServersResponse {
+  repeated ServerName server_name = 1;
 }
 
-message DrainRegionServersRequest {
- repeated ServerName server_name = 1;
+message DecommissionRegionServersRequest {
+  repeated ServerName server_name = 1;
+  required bool offload = 2;
 }
 
-message DrainRegionServersResponse {
+message DecommissionRegionServersResponse {
 }
 
-message RemoveDrainFromRegionServersRequest {
- repeated ServerName server_name = 1;
+message RecommissionRegionServerRequest {
+  required ServerName server_name = 1;
+  repeated RegionSpecifier region = 2;
 }
 
-message RemoveDrainFromRegionServersResponse {
+message RecommissionRegionServerResponse {
+}
+
+message ClearDeadServersRequest {
+  repeated ServerName server_name = 1;
+}
+
+message ClearDeadServersResponse {
+  repeated ServerName server_name = 1;
 }
 
 service MasterService {
@@ -666,10 +665,6 @@ service MasterService {
   /** Modifies an existing column on the specified table. */
   rpc ModifyColumn(ModifyColumnRequest)
     returns(ModifyColumnResponse);
-
- /** Master dispatch merging the regions */
-  rpc DispatchMergingRegions(DispatchMergingRegionsRequest)
-    returns(DispatchMergingRegionsResponse);
 
   /** Move the region region to the destination server. */
   rpc MoveRegion(MoveRegionRequest)
@@ -934,11 +929,11 @@ service MasterService {
     returns(AbortProcedureResponse);
 
   /** returns a list of procedures */
-  rpc ListProcedures(ListProceduresRequest)
-    returns(ListProceduresResponse);
+  rpc GetProcedures(GetProceduresRequest)
+    returns(GetProceduresResponse);
 
-  rpc ListLocks(ListLocksRequest)
-    returns(ListLocksResponse);
+  rpc GetLocks(GetLocksRequest)
+    returns(GetLocksResponse);
 
   /** Add a replication peer */
   rpc AddReplicationPeer(AddReplicationPeerRequest)
@@ -968,17 +963,21 @@ service MasterService {
   rpc ListReplicationPeers(ListReplicationPeersRequest)
     returns(ListReplicationPeersResponse);
 
-  /** Returns a list of ServerNames marked as draining. */
-  rpc listDrainingRegionServers(ListDrainingRegionServersRequest)
-    returns(ListDrainingRegionServersResponse);
+  /** Transit the state of current cluster in a synchronous replication peer */
+  rpc TransitReplicationPeerSyncReplicationState(TransitReplicationPeerSyncReplicationStateRequest)
+    returns(TransitReplicationPeerSyncReplicationStateResponse);
 
-  /** Mark a list of ServerNames as draining. */
-  rpc drainRegionServers(DrainRegionServersRequest)
-    returns(DrainRegionServersResponse);
+  /** Returns a list of ServerNames marked as decommissioned. */
+  rpc ListDecommissionedRegionServers(ListDecommissionedRegionServersRequest)
+    returns(ListDecommissionedRegionServersResponse);
 
-  /** Unmark a list of ServerNames marked as draining. */
-  rpc removeDrainFromRegionServers(RemoveDrainFromRegionServersRequest)
-    returns(RemoveDrainFromRegionServersResponse);
+  /** Decommission region servers. */
+  rpc DecommissionRegionServers(DecommissionRegionServersRequest)
+    returns(DecommissionRegionServersResponse);
+
+  /** Re-commission region server. */
+  rpc RecommissionRegionServer(RecommissionRegionServerRequest)
+    returns(RecommissionRegionServerResponse);
 
   /** Fetches the Master's view of space utilization */
   rpc GetSpaceQuotaRegionSizes(GetSpaceQuotaRegionSizesRequest)
@@ -987,4 +986,86 @@ service MasterService {
   /** Fetches the Master's view of quotas */
   rpc GetQuotaStates(GetQuotaStatesRequest)
     returns(GetQuotaStatesResponse);
+
+  /** clear dead servers from master*/
+  rpc ClearDeadServers(ClearDeadServersRequest)
+    returns(ClearDeadServersResponse);
+
+}
+
+// HBCK Service definitions.
+
+message SetTableStateInMetaRequest {
+  required TableName table_name = 1;
+  required TableState table_state = 2;
+}
+
+/** Like Admin's AssignRegionRequest except it can
+ * take one or more Regions at a time.
+ */
+// NOTE: In hbck.proto, there is a define for
+// AssignRegionRequest -- singular 'Region'. This
+// is plural to convey it can carry more than one
+// Region at a time.
+message AssignsRequest {
+  repeated RegionSpecifier region = 1;
+}
+
+/** Like Admin's AssignRegionResponse except it can
+ * return one or more pids as result -- one per assign.
+ */
+message AssignsResponse {
+  repeated uint64 pid = 1;
+}
+
+/** Like Admin's UnassignRegionRequest except it can
+ * take one or more Regions at a time.
+ */
+message UnassignsRequest {
+  repeated RegionSpecifier region = 1;
+}
+
+/** Like Admin's UnassignRegionResponse except it can
+ * return one or more pids as result -- one per unassign.
+ */
+message UnassignsResponse {
+  repeated uint64 pid = 1;
+}
+
+message BypassProcedureRequest {
+  repeated uint64 proc_id = 1;
+  optional uint64 waitTime = 2; // wait time in ms to acquire lock on a procedure
+  optional bool force = 3; // if true, procedure is marked for bypass even if its executing
+}
+
+message BypassProcedureResponse {
+  repeated bool bypassed = 1;
+}
+
+service HbckService {
+  /** Update state of the table in meta only*/
+  rpc SetTableStateInMeta(SetTableStateInMetaRequest)
+    returns(GetTableStateResponse);
+
+  /**
+   * Assign regions.
+   * Like Admin's assign but works even if the
+   * Master is initializing. Also allows bulk'ing up
+   * assigns rather than one region at a time.
+   */
+  rpc Assigns(AssignsRequest)
+    returns(AssignsResponse);
+
+  /**
+   * Unassign regions
+   * Like Admin's unssign but works even if the
+   * Master is initializing. Also allows bulk'ing up
+   * assigns rather than one region at a time.
+   */
+  rpc Unassigns(UnassignsRequest)
+    returns(UnassignsResponse);
+
+  /** Bypass a procedure to completion, procedure is completed but no actual work is done*/
+  rpc BypassProcedure(BypassProcedureRequest)
+    returns(BypassProcedureResponse);
 }

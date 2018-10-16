@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} for interacting with values encoded using
@@ -33,22 +33,34 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
 public class RawLong implements DataType<Long> {
 
   @Override
-  public boolean isOrderPreserving() { return false; }
+  public boolean isOrderPreserving() {
+    return false;
+  }
 
   @Override
-  public Order getOrder() { return null; }
+  public Order getOrder() {
+    return null;
+  }
 
   @Override
-  public boolean isNullable() { return false; }
+  public boolean isNullable() {
+    return false;
+  }
 
   @Override
-  public boolean isSkippable() { return true; }
+  public boolean isSkippable() {
+    return true;
+  }
 
   @Override
-  public int encodedLength(Long val) { return Bytes.SIZEOF_LONG; }
+  public int encodedLength(Long val) {
+    return Bytes.SIZEOF_LONG;
+  }
 
   @Override
-  public Class<Long> encodedClass() { return Long.class; }
+  public Class<Long> encodedClass() {
+    return Long.class;
+  }
 
   @Override
   public int skip(PositionedByteRange src) {

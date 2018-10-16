@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+syntax = "proto2";
 // This file contains protocol buffers that are used for Client service.
 package hbase.pb;
 
@@ -81,6 +81,12 @@ message Get {
   // the existence.
   optional bool existence_only = 10 [default = false];
 
+  // If the row to get doesn't exist, return the
+  // closest row before. Deprecated. No longer used!
+  // Since hbase-2.0.0 but left in place so can test
+  // for Gets with this set and throw Exception.
+  optional bool closest_row_before = 11 [default = false];
+
   optional Consistency consistency = 12 [default = STRONG];
   repeated ColumnFamilyTimeRange cf_time_range = 13;
   optional bool load_column_families_on_demand = 14; /* DO NOT add defaults to load_column_families_on_demand. */
@@ -102,7 +108,7 @@ message Result {
   //  in the query.
   optional bool exists = 3;
 
-  // Whether or not the results are coming from possibly stale data 
+  // Whether or not the results are coming from possibly stale data
   optional bool stale = 4 [default = false];
 
   // Whether or not the entire result could be returned. Results will be split when
@@ -137,6 +143,7 @@ message Condition {
   required bytes qualifier = 3;
   required CompareType compare_type = 4;
   required Comparator comparator = 5;
+  optional TimeRange time_range = 6;
 }
 
 
@@ -452,7 +459,7 @@ message RegionAction {
 */
 message RegionLoadStats {
   // Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
-  optional int32 memstoreLoad = 1 [default = 0];
+  optional int32 memStoreLoad = 1 [default = 0];
   // Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
   // We can move this to "ServerLoadStats" should we develop them.
   optional int32 heapOccupancy = 2 [default = 0];
@@ -533,7 +540,7 @@ service ClientService {
 
   rpc ExecService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
-    
+
   rpc ExecRegionServerService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 

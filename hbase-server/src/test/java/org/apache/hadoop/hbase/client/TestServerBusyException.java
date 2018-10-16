@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,30 +21,31 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.ServerTooBusyException;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 
 /**
  * This class is for testing HBaseConnectionManager ServerBusyException.
@@ -54,10 +54,11 @@ import org.junit.rules.TestRule;
  */
 @Category({LargeTests.class})
 public class TestServerBusyException {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder()
-      .withTimeout(this.getClass())
-      .withLookingForStuckThread(true)
-      .build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestServerBusyException.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
@@ -66,8 +67,13 @@ public class TestServerBusyException {
   @Rule
   public TestName name = new TestName();
 
-  public static class SleepCoprocessor implements RegionObserver {
+  public static class SleepCoprocessor implements RegionCoprocessor, RegionObserver {
     public static final int SLEEP_TIME = 5000;
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Get get, final List<Cell> results) throws IOException {
@@ -95,9 +101,15 @@ public class TestServerBusyException {
 
   }
 
-  public static class SleepLongerAtFirstCoprocessor implements RegionObserver {
+  public static class SleepLongerAtFirstCoprocessor implements RegionCoprocessor, RegionObserver {
     public static final int SLEEP_TIME = 2000;
     static final AtomicLong ct = new AtomicLong(0);
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Get get, final List<Cell> results) throws IOException {
@@ -129,7 +141,7 @@ public class TestServerBusyException {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private class TestPutThread extends Thread {
+  private static class TestPutThread extends Thread {
     Table table;
     int getServerBusyException = 0;
 
@@ -141,18 +153,16 @@ public class TestServerBusyException {
     public void run() {
       try {
         Put p = new Put(ROW);
-        p.addColumn(FAM_NAM, new byte[]{0}, new byte[]{0});
+        p.addColumn(FAM_NAM, new byte[] { 0 }, new byte[] { 0 });
         table.put(p);
-      } catch (RetriesExhaustedWithDetailsException e) {
-        if (e.exceptions.get(0) instanceof ServerTooBusyException) {
-          getServerBusyException = 1;
-        }
+      } catch (ServerTooBusyException e) {
+        getServerBusyException = 1;
       } catch (IOException ignore) {
       }
     }
   }
 
-  private class TestGetThread extends Thread {
+  private static class TestGetThread extends Thread {
     Table table;
     int getServerBusyException = 0;
 

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,16 +24,15 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.TestTableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -50,27 +49,26 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.TestTableName;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestCellACLWithMultipleVersions extends SecureTestUtil {
-  private static final Log LOG = LogFactory.getLog(TestCellACLWithMultipleVersions.class);
 
-  static {
-    Logger.getLogger(AccessController.class).setLevel(Level.TRACE);
-    Logger.getLogger(AccessControlFilter.class).setLevel(Level.TRACE);
-    Logger.getLogger(TableAuthManager.class).setLevel(Level.TRACE);
-  }
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCellACLWithMultipleVersions.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCellACLWithMultipleVersions.class);
 
   @Rule
   public TestTableName TEST_TABLE = new TestTableName();
@@ -110,12 +108,11 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     MasterCoprocessorHost cpHost = TEST_UTIL.getMiniHBaseCluster().getMaster()
         .getMasterCoprocessorHost();
     cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
-    AccessController ac = (AccessController)
-      cpHost.findCoprocessor(AccessController.class.getName());
-    cpHost.createEnvironment(AccessController.class, ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    AccessController ac = cpHost.findCoprocessor(AccessController.class);
+    cpHost.createEnvironment(ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
     RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
         .getRegionServerCoprocessorHost();
-    rsHost.createEnvironment(AccessController.class, ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    rsHost.createEnvironment(ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
     TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
@@ -570,36 +567,36 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                   new String[] { user2.getShortName(), AuthUtil.toGroupEntry(GROUP),
                       USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
             Put p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 123, ZERO);
-            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q1, 123, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 125, ZERO);
-            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 125, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q1, 125, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, 125, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 127, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 127, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 129, ZERO);
-            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 129, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q1, 129, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, 129, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
           }
@@ -676,20 +673,20 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                   new String[] { user2.getShortName(), AuthUtil.toGroupEntry(GROUP),
                       USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
             Put p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 127, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 127, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
           }
@@ -768,20 +765,20 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             permsU2andGUandOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
                 Permission.Action.WRITE));
             Put p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 127, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 127, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
           }
@@ -799,7 +796,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Put p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 125, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 125, ZERO);
             p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
             p.setACL(user2.getShortName(), new Permission(Permission.Action.READ,
                 Permission.Action.WRITE));
@@ -864,26 +861,26 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                     AuthUtil.toGroupEntry(GROUP) }, Action.READ, Action.WRITE);
 
             Put p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 120, ZERO);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 120, ZERO);
-            p.addColumn(TEST_FAMILY1, TEST_Q3, (long) 120, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 120, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 120, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q3, 120, ZERO);
             p.setACL(permsU1andU2andGUandOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
-            p.addColumn(TEST_FAMILY1, TEST_Q3, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q3, 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 127, ZERO);
             p.setACL(permsU1_U2andGU);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 127, ZERO);
             p.setACL(user2.getShortName(), new Permission(Permission.Action.READ));
             t.put(p);
 
@@ -906,7 +903,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
             d.addColumns(TEST_FAMILY1, TEST_Q1, 120);
-            t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
+            t.checkAndMutate(TEST_ROW1, TEST_FAMILY1).qualifier(TEST_Q1)
+                .ifEquals(ZERO).thenDelete(d);
           }
         }
         return null;
@@ -942,7 +940,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(row);
             d.addColumn(TEST_FAMILY1, q1, 120);
-            t.checkAndDelete(row, TEST_FAMILY1, q1, value, d);
+            t.checkAndMutate(row, TEST_FAMILY1).qualifier(q1).ifEquals(value).thenDelete(d);
           }
         }
         return null;
@@ -959,7 +957,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(row);
             d.addColumns(TEST_FAMILY1, TEST_Q1);
-            t.checkAndDelete(row, TEST_FAMILY1, TEST_Q1, value, d);
+            t.checkAndMutate(row, TEST_FAMILY1).qualifier(TEST_Q1).ifEquals(value).thenDelete(d);
             fail(user.getShortName() + " should not be allowed to do checkAndDelete");
           } catch (Exception e) {
           }

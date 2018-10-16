@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Comparator;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * CellArrayMap is a simple array of Cells and cannot be allocated off-heap.

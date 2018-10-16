@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An extension of the ByteBufferKeyValue where the tags length is always 0
@@ -52,7 +52,7 @@ public class NoTagsByteBufferKeyValue extends ByteBufferKeyValue {
   }
 
   @Override
-  public Cell deepClone() {
+  public ExtendedCell deepClone() {
     byte[] copy = new byte[this.length];
     ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
     KeyValue kv = new NoTagsKeyValue(copy, 0, copy.length);

@@ -15,28 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
+import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.net.InetSocketAddress;
-
 @Category({RPCTests.class, MediumTests.class})   // Can't be small, we're playing with the EnvironmentEdge
 public class TestHBaseClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHBaseClient.class);
 
   @Test
   public void testFailedServer(){
     ManualEnvironmentEdge ee = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(  ee );
     FailedServers fs = new FailedServers(new Configuration());
+    Throwable testThrowable = new Throwable();//throwable already tested in TestFailedServers.java
 
     InetSocketAddress ia = InetSocketAddress.createUnresolved("bad", 12);
     InetSocketAddress ia2 = InetSocketAddress.createUnresolved("bad", 12);  // same server as ia
@@ -46,7 +51,7 @@ public class TestHBaseClient {
 
     Assert.assertFalse( fs.isFailedServer(ia) );
 
-    fs.addToFailedServers(ia);
+    fs.addToFailedServers(ia,testThrowable);
     Assert.assertTrue( fs.isFailedServer(ia) );
     Assert.assertTrue( fs.isFailedServer(ia2) );
 
@@ -58,9 +63,9 @@ public class TestHBaseClient {
     Assert.assertFalse( fs.isFailedServer(ia) );
     Assert.assertFalse( fs.isFailedServer(ia2) );
 
-    fs.addToFailedServers(ia);
-    fs.addToFailedServers(ia3);
-    fs.addToFailedServers(ia4);
+    fs.addToFailedServers(ia,testThrowable);
+    fs.addToFailedServers(ia3,testThrowable);
+    fs.addToFailedServers(ia4,testThrowable);
 
     Assert.assertTrue( fs.isFailedServer(ia) );
     Assert.assertTrue( fs.isFailedServer(ia2) );
@@ -74,7 +79,7 @@ public class TestHBaseClient {
     Assert.assertFalse( fs.isFailedServer(ia4) );
 
 
-    fs.addToFailedServers(ia3);
+    fs.addToFailedServers(ia3,testThrowable);
     Assert.assertFalse( fs.isFailedServer(ia4) );
   }
 }

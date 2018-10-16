@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * This is the interface that will expose RegionServer information to hadoop1/hadoop2
  * implementations of the MetricsRegionServerSource.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionServerWrapper {
 
   /**
@@ -71,7 +74,7 @@ public interface MetricsRegionServerWrapper {
    * Get the number of WAL files of this region server.
    */
   long getNumWALFiles();
-  
+
   /**
    * Get the size of WAL files of this region server.
    */
@@ -90,7 +93,7 @@ public interface MetricsRegionServerWrapper {
   /**
    * Get the size of the memstore on this region server.
    */
-  long getMemstoreSize();
+  long getMemStoreSize();
 
   /**
    * Get the total size of the store files this region server is serving from.
@@ -133,6 +136,16 @@ public interface MetricsRegionServerWrapper {
   long getReadRequestsCount();
 
   /**
+   * Get the number of coprocessor requests to regions hosted on this region server.
+   */
+  long getCpRequestsCount();
+
+  /**
+   * Get the rate of read requests per second to regions hosted on this region server.
+   */
+  double getReadRequestsRatePerSecond();
+
+  /**
    * Get the number of filtered read requests to regions hosted on this region server.
    */
   long getFilteredReadRequestsCount();
@@ -141,6 +154,11 @@ public interface MetricsRegionServerWrapper {
    * Get the number of write requests to regions hosted on this region server.
    */
   long getWriteRequestsCount();
+
+  /**
+   * Get the rate of write requests per second to regions hosted on this region server.
+   */
+  double getWriteRequestsRatePerSecond();
 
   /**
    * Get the number of CAS operations that failed.
@@ -207,6 +225,7 @@ public interface MetricsRegionServerWrapper {
    */
   int getFlushQueueSize();
 
+  public long getMemStoreLimit();
   /**
    * Get the size (in bytes) of the block cache that is free.
    */
@@ -267,6 +286,46 @@ public interface MetricsRegionServerWrapper {
    * Number of cache insertions that failed.
    */
   long getBlockCacheFailedInsertions();
+
+  /**
+   * Hit count of L1 cache.
+   */
+  public long getL1CacheHitCount();
+
+  /**
+   * Miss count of L1 cache.
+   */
+  public long getL1CacheMissCount();
+
+  /**
+   * Hit ratio of L1 cache.
+   */
+  public double getL1CacheHitRatio();
+
+  /**
+   * Miss ratio of L1 cache.
+   */
+  public double getL1CacheMissRatio();
+
+  /**
+   * Hit count of L2 cache.
+   */
+  public long getL2CacheHitCount();
+
+  /**
+   * Miss count of L2 cache.
+   */
+  public long getL2CacheMissCount();
+
+  /**
+   * Hit ratio of L2 cache.
+   */
+  public double getL2CacheHitRatio();
+
+  /**
+   * Miss ratio of L2 cache.
+   */
+  public double getL2CacheMissRatio();
 
   /**
    * Force a re-computation of the metrics.
@@ -457,4 +516,6 @@ public interface MetricsRegionServerWrapper {
   long getDeleteFamilyBloomHitCount();
 
   long getTrailerHitCount();
+
+  long getTotalRowActionRequestCount();
 }

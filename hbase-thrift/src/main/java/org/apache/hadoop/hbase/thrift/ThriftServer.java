@@ -18,24 +18,21 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.util.Shell.ExitCodeException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 
 /**
  * ThriftServer- this class starts up a Thrift server which implements the
@@ -45,7 +42,7 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ThriftServer {
 
-  private static final Log LOG = LogFactory.getLog(ThriftServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ThriftServer.class);
 
   private static final String MIN_WORKERS_OPTION = "minWorkers";
   private static final String MAX_WORKERS_OPTION = "workers";
@@ -55,6 +52,7 @@ public class ThriftServer {
   static final String COMPACT_OPTION = "compact";
   static final String FRAMED_OPTION = "framed";
   static final String PORT_OPTION = "port";
+  static final String INFOPORT_OPTION = "infoport";
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   private static final int DEFAULT_LISTEN_PORT = 9090;
@@ -78,7 +76,8 @@ public class ThriftServer {
       throws ExitCodeException {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("Thrift", null, options,
-        "To start the Thrift server run 'hbase-daemon.sh start thrift'\n" +
+        "To start the Thrift server run 'hbase-daemon.sh start thrift' or " +
+        "'hbase thrift'\n" +
         "To shutdown the thrift server run 'hbase-daemon.sh stop " +
         "thrift' or send a kill signal to the thrift server pid",
         true);
@@ -87,23 +86,24 @@ public class ThriftServer {
 
   /**
    * Start up or shuts down the Thrift server, depending on the arguments.
-   * @param args
+   * @param args the arguments to pass in when starting the Thrift server
    */
-   void doMain(final String[] args) throws Exception {
-     processOptions(args);
+  void doMain(final String[] args) throws Exception {
+    processOptions(args);
+    serverRunner = new ThriftServerRunner(conf);
 
-     serverRunner = new ThriftServerRunner(conf);
+    // Put up info server.
+    int port = conf.getInt("hbase.thrift.info.port", 9095);
 
-     // Put up info server.
-     int port = conf.getInt("hbase.thrift.info.port", 9095);
-     if (port >= 0) {
-       conf.setLong("startcode", System.currentTimeMillis());
-       String a = conf.get("hbase.thrift.info.bindAddress", "0.0.0.0");
-       infoServer = new InfoServer("thrift", a, port, false, conf);
-       infoServer.setAttribute("hbase.conf", conf);
-       infoServer.start();
-     }
-     serverRunner.run();
+    if (port >= 0) {
+      conf.setLong("startcode", System.currentTimeMillis());
+      String a = conf.get("hbase.thrift.info.bindAddress", "0.0.0.0");
+      infoServer = new InfoServer("thrift", a, port, false, conf);
+      infoServer.setAttribute("hbase.conf", conf);
+      infoServer.start();
+    }
+
+    serverRunner.run();
   }
 
   /**
@@ -118,7 +118,7 @@ public class ThriftServer {
     options.addOption("f", FRAMED_OPTION, false, "Use framed transport");
     options.addOption("c", COMPACT_OPTION, false, "Use the compact protocol");
     options.addOption("h", "help", false, "Print help information");
-    options.addOption(null, "infoport", true, "Port for web UI");
+    options.addOption(null, INFOPORT_OPTION, true, "Port for web UI");
 
     options.addOption("m", MIN_WORKERS_OPTION, true,
         "The minimum number of worker threads for " +
@@ -143,20 +143,10 @@ public class ThriftServer {
 
     options.addOptionGroup(ImplType.createOptionGroup());
 
-    CommandLineParser parser = new PosixParser();
+    CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 
-    // This is so complicated to please both bin/hbase and bin/hbase-daemon.
-    // hbase-daemon provides "start" and "stop" arguments
-    // hbase should print the help if no argument is provided
-    List<String> commandLine = Arrays.asList(args);
-    boolean stop = commandLine.contains("stop");
-    boolean start = commandLine.contains("start");
-    boolean invalidStartStop = (start && stop) || (!start && !stop);
-    if (cmd.hasOption("help") || invalidStartStop) {
-      if (invalidStartStop) {
-        LOG.error("Exactly one of 'start' and 'stop' has to be specified");
-      }
+    if (cmd.hasOption("help")) {
       printUsageAndExit(options, 1);
     }
 
@@ -173,13 +163,14 @@ public class ThriftServer {
 
     // check for user-defined info server port setting, if so override the conf
     try {
-      if (cmd.hasOption("infoport")) {
-        String val = cmd.getOptionValue("infoport");
+      if (cmd.hasOption(INFOPORT_OPTION)) {
+        String val = cmd.getOptionValue(INFOPORT_OPTION);
         conf.setInt("hbase.thrift.info.port", Integer.parseInt(val));
         LOG.debug("Web UI port set to " + val);
       }
     } catch (NumberFormatException e) {
-      LOG.error("Could not parse the value provided for the infoport option", e);
+      LOG.error("Could not parse the value provided for the " + INFOPORT_OPTION +
+        " option", e);
       printUsageAndExit(options, -1);
     }
 
@@ -194,7 +185,7 @@ public class ThriftServer {
         conf, TBoundedThreadPoolServer.THREAD_KEEP_ALIVE_TIME_SEC_CONF_KEY);
     optionToConf(cmd, READ_TIMEOUT_OPTION, conf,
         ThriftServerRunner.THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY);
-    
+
     // Set general thrift server options
     boolean compact = cmd.hasOption(COMPACT_OPTION) ||
       conf.getBoolean(ThriftServerRunner.COMPACT_CONF_KEY, false);
@@ -215,7 +206,7 @@ public class ThriftServer {
       try {
         this.infoServer.stop();
       } catch (Exception ex) {
-        ex.printStackTrace();
+        LOG.error("Failed to stop infoServer", ex);
       }
     }
     serverRunner.shutdown();
@@ -230,10 +221,6 @@ public class ThriftServer {
     }
   }
 
-  /**
-   * @param args
-   * @throws Exception
-   */
   public static void main(String [] args) throws Exception {
     LOG.info("***** STARTING service '" + ThriftServer.class.getSimpleName() + "' *****");
     VersionInfo.logVersion();

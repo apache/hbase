@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -34,6 +32,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An integration test to detect regressions in HBASE-7220. Create
@@ -46,8 +46,8 @@ public class IntegrationTestManyRegions {
   private static final String CLASS_NAME
     = IntegrationTestManyRegions.class.getSimpleName();
 
-  protected static final Log LOG
-    = LogFactory.getLog(IntegrationTestManyRegions.class);
+  protected static final Logger LOG
+    = LoggerFactory.getLogger(IntegrationTestManyRegions.class);
   protected static final TableName TABLE_NAME = TableName.valueOf(CLASS_NAME);
   protected static final String REGION_COUNT_KEY
     = String.format("hbase.%s.regions", CLASS_NAME);

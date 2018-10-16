@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
 
 /**
@@ -35,8 +35,9 @@ public class ImmutableHColumnDescriptor extends HColumnDescriptor {
     super(desc, false);
   }
 
-  ImmutableHColumnDescriptor(final ModifyableColumnFamilyDescriptor desc) {
-    super(desc);
+  public ImmutableHColumnDescriptor(final ColumnFamilyDescriptor desc) {
+    super(desc instanceof ModifyableColumnFamilyDescriptor ?
+      (ModifyableColumnFamilyDescriptor) desc : new ModifyableColumnFamilyDescriptor(desc));
   }
 
   @Override

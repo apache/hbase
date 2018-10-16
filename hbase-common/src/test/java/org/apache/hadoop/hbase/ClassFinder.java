@@ -33,8 +33,8 @@ import java.util.jar.JarInputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that finds a set of classes that are locally accessible
@@ -42,7 +42,7 @@ import org.apache.commons.logging.LogFactory;
  * imposed by name and class filters provided by the user.
  */
 public class ClassFinder {
-  private static final Log LOG = LogFactory.getLog(ClassFinder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClassFinder.class);
   private static String CLASS_EXT = ".class";
 
   private ResourcePathFilter resourcePathFilter;
@@ -52,15 +52,15 @@ public class ClassFinder {
 
   public interface ResourcePathFilter {
     boolean isCandidatePath(String resourcePath, boolean isJar);
-  };
+  }
 
   public interface FileNameFilter {
     boolean isCandidateFile(String fileName, String absFilePath);
-  };
+  }
 
   public interface ClassFilter {
     boolean isCandidateClass(Class<?> c);
-  };
+  }
 
   public static class Not implements ResourcePathFilter, FileNameFilter, ClassFilter {
     private ResourcePathFilter resourcePathFilter;
@@ -273,7 +273,7 @@ public class ClassFinder {
       Class<?> c = Class.forName(className, false, this.getClass().getClassLoader());
       boolean isCandidateClass = null == classFilter || classFilter.isCandidateClass(c);
       return isCandidateClass ? c : null;
-    } catch (ClassNotFoundException classNotFoundEx) {
+    } catch (NoClassDefFoundError|ClassNotFoundException classNotFoundEx) {
       if (!proceedOnExceptions) {
         throw classNotFoundEx;
       }
@@ -287,7 +287,7 @@ public class ClassFinder {
     return null;
   }
 
-  private class FileFilterWithName implements FileFilter {
+  private static class FileFilterWithName implements FileFilter {
     private FileNameFilter nameFilter;
 
     public FileFilterWithName(FileNameFilter nameFilter) {
@@ -301,5 +301,5 @@ public class ClassFinder {
               && (null == nameFilter
                 || nameFilter.isCandidateFile(file.getName(), file.getAbsolutePath())));
     }
-  };
-};
+  }
+}

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,36 +25,32 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.SecureAsyncProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -68,10 +64,10 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestSecureWAL {
 
-  static {
-    ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hbase.regionserver.wal"))
-      .getLogger().setLevel(Level.ALL);
-  };
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSecureWAL.class);
+
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
@@ -114,32 +110,26 @@ public class TestSecureWAL {
   @Test
   public void testSecureWAL() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(tableName.getName()));
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(byte[] fam : htd.getFamiliesKeys()) {
-      scopes.put(fam, 0);
-    }
-    HRegionInfo regioninfo = new HRegionInfo(tableName,
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
+    scopes.put(tableName.getName(), 0);
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     final int total = 10;
     final byte[] row = Bytes.toBytes("row");
     final byte[] family = Bytes.toBytes("family");
     final byte[] value = Bytes.toBytes("Test value");
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
     final WALFactory wals =
-        new WALFactory(TEST_UTIL.getConfiguration(), null, tableName.getNameAsString());
+        new WALFactory(TEST_UTIL.getConfiguration(), tableName.getNameAsString());
 
     // Write the WAL
-    final WAL wal =
-        wals.getWAL(regioninfo.getEncodedNameAsBytes(), regioninfo.getTable().getNamespace());
+    final WAL wal = wals.getWAL(regionInfo);
 
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));
-      wal.append(regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
+      wal.append(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
           System.currentTimeMillis(), mvcc, scopes), kvs, true);
     }
     wal.sync();

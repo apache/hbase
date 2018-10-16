@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufOutputStream;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -29,13 +29,13 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
@@ -58,7 +58,7 @@ import org.apache.hadoop.io.compress.Decompressor;
 class CellBlockBuilder {
 
   // LOG is being used in TestCellBlockBuilder
-  static final Log LOG = LogFactory.getLog(CellBlockBuilder.class);
+  static final Logger LOG = LoggerFactory.getLogger(CellBlockBuilder.class);
 
   private final Configuration conf;
 

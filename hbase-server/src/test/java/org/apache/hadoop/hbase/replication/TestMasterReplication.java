@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,29 +25,28 @@ import static org.junit.Assert.fail;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -55,32 +54,43 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.TestSourceFSConfigurationProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestMasterReplication {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterReplication.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterReplication.class);
 
   private Configuration baseConfiguration;
 
@@ -105,7 +115,7 @@ public class TestMasterReplication {
   private static final byte[] put = Bytes.toBytes("put");
   private static final byte[] delete = Bytes.toBytes("delete");
 
-  private HTableDescriptor table;
+  private TableDescriptor table;
 
   @Before
   public void setUp() throws Exception {
@@ -125,16 +135,12 @@ public class TestMasterReplication {
     baseConfiguration.setStrings(
         CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         CoprocessorCounter.class.getName());
-
-    table = new HTableDescriptor(tableName);
-    HColumnDescriptor fam = new HColumnDescriptor(famName);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
-    fam = new HColumnDescriptor(famName1);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
-    fam = new HColumnDescriptor(noRepfamName);
-    table.addFamily(fam);
+    table = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName1)
+            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
   }
 
   /**
@@ -143,7 +149,7 @@ public class TestMasterReplication {
    * replicated. It also tests that the puts and deletes are not replicated back
    * to the originating cluster.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testCyclicReplication1() throws Exception {
     LOG.info("testSimplePutDelete");
     int numClusters = 2;
@@ -173,7 +179,7 @@ public class TestMasterReplication {
    * {@link BaseReplicationEndpoint#canReplicateToSameCluster()} returns false, so the
    * ReplicationSource should terminate, and no further logs should get enqueued
    */
-  @Test(timeout = 300000)
+  @Test
   public void testLoopedReplication() throws Exception {
     LOG.info("testLoopedReplication");
     startMiniClusters(1);
@@ -186,8 +192,9 @@ public class TestMasterReplication {
     Waiter.waitFor(baseConfiguration, 10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        ClusterStatus clusterStatus = utilities[0].getAdmin().getClusterStatus();
-        ServerLoad serverLoad = clusterStatus.getLoad(rsName);
+        ClusterMetrics clusterStatus = utilities[0].getAdmin()
+            .getClusterMetrics(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS));
+        ServerMetrics serverLoad = clusterStatus.getLiveServerMetrics().get(rsName);
         List<ReplicationLoadSource> replicationLoadSourceList =
             serverLoad.getReplicationLoadSourceList();
         return replicationLoadSourceList.isEmpty();
@@ -197,11 +204,11 @@ public class TestMasterReplication {
     Table[] htables = getHTablesOnClusters(tableName);
     putAndWait(row, famName, htables[0], htables[0]);
     rollWALAndWait(utilities[0], table.getTableName(), row);
-    ZooKeeperWatcher zkw = utilities[0].getZooKeeperWatcher();
-    String queuesZnode =
-        ZKUtil.joinZNode(zkw.getZNodePaths().baseZNode, ZKUtil.joinZNode("replication", "rs"));
+    ZKWatcher zkw = utilities[0].getZooKeeperWatcher();
+    String queuesZnode = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode,
+      ZNodePaths.joinZNode("replication", "rs"));
     List<String> listChildrenNoWatch =
-        ZKUtil.listChildrenNoWatch(zkw, ZKUtil.joinZNode(queuesZnode, rsName.toString()));
+        ZKUtil.listChildrenNoWatch(zkw, ZNodePaths.joinZNode(queuesZnode, rsName.toString()));
     assertEquals(0, listChildrenNoWatch.size());
   }
 
@@ -209,7 +216,7 @@ public class TestMasterReplication {
    * It tests the replication scenario involving 0 -> 1 -> 0. It does it by bulk loading a set of
    * HFiles to a table in each cluster, checking if it's replicated.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testHFileCyclicReplication() throws Exception {
     LOG.info("testHFileCyclicReplication");
     int numClusters = 2;
@@ -265,9 +272,9 @@ public class TestMasterReplication {
    * originating from itself and also the edits that it received using replication from a different
    * cluster. The scenario is explained in HBASE-9158
    */
-  @Test(timeout = 300000)
+  @Test
   public void testCyclicReplication2() throws Exception {
-    LOG.info("testCyclicReplication1");
+    LOG.info("testCyclicReplication2");
     int numClusters = 3;
     Table[] htables = null;
     try {
@@ -306,7 +313,7 @@ public class TestMasterReplication {
       // without HBASE-9158 the edit for row4 would have been marked with
       // cluster 0's id
       // and hence not replicated to cluster 0
-      wait(row4, htables[0], true);
+      wait(row4, htables[0], false);
     } finally {
       close(htables);
       shutDownMiniClusters();
@@ -317,7 +324,7 @@ public class TestMasterReplication {
    * It tests the multi slave hfile replication scenario involving 0 -> 1, 2. It does it by bulk
    * loading a set of HFiles to a table in master cluster, checking if it's replicated in its peers.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testHFileMultiSlaveReplication() throws Exception {
     LOG.info("testHFileMultiSlaveReplication");
     int numClusters = 3;
@@ -375,7 +382,7 @@ public class TestMasterReplication {
    * families. It does it by bulk loading a set of HFiles belonging to both the CFs of table and set
    * only one CF data to replicate.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testHFileReplicationForConfiguredTableCfs() throws Exception {
     LOG.info("testHFileReplicationForConfiguredTableCfs");
     int numClusters = 2;
@@ -429,7 +436,7 @@ public class TestMasterReplication {
   /**
    * Tests cyclic replication scenario of 0 -> 1 -> 2 -> 1.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testCyclicReplication3() throws Exception {
     LOG.info("testCyclicReplication2");
     int numClusters = 3;
@@ -487,7 +494,7 @@ public class TestMasterReplication {
       utility.startMiniCluster();
       utilities[i] = utility;
       configurations[i] = conf;
-      new ZooKeeperWatcher(conf, "cluster" + i, null, true);
+      new ZKWatcher(conf, "cluster" + i, null, true);
     }
   }
 
@@ -501,7 +508,7 @@ public class TestMasterReplication {
     miniZK.shutdown();
   }
 
-  private void createTableOnClusters(HTableDescriptor table) throws Exception {
+  private void createTableOnClusters(TableDescriptor table) throws Exception {
     for (HBaseTestingUtility utility : utilities) {
       utility.getAdmin().createTable(table);
     }
@@ -518,11 +525,13 @@ public class TestMasterReplication {
 
   private void addPeer(String id, int masterClusterNumber, int slaveClusterNumber, String tableCfs)
       throws Exception {
-    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
-        .getAdmin()) {
-      admin.addReplicationPeer(id,
+    try (Admin admin =
+        ConnectionFactory.createConnection(configurations[masterClusterNumber]).getAdmin()) {
+      admin.addReplicationPeer(
+        id,
         new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey())
-            .setTableCFsMap(ReplicationSerDeHelper.parseTableCFsFromConfig(tableCfs)));
+            .setReplicateAllUserTables(false)
+            .setTableCFsMap(ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCfs)));
     }
   }
 
@@ -548,7 +557,7 @@ public class TestMasterReplication {
         }
       }
     } catch (Exception e) {
-      LOG.warn("Exception occured while closing the object:", e);
+      LOG.warn("Exception occurred while closing the object:", e);
     }
   }
 
@@ -558,7 +567,6 @@ public class TestMasterReplication {
     Table[] htables = new Table[numClusters];
     for (int i = 0; i < numClusters; i++) {
       Table htable = ConnectionFactory.createConnection(configurations[i]).getTable(tableName);
-      htable.setWriteBufferSize(1024);
       htables[i] = htable;
     }
     return htables;
@@ -601,7 +609,7 @@ public class TestMasterReplication {
 
     Path dir = util.getDataTestDirOnTestFS(testName);
     FileSystem fs = util.getTestFileSystem();
-    dir = dir.makeQualified(fs);
+    dir = dir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
     Path familyDir = new Path(dir, Bytes.toString(fam));
 
     int hfileIdx = 0;
@@ -685,7 +693,7 @@ public class TestMasterReplication {
     final CountDownLatch latch = new CountDownLatch(1);
 
     // listen for successful log rolls
-    final WALActionsListener listener = new WALActionsListener.Base() {
+    final WALActionsListener listener = new WALActionsListener() {
           @Override
           public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
             latch.countDown();
@@ -694,7 +702,7 @@ public class TestMasterReplication {
     region.getWAL().registerWALActionsListener(listener);
 
     // request a roll
-    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getTableDesc().getTableName(),
+    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getTableDescriptor().getTableName(),
       region.getRegionInfo().getRegionName()));
 
     // wait
@@ -712,9 +720,14 @@ public class TestMasterReplication {
    * Use a coprocessor to count puts and deletes. as KVs would be replicated back with the same
    * timestamp there is otherwise no way to count them.
    */
-  public static class CoprocessorCounter implements RegionObserver {
+  public static class CoprocessorCounter implements RegionCoprocessor, RegionObserver {
     private int nCount = 0;
     private int nDelete = 0;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,

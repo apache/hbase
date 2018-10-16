@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,38 +23,46 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the {@link ActiveMasterManager}.
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestActiveMasterManager {
-  private final static Log LOG = LogFactory.getLog(TestActiveMasterManager.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestActiveMasterManager.class);
+
+  private final static Logger LOG = LoggerFactory.getLogger(TestActiveMasterManager.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -69,11 +76,11 @@ public class TestActiveMasterManager {
   }
 
   @Test public void testRestartMaster() throws IOException, KeeperException {
-    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
-      ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
-      ZKUtil.deleteNode(zk, zk.znodePaths.clusterStateZNode);
+      ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.getZNodePaths().clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
@@ -111,11 +118,11 @@ public class TestActiveMasterManager {
    */
   @Test
   public void testActiveMasterManagerFromZK() throws Exception {
-    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
-      ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
-      ZKUtil.deleteNode(zk, zk.znodePaths.clusterStateZNode);
+      ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.getZNodePaths().clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
@@ -134,7 +141,7 @@ public class TestActiveMasterManager {
     ClusterStatusTracker clusterStatusTracker =
       ms1.getClusterStatusTracker();
     clusterStatusTracker.setClusterUp();
-    activeMasterManager.blockUntilBecomingActiveMaster(100, 
+    activeMasterManager.blockUntilBecomingActiveMaster(100,
         Mockito.mock(MonitoredTask.class));
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, firstMasterAddress);
@@ -160,11 +167,12 @@ public class TestActiveMasterManager {
     ms1.stop("stopping first server");
 
     // Use a listener to capture when the node is actually deleted
-    NodeDeletionListener listener = new NodeDeletionListener(zk, zk.znodePaths.masterAddressZNode);
+    NodeDeletionListener listener = new NodeDeletionListener(zk,
+            zk.getZNodePaths().masterAddressZNode);
     zk.registerListener(listener);
 
     LOG.info("Deleting master node");
-    ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
+    ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
 
     // Wait for the node to be deleted
     LOG.info("Waiting for active master manager to be notified");
@@ -184,7 +192,7 @@ public class TestActiveMasterManager {
     assertTrue(t.isActiveMaster);
 
     LOG.info("Deleting master node");
-    ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
+    ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
   }
 
   /**
@@ -192,9 +200,9 @@ public class TestActiveMasterManager {
    * @param zk
    * @param thisMasterAddress
    * @throws KeeperException
-   * @throws IOException 
+   * @throws IOException
    */
-  private void assertMaster(ZooKeeperWatcher zk,
+  private void assertMaster(ZKWatcher zk,
       ServerName expectedAddress)
   throws KeeperException, IOException {
     ServerName readAddress = MasterAddressTracker.getMasterAddress(zk);
@@ -208,7 +216,7 @@ public class TestActiveMasterManager {
     DummyMaster dummyMaster;
     boolean isActiveMaster;
 
-    public WaitToBeMasterThread(ZooKeeperWatcher zk, ServerName address) {
+    public WaitToBeMasterThread(ZKWatcher zk, ServerName address) {
       this.dummyMaster = new DummyMaster(zk,address);
       this.manager = this.dummyMaster.getActiveMasterManager();
       isActiveMaster = false;
@@ -223,13 +231,13 @@ public class TestActiveMasterManager {
     }
   }
 
-  public static class NodeDeletionListener extends ZooKeeperListener {
-    private static final Log LOG = LogFactory.getLog(NodeDeletionListener.class);
+  public static class NodeDeletionListener extends ZKListener {
+    private static final Logger LOG = LoggerFactory.getLogger(NodeDeletionListener.class);
 
     private Semaphore lock;
     private String node;
 
-    public NodeDeletionListener(ZooKeeperWatcher watcher, String node) {
+    public NodeDeletionListener(ZKWatcher watcher, String node) {
       super(watcher);
       lock = new Semaphore(0);
       this.node = node;
@@ -256,7 +264,7 @@ public class TestActiveMasterManager {
     private ClusterStatusTracker clusterStatusTracker;
     private ActiveMasterManager activeMasterManager;
 
-    public DummyMaster(ZooKeeperWatcher zk, ServerName master) {
+    public DummyMaster(ZKWatcher zk, ServerName master) {
       this.clusterStatusTracker =
         new ClusterStatusTracker(zk, this);
       clusterStatusTracker.start();
@@ -268,7 +276,7 @@ public class TestActiveMasterManager {
 
     @Override
     public void abort(final String msg, final Throwable t) {}
-    
+
     @Override
     public boolean isAborted() {
       return false;
@@ -280,7 +288,7 @@ public class TestActiveMasterManager {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return null;
     }
 
@@ -330,6 +338,21 @@ public class TestActiveMasterManager {
     @Override
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
       return null;
     }
   }

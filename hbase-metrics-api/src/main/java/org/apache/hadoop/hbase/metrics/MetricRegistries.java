@@ -24,8 +24,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * MetricRegistries is collection of MetricRegistry's. MetricsRegistries implementations should do

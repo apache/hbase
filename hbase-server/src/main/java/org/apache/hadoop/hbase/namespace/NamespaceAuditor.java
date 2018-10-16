@@ -19,17 +19,17 @@ package org.apache.hadoop.hbase.namespace;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The Class NamespaceAuditor performs checks to ensure operations like table creation
@@ -38,9 +38,7 @@ import org.apache.hadoop.hbase.quotas.QuotaExceededException;
  */
 @InterfaceAudience.Private
 public class NamespaceAuditor {
-  private static final Log LOG = LogFactory.getLog(NamespaceAuditor.class);
-  static final String NS_AUDITOR_INIT_TIMEOUT = "hbase.namespace.auditor.init.timeout";
-  static final int DEFAULT_NS_AUDITOR_INIT_TIMEOUT = 120000;
+  private static final Logger LOG = LoggerFactory.getLogger(NamespaceAuditor.class);
   private NamespaceStateManager stateManager;
   private MasterServices masterServices;
 
@@ -76,7 +74,7 @@ public class NamespaceAuditor {
       checkTableTypeAndThrowException(tName);
     }
   }
-  
+
   /**
    * Check and update region count quota for an existing table.
    * @param tName - table name for which region count to be updated.
@@ -115,7 +113,7 @@ public class NamespaceAuditor {
     return -1;
   }
 
-  public void checkQuotaToSplitRegion(HRegionInfo hri) throws IOException {
+  public void checkQuotaToSplitRegion(RegionInfo hri) throws IOException {
     if (!stateManager.isInitialized()) {
       throw new IOException(
           "Split operation is being performed even before namespace auditor is initialized.");
@@ -126,7 +124,7 @@ public class NamespaceAuditor {
     }
   }
 
-  public void updateQuotaForRegionMerge(HRegionInfo mergedRegion) throws IOException {
+  public void updateQuotaForRegionMerge(RegionInfo mergedRegion) throws IOException {
     if (!stateManager.isInitialized()) {
       throw new IOException(
           "Merge operation is being performed even before namespace auditor is initialized.");
@@ -150,7 +148,7 @@ public class NamespaceAuditor {
     stateManager.removeTable(tableName);
   }
 
-  public void removeRegionFromNamespaceUsage(HRegionInfo hri) throws IOException {
+  public void removeRegionFromNamespaceUsage(RegionInfo hri) throws IOException {
     stateManager.removeRegionFromTable(hri);
   }
 

@@ -33,7 +33,7 @@ import java.security.cert.CertificateException;
 import java.util.Locale;
 import java.util.Properties;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A basic KeyProvider that can resolve keys from a protected KeyStore file

@@ -20,20 +20,27 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * Handles closing of a region on a region server.
+ * <p/>
+ * Now for regular close region request, we will use {@link UnassignRegionHandler} instead. But when
+ * shutting down the region server, will also close regions and the related methods still use this
+ * class so we keep it here.
+ * @see UnassignRegionHandler
  */
 @InterfaceAudience.Private
 public class CloseRegionHandler extends EventHandler {
@@ -42,10 +49,10 @@ public class CloseRegionHandler extends EventHandler {
   // after the user regions have closed.  What
   // about the case where master tells us to shutdown a catalog region and we
   // have a running queue of user regions to close?
-  private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CloseRegionHandler.class);
 
   private final RegionServerServices rsServices;
-  private final HRegionInfo regionInfo;
+  private final RegionInfo regionInfo;
 
   // If true, the hosting server is aborting.  Region close process is different
   // when we are aborting.
@@ -62,14 +69,14 @@ public class CloseRegionHandler extends EventHandler {
    */
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices,
-      final HRegionInfo regionInfo, final boolean abort,
+      final RegionInfo regionInfo, final boolean abort,
       ServerName destination) {
     this(server, rsServices, regionInfo, abort,
       EventType.M_RS_CLOSE_REGION, destination);
   }
 
   protected CloseRegionHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
+      final RegionServerServices rsServices, RegionInfo regionInfo,
       boolean abort, EventType eventType, ServerName destination) {
     super(server, eventType);
     this.server = server;
@@ -79,20 +86,20 @@ public class CloseRegionHandler extends EventHandler {
     this.destination = destination;
   }
 
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return regionInfo;
   }
 
   @Override
   public void process() {
     try {
-      String name = regionInfo.getRegionNameAsString();
-      LOG.debug("Processing close of " + name);
+      String name = regionInfo.getEncodedName();
+      LOG.trace("Processing close of {}", name);
       String encodedRegionName = regionInfo.getEncodedName();
       // Check that this region is being served here
-      HRegion region = (HRegion)rsServices.getFromOnlineRegions(encodedRegionName);
+      HRegion region = (HRegion)rsServices.getRegion(encodedRegionName);
       if (region == null) {
-        LOG.warn("Received CLOSE for region " + name + " but currently not serving - ignoring");
+        LOG.warn("Received CLOSE for region {} but currently not serving - ignoring", name);
         // TODO: do better than a simple warning
         return;
       }
@@ -102,8 +109,7 @@ public class CloseRegionHandler extends EventHandler {
         if (region.close(abort) == null) {
           // This region got closed.  Most likely due to a split.
           // The split message will clean up the master state.
-          LOG.warn("Can't close region: was already closed during close(): " +
-            name);
+          LOG.warn("Can't close region {}, was already closed during close()", name);
           return;
         }
       } catch (IOException ioe) {
@@ -115,8 +121,9 @@ public class CloseRegionHandler extends EventHandler {
         throw new RuntimeException(ioe);
       }
 
-      this.rsServices.removeFromOnlineRegions(region, destination);
-      rsServices.reportRegionStateTransition(TransitionCode.CLOSED, regionInfo);
+      this.rsServices.removeRegion(region, destination);
+      rsServices.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.CLOSED,
+          HConstants.NO_SEQNUM, -1, regionInfo));
 
       // Done!  Region is closed on this RS
       LOG.debug("Closed " + region.getRegionInfo().getRegionNameAsString());

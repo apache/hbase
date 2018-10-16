@@ -15,24 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadLocalRandom;
-
-import static org.junit.Assert.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestCopyOnWriteMaps {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCopyOnWriteMaps.class);
 
   private static final int MAX_RAND = 10 * 1000 * 1000;
   private ConcurrentNavigableMap<Long, Long> m;
@@ -258,8 +266,8 @@ public class TestCopyOnWriteMaps {
     long n = 100L;
     CopyOnWriteArrayMap<Long,Long> tm99 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(99L, false);
     for (Map.Entry<Long,Long> e:tm99.entrySet()) {
-      assertEquals(new Long(n), e.getKey());
-      assertEquals(new Long(n), e.getValue());
+      assertEquals(Long.valueOf(n), e.getKey());
+      assertEquals(Long.valueOf(n), e.getValue());
       n++;
     }
   }
@@ -277,15 +285,15 @@ public class TestCopyOnWriteMaps {
     long n = 102;
     CopyOnWriteArrayMap<Long,Long> tm102 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(102L, true);
     for (Map.Entry<Long,Long> e:tm102.entrySet()) {
-      assertEquals(new Long(n), e.getKey());
-      assertEquals(new Long(n), e.getValue());
+      assertEquals(Long.valueOf(n), e.getKey());
+      assertEquals(Long.valueOf(n), e.getValue());
       n++;
     }
     n = 99;
     CopyOnWriteArrayMap<Long,Long> tm98 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(98L, true);
     for (Map.Entry<Long,Long> e:tm98.entrySet()) {
-      assertEquals(new Long(n), e.getKey());
-      assertEquals(new Long(n), e.getValue());
+      assertEquals(Long.valueOf(n), e.getKey());
+      assertEquals(Long.valueOf(n), e.getValue());
       n++;
     }
   }
@@ -302,11 +310,11 @@ public class TestCopyOnWriteMaps {
     long n = 99;
 
     for (Map.Entry<Long, Long> e:m.entrySet()) {
-      assertEquals(new Long(n), e.getKey());
-      assertEquals(new Long(n), e.getValue());
+      assertEquals(Long.valueOf(n), e.getKey());
+      assertEquals(Long.valueOf(n), e.getValue());
       n++;
     }
     assertEquals(5, m.size());
-    assertEquals(false, m.isEmpty());
+    assertFalse(m.isEmpty());
   }
 }

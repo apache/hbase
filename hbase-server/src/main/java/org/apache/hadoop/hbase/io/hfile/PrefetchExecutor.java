@@ -28,18 +28,18 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class PrefetchExecutor {
+@InterfaceAudience.Private
+public final class PrefetchExecutor {
 
-  private static final Log LOG = LogFactory.getLog(PrefetchExecutor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PrefetchExecutor.class);
 
   /** Futures for tracking block prefetch activity */
   private static final Map<Path,Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
@@ -131,9 +131,10 @@ public class PrefetchExecutor {
   public static boolean isCompleted(Path path) {
     Future<?> future = prefetchFutures.get(path);
     if (future != null) {
-      return future.isDone(); 
+      return future.isDone();
     }
     return true;
   }
 
+  private PrefetchExecutor() {}
 }

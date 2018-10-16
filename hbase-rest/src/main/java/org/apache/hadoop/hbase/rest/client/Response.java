@@ -22,9 +22,9 @@ package org.apache.hadoop.hbase.rest.client;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 
@@ -33,7 +33,7 @@ import org.apache.http.HttpResponse;
  */
 @InterfaceAudience.Public
 public class Response {
-  private static final Log LOG = LogFactory.getLog(Response.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Response.class);
 
   private int code;
   private Header[] headers;

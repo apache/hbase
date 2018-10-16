@@ -19,29 +19,36 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.*;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableSet;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.DataCacheEntry;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.IndexCacheEntry;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestBlockCacheReporting {
-  private static final Log LOG = LogFactory.getLog(TestBlockCacheReporting.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBlockCacheReporting.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlockCacheReporting.class);
   private Configuration conf;
 
   @Before
@@ -86,9 +93,9 @@ public class TestBlockCacheReporting {
     final int count = 3;
     addDataAndHits(cc.getBlockCache(), count);
     // The below has no asserts.  It is just exercising toString and toJSON code.
-    LOG.info(cc.getBlockCache().getStats());
+    LOG.info(Objects.toString(cc.getBlockCache().getStats()));
     BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
-    LOG.info(cbsbf);
+    LOG.info(Objects.toString(cbsbf));
     logPerFile(cbsbf);
     bucketCacheReport(cc.getBlockCache());
     LOG.info(BlockCacheUtil.toJSON(cbsbf));
@@ -106,9 +113,9 @@ public class TestBlockCacheReporting {
     BlockCache bc = cc.getBlockCache();
     LOG.info("count=" + bc.getBlockCount() + ", currentSize=" + bc.getCurrentSize() +
         ", freeSize=" + bc.getFreeSize() );
-    LOG.info(cc.getBlockCache().getStats());
+    LOG.info(Objects.toString(cc.getBlockCache().getStats()));
     BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
-    LOG.info(cbsbf);
+    LOG.info(Objects.toString(cbsbf));
     logPerFile(cbsbf);
     bucketCacheReport(cc.getBlockCache());
     LOG.info(BlockCacheUtil.toJSON(cbsbf));
@@ -119,7 +126,7 @@ public class TestBlockCacheReporting {
     BlockCache [] bcs = bc.getBlockCaches();
     if (bcs != null) {
       for (BlockCache sbc: bc.getBlockCaches()) {
-        bucketCacheReport(sbc);
+        LOG.info(bc.getClass().getSimpleName() + ": " + sbc.getStats());
       }
     }
   }

@@ -29,10 +29,10 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * To only retrieve columns within a specific range of version timestamps, call
  * {@link #setTimeRange(long, long) setTimeRange}.
  * <p>
- * To only retrieve columns with a specific timestamp, call {@link #setTimeStamp(long) setTimestamp}
+ * To only retrieve columns with a specific timestamp, call {@link #setTimestamp(long) setTimestamp}
  * .
  * <p>
  * To limit the number of versions of each column to be returned, call {@link #setMaxVersions(int)
@@ -87,7 +87,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class Scan extends Query {
-  private static final Log LOG = LogFactory.getLog(Scan.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Scan.class);
 
   private static final String RAW_ATTR = "_raw_";
 
@@ -141,7 +141,9 @@ public class Scan extends Query {
   private long maxResultSize = -1;
   private boolean cacheBlocks = true;
   private boolean reversed = false;
-  private Map<byte[], NavigableSet<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  private TimeRange tr = TimeRange.allTime();
+  private Map<byte [], NavigableSet<byte []>> familyMap =
+    new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
   private Boolean asyncPrefetch = null;
 
   /**
@@ -276,6 +278,9 @@ public class Scan extends Query {
     this.mvccReadPoint = scan.getMvccReadPoint();
     this.limit = scan.getLimit();
     this.needCursorResult = scan.isNeedCursorResult();
+    setPriority(scan.getPriority());
+    readType = scan.getReadType();
+    super.setReplicaId(scan.getReplicaId());
   }
 
   /**
@@ -306,6 +311,8 @@ public class Scan extends Query {
       setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
     this.mvccReadPoint = -1L;
+    setPriority(get.getPriority());
+    super.setReplicaId(get.getReplicaId());
   }
 
   public boolean isGetScan() {
@@ -338,17 +345,17 @@ public class Scan extends Query {
     NavigableSet<byte []> set = familyMap.get(family);
     if(set == null) {
       set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+      familyMap.put(family, set);
     }
     if (qualifier == null) {
       qualifier = HConstants.EMPTY_BYTE_ARRAY;
     }
     set.add(qualifier);
-    familyMap.put(family, set);
     return this;
   }
 
   /**
-   * Set versions of columns only within the specified timestamp range,
+   * Get versions of columns only within the specified timestamp range,
    * [minStamp, maxStamp).  Note, default maximum versions to return is 1.  If
    * your time range spans more than one version and you want all versions
    * returned, up the number of versions beyond the default.
@@ -358,18 +365,27 @@ public class Scan extends Query {
    * @see #setMaxVersions(int)
    * @return this
    */
-  @Override
   public Scan setTimeRange(long minStamp, long maxStamp) throws IOException {
-    return (Scan) super.setTimeRange(minStamp, maxStamp);
+    tr = new TimeRange(minStamp, maxStamp);
+    return this;
   }
 
   /**
-   * Set versions of columns only within the specified timestamp range,
-   * @param tr Input TimeRange
-   * @return this for invocation chaining
+   * Get versions of columns with the specified timestamp. Note, default maximum
+   * versions to return is 1.  If your time range spans more than one version
+   * and you want all versions returned, up the number of versions beyond the
+   * defaut.
+   * @param timestamp version timestamp
+   * @see #setMaxVersions()
+   * @see #setMaxVersions(int)
+   * @return this
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #setTimestamp(long)} instead
    */
-  public Scan setTimeRange(TimeRange tr) {
-    return (Scan) super.setTimeRange(tr);
+  @Deprecated
+  public Scan setTimeStamp(long timestamp)
+  throws IOException {
+    return this.setTimestamp(timestamp);
   }
 
   /**
@@ -382,26 +398,20 @@ public class Scan extends Query {
    * @see #setMaxVersions(int)
    * @return this
    */
-  public Scan setTimeStamp(long timestamp)
-  throws IOException {
+  public Scan setTimestamp(long timestamp) {
     try {
-      super.setTimeRange(timestamp, timestamp + 1);
+      tr = new TimeRange(timestamp, timestamp + 1);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
       throw e;
     }
+
     return this;
   }
 
-  @Override
-  public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
+  @Override public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
     return (Scan) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
-  }
-
-  @Override
-  public Scan setColumnFamilyTimeRange(byte[] cf, TimeRange tr) {
-    return (Scan) super.setColumnFamilyTimeRange(cf, tr);
   }
 
   /**
@@ -473,7 +483,7 @@ public class Scan extends Query {
    * @return this
    * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
    *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated use {@link #withStartRow(byte[])} instead. This method may change the inclusive of
+   * @deprecated use {@link #withStopRow(byte[])} instead. This method may change the inclusive of
    *             the stop row to keep compatible with the old behavior.
    */
   @Deprecated
@@ -591,19 +601,42 @@ public class Scan extends Query {
   /**
    * Get all available versions.
    * @return this
+   * @deprecated It is easy to misunderstand with column family's max versions, so use
+   *             {@link #readAllVersions()} instead.
    */
+  @Deprecated
   public Scan setMaxVersions() {
-    this.maxVersions = Integer.MAX_VALUE;
-    return this;
+    return readAllVersions();
   }
 
   /**
    * Get up to the specified number of versions of each column.
    * @param maxVersions maximum versions for each column
    * @return this
+   * @deprecated It is easy to misunderstand with column family's max versions, so use
+   *             {@link #readVersions(int)} instead.
    */
+  @Deprecated
   public Scan setMaxVersions(int maxVersions) {
-    this.maxVersions = maxVersions;
+    return readVersions(maxVersions);
+  }
+
+  /**
+   * Get all available versions.
+   * @return this
+   */
+  public Scan readAllVersions() {
+    this.maxVersions = Integer.MAX_VALUE;
+    return this;
+  }
+
+  /**
+   * Get up to the specified number of versions of each column.
+   * @param versions specified number of versions for each column
+   * @return this
+   */
+  public Scan readVersions(int versions) {
+    this.maxVersions = versions;
     return this;
   }
 
@@ -792,6 +825,13 @@ public class Scan extends Query {
   }
 
   /**
+   * @return TimeRange
+   */
+  public TimeRange getTimeRange() {
+    return this.tr;
+  }
+
+  /**
    * @return RowFilter
    */
   @Override
@@ -875,6 +915,7 @@ public class Scan extends Query {
     return allowPartialResults;
   }
 
+  @Override
   public Scan setLoadColumnFamiliesOnDemand(boolean value) {
     return (Scan) super.setLoadColumnFamiliesOnDemand(value);
   }
@@ -1058,6 +1099,11 @@ public class Scan extends Query {
   @Override
   public Scan setIsolationLevel(IsolationLevel level) {
     return (Scan) super.setIsolationLevel(level);
+  }
+
+  @Override
+  public Scan setPriority(int priority) {
+    return (Scan) super.setPriority(priority);
   }
 
   /**

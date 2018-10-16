@@ -21,6 +21,8 @@ require 'hbase_constants'
 require 'shell'
 
 class ShellTest < Test::Unit::TestCase
+  include Hbase::TestHelpers
+
   def setup
     @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
     @shell = Shell::Shell.new(@hbase)
@@ -69,7 +71,17 @@ class ShellTest < Test::Unit::TestCase
     @shell.command('version')
   end
 
-  #-------------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------
+
+  define_test 'Shell::Shell#print_banner should display Reference Guide link' do
+    @shell.interactive = true
+    output = capture_stdout { @shell.print_banner }
+    @shell.interactive = false
+    link_regex = %r{For Reference, please visit: http://hbase.apache.org/book.html#shell}
+    assert_match(link_regex, output)
+  end
+
+  #-----------------------------------------------------------------------------
 
   define_test "Shell::Shell interactive mode should not throw" do
     # incorrect number of arguments

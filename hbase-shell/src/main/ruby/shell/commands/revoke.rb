@@ -20,12 +20,13 @@ module Shell
   module Commands
     class Revoke < Command
       def help
-        return <<-EOF
+        <<-EOF
 Revoke a user's access rights.
-Syntax : revoke <user> [, <@namespace> [, <table> [, <column family> [, <column qualifier>]]]]
+Syntax: revoke <user or @group> [, <table> [, <column family> [, <column qualifier>]]]
+Syntax: revoke <user or @group>, <@namespace>
 
-Note: Groups and users access are revoked in the same way, but groups are prefixed with an '@' 
-      character. In the same way, tables and namespaces are specified, but namespaces are 
+Note: Groups and users access are revoked in the same way, but groups are prefixed with an '@'
+      character. Tables and namespaces are specified the same way, but namespaces are
       prefixed with an '@' character.
 
 For example:
@@ -38,7 +39,7 @@ For example:
 EOF
       end
 
-      def command(user, table_name=nil, family=nil, qualifier=nil)
+      def command(user, table_name = nil, family = nil, qualifier = nil)
         security_admin.revoke(user, table_name, family, qualifier)
       end
     end

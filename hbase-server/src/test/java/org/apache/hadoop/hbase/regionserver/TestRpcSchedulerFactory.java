@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.RWQueueRpcExecutor;
@@ -34,7 +34,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 
 /**
  * A silly test that does nothing but make sure an rpcscheduler factory makes what it says
@@ -42,9 +41,12 @@ import org.junit.rules.TestRule;
  */
 @Category(SmallTests.class)
 public class TestRpcSchedulerFactory {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRpcSchedulerFactory.class);
+
   @Rule public TestName testName = new TestName();
-  @ClassRule public static TestRule timeout =
-      CategoryBasedTimeout.forClass(TestRpcSchedulerFactory.class);
   private Configuration conf;
 
   @Before

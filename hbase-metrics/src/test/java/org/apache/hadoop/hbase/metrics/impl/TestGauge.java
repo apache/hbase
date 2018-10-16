@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.metrics.impl;
 import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.atomic.AtomicLong;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.metrics.Gauge;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -31,6 +32,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestGauge {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestGauge.class);
 
   @Test
   public void testGetValue() {

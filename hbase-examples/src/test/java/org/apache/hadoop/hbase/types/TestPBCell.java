@@ -21,20 +21,28 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({SmallTests.class, MiscTests.class})
 public class TestPBCell {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestPBCell.class);
 
   private static final PBCell CODEC = new PBCell();
 
@@ -44,7 +52,7 @@ public class TestPBCell {
   @Test
   public void testRoundTrip() {
     final Cell cell = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("fam"),
-      Bytes.toBytes("qual"), Bytes.toBytes("val"));
+        Bytes.toBytes("qual"), Bytes.toBytes("val"));
     CellProtos.Cell c = ProtobufUtil.toCell(cell), decoded;
     PositionedByteRange pbr = new SimplePositionedByteRange(c.getSerializedSize());
     pbr.setPosition(0);
@@ -52,6 +60,7 @@ public class TestPBCell {
     pbr.setPosition(0);
     decoded = CODEC.decode(pbr);
     assertEquals(encodedLength, pbr.getPosition());
-    assertTrue(CellUtil.equals(cell, ProtobufUtil.toCell(decoded)));
+    assertTrue(CellUtil.equals(cell, ProtobufUtil
+        .toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), decoded)));
   }
 }

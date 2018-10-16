@@ -1,6 +1,4 @@
-/*
- * Copyright The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,46 +19,46 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestMultiSlaveReplication {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultiSlaveReplication.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiSlaveReplication.class);
 
   private static Configuration conf1;
   private static Configuration conf2;
@@ -97,14 +95,12 @@ public class TestMultiSlaveReplication {
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
     conf1.setInt("hbase.master.cleaner.interval", 5 * 1000);
-    conf1.setClass("hbase.region.replica.replication.replicationQueues.class",
-        ReplicationQueuesZKImpl.class, ReplicationQueues.class);
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     utility1.setZkCluster(miniZK);
-    new ZooKeeperWatcher(conf1, "cluster1", null, true);
+    new ZKWatcher(conf1, "cluster1", null, true);
 
     conf2 = new Configuration(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
@@ -114,11 +110,11 @@ public class TestMultiSlaveReplication {
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
-    new ZooKeeperWatcher(conf2, "cluster2", null, true);
+    new ZKWatcher(conf2, "cluster2", null, true);
 
     utility3 = new HBaseTestingUtility(conf3);
     utility3.setZkCluster(miniZK);
-    new ZooKeeperWatcher(conf3, "cluster3", null, true);
+    new ZKWatcher(conf3, "cluster3", null, true);
 
     table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
@@ -128,7 +124,7 @@ public class TestMultiSlaveReplication {
     table.addFamily(fam);
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testMultiSlaveReplication() throws Exception {
     LOG.info("testCyclicReplication");
     MiniHBaseCluster master = utility1.startMiniCluster();
@@ -140,11 +136,8 @@ public class TestMultiSlaveReplication {
     utility2.getAdmin().createTable(table);
     utility3.getAdmin().createTable(table);
     Table htable1 = utility1.getConnection().getTable(tableName);
-    htable1.setWriteBufferSize(1024);
     Table htable2 = utility2.getConnection().getTable(tableName);
-    htable2.setWriteBufferSize(1024);
     Table htable3 = utility3.getConnection().getTable(tableName);
-    htable3.setWriteBufferSize(1024);
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
@@ -193,7 +186,7 @@ public class TestMultiSlaveReplication {
     // Even if the log was rolled in the middle of the replication
     // "row" is still replication.
     checkRow(row, 1, htable2);
-    // Replication thread of cluster 2 may be sleeping, and since row2 is not there in it, 
+    // Replication thread of cluster 2 may be sleeping, and since row2 is not there in it,
     // we should wait before checking.
     checkWithWait(row, 1, htable3);
 
@@ -224,7 +217,7 @@ public class TestMultiSlaveReplication {
     final CountDownLatch latch = new CountDownLatch(1);
 
     // listen for successful log rolls
-    final WALActionsListener listener = new WALActionsListener.Base() {
+    final WALActionsListener listener = new WALActionsListener() {
           @Override
           public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
             latch.countDown();
@@ -233,7 +226,7 @@ public class TestMultiSlaveReplication {
     region.getWAL().registerWALActionsListener(listener);
 
     // request a roll
-    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getTableDesc().getTableName(),
+    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getTableDescriptor().getTableName(),
       region.getRegionInfo().getRegionName()));
 
     // wait
@@ -247,7 +240,7 @@ public class TestMultiSlaveReplication {
     region.getWAL().unregisterWALActionsListener(listener);
   }
 
- 
+
   private void checkWithWait(byte[] row, int count, Table table) throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
@@ -270,7 +263,7 @@ public class TestMultiSlaveReplication {
       }
     }
   }
-  
+
   private void checkRow(byte[] row, int count, Table... tables) throws IOException {
     Get get = new Get(row);
     for (Table table : tables) {
@@ -302,7 +295,7 @@ public class TestMultiSlaveReplication {
       if (removedFromAll) {
         break;
       } else {
-        Thread.sleep(SLEEP_TIME);        
+        Thread.sleep(SLEEP_TIME);
       }
     }
   }

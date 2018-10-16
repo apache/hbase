@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface used to manage RSGroupInfo storage. An implementation
@@ -36,6 +35,10 @@ import org.apache.hadoop.hbase.net.Address;
  */
 @InterfaceAudience.Private
 public interface RSGroupInfoManager {
+
+  String REASSIGN_WAIT_INTERVAL_KEY = "hbase.rsgroup.reassign.wait";
+  long DEFAULT_REASSIGN_WAIT_INTERVAL = 30 * 1000L;
+
   //Assigned before user tables
   TableName RSGROUP_TABLE_NAME =
       TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "rsgroup");
@@ -43,6 +46,8 @@ public interface RSGroupInfoManager {
   byte[] META_FAMILY_BYTES = Bytes.toBytes("m");
   byte[] META_QUALIFIER_BYTES = Bytes.toBytes("i");
   byte[] ROW_KEY = {0};
+
+  void start();
 
   /**
    * Add given RSGroupInfo to existing list of group infos.
@@ -113,4 +118,10 @@ public interface RSGroupInfoManager {
    */
   void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
       String srcGroup, String dstGroup) throws IOException;
+
+  /**
+   * Remove decommissioned servers from rsgroup
+   * @param servers set of servers to remove
+   */
+  void removeServers(Set<Address> servers) throws IOException;
 }

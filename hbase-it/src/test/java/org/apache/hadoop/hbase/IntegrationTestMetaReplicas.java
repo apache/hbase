@@ -19,30 +19,31 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TestMetaWithReplicas;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An integration test that starts the cluster with three replicas for the meta
  * It then creates a table, flushes the meta, kills the server holding the primary.
- * After that a client issues put/get requests on the created table - the other 
+ * After that a client issues put/get requests on the created table - the other
  * replicas of the meta would be used to get the location of the region of the created
  * table.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestMetaReplicas {
-  private static final Log LOG = LogFactory.getLog(IntegrationTestMetaReplicas.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestMetaReplicas.class);
   /**
    * Util to get at the cluster.
    */
@@ -59,11 +60,11 @@ public class IntegrationTestMetaReplicas {
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
     // Make sure there are three servers.
     util.initializeCluster(3);
-    ZooKeeperWatcher zkw = util.getZooKeeperWatcher();
+    ZKWatcher zkw = util.getZooKeeperWatcher();
     Configuration conf = util.getConfiguration();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode = ZKUtil.joinZNode(baseZNode,
+    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
@@ -80,7 +81,7 @@ public class IntegrationTestMetaReplicas {
   }
 
   private static void waitUntilZnodeAvailable(int replicaId) throws Exception {
-    String znode = util.getZooKeeperWatcher().znodePaths.getZNodeForReplica(replicaId);
+    String znode = util.getZooKeeperWatcher().getZNodePaths().getZNodeForReplica(replicaId);
     int i = 0;
     while (i < 1000) {
       if (ZKUtil.checkExists(util.getZooKeeperWatcher(), znode) == -1) {

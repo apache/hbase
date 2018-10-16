@@ -17,54 +17,61 @@
  * limitations under the License.
  */
 --%>
-<%@page import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType"%>
+<%@page import="java.net.URLEncoder"%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
-  import="org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString"
-  import="java.net.URLEncoder"
+  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
   import="java.util.ArrayList"
-  import="java.util.TreeMap"
-  import="java.util.List"
-  import="java.util.LinkedHashMap"
-  import="java.util.Map"
-  import="java.util.Set"
   import="java.util.Collection"
   import="java.util.Collections"
-  import="java.util.Comparator"
-  import="org.apache.commons.lang.StringEscapeUtils"
+  import="java.util.HashMap"
+  import="java.util.LinkedHashMap"
+  import="java.util.List"
+  import="java.util.Map"
+  import="java.util.Objects"
+  import="java.util.TreeMap"
+  import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.util.StringUtils"
-  import="org.apache.hadoop.hbase.HRegionInfo"
+  import="org.apache.hadoop.hbase.HColumnDescriptor"
+  import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
   import="org.apache.hadoop.hbase.ServerName"
-  import="org.apache.hadoop.hbase.ServerLoad"
-  import="org.apache.hadoop.hbase.RegionLoad"
-  import="org.apache.hadoop.hbase.HConstants"
+  import="org.apache.hadoop.hbase.TableName"
+  import="org.apache.hadoop.hbase.TableNotFoundException"
+  import="org.apache.hadoop.hbase.client.Admin"
+  import="org.apache.hadoop.hbase.client.CompactionState"
+  import="org.apache.hadoop.hbase.client.RegionInfo"
+  import="org.apache.hadoop.hbase.client.RegionInfoBuilder"
+  import="org.apache.hadoop.hbase.client.RegionLocator"
+  import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
+  import="org.apache.hadoop.hbase.client.Table"
   import="org.apache.hadoop.hbase.master.HMaster"
-  import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
+  import="org.apache.hadoop.hbase.master.assignment.RegionStates"
+  import="org.apache.hadoop.hbase.master.RegionState"
   import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
   import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
-  import="org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos"
-  import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos"
-  import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas"
-  import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota"
-  import="org.apache.hadoop.hbase.TableName"
-  import="org.apache.hadoop.hbase.HColumnDescriptor"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.TableNotFoundException"%>
-<%@ page import="org.apache.hadoop.hbase.client.*" %>
+  import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
+  import="org.apache.hadoop.util.StringUtils"
+  import="org.apache.hbase.thirdparty.com.google.protobuf.ByteString"%>
+<%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos" %>
+<%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos" %>
+<%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
+<%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
+<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
+<%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
+<%@ page import="org.apache.hadoop.hbase.Size" %>
+<%@ page import="org.apache.hadoop.hbase.RegionMetricsBuilder" %>
 <%!
   /**
-   * @return An empty region load stamped with the passed in <code>hri</code>
+   * @return An empty region load stamped with the passed in <code>regionInfo</code>
    * region name.
    */
-  private RegionLoad getEmptyRegionLoad(final HRegionInfo hri) {
-    return new RegionLoad(ClusterStatusProtos.RegionLoad.newBuilder().
-      setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
-      setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
-      setValue(ByteString.copyFrom(hri.getRegionName())).build()).build());
+  private RegionMetrics getEmptyRegionMetrics(final RegionInfo regionInfo) {
+    return RegionMetricsBuilder.toRegionMetrics(ClusterStatusProtos.RegionLoad.newBuilder().
+            setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
+                    setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
+                    setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
   }
 %>
 <%
@@ -73,16 +80,10 @@
 
   MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
-  final String escaped_fqtn = StringEscapeUtils.escapeHtml(fqtn);
-  String sortKey = request.getParameter("sort");
-  String reverse = request.getParameter("reverse");
-  final boolean reverseOrder = (reverse==null||!reverse.equals("false"));
-  String showWholeKey = request.getParameter("showwhole");
-  final boolean showWhole = (showWholeKey!=null && showWholeKey.equals("true"));
+  final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
   Table table;
   String tableHeader;
   boolean withReplica = false;
-  ServerName rl = metaTableLocator.getMetaRegionLocation(master.getZooKeeper());
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
   int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
@@ -115,75 +116,28 @@
   }
   int numRegions = 0;
 
+  String pageTitle;
+  if ( !readOnly && action != null ) {
+      pageTitle = "HBase Master: " + StringEscapeUtils.escapeHtml4(master.getServerName().toString());
+  } else {
+      pageTitle = "Table: " + escaped_fqtn;
+  }
+  pageContext.setAttribute("pageTitle", pageTitle);
 %>
-<!--[if IE]>
-<!DOCTYPE html>
-<![endif]-->
-<?xml version="1.0" encoding="UTF-8" ?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta charset="utf-8">
-    <% if ( !readOnly && action != null ) { %>
-        <title>HBase Master: <%= StringEscapeUtils.escapeHtml(master.getServerName().toString()) %></title>
-    <% } else { %>
-        <title>Table: <%= escaped_fqtn %></title>
-    <% } %>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
 
+<jsp:include page="header.jsp">
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 
-      <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-      <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-      <link href="/static/css/hbase.css" rel="stylesheet">
-      <% if ( ( !readOnly && action != null ) || fqtn == null ) { %>
-	  <script type="text/javascript">
-      <!--
-		  setTimeout("history.back()",5000);
-	  -->
-	  </script>
-      <% } else { %>
-      <!--[if lt IE 9]>
-          <script src="/static/js/html5shiv.js"></script>
-      <![endif]-->
-      <% } %>
-</head>
-<body>
-<div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-        </div>
-        <div class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
-                <li><a href="/logs/">Local Logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug Dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
-        </div><!--/.nav-collapse -->
-    </div>
-</div>
 <%
 if ( fqtn != null ) {
   try {
   table = master.getConnection().getTable(TableName.valueOf(fqtn));
   if (table.getTableDescriptor().getRegionReplication() > 1) {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>ReplicaID</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>ReplicaID</th></tr></thead>";
     withReplica = true;
   } else {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th></tr></thead>";
   }
   if ( !readOnly && action != null ) {
 %>
@@ -206,10 +160,10 @@ if ( fqtn != null ) {
     %> Split request accepted. <%
     } else if (action.equals("compact")) {
       if (key != null && key.length() > 0) {
-        List<HRegionInfo> regions = admin.getTableRegions(TableName.valueOf(fqtn));
+        List<RegionInfo> regions = admin.getRegions(TableName.valueOf(fqtn));
         byte[] row = Bytes.toBytes(key);
 
-        for (HRegionInfo region : regions) {
+        for (RegionInfo region : regions) {
           if (region.containsRow(row)) {
             admin.compactRegion(region.getRegionName());
           }
@@ -226,7 +180,7 @@ if ( fqtn != null ) {
     }
   }
 %>
-<p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+<jsp:include page="redirect.jsp" />
 </div>
 <%
   } else {
@@ -242,14 +196,15 @@ if ( fqtn != null ) {
   if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) {
 %>
 <%= tableHeader %>
+<tbody>
 <%
   // NOTE: Presumes meta with one or more replicas
   for (int j = 0; j < numMetaReplicas; j++) {
-    HRegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                            HRegionInfo.FIRST_META_REGIONINFO, j);
+    RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
+                            RegionInfoBuilder.FIRST_META_REGIONINFO, j);
     ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
     for (int i = 0; i < 1; i++) {
-      String url = "";
+      String hostAndPort = "";
       String readReq = "N/A";
       String writeReq = "N/A";
       String fileSize = "N/A";
@@ -258,18 +213,18 @@ if ( fqtn != null ) {
       float locality = 0.0f;
 
       if (metaLocation != null) {
-        ServerLoad sl = master.getServerManager().getLoad(metaLocation);
+        ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
         // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
-        url = "//" + URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
+        hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
         if (sl != null) {
-          Map<byte[], RegionLoad> map = sl.getRegionsLoad();
+          Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
           if (map.containsKey(meta.getRegionName())) {
-            RegionLoad load = map.get(meta.getRegionName());
-            readReq = String.format("%,1d", load.getReadRequestsCount());
-            writeReq = String.format("%,1d", load.getWriteRequestsCount());
-            fileSize = StringUtils.byteDesc(load.getStorefileSizeMB()*1024l*1024);
-            fileCount = String.format("%,1d", load.getStorefiles());
-            memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
+            RegionMetrics load = map.get(meta.getRegionName());
+            readReq = String.format("%,1d", load.getReadRequestCount());
+            writeReq = String.format("%,1d", load.getWriteRequestCount());
+            fileSize = StringUtils.byteDesc((long) load.getStoreFileSize().get(Size.Unit.BYTE));
+            fileCount = String.format("%,1d", load.getStoreFileCount());
+            memSize = StringUtils.byteDesc((long) load.getMemStoreSize().get(Size.Unit.BYTE));
             locality = load.getDataLocality();
           }
         }
@@ -277,7 +232,7 @@ if ( fqtn != null ) {
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString()) + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
+    <td><a href="http://<%= hostAndPort %>/"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
     <td><%= readReq%></td>
     <td><%= writeReq%></td>
     <td><%= fileSize%></td>
@@ -286,12 +241,28 @@ if ( fqtn != null ) {
     <td><%= locality%></td>
     <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
+<%
+      if (withReplica) {
+%>
+    <td><%= meta.getReplicaId() %></td>
+<%
+      }
+%>
 </tr>
 <%  } %>
 <%} %>
+</tbody>
 </table>
 <%} else {
   Admin admin = master.getConnection().getAdmin();
+  RegionStates states = master.getAssignmentManager().getRegionStates();
+  Map<RegionState.State, List<RegionInfo>> regionStates = states.getRegionByStateOfTable(table.getName());
+  Map<String, RegionState.State> stateMap = new HashMap<>();
+  for (RegionState.State regionState : regionStates.keySet()) {
+    for (RegionInfo regionInfo : regionStates.get(regionState)) {
+        stateMap.put(regionInfo.getEncodedName(), regionState);
+    }
+  }
   RegionLocator r = master.getClusterConnection().getRegionLocator(table.getName());
   try { %>
 <h2>Table Attributes</h2>
@@ -318,7 +289,7 @@ if ( fqtn != null ) {
   } catch (Exception e) {
     // Nothing really to do here
     for(StackTraceElement element : e.getStackTrace()) {
-      %><%= StringEscapeUtils.escapeHtml(element.toString()) %><%
+      %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
     }
 %> Unknown <%
   }
@@ -399,7 +370,7 @@ if ( fqtn != null ) {
     for (HColumnDescriptor family: families) {
   %>
   <tr>
-    <td><%= StringEscapeUtils.escapeHtml(family.getNameAsString()) %></td>
+    <td><%= StringEscapeUtils.escapeHtml4(family.getNameAsString()) %></td>
     <td>
     <table class="table table-striped">
       <tr>
@@ -412,10 +383,10 @@ if ( fqtn != null ) {
     %>
       <tr>
         <td>
-          <%= StringEscapeUtils.escapeHtml(familyKey.toString()) %>
+          <%= StringEscapeUtils.escapeHtml4(familyKey.toString()) %>
 		</td>
         <td>
-          <%= StringEscapeUtils.escapeHtml(familyValues.get(familyKey).toString()) %>
+          <%= StringEscapeUtils.escapeHtml4(familyValues.get(familyKey).toString()) %>
         </td>
       </tr>
     <% } %>
@@ -434,58 +405,43 @@ if ( fqtn != null ) {
   Map<ServerName, Integer> regDistribution = new TreeMap<>();
   Map<ServerName, Integer> primaryRegDistribution = new TreeMap<>();
   List<HRegionLocation> regions = r.getAllRegionLocations();
-  Map<HRegionInfo, RegionLoad> regionsToLoad = new LinkedHashMap<>();
-  Map<HRegionInfo, ServerName> regionsToServer = new LinkedHashMap<>();
+  Map<RegionInfo, RegionMetrics> regionsToLoad = new LinkedHashMap<>();
+  Map<RegionInfo, ServerName> regionsToServer = new LinkedHashMap<>();
   for (HRegionLocation hriEntry : regions) {
-    HRegionInfo regionInfo = hriEntry.getRegionInfo();
+    RegionInfo regionInfo = hriEntry.getRegionInfo();
     ServerName addr = hriEntry.getServerName();
     regionsToServer.put(regionInfo, addr);
 
     if (addr != null) {
-      ServerLoad sl = master.getServerManager().getLoad(addr);
+      ServerMetrics sl = master.getServerManager().getLoad(addr);
       if (sl != null) {
-        Map<byte[], RegionLoad> map = sl.getRegionsLoad();
-        RegionLoad regionload = map.get(regionInfo.getRegionName());
-        regionsToLoad.put(regionInfo, regionload);
-        if(regionload != null) {
-          totalReadReq += regionload.getReadRequestsCount();
-          totalWriteReq += regionload.getWriteRequestsCount();
-          totalSize += regionload.getStorefileSizeMB();
-          totalStoreFileCount += regionload.getStorefiles();
-          totalMemSize += regionload.getMemStoreSizeMB();
-          totalStoreFileSizeMB += regionload.getStorefileSizeMB();
+        RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
+        regionsToLoad.put(regionInfo, regionMetrics);
+        if(regionMetrics != null) {
+          totalReadReq += regionMetrics.getReadRequestCount();
+          totalWriteReq += regionMetrics.getWriteRequestCount();
+          totalSize += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
+          totalStoreFileCount += regionMetrics.getStoreFileCount();
+          totalMemSize += regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE);
+          totalStoreFileSizeMB += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
         } else {
-          RegionLoad load0 = getEmptyRegionLoad(regionInfo);
+          RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
           regionsToLoad.put(regionInfo, load0);
         }
       } else{
-        RegionLoad load0 = getEmptyRegionLoad(regionInfo);
+        RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
         regionsToLoad.put(regionInfo, load0);
       }
     } else {
-      RegionLoad load0 = getEmptyRegionLoad(regionInfo);
+      RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
       regionsToLoad.put(regionInfo, load0);
     }
   }
 
   if(regions != null && regions.size() > 0) { %>
 <h2>Table Regions</h2>
-Sort As
-<select id="sel" style="margin-right: 10px">
-<option value="regionName">RegionName</option>
-<option value="readrequest">ReadRequest</option>
-<option value="writerequest">WriteRequest</option>
-<option value="size">StorefileSize</option>
-<option value="filecount">Num.Storefiles</option>
-<option value="memstore">MemstoreSize</option>
-<option value="locality">Locality</option>
-</select>
-Ascending<input type="checkbox" id="ascending" value="Ascending" style="margin-right:10px">
-ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-right:10px">
-<input type="button" id="submit" value="Reorder" onClick="reloadAsSort()" style="font-size: 12pt; width: 5em; margin-bottom: 5px" class="btn">
-<p>
-
-<table class="table table-striped">
+<table id="regionServerDetailsTable" class="tablesorter table table-striped">
+<thead>
 <tr>
 <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
 <th>Region Server</th>
@@ -497,6 +453,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 <th>Locality</th>
 <th>Start Key</th>
 <th>End Key</th>
+<th>Region State</th>
 <%
   if (withReplica) {
 %>
@@ -504,188 +461,44 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 <%
   }
 %>
+</thead>
 </tr>
+<tbody>
 
 <%
-  List<Map.Entry<HRegionInfo, RegionLoad>> entryList = new ArrayList<>(regionsToLoad.entrySet());
-  if(sortKey != null) {
-    if (sortKey.equals("readrequest")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue() == null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue() == null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getReadRequestsCount() < entry2.getValue().getReadRequestsCount()) {
-                result = -1;
-              } else if (entry1.getValue().getReadRequestsCount() > entry2.getValue().getReadRequestsCount()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
-    } else if (sortKey.equals("writerequest")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue() == null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue() == null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getWriteRequestsCount() < entry2.getValue()
-                  .getWriteRequestsCount()) {
-                result = -1;
-              } else if (entry1.getValue().getWriteRequestsCount() > entry2.getValue()
-                  .getWriteRequestsCount()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
-    } else if (sortKey.equals("size")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue() == null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue() == null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getStorefileSizeMB() < entry2.getValue()
-                  .getStorefileSizeMB()) {
-                result = -1;
-              } else if (entry1.getValue().getStorefileSizeMB() > entry2
-                  .getValue().getStorefileSizeMB()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
-    } else if (sortKey.equals("filecount")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue() == null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue() == null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getStorefiles() < entry2.getValue()
-                  .getStorefiles()) {
-                result = -1;
-              } else if (entry1.getValue().getStorefiles() > entry2.getValue()
-                  .getStorefiles()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
-    } else if (sortKey.equals("memstore")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue()==null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue()==null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getMemStoreSizeMB() < entry2.getValue()
-                  .getMemStoreSizeMB()) {
-                result = -1;
-              } else if (entry1.getValue().getMemStoreSizeMB() > entry2
-                  .getValue().getMemStoreSizeMB()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
-    } else if (sortKey.equals("locality")) {
-      Collections.sort(entryList,
-          new Comparator<Map.Entry<HRegionInfo, RegionLoad>>() {
-            public int compare(
-                Map.Entry<HRegionInfo, RegionLoad> entry1,
-                Map.Entry<HRegionInfo, RegionLoad> entry2) {
-              if (entry1 == null || entry1.getValue()==null) {
-                return -1;
-              } else if (entry2 == null || entry2.getValue()==null) {
-                return 1;
-              }
-              int result = 0;
-              if (entry1.getValue().getDataLocality() < entry2.getValue()
-                  .getDataLocality()) {
-                result = -1;
-              } else if (entry1.getValue().getDataLocality() > entry2
-                  .getValue().getDataLocality()) {
-                result = 1;
-              }
-              if (reverseOrder) {
-                result = -1 * result;
-              }
-              return result;
-            }
-          });
-    }
-  }
+  List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
   numRegions = regions.size();
   int numRegionsRendered = 0;
   // render all regions
   if (numRegionsToRender < 0) {
     numRegionsToRender = numRegions;
   }
-  for (Map.Entry<HRegionInfo, RegionLoad> hriEntry : entryList) {
-    HRegionInfo regionInfo = hriEntry.getKey();
+  for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
+    RegionInfo regionInfo = hriEntry.getKey();
     ServerName addr = regionsToServer.get(regionInfo);
-    RegionLoad load = hriEntry.getValue();
+    RegionMetrics load = hriEntry.getValue();
     String readReq = "N/A";
     String writeReq = "N/A";
     String regionSize = "N/A";
     String fileCount = "N/A";
     String memSize = "N/A";
     float locality = 0.0f;
+    String state = "N/A";
     if(load != null) {
-      readReq = String.format("%,1d", load.getReadRequestsCount());
-      writeReq = String.format("%,1d", load.getWriteRequestsCount());
-      regionSize = StringUtils.byteDesc(load.getStorefileSizeMB()*1024l*1024);
-      fileCount = String.format("%,1d", load.getStorefiles());
-      memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
+      readReq = String.format("%,1d", load.getReadRequestCount());
+      writeReq = String.format("%,1d", load.getWriteRequestCount());
+      regionSize = StringUtils.byteDesc((long) load.getStoreFileSize().get(Size.Unit.BYTE));
+      fileCount = String.format("%,1d", load.getStoreFileCount());
+      memSize = StringUtils.byteDesc((long) load.getMemStoreSize().get(Size.Unit.BYTE));
       locality = load.getDataLocality();
     }
 
+    if (stateMap.containsKey(regionInfo.getEncodedName())) {
+     state = stateMap.get(regionInfo.getEncodedName()).toString();
+    }
+
     if (addr != null) {
-      ServerLoad sl = master.getServerManager().getLoad(addr);
+      ServerMetrics sl = master.getServerManager().getLoad(addr);
       // This port might be wrong if RS actually ended up using something else.
       urlRegionServer =
           "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
@@ -704,12 +517,12 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
       numRegionsRendered++;
 %>
 <tr>
-  <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getRegionName()):regionInfo.getEncodedName()) %></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
   <%
   if (urlRegionServer != null) {
   %>
   <td>
-     <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
+     <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
   </td>
   <%
   } else {
@@ -724,8 +537,9 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   <td><%= fileCount%></td>
   <td><%= memSize%></td>
   <td><%= locality%></td>
-  <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getStartKey()):"-")%></td>
-  <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getEndKey()):"-")%></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
+  <td><%= state%></td>
   <%
   if (withReplica) {
   %>
@@ -736,6 +550,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 </tr>
 <% } %>
 <% } %>
+</tbody>
 </table>
 <% if (numRegions > numRegionsRendered) {
      String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
@@ -748,11 +563,12 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 <%
 if (withReplica) {
 %>
-<table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th><th>Primary Region Count</th></tr>
+<table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th><th>Primary Region Count</th></tr></thead>
 <%
 } else {
 %>
-<table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th></tr>
+<table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th></tr></thead>
+<tbody>
 <%
 }
 %>
@@ -762,7 +578,7 @@ if (withReplica) {
      String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
 %>
 <tr>
-  <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
+  <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
   <td><%= rdEntry.getValue()%></td>
 <%
 if (withReplica) {
@@ -773,11 +589,12 @@ if (withReplica) {
 %>
 </tr>
 <% } %>
+</tbody>
 </table>
 <% }
 } catch(Exception ex) {
   for(StackTraceElement element : ex.getStackTrace()) {
-    %><%= StringEscapeUtils.escapeHtml(element.toString()) %><%
+    %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
   }
 } finally {
   admin.close();
@@ -795,7 +612,7 @@ if (withReplica) {
   <tr>
     <td>Size</td>
     <td><%= StringUtils.TraditionalBinaryPrefix.long2String(totalStoreFileSizeMB * 1024 * 1024, "B", 2)%></td>
-    <td>Total size of store files (in bytes)</td>
+    <td>Total size of store files</td>
   </tr>
 </table>
 
@@ -804,46 +621,57 @@ if (withReplica) {
 Actions:
 <p>
 <center>
-<table class="table" width="95%" >
+<table class="table" style="border: 0;" width="95%" >
 <tr>
   <form method="get">
-  <input type="hidden" name="action" value="compact">
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
-  <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn"></td>
-  <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">Row Key (optional):<input type="text" name="key" size="40"></td>
-  <td style="border-style: none">This action will force a compaction of all
-  regions of the table, or, if a key is supplied, only the region containing the
-  given key.</td>
-  </form>
-</tr>
-<tr><td style="border-style: none" colspan="4">&nbsp;</td></tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="split">
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
-  <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn"></td>
-  <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">Row Key (optional):<input type="text" name="key" size="40"></td>
-  <td style="border-style: none">This action will force a split of all eligible
-  regions of the table, or, if a key is supplied, only the region containing the
-  given key. An eligible region is one that does not contain any references to
-  other regions. Split requests for noneligible regions will be ignored.</td>
+  <input type="hidden" name="action" value="compact" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
+  </td>
+  <td>
+    This action will force a compaction of all regions of the table, or,
+    if a key is supplied, only the region containing the
+    given key.
+  </td>
   </form>
 </tr>
 <tr>
   <form method="get">
-  <input type="hidden" name="action" value="merge">
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
-  <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn"></td>
-  <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">Region Key (Required):<input type="text" name="left" size="40">
-  Region Key (Required) :<input type="text" name="right" size="40"></td>
-  <td style="border-style: none">This action will merge two
-  regions of the table, Merge requests for noneligible regions will be ignored.</td>
+  <input type="hidden" name="action" value="split" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
+  </td>
+  <td>
+	  This action will force a split of all eligible
+	  regions of the table, or, if a key is supplied, only the region containing the
+	  given key. An eligible region is one that does not contain any references to
+	  other regions. Split requests for noneligible regions will be ignored.
+  </td>
+  </form>
+</tr>
+<tr>
+  <form method="get">
+  <input type="hidden" name="action" value="merge" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="left" size="40" required="required" placeholder="Region Key (required)" />
+    <input type="text" name="right" size="40" required="required" placeholder="Region Key (required)" />
+  </td>
+  <td>
+    This action will merge two regions of the table, Merge requests for
+    noneligible regions will be ignored.
+  </td>
   </form>
 </tr>
 </table>
@@ -884,45 +712,21 @@ Actions:
         </div>
     </div>
 <p><hr><p>
-<p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+<jsp:include page="redirect.jsp" />
 </div>
 <% } %>
+
+<jsp:include page="footer.jsp" />
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
+<script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
-</body>
-</html>
-
 <script>
-var index=0;
-var sortKeyValue='<%= StringEscapeUtils.escapeJavaScript(sortKey) %>';
-if(sortKeyValue=="readrequest")index=1;
-else if(sortKeyValue=="writerequest")index=2;
-else if(sortKeyValue=="size")index=3;
-else if(sortKeyValue=="filecount")index=4;
-else if(sortKeyValue=="memstore")index=5;
-else if(sortKeyValue=="locality")index=6;
-document.getElementById("sel").selectedIndex=index;
-
-<% // turned into a boolean when we pulled it out of the request. %>
-var reverse='<%= reverseOrder %>';
-if(reverse=='false')document.getElementById("ascending").checked=true;
-
-<% // turned into a boolean when we pulled it out of the request. %>
-var showWhole='<%= showWhole %>';
-if(showWhole=='true')document.getElementById("showWhole").checked=true;
-
-function reloadAsSort(){
-  var url="?name="+'<%= URLEncoder.encode(fqtn) %>';
-  if(document.getElementById("sel").selectedIndex>0){
-    url=url+"&sort="+document.getElementById("sel").value;
-  }
-  if(document.getElementById("ascending").checked){
-    url=url+"&reverse=false";
-  }
-  if(document.getElementById("showWhole").checked){
-    url=url+"&showwhole=true";
-  }
-  location.href=url;
-}
+$(document).ready(function()
+    {
+        $("#regionServerTable").tablesorter();
+        $("#regionServerDetailsTable").tablesorter();
+        $("#tableRegionTable").tablesorter();
+    }
+);
 </script>

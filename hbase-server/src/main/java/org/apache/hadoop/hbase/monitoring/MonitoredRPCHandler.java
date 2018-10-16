@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * A MonitoredTask implementation optimized for use with RPC Handlers 

@@ -23,10 +23,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An OutputStream which writes data into ByteBuffers. It will try to get ByteBuffer, as and when
@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
  */
 @InterfaceAudience.Private
 public class ByteBufferListOutputStream extends ByteBufferOutputStream {
-  private static final Log LOG = LogFactory.getLog(ByteBufferListOutputStream.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ByteBufferListOutputStream.class);
 
   private ByteBufferPool pool;
   // Keep track of the BBs where bytes written to. We will first try to get a BB from the pool. If
@@ -115,7 +115,7 @@ public class ByteBufferListOutputStream extends ByteBufferOutputStream {
     try {
       close();
     } catch (IOException e) {
-      LOG.debug(e);
+      LOG.debug(e.toString(), e);
     }
     // Return back all the BBs to pool
     if (this.bufsFromPool != null) {

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,19 +19,21 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import java.io.IOException;
 
 /**
- * Defines the set of shared functions implemented by HBase servers (Masters
- * and RegionServers).
+ * Defines a curated set of shared functions implemented by HBase servers (Masters
+ * and RegionServers). For use internally only. Be judicious adding API. Changes cause ripples
+ * through the code base.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface Server extends Abortable, Stoppable {
   /**
    * Gets the configuration object for this server.
@@ -41,7 +43,7 @@ public interface Server extends Abortable, Stoppable {
   /**
    * Gets the ZooKeeper instance for this server.
    */
-  ZooKeeperWatcher getZooKeeper();
+  ZKWatcher getZooKeeper();
 
   /**
    * Returns a reference to the servers' connection.
@@ -50,6 +52,8 @@ public interface Server extends Abortable, Stoppable {
    * by Server itself, so callers must NOT attempt to close connection obtained.
    */
   Connection getConnection();
+
+  Connection createConnection(Configuration conf) throws IOException;
 
   /**
    * Returns a reference to the servers' cluster connection. Prefer {@link #getConnection()}.
@@ -81,4 +85,31 @@ public interface Server extends Abortable, Stoppable {
    * @return The {@link ChoreService} instance for this server
    */
   ChoreService getChoreService();
+
+  /**
+   * @return Return the FileSystem object used (can return null!).
+   */
+  // TODO: On Master, return Master's. On RegionServer, return RegionServers. The FileSystems
+  // may differ. TODO.
+  default FileSystem getFileSystem() {
+    // This default is pretty dodgy!
+    Configuration c = getConfiguration();
+    FileSystem fs = null;
+    try {
+      if (c != null) {
+        fs = FileSystem.get(c);
+      }
+    } catch (IOException e) {
+      // If an exception, just return null
+    }
+    return fs;
+  }
+
+  /**
+   * @return True is the server is Stopping
+   */
+  // Note: This method is not part of the Stoppable Interface.
+  default boolean isStopping() {
+    return false;
+  }
 }

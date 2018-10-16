@@ -23,8 +23,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -47,6 +48,10 @@ import org.junit.rules.TestName;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestEnforcingScanLabelGenerator {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestEnforcingScanLabelGenerator.class);
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -82,6 +87,7 @@ public class TestEnforcingScanLabelGenerator {
 
     // Set up for the test
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.addLabels(conn, new String[] { SECRET, CONFIDENTIAL });
@@ -99,6 +105,7 @@ public class TestEnforcingScanLabelGenerator {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = TEST_UTIL.createTable(tableName, CF)) {
@@ -120,6 +127,7 @@ public class TestEnforcingScanLabelGenerator {
 
     // Test that super user can see all the cells.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
@@ -135,6 +143,7 @@ public class TestEnforcingScanLabelGenerator {
     });
 
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {

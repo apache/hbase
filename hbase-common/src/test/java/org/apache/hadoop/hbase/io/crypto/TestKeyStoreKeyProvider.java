@@ -1,18 +1,19 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.crypto;
 
@@ -26,22 +27,27 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.util.Properties;
-
 import javax.crypto.spec.SecretKeySpec;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestKeyStoreKeyProvider {
 
-  private static final Log LOG = LogFactory.getLog(TestKeyStoreKeyProvider.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeyStoreKeyProvider.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestKeyStoreKeyProvider.class);
   static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
   static final String ALIAS = "test";
   static final String PASSWORD = "password";
@@ -52,7 +58,7 @@ public class TestKeyStoreKeyProvider {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    KEY = MessageDigest.getInstance("SHA-256").digest(ALIAS.getBytes());
+    KEY = MessageDigest.getInstance("SHA-256").digest(Bytes.toBytes(ALIAS));
     // Create a JKECS store containing a test secret key
     KeyStore store = KeyStore.getInstance("JCEKS");
     store.load(null, PASSWORD.toCharArray());
@@ -82,7 +88,7 @@ public class TestKeyStoreKeyProvider {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKeyStoreKeyProviderWithPassword() throws Exception {
     KeyProvider provider = new KeyStoreKeyProvider();
     provider.init("jceks://" + storeFile.toURI().getPath() + "?password=" + PASSWORD);
@@ -95,7 +101,7 @@ public class TestKeyStoreKeyProvider {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKeyStoreKeyProviderWithPasswordFile() throws Exception {
     KeyProvider provider = new KeyStoreKeyProvider();
     provider.init("jceks://" + storeFile.toURI().getPath() + "?passwordFile=" +

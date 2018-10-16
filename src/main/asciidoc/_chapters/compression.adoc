@@ -115,12 +115,7 @@ The data format is nearly identical to Diff encoding, so there is not an image t
 Prefix Tree::
   Prefix tree encoding was introduced as an experimental feature in HBase 0.96.
   It provides similar memory savings to the Prefix, Diff, and Fast Diff encoder, but provides faster random access at a cost of slower encoding speed.
-+
-Prefix Tree may be appropriate for applications that have high block cache hit ratios. It introduces new 'tree' fields for the row and column.
-The row tree field contains a list of offsets/references corresponding to the cells in that row. This allows for a good deal of compression.
-For more details about Prefix Tree encoding, see link:https://issues.apache.org/jira/browse/HBASE-4676[HBASE-4676].
-+
-It is difficult to graphically illustrate a prefix tree, so no image is included. See the Wikipedia article for link:http://en.wikipedia.org/wiki/Trie[Trie] for more general information about this data structure.
+  It was removed in hbase-2.0.0. It was a good idea but little uptake. If interested in reviving this effort, write the hbase dev list.
 
 [[data.block.encoding.types]]
 === Which Compressor or Data Block Encoder To Use
@@ -130,7 +125,7 @@ The compression or codec type to use depends on the characteristics of your data
 In general, you need to weigh your options between smaller size and faster compression/decompression. Following are some general guidelines, expanded from a discussion at link:http://search-hadoop.com/m/lL12B1PFVhp1[Documenting Guidance on compression and codecs].
 
 * If you have long keys (compared to the values) or many columns, use a prefix encoder.
-  FAST_DIFF is recommended, as more testing is needed for Prefix Tree encoding.
+  FAST_DIFF is recommended.
 * If the values are large (and not precompressed, such as images), use a data block compressor.
 * Use GZIP for [firstterm]_cold data_, which is accessed infrequently.
   GZIP compression uses more CPU resources than Snappy or LZO, but provides a higher compression ratio.
@@ -267,8 +262,7 @@ See <<brand.new.compressor,brand.new.compressor>>).
 .Install LZO Support
 
 HBase cannot ship with LZO because of incompatibility between HBase, which uses an Apache Software License (ASL) and LZO, which uses a GPL license.
-See the link:http://wiki.apache.org/hadoop/UsingLzoCompression[Using LZO
-              Compression] wiki page for information on configuring LZO support for HBase.
+See the link:https://github.com/twitter/hadoop-lzo/blob/master/README.md[Hadoop-LZO at Twitter] for information on configuring LZO support for HBase.
 
 If you depend upon LZO compression, consider configuring your RegionServers to fail to start if LZO is not available.
 See <<hbase.regionserver.codecs,hbase.regionserver.codecs>>.
@@ -341,25 +335,18 @@ You do not need to re-create the table or copy data.
 If you are changing codecs, be sure the old codec is still available until all the old StoreFiles have been compacted.
 
 .Enabling Compression on a ColumnFamily of an Existing Table using HBaseShell
-====
 ----
-
 hbase> disable 'test'
 hbase> alter 'test', {NAME => 'cf', COMPRESSION => 'GZ'}
 hbase> enable 'test'
 ----
-====
 
 .Creating a New Table with Compression On a ColumnFamily
-====
 ----
-
 hbase> create 'test2', { NAME => 'cf2', COMPRESSION => 'SNAPPY' }
 ----
-====
 
 .Verifying a ColumnFamily's Compression Settings
-====
 ----
 
 hbase> describe 'test'
@@ -372,7 +359,6 @@ DESCRIPTION                                          ENABLED
  LOCKCACHE => 'true'}
 1 row(s) in 0.1070 seconds
 ----
-====
 
 ==== Testing Compression Performance
 
@@ -380,9 +366,7 @@ HBase includes a tool called LoadTestTool which provides mechanisms to test your
 You must specify either `-write` or `-update-read` as your first parameter, and if you do not specify another parameter, usage advice is printed for each option.
 
 .+LoadTestTool+ Usage
-====
 ----
-
 $ bin/hbase org.apache.hadoop.hbase.util.LoadTestTool -h
 usage: bin/hbase org.apache.hadoop.hbase.util.LoadTestTool <options>
 Options:
@@ -393,7 +377,7 @@ Options:
                               LZ4]
  -data_block_encoding <arg>   Encoding algorithm (e.g. prefix compression) to
                               use for data blocks in the test column family, one
-                              of [NONE, PREFIX, DIFF, FAST_DIFF, PREFIX_TREE].
+                              of [NONE, PREFIX, DIFF, FAST_DIFF, ROW_INDEX_V1].
  -encryption <arg>            Enables transparent encryption on the test table,
                               one of [AES]
  -generator <arg>             The class which generates load for the tool. Any
@@ -435,19 +419,15 @@ Options:
                               port numbers
  -zk_root <arg>               name of parent znode in zookeeper
 ----
-====
 
 .Example Usage of LoadTestTool
-====
 ----
-
 $ hbase org.apache.hadoop.hbase.util.LoadTestTool -write 1:10:100 -num_keys 1000000
           -read 100:30 -num_tables 1 -data_block_encoding NONE -tn load_test_tool_NONE
 ----
-====
 
 [[data.block.encoding.enable]]
-== Enable Data Block Encoding
+=== Enable Data Block Encoding
 
 Codecs are built into HBase so no extra configuration is needed.
 Codecs are enabled on a table by setting the `DATA_BLOCK_ENCODING` property.
@@ -455,9 +435,7 @@ Disable the table before altering its DATA_BLOCK_ENCODING setting.
 Following is an example using HBase Shell:
 
 .Enable Data Block Encoding On a Table
-====
 ----
-
 hbase>  disable 'test'
 hbase> alter 'test', { NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
 Updating all regions with the new schema...
@@ -468,12 +446,9 @@ Done.
 hbase> enable 'test'
 0 row(s) in 0.1580 seconds
 ----
-====
 
 .Verifying a ColumnFamily's Data Block Encoding
-====
 ----
-
 hbase> describe 'test'
 DESCRIPTION                                          ENABLED
  'test', {NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST true
@@ -484,7 +459,6 @@ DESCRIPTION                                          ENABLED
  e', BLOCKCACHE => 'true'}
 1 row(s) in 0.0650 seconds
 ----
-====
 
 :numbered:
 

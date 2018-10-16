@@ -18,15 +18,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  */
 @InterfaceAudience.Private
 public class MultiVersionConcurrencyControl {
-  private static final Log LOG = LogFactory.getLog(MultiVersionConcurrencyControl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiVersionConcurrencyControl.class);
 
   final AtomicLong readPoint = new AtomicLong(0);
   final AtomicLong writePoint = new AtomicLong(0);
@@ -74,8 +74,12 @@ public class MultiVersionConcurrencyControl {
   public void advanceTo(long newStartPoint) {
     while (true) {
       long seqId = this.getWritePoint();
-      if (seqId >= newStartPoint) break;
-      if (this.tryAdvanceTo(/* newSeqId = */ newStartPoint, /* expected = */ seqId)) break;
+      if (seqId >= newStartPoint) {
+        break;
+      }
+      if (this.tryAdvanceTo(newStartPoint, seqId)) {
+        break;
+      }
     }
   }
 
@@ -239,8 +243,9 @@ public class MultiVersionConcurrencyControl {
   }
 
   @VisibleForTesting
+  @Override
   public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("readPoint", readPoint)
         .add("writePoint", writePoint).toString();
   }

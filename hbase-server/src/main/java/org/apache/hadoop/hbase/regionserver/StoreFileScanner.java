@@ -25,15 +25,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -43,7 +46,8 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
  * bloom filter things.
  */
-@InterfaceAudience.LimitedPrivate("Coprocessor")
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.PHOENIX)
+@InterfaceStability.Evolving
 public class StoreFileScanner implements KeyValueScanner {
   // the reader it comes from:
   private final StoreFileReader reader;
@@ -90,6 +94,7 @@ public class StoreFileScanner implements KeyValueScanner {
     this.hasMVCCInfo = hasMVCC;
     this.scannerOrder = scannerOrder;
     this.canOptimizeForNonNullColumn = canOptimizeForNonNullColumn;
+    this.reader.incrementRefCount();
   }
 
   boolean isPrimaryReplica() {
@@ -99,7 +104,7 @@ public class StoreFileScanner implements KeyValueScanner {
   /**
    * Return an array of scanners corresponding to the given set of store files.
    */
-  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
+  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
       boolean cacheBlocks, boolean usePread, long readPt) throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, false, false, readPt);
   }
@@ -107,7 +112,7 @@ public class StoreFileScanner implements KeyValueScanner {
   /**
    * Return an array of scanners corresponding to the given set of store files.
    */
-  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
+  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
       boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean useDropBehind,
       long readPt) throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, useDropBehind, null,
@@ -118,7 +123,7 @@ public class StoreFileScanner implements KeyValueScanner {
    * Return an array of scanners corresponding to the given set of store files, And set the
    * ScanQueryMatcher for each store file scanner for further optimization
    */
-  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
+  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
       boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean canUseDrop,
       ScanQueryMatcher matcher, long readPt) throws IOException {
     if (files.isEmpty()) {
@@ -126,23 +131,33 @@ public class StoreFileScanner implements KeyValueScanner {
     }
     List<StoreFileScanner> scanners = new ArrayList<>(files.size());
     boolean canOptimizeForNonNullColumn = matcher != null ? !matcher.hasNullColumnInQuery() : false;
-    PriorityQueue<StoreFile> sortedFiles =
+    PriorityQueue<HStoreFile> sortedFiles =
         new PriorityQueue<>(files.size(), StoreFileComparators.SEQ_ID);
-    for (StoreFile file : files) {
+    for (HStoreFile file : files) {
       // The sort function needs metadata so we need to open reader first before sorting the list.
       file.initReader();
       sortedFiles.add(file);
     }
-    for (int i = 0, n = files.size(); i < n; i++) {
-      StoreFile sf = sortedFiles.remove();
-      StoreFileScanner scanner;
-      if (usePread) {
-        scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
-      } else {
-        scanner = sf.getStreamScanner(canUseDrop, cacheBlocks, isCompaction, readPt, i,
-          canOptimizeForNonNullColumn);
+    boolean succ = false;
+    try {
+      for (int i = 0, n = files.size(); i < n; i++) {
+        HStoreFile sf = sortedFiles.remove();
+        StoreFileScanner scanner;
+        if (usePread) {
+          scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
+        } else {
+          scanner = sf.getStreamScanner(canUseDrop, cacheBlocks, isCompaction, readPt, i,
+              canOptimizeForNonNullColumn);
+        }
+        scanners.add(scanner);
       }
-      scanners.add(scanner);
+      succ = true;
+    } finally {
+      if (!succ) {
+        for (StoreFileScanner scanner : scanners) {
+          scanner.close();
+        }
+      }
     }
     return scanners;
   }
@@ -151,10 +166,10 @@ public class StoreFileScanner implements KeyValueScanner {
    * Get scanners for compaction. We will create a separated reader for each store file to avoid
    * contention with normal read request.
    */
-  public static List<StoreFileScanner> getScannersForCompaction(Collection<StoreFile> files,
+  public static List<StoreFileScanner> getScannersForCompaction(Collection<HStoreFile> files,
       boolean canUseDropBehind, long readPt) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<>(files.size());
-    List<StoreFile> sortedFiles = new ArrayList<>(files);
+    List<HStoreFile> sortedFiles = new ArrayList<>(files);
     Collections.sort(sortedFiles, StoreFileComparators.SEQ_ID);
     boolean succ = false;
     try {
@@ -173,14 +188,17 @@ public class StoreFileScanner implements KeyValueScanner {
     return scanners;
   }
 
+  @Override
   public String toString() {
     return "StoreFileScanner[" + hfs.toString() + ", cur=" + cur + "]";
   }
 
+  @Override
   public Cell peek() {
     return cur;
   }
 
+  @Override
   public Cell next() throws IOException {
     Cell retKey = cur;
 
@@ -201,6 +219,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return retKey;
   }
 
+  @Override
   public boolean seek(Cell key) throws IOException {
     if (seekCount != null) seekCount.increment();
 
@@ -228,6 +247,7 @@ public class StoreFileScanner implements KeyValueScanner {
     }
   }
 
+  @Override
   public boolean reseek(Cell key) throws IOException {
     if (seekCount != null) seekCount.increment();
 
@@ -258,7 +278,7 @@ public class StoreFileScanner implements KeyValueScanner {
   protected void setCurrentCell(Cell newVal) throws IOException {
     this.cur = newVal;
     if (this.cur != null && this.reader.isBulkLoaded() && !this.reader.isSkipResetSeqId()) {
-      CellUtil.setSequenceId(cur, this.reader.getSequenceID());
+      PrivateCellUtil.setSequenceId(cur, this.reader.getSequenceID());
     }
   }
 
@@ -284,6 +304,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
+  @Override
   public void close() {
     if (closed) return;
     cur = null;
@@ -377,7 +398,8 @@ public class StoreFileScanner implements KeyValueScanner {
       if (reader.getBloomFilterType() == BloomType.ROWCOL) {
         haveToSeek = reader.passesGeneralRowColBloomFilter(kv);
       } else if (canOptimizeForNonNullColumn
-          && ((CellUtil.isDeleteFamily(kv) || CellUtil.isDeleteFamilyVersion(kv)))) {
+          && ((PrivateCellUtil.isDeleteFamily(kv)
+              || PrivateCellUtil.isDeleteFamilyVersion(kv)))) {
         // if there is no such delete family kv in the store file,
         // then no need to seek.
         haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getRowArray(), kv.getRowOffset(),
@@ -401,7 +423,7 @@ public class StoreFileScanner implements KeyValueScanner {
         // a higher timestamp than the max timestamp in this file. We know that
         // the next point when we have to consider this file again is when we
         // pass the max timestamp of this file (with the same row/column).
-        setCurrentCell(CellUtil.createFirstOnRowColTS(kv, maxTimestampInFile));
+        setCurrentCell(PrivateCellUtil.createFirstOnRowColTS(kv, maxTimestampInFile));
       } else {
         // This will be the case e.g. when we need to seek to the next
         // row/column, and we don't know exactly what they are, so we set the
@@ -419,7 +441,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // key/value and the store scanner will progress to the next column. This
     // is obviously not a "real real" seek, but unlike the fake KV earlier in
     // this method, we want this to be propagated to ScanQueryMatcher.
-    setCurrentCell(CellUtil.createLastOnRowCol(kv));
+    setCurrentCell(PrivateCellUtil.createLastOnRowCol(kv));
 
     realSeekDone = true;
     return true;
@@ -470,9 +492,9 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
+  public boolean shouldUseScanner(Scan scan, HStore store, long oldestUnexpiredTS) {
     // if the file has no entries, no need to validate or create a scanner.
-    byte[] cf = store.getFamily().getName();
+    byte[] cf = store.getColumnFamilyDescriptor().getName();
     TimeRange timeRange = scan.getColumnFamilyTimeRange().get(cf);
     if (timeRange == null) {
       timeRange = scan.getTimeRange();
@@ -488,14 +510,14 @@ public class StoreFileScanner implements KeyValueScanner {
         boolean keepSeeking = false;
         Cell key = originalKey;
         do {
-          Cell seekKey = CellUtil.createFirstOnRow(key);
+          Cell seekKey = PrivateCellUtil.createFirstOnRow(key);
           if (seekCount != null) seekCount.increment();
           if (!hfs.seekBefore(seekKey)) {
             this.cur = null;
             return false;
           }
           Cell curCell = hfs.getCell();
-          Cell firstKeyOfPreviousRow = CellUtil.createFirstOnRow(curCell);
+          Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(curCell);
 
           if (seekCount != null) seekCount.increment();
           if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
@@ -534,12 +556,11 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public boolean seekToLastRow() throws IOException {
-    byte[] lastRow = reader.getLastRowKey();
-    if (lastRow == null) {
+    Optional<byte[]> lastRow = reader.getLastRowKey();
+    if (!lastRow.isPresent()) {
       return false;
     }
-    Cell seekKey = CellUtil
-        .createFirstOnRow(lastRow, 0, (short) lastRow.length);
+    Cell seekKey = PrivateCellUtil.createFirstOnRow(lastRow.get());
     if (seek(seekKey)) {
       return true;
     } else {

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -33,11 +31,17 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestKeyValueHeap extends HBaseTestCase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeyValueHeap.class);
+
   private byte[] row1 = Bytes.toBytes("row1");
   private byte[] fam1 = Bytes.toBytes("fam1");
   private byte[] col1 = Bytes.toBytes("col1");
@@ -77,7 +81,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
   public List<Cell> assertCells(List<Cell> expected, List<KeyValueScanner> scanners)
       throws IOException {
     //Creating KeyValueHeap
-    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     List<Cell> actual = new ArrayList<>();
     while(kvh.peek() != null){
@@ -88,6 +92,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     return actual;
   }
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
@@ -106,7 +111,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     //Check if result is sorted according to Comparator
     for(int i=0; i<actual.size()-1; i++){
-      int ret = CellComparator.COMPARATOR.compare(actual.get(i), actual.get(i+1));
+      int ret = CellComparatorImpl.COMPARATOR.compare(actual.get(i), actual.get(i+1));
       assertTrue(ret < 0);
     }
   }
@@ -121,7 +126,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     //Creating KeyValueHeap
     KeyValueHeap kvh =
-      new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+      new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     Cell seekKv = new KeyValue(row2, fam1, null, null);
     kvh.seek(seekKv);
@@ -140,7 +145,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     scanners.add(s4);
 
     //Creating KeyValueHeap
-    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     while(kvh.next() != null);
     // Once the internal scanners go out of Cells, those will be removed from KVHeap's priority
@@ -168,7 +173,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     List<KeyValueScanner> scanners = new ArrayList<>(Arrays.asList(s1, s2, s3, s4));
 
     // Creating KeyValueHeap
-    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     try {
       for (KeyValueScanner scanner : scanners) {
@@ -185,7 +190,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     for (KeyValueScanner scanner : scanners) {
       // Verify that close is called and only called once for each scanner
       assertTrue(((SeekTestScanner) scanner).isClosed());
-      assertEquals(((SeekTestScanner) scanner).getClosedNum(), 1);
+      assertEquals(1, ((SeekTestScanner) scanner).getClosedNum());
     }
   }
 

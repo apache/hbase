@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
 import com.google.protobuf.ByteString;
 import com.google.protobuf.HBaseZeroCopyByteString;
+
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Hack to workaround HBASE-10304 issue that keeps bubbling up when a mapreduce context.
  */
 @InterfaceAudience.Private
-public class ByteStringer {
-  private static final Log LOG = LogFactory.getLog(ByteStringer.class);
+public final class ByteStringer {
+  private static final Logger LOG = LoggerFactory.getLogger(ByteStringer.class);
 
   /**
    * Flag set at class loading time.

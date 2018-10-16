@@ -20,15 +20,16 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS",
   justification="It is intended to use the same equal method as superclass")
-public class DateTieredCompactionRequest extends CompactionRequest {
+@InterfaceAudience.Private
+public class DateTieredCompactionRequest extends CompactionRequestImpl {
   private List<Long> boundaries;
 
-  public DateTieredCompactionRequest(Collection<StoreFile> files, List<Long> boundaryList) {
+  public DateTieredCompactionRequest(Collection<HStoreFile> files, List<Long> boundaryList) {
     super(files);
     boundaries = boundaryList;
   }

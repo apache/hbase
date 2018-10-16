@@ -18,23 +18,18 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+
 import java.io.IOException;
 import java.util.Random;
-
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 
 /**
  * Action that changes the encoding on a column family from a list of tables.
  */
 public class ChangeEncodingAction extends Action {
   private final TableName tableName;
-
-  private Admin admin;
-  private Random random;
+  private final Random random;
 
   public ChangeEncodingAction(TableName tableName) {
     this.tableName = tableName;
@@ -42,34 +37,16 @@ public class ChangeEncodingAction extends Action {
   }
 
   @Override
-  public void init(ActionContext context) throws IOException {
-    super.init(context);
-    this.admin = context.getHBaseIntegrationTestingUtility().getAdmin();
-  }
-
-  @Override
-  public void perform() throws Exception {
-    HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
-    HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
-
-    if (columnDescriptors == null || columnDescriptors.length == 0) {
-      return;
-    }
-
+  public void perform() throws IOException {
     LOG.debug("Performing action: Changing encodings on " + tableName);
     // possible DataBlockEncoding id's
-    int[] possibleIds = {0, 2, 3, 4, 6};
-    for (HColumnDescriptor descriptor : columnDescriptors) {
-      short id = (short) possibleIds[random.nextInt(possibleIds.length)];
-      descriptor.setDataBlockEncoding(DataBlockEncoding.getEncodingById(id));
-      LOG.debug("Set encoding of column family " + descriptor.getNameAsString()
-        + " to: " + descriptor.getDataBlockEncoding());
-    }
+    final int[] possibleIds = {0, 2, 3, 4, 6};
 
-    // Don't try the modify if we're stopping
-    if (context.isStopping()) {
-      return;
-    }
-    admin.modifyTable(tableName, tableDescriptor);
+    modifyAllTableColumns(tableName, (columnName, columnBuilder) -> {
+      short id = (short) possibleIds[random.nextInt(possibleIds.length)];
+      DataBlockEncoding encoding = DataBlockEncoding.getEncodingById(id);
+      columnBuilder.setDataBlockEncoding(encoding);
+      LOG.debug("Set encoding of column family " + columnName + " to: " + encoding);
+    });
   }
 }

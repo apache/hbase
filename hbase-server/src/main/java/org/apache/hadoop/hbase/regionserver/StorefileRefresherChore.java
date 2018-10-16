@@ -23,11 +23,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
@@ -44,7 +44,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public class StorefileRefresherChore extends ScheduledChore {
 
-  private static final Log LOG = LogFactory.getLog(StorefileRefresherChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StorefileRefresherChore.class);
 
   /**
    * The period (in milliseconds) for refreshing the store files for the secondary regions.
@@ -91,7 +91,7 @@ public class StorefileRefresherChore extends ScheduledChore {
       }
       // don't refresh unless enabled for all files, or it the meta region
       // meta region don't have WAL replication for replicas enabled yet
-      if (onlyMetaRefresh && !r.getRegionInfo().isMetaTable()) continue;
+      if (onlyMetaRefresh && !r.getRegionInfo().isMetaRegion()) continue;
       String encodedName = r.getRegionInfo().getEncodedName();
       long time = EnvironmentEdgeManager.currentTime();
       if (!lastRefreshTimes.containsKey(encodedName)) {
@@ -122,7 +122,7 @@ public class StorefileRefresherChore extends ScheduledChore {
     Iterator<String> lastRefreshTimesIter = lastRefreshTimes.keySet().iterator();
     while (lastRefreshTimesIter.hasNext()) {
       String encodedName = lastRefreshTimesIter.next();
-      if (regionServer.getFromOnlineRegions(encodedName) == null) {
+      if (regionServer.getRegion(encodedName) == null) {
         lastRefreshTimesIter.remove();
       }
     }

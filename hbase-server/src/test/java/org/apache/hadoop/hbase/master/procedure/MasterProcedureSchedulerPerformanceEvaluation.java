@@ -22,9 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.Random;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +31,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 /**
  * Tool to test performance of locks and queues in procedure scheduler independently from other
@@ -102,6 +102,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
       this.hri = hri;
     }
 
+    @Override
     public Procedure newProcedure(long procId) {
       return new RegionProcedure(procId, hri);
     }
@@ -132,6 +133,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
       this.tableName = tableName;
     }
 
+    @Override
     public Procedure newProcedure(long procId) {
       return new TableProcedure(procId, tableName);
     }
@@ -196,6 +198,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   private final AtomicLong completed = new AtomicLong(0);
 
   private class AddProcsWorker extends Thread {
+    @Override
     public void run() {
       final Random rand = new Random(System.currentTimeMillis());
       long procId = procIds.incrementAndGet();
@@ -209,6 +212,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   }
 
   private class PollAndLockWorker extends Thread {
+    @Override
     public void run() {
       while (completed.get() < numOps) {
         // With lock/unlock being ~100ns, and no other workload, 1000ns wait seams reasonable.
@@ -252,7 +256,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
 
   @Override
   protected int doWork() throws Exception {
-    procedureScheduler = new MasterProcedureScheduler(UTIL.getConfiguration());
+    procedureScheduler = new MasterProcedureScheduler();
     procedureScheduler.start();
     setupOperations();
 

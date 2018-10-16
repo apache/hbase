@@ -22,17 +22,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Wrapper for input stream(s) that takes care of the interaction of FS and HBase checksums,
@@ -41,7 +42,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class FSDataInputStreamWrapper implements Closeable {
-  private static final Log LOG = LogFactory.getLog(FSDataInputStreamWrapper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FSDataInputStreamWrapper.class);
+  private static final boolean isLogTraceEnabled = LOG.isTraceEnabled();
 
   private final HFileSystem hfs;
   private final Path path;
@@ -72,7 +74,7 @@ public class FSDataInputStreamWrapper implements Closeable {
    */
   private volatile FSDataInputStream stream = null;
   private volatile FSDataInputStream streamNoFsChecksum = null;
-  private Object streamNoFsChecksumFirstCreateLock = new Object();
+  private final Object streamNoFsChecksumFirstCreateLock = new Object();
 
   // The configuration states that we should validate hbase checksums
   private boolean useHBaseChecksumConfigured;
@@ -85,7 +87,7 @@ public class FSDataInputStreamWrapper implements Closeable {
 
   // In the case of a checksum failure, do these many succeeding
   // reads without hbase checksum verification.
-  private volatile int hbaseChecksumOffCount = -1;
+  private AtomicInteger hbaseChecksumOffCount = new AtomicInteger(-1);
 
   private Boolean instanceOfCanUnbuffer = null;
   // Using reflection to get org.apache.hadoop.fs.CanUnbuffer#unbuffer method to avoid compilation
@@ -126,13 +128,13 @@ public class FSDataInputStreamWrapper implements Closeable {
 
   private void setStreamOptions(FSDataInputStream in) {
     try {
-      this.stream.setDropBehind(dropBehind);
+      in.setDropBehind(dropBehind);
     } catch (Exception e) {
       // Skipped.
     }
     if (readahead >= 0) {
       try {
-        this.stream.setReadahead(readahead);
+        in.setReadahead(readahead);
       } catch (Exception e) {
         // Skipped.
       }
@@ -215,7 +217,7 @@ public class FSDataInputStreamWrapper implements Closeable {
     }
     if (!partOfConvoy) {
       this.useHBaseChecksum = false;
-      this.hbaseChecksumOffCount = offCount;
+      this.hbaseChecksumOffCount.set(offCount);
     }
     return this.stream;
   }
@@ -223,7 +225,7 @@ public class FSDataInputStreamWrapper implements Closeable {
   /** Report that checksum was ok, so we may ponder going back to HBase checksum. */
   public void checksumOk() {
     if (this.useHBaseChecksumConfigured && !this.useHBaseChecksum
-        && (this.hbaseChecksumOffCount-- < 0)) {
+        && (this.hbaseChecksumOffCount.getAndDecrement() < 0)) {
       // The stream we need is already open (because we were using HBase checksum in the past).
       assert this.streamNoFsChecksum != null;
       this.useHBaseChecksum = true;
@@ -274,10 +276,11 @@ public class FSDataInputStreamWrapper implements Closeable {
             try {
               this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
             } catch (NoSuchMethodException | SecurityException e) {
-              LOG.warn("Failed to find 'unbuffer' method in class " + streamClass
-                  + " . So there may be a TCP socket connection "
-                  + "left open in CLOSE_WAIT state.",
-                e);
+              if (isLogTraceEnabled) {
+                LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
+                    + " . So there may be a TCP socket connection "
+                    + "left open in CLOSE_WAIT state.", e);
+              }
               return;
             }
             this.instanceOfCanUnbuffer = true;
@@ -289,15 +292,18 @@ public class FSDataInputStreamWrapper implements Closeable {
         try {
           this.unbuffer.invoke(wrappedStream);
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-          LOG.warn("Failed to invoke 'unbuffer' method in class " + streamClass
-              + " . So there may be a TCP socket connection left open in CLOSE_WAIT state.",
-            e);
+          if (isLogTraceEnabled) {
+            LOG.trace("Failed to invoke 'unbuffer' method in class " + streamClass
+                + " . So there may be a TCP socket connection left open in CLOSE_WAIT state.", e);
+          }
         }
       } else {
-        LOG.warn("Failed to find 'unbuffer' method in class " + streamClass
-            + " . So there may be a TCP socket connection "
-            + "left open in CLOSE_WAIT state. For more details check "
-            + "https://issues.apache.org/jira/browse/HBASE-9393");
+        if (isLogTraceEnabled) {
+          LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
+              + " . So there may be a TCP socket connection "
+              + "left open in CLOSE_WAIT state. For more details check "
+              + "https://issues.apache.org/jira/browse/HBASE-9393");
+        }
       }
     }
   }

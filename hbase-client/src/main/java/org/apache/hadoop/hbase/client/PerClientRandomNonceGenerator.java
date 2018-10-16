@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * NonceGenerator implementation that uses client ID hash + random int as nonce group, and random
@@ -41,10 +41,12 @@ public final class PerClientRandomNonceGenerator implements NonceGenerator {
     this.clientId = (((long) Arrays.hashCode(clientIdBase)) << 32) + rdm.nextInt();
   }
 
+  @Override
   public long getNonceGroup() {
     return this.clientId;
   }
 
+  @Override
   public long newNonce() {
     long result = HConstants.NO_NONCE;
     do {

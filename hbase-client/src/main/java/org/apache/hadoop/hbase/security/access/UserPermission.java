@@ -22,10 +22,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class UserPermission extends TablePermission {
-  private static final Log LOG = LogFactory.getLog(UserPermission.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UserPermission.class);
 
   private byte[] user;
 

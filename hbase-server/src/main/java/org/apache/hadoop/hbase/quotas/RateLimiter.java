@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Simple rate limiter.
@@ -100,6 +100,7 @@ public abstract class RateLimiter {
     this.avail = limit;
   }
 
+  @Override
   public String toString() {
     String rateLimiter = this.getClass().getSimpleName();
     if (getLimit() == Long.MAX_VALUE) {

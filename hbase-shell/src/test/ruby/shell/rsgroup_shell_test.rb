@@ -50,7 +50,7 @@ module Hbase
       hostport = @rsgroup_admin.getRSGroupInfo('default').getServers.iterator.next
       @shell.command('get_rsgroup', 'default')
       hostPortStr = hostport.toString
-      @shell.command('get_server_rsgroup', [hostPortStr])
+      @shell.command('get_server_rsgroup', hostPortStr)
       @shell.command('move_servers_rsgroup',
                      group_name,
                      [hostPortStr])
@@ -62,23 +62,59 @@ module Hbase
                      [table_name])
       assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getTables.count)
 
-      count = 0
-      @hbase.rsgroup_admin().get_rsgroup(group_name) do |line|
-        case count
-        when 1
-          assert_equal(hostPortStr, line)
-        when 3
-          assert_equal(table_name, line)
-        end
-        count += 1
-      end
-      assert_equal(4, count)
+      group = @hbase.rsgroup_admin.get_rsgroup(group_name)
+      assert_not_nil(group)
+      assert_equal(1, group.getServers.count)
+      assert_equal(1, group.getTables.count)
+      assert_equal(hostPortStr, group.getServers.iterator.next.toString)
+      assert_equal(table_name, group.getTables.iterator.next.toString)
 
-      assert_equal(2,
-                   @hbase.rsgroup_admin().list_rs_groups.count)
+      assert_equal(2, @hbase.rsgroup_admin.list_rs_groups.count)
 
       # just run it to verify jruby->java api binding
-      @hbase.rsgroup_admin().balance_rs_group(group_name)
+      @hbase.rsgroup_admin.balance_rs_group(group_name)
+    end
+
+    define_test 'Test RSGroup Move Namespace RSGroup Commands' do
+      group_name = 'test_group'
+      namespace_name = 'test_namespace'
+      ns_table_name = 'test_namespace:test_ns_table'
+
+      @shell.command('create_namespace', namespace_name)
+      @shell.command('create', ns_table_name, 'f')
+
+      @shell.command('move_namespaces_rsgroup',
+                     group_name,
+                     [namespace_name])
+      assert_equal(2, @rsgroup_admin.getRSGroupInfo(group_name).getTables.count)
+
+      group = @hbase.rsgroup_admin.get_rsgroup(group_name)
+      assert_not_nil(group)
+      assert_equal(ns_table_name, group.getTables.iterator.next.toString)
+    end
+
+    define_test 'Test RSGroup Move Server Namespace RSGroup Commands' do
+      ns_group_name = 'test_ns_group'
+      namespace_name = 'test_namespace'
+      ns_table_name = 'test_namespace:test_ns_table'
+
+      @shell.command('add_rsgroup', ns_group_name)
+      assert_not_nil(@rsgroup_admin.getRSGroupInfo(ns_group_name))
+
+      @shell.command('move_tables_rsgroup',
+                     'default',
+                     [ns_table_name])
+
+      group_servers = @rsgroup_admin.getRSGroupInfo('default').getServers
+      hostport_str = group_servers.iterator.next.toString
+      @shell.command('move_servers_namespaces_rsgroup',
+                     ns_group_name,
+                     [hostport_str],
+                     [namespace_name])
+      ns_group = @hbase.rsgroup_admin.get_rsgroup(ns_group_name)
+      assert_not_nil(ns_group)
+      assert_equal(hostport_str, ns_group.getServers.iterator.next.toString)
+      assert_equal(ns_table_name, ns_group.getTables.iterator.next.toString)
     end
 
     # we test exceptions that could be thrown by the ruby wrappers

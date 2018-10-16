@@ -28,25 +28,25 @@ import java.util.Properties;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Context;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CommonsCryptoAES extends Cipher {
 
-  private static final Log LOG = LogFactory.getLog(CommonsCryptoAES.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CommonsCryptoAES.class);
 
   public static final String CIPHER_MODE_KEY = "hbase.crypto.commons.mode";
   public static final String CIPHER_CLASSES_KEY = "hbase.crypto.commons.cipher.classes";

@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Count < Command
       def help
-        return <<-EOF
+        <<-EOF
 Count the number of rows in a table.  Return value is the number of rows.
 This operation may take a LONG time (Run '$HADOOP_HOME/bin/hadoop jar
 hbase.jar rowcount' to run a counting mapreduce job). Current count is shown
@@ -58,7 +58,7 @@ EOF
 
       def count(table, params = {})
         # If the second parameter is an integer, then it is the old command syntax
-        params = { 'INTERVAL' => params } if params.kind_of?(Fixnum)
+        params = { 'INTERVAL' => params } if params.is_a?(Integer)
 
         # Merge params with defaults
         params = {
@@ -71,14 +71,14 @@ EOF
         @start_time = Time.now
         formatter.header
         count = table._count_internal(params['INTERVAL'].to_i, scan) do |cnt, row|
-          formatter.row([ "Current count: #{cnt}, row: #{row}" ])
+          formatter.row(["Current count: #{cnt}, row: #{row}"])
         end
         formatter.footer(count)
-        return count
+        count
       end
     end
   end
 end
 
-#Add the method table.count that calls count.count
-::Hbase::Table.add_shell_command("count")
+# Add the method table.count that calls count.count
+::Hbase::Table.add_shell_command('count')

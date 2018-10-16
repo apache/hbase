@@ -34,10 +34,10 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -50,8 +50,8 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Public
 public class RestCsrfPreventionFilter implements Filter {
 
-  private static final Log LOG =
-      LogFactory.getLog(RestCsrfPreventionFilter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RestCsrfPreventionFilter.class);
 
   public static final String HEADER_USER_AGENT = "User-Agent";
   public static final String BROWSER_USER_AGENT_PARAM =

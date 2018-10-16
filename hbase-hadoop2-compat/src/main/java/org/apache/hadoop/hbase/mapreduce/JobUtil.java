@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods to interact with a job.
@@ -35,7 +35,7 @@ import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class JobUtil {
-  private static final Log LOG = LogFactory.getLog(JobUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JobUtil.class);
 
   protected JobUtil() {
     super();
@@ -46,8 +46,8 @@ public abstract class JobUtil {
    *
    * @param conf system configuration
    * @return staging directory path
-   * @throws IOException
-   * @throws InterruptedException
+   * @throws IOException if the ownership on the staging directory is not as expected
+   * @throws InterruptedException if the thread getting the staging directory is interrupted
    */
   public static Path getStagingDir(Configuration conf)
       throws IOException, InterruptedException {

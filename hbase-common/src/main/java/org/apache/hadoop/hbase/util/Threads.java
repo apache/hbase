@@ -18,31 +18,33 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Thread Utility
  */
 @InterfaceAudience.Private
 public class Threads {
-  private static final Log LOG = LogFactory.getLog(Threads.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Threads.class);
   private static final AtomicInteger poolNumber = new AtomicInteger(1);
 
   public static final UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =
@@ -59,7 +61,7 @@ public class Threads {
    * @param t thread to run
    * @return Returns the passed Thread <code>t</code>.
    */
-  public static Thread setDaemonThreadRunning(final Thread t) {
+  public static <T extends Thread> T setDaemonThreadRunning(T t) {
     return setDaemonThreadRunning(t, t.getName());
   }
 
@@ -69,8 +71,7 @@ public class Threads {
    * @param name new name
    * @return Returns the passed Thread <code>t</code>.
    */
-  public static Thread setDaemonThreadRunning(final Thread t,
-    final String name) {
+  public static <T extends Thread> T setDaemonThreadRunning(T t, String name) {
     return setDaemonThreadRunning(t, name, null);
   }
 
@@ -78,12 +79,11 @@ public class Threads {
    * Utility method that sets name, daemon status and starts passed thread.
    * @param t thread to frob
    * @param name new name
-   * @param handler A handler to set on the thread.  Pass null if want to
-   * use default handler.
+   * @param handler A handler to set on the thread. Pass null if want to use default handler.
    * @return Returns the passed Thread <code>t</code>.
    */
-  public static Thread setDaemonThreadRunning(final Thread t,
-    final String name, final UncaughtExceptionHandler handler) {
+  public static <T extends Thread> T setDaemonThreadRunning(T t, String name,
+      UncaughtExceptionHandler handler) {
     t.setName(name);
     if (handler != null) {
       t.setUncaughtExceptionHandler(handler);
@@ -314,7 +314,8 @@ public class Threads {
           @Override
           public void printThreadInfo(PrintStream stream, String title) {
             try {
-              hadoop26Method.invoke(null, new PrintWriter(stream), title);
+              hadoop26Method.invoke(null, new PrintWriter(
+                  new OutputStreamWriter(stream, StandardCharsets.UTF_8)), title);
             } catch (IllegalAccessException | IllegalArgumentException e) {
               throw new RuntimeException(e);
             } catch (InvocationTargetException e) {

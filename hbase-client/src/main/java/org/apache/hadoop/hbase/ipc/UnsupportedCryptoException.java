@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public class UnsupportedCryptoException extends FatalConnectionException {

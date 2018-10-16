@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client.backoff;
 
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Configurable policy for the amount of time a client should wait for a new request to the

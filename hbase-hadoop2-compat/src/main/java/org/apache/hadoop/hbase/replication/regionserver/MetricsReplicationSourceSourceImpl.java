@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSourceSource {
 
   private final MetricsReplicationSourceImpl rms;
@@ -33,6 +35,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String shippedOpsKey;
   private String keyPrefix;
 
+  /**
+   * @deprecated since 1.3.0. Use {@link #shippedBytesKey} instead.
+   */
   @Deprecated
   private final String shippedKBsKey;
   private final String shippedBytesKey;
@@ -251,6 +256,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   public void incrCompletedRecoveryQueue() {
     completedRecoveryQueue.incr(1L);
   }
+
+  @Override
+  public void incrFailedRecoveryQueue() {/*no op*/}
 
   @Override
   public void init() {

@@ -60,6 +60,21 @@ public class DelegatingRpcScheduler extends RpcScheduler {
   }
 
   @Override
+  public int getActiveGeneralRpcHandlerCount() {
+    return delegate.getActiveGeneralRpcHandlerCount();
+  }
+
+  @Override
+  public int getActivePriorityRpcHandlerCount() {
+    return delegate.getActivePriorityRpcHandlerCount();
+  }
+
+  @Override
+  public int getActiveReplicationRpcHandlerCount() {
+    return delegate.getActiveReplicationRpcHandlerCount();
+  }
+
+  @Override
   public boolean dispatch(CallRunner task) throws IOException, InterruptedException {
     return delegate.dispatch(task);
   }
@@ -102,5 +117,10 @@ public class DelegatingRpcScheduler extends RpcScheduler {
   @Override
   public int getActiveScanRpcHandlerCount() {
     return 0;
+  }
+
+  @Override
+  public CallQueueInfo getCallQueueInfo() {
+    return delegate.getCallQueueInfo();
   }
 }

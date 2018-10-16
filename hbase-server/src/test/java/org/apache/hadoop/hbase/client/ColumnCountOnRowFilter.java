@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,7 +38,7 @@ public final class ColumnCountOnRowFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell v) throws IOException {
+  public ReturnCode filterCell(final Cell c) {
     count++;
     return count > limit ? ReturnCode.NEXT_ROW : ReturnCode.INCLUDE;
   }
@@ -54,5 +55,22 @@ public final class ColumnCountOnRowFilter extends FilterBase {
 
   public static ColumnCountOnRowFilter parseFrom(byte[] bytes) throws DeserializationException {
     return new ColumnCountOnRowFilter(Bytes.toInt(bytes));
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof ColumnCountOnRowFilter)) {
+      return false;
+    }
+    if (this == obj) {
+      return true;
+    }
+    ColumnCountOnRowFilter f = (ColumnCountOnRowFilter) obj;
+    return this.limit == f.limit;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.limit);
   }
 }

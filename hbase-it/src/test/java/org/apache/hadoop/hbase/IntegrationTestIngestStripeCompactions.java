@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
-import org.apache.hadoop.hbase.util.LoadTestTool;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
 
@@ -41,7 +41,7 @@ public class IntegrationTestIngestStripeCompactions extends IntegrationTestInges
     HTableDescriptor htd = new HTableDescriptor(getTablename());
     htd.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY, StripeStoreEngine.class.getName());
     htd.setConfiguration(HStore.BLOCKING_STOREFILES_KEY, "100");
-    HColumnDescriptor hcd = new HColumnDescriptor(LoadTestTool.DEFAULT_COLUMN_FAMILY);
+    HColumnDescriptor hcd = new HColumnDescriptor(HFileTestUtil.DEFAULT_COLUMN_FAMILY);
     HBaseTestingUtility.createPreSplitLoadTestTable(util.getConfiguration(), htd, hcd);
   }
 

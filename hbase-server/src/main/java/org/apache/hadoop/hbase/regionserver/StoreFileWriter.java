@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,35 +17,46 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.base.Preconditions;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_PARAM_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.BloomContext;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.RowBloomContext;
 import org.apache.hadoop.hbase.util.RowColBloomContext;
-import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.hbase.util.RowPrefixDelimiterBloomContext;
+import org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A StoreFile writer.  Use this to read/write HBase Store Files. It is package
@@ -54,48 +64,19 @@ import org.apache.hadoop.io.WritableUtils;
  */
 @InterfaceAudience.Private
 public class StoreFileWriter implements CellSink, ShipperListener {
-  private static final Log LOG = LogFactory.getLog(StoreFileWriter.class.getName());
-
+  private static final Logger LOG = LoggerFactory.getLogger(StoreFileWriter.class.getName());
+  private static final Pattern dash = Pattern.compile("-");
   private final BloomFilterWriter generalBloomFilterWriter;
   private final BloomFilterWriter deleteFamilyBloomFilterWriter;
   private final BloomType bloomType;
+  private byte[] bloomParam = null;
   private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
   private long deleteFamilyCnt = 0;
   private BloomContext bloomContext = null;
   private BloomContext deleteFamilyBloomContext = null;
-
-  /**
-   * timeRangeTrackerSet is used to figure if we were passed a filled-out TimeRangeTracker or not.
-   * When flushing a memstore, we set the TimeRangeTracker that it accumulated during updates to
-   * memstore in here into this Writer and use this variable to indicate that we do not need to
-   * recalculate the timeRangeTracker bounds; it was done already as part of add-to-memstore.
-   * A completed TimeRangeTracker is not set in cases of compactions when it is recalculated.
-   */
-   private final boolean timeRangeTrackerSet;
-   final TimeRangeTracker timeRangeTracker;
+  private final TimeRangeTracker timeRangeTracker;
 
   protected HFile.Writer writer;
-
-  /**
-   * Creates an HFile.Writer that also write helpful meta data.
-   * @param fs file system to write to
-   * @param path file name to create
-   * @param conf user configuration
-   * @param comparator key comparator
-   * @param bloomType bloom filter setting
-   * @param maxKeys the expected maximum number of keys to be added. Was used
-   *        for Bloom filter size in {@link HFile} format version 1.
-   * @param fileContext - The HFile context
-   * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
-   * @throws IOException problem writing to FS
-   */
-  StoreFileWriter(FileSystem fs, Path path, final Configuration conf, CacheConfig cacheConf,
-      final CellComparator comparator, BloomType bloomType, long maxKeys,
-      InetSocketAddress[] favoredNodes, HFileContext fileContext, boolean shouldDropCacheBehind)
-          throws IOException {
-      this(fs, path, conf, cacheConf, comparator, bloomType, maxKeys, favoredNodes, fileContext,
-          shouldDropCacheBehind, null);
-    }
 
     /**
      * Creates an HFile.Writer that also write helpful meta data.
@@ -109,7 +90,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      * @param favoredNodes
      * @param fileContext - The HFile context
      * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
-     * @param trt Ready-made timetracker to use.
      * @throws IOException problem writing to FS
      */
     private StoreFileWriter(FileSystem fs, Path path,
@@ -117,13 +97,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         CacheConfig cacheConf,
         final CellComparator comparator, BloomType bloomType, long maxKeys,
         InetSocketAddress[] favoredNodes, HFileContext fileContext,
-        boolean shouldDropCacheBehind, final TimeRangeTracker trt)
+        boolean shouldDropCacheBehind)
             throws IOException {
-    // If passed a TimeRangeTracker, use it. Set timeRangeTrackerSet so we don't destroy it.
-    // TODO: put the state of the TRT on the TRT; i.e. make a read-only version (TimeRange) when
-    // it no longer writable.
-    this.timeRangeTrackerSet = trt != null;
-    this.timeRangeTracker = this.timeRangeTrackerSet? trt: new TimeRangeTracker();
+    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
     // TODO : Change all writers to be specifically created for compaction context
     writer = HFile.getWriterFactory(conf, cacheConf)
         .withPath(fs, path)
@@ -139,21 +115,32 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
     if (generalBloomFilterWriter != null) {
       this.bloomType = bloomType;
+      this.bloomParam = BloomFilterUtil.getBloomFilterParam(bloomType, conf);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Bloom filter type for " + path + ": " + this.bloomType + ", " +
-            generalBloomFilterWriter.getClass().getSimpleName());
+        LOG.trace("Bloom filter type for " + path + ": " + this.bloomType + ", param: "
+            + (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH?
+               Bytes.toInt(bloomParam):Bytes.toStringBinary(bloomParam))
+            + ", " + generalBloomFilterWriter.getClass().getSimpleName());
       }
       // init bloom context
       switch (bloomType) {
-      case ROW:
-        bloomContext = new RowBloomContext(generalBloomFilterWriter, comparator);
-        break;
-      case ROWCOL:
-        bloomContext = new RowColBloomContext(generalBloomFilterWriter, comparator);
-        break;
-      default:
-        throw new IOException(
-            "Invalid Bloom filter type: " + bloomType + " (ROW or ROWCOL expected)");
+        case ROW:
+          bloomContext = new RowBloomContext(generalBloomFilterWriter, comparator);
+          break;
+        case ROWCOL:
+          bloomContext = new RowColBloomContext(generalBloomFilterWriter, comparator);
+          break;
+        case ROWPREFIX_FIXED_LENGTH:
+          bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter, comparator,
+              Bytes.toInt(bloomParam));
+          break;
+        case ROWPREFIX_DELIMITED:
+          bloomContext = new RowPrefixDelimiterBloomContext(generalBloomFilterWriter, comparator,
+              bloomParam);
+          break;
+        default:
+          throw new IOException("Invalid Bloom filter type: "
+              + bloomType + " (ROW or ROWCOL or ROWPREFIX or ROWPREFIX_DELIMITED expected)");
       }
     } else {
       // Not using Bloom filters.
@@ -184,10 +171,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * @throws IOException problem writing to FS
    */
   public void appendMetadata(final long maxSequenceId, final boolean majorCompaction)
-  throws IOException {
-    writer.appendFileInfo(StoreFile.MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
-    writer.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,
-        Bytes.toBytes(majorCompaction));
+      throws IOException {
+    writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
+    writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
     appendTrackedTimestampsToMetadata();
   }
 
@@ -201,9 +187,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    */
   public void appendMetadata(final long maxSequenceId, final boolean majorCompaction,
       final long mobCellsCount) throws IOException {
-    writer.appendFileInfo(StoreFile.MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
-    writer.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
-    writer.appendFileInfo(StoreFile.MOB_CELLS_COUNT, Bytes.toBytes(mobCellsCount));
+    writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
+    writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
+    writer.appendFileInfo(MOB_CELLS_COUNT, Bytes.toBytes(mobCellsCount));
     appendTrackedTimestampsToMetadata();
   }
 
@@ -211,8 +197,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * Add TimestampRange and earliest put timestamp to Metadata
    */
   public void appendTrackedTimestampsToMetadata() throws IOException {
-    appendFileInfo(StoreFile.TIMERANGE_KEY, WritableUtils.toByteArray(timeRangeTracker));
-    appendFileInfo(StoreFile.EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
+    // TODO: The StoreFileReader always converts the byte[] to TimeRange
+    // via TimeRangeTracker, so we should write the serialization data of TimeRange directly.
+    appendFileInfo(TIMERANGE_KEY, TimeRangeTracker.toByteArray(timeRangeTracker));
+    appendFileInfo(EARLIEST_PUT_TS, Bytes.toBytes(earliestPutTs));
   }
 
   /**
@@ -225,20 +213,20 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     if (KeyValue.Type.Put.getCode() == cell.getTypeByte()) {
       earliestPutTs = Math.min(earliestPutTs, cell.getTimestamp());
     }
-    if (!timeRangeTrackerSet) {
-      timeRangeTracker.includeTimestamp(cell);
-    }
+    timeRangeTracker.includeTimestamp(cell);
   }
 
   private void appendGeneralBloomfilter(final Cell cell) throws IOException {
     if (this.generalBloomFilterWriter != null) {
       /*
        * http://2.bp.blogspot.com/_Cib_A77V54U/StZMrzaKufI/AAAAAAAAADo/ZhK7bGoJdMQ/s400/KeyValue.png
-       * Key = RowLen + Row + FamilyLen + Column [Family + Qualifier] + TimeStamp
+       * Key = RowLen + Row + FamilyLen + Column [Family + Qualifier] + Timestamp
        *
-       * 2 Types of Filtering:
+       * 4 Types of Filtering:
        *  1. Row = Row
        *  2. RowCol = Row + Qualifier
+       *  3. RowPrefixFixedLength  = Fixed Length Row Prefix
+       *  4. RowPrefixDelimiter = Delimited Row Prefix
        */
       bloomContext.writeBloom(cell);
     }
@@ -246,7 +234,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
   private void appendDeleteFamilyBloomFilter(final Cell cell)
       throws IOException {
-    if (!CellUtil.isDeleteFamily(cell) && !CellUtil.isDeleteFamilyVersion(cell)) {
+    if (!PrivateCellUtil.isDeleteFamily(cell) && !PrivateCellUtil.isDeleteFamilyVersion(cell)) {
       return;
     }
 
@@ -309,8 +297,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     // add the general Bloom filter writer and append file info
     if (hasGeneralBloom) {
       writer.addGeneralBloomFilter(generalBloomFilterWriter);
-      writer.appendFileInfo(StoreFile.BLOOM_FILTER_TYPE_KEY,
-          Bytes.toBytes(bloomType.toString()));
+      writer.appendFileInfo(BLOOM_FILTER_TYPE_KEY, Bytes.toBytes(bloomType.toString()));
+      if (bloomParam != null) {
+        writer.appendFileInfo(BLOOM_FILTER_PARAM_KEY, bloomParam);
+      }
       bloomContext.addLastBloomKey(writer);
     }
     return hasGeneralBloom;
@@ -326,8 +316,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
     // append file info about the number of delete family kvs
     // even if there is no delete family Bloom.
-    writer.appendFileInfo(StoreFile.DELETE_FAMILY_COUNT,
-        Bytes.toBytes(this.deleteFamilyCnt));
+    writer.appendFileInfo(DELETE_FAMILY_COUNT, Bytes.toBytes(this.deleteFamilyCnt));
 
     return hasDeleteFamilyBloom;
   }
@@ -367,7 +356,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     if (!fs.getFileStatus(dir).isDirectory()) {
       throw new IOException("Expecting " + dir.toString() + " to be a directory");
     }
-    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", ""));
+    return new Path(dir, dash.matcher(UUID.randomUUID().toString()).replaceAll(""));
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ICAST_INTEGER_MULTIPLY_CAST_TO_LONG",
@@ -377,14 +366,13 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private final CacheConfig cacheConf;
     private final FileSystem fs;
 
-    private CellComparator comparator = CellComparator.COMPARATOR;
+    private CellComparator comparator = CellComparator.getInstance();
     private BloomType bloomType = BloomType.NONE;
     private long maxKeyCount = 0;
     private Path dir;
     private Path filePath;
     private InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
-    private TimeRangeTracker trt;
     private boolean shouldDropCacheBehind;
 
     public Builder(Configuration conf, CacheConfig cacheConf,
@@ -401,17 +389,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       this.conf = conf;
       this.cacheConf = CacheConfig.DISABLED;
       this.fs = fs;
-    }
-
-    /**
-     * @param trt A premade TimeRangeTracker to use rather than build one per append (building one
-     * of these is expensive so good to pass one in if you have one).
-     * @return this (for chained invocation)
-     */
-    public Builder withTimeRangeTracker(final TimeRangeTracker trt) {
-      Preconditions.checkNotNull(trt);
-      this.trt = trt;
-      return this;
     }
 
     /**
@@ -500,7 +477,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
 
       // set block storage policy for temp path
-      String policyName = this.conf.get(HColumnDescriptor.STORAGE_POLICY);
+      String policyName = this.conf.get(ColumnFamilyDescriptorBuilder.STORAGE_POLICY);
       if (null == policyName) {
         policyName = this.conf.get(HStore.BLOCK_STORAGE_POLICY_KEY);
       }
@@ -514,11 +491,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
 
       if (comparator == null) {
-        comparator = CellComparator.COMPARATOR;
+        comparator = CellComparator.getInstance();
       }
       return new StoreFileWriter(fs, filePath,
           conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext,
-          shouldDropCacheBehind, trt);
+          shouldDropCacheBehind);
     }
   }
 }

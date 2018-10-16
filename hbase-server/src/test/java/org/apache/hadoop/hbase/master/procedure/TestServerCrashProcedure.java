@@ -15,20 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
@@ -39,15 +39,22 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestServerCrashProcedure {
-  private static final Log LOG = LogFactory.getLog(TestServerCrashProcedure.class);
 
-  private HBaseTestingUtility util;
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestServerCrashProcedure.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestServerCrashProcedure.class);
+
+  protected HBaseTestingUtility util;
 
   private ProcedureMetrics serverCrashProcMetrics;
   private long serverCrashSubmittedCount = 0;
@@ -63,11 +70,15 @@ public class TestServerCrashProcedure {
   public void setup() throws Exception {
     this.util = new HBaseTestingUtility();
     setupConf(this.util.getConfiguration());
-    this.util.startMiniCluster(3);
+    startMiniCluster();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
       this.util.getHBaseCluster().getMaster().getMasterProcedureExecutor(), false);
     serverCrashProcMetrics = this.util.getHBaseCluster().getMaster().getMasterMetrics()
         .getServerCrashProcMetrics();
+  }
+
+  protected void startMiniCluster() throws Exception {
+    this.util.startMiniCluster(3);
   }
 
   @After
@@ -82,33 +93,35 @@ public class TestServerCrashProcedure {
   }
 
 
-  @Test(timeout=60000)
+  @Test
   public void testCrashTargetRs() throws Exception {
+    testRecoveryAndDoubleExecution(false, false);
   }
 
-  @Test(timeout=60000)
-  @Ignore // Fix for AMv2
+  @Test
   public void testRecoveryAndDoubleExecutionOnRsWithMeta() throws Exception {
-    testRecoveryAndDoubleExecution(true);
+    testRecoveryAndDoubleExecution(true, true);
   }
 
-  @Test(timeout=60000)
-  @Ignore // Fix for AMv2
+  @Test
   public void testRecoveryAndDoubleExecutionOnRsWithoutMeta() throws Exception {
-    testRecoveryAndDoubleExecution(false);
+    testRecoveryAndDoubleExecution(false, true);
+  }
+
+  private long getSCPProcId(ProcedureExecutor<?> procExec) {
+    util.waitFor(30000, () -> !procExec.getProcedures().isEmpty());
+    return procExec.getActiveProcIds().stream().mapToLong(Long::longValue).min().getAsLong();
   }
 
   /**
    * Run server crash procedure steps twice to test idempotency and that we are persisting all
    * needed state.
-   * @throws Exception
    */
-  private void testRecoveryAndDoubleExecution(final boolean carryingMeta) throws Exception {
-    final TableName tableName = TableName.valueOf(
-      "testRecoveryAndDoubleExecution-carryingMeta-" + carryingMeta);
-    final Table t = this.util.createTable(tableName, HBaseTestingUtility.COLUMNS,
-        HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-    try {
+  private void testRecoveryAndDoubleExecution(boolean carryingMeta, boolean doubleExecution)
+      throws Exception {
+    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution-carryingMeta-"
+        + carryingMeta + "-doubleExecution-" + doubleExecution);
+    try (Table t = createTable(tableName)) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
       this.util.loadTable(t, HBaseTestingUtility.COLUMNS[0]);
       final int count = util.countRows(t);
@@ -118,35 +131,51 @@ public class TestServerCrashProcedure {
       // Master's running of the server crash processing.
       final HMaster master = this.util.getHBaseCluster().getMaster();
       final ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-      master.setServerCrashProcessingEnabled(false);
       // find the first server that match the request and executes the test
       ServerName rsToKill = null;
-      for (HRegionInfo hri: util.getHBaseAdmin().getTableRegions(tableName)) {
+      for (RegionInfo hri : util.getAdmin().getRegions(tableName)) {
         final ServerName serverName = AssignmentTestingUtil.getServerHoldingRegion(util, hri);
         if (AssignmentTestingUtil.isServerHoldingMeta(util, serverName) == carryingMeta) {
           rsToKill = serverName;
           break;
         }
       }
-      // kill the RS
-      AssignmentTestingUtil.killRs(util, rsToKill);
-      // Now, reenable processing else we can't get a lock on the ServerCrashProcedure.
-      master.setServerCrashProcessingEnabled(true);
-      // Do some of the master processing of dead servers so when SCP runs, it has expected 'state'.
-      master.getServerManager().moveFromOnlineToDeadServers(rsToKill);
       // Enable test flags and then queue the crash procedure.
       ProcedureTestingUtility.waitNoProcedureRunning(procExec);
-      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
-      long procId = procExec.submitProcedure(new ServerCrashProcedure(
-          procExec.getEnvironment(), rsToKill, true, carryingMeta));
-      // Now run through the procedure twice crashing the executor on each step...
-      MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
-      // Assert all data came back.
+      if (doubleExecution) {
+        // For SCP, if you enable this then we will enter an infinite loop, as we will crash between
+        // queue and open for TRSP, and then going back to queue, as we will use the crash rs as the
+        // target server since it is recored in hbase:meta.
+        ProcedureTestingUtility.setKillIfHasParent(procExec, false);
+        ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+        // kill the RS
+        AssignmentTestingUtil.killRs(util, rsToKill);
+        long procId = getSCPProcId(procExec);
+        // Now run through the procedure twice crashing the executor on each step...
+        MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+      } else {
+        // kill the RS
+        AssignmentTestingUtil.killRs(util, rsToKill);
+        long procId = getSCPProcId(procExec);
+        ProcedureTestingUtility.waitProcedure(procExec, procId);
+      }
+      assertReplicaDistributed(t);
       assertEquals(count, util.countRows(t));
       assertEquals(checksum, util.checksumRows(t));
-    } finally {
-      t.close();
+    } catch (Throwable throwable) {
+      LOG.error("Test failed!", throwable);
+      throw throwable;
     }
+  }
+
+  protected void assertReplicaDistributed(final Table t) {
+    return;
+  }
+
+  protected Table createTable(final TableName tableName) throws IOException {
+    final Table t = this.util.createTable(tableName, HBaseTestingUtility.COLUMNS,
+        HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    return t;
   }
 
   private void collectMasterMetrics() {

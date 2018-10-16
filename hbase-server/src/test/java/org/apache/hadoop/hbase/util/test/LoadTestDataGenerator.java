@@ -17,11 +17,14 @@
 package org.apache.hadoop.hbase.util.test;
 
 import java.io.IOException;
+import java.util.Random;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A generator of random data (keys/cfs/columns/values) for load testing.
@@ -33,11 +36,11 @@ public abstract class LoadTestDataGenerator {
 
   // The mutate info column stores information
   // about update done to this column family this row.
-  public final static byte[] MUTATE_INFO = "mutate_info".getBytes();
+  public final static byte[] MUTATE_INFO = Bytes.toBytes("mutate_info");
 
   // The increment column always has a long value,
   // which can be incremented later on during updates.
-  public final static byte[] INCREMENT = "increment".getBytes();
+  public final static byte[] INCREMENT = Bytes.toBytes("increment");
 
   protected String[] args;
 
@@ -54,6 +57,28 @@ public abstract class LoadTestDataGenerator {
    */
   public LoadTestDataGenerator(int minValueSize, int maxValueSize) {
     this.kvGenerator = new LoadTestKVGenerator(minValueSize, maxValueSize);
+  }
+
+  public static byte[] generateData(final Random r, int length) {
+    byte [] b = new byte [length];
+    int i = 0;
+
+    for(i = 0; i < (length-8); i += 8) {
+      b[i] = (byte) (65 + r.nextInt(26));
+      b[i+1] = b[i];
+      b[i+2] = b[i];
+      b[i+3] = b[i];
+      b[i+4] = b[i];
+      b[i+5] = b[i];
+      b[i+6] = b[i];
+      b[i+7] = b[i];
+    }
+
+    byte a = (byte) (65 + r.nextInt(26));
+    for(; i < length; i++) {
+      b[i] = a;
+    }
+    return b;
   }
 
   /**

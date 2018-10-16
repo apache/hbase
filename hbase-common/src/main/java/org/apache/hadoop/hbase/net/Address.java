@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.hbase.net;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.net.HostAndPort;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
 /**
  * An immutable type to hold a hostname and port combo, like an Endpoint
  * or java.net.InetSocketAddress (but without danger of our calling
  * resolve -- we do NOT want a resolve happening every time we want
- * to hold a hostname and port combo). This class is also <<Comparable>>.
+ * to hold a hostname and port combo). This class is also {@link Comparable}
  * <p>In implementation this class is a facade over Guava's {@link HostAndPort}.
  * We cannot have Guava classes in our API hence this Type.
  */
@@ -46,7 +47,7 @@ public class Address implements Comparable<Address> {
   }
 
   public String getHostname() {
-    return this.hostAndPort.getHostText();
+    return this.hostAndPort.getHost();
   }
 
   public int getPort() {
@@ -56,6 +57,24 @@ public class Address implements Comparable<Address> {
   @Override
   public String toString() {
     return this.hostAndPort.toString();
+  }
+
+  /**
+   * If hostname is a.b.c and the port is 123, return a:123 instead of a.b.c:123.
+   * @return if host looks like it is resolved -- not an IP -- then strip the domain portion
+   * otherwise returns same as {@link #toString()}}
+   */
+  public String toStringWithoutDomain() {
+    String hostname = getHostname();
+    String [] parts = hostname.split("\\.");
+    if (parts.length > 1) {
+      for (String part: parts) {
+        if (!StringUtils.isNumeric(part)) {
+          return Address.fromParts(parts[0], getPort()).toString();
+        }
+      }
+    }
+    return toString();
   }
 
   @Override

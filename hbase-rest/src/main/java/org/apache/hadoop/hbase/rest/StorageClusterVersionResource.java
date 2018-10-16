@@ -20,25 +20,24 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
+import java.util.EnumSet;
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import javax.ws.rs.core.UriInfo;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class StorageClusterVersionResource extends ResourceBase {
-  private static final Log LOG =
-    LogFactory.getLog(StorageClusterVersionResource.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(StorageClusterVersionResource.class);
 
   static CacheControl cacheControl;
   static {
@@ -64,7 +63,9 @@ public class StorageClusterVersionResource extends ResourceBase {
     servlet.getMetrics().incrementRequests(1);
     try {
       StorageClusterVersionModel model = new StorageClusterVersionModel();
-      model.setVersion(servlet.getAdmin().getClusterStatus().getHBaseVersion());
+      model.setVersion(
+        servlet.getAdmin().getClusterMetrics(EnumSet.of(Option.HBASE_VERSION))
+            .getHBaseVersion());
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
       servlet.getMetrics().incrementSucessfulGetRequests(1);

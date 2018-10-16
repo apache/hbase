@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.ParseFilter;
@@ -38,7 +38,7 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
  */
 @InterfaceAudience.Private
 public class RESTServlet implements Constants {
-  private static final Log LOG = LogFactory.getLog(RESTServlet.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RESTServlet.class);
   private static RESTServlet INSTANCE;
   private final Configuration conf;
   private final MetricsREST metrics;

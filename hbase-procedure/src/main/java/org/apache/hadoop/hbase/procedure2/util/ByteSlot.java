@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Similar to the ByteArrayOutputStream, with the exception that we can prepend an header.
@@ -81,11 +81,13 @@ public class ByteSlot extends OutputStream {
     buf[offset] = (byte)b;
   }
 
+  @Override
   public void write(int b) {
     ensureCapacity(size + 1);
     buf[size++] = (byte)b;
   }
 
+  @Override
   public void write(byte[] b, int off, int len) {
     ensureCapacity(size + len);
     System.arraycopy(b, off, buf, size, len);

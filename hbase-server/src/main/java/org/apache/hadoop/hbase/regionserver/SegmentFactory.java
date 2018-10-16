@@ -18,10 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,70 +40,113 @@ public final class SegmentFactory {
     return instance;
   }
 
-  // create skip-list-based (non-flat) immutable segment from compacting old immutable segments
-  public ImmutableSegment createImmutableSegment(final Configuration conf,
-      final CellComparator comparator, MemStoreSegmentsIterator iterator) {
-    return new ImmutableSegment(comparator, iterator, MemStoreLAB.newInstance(conf));
-  }
-
   // create composite immutable segment from a list of segments
+  // for snapshot consisting of multiple segments
   public CompositeImmutableSegment createCompositeImmutableSegment(
       final CellComparator comparator, List<ImmutableSegment> segments) {
     return new CompositeImmutableSegment(comparator, segments);
-
   }
 
   // create new flat immutable segment from compacting old immutable segments
+  // for compaction
   public ImmutableSegment createImmutableSegmentByCompaction(final Configuration conf,
       final CellComparator comparator, MemStoreSegmentsIterator iterator, int numOfCells,
-      ImmutableSegment.Type segmentType)
+      CompactingMemStore.IndexType idxType, MemStoreCompactionStrategy.Action action)
       throws IOException {
-    Preconditions.checkArgument(segmentType == ImmutableSegment.Type.ARRAY_MAP_BASED,
-        "wrong immutable segment type");
+
     MemStoreLAB memStoreLAB = MemStoreLAB.newInstance(conf);
     return
-        // the last parameter "false" means not to merge, but to compact the pipeline
-        // in order to create the new segment
-        new ImmutableSegment(comparator, iterator, memStoreLAB, numOfCells, segmentType, false);
+        createImmutableSegment(
+            conf,comparator,iterator,memStoreLAB,numOfCells,action,idxType);
   }
 
-  // create empty immutable segment
+  /**
+   * create empty immutable segment for initializations
+   * This ImmutableSegment is used as a place holder for snapshot in Memstore.
+   * It won't flush later, So it is not necessary to record the initial size
+   * for it.
+   * @param comparator comparator
+   * @return ImmutableSegment
+   */
   public ImmutableSegment createImmutableSegment(CellComparator comparator) {
-    MutableSegment segment = generateMutableSegment(null, comparator, null);
-    return createImmutableSegment(segment);
+    MutableSegment segment = generateMutableSegment(null, comparator, null, null);
+    return createImmutableSegment(segment, null);
   }
 
-  // create immutable segment from mutable segment
-  public ImmutableSegment createImmutableSegment(MutableSegment segment) {
-    return new ImmutableSegment(segment);
+  // create not-flat immutable segment from mutable segment
+  public ImmutableSegment createImmutableSegment(MutableSegment segment,
+      MemStoreSizing memstoreSizing) {
+    return new CSLMImmutableSegment(segment, memstoreSizing);
   }
 
   // create mutable segment
-  public MutableSegment createMutableSegment(final Configuration conf, CellComparator comparator) {
+  public MutableSegment createMutableSegment(final Configuration conf,
+      CellComparator comparator, MemStoreSizing memstoreSizing) {
     MemStoreLAB memStoreLAB = MemStoreLAB.newInstance(conf);
-    return generateMutableSegment(conf, comparator, memStoreLAB);
+    return generateMutableSegment(conf, comparator, memStoreLAB, memstoreSizing);
   }
 
   // create new flat immutable segment from merging old immutable segments
+  // for merge
   public ImmutableSegment createImmutableSegmentByMerge(final Configuration conf,
       final CellComparator comparator, MemStoreSegmentsIterator iterator, int numOfCells,
-      ImmutableSegment.Type segmentType, List<ImmutableSegment> segments)
+      List<ImmutableSegment> segments, CompactingMemStore.IndexType idxType,
+      MemStoreCompactionStrategy.Action action)
       throws IOException {
-    Preconditions.checkArgument(segmentType == ImmutableSegment.Type.ARRAY_MAP_BASED,
-        "wrong immutable segment type");
+
     MemStoreLAB memStoreLAB = getMergedMemStoreLAB(conf, segments);
     return
-        // the last parameter "true" means to merge the compaction pipeline
-        // in order to create the new segment
-        new ImmutableSegment(comparator, iterator, memStoreLAB, numOfCells, segmentType, true);
+        createImmutableSegment(
+            conf,comparator,iterator,memStoreLAB,numOfCells,action,idxType);
+
   }
+
+  // create flat immutable segment from non-flat immutable segment
+  // for flattening
+  public ImmutableSegment createImmutableSegmentByFlattening(
+      CSLMImmutableSegment segment, CompactingMemStore.IndexType idxType,
+      MemStoreSizing memstoreSizing, MemStoreCompactionStrategy.Action action) {
+    ImmutableSegment res = null;
+    switch (idxType) {
+      case CHUNK_MAP:
+        res = new CellChunkImmutableSegment(segment, memstoreSizing, action);
+        break;
+      case CSLM_MAP:
+        assert false; // non-flat segment can not be the result of flattening
+        break;
+      case ARRAY_MAP:
+        res = new CellArrayImmutableSegment(segment, memstoreSizing, action);
+        break;
+    }
+    return res;
+  }
+
+
   //****** private methods to instantiate concrete store segments **********//
+  private ImmutableSegment createImmutableSegment(final Configuration conf, final CellComparator comparator,
+      MemStoreSegmentsIterator iterator, MemStoreLAB memStoreLAB, int numOfCells,
+      MemStoreCompactionStrategy.Action action, CompactingMemStore.IndexType idxType) {
+
+    ImmutableSegment res = null;
+    switch (idxType) {
+    case CHUNK_MAP:
+      res = new CellChunkImmutableSegment(comparator, iterator, memStoreLAB, numOfCells, action);
+      break;
+    case CSLM_MAP:
+      assert false; // non-flat segment can not be created here
+      break;
+    case ARRAY_MAP:
+      res = new CellArrayImmutableSegment(comparator, iterator, memStoreLAB, numOfCells, action);
+      break;
+    }
+    return res;
+  }
 
   private MutableSegment generateMutableSegment(final Configuration conf, CellComparator comparator,
-      MemStoreLAB memStoreLAB) {
+      MemStoreLAB memStoreLAB, MemStoreSizing memstoreSizing) {
     // TBD use configuration to set type of segment
     CellSet set = new CellSet(comparator);
-    return new MutableSegment(set, comparator, memStoreLAB);
+    return new MutableSegment(set, comparator, memStoreLAB, memstoreSizing);
   }
 
   private MemStoreLAB getMergedMemStoreLAB(Configuration conf, List<ImmutableSegment> segments) {

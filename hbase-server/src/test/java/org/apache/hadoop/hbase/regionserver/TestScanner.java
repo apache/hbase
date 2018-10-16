@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,12 +29,9 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -58,22 +54,27 @@ import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test of a long-lived scanner validating as we go.
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestScanner {
-  @Rule public TestName name = new TestName();
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
-  private static final Log LOG = LogFactory.getLog(TestScanner.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestScanner.class);
+
+  @Rule public TestName name = new TestName();
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
@@ -117,7 +118,8 @@ public class TestScanner {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
-    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    thirdRowBytes[START_KEY_BYTES.length - 1] =
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
     col1 = Bytes.toBytes("column1");
   }
 
@@ -155,7 +157,7 @@ public class TestScanner {
       for (boolean first = true; s.next(results);) {
         kv = results.get(0);
         if (first) {
-          assertTrue(CellUtil.matchingRow(kv,  startrow));
+          assertTrue(CellUtil.matchingRows(kv,  startrow));
           first = false;
         }
         count++;
@@ -546,7 +548,7 @@ public class TestScanner {
       // make sure returns column2 of firstRow
       assertTrue("result is not correct, keyValues : " + results,
           results.size() == 1);
-      assertTrue(CellUtil.matchingRow(results.get(0), firstRowBytes)); 
+      assertTrue(CellUtil.matchingRows(results.get(0), firstRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
       results = new ArrayList<>();
@@ -554,7 +556,7 @@ public class TestScanner {
 
       // get secondRow
       assertTrue(results.size() == 2);
-      assertTrue(CellUtil.matchingRow(results.get(0), secondRowBytes));
+      assertTrue(CellUtil.matchingRows(results.get(0), secondRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
     } finally {
@@ -589,6 +591,7 @@ public class TestScanner {
       if (flushIndex == count) {
         LOG.info("Starting flush at flush index " + flushIndex);
         Thread t = new Thread() {
+          @Override
           public void run() {
             try {
               region.flush(true);

@@ -18,31 +18,39 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * Test that the {@link SnapshotDescription} helper is helping correctly.
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestSnapshotDescriptionUtils {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotDescriptionUtils.class);
+
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static FileSystem fs;
   private static Path root;
@@ -66,7 +74,7 @@ public class TestSnapshotDescriptionUtils {
     EnvironmentEdgeManagerTestHelper.reset();
   }
 
-  private static final Log LOG = LogFactory.getLog(TestSnapshotDescriptionUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotDescriptionUtils.class);
 
   @Test
   public void testValidateMissingTableName() throws IOException {
@@ -99,5 +107,59 @@ public class TestSnapshotDescriptionUtils {
     } catch (IOException e) {
       LOG.info("Correctly failed to move non-existant directory: " + e.getMessage());
     }
+  }
+
+  @Test
+  public void testIsSubDirectoryWorks() {
+    Path rootDir = new Path("hdfs://root/.hbase-snapshot/");
+
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(rootDir, rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://root/.hbase-snapshotdir"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://root/.hbase-snapshot"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://.hbase-snapshot"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://.hbase-snapshot/.tmp"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(new Path("hdfs://root"), rootDir));
+    assertTrue(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://root/.hbase-snapshot/.tmp"), rootDir));
+    assertTrue(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("hdfs://root/.hbase-snapshot/.tmp/snapshot"), rootDir));
+
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("s3://root/.hbase-snapshot/"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(new Path("s3://root"), rootDir));
+    assertFalse(SnapshotDescriptionUtils.isSubDirectoryOf(
+        new Path("s3://root/.hbase-snapshot/.tmp/snapshot"), rootDir));
+  }
+
+  @Test
+  public void testIsWithinWorkingDir() {
+    Configuration conf = new Configuration();
+    conf.set(HConstants.HBASE_DIR, "hdfs://root/");
+
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/.hbase-snapshotdir"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/.hbase-snapshot"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://.hbase-snapshot"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://.hbase-snapshot/.tmp"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(new Path("hdfs://root"), conf));
+    assertTrue(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/.hbase-snapshot/.tmp"), conf));
+    assertTrue(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("hdfs://root/.hbase-snapshot/.tmp/snapshot"), conf));
+
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("s3://root/.hbase-snapshot/"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(new Path("s3://root"), conf));
+    assertFalse(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
+        new Path("s3://root/.hbase-snapshot/.tmp/snapshot"), conf));
   }
 }

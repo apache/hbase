@@ -20,21 +20,29 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.NavigableMap;
+import java.util.function.Function;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
-import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALKey;
-
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 
 /**
  * Helper methods to ease Region Server integration with the Write Ahead Log (WAL).
@@ -43,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
  */
 @InterfaceAudience.Private
 public class WALUtil {
-  private static final Log LOG = LogFactory.getLog(WALUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALUtil.class);
 
   private WALUtil() {
     // Shut down construction of this class.
@@ -58,11 +66,12 @@ public class WALUtil {
    * <p>This write is for internal use only. Not for external client consumption.
    * @param mvcc Used by WAL to get sequence Id for the waledit.
    */
-  public static WALKey writeCompactionMarker(WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, HRegionInfo hri, final CompactionDescriptor c,
+  public static WALKeyImpl writeCompactionMarker(WAL wal,
+      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final CompactionDescriptor c,
       MultiVersionConcurrencyControl mvcc)
   throws IOException {
-    WALKey walKey = writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), mvcc);
+    WALKeyImpl walKey =
+        writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), mvcc);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }
@@ -74,10 +83,10 @@ public class WALUtil {
    *
    * <p>This write is for internal use only. Not for external client consumption.
    */
-  public static WALKey writeFlushMarker(WAL wal, NavigableMap<byte[], Integer> replicationScope,
-      HRegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
+  public static WALKeyImpl writeFlushMarker(WAL wal, NavigableMap<byte[], Integer> replicationScope,
+      RegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
           throws IOException {
-    WALKey walKey = doFullAppendTransaction(wal, replicationScope, hri,
+    WALKeyImpl walKey = doFullAppendTransaction(wal, replicationScope, hri,
         WALEdit.createFlushWALEdit(hri, f), mvcc, sync);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended flush marker " + TextFormat.shortDebugString(f));
@@ -89,11 +98,11 @@ public class WALUtil {
    * Write a region open marker indicating that the region is opened.
    * This write is for internal use only. Not for external client consumption.
    */
-  public static WALKey writeRegionEventMarker(WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, HRegionInfo hri,
+  public static WALKeyImpl writeRegionEventMarker(WAL wal,
+      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri,
       final RegionEventDescriptor r, final MultiVersionConcurrencyControl mvcc)
   throws IOException {
-    WALKey walKey = writeMarker(wal, replicationScope, hri,
+    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri,
         WALEdit.createRegionEventWALEdit(hri, r), mvcc);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
@@ -111,20 +120,20 @@ public class WALUtil {
    * @return walKey with sequenceid filled out for this bulk load marker
    * @throws IOException We will throw an IOException if we can not append to the HLog.
    */
-  public static WALKey writeBulkLoadMarkerAndSync(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+  public static WALKeyImpl writeBulkLoadMarkerAndSync(final WAL wal,
+      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
       final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
           throws IOException {
-    WALKey walKey = writeMarker(wal, replicationScope, hri, WALEdit.createBulkLoadEvent(hri, desc),
-        mvcc);
+    WALKeyImpl walKey =
+        writeMarker(wal, replicationScope, hri, WALEdit.createBulkLoadEvent(hri, desc), mvcc);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended Bulk Load marker " + TextFormat.shortDebugString(desc));
     }
     return walKey;
   }
 
-  private static WALKey writeMarker(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+  private static WALKeyImpl writeMarker(final WAL wal,
+      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
       final WALEdit edit, final MultiVersionConcurrencyControl mvcc)
   throws IOException {
     // If sync == true in below, then timeout is not used; safe to pass UNSPECIFIED_TIMEOUT
@@ -137,14 +146,14 @@ public class WALUtil {
    * Good for case of adding a single edit or marker to the WAL.
    *
    * <p>This write is for internal use only. Not for external client consumption.
-   * @return WALKey that was added to the WAL.
+   * @return WALKeyImpl that was added to the WAL.
    */
-  public static WALKey doFullAppendTransaction(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+  public static WALKeyImpl doFullAppendTransaction(final WAL wal,
+      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
       final WALEdit edit, final MultiVersionConcurrencyControl mvcc, final boolean sync)
   throws IOException {
     // TODO: Pass in current time to use?
-    WALKey walKey = new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(),
+    WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(),
         System.currentTimeMillis(), mvcc, replicationScope);
     long trx = MultiVersionConcurrencyControl.NONE;
     try {
@@ -155,9 +164,55 @@ public class WALUtil {
       // Call complete only here because these are markers only. They are not for clients to read.
       mvcc.complete(walKey.getWriteEntry());
     } catch (IOException ioe) {
-      mvcc.complete(walKey.getWriteEntry());
+      if (walKey.getWriteEntry() != null) {
+        mvcc.complete(walKey.getWriteEntry());
+      }
       throw ioe;
     }
     return walKey;
+  }
+
+  /**
+   * Blocksize returned here is 2x the default HDFS blocksize unless explicitly set in
+   * Configuration. Works in tandem with hbase.regionserver.logroll.multiplier. See comment in
+   * AbstractFSWAL in Constructor where we set blocksize and logrollsize for why.
+   * @return Blocksize to use writing WALs.
+   */
+  public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir)
+      throws IOException {
+    return getWALBlockSize(conf, fs, dir, false);
+  }
+
+  /**
+   * Public because of FSHLog. Should be package-private
+   * @param isRecoverEdits the created writer is for recovered edits or WAL.
+   *                       For recovered edits, it is true and for WAL it is false.
+   */
+  public static long getWALBlockSize(Configuration conf, FileSystem fs, Path dir,
+      boolean isRecoverEdits) throws IOException {
+    long defaultBlockSize = CommonFSUtils.getDefaultBlockSize(fs, dir) * 2;
+    if (isRecoverEdits) {
+      return conf.getLong("hbase.regionserver.recoverededits.blocksize", defaultBlockSize);
+    }
+    return conf.getLong("hbase.regionserver.hlog.blocksize", defaultBlockSize);
+  }
+
+  public static void filterCells(WALEdit edit, Function<Cell, Cell> mapper) {
+    ArrayList<Cell> cells = edit.getCells();
+    int size = cells.size();
+    int newSize = 0;
+    for (int i = 0; i < size; i++) {
+      Cell cell = mapper.apply(cells.get(i));
+      if (cell != null) {
+        cells.set(newSize, cell);
+        newSize++;
+      }
+    }
+    for (int i = size - 1; i >= newSize; i--) {
+      cells.remove(i);
+    }
+    if (newSize < size / 2) {
+      cells.trimToSize();
+    }
   }
 }

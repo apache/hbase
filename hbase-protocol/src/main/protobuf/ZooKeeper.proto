@@ -77,14 +77,9 @@ message SplitLogTask {
     DONE = 3;
     ERR = 4;
   }
-  enum RecoveryMode {
-    UNKNOWN = 0;
-    LOG_SPLITTING = 1;
-    LOG_REPLAY = 2;
-  }
   required State state = 1;
   required ServerName server_name = 2;
-  optional RecoveryMode mode = 3 [default = UNKNOWN];
+  // optional RecoveryMode DEPRECATED_mode = 3 [default = UNKNOWN];
 }
 
 /**

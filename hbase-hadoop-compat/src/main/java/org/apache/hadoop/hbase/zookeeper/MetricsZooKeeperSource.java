@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface of the source that will export metrics about the ZooKeeper.
  */
+@InterfaceAudience.Private
 public interface MetricsZooKeeperSource extends BaseSource {
 
   /**
@@ -49,15 +51,18 @@ public interface MetricsZooKeeperSource extends BaseSource {
   String EXCEPTION_CONNECTIONLOSS = "CONNECTIONLOSS Exception";
   String EXCEPTION_CONNECTIONLOSS_DESC = "Number of failed ops due to a CONNECTIONLOSS exception.";
   String EXCEPTION_DATAINCONSISTENCY = "DATAINCONSISTENCY Exception";
-  String EXCEPTION_DATAINCONSISTENCY_DESC = "Number of failed ops due to a DATAINCONSISTENCY exception.";
+  String EXCEPTION_DATAINCONSISTENCY_DESC =
+          "Number of failed ops due to a DATAINCONSISTENCY exception.";
   String EXCEPTION_INVALIDACL = "INVALIDACL Exception";
   String EXCEPTION_INVALIDACL_DESC = "Number of failed ops due to an INVALIDACL exception";
   String EXCEPTION_NOAUTH = "NOAUTH Exception";
   String EXCEPTION_NOAUTH_DESC = "Number of failed ops due to a NOAUTH exception.";
   String EXCEPTION_OPERATIONTIMEOUT = "OPERATIONTIMEOUT Exception";
-  String EXCEPTION_OPERATIONTIMEOUT_DESC = "Number of failed ops due to an OPERATIONTIMEOUT exception.";
+  String EXCEPTION_OPERATIONTIMEOUT_DESC =
+          "Number of failed ops due to an OPERATIONTIMEOUT exception.";
   String EXCEPTION_RUNTIMEINCONSISTENCY = "RUNTIMEINCONSISTENCY Exception";
-  String EXCEPTION_RUNTIMEINCONSISTENCY_DESC = "Number of failed ops due to a RUNTIMEINCONSISTENCY exception.";
+  String EXCEPTION_RUNTIMEINCONSISTENCY_DESC =
+          "Number of failed ops due to a RUNTIMEINCONSISTENCY exception.";
   String EXCEPTION_SESSIONEXPIRED = "SESSIONEXPIRED Exception";
   String EXCEPTION_SESSIONEXPIRED_DESC = "Number of failed ops due to a SESSIONEXPIRED exception.";
   String EXCEPTION_SYSTEMERROR = "SYSTEMERROR Exception";

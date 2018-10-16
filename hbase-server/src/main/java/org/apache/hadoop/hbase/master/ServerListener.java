@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
@@ -30,17 +30,17 @@ public interface ServerListener {
   /**
    * Started waiting on RegionServers to check-in.
    */
-  default void waiting() {};
+  default void waiting() {}
 
   /**
    * The server has joined the cluster.
    * @param serverName The remote servers name.
    */
-  default void serverAdded(final ServerName serverName) {};
+  default void serverAdded(final ServerName serverName) {}
 
   /**
    * The server was removed from the cluster.
    * @param serverName The remote servers name.
    */
-  default void serverRemoved(final ServerName serverName) {};
+  default void serverRemoved(final ServerName serverName) {}
 }

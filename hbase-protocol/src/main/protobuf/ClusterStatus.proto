@@ -98,9 +98,9 @@ message RegionLoad {
 
   /**
    * The current total size of root-level store file indexes for the region,
-   * in MB. The same as {@link #rootIndexSizeKB} but in MB.
+   * in KB. The same as {@link #rootIndexSizeKB}.
    */
-  optional uint32 storefile_index_size_MB = 7;
+  optional uint64 storefile_index_size_KB = 7;
 
   /** the current total read requests made to region */
   optional uint64 read_requests_count = 8;
@@ -139,6 +139,9 @@ message RegionLoad {
 
   /** the current total filtered read requests made to region */
   optional uint64 filtered_read_requests_count = 19;
+
+  /** the current total coprocessor requests made to region */
+  optional uint64 cp_requests_count = 20;
 }
 
 /* Server-level protobufs */
@@ -224,4 +227,16 @@ message ClusterStatus {
   optional ServerName master = 7;
   repeated ServerName backup_masters = 8;
   optional bool balancer_on = 9;
+}
+
+enum Option {
+  HBASE_VERSION = 0;
+  CLUSTER_ID = 1;
+  LIVE_SERVERS = 2;
+  DEAD_SERVERS = 3;
+  MASTER = 4;
+  BACKUP_MASTERS = 5;
+  MASTER_COPROCESSORS = 6;
+  REGIONS_IN_TRANSITION = 7;
+  BALANCER_ON = 8;
 }

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,37 +17,36 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.Before;
-import org.junit.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -60,6 +58,10 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestSeekTo {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSeekTo.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final DataBlockEncoding encoding;
@@ -122,7 +124,7 @@ public class TestSeekTo {
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Writer writer = HFile.getWriterFactoryNoCache(conf).withOutputStream(fout)
         .withFileContext(context)
-        .withComparator(CellComparator.COMPARATOR).create();
+        .withComparator(CellComparatorImpl.COMPARATOR).create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c", tagUsage));
@@ -173,10 +175,10 @@ public class TestSeekTo {
     assertEquals("i", toRowStr(scanner.getCell()));
     Cell cell = scanner.getCell();
     if (tagUsage != TagUsage.NO_TAG && cell.getTagsLength() > 0) {
-      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+      Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {
         Tag next = tagsIterator.next();
-        assertEquals("myTag1", Bytes.toString(TagUtil.cloneValue(next)));
+        assertEquals("myTag1", Bytes.toString(Tag.cloneValue(next)));
       }
     }
     assertTrue(scanner.seekBefore(toKV("k", tagUsage)));
@@ -316,12 +318,7 @@ public class TestSeekTo {
     assertEquals("i", toRowStr(scanner.getCell()));
 
     assertEquals(1, scanner.seekTo(toKV("l", tagUsage)));
-    if (encoding == DataBlockEncoding.PREFIX_TREE) {
-      // TODO : Fix this
-      assertEquals(null, scanner.getCell());
-    } else {
-      assertEquals("k", toRowStr(scanner.getCell()));
-    }
+    assertEquals("k", toRowStr(scanner.getCell()));
 
     reader.close();
     deleteTestDir(fs);

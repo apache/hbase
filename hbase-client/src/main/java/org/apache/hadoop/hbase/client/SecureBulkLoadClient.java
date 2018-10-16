@@ -22,9 +22,8 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -38,6 +37,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.security.token.Token;
+
+import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
 
 /**
  * Client proxy for SecureBulkLoadProtocol
@@ -56,7 +57,7 @@ public class SecureBulkLoadClient {
     try {
       ClientServiceCallable<String> callable = new ClientServiceCallable<String>(conn,
           table.getName(), HConstants.EMPTY_START_ROW,
-          this.rpcControllerFactory.newController()) {
+          this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
         @Override
         protected String rpcCall() throws Exception {
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
@@ -79,7 +80,7 @@ public class SecureBulkLoadClient {
   public void cleanupBulkLoad(final Connection conn, final String bulkToken) throws IOException {
     try {
       ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn,
-          table.getName(), HConstants.EMPTY_START_ROW, this.rpcControllerFactory.newController()) {
+          table.getName(), HConstants.EMPTY_START_ROW, this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
         @Override
         protected Void rpcCall() throws Exception {
           byte[] regionName = getLocation().getRegionInfo().getRegionName();

@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop Two implementation of a metrics2 source that will export metrics from the Rest server to
@@ -31,16 +31,19 @@ import org.apache.hadoop.metrics2.lib.MutableFastCounter;
  */
 @InterfaceAudience.Private
 public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsRESTSource {
-
   private MutableFastCounter request;
   private MutableFastCounter sucGet;
   private MutableFastCounter sucPut;
   private MutableFastCounter sucDel;
   private MutableFastCounter sucScan;
+  private MutableFastCounter sucAppend;
+  private MutableFastCounter sucIncrement;
   private MutableFastCounter fGet;
   private MutableFastCounter fPut;
   private MutableFastCounter fDel;
   private MutableFastCounter fScan;
+  private MutableFastCounter fAppend;
+  private MutableFastCounter fIncrement;
 
   // pause monitor metrics
   private final MutableFastCounter infoPauseThresholdExceeded;
@@ -70,17 +73,21 @@ public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsREST
   @Override
   public void init() {
     super.init();
-    request = getMetricsRegistry().getCounter(REQUEST_KEY, 0l);
+    request = getMetricsRegistry().getCounter(REQUEST_KEY, 0L);
 
-    sucGet = getMetricsRegistry().getCounter(SUCCESSFUL_GET_KEY, 0l);
-    sucPut = getMetricsRegistry().getCounter(SUCCESSFUL_PUT_KEY, 0l);
-    sucDel = getMetricsRegistry().getCounter(SUCCESSFUL_DELETE_KEY, 0l);
+    sucGet = getMetricsRegistry().getCounter(SUCCESSFUL_GET_KEY, 0L);
+    sucPut = getMetricsRegistry().getCounter(SUCCESSFUL_PUT_KEY, 0L);
+    sucDel = getMetricsRegistry().getCounter(SUCCESSFUL_DELETE_KEY, 0L);
     sucScan = getMetricsRegistry().getCounter(SUCCESSFUL_SCAN_KEY, 0L);
+    sucAppend = getMetricsRegistry().getCounter(SUCCESSFUL_APPEND_KEY, 0L);
+    sucIncrement = getMetricsRegistry().getCounter(SUCCESSFUL_INCREMENT_KEY, 0L);
 
-    fGet = getMetricsRegistry().getCounter(FAILED_GET_KEY, 0l);
-    fPut = getMetricsRegistry().getCounter(FAILED_PUT_KEY, 0l);
-    fDel = getMetricsRegistry().getCounter(FAILED_DELETE_KEY, 0l);
-    fScan = getMetricsRegistry().getCounter(FAILED_SCAN_KEY, 0l);
+    fGet = getMetricsRegistry().getCounter(FAILED_GET_KEY, 0L);
+    fPut = getMetricsRegistry().getCounter(FAILED_PUT_KEY, 0L);
+    fDel = getMetricsRegistry().getCounter(FAILED_DELETE_KEY, 0L);
+    fScan = getMetricsRegistry().getCounter(FAILED_SCAN_KEY, 0L);
+    fAppend = getMetricsRegistry().getCounter(FAILED_APPEND_KEY, 0L);
+    fIncrement = getMetricsRegistry().getCounter(FAILED_INCREMENT_KEY, 0L);
   }
 
   @Override
@@ -125,7 +132,27 @@ public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsREST
 
   @Override
   public void incrementFailedScanRequests(int inc) {
-   fScan.incr(inc);
+    fScan.incr(inc);
+  }
+
+  @Override
+  public void incrementSucessfulAppendRequests(int inc) {
+    sucAppend.incr(inc);
+  }
+
+  @Override
+  public void incrementFailedAppendRequests(int inc) {
+    fAppend.incr(inc);
+  }
+
+  @Override
+  public void incrementSucessfulIncrementRequests(int inc) {
+    sucIncrement.incr(inc);
+  }
+
+  @Override
+  public void incrementFailedIncrementRequests(int inc) {
+    fIncrement.incr(inc);
   }
 
   @Override

@@ -33,10 +33,7 @@
 package org.apache.hadoop.hbase.metrics.impl;
 
 import java.util.Map;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Gauge;
 import org.apache.hadoop.hbase.metrics.Histogram;
@@ -50,6 +47,9 @@ import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the adapter from "HBase Metrics Framework", implemented in hbase-metrics-api and
@@ -59,9 +59,10 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
  *
  * Some of the code is forked from https://github.com/joshelser/dropwizard-hadoop-metrics2.
  */
+@InterfaceAudience.Private
 public class HBaseMetrics2HadoopMetricsAdapter {
-  private static final Log LOG
-      = LogFactory.getLog(HBaseMetrics2HadoopMetricsAdapter.class);
+  private static final Logger LOG
+      = LoggerFactory.getLogger(HBaseMetrics2HadoopMetricsAdapter.class);
   private static final String EMPTY_STRING = "";
 
   public HBaseMetrics2HadoopMetricsAdapter() {

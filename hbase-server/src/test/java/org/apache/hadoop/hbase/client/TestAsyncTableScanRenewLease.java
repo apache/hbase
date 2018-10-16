@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -33,11 +33,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncTableScanRenewLease {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncTableScanRenewLease.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -49,7 +54,7 @@ public class TestAsyncTableScanRenewLease {
 
   private static AsyncConnection CONN;
 
-  private static RawAsyncTable TABLE;
+  private static AsyncTable<AdvancedScanResultConsumer> TABLE;
 
   private static int SCANNER_LEASE_TIMEOUT_PERIOD_MS = 5000;
 
@@ -60,7 +65,7 @@ public class TestAsyncTableScanRenewLease {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    TABLE = CONN.getRawTable(TABLE_NAME);
+    TABLE = CONN.getTable(TABLE_NAME);
     TABLE.putAll(IntStream.range(0, 10).mapToObj(
       i -> new Put(Bytes.toBytes(String.format("%02d", i))).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
         .collect(Collectors.toList())).get();
@@ -72,7 +77,7 @@ public class TestAsyncTableScanRenewLease {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private static final class RenewLeaseConsumer implements RawScanResultConsumer {
+  private static final class RenewLeaseConsumer implements AdvancedScanResultConsumer {
 
     private final List<Result> results = new ArrayList<>();
 

@@ -23,11 +23,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * <p>
@@ -51,17 +52,37 @@ public class FamilyFilter extends CompareFilter {
    *
    * @param familyCompareOp  the compare op for column family matching
    * @param familyComparator the comparator for column family matching
+   * @deprecated  Since 2.0.0. Will be removed in 3.0.0.
+   *  Use {@link #FamilyFilter(CompareOperator, ByteArrayComparable)}
    */
+  @Deprecated
   public FamilyFilter(final CompareOp familyCompareOp,
                       final ByteArrayComparable familyComparator) {
       super(familyCompareOp, familyComparator);
   }
 
+  /**
+   * Constructor.
+   *
+   * @param op  the compare op for column family matching
+   * @param familyComparator the comparator for column family matching
+   */
+  public FamilyFilter(final CompareOperator op,
+                      final ByteArrayComparable familyComparator) {
+    super(op, familyComparator);
+  }
+
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
-    int familyLength = v.getFamilyLength();
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
+    int familyLength = c.getFamilyLength();
     if (familyLength > 0) {
-      if (compareFamily(this.compareOp, this.comparator, v)) {
+      if (compareFamily(getCompareOperator(), this.comparator, c)) {
         return ReturnCode.NEXT_ROW;
       }
     }
@@ -70,7 +91,7 @@ public class FamilyFilter extends CompareFilter {
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     ArrayList<?> arguments = CompareFilter.extractArguments(filterArguments);
-    CompareOp compareOp = (CompareOp)arguments.get(0);
+    CompareOperator compareOp = (CompareOperator)arguments.get(0);
     ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);
     return new FamilyFilter(compareOp, comparator);
   }
@@ -78,6 +99,7 @@ public class FamilyFilter extends CompareFilter {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.FamilyFilter.Builder builder =
       FilterProtos.FamilyFilter.newBuilder();
@@ -99,8 +121,8 @@ public class FamilyFilter extends CompareFilter {
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    final CompareOp valueCompareOp =
-      CompareOp.valueOf(proto.getCompareFilter().getCompareOp().name());
+    final CompareOperator valueCompareOp =
+      CompareOperator.valueOf(proto.getCompareFilter().getCompareOp().name());
     ByteArrayComparable valueComparator = null;
     try {
       if (proto.getCompareFilter().hasComparator()) {
@@ -113,10 +135,10 @@ public class FamilyFilter extends CompareFilter {
   }
 
   /**
-   * @param other
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof FamilyFilter)) return false;
@@ -124,4 +146,14 @@ public class FamilyFilter extends CompareFilter {
     FamilyFilter other = (FamilyFilter)o;
     return super.areSerializedFieldsEqual(other);
  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }

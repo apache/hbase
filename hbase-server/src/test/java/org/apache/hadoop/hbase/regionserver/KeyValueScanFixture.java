@@ -41,7 +41,7 @@ public class KeyValueScanFixture extends CollectionBackedScanner {
   public static List<KeyValueScanner> scanFixture(KeyValue[] ... kvArrays) {
     ArrayList<KeyValueScanner> scanners = new ArrayList<>();
     for (KeyValue [] kvs : kvArrays) {
-      scanners.add(new KeyValueScanFixture(CellComparator.COMPARATOR, kvs));
+      scanners.add(new KeyValueScanFixture(CellComparator.getInstance(), kvs));
     }
     return scanners;
   }

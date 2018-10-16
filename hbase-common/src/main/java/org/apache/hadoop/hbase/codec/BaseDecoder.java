@@ -23,18 +23,19 @@ import java.io.InputStream;
 import java.io.PushbackInputStream;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * TODO javadoc
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public abstract class BaseDecoder implements Codec.Decoder {
-  protected static final Log LOG = LogFactory.getLog(BaseDecoder.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(BaseDecoder.class);
 
   protected final InputStream in;
   private Cell current = null;

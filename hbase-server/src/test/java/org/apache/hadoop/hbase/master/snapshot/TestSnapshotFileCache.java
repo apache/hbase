@@ -24,30 +24,37 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
  * Test that we correctly reload the cache, filter directories, etc.
@@ -55,9 +62,12 @@ import org.junit.experimental.categories.Category;
 @Category({MasterTests.class, MediumTests.class})
 public class TestSnapshotFileCache {
 
-  private static final Log LOG = LogFactory.getLog(TestSnapshotFileCache.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotFileCache.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static long sequenceId = 0;
   private static FileSystem fs;
   private static Path rootDir;
 
@@ -80,7 +90,7 @@ public class TestSnapshotFileCache {
     fs.delete(snapshotDir, true);
   }
 
-  @Test(timeout = 10000000)
+  @Test
   public void testLoadAndDelete() throws IOException {
     // don't refresh the cache unless we tell it to
     long period = Long.MAX_VALUE;
@@ -152,9 +162,6 @@ public class TestSnapshotFileCache {
     SnapshotMock.SnapshotBuilder complete =
         createAndTestSnapshotV1(cache, "snapshot", false, false);
 
-    SnapshotMock.SnapshotBuilder inProgress =
-        createAndTestSnapshotV1(cache, "snapshotInProgress", true, false);
-
     int countBeforeCheck = count.get();
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
@@ -167,7 +174,7 @@ public class TestSnapshotFileCache {
 
 
     // add a random file to make sure we refresh
-    FileStatus randomFile = mockStoreFile(UUID.randomUUID().toString());
+    FileStatus randomFile = mockStoreFile(UTIL.getRandomUUID().toString());
     allStoreFiles.add(randomFile);
     deletableFiles = cache.getUnreferencedFiles(allStoreFiles, null);
     assertEquals(randomFile, Iterables.getOnlyElement(deletableFiles));
@@ -180,7 +187,7 @@ public class TestSnapshotFileCache {
     SnapshotReferenceUtil
         .visitReferencedFiles(UTIL.getConfiguration(), fs, builder.getSnapshotsDir(),
             new SnapshotReferenceUtil.SnapshotVisitor() {
-              @Override public void storeFile(HRegionInfo regionInfo, String familyName,
+              @Override public void storeFile(RegionInfo regionInfo, String familyName,
                   SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile) throws IOException {
                 FileStatus status = mockStoreFile(storeFile.getName());
                 allStoreFiles.add(status);
@@ -198,12 +205,13 @@ public class TestSnapshotFileCache {
   }
 
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
+    @Override
     public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
       Collection<String> files =  new HashSet<>();
       files.addAll(SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotDir));
       return files;
     }
-  };
+  }
 
   private SnapshotMock.SnapshotBuilder createAndTestSnapshotV1(final SnapshotFileCache cache,
       final String name, final boolean tmp, final boolean removeOnExit) throws IOException {
@@ -226,12 +234,11 @@ public class TestSnapshotFileCache {
     List<Path> files = new ArrayList<>();
     for (int i = 0; i < 3; ++i) {
       for (Path filePath: builder.addRegion()) {
-        String fileName = filePath.getName();
         if (tmp) {
           // We should be able to find all the files while the snapshot creation is in-progress
           FSUtils.logFileSystemState(fs, rootDir, LOG);
-          Iterable<FileStatus> nonSnapshot = getNonSnapshotFiles(cache, filePath);
-          assertFalse("Cache didn't find " + fileName, Iterables.contains(nonSnapshot, fileName));
+          assertFalse("Cache didn't find " + filePath,
+            contains(getNonSnapshotFiles(cache, filePath), filePath));
         }
         files.add(filePath);
       }
@@ -244,9 +251,7 @@ public class TestSnapshotFileCache {
 
     // Make sure that all files are still present
     for (Path path: files) {
-      Iterable<FileStatus> nonSnapshotFiles = getNonSnapshotFiles(cache, path);
-      assertFalse("Cache didn't find " + path.getName(),
-          Iterables.contains(nonSnapshotFiles, path.getName()));
+      assertFalse("Cache didn't find " + path, contains(getNonSnapshotFiles(cache, path), path));
     }
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
@@ -255,25 +260,28 @@ public class TestSnapshotFileCache {
       fs.delete(builder.getSnapshotsDir(), true);
       FSUtils.logFileSystemState(fs, rootDir, LOG);
 
-      // The files should be in cache until next refresh
-      for (Path filePath: files) {
-        Iterable<FileStatus> nonSnapshotFiles = getNonSnapshotFiles(cache, filePath);
-        assertFalse("Cache didn't find " + filePath.getName(), Iterables.contains(nonSnapshotFiles,
-            filePath.getName()));
-      }
-
       // then trigger a refresh
       cache.triggerCacheRefreshForTesting();
       // and not it shouldn't find those files
       for (Path filePath: files) {
-        Iterable<FileStatus> nonSnapshotFiles = getNonSnapshotFiles(cache, filePath);
-        assertTrue("Cache found '" + filePath.getName() + "', but it shouldn't have.",
-            !Iterables.contains(nonSnapshotFiles, filePath.getName()));
+        assertTrue("Cache found '" + filePath + "', but it shouldn't have.",
+          contains(getNonSnapshotFiles(cache, filePath), filePath));
+
       }
     }
   }
 
-  private Iterable<FileStatus> getNonSnapshotFiles(SnapshotFileCache cache, Path storeFile)
+  private static boolean contains(Iterable<FileStatus> files, Path filePath) {
+    for (FileStatus status: files) {
+      LOG.debug("debug in contains, 3.1: " + status.getPath() + " filePath:" + filePath);
+      if (filePath.equals(status.getPath())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static Iterable<FileStatus> getNonSnapshotFiles(SnapshotFileCache cache, Path storeFile)
       throws IOException {
     return cache.getUnreferencedFiles(
         Arrays.asList(FSUtils.listStatus(fs, storeFile.getParent())), null

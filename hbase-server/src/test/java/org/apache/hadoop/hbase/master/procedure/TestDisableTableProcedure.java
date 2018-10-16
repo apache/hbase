@@ -15,38 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
-  private static final Log LOG = LogFactory.getLog(TestDisableTableProcedure.class);
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDisableTableProcedure.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestDisableTableProcedure.class);
 
   @Rule public TestName name = new TestName();
 
-  @Test(timeout = 60000)
+  @Test
   public void testDisableTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -62,7 +64,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testDisableTableMultipleTimes() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -77,16 +79,26 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
 
-    // Disable the table again - expect failure
-    long procId2 = procExec.submitProcedure(new DisableTableProcedure(
-        procExec.getEnvironment(), tableName, false));
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureInfo result = procExec.getResult(procId2);
-    assertTrue(result.isFailed());
-    LOG.debug("Disable failed with exception: " + result.getExceptionFullMessage());
-    assertTrue(
-      ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotEnabledException);
+    // Disable the table again - expect failure. We used to get it via procExec#getResult but we
+    // added fail fast so now happens on construction.
+    Throwable e = null;
+    Throwable cause = null;
+    try {
+      long procId2 = procExec.submitProcedure(new DisableTableProcedure(
+          procExec.getEnvironment(), tableName, false));
+      // Wait the completion
+      ProcedureTestingUtility.waitProcedure(procExec, procId2);
+      Procedure<?> result = procExec.getResult(procId2);
+      assertTrue(result.isFailed());
+      cause = ProcedureTestingUtility.getExceptionCause(result);
+      e = result.getException();
+    } catch (TableNotEnabledException tnde) {
+      // Expected.
+      e = tnde;
+      cause = tnde;
+    }
+    LOG.debug("Disable failed with exception {}" + e);
+    assertTrue(cause instanceof TableNotEnabledException);
 
     // Disable the table - expect failure from ProcedurePrepareLatch
     try {
@@ -98,19 +110,24 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
       Assert.fail("Disable should throw exception through latch.");
     } catch (TableNotEnabledException tnee) {
       // Expected
-      LOG.debug("Disable failed with expected exception.");
+      LOG.debug("Disable failed with expected exception {}", tnee);
     }
 
     // Disable the table again with skipping table state check flag (simulate recovery scenario)
-    long procId4 = procExec.submitProcedure(new DisableTableProcedure(
+    try {
+      long procId4 = procExec.submitProcedure(new DisableTableProcedure(
         procExec.getEnvironment(), tableName, true));
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId4);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId4);
+      // Wait the completion
+      ProcedureTestingUtility.waitProcedure(procExec, procId4);
+      ProcedureTestingUtility.assertProcNotFailed(procExec, procId4);
+    } catch (TableNotEnabledException tnee) {
+      // Expected
+      LOG.debug("Disable failed with expected exception {}", tnee);
+    }
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

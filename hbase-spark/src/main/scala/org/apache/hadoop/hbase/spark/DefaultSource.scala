@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.spark
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapred.TableOutputFormat
@@ -33,9 +33,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.CellUtil
 import org.apache.hadoop.mapred.JobConf
-import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.datasources.hbase.{Utils, Field, HBaseTableCatalog}
 import org.apache.spark.sql.{DataFrame, SaveMode, Row, SQLContext}
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
@@ -106,7 +104,7 @@ case class HBaseRelation (
 
   val catalog = HBaseTableCatalog(parameters)
   def tableName = catalog.name
-  val configResources = parameters.getOrElse(HBaseSparkConf.HBASE_CONFIG_LOCATION, "")
+  val configResources = parameters.get(HBaseSparkConf.HBASE_CONFIG_LOCATION)
   val useHBaseContext =  parameters.get(HBaseSparkConf.USE_HBASECONTEXT).map(_.toBoolean).getOrElse(HBaseSparkConf.DEFAULT_USE_HBASECONTEXT)
   val usePushDownColumnFilter = parameters.get(HBaseSparkConf.PUSHDOWN_COLUMN_FILTER)
     .map(_.toBoolean).getOrElse(HBaseSparkConf.DEFAULT_PUSHDOWN_COLUMN_FILTER)
@@ -133,7 +131,7 @@ case class HBaseRelation (
     LatestHBaseContextCache.latest
   } else {
     val config = HBaseConfiguration.create()
-    configResources.split(",").foreach( r => config.addResource(r))
+    configResources.map(resource => resource.split(",").foreach(r => config.addResource(r)))
     new HBaseContext(sqlContext.sparkContext, config)
   }
 

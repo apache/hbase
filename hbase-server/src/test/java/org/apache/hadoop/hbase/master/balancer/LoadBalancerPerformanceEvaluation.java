@@ -18,29 +18,31 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 /**
  * Tool to test performance of different {@link org.apache.hadoop.hbase.master.LoadBalancer}
@@ -52,8 +54,8 @@ import java.util.Map;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
-  private static final Log LOG =
-      LogFactory.getLog(LoadBalancerPerformanceEvaluation.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LoadBalancerPerformanceEvaluation.class.getName());
 
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
@@ -79,9 +81,9 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
   // data
   private List<ServerName> servers;
-  private List<HRegionInfo> regions;
-  private Map<HRegionInfo, ServerName> regionServerMap;
-  private Map<ServerName, List<HRegionInfo>> serverRegionMap;
+  private List<RegionInfo> regions;
+  private Map<RegionInfo, ServerName> regionServerMap;
+  private Map<ServerName, List<RegionInfo>> serverRegionMap;
 
   // Non-default configurations.
   private void setupConf() {
@@ -100,7 +102,12 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
       Bytes.putInt(start, 0, i);
       Bytes.putInt(end, 0, i + 1);
       TableName tableName = TableName.valueOf("LoadBalancerPerfTable");
-      HRegionInfo hri = new HRegionInfo(tableName, start, end, false, i);
+      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(start)
+        .setEndKey(end)
+        .setSplit(false)
+        .setRegionId(i)
+        .build();
       regions.add(hri);
       regionServerMap.put(hri, null);
     }
@@ -153,21 +160,21 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
     String methodName = "roundRobinAssignment";
     LOG.info("Calling " + methodName);
-    Stopwatch watch = new Stopwatch().start();
+    Stopwatch watch = Stopwatch.createStarted();
     loadBalancer.roundRobinAssignment(regions, servers);
-    System.out.print(formatResults(methodName, watch.elapsedMillis()));
+    System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     methodName = "retainAssignment";
     LOG.info("Calling " + methodName);
     watch.reset().start();
     loadBalancer.retainAssignment(regionServerMap, servers);
-    System.out.print(formatResults(methodName, watch.elapsedMillis()));
+    System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     methodName = "balanceCluster";
     LOG.info("Calling " + methodName);
     watch.reset().start();
     loadBalancer.balanceCluster(serverRegionMap);
-    System.out.print(formatResults(methodName, watch.elapsedMillis()));
+    System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     return EXIT_SUCCESS;
   }

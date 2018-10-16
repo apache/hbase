@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Similar to RegionException, but disables retries.
@@ -37,4 +37,7 @@ public class DoNotRetryRegionException extends DoNotRetryIOException {
     super(s);
   }
 
+  public DoNotRetryRegionException(Throwable cause) {
+    super(cause);
+  }
 }

@@ -25,25 +25,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionInfoDisplay;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
-import org.apache.hadoop.hbase.util.ByteArrayHashKey;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.HashKey;
-import org.apache.hadoop.hbase.util.JenkinsHash;
-import org.apache.hadoop.hbase.util.MD5Hash;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Information about a region. A region is a range of keys in the whole keyspace of a table, an
@@ -74,11 +69,13 @@ import org.apache.hadoop.util.StringUtils;
  * correspond to multiple HRegionInfo's. These HRI's share the same fields however except the
  * replicaId field. If the replicaId is not set, it defaults to 0, which is compatible with the
  * previous behavior of a range corresponding to 1 region.
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+ *             use {@link RegionInfoBuilder} to build {@link RegionInfo}.
  */
+@Deprecated
 @InterfaceAudience.Public
-public class HRegionInfo implements Comparable<HRegionInfo> {
-
-  private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
+public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionInfo.class);
 
   /**
    * The new format for a region name contains its encodedName at the end.
@@ -103,82 +100,48 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * old region name format.
    */
 
-  /** Separator used to demarcate the encodedName in a region name
-   * in the new format. See description on new format above.
-   */
-  private static final int ENC_SEPARATOR = '.';
-  public  static final int MD5_HEX_LENGTH   = 32;
-
   /** A non-capture group so that this can be embedded. */
-  public static final String ENCODED_REGION_NAME_REGEX = "(?:[a-f0-9]+)";
-
-  // to keep appended int's sorted in string format. Only allows 2 bytes to be
-  // sorted for replicaId
-  public static final String REPLICA_ID_FORMAT = "%04X";
-
-  public static final byte REPLICA_ID_DELIMITER = (byte)'_';
+  public static final String ENCODED_REGION_NAME_REGEX = RegionInfoBuilder.ENCODED_REGION_NAME_REGEX;
 
   private static final int MAX_REPLICA_ID = 0xFFFF;
-  public static final int DEFAULT_REPLICA_ID = 0;
-
-  public static final String INVALID_REGION_NAME_FORMAT_MESSAGE = "Invalid regionName format";
-
-  /**
-   * Does region name contain its encoded name?
-   * @param regionName region name
-   * @return boolean indicating if this a new format region
-   *         name which contains its encoded name.
-   */
-  private static boolean hasEncodedName(final byte[] regionName) {
-    // check if region name ends in ENC_SEPARATOR
-    if ((regionName.length >= 1)
-        && (regionName[regionName.length - 1] == ENC_SEPARATOR)) {
-      // region name is new format. it contains the encoded name.
-      return true;
-    }
-    return false;
-  }
 
   /**
    * @param regionName
    * @return the encodedName
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#encodeRegionName(byte[])}.
    */
+  @Deprecated
   public static String encodeRegionName(final byte [] regionName) {
-    String encodedName;
-    if (hasEncodedName(regionName)) {
-      // region is in new format:
-      // <tableName>,<startKey>,<regionIdTimeStamp>/encodedName/
-      encodedName = Bytes.toString(regionName,
-          regionName.length - MD5_HEX_LENGTH - 1,
-          MD5_HEX_LENGTH);
-    } else {
-      // old format region name. First hbase:meta region also
-      // use this format.EncodedName is the JenkinsHash value.
-      HashKey<byte[]> key = new ByteArrayHashKey(regionName, 0, regionName.length);
-      int hashVal = Math.abs(JenkinsHash.getInstance().hash(key, 0));
-      encodedName = String.valueOf(hashVal);
-    }
-    return encodedName;
+    return RegionInfo.encodeRegionName(regionName);
   }
 
   /**
    * @return Return a short, printable name for this region (usually encoded name) for us logging.
    */
+  @Override
   public String getShortNameToLog() {
     return prettyPrint(this.getEncodedName());
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#getShortNameToLog(RegionInfo...)}.
+   */
+  @Deprecated
   public static String getShortNameToLog(HRegionInfo...hris) {
-    return getShortNameToLog(Arrays.asList(hris));
+    return RegionInfo.getShortNameToLog(Arrays.asList(hris));
   }
 
   /**
    * @return Return a String of short, printable names for <code>hris</code>
    * (usually encoded name) for us logging.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#getShortNameToLog(List)})}.
    */
+  @Deprecated
   public static String getShortNameToLog(final List<HRegionInfo> hris) {
-    return hris.stream().map(hri -> hri.getShortNameToLog()).
-        collect(Collectors.toList()).toString();
+    return RegionInfo.getShortNameToLog(hris.stream().collect(Collectors.toList()));
   }
 
   /**
@@ -186,18 +149,21 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param encodedRegionName The encoded regionname.
    * @return <code>hbase:meta</code> if passed <code>1028785192</code> else returns
    * <code>encodedRegionName</code>
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#prettyPrint(String)}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static String prettyPrint(final String encodedRegionName) {
-    if (encodedRegionName.equals("1028785192")) {
-      return encodedRegionName + "/hbase:meta";
-    }
-    return encodedRegionName;
+    return RegionInfo.prettyPrint(encodedRegionName);
   }
 
   private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
-  // This flag is in the parent of a split while the parent is still referenced
-  // by daughter regions.  We USED to set this flag when we disabled a table
-  // but now table state is kept up in zookeeper as of 0.90.0 HBase.
+  // This flag is in the parent of a split while the parent is still referenced by daughter regions.
+  // We USED to set this flag when we disabled a table but now table state is kept up in zookeeper
+  // as of 0.90.0 HBase. And now in DisableTableProcedure, finally we will create bunch of
+  // UnassignProcedures and at the last of the procedure we will set the region state to CLOSED, and
+  // will not change the offLine flag.
   private boolean offLine = false;
   private long regionId = -1;
   private transient byte [] regionName = HConstants.EMPTY_BYTE_ARRAY;
@@ -212,9 +178,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   // Current TableName
   private TableName tableName = null;
-  final static String DISPLAY_KEYS_KEY = "hbase.display.keys";
-  public final static byte[] HIDDEN_END_KEY = Bytes.toBytes("hidden-end-key");
-  public final static byte[] HIDDEN_START_KEY = Bytes.toBytes("hidden-start-key");
+
+  // Duplicated over in RegionInfoDisplay
+  final static String DISPLAY_KEYS_KEY = RegionInfoDisplay.DISPLAY_KEYS_KEY;
+  public final static byte[] HIDDEN_END_KEY = RegionInfoDisplay.HIDDEN_END_KEY;
+  public final static byte[] HIDDEN_START_KEY = RegionInfoDisplay.HIDDEN_START_KEY;
 
   /** HRegionInfo for first meta region */
   // TODO: How come Meta regions still do not have encoded region names? Fix.
@@ -223,7 +191,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
-    result ^= this.regionId;
+    result = (int) (result ^ this.regionId);
     result ^= Arrays.hashCode(this.startKey);
     result ^= Arrays.hashCode(this.endKey);
     result ^= Boolean.valueOf(this.offLine).hashCode();
@@ -231,7 +199,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     result ^= this.replicaId;
     this.hashCode = result;
   }
-
 
   /**
    * Private constructor used constructing HRegionInfo for the
@@ -344,7 +311,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    *
    * @param other
    */
-  public HRegionInfo(HRegionInfo other) {
+  public HRegionInfo(RegionInfo other) {
     super();
     this.endKey = other.getEndKey();
     this.offLine = other.isOffline();
@@ -354,8 +321,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     this.startKey = other.getStartKey();
     this.hashCode = other.hashCode();
     this.encodedName = other.getEncodedName();
-    this.tableName = other.tableName;
-    this.replicaId = other.replicaId;
+    this.tableName = other.getTable();
+    this.replicaId = other.getReplicaId();
   }
 
   public HRegionInfo(HRegionInfo other, int replicaId) {
@@ -372,10 +339,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#createRegionName(TableName, byte[], long, boolean)}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte [] createRegionName(final TableName tableName,
       final byte [] startKey, final long regionid, boolean newFormat) {
-    return createRegionName(tableName, startKey, Long.toString(regionid), newFormat);
+    return RegionInfo.createRegionName(tableName, startKey, Long.toString(regionid), newFormat);
   }
 
   /**
@@ -386,10 +357,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#createRegionName(TableName, byte[], String, boolean)}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte [] createRegionName(final TableName tableName,
       final byte [] startKey, final String id, boolean newFormat) {
-    return createRegionName(tableName, startKey, Bytes.toBytes(id), newFormat);
+    return RegionInfo.createRegionName(tableName, startKey, Bytes.toBytes(id), newFormat);
   }
 
   /**
@@ -401,10 +376,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey, id and replicaId
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#createRegionName(TableName, byte[], long, int, boolean)}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte [] createRegionName(final TableName tableName,
       final byte [] startKey, final long regionid, int replicaId, boolean newFormat) {
-    return createRegionName(tableName, startKey, Bytes.toBytes(Long.toString(regionid)),
+    return RegionInfo.createRegionName(tableName, startKey, Bytes.toBytes(Long.toString(regionid)),
         replicaId, newFormat);
   }
 
@@ -416,10 +395,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#createRegionName(TableName, byte[], byte[], boolean)}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte [] createRegionName(final TableName tableName,
       final byte [] startKey, final byte [] id, boolean newFormat) {
-    return createRegionName(tableName, startKey, id, DEFAULT_REPLICA_ID, newFormat);
+    return RegionInfo.createRegionName(tableName, startKey, id, DEFAULT_REPLICA_ID, newFormat);
   }
   /**
    * Make a region name of passed parameters.
@@ -429,94 +412,38 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param replicaId
    * @param newFormat should we create the region name in the new format
    * @return Region name made of passed tableName, startKey, id and replicaId
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#createRegionName(TableName, byte[], byte[], int, boolean)}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte [] createRegionName(final TableName tableName,
       final byte [] startKey, final byte [] id, final int replicaId, boolean newFormat) {
-    int len = tableName.getName().length + 2 + id.length +
-        (startKey == null? 0: startKey.length);
-    if (newFormat) {
-      len += MD5_HEX_LENGTH + 2;
-    }
-    byte[] replicaIdBytes = null;
-    // Special casing: replicaId is only appended if replicaId is greater than
-    // 0. This is because all regions in meta would have to be migrated to the new
-    // name otherwise
-    if (replicaId > 0) {
-      // use string representation for replica id
-      replicaIdBytes = Bytes.toBytes(String.format(REPLICA_ID_FORMAT, replicaId));
-      len += 1 + replicaIdBytes.length;
-    }
-
-    byte [] b = new byte [len];
-
-    int offset = tableName.getName().length;
-    System.arraycopy(tableName.getName(), 0, b, 0, offset);
-    b[offset++] = HConstants.DELIMITER;
-    if (startKey != null && startKey.length > 0) {
-      System.arraycopy(startKey, 0, b, offset, startKey.length);
-      offset += startKey.length;
-    }
-    b[offset++] = HConstants.DELIMITER;
-    System.arraycopy(id, 0, b, offset, id.length);
-    offset += id.length;
-
-    if (replicaIdBytes != null) {
-      b[offset++] = REPLICA_ID_DELIMITER;
-      System.arraycopy(replicaIdBytes, 0, b, offset, replicaIdBytes.length);
-      offset += replicaIdBytes.length;
-    }
-
-    if (newFormat) {
-      //
-      // Encoded name should be built into the region name.
-      //
-      // Use the region name thus far (namely, <tablename>,<startKey>,<id>_<replicaId>)
-      // to compute a MD5 hash to be used as the encoded name, and append
-      // it to the byte buffer.
-      //
-      String md5Hash = MD5Hash.getMD5AsHex(b, 0, offset);
-      byte [] md5HashBytes = Bytes.toBytes(md5Hash);
-
-      if (md5HashBytes.length != MD5_HEX_LENGTH) {
-        LOG.error("MD5-hash length mismatch: Expected=" + MD5_HEX_LENGTH +
-                  "; Got=" + md5HashBytes.length);
-      }
-
-      // now append the bytes '.<encodedName>.' to the end
-      b[offset++] = ENC_SEPARATOR;
-      System.arraycopy(md5HashBytes, 0, b, offset, MD5_HEX_LENGTH);
-      offset += MD5_HEX_LENGTH;
-      b[offset++] = ENC_SEPARATOR;
-    }
-
-    return b;
+    return RegionInfo.createRegionName(tableName, startKey, id, replicaId, newFormat);
   }
 
   /**
    * Gets the table name from the specified region name.
    * @param regionName to extract the table name from
    * @return Table name
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#getTable(byte[])}.
    */
+  @Deprecated
   public static TableName getTable(final byte [] regionName) {
-    int offset = -1;
-    for (int i = 0; i < regionName.length; i++) {
-      if (regionName[i] == HConstants.DELIMITER) {
-        offset = i;
-        break;
-      }
-    }
-    byte[] buff  = new byte[offset];
-    System.arraycopy(regionName, 0, buff, 0, offset);
-    return TableName.valueOf(buff);
+    return RegionInfo.getTable(regionName);
   }
 
   /**
    * Gets the start key from the specified region name.
    * @param regionName
    * @return Start key.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#getStartKey(byte[])}.
    */
+  @Deprecated
   public static byte[] getStartKey(final byte[] regionName) throws IOException {
-    return parseRegionName(regionName)[1];
+    return RegionInfo.getStartKey(regionName);
   }
 
   /**
@@ -524,91 +451,31 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param regionName
    * @return Array of byte[] containing tableName, startKey and id
    * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#parseRegionName(byte[])}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte [][] parseRegionName(final byte [] regionName)
   throws IOException {
-    // Region name is of the format:
-    // tablename,startkey,regionIdTimestamp[_replicaId][.encodedName.]
-    // startkey can contain the delimiter (',') so we parse from the start and end
-
-    // parse from start
-    int offset = -1;
-    for (int i = 0; i < regionName.length; i++) {
-      if (regionName[i] == HConstants.DELIMITER) {
-        offset = i;
-        break;
-      }
-    }
-    if (offset == -1) {
-      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE
-        + ": " + Bytes.toStringBinary(regionName));
-    }
-    byte[] tableName = new byte[offset];
-    System.arraycopy(regionName, 0, tableName, 0, offset);
-    offset = -1;
-
-    int endOffset = regionName.length;
-    // check whether regionName contains encodedName
-    if (regionName.length > MD5_HEX_LENGTH + 2
-        && regionName[regionName.length-1] == ENC_SEPARATOR
-        && regionName[regionName.length-MD5_HEX_LENGTH-2] == ENC_SEPARATOR) {
-      endOffset = endOffset - MD5_HEX_LENGTH - 2;
-    }
-
-    // parse from end
-    byte[] replicaId = null;
-    int idEndOffset = endOffset;
-    for (int i = endOffset - 1; i > 0; i--) {
-      if (regionName[i] == REPLICA_ID_DELIMITER) { //replicaId may or may not be present
-        replicaId = new byte[endOffset - i - 1];
-        System.arraycopy(regionName, i + 1, replicaId, 0,
-          endOffset - i - 1);
-        idEndOffset = i;
-        // do not break, continue to search for id
-      }
-      if (regionName[i] == HConstants.DELIMITER) {
-        offset = i;
-        break;
-      }
-    }
-    if (offset == -1) {
-      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE
-        + ": " + Bytes.toStringBinary(regionName));
-    }
-    byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
-    if(offset != tableName.length + 1) {
-      startKey = new byte[offset - tableName.length - 1];
-      System.arraycopy(regionName, tableName.length + 1, startKey, 0,
-          offset - tableName.length - 1);
-    }
-    byte [] id = new byte[idEndOffset - offset - 1];
-    System.arraycopy(regionName, offset + 1, id, 0,
-      idEndOffset - offset - 1);
-    byte [][] elements = new byte[replicaId == null ? 3 : 4][];
-    elements[0] = tableName;
-    elements[1] = startKey;
-    elements[2] = id;
-    if (replicaId != null) {
-      elements[3] = replicaId;
-    }
-
-    return elements;
+    return RegionInfo.parseRegionName(regionName);
   }
 
+  /**
+   *
+   * @param regionName
+   * @return if region name is encoded.
+   * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#isEncodedRegionName(byte[])}.
+   */
+  @Deprecated
   public static boolean isEncodedRegionName(byte[] regionName) throws IOException {
-    try {
-      HRegionInfo.parseRegionName(regionName);
-      return false;
-    } catch (IOException e) {
-      if (StringUtils.stringifyException(e)
-          .contains(HRegionInfo.INVALID_REGION_NAME_FORMAT_MESSAGE)) {
-        return true;
-      }
-      throw e;
-    }
+    return RegionInfo.isEncodedRegionName(regionName);
   }
 
   /** @return the regionId */
+  @Override
   public long getRegionId(){
     return regionId;
   }
@@ -617,6 +484,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return the regionName as an array of bytes.
    * @see #getRegionNameAsString()
    */
+  @Override
   public byte [] getRegionName(){
     return regionName;
   }
@@ -624,8 +492,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /**
    * @return Region name as a String for use in logging, etc.
    */
+  @Override
   public String getRegionNameAsString() {
-    if (hasEncodedName(this.regionName)) {
+    if (RegionInfo.hasEncodedName(this.regionName)) {
       // new format region names already have their encoded name.
       return Bytes.toStringBinary(this.regionName);
     }
@@ -636,14 +505,18 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return Bytes.toStringBinary(this.regionName) + "." + this.getEncodedName();
   }
 
-  /** @return the encoded region name */
+  /**
+   * @return the encoded region name
+   */
+  @Override
   public synchronized String getEncodedName() {
     if (this.encodedName == null) {
-      this.encodedName = encodeRegionName(this.regionName);
+      this.encodedName = RegionInfo.encodeRegionName(this.regionName);
     }
     return this.encodedName;
   }
 
+  @Override
   public synchronized byte [] getEncodedNameAsBytes() {
     if (this.encodedNameAsBytes == null) {
       this.encodedNameAsBytes = Bytes.toBytes(getEncodedName());
@@ -651,12 +524,18 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return this.encodedNameAsBytes;
   }
 
-  /** @return the startKey */
+  /**
+   * @return the startKey
+   */
+  @Override
   public byte [] getStartKey(){
     return startKey;
   }
 
-  /** @return the endKey */
+  /**
+   * @return the endKey
+   */
+  @Override
   public byte [] getEndKey(){
     return endKey;
   }
@@ -665,6 +544,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * Get current table name of the region
    * @return TableName
    */
+  @Override
   public TableName getTable() {
     // This method name should be getTableName but there was already a method getTableName
     // that returned a byte array.  It is unfortunate given everywhere else, getTableName returns
@@ -682,6 +562,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * ["b","z"] it will return false.
    * @throws IllegalArgumentException if the range passed is invalid (ie. end &lt; start)
    */
+  @Override
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
     if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
       throw new IllegalArgumentException(
@@ -697,8 +578,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * Return true if the given row falls in this region.
+   * @return true if the given row falls in this region.
    */
+  @Override
   public boolean containsRow(byte[] row) {
     return Bytes.compareTo(row, startKey) >= 0 &&
       (Bytes.compareTo(row, endKey) < 0 ||
@@ -712,7 +594,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return isMetaRegion();
   }
 
-  /** @return true if this region is a meta region */
+  /**
+   * @return true if this region is a meta region
+   */
+  @Override
   public boolean isMetaRegion() {
      return tableName.equals(HRegionInfo.FIRST_META_REGIONINFO.getTable());
   }
@@ -725,8 +610,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * @return True if has been split and has daughters.
+   * @return true if has been split and has daughters.
    */
+  @Override
   public boolean isSplit() {
     return this.split;
   }
@@ -739,8 +625,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * @return True if this region is offline.
+   * @return true if this region is offline.
    */
+  @Override
   public boolean isOffline() {
     return this.offLine;
   }
@@ -755,8 +642,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * @return True if this is a split parent region.
+   * @return true if this is a split parent region.
    */
+  @Override
   public boolean isSplitParent() {
     if (!isSplit()) return false;
     if (!isOffline()) {
@@ -769,6 +657,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * Returns the region replica id
    * @return returns region replica id
    */
+  @Override
   public int getReplicaId() {
     return replicaId;
   }
@@ -819,53 +708,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   @Override
   public int compareTo(HRegionInfo o) {
-    if (o == null) {
-      return 1;
-    }
-
-    // Are regions of same table?
-    int result = this.tableName.compareTo(o.tableName);
-    if (result != 0) {
-      return result;
-    }
-
-    // Compare start keys.
-    result = Bytes.compareTo(this.startKey, o.startKey);
-    if (result != 0) {
-      return result;
-    }
-
-    // Compare end keys.
-    result = Bytes.compareTo(this.endKey, o.endKey);
-
-    if (result != 0) {
-      if (this.getStartKey().length != 0
-              && this.getEndKey().length == 0) {
-          return 1; // this is last region
-      }
-      if (o.getStartKey().length != 0
-              && o.getEndKey().length == 0) {
-          return -1; // o is the last region
-      }
-      return result;
-    }
-
-    // regionId is usually milli timestamp -- this defines older stamps
-    // to be "smaller" than newer stamps in sort order.
-    if (this.regionId > o.regionId) {
-      return 1;
-    } else if (this.regionId < o.regionId) {
-      return -1;
-    }
-
-    int replicaDiff = this.getReplicaId() - o.getReplicaId();
-    if (replicaDiff != 0) return replicaDiff;
-
-    if (this.offLine == o.offLine)
-      return 0;
-    if (this.offLine == true) return -1;
-
-    return 1;
+    return RegionInfo.COMPARATOR.compare(this, o);
   }
 
   /**
@@ -883,7 +726,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    *
    * @return the converted RegionInfo
    */
-  RegionInfo convert() {
+  HBaseProtos.RegionInfo convert() {
     return convert(this);
   }
 
@@ -892,58 +735,47 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    *
    * @param info the HRegionInfo to convert
    * @return the converted RegionInfo
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use toRegionInfo(org.apache.hadoop.hbase.client.RegionInfo)
+   *             in org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.
    */
-  public static RegionInfo convert(final HRegionInfo info) {
-    if (info == null) return null;
-    RegionInfo.Builder builder = RegionInfo.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
-    builder.setRegionId(info.getRegionId());
-    if (info.getStartKey() != null) {
-      builder.setStartKey(UnsafeByteOperations.unsafeWrap(info.getStartKey()));
-    }
-    if (info.getEndKey() != null) {
-      builder.setEndKey(UnsafeByteOperations.unsafeWrap(info.getEndKey()));
-    }
-    builder.setOffline(info.isOffline());
-    builder.setSplit(info.isSplit());
-    builder.setReplicaId(info.getReplicaId());
-    return builder.build();
+  @Deprecated
+  @InterfaceAudience.Private
+  public static HBaseProtos.RegionInfo convert(final HRegionInfo info) {
+    return ProtobufUtil.toRegionInfo(info);
   }
 
   /**
    * Convert a RegionInfo to a HRegionInfo
    *
    * @param proto the RegionInfo to convert
-   * @return the converted HRegionInfho
+   * @return the converted HRegionInfo
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use toRegionInfo(HBaseProtos.RegionInfo)
+   *             in org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.
    */
-  public static HRegionInfo convert(final RegionInfo proto) {
-    if (proto == null) return null;
-    TableName tableName =
-        ProtobufUtil.toTableName(proto.getTableName());
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return RegionReplicaUtil.getRegionInfoForReplica(FIRST_META_REGIONINFO,
-          proto.getReplicaId());
-    }
-    long regionId = proto.getRegionId();
-    int replicaId = proto.hasReplicaId() ? proto.getReplicaId() : DEFAULT_REPLICA_ID;
-    byte[] startKey = null;
-    byte[] endKey = null;
-    if (proto.hasStartKey()) {
-      startKey = proto.getStartKey().toByteArray();
-    }
-    if (proto.hasEndKey()) {
-      endKey = proto.getEndKey().toByteArray();
-    }
-    boolean split = false;
-    if (proto.hasSplit()) {
-      split = proto.getSplit();
-    }
-    HRegionInfo hri = new HRegionInfo(
-        tableName,
-        startKey,
-        endKey, split, regionId, replicaId);
-    if (proto.hasOffline()) {
-      hri.setOffline(proto.getOffline());
+  @Deprecated
+  @InterfaceAudience.Private
+  public static HRegionInfo convert(final HBaseProtos.RegionInfo proto) {
+    RegionInfo ri = ProtobufUtil.toRegionInfo(proto);
+    // This is hack of what is in RegionReplicaUtil but it is doing translation of
+    // RegionInfo into HRegionInfo which is what is wanted here.
+    HRegionInfo hri;
+    if (ri.isMetaRegion()) {
+      hri = ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID ?
+      HRegionInfo.FIRST_META_REGIONINFO :
+      new HRegionInfo(ri.getRegionId(), ri.getTable(), ri.getReplicaId());
+    } else {
+      hri = new HRegionInfo(
+        ri.getTable(),
+        ri.getStartKey(),
+        ri.getEndKey(),
+        ri.isSplit(),
+        ri.getRegionId(),
+        ri.getReplicaId());
+      if (proto.hasOffline()) {
+        hri.setOffline(proto.getOffline());
+      }
     }
     return hri;
   }
@@ -951,17 +783,22 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /**
    * @return This instance serialized as protobuf w/ a magic pb prefix.
    * @see #parseFrom(byte[])
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#toByteArray(RegionInfo)}.
    */
+  @Deprecated
   public byte [] toByteArray() {
-    byte [] bytes = convert().toByteArray();
-    return ProtobufUtil.prependPBMagic(bytes);
+    return RegionInfo.toByteArray(this);
   }
 
   /**
    * @return A deserialized {@link HRegionInfo}
    * or null if we failed deserialize or passed bytes null
    * @see #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#parseFromOrNull(byte[])}.
    */
+  @Deprecated
   public static HRegionInfo parseFromOrNull(final byte [] bytes) {
     if (bytes == null) return null;
     return parseFromOrNull(bytes, 0, bytes.length);
@@ -971,7 +808,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return A deserialized {@link HRegionInfo} or null
    *  if we failed deserialize or passed bytes null
    * @see #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#parseFromOrNull(byte[], int, int)}.
    */
+  @Deprecated
   public static HRegionInfo parseFromOrNull(final byte [] bytes, int offset, int len) {
     if (bytes == null || len <= 0) return null;
     try {
@@ -986,6 +826,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return A deserialized {@link HRegionInfo}
    * @throws DeserializationException
    * @see #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#parseFrom(byte[])}.
    */
   public static HRegionInfo parseFrom(final byte [] bytes) throws DeserializationException {
     if (bytes == null) return null;
@@ -999,7 +841,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return A deserialized {@link HRegionInfo}
    * @throws DeserializationException
    * @see #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#parseFrom(byte[], int, int)}.
    */
+  @Deprecated
   public static HRegionInfo parseFrom(final byte [] bytes, int offset, int len)
       throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes, offset, len)) {
@@ -1023,9 +868,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
    * @throws IOException
    * @see #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#toDelimitedByteArray(RegionInfo)}.
    */
+  @Deprecated
   public byte [] toDelimitedByteArray() throws IOException {
-    return ProtobufUtil.toDelimitedByteArray(convert());
+    return RegionInfo.toDelimitedByteArray(this);
   }
 
   /**
@@ -1034,14 +882,15 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param state
    * @param conf
    * @return descriptive string
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use RegionInfoDisplay#getDescriptiveNameFromRegionStateForDisplay(RegionState, Configuration)
+   *             over in hbase-server module.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static String getDescriptiveNameFromRegionStateForDisplay(RegionState state,
       Configuration conf) {
-    if (conf.getBoolean(DISPLAY_KEYS_KEY, true)) return state.toDescriptiveString();
-    String descriptiveStringFromState = state.toDescriptiveString();
-    int idx = descriptiveStringFromState.lastIndexOf(" state=");
-    String regionName = getRegionNameAsStringForDisplay(state.getRegion(), conf);
-    return regionName + descriptiveStringFromState.substring(idx);
+    return RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
   }
 
   /**
@@ -1049,11 +898,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param hri
    * @param conf
    * @return the endkey
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use RegionInfoDisplay#getEndKeyForDisplay(RegionInfo, Configuration)
+   *             over in hbase-server module.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte[] getEndKeyForDisplay(HRegionInfo hri, Configuration conf) {
-    boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
-    if (displayKey) return hri.getEndKey();
-    return HIDDEN_END_KEY;
+    return RegionInfoDisplay.getEndKeyForDisplay(hri, conf);
   }
 
   /**
@@ -1061,11 +913,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param hri
    * @param conf
    * @return the startkey
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use RegionInfoDisplay#getStartKeyForDisplay(RegionInfo, Configuration)
+   *             over in hbase-server module.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte[] getStartKeyForDisplay(HRegionInfo hri, Configuration conf) {
-    boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
-    if (displayKey) return hri.getStartKey();
-    return HIDDEN_START_KEY;
+    return RegionInfoDisplay.getStartKeyForDisplay(hri, conf);
   }
 
   /**
@@ -1073,9 +928,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param hri
    * @param conf
    * @return region name as String
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use RegionInfoDisplay#getRegionNameAsStringForDisplay(RegionInfo, Configuration)
+   *             over in hbase-server module.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static String getRegionNameAsStringForDisplay(HRegionInfo hri, Configuration conf) {
-    return Bytes.toStringBinary(getRegionNameForDisplay(hri, conf));
+    return RegionInfoDisplay.getRegionNameAsStringForDisplay(hri, conf);
   }
 
   /**
@@ -1083,47 +943,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param hri
    * @param conf
    * @return region name bytes
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use RegionInfoDisplay#getRegionNameForDisplay(RegionInfo, Configuration)
+   *             over in hbase-server module.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte[] getRegionNameForDisplay(HRegionInfo hri, Configuration conf) {
-    boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
-    if (displayKey || hri.getTable().equals(TableName.META_TABLE_NAME)) {
-      return hri.getRegionName();
-    } else {
-      // create a modified regionname with the startkey replaced but preserving
-      // the other parts including the encodedname.
-      try {
-        byte[][]regionNameParts = parseRegionName(hri.getRegionName());
-        regionNameParts[1] = HIDDEN_START_KEY; //replace the real startkey
-        int len = 0;
-        // get the total length
-        for (byte[] b : regionNameParts) {
-          len += b.length;
-        }
-        byte[] encodedRegionName =
-            Bytes.toBytes(encodeRegionName(hri.getRegionName()));
-        len += encodedRegionName.length;
-        //allocate some extra bytes for the delimiters and the last '.'
-        byte[] modifiedName = new byte[len + regionNameParts.length + 1];
-        int lengthSoFar = 0;
-        int loopCount = 0;
-        for (byte[] b : regionNameParts) {
-          System.arraycopy(b, 0, modifiedName, lengthSoFar, b.length);
-          lengthSoFar += b.length;
-          if (loopCount++ == 2) modifiedName[lengthSoFar++] = REPLICA_ID_DELIMITER;
-          else  modifiedName[lengthSoFar++] = HConstants.DELIMITER;
-        }
-        // replace the last comma with '.'
-        modifiedName[lengthSoFar - 1] = ENC_SEPARATOR;
-        System.arraycopy(encodedRegionName, 0, modifiedName, lengthSoFar,
-            encodedRegionName.length);
-        lengthSoFar += encodedRegionName.length;
-        modifiedName[lengthSoFar] = ENC_SEPARATOR;
-        return modifiedName;
-      } catch (IOException e) {
-        //LOG.warn("Encountered exception " + e);
-        throw new RuntimeException(e);
-      }
-    }
+    return RegionInfoDisplay.getRegionNameForDisplay(hri, conf);
   }
 
   /**
@@ -1132,7 +959,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param in
    * @return An instance of HRegionInfo.
    * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#parseFrom(DataInputStream)}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static HRegionInfo parseFrom(final DataInputStream in) throws IOException {
     // I need to be able to move back in the stream if this is not a pb serialization so I can
     // do the Writable decoding instead.
@@ -1161,22 +992,13 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
    * @throws IOException
    * @see #toByteArray()
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#toDelimitedByteArray(RegionInfo...)}.
    */
+  @Deprecated
+  @InterfaceAudience.Private
   public static byte[] toDelimitedByteArray(HRegionInfo... infos) throws IOException {
-    byte[][] bytes = new byte[infos.length][];
-    int size = 0;
-    for (int i = 0; i < infos.length; i++) {
-      bytes[i] = infos[i].toDelimitedByteArray();
-      size += bytes[i].length;
-    }
-
-    byte[] result = new byte[size];
-    int offset = 0;
-    for (byte[] b : bytes) {
-      System.arraycopy(b, 0, result, offset, b.length);
-      offset += b.length;
-    }
-    return result;
+    return RegionInfo.toDelimitedByteArray(infos);
   }
 
   /**
@@ -1186,7 +1008,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param offset the start offset into the byte[] buffer
    * @param length how far we should read into the byte[] buffer
    * @return All the hregioninfos that are in the byte array. Keeps reading till we hit the end.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link RegionInfo#parseDelimitedFrom(byte[], int, int)}.
    */
+  @Deprecated
   public static List<HRegionInfo> parseDelimitedFrom(final byte[] bytes, final int offset,
       final int length) throws IOException {
     if (bytes == null) {
@@ -1211,21 +1036,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param regionA
    * @param regionB
    * @return true if two regions are adjacent
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link org.apache.hadoop.hbase.client.RegionInfo#areAdjacent(RegionInfo, RegionInfo)}.
    */
+  @Deprecated
   public static boolean areAdjacent(HRegionInfo regionA, HRegionInfo regionB) {
-    if (regionA == null || regionB == null) {
-      throw new IllegalArgumentException(
-          "Can't check whether adjacent for null region");
-    }
-    HRegionInfo a = regionA;
-    HRegionInfo b = regionB;
-    if (Bytes.compareTo(a.getStartKey(), b.getStartKey()) > 0) {
-      a = regionB;
-      b = regionA;
-    }
-    if (Bytes.compareTo(a.getEndKey(), b.getStartKey()) == 0) {
-      return true;
-    }
-    return false;
+    return RegionInfo.areAdjacent(regionA, regionB);
   }
 }

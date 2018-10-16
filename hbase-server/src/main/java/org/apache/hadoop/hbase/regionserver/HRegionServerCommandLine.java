@@ -18,15 +18,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 
 /**
@@ -35,7 +33,7 @@ import org.apache.hadoop.hbase.util.ServerCommandLine;
  */
 @InterfaceAudience.Private
 public class HRegionServerCommandLine extends ServerCommandLine {
-  private static final Log LOG = LogFactory.getLog(HRegionServerCommandLine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionServerCommandLine.class);
 
   private final Class<? extends HRegionServer> regionServerClass;
 
@@ -46,13 +44,14 @@ public class HRegionServerCommandLine extends ServerCommandLine {
     this.regionServerClass = clazz;
   }
 
+  @Override
   protected String getUsage() {
     return USAGE;
   }
 
   private int start() throws Exception {
     Configuration conf = getConf();
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
+    TraceUtil.initTracer(conf);
     try {
       // If 'local', don't start a region server here. Defer to
       // LocalHBaseCluster. It manages 'local' clusters.
@@ -61,7 +60,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
             + HConstants.CLUSTER_DISTRIBUTED + " is false");
       } else {
         logProcessInfo(getConf());
-        HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf, cp);
+        HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
         hrs.start();
         hrs.join();
         if (hrs.isAborted()) {
@@ -75,6 +74,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
     return 0;
   }
 
+  @Override
   public int run(String args[]) throws Exception {
     if (args.length != 1) {
       usage(null);

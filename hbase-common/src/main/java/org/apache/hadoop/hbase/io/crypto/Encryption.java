@@ -33,15 +33,15 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A facade for encryption algorithms and related support.
@@ -49,7 +49,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceAudience.Public
 public final class Encryption {
 
-  private static final Log LOG = LogFactory.getLog(Encryption.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Encryption.class);
 
   /**
    * Crypto context
@@ -205,7 +205,7 @@ public final class Encryption {
   /**
    * Return a 128 bit key derived from the concatenation of the supplied
    * arguments using PBKDF2WithHmacSHA1 at 10,000 iterations.
-   * 
+   *
    */
   public static byte[] pbkdf128(String... args) {
     byte[] salt = new byte[128];
@@ -228,7 +228,7 @@ public final class Encryption {
   /**
    * Return a 128 bit key derived from the concatenation of the supplied
    * arguments using PBKDF2WithHmacSHA1 at 10,000 iterations.
-   * 
+   *
    */
   public static byte[] pbkdf128(byte[]... args) {
     byte[] salt = new byte[128];
@@ -421,7 +421,7 @@ public final class Encryption {
    */
   public static Key getSecretKeyForSubject(String subject, Configuration conf)
       throws IOException {
-    KeyProvider provider = (KeyProvider)getKeyProvider(conf);
+    KeyProvider provider = getKeyProvider(conf);
     if (provider != null) try {
       Key[] keys = provider.getKeys(new String[] { subject });
       if (keys != null && keys.length > 0) {

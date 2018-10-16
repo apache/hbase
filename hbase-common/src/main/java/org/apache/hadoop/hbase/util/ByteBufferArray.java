@@ -20,14 +20,22 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class manages an array of ByteBuffers with a default size 4MB. These
@@ -35,24 +43,25 @@ import org.apache.hadoop.util.StringUtils;
  * reading/writing data from this large buffer with a position and offset
  */
 @InterfaceAudience.Private
-public final class ByteBufferArray {
-  private static final Log LOG = LogFactory.getLog(ByteBufferArray.class);
+public class ByteBufferArray {
+  private static final Logger LOG = LoggerFactory.getLogger(ByteBufferArray.class);
 
   public static final int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
-  private ByteBuffer buffers[];
+  @VisibleForTesting
+  ByteBuffer buffers[];
   private int bufferSize;
-  private int bufferCount;
+  @VisibleForTesting
+  int bufferCount;
 
   /**
    * We allocate a number of byte buffers as the capacity. In order not to out
    * of the array bounds for the last byte(see {@link ByteBufferArray#multiple}),
    * we will allocate one additional buffer with capacity 0;
    * @param capacity total size of the byte buffer array
-   * @param directByteBuffer true if we allocate direct buffer
    * @param allocator the ByteBufferAllocator that will create the buffers
    * @throws IOException throws IOException if there is an exception thrown by the allocator
    */
-  public ByteBufferArray(long capacity, boolean directByteBuffer, ByteBufferAllocator allocator)
+  public ByteBufferArray(long capacity, ByteBufferAllocator allocator)
       throws IOException {
     this.bufferSize = DEFAULT_BUFFER_SIZE;
     if (this.bufferSize > (capacity / 16))
@@ -60,15 +69,73 @@ public final class ByteBufferArray {
     this.bufferCount = (int) (roundUp(capacity, bufferSize) / bufferSize);
     LOG.info("Allocating buffers total=" + StringUtils.byteDesc(capacity)
         + ", sizePerBuffer=" + StringUtils.byteDesc(bufferSize) + ", count="
-        + bufferCount + ", direct=" + directByteBuffer);
+        + bufferCount);
     buffers = new ByteBuffer[bufferCount + 1];
-    for (int i = 0; i <= bufferCount; i++) {
-      if (i < bufferCount) {
-        buffers[i] = allocator.allocate(bufferSize, directByteBuffer);
-      } else {
-        // always create on heap
-        buffers[i] = ByteBuffer.allocate(0);
+    createBuffers(allocator);
+  }
+
+  @VisibleForTesting
+  void createBuffers(ByteBufferAllocator allocator)
+      throws IOException {
+    int threadCount = getThreadCount();
+    ExecutorService service = new ThreadPoolExecutor(threadCount, threadCount, 0L,
+        TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+    int perThreadCount = (int)Math.floor((double) (bufferCount) / threadCount);
+    int lastThreadCount = bufferCount - (perThreadCount * (threadCount - 1));
+    Future<ByteBuffer[]>[] futures = new Future[threadCount];
+    try {
+      for (int i = 0; i < threadCount; i++) {
+        // Last thread will have to deal with a different number of buffers
+        int buffersToCreate = (i == threadCount - 1) ? lastThreadCount : perThreadCount;
+        futures[i] = service.submit(
+          new BufferCreatorCallable(bufferSize, buffersToCreate, allocator));
       }
+      int bufferIndex = 0;
+      for (Future<ByteBuffer[]> future : futures) {
+        try {
+          ByteBuffer[] buffers = future.get();
+          for (ByteBuffer buffer : buffers) {
+            this.buffers[bufferIndex++] = buffer;
+          }
+        } catch (InterruptedException | ExecutionException e) {
+          LOG.error("Buffer creation interrupted", e);
+          throw new IOException(e);
+        }
+      }
+    } finally {
+      service.shutdownNow();
+    }
+    // always create on heap empty dummy buffer at last
+    this.buffers[bufferCount] = ByteBuffer.allocate(0);
+  }
+
+  @VisibleForTesting
+  int getThreadCount() {
+    return Runtime.getRuntime().availableProcessors();
+  }
+
+  /**
+   * A callable that creates buffers of the specified length either onheap/offheap using the
+   * {@link ByteBufferAllocator}
+   */
+  private static class BufferCreatorCallable implements Callable<ByteBuffer[]> {
+    private final int bufferCapacity;
+    private final int bufferCount;
+    private final ByteBufferAllocator allocator;
+
+    BufferCreatorCallable(int bufferCapacity, int bufferCount, ByteBufferAllocator allocator) {
+      this.bufferCapacity = bufferCapacity;
+      this.bufferCount = bufferCount;
+      this.allocator = allocator;
+    }
+
+    @Override
+    public ByteBuffer[] call() throws Exception {
+      ByteBuffer[] buffers = new ByteBuffer[this.bufferCount];
+      for (int i = 0; i < this.bufferCount; i++) {
+        buffers[i] = allocator.allocate(this.bufferCapacity);
+      }
+      return buffers;
     }
   }
 
@@ -169,7 +236,7 @@ public final class ByteBufferArray {
     int endBuffer = (int) (end / bufferSize), endOffset = (int) (end % bufferSize);
     assert array.length >= len + arrayOffset;
     assert startBuffer >= 0 && startBuffer < bufferCount;
-    assert endBuffer >= 0 && endBuffer < bufferCount
+    assert (endBuffer >= 0 && endBuffer < bufferCount)
         || (endBuffer == bufferCount && endOffset == 0);
     if (startBuffer >= buffers.length || startBuffer < 0) {
       String msg = "Failed multiple, start=" + start + ",startBuffer="
@@ -217,7 +284,7 @@ public final class ByteBufferArray {
       endBufferOffset = bufferSize;
     }
     assert startBuffer >= 0 && startBuffer < bufferCount;
-    assert endBuffer >= 0 && endBuffer < bufferCount
+    assert (endBuffer >= 0 && endBuffer < bufferCount)
         || (endBuffer == bufferCount && endBufferOffset == 0);
     if (startBuffer >= buffers.length || startBuffer < 0) {
       String msg = "Failed subArray, start=" + offset + ",startBuffer=" + startBuffer

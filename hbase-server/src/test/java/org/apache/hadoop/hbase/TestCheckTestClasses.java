@@ -15,24 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 
 /**
  * Checks tests are categorized.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestCheckTestClasses {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCheckTestClasses.class);
+
   /**
    * Throws an assertion if we find a test class without category (small/medium/large/integration).
    * List all the test classes without category in the assertion message.

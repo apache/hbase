@@ -25,10 +25,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
-
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -47,6 +48,10 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncTableScanMetrics {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncTableScanMetrics.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -106,8 +111,8 @@ public class TestAsyncTableScanMetrics {
 
   private static Pair<List<Result>, ScanMetrics> doScanWithRawAsyncTable(Scan scan)
       throws IOException, InterruptedException {
-    SimpleRawScanResultConsumer consumer = new SimpleRawScanResultConsumer();
-    CONN.getRawTable(TABLE_NAME).scan(scan, consumer);
+    BufferingScanResultConsumer consumer = new BufferingScanResultConsumer();
+    CONN.getTable(TABLE_NAME).scan(scan, consumer);
     List<Result> results = new ArrayList<>();
     for (Result result; (result = consumer.take()) != null;) {
       results.add(result);
@@ -147,7 +152,7 @@ public class TestAsyncTableScanMetrics {
     List<Result> results = pair.getFirst();
     assertEquals(3, results.size());
     long bytes = results.stream().flatMap(r -> Arrays.asList(r.rawCells()).stream())
-        .mapToLong(c -> CellUtil.estimatedSerializedSizeOf(c)).sum();
+        .mapToLong(c -> PrivateCellUtil.estimatedSerializedSizeOf(c)).sum();
     ScanMetrics scanMetrics = pair.getSecond();
     assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
     assertEquals(bytes, scanMetrics.countOfBytesInResults.get());

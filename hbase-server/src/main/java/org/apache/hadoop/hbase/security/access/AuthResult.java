@@ -19,15 +19,17 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Represents the result of an authorization check for logging and error
@@ -207,6 +209,7 @@ public class AuthResult {
     return sb.toString();
   }
 
+  @Override
   public String toString() {
     return "AuthResult" + toContextString();
   }
@@ -253,6 +256,13 @@ public class AuthResult {
     private Map<byte[], ? extends Collection<?>> families = null;
     byte[] family = null;
     byte[] qualifier = null;
+    // For extra parameters to be shown in audit log
+    private final Map<String, String> extraParams = new HashMap<String, String>(2);
+
+    public Params addExtraParam(String key, String value) {
+      extraParams.put(key, value);
+      return this;
+    }
 
     public Params setNamespace(String namespace) {
       this.namespace = namespace;
@@ -279,15 +289,35 @@ public class AuthResult {
       return this;
     }
 
+    @Override
     public String toString() {
       String familiesString = toFamiliesString(families, family, qualifier);
       String[] params = new String[] {
           namespace != null ? "namespace=" + namespace : null,
           tableName != null ? "table=" + tableName.getNameWithNamespaceInclAsString() : null,
-          familiesString.length() > 0 ? "family=" + familiesString : null
+          familiesString.length() > 0 ? "family=" + familiesString : null,
+          extraParams.isEmpty() ? null : concatenateExtraParams()
       };
       return Joiner.on(",").skipNulls().join(params);
     }
 
+    /**
+     * @return extra parameter key/value string
+     */
+    private String concatenateExtraParams() {
+      final StringBuilder sb = new StringBuilder();
+      boolean first = true;
+      for (Entry<String, String> entry : extraParams.entrySet()) {
+        if (entry.getKey() != null && entry.getValue() != null) {
+          if (!first) {
+            sb.append(',');
+          }
+          first = false;
+          sb.append(entry.getKey() + '=');
+          sb.append(entry.getValue());
+        }
+      }
+      return sb.toString();
+    }
   }
 }

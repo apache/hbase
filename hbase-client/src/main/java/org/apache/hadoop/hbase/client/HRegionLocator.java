@@ -22,17 +22,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * An implementation of {@link RegionLocator}. Used to view region location information for a single
@@ -84,15 +84,12 @@ public class HRegionLocator implements RegionLocator {
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
     TableName tableName = getName();
-    List<Pair<HRegionInfo, ServerName>> locations =
-        MetaTableAccessor.getTableRegionsAndLocations(this.connection, tableName);
-    ArrayList<HRegionLocation> regions = new ArrayList<>(locations.size());
-    for (Pair<HRegionInfo, ServerName> entry : locations) {
-      regions.add(new HRegionLocation(entry.getFirst(), entry.getSecond()));
-
-    }
-    if (regions.size() > 0) {
-      connection.cacheLocation(tableName, new RegionLocations(regions));
+    ArrayList<HRegionLocation> regions = new ArrayList<>();
+    for (RegionLocations locations : listRegionLocations()) {
+      for (HRegionLocation location : locations.getRegionLocations()) {
+        regions.add(location);
+      }
+      connection.cacheLocation(tableName, locations);
     }
     return regions;
   }

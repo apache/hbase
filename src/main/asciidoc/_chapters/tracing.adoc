@@ -30,8 +30,10 @@
 :icons: font
 :experimental:
 
-link:https://issues.apache.org/jira/browse/HBASE-6449[HBASE-6449] added support for tracing requests through HBase, using the open source tracing library, link:http://htrace.incubator.apache.org/[HTrace].
-Setting up tracing is quite simple, however it currently requires some very minor changes to your client code (it would not be very difficult to remove this requirement).
+HBase includes facilities for tracing requests using the open source tracing library, link:https://htrace.incubator.apache.org/[Apache HTrace].
+Setting up tracing is quite simple, however it currently requires some very minor changes to your client code (this requirement may be removed in the future).
+
+Support for this feature using HTrace 3 in HBase was added in link:https://issues.apache.org/jira/browse/HBASE-6449[HBASE-6449]. Starting with HBase 2.0, there was a non-compatible update to HTrace 4 via link:https://issues.apache.org/jira/browse/HBASE-18601[HBASE-18601]. The examples provided in this section will be using HTrace 4 package names, syntax, and conventions. For older examples, please consult previous versions of this guide.
 
 [[tracing.spanreceivers]]
 === SpanReceivers
@@ -57,7 +59,7 @@ The `LocalFileSpanReceiver` looks in _hbase-site.xml_      for a `hbase.local-fi
 
 <property>
   <name>hbase.trace.spanreceiver.classes</name>
-  <value>org.apache.htrace.impl.LocalFileSpanReceiver</value>
+  <value>org.apache.htrace.core.LocalFileSpanReceiver</value>
 </property>
 <property>
   <name>hbase.htrace.local-file-span-receiver.path</name>
@@ -67,7 +69,7 @@ The `LocalFileSpanReceiver` looks in _hbase-site.xml_      for a `hbase.local-fi
 
 HTrace also provides `ZipkinSpanReceiver` which converts spans to link:http://github.com/twitter/zipkin[Zipkin] span format and send them to Zipkin server. In order to use this span receiver, you need to install the jar of htrace-zipkin to your HBase's classpath on all of the nodes in your cluster.
 
-_htrace-zipkin_ is published to the link:http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.apache.htrace%22%20AND%20a%3A%22htrace-zipkin%22[Maven central repository]. You could get the latest version from there or just build it locally (see the link:http://htrace.incubator.apache.org/[HTrace] homepage for information on how to do this) and then copy it out to all nodes.
+_htrace-zipkin_ is published to the link:http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.apache.htrace%22%20AND%20a%3A%22htrace-zipkin%22[Maven central repository]. You could get the latest version from there or just build it locally (see the link:https://htrace.incubator.apache.org/[HTrace] homepage for information on how to do this) and then copy it out to all nodes.
 
 `ZipkinSpanReceiver` for properties called `hbase.htrace.zipkin.collector-hostname` and `hbase.htrace.zipkin.collector-port` in _hbase-site.xml_ with values describing the Zipkin collector server to which span information are sent.
 
@@ -76,7 +78,7 @@ _htrace-zipkin_ is published to the link:http://search.maven.org/#search%7Cgav%7
 
 <property>
   <name>hbase.trace.spanreceiver.classes</name>
-  <value>org.apache.htrace.impl.ZipkinSpanReceiver</value>
+  <value>org.apache.htrace.core.ZipkinSpanReceiver</value>
 </property>
 <property>
   <name>hbase.htrace.zipkin.collector-hostname</name>

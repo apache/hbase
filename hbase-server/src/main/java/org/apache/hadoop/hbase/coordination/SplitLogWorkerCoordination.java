@@ -17,23 +17,21 @@
   * limitations under the License.
   */
 package org.apache.hadoop.hbase.coordination;
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
- * Coordinated operations for {@link SplitLogWorker} and 
+ * Coordinated operations for {@link SplitLogWorker} and
  * {@link org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler} Important
  * methods for SplitLogWorker: <BR>
  * {@link #isReady()} called from {@link SplitLogWorker#run()} to check whether the coordination is
@@ -42,7 +40,7 @@ import com.google.common.annotations.VisibleForTesting;
  * {@link #isStop()} a flag indicates whether worker should finish <BR>
  * {@link #registerListener()} called from {@link SplitLogWorker#run()} and could register listener
  * for external changes in coordination (if required) <BR>
- * {@link #endTask(SplitLogTask, AtomicLong, SplitTaskDetails)} notify coordination engine that
+ * {@link #endTask(SplitLogTask, LongAdder, SplitTaskDetails)} notify coordination engine that
  * <p>
  * Important methods for WALSplitterHandler: <BR>
  * splitting task has completed.
@@ -51,7 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
 public interface SplitLogWorkerCoordination {
 
 /* SplitLogWorker part */
-  public static final int DEFAULT_MAX_SPLITTERS = 2;
+  int DEFAULT_MAX_SPLITTERS = 2;
 
   /**
    * Initialize internal values. This method should be used when corresponding SplitLogWorker
@@ -121,21 +119,17 @@ public interface SplitLogWorkerCoordination {
    * @param splitTaskDetails details about log split task (specific to coordination engine being
    *          used).
    */
-  void endTask(SplitLogTask slt, AtomicLong ctr, SplitTaskDetails splitTaskDetails);
+  void endTask(SplitLogTask slt, LongAdder ctr, SplitTaskDetails splitTaskDetails);
 
   /**
    * Interface for log-split tasks Used to carry implementation details in encapsulated way through
    * Handlers to the coordination API.
    */
-  static interface SplitTaskDetails {
+  interface SplitTaskDetails {
 
     /**
      * @return full file path in HDFS for the WAL file to be split.
      */
     String getWALFile();
   }
-
-  RegionStoreSequenceIds getRegionFlushedSequenceId(String failedServerName, String key)
-      throws IOException;
-
 }

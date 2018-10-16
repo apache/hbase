@@ -17,12 +17,17 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
+import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
 
 @InterfaceAudience.Public
 public abstract class QuotaSettings {
@@ -52,10 +57,61 @@ public abstract class QuotaSettings {
   }
 
   /**
+   * Converts the protocol buffer request into a QuotaSetting POJO. Arbitrarily
+   * enforces that the request only contain one "limit", despite the message
+   * allowing multiple. The public API does not allow such use of the message.
+   *
+   * @param request The protocol buffer request.
+   * @return A {@link QuotaSettings} POJO.
+   */
+  @InterfaceAudience.Private
+  public static QuotaSettings buildFromProto(SetQuotaRequest request) {
+    String username = null;
+    if (request.hasUserName()) {
+      username = request.getUserName();
+    }
+    TableName tableName = null;
+    if (request.hasTableName()) {
+      tableName = ProtobufUtil.toTableName(request.getTableName());
+    }
+    String namespace = null;
+    if (request.hasNamespace()) {
+      namespace = request.getNamespace();
+    }
+    if (request.hasBypassGlobals()) {
+      // Make sure we don't have either of the two below limits also included
+      if (request.hasSpaceLimit() || request.hasThrottle()) {
+        throw new IllegalStateException(
+            "SetQuotaRequest has multiple limits: " + TextFormat.shortDebugString(request));
+      }
+      return new QuotaGlobalsSettingsBypass(
+          username, tableName, namespace, request.getBypassGlobals());
+    } else if (request.hasSpaceLimit()) {
+      // Make sure we don't have the below limit as well
+      if (request.hasThrottle()) {
+        throw new IllegalStateException(
+            "SetQuotaRequests has multiple limits: " + TextFormat.shortDebugString(request));
+      }
+      // Sanity check on the pb received.
+      if (!request.getSpaceLimit().hasQuota()) {
+        throw new IllegalArgumentException(
+            "SpaceLimitRequest is missing the expected SpaceQuota.");
+      }
+      return QuotaSettingsFactory.fromSpace(
+          tableName, namespace, request.getSpaceLimit().getQuota());
+    } else if (request.hasThrottle()) {
+      return new ThrottleSettings(username, tableName, namespace, request.getThrottle());
+    } else {
+      throw new IllegalStateException("Unhandled SetRequestRequest state");
+    }
+  }
+
+  /**
    * Convert a QuotaSettings to a protocol buffer SetQuotaRequest.
    * This is used internally by the Admin client to serialize the quota settings
    * and send them to the master.
    */
+  @InterfaceAudience.Private
   public static SetQuotaRequest buildSetQuotaRequestProto(final QuotaSettings settings) {
     SetQuotaRequest.Builder builder = SetQuotaRequest.newBuilder();
     if (settings.getUserName() != null) {
@@ -76,6 +132,7 @@ public abstract class QuotaSettings {
    * the subclass should implement this method to set the specific SetQuotaRequest
    * properties.
    */
+  @InterfaceAudience.Private
   protected abstract void setupSetQuotaRequest(SetQuotaRequest.Builder builder);
 
   protected String ownerToString() {
@@ -118,5 +175,33 @@ public abstract class QuotaSettings {
       case DAYS:         return "day";
     }
     throw new RuntimeException("Invalid TimeUnit " + timeUnit);
+  }
+
+  /**
+   * Merges the provided settings with {@code this} and returns a new settings
+   * object to the caller if the merged settings differ from the original.
+   *
+   * @param newSettings The new settings to merge in.
+   * @return The merged {@link QuotaSettings} object or null if the quota should be deleted.
+   */
+  abstract QuotaSettings merge(QuotaSettings newSettings) throws IOException;
+
+  /**
+   * Validates that settings being merged into {@code this} is targeting the same "subject", e.g.
+   * user, table, namespace.
+   *
+   * @param mergee The quota settings to be merged into {@code this}.
+   * @throws IllegalArgumentException if the subjects are not equal.
+   */
+  void validateQuotaTarget(QuotaSettings mergee) {
+    if (!Objects.equals(getUserName(), mergee.getUserName())) {
+      throw new IllegalArgumentException("Mismatched user names on settings to merge");
+    }
+    if (!Objects.equals(getTableName(), mergee.getTableName())) {
+      throw new IllegalArgumentException("Mismatched table names on settings to merge");
+    }
+    if (!Objects.equals(getNamespace(), mergee.getNamespace())) {
+      throw new IllegalArgumentException("Mismatched namespace on settings to merge");
+    }
   }
 }

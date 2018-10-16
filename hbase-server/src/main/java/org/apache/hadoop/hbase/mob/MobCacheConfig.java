@@ -20,7 +20,8 @@ package org.apache.hadoop.hbase.mob;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 
 /**
@@ -31,13 +32,18 @@ public class MobCacheConfig extends CacheConfig {
 
   private static MobFileCache mobFileCache;
 
-  public MobCacheConfig(Configuration conf, HColumnDescriptor family) {
+  public MobCacheConfig(Configuration conf, ColumnFamilyDescriptor family) {
     super(conf, family);
     instantiateMobFileCache(conf);
   }
 
   public MobCacheConfig(Configuration conf) {
     super(conf);
+    instantiateMobFileCache(conf);
+  }
+
+  public MobCacheConfig(Configuration conf, boolean needBlockCache) {
+    super(conf, needBlockCache);
     instantiateMobFileCache(conf);
   }
 

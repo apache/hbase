@@ -145,7 +145,6 @@ For instance, if your script creates a table, but returns a non-zero exit value,
 You can enter HBase Shell commands into a text file, one command per line, and pass that file to the HBase Shell.
 
 .Example Command File
-====
 ----
 create 'test', 'cf'
 list 'test'
@@ -158,7 +157,6 @@ get 'test', 'row1'
 disable 'test'
 enable 'test'
 ----
-====
 
 .Directing HBase Shell to Execute the Commands
 ====
@@ -227,7 +225,7 @@ The table reference can be used to perform data read write operations such as pu
 For example, previously you would always specify a table name:
 
 ----
-hbase(main):000:0> create ‘t’, ‘f’
+hbase(main):000:0> create 't', 'f'
 0 row(s) in 1.0970 seconds
 hbase(main):001:0> put 't', 'rold', 'f', 'v'
 0 row(s) in 0.0080 seconds
@@ -291,7 +289,7 @@ hbase(main):012:0> tab = get_table 't'
 0 row(s) in 0.0010 seconds
 
 => Hbase::Table - t
-hbase(main):013:0> tab.put ‘r1’ ,’f’, ‘v’
+hbase(main):013:0> tab.put 'r1' ,'f', 'v'
 0 row(s) in 0.0100 seconds
 hbase(main):014:0> tab.scan
 ROW                                COLUMN+CELL
@@ -305,7 +303,7 @@ You can then use jruby to script table operations based on these names.
 The list_snapshots command also acts similarly.
 
 ----
-hbase(main):016 > tables = list(‘t.*’)
+hbase(main):016 > tables = list('t.*')
 TABLE
 t
 1 row(s) in 0.1040 seconds
@@ -318,6 +316,7 @@ hbase(main):017:0> tables.map { |t| disable t ; drop  t}
 hbase(main):018:0>
 ----
 
+[[irbrc]]
 === _irbrc_
 
 Create an _.irbrc_ file for yourself in your home directory.
@@ -329,6 +328,13 @@ $ more .irbrc
 require 'irb/ext/save-history'
 IRB.conf[:SAVE_HISTORY] = 100
 IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb-save-history"
+----
+
+If you'd like to avoid printing the result of evaluting each expression to stderr, for example the array of tables returned from the "list" command:
+
+[source,bash]
+----
+$ echo "IRB.conf[:ECHO] = false" >>~/.irbrc
 ----
 
 See the `ruby` documentation of _.irbrc_ to learn about other possible configurations.
@@ -377,7 +383,7 @@ This will continue for all split points up to the last. The last region will be 
 
 [source]
 ----
-hbase>create 't1','f',SPLITS => ['10','20',30']
+hbase>create 't1','f',SPLITS => ['10','20','30']
 ----
 
 In the above example, the table 't1' will be created with column family 'f', pre-split to four regions. Note the first region will contain all keys from '\x00' up to '\x30' (as '\x31' is the ASCII code for '1').

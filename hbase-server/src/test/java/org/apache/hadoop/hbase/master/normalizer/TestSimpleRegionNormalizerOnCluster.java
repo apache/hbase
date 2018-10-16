@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,8 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -29,6 +33,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
@@ -40,28 +45,29 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
+import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing {@link SimpleRegionNormalizer} on minicluster.
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestSimpleRegionNormalizerOnCluster {
-  private static final Log LOG = LogFactory.getLog(TestSimpleRegionNormalizerOnCluster.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSimpleRegionNormalizerOnCluster.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSimpleRegionNormalizerOnCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
   private static Admin admin;
@@ -86,7 +92,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 90000)
+  @Test
   @SuppressWarnings("deprecation")
   public void testRegionNormalizationSplitOnCluster() throws Exception {
     testRegionNormalizationSplitOnCluster(false);
@@ -113,13 +119,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     try (Table ht = TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILYNAME, 5)) {
       // Need to get sorted list of regions here
       List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(TABLENAME);
-      Collections.sort(generatedRegions, new Comparator<HRegion>() {
-        @Override
-        public int compare(HRegion o1, HRegion o2) {
-          return o1.getRegionInfo().compareTo(o2.getRegionInfo());
-        }
-      });
-
+      Collections.sort(generatedRegions, Comparator.comparing(HRegion::getRegionInfo, RegionInfo.COMPARATOR));
       HRegion region = generatedRegions.get(0);
       generateTestData(region, 1);
       region.flush(true);
@@ -179,7 +179,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     admin.deleteTable(TABLENAME);
   }
 
-  @Ignore @Test(timeout = 60000) // TODO: FIX!
+  @Test
   @SuppressWarnings("deprecation")
   public void testRegionNormalizationMergeOnCluster() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -190,12 +190,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     try (Table ht = TEST_UTIL.createMultiRegionTable(tableName, FAMILYNAME, 5)) {
       // Need to get sorted list of regions here
       List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      Collections.sort(generatedRegions, new Comparator<HRegion>() {
-        @Override
-        public int compare(HRegion o1, HRegion o2) {
-          return o1.getRegionInfo().compareTo(o2.getRegionInfo());
-        }
-      });
+      Collections.sort(generatedRegions, Comparator.comparing(HRegion::getRegionInfo, RegionInfo.COMPARATOR));
 
       HRegion region = generatedRegions.get(0);
       generateTestData(region, 1);

@@ -25,52 +25,51 @@ import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DE
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * A WAL Provider that returns a single thread safe WAL that optionally can skip parts of our
- * normal interactions with HDFS.
- *
- * This implementation picks a directory in HDFS based on the same mechanisms as the 
- * {@link FSHLogProvider}. Users can configure how much interaction
- * we have with HDFS with the configuration property "hbase.wal.iotestprovider.operations".
- * The value should be a comma separated list of allowed operations:
+ * A WAL Provider that returns a single thread safe WAL that optionally can skip parts of our normal
+ * interactions with HDFS.
+ * <p>
+ * This implementation picks a directory in HDFS based on the same mechanisms as the
+ * {@link FSHLogProvider}. Users can configure how much interaction we have with HDFS with the
+ * configuration property "hbase.wal.iotestprovider.operations". The value should be a comma
+ * separated list of allowed operations:
  * <ul>
- *   <li><em>append</em>   : edits will be written to the underlying filesystem
- *   <li><em>sync</em>     : wal syncs will result in hflush calls
- *   <li><em>fileroll</em> : roll requests will result in creating a new file on the underlying
- *                           filesystem.
+ * <li><em>append</em> : edits will be written to the underlying filesystem</li>
+ * <li><em>sync</em> : wal syncs will result in hflush calls</li>
+ * <li><em>fileroll</em> : roll requests will result in creating a new file on the underlying
+ * filesystem.</li>
  * </ul>
- * Additionally, the special cases "all" and "none" are recognized.
- * If ommited, the value defaults to "all."
- * Behavior is undefined if "all" or "none" are paired with additional values. Behavior is also
- * undefined if values not listed above are included.
- *
- * Only those operations listed will occur between the returned WAL and HDFS. All others
- * will be no-ops.
- *
+ * Additionally, the special cases "all" and "none" are recognized. If ommited, the value defaults
+ * to "all." Behavior is undefined if "all" or "none" are paired with additional values. Behavior is
+ * also undefined if values not listed above are included.
+ * <p>
+ * Only those operations listed will occur between the returned WAL and HDFS. All others will be
+ * no-ops.
+ * <p>
  * Note that in the case of allowing "append" operations but not allowing "fileroll", the returned
  * WAL will just keep writing to the same file. This won't avoid all costs associated with file
  * management over time, becaue the data set size may result in additional HDFS block allocations.
- *
  */
 @InterfaceAudience.Private
 public class IOTestProvider implements WALProvider {
-  private static final Log LOG = LogFactory.getLog(IOTestProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IOTestProvider.class);
 
   private static final String ALLOWED_OPERATIONS = "hbase.wal.iotestprovider.operations";
   private enum AllowedOperations {
@@ -78,54 +77,77 @@ public class IOTestProvider implements WALProvider {
     append,
     sync,
     fileroll,
-    none;
+    none
   }
 
-  private FSHLog log = null;
+  private WALFactory factory;
 
+  private Configuration conf;
+
+  private volatile FSHLog log;
+
+  private String providerId;
+
+  private List<WALActionsListener> listeners = new ArrayList<>();
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
-   * @param listeners may be null
    * @param providerId differentiate between providers from one facotry, used for FS layout. may be
    *                   null
    */
   @Override
-  public void init(final WALFactory factory, final Configuration conf,
-      final List<WALActionsListener> listeners, String providerId) throws IOException {
-    if (null != log) {
+  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+    if (factory != null) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
-    if (null == providerId) {
-      providerId = DEFAULT_PROVIDER_ID;
-    }
-    final String logPrefix = factory.factoryId + WAL_FILE_NAME_DELIMITER + providerId;
-    log = new IOTestWAL(FSUtils.getWALFileSystem(conf), FSUtils.getWALRootDir(conf),
+    this.factory = factory;
+    this.conf = conf;
+    this.providerId = providerId != null ? providerId : DEFAULT_PROVIDER_ID;
+  }
+
+  @Override
+  public List<WAL> getWALs() {
+    return Collections.singletonList(log);
+  }
+
+  private FSHLog createWAL() throws IOException {
+    String logPrefix = factory.factoryId + WAL_FILE_NAME_DELIMITER + providerId;
+    return new IOTestWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
         AbstractFSWALProvider.getWALDirectoryName(factory.factoryId),
         HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners, true, logPrefix,
         META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
   }
 
   @Override
-  public List<WAL> getWALs() throws IOException {
-    List<WAL> wals = new ArrayList<>(1);
-    wals.add(log);
-    return wals;
-  }
-
-  @Override
-  public WAL getWAL(final byte[] identifier, byte[] namespace) throws IOException {
-   return log;
+  public WAL getWAL(RegionInfo region) throws IOException {
+    FSHLog log = this.log;
+    if (log != null) {
+      return log;
+    }
+    synchronized (this) {
+      log = this.log;
+      if (log == null) {
+        log = createWAL();
+        this.log = log;
+      }
+    }
+    return log;
   }
 
   @Override
   public void close() throws IOException {
-    log.close();
+    FSHLog log = this.log;
+    if (log != null) {
+      log.close();
+    }
   }
 
   @Override
   public void shutdown() throws IOException {
-    log.shutdown();
+    FSHLog log = this.log;
+    if (log != null) {
+      log.shutdown();
+    }
   }
 
   private static class IOTestWAL extends FSHLog {
@@ -184,7 +206,12 @@ public class IOTestProvider implements WALProvider {
       if (!initialized || doFileRolls) {
         LOG.info("creating new writer instance.");
         final ProtobufLogWriter writer = new IOTestWriter();
-        writer.init(fs, path, conf, false);
+        try {
+          writer.init(fs, path, conf, false, this.blocksize);
+        } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
+          throw new IOException("Can't create writer instance because underlying FileSystem " +
+              "doesn't support needed stream capabilities.", exception);
+        }
         if (!initialized) {
           LOG.info("storing initial writer instance in case file rolling isn't allowed.");
           noRollsWriter = writer;
@@ -207,7 +234,8 @@ public class IOTestProvider implements WALProvider {
     private boolean doSyncs;
 
     @Override
-    public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable) throws IOException {
+    public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
+        long blocksize) throws IOException, CommonFSUtils.StreamLacksCapabilityException {
       Collection<String> operations = conf.getStringCollection(ALLOWED_OPERATIONS);
       if (operations.isEmpty() || operations.contains(AllowedOperations.all.name())) {
         doAppends = doSyncs = true;
@@ -219,7 +247,7 @@ public class IOTestProvider implements WALProvider {
       }
       LOG.info("IOTestWriter initialized with appends " + (doAppends ? "enabled" : "disabled") +
           " and syncs " + (doSyncs ? "enabled" : "disabled"));
-      super.init(fs, path, conf, overwritable);
+      super.init(fs, path, conf, overwritable, blocksize);
     }
 
     @Override
@@ -235,9 +263,9 @@ public class IOTestProvider implements WALProvider {
     }
 
     @Override
-    public void sync() throws IOException {
+    public void sync(boolean forceSync) throws IOException {
       if (doSyncs) {
-        super.sync();
+        super.sync(forceSync);
       }
     }
   }
@@ -250,5 +278,11 @@ public class IOTestProvider implements WALProvider {
   @Override
   public long getLogFileSize() {
     return this.log.getLogFileSize();
+  }
+
+  @Override
+  public void addWALActionsListener(WALActionsListener listener) {
+    // TODO Implement WALProvider.addWALActionLister
+
   }
 }

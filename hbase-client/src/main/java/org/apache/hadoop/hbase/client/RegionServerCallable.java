@@ -21,15 +21,16 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -58,7 +59,6 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * Some subclasses want to set their own location. Make it protected.
    */
   protected HRegionLocation location;
-  protected final static int MIN_WAIT_DEAD_SERVER = 10000;
   protected S stub;
 
   /**
@@ -67,6 +67,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * Can be null!
    */
   protected final RpcController rpcController;
+  private int priority = HConstants.NORMAL_QOS;
 
   /**
    * @param connection Connection to use.
@@ -76,11 +77,17 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    */
   public RegionServerCallable(Connection connection, TableName tableName, byte [] row,
       RpcController rpcController) {
+    this(connection, tableName, row, rpcController, HConstants.NORMAL_QOS);
+  }
+
+  public RegionServerCallable(Connection connection, TableName tableName, byte [] row,
+      RpcController rpcController, int priority) {
     super();
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
     this.rpcController = rpcController;
+    this.priority = priority;
   }
 
   protected RpcController getRpcController() {
@@ -99,6 +106,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * Override that changes call Exception from {@link Exception} to {@link IOException}.
    * Also does set up of the rpcController.
    */
+  @Override
   public T call(int callTimeout) throws IOException {
     try {
       // Iff non-null and an instance of a SHADED rpcController, do config! Unshaded -- i.e.
@@ -112,6 +120,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
           // If it is an instance of HBaseRpcController, we can set priority on the controller based
           // off the tableName. Set call timeout too.
           hrc.setPriority(tableName);
+          hrc.setPriority(priority);
           hrc.setCallTimeout(callTimeout);
         }
       }
@@ -173,6 +182,9 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
     return this.row;
   }
 
+  protected int getPriority() { return this.priority;}
+
+  @Override
   public void throwable(Throwable t, boolean retrying) {
     if (location != null) {
       getConnection().updateCachedLocations(tableName, location.getRegionInfo().getRegionName(),
@@ -180,17 +192,14 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
     }
   }
 
+  @Override
   public String getExceptionMessageAdditionalDetail() {
     return "row '" + Bytes.toString(row) + "' on table '" + tableName + "' at " + location;
   }
 
+  @Override
   public long sleep(long pause, int tries) {
-    long sleep = ConnectionUtils.getPauseTime(pause, tries);
-    if (sleep < MIN_WAIT_DEAD_SERVER
-        && (location == null || getConnection().isDeadServer(location.getServerName()))) {
-      sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
-    }
-    return sleep;
+    return ConnectionUtils.getPauseTime(pause, tries);
   }
 
   /**
@@ -203,6 +212,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
     return this.location.getRegionInfo();
   }
 
+  @Override
   public void prepare(final boolean reload) throws IOException {
     // check table state if this is a retry
     if (reload && tableName != null && !tableName.equals(TableName.META_TABLE_NAME)

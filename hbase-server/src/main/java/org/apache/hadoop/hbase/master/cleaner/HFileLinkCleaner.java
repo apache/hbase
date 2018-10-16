@@ -18,15 +18,16 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -41,7 +42,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
-  private static final Log LOG = LogFactory.getLog(HFileLinkCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileLinkCleaner.class);
 
   private FileSystem fs = null;
 

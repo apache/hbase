@@ -25,37 +25,38 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
-
-import org.apache.commons.lang.mutable.MutableBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
-import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testcase for https://issues.apache.org/jira/browse/HBASE-13811
@@ -63,7 +64,11 @@ import org.mockito.stubbing.Answer;
 @Category({ MediumTests.class })
 public class TestSplitWalDataLoss {
 
-  private static final Log LOG = LogFactory.getLog(TestSplitWalDataLoss.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSplitWalDataLoss.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitWalDataLoss.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
@@ -79,11 +84,11 @@ public class TestSplitWalDataLoss {
   @Before
   public void setUp() throws Exception {
     testUtil.getConfiguration().setInt("hbase.regionserver.msginterval", 30000);
-    testUtil.getConfiguration().setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     testUtil.startMiniCluster(2);
     Admin admin = testUtil.getAdmin();
     admin.createNamespace(namespace);
-    admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(family)));
+    admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build());
     testUtil.waitTableAvailable(tableName);
   }
 
@@ -95,7 +100,7 @@ public class TestSplitWalDataLoss {
   @Test
   public void test() throws IOException, InterruptedException {
     final HRegionServer rs = testUtil.getRSForFirstRegionInTable(tableName);
-    final HRegion region = (HRegion) rs.getOnlineRegions(tableName).get(0);
+    final HRegion region = (HRegion) rs.getRegions(tableName).get(0);
     HRegion spiedRegion = spy(region);
     final MutableBoolean flushed = new MutableBoolean(false);
     final MutableBoolean reported = new MutableBoolean(false);
@@ -117,10 +122,10 @@ public class TestSplitWalDataLoss {
       }
     }).when(spiedRegion).internalFlushCacheAndCommit(Matchers.<WAL> any(),
       Matchers.<MonitoredTask> any(), Matchers.<PrepareFlushResult> any(),
-      Matchers.<Collection<Store>> any());
+      Matchers.<Collection<HStore>> any());
     // Find region key; don't pick up key for hbase:meta by mistake.
     String key = null;
-    for (Map.Entry<String, Region> entry: rs.onlineRegions.entrySet()) {
+    for (Map.Entry<String, HRegion> entry: rs.onlineRegions.entrySet()) {
       if (entry.getValue().getRegionInfo().getTable().equals(this.tableName)) {
         key = entry.getKey();
         break;
@@ -136,7 +141,7 @@ public class TestSplitWalDataLoss {
     long oldestSeqIdOfStore = region.getOldestSeqIdOfStore(family);
     LOG.info("CHANGE OLDEST " + oldestSeqIdOfStore);
     assertTrue(oldestSeqIdOfStore > HConstants.NO_SEQNUM);
-    rs.cacheFlusher.requestFlush(spiedRegion, false);
+    rs.cacheFlusher.requestFlush(spiedRegion, false, FlushLifeCycleTracker.DUMMY);
     synchronized (flushed) {
       while (!flushed.booleanValue()) {
         flushed.wait();

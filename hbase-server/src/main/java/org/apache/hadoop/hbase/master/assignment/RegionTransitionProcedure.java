@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,80 +15,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
-import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
+import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
- * Base class for the Assign and Unassign Procedure.
- * There can only be one RegionTransitionProcedure per region running at a time
- * since each procedure takes a lock on the region (see MasterProcedureScheduler).
- *
- * <p>This procedure is asynchronous and responds to external events.
- * The AssignmentManager will notify this procedure when the RS completes
- * the operation and reports the transitioned state
- * (see the Assign and Unassign class for more detail).
- * <p>Procedures move from the REGION_TRANSITION_QUEUE state when they are
- * first submitted, to the REGION_TRANSITION_DISPATCH state when the request
- * to remote server is sent and the Procedure is suspended waiting on external
- * event to be woken again. Once the external event is triggered, Procedure
- * moves to the REGION_TRANSITION_FINISH state.
+ * Leave here only for checking if we can successfully start the master.
+ * @deprecated Do not use any more.
+ * @see TransitRegionStateProcedure
  */
+@Deprecated
 @InterfaceAudience.Private
-public abstract class RegionTransitionProcedure
-    extends Procedure<MasterProcedureEnv>
-    implements TableProcedureInterface,
-      RemoteProcedure<MasterProcedureEnv, ServerName> {
-  private static final Log LOG = LogFactory.getLog(RegionTransitionProcedure.class);
+public abstract class RegionTransitionProcedure extends Procedure<MasterProcedureEnv>
+    implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
 
   protected final AtomicBoolean aborted = new AtomicBoolean(false);
 
-  private RegionTransitionState transitionState =
-      RegionTransitionState.REGION_TRANSITION_QUEUE;
-  private HRegionInfo regionInfo;
-  private volatile boolean lock = false;
+  private RegionTransitionState transitionState = RegionTransitionState.REGION_TRANSITION_QUEUE;
 
+  private RegionInfo regionInfo;
+
+  private int attempt;
+
+  // Required by the Procedure framework to create the procedure on replay
   public RegionTransitionProcedure() {
-    // Required by the Procedure framework to create the procedure on replay
-    super();
   }
 
-  public RegionTransitionProcedure(final HRegionInfo regionInfo) {
+  public RegionTransitionProcedure(final RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
   }
 
-  public HRegionInfo getRegionInfo() {
+  @VisibleForTesting
+  public RegionInfo getRegionInfo() {
     return regionInfo;
   }
 
-  protected void setRegionInfo(final HRegionInfo regionInfo) {
-    // Setter is for deserialization.
+  protected void setRegionInfo(final RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
+  }
+
+  protected void setAttempt(int attempt) {
+    this.attempt = attempt;
+  }
+
+  protected int getAttempt() {
+    return this.attempt;
   }
 
   @Override
   public TableName getTableName() {
-    HRegionInfo hri = getRegionInfo();
-    return hri != null? hri.getTable(): null;
+    RegionInfo hri = getRegionInfo();
+    return hri != null ? hri.getTable() : null;
   }
 
   public boolean isMeta() {
@@ -102,131 +96,42 @@ public abstract class RegionTransitionProcedure
     sb.append(" table=");
     sb.append(getTableName());
     sb.append(", region=");
-    sb.append(getRegionInfo() == null? null: getRegionInfo().getEncodedName());
+    sb.append(getRegionInfo() == null ? null : getRegionInfo().getEncodedName());
   }
 
   public RegionStateNode getRegionState(final MasterProcedureEnv env) {
-    return env.getAssignmentManager().getRegionStates().
-        getOrCreateRegionNode(getRegionInfo());
+    return env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegionInfo());
   }
 
-  protected void setTransitionState(final RegionTransitionState state) {
+  void setTransitionState(final RegionTransitionState state) {
     this.transitionState = state;
   }
 
-  protected RegionTransitionState getTransitionState() {
+  RegionTransitionState getTransitionState() {
     return transitionState;
   }
 
   protected abstract boolean startTransition(MasterProcedureEnv env, RegionStateNode regionNode)
-    throws IOException, ProcedureSuspendedException;
+      throws IOException, ProcedureSuspendedException;
 
-  /**
-   * Called when the Procedure is in the REGION_TRANSITION_DISPATCH state.
-   * In here we do the RPC call to OPEN/CLOSE the region. The suspending of
-   * the thread so it sleeps until it gets update that the OPEN/CLOSE has
-   * succeeded is complicated. Read the implementations to learn more.
-   */
   protected abstract boolean updateTransition(MasterProcedureEnv env, RegionStateNode regionNode)
-    throws IOException, ProcedureSuspendedException;
+      throws IOException, ProcedureSuspendedException;
 
   protected abstract void finishTransition(MasterProcedureEnv env, RegionStateNode regionNode)
-    throws IOException, ProcedureSuspendedException;
+      throws IOException, ProcedureSuspendedException;
 
-  protected abstract void reportTransition(MasterProcedureEnv env,
-      RegionStateNode regionNode, TransitionCode code, long seqId) throws UnexpectedStateException;
+  protected abstract void reportTransition(MasterProcedureEnv env, RegionStateNode regionNode,
+      TransitionCode code, long seqId) throws UnexpectedStateException;
 
+  @Override
   public abstract RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName serverName);
-  protected abstract void remoteCallFailed(MasterProcedureEnv env,
-      RegionStateNode regionNode, IOException exception);
+
+  protected abstract boolean remoteCallFailed(MasterProcedureEnv env, RegionStateNode regionNode,
+      IOException exception);
 
   @Override
-  public void remoteCallCompleted(final MasterProcedureEnv env,
-      final ServerName serverName, final RemoteOperation response) {
-    // Ignore the response? reportTransition() is the one that count?
-  }
-
-  @Override
-  public void remoteCallFailed(final MasterProcedureEnv env,
+  public synchronized void remoteCallFailed(final MasterProcedureEnv env,
       final ServerName serverName, final IOException exception) {
-    final RegionStateNode regionNode = getRegionState(env);
-    assert serverName.equals(regionNode.getRegionLocation());
-    String msg = exception.getMessage() == null? exception.getClass().getSimpleName():
-      exception.getMessage();
-    LOG.warn("Failed " + this + "; " + regionNode.toShortString() + "; exception=" + msg);
-    remoteCallFailed(env, regionNode, exception);
-    // NOTE: This call to wakeEvent puts this Procedure back on the scheduler.
-    // Thereafter, another Worker can be in here so DO NOT MESS WITH STATE beyond
-    // this method. Just get out of this current processing quickly.
-    env.getProcedureScheduler().wakeEvent(regionNode.getProcedureEvent());
-  }
-
-  /**
-   * Be careful! At the end of this method, the procedure has either succeeded
-   * and this procedure has been set into a suspended state OR, we failed and
-   * this procedure has been put back on the scheduler ready for another worker
-   * to pick it up. In both cases, we need to exit the current Worker processing
-   * toute de suite!
-   * @return True if we successfully dispatched the call and false if we failed;
-   * if failed, we need to roll back any setup done for the dispatch.
-   */
-  protected boolean addToRemoteDispatcher(final MasterProcedureEnv env,
-      final ServerName targetServer) {
-    assert targetServer.equals(getRegionState(env).getRegionLocation()) :
-      "targetServer=" + targetServer + " getRegionLocation=" +
-        getRegionState(env).getRegionLocation(); // TODO
-
-    LOG.info("Dispatch " + this + "; " + getRegionState(env).toShortString());
-
-    // Put this procedure into suspended mode to wait on report of state change
-    // from remote regionserver. Means Procedure associated ProcedureEvent is marked not 'ready'.
-    env.getProcedureScheduler().suspendEvent(getRegionState(env).getProcedureEvent());
-
-    // Tricky because this can fail. If it fails need to backtrack on stuff like
-    // the 'suspend' done above -- tricky as the 'wake' requeues us -- and ditto
-    // up in the caller; it needs to undo state changes.
-    if (!env.getRemoteDispatcher().addOperationToNode(targetServer, this)) {
-      remoteCallFailed(env, targetServer,
-          new FailedRemoteDispatchException(this + " to " + targetServer));
-      return false;
-    }
-    return true;
-  }
-
-  protected void reportTransition(final MasterProcedureEnv env, final ServerName serverName,
-      final TransitionCode code, final long seqId) throws UnexpectedStateException {
-    final RegionStateNode regionNode = getRegionState(env);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Received report " + code + " seqId=" + seqId + ", " +
-            this + "; " + regionNode.toShortString());
-    }
-    if (!serverName.equals(regionNode.getRegionLocation())) {
-      if (isMeta() && regionNode.getRegionLocation() == null) {
-        regionNode.setRegionLocation(serverName);
-      } else {
-        throw new UnexpectedStateException(String.format(
-          "Unexpected state=%s from server=%s; expected server=%s; %s; %s",
-          code, serverName, regionNode.getRegionLocation(),
-          this, regionNode.toShortString()));
-      }
-    }
-
-    reportTransition(env, regionNode, code, seqId);
-
-    // NOTE: This call adds this procedure back on the scheduler.
-    // This makes it so this procedure can run again. Another worker will take
-    // processing to the next stage. At an extreme, the other worker may run in
-    // parallel so DO  NOT CHANGE any state hereafter! This should be last thing
-    // done in this processing step.
-    env.getProcedureScheduler().wakeEvent(regionNode.getProcedureEvent());
-  }
-
-  protected boolean isServerOnline(final MasterProcedureEnv env, final RegionStateNode regionNode) {
-    return isServerOnline(env, regionNode.getRegionLocation());
-  }
-
-  protected boolean isServerOnline(final MasterProcedureEnv env, final ServerName serverName) {
-    return env.getMasterServices().getServerManager().isServerOnline(serverName);
   }
 
   @Override
@@ -239,81 +144,12 @@ public abstract class RegionTransitionProcedure
   }
 
   @Override
-  protected Procedure[] execute(final MasterProcedureEnv env) throws ProcedureSuspendedException {
-    final AssignmentManager am = env.getAssignmentManager();
-    final RegionStateNode regionNode = getRegionState(env);
-    if (!am.addRegionInTransition(regionNode, this)) {
-      String msg = String.format(
-        "There is already another procedure running on this region this=%s owner=%s",
-        this, regionNode.getProcedure());
-      LOG.warn(msg + " " + this + "; " + regionNode.toShortString());
-      setAbortFailure(getClass().getSimpleName(), msg);
-      return null;
-    }
-    try {
-      boolean retry;
-      do {
-        retry = false;
-        switch (transitionState) {
-          case REGION_TRANSITION_QUEUE:
-            // 1. push into the AM queue for balancer policy
-            if (!startTransition(env, regionNode)) {
-              // The operation figured it is done or it aborted; check getException()
-              am.removeRegionInTransition(getRegionState(env), this);
-              return null;
-            }
-            transitionState = RegionTransitionState.REGION_TRANSITION_DISPATCH;
-            if (env.getProcedureScheduler().waitEvent(regionNode.getProcedureEvent(), this)) {
-              // Why this suspend? Because we want to ensure Store happens before proceed?
-              throw new ProcedureSuspendedException();
-            }
-            break;
-
-          case REGION_TRANSITION_DISPATCH:
-            // 2. send the request to the target server
-            if (!updateTransition(env, regionNode)) {
-              // The operation figured it is done or it aborted; check getException()
-              am.removeRegionInTransition(regionNode, this);
-              return null;
-            }
-            if (transitionState != RegionTransitionState.REGION_TRANSITION_DISPATCH) {
-              retry = true;
-              break;
-            }
-            if (env.getProcedureScheduler().waitEvent(regionNode.getProcedureEvent(), this)) {
-              throw new ProcedureSuspendedException();
-            }
-            break;
-
-          case REGION_TRANSITION_FINISH:
-            // 3. wait assignment response. completion/failure
-            finishTransition(env, regionNode);
-            am.removeRegionInTransition(regionNode, this);
-            return null;
-        }
-      } while (retry);
-    } catch (IOException e) {
-      LOG.warn("Retryable error trying to transition: " +
-          this + "; " + regionNode.toShortString(), e);
-    }
-
-    return new Procedure[] {this};
+  protected Procedure[] execute(final MasterProcedureEnv env) {
+    return null;
   }
 
   @Override
-  protected void rollback(final MasterProcedureEnv env) {
-    if (isRollbackSupported(transitionState)) {
-      // Nothing done up to this point. abort safely.
-      // This should happen when something like disableTable() is triggered.
-      env.getAssignmentManager().removeRegionInTransition(getRegionState(env), this);
-      return;
-    }
-
-    // There is no rollback for assignment unless we cancel the operation by
-    // dropping/disabling the table.
-    throw new UnsupportedOperationException("Unhandled state " + transitionState +
-        "; there is no rollback for assignment unless we cancel the operation by " +
-        "dropping/disabling the table");
+  protected void rollback(MasterProcedureEnv env) {
   }
 
   protected abstract boolean isRollbackSupported(final RegionTransitionState state);
@@ -328,54 +164,14 @@ public abstract class RegionTransitionProcedure
   }
 
   @Override
-  protected LockState acquireLock(final MasterProcedureEnv env) {
-    // Unless we are assigning meta, wait for meta to be available and loaded.
-    if (!isMeta() && (env.waitFailoverCleanup(this) ||
-        env.getAssignmentManager().waitMetaInitialized(this, getRegionInfo()))) {
-      return LockState.LOCK_EVENT_WAIT;
-    }
-
-    // TODO: Revisit this and move it to the executor
-    if (env.getProcedureScheduler().waitRegion(this, getRegionInfo())) {
-      try {
-        LOG.debug(LockState.LOCK_EVENT_WAIT + " pid=" + getProcId() + " " +
-          env.getProcedureScheduler().dumpLocks());
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-      return LockState.LOCK_EVENT_WAIT;
-    }
-    this.lock = true;
-    return LockState.LOCK_ACQUIRED;
+  public void remoteOperationCompleted(MasterProcedureEnv env) {
+    // should not be called for region operation until we modified the open/close region procedure
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureScheduler().wakeRegion(this, getRegionInfo());
-    lock = false;
+  public void remoteOperationFailed(MasterProcedureEnv env, RemoteProcedureException error) {
+    // should not be called for region operation until we modified the open/close region procedure
+    throw new UnsupportedOperationException();
   }
-
-  @Override
-  protected boolean holdLock(final MasterProcedureEnv env) {
-    return true;
-  }
-
-  @Override
-  protected boolean hasLock(final MasterProcedureEnv env) {
-    return lock;
-  }
-
-  @Override
-  protected boolean shouldWaitClientAck(MasterProcedureEnv env) {
-    // The operation is triggered internally on the server
-    // the client does not know about this procedure.
-    return false;
-  }
-
-  /**
-   * Used by ServerCrashProcedure to see if this Assign/Unassign needs processing.
-   * @return ServerName the Assign or Unassign is going against.
-   */
-  public abstract ServerName getServer(final MasterProcedureEnv env);
 }

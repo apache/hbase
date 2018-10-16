@@ -18,13 +18,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.lang.reflect.Array;
+import java.util.AbstractCollection;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A collection class that contains multiple sub-lists, which allows us to not copy lists.
@@ -33,7 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * NOTE: Doesn't implement list as it is not necessary for current usage, feel free to add.
  */
 @InterfaceAudience.Private
-public class ConcatenatedLists<T> implements Collection<T> {
+public class ConcatenatedLists<T> extends AbstractCollection<T> {
   protected final ArrayList<List<T>> components = new ArrayList<>();
   protected int size = 0;
 
@@ -53,77 +52,6 @@ public class ConcatenatedLists<T> implements Collection<T> {
   @Override
   public int size() {
     return this.size;
-  }
-
-  @Override
-  public boolean isEmpty() {
-    return this.size == 0;
-  }
-
-  @Override
-  public boolean contains(Object o) {
-    for (List<T> component : this.components) {
-      if (component.contains(o)) return true;
-    }
-    return false;
-  }
-
-  @Override
-  public boolean containsAll(Collection<?> c) {
-    for (Object o : c) {
-      if (!contains(o)) return false;
-    }
-    return true;
-  }
-
-  @Override
-  public Object[] toArray() {
-    return toArray((Object[])Array.newInstance(Object.class, this.size));
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public <U> U[] toArray(U[] a) {
-    U[] result = (a.length == this.size()) ? a
-        : (U[])Array.newInstance(a.getClass().getComponentType(), this.size);
-    int i = 0;
-    for (List<T> component : this.components) {
-      for (T t : component) {
-        result[i] = (U)t;
-        ++i;
-      }
-    }
-    return result;
-  }
-
-  @Override
-  public boolean add(T e) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean remove(Object o) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean addAll(Collection<? extends T> c) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean removeAll(Collection<?> c) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean retainAll(Collection<?> c) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void clear() {
-    throw new UnsupportedOperationException();
   }
 
   @Override

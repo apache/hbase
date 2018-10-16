@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,18 +17,23 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static junit.framework.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static junit.framework.Assert.assertEquals;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHDFSBlocksDistribution {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHDFSBlocksDistribution.class);
+
   @Test
   public void testAddHostsAndBlockWeight() throws Exception {
     HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
@@ -49,6 +53,7 @@ public class TestHDFSBlocksDistribution {
   }
 
   public class MockHDFSBlocksDistribution extends HDFSBlocksDistribution {
+    @Override
     public Map<String,HostAndWeight> getHostAndWeights() {
       HashMap<String, HostAndWeight> map = new HashMap<>();
       map.put("test", new HostAndWeight(null, 100));

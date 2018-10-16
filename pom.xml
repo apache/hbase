@@ -61,7 +61,12 @@
   </licenses>
 
   <modules>
+    <module>hbase-build-support</module>
+    <module>hbase-build-configuration</module>
+    <module>hbase-replication</module>
+    <module>hbase-mapreduce</module>
     <module>hbase-resource-bundle</module>
+    <module>hbase-http</module>
     <module>hbase-server</module>
     <module>hbase-thrift</module>
     <module>hbase-shell</module>
@@ -74,7 +79,6 @@
     <module>hbase-endpoint</module>
     <module>hbase-it</module>
     <module>hbase-examples</module>
-    <module>hbase-prefix-tree</module>
     <module>hbase-assembly</module>
     <module>hbase-testing-util</module>
     <module>hbase-annotations</module>
@@ -86,6 +90,9 @@
     <module>hbase-archetypes</module>
     <module>hbase-metrics-api</module>
     <module>hbase-metrics</module>
+    <module>hbase-spark-it</module>
+    <module>hbase-backup</module>
+    <module>hbase-zookeeper</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
       e.g. surefire 2.18-SNAPSHOT-->
@@ -152,6 +159,12 @@
   </mailingLists>
   <developers>
     <developer>
+      <id>achouhan</id>
+      <name>Abhishek Singh Chouhan</name>
+      <email>achouhan@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>acube123</id>
       <name>Amitanand S. Aiyer</name>
       <email>acube123@apache.org</email>
@@ -203,13 +216,19 @@
       <id>ashu</id>
       <name>Ashu Pachauri</name>
       <email>ashu@apache.org</email>
-      <timezone>-8</timezone>
+      <timezone>+5</timezone>
     </developer>
     <developer>
       <id>binlijin</id>
       <name>Lijin Bin</name>
       <email>binlijin@apache.org</email>
       <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>brfrn169</id>
+      <name>Toshihiro Suzuki</name>
+      <email>brfrn169@apache.org</email>
+      <timezone>+9</timezone>
     </developer>
     <developer>
       <id>busbey</id>
@@ -290,6 +309,18 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+        <id>gxcheng</id>
+        <name>Guangxu Cheng</name>
+        <email>gxcheng@apache.org</email>
+        <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>huaxiangsun</id>
+      <name>Huaxiang Sun</name>
+      <email>huaxiangsun@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>jdcryans</id>
       <name>Jean-Daniel Cryans</name>
       <email>jdcryans@apache.org</email>
@@ -332,6 +363,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>janh</id>
+      <name>Jan Hentschel</name>
+      <email>janh@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>jmhsieh</id>
       <name>Jonathan Hsieh</name>
       <email>jmhsieh@apache.org</email>
@@ -354,6 +391,12 @@
       <name>Karthik Ranganathan</name>
       <email>kranganathan@fb.com</email>
       <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>larsfrancke</id>
+      <name>Lars Francke</name>
+      <email>larsfrancke@apache.org</email>
+      <timezone>Europe/Berlin</timezone>
     </developer>
     <developer>
       <id>larsgeorge</id>
@@ -404,10 +447,22 @@
       <timezone>0</timezone>
     </developer>
     <developer>
+      <id>mdrob</id>
+      <name>Mike Drob</name>
+      <email>mdrob@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
+      <id>meszibalu</id>
+      <name>Balazs Meszaros</name>
+      <email>meszibalu@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>misty</id>
       <name>Misty Stanley-Jones</name>
       <email>misty@apache.org</email>
-      <timezone>+10</timezone>
+      <timezone>-8</timezone>
     </developer>
     <developer>
       <id>ndimiduk</id>
@@ -434,6 +489,18 @@
       <timezone>0</timezone>
     </developer>
     <developer>
+      <id>openinx</id>
+      <name>Zheng Hu</name>
+      <email>openinx@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>psomogyi</id>
+      <name>Peter Somogyi</name>
+      <email>psomogyi@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>rajeshbabu</id>
       <name>Rajeshbabu Chintaguntla</name>
       <email>rajeshbabu@apache.org</email>
@@ -450,6 +517,12 @@
       <name>Ryan Rawson</name>
       <email>rawson@apache.org</email>
       <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>reidchan</id>
+      <name>Reid Chan</name>
+      <email>reidchan@apache.org</email>
+      <timezone>+8</timezone>
     </developer>
     <developer>
       <id>sershe</id>
@@ -494,6 +567,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>vikasv</id>
+      <name>Vikas Vishwakarma</name>
+      <email>vikasv@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>virag</id>
       <name>Virag Kothari</name>
       <email>virag@yahoo-inc.com</email>
@@ -523,31 +602,56 @@
       <email>zjushch@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>churro</id>
+      <name>Rahul Gidwani</name>
+      <email>churro@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>yiliang</id>
+      <name>Yi Liang</name>
+      <email>yiliang@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>zyork</id>
+      <name>Zach York</name>
+      <email>zyork@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
   </developers>
   <build>
     <extensions>
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.5.0.Final</version>
+        <version>${os.maven.version}</version>
       </extension>
     </extensions>
+    <!-- Plugin versions are inherited from ASF parent pom: https://maven.apache.org/pom/asf/
+         For specific version use a property and define it in the parent pom.
+     -->
     <pluginManagement>
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>${maven.dependency.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
            <artifactId>maven-javadoc-plugin</artifactId>
-           <version>${javadoc.version}</version>
+           <version>${maven.javadoc.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.5</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>2.4.1</version>
+          <version>${maven.shade.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -569,7 +673,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.2</version>
+          <version>${maven.compiler.version}</version>
           <configuration>
             <source>${compileSource}</source>
             <target>${compileSource}</target>
@@ -607,13 +711,18 @@
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
             </systemPropertyVariables>
-
             <excludes>
-	      <!-- users can add -D option to skip particular test classes
-		   ex: mvn test -Dtest.exclude.pattern=**/TestFoo.java,**/TestBar.java
-	      -->
-	      <exclude>${test.exclude.pattern}</exclude>
-	    </excludes>
+              <!-- users can add -D option to skip particular test classes
+             ex: mvn test -Dtest.exclude.pattern=**/TestFoo.java,**/TestBar.java
+              -->
+              <exclude>${test.exclude.pattern}</exclude>
+            </excludes>
+            <properties>
+              <property>
+                <name>listener</name>
+                <value>org.apache.hadoop.hbase.TimedOutTestsListener,org.apache.hadoop.hbase.HBaseClassTestRuleChecker,org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
+              </property>
+            </properties>
           </configuration>
           <executions>
             <execution>
@@ -654,12 +763,12 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>buildnumber-maven-plugin</artifactId>
-          <version>1.3</version>
+          <version>${buildnumber.maven.version}</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>3.0.0</version>
+          <version>${findbugs.maven.version}</version>
           <!--NOTE: Findbugs 3.0.0 requires jdk7-->
           <configuration>
             <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
@@ -671,7 +780,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.9.1</version>
+          <version>${build.helper.maven.version}</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
@@ -693,6 +802,7 @@
               <phase>prepare-package</phase>
               <goals>
                 <goal>jar-no-fork</goal>
+                <goal>test-jar-no-fork</goal>
               </goals>
             </execution>
           </executions>
@@ -731,7 +841,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>
-          <version>2.9</version>
+          <version>${maven.eclipse.version}</version>
         </plugin>
         <!--This plugin's configuration is used to store Eclipse m2e settings
             only. It has no influence on the Maven build itself. m2e does not
@@ -744,7 +854,7 @@
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
+          <version>${lifecycle.mapping.version}</version>
           <configuration>
             <lifecycleMappingMetadata>
               <pluginExecutions>
@@ -765,7 +875,7 @@
                   <pluginExecutionFilter>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
-                    <versionRange>[1.0.1,)</versionRange>
+                    <versionRange>${enforcer.version}</versionRange>
                     <goals>
                       <goal>enforce</goal>
                     </goals>
@@ -812,7 +922,7 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.11</version>
+          <version>${apache.rat.version}</version>
           <configuration>
             <excludes>
               <exclude>**/*.versionsBackup</exclude>
@@ -838,6 +948,7 @@
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
               <!-- MIT http://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
+              <exclude>**/jquery.tablesorter.min.js</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
@@ -851,7 +962,7 @@
               <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
               <exclude>**/patchprocess/**</exclude>
-              <exclude>src/main/site/resources/repo/**</exclude>
+              <exclude>src/site/resources/repo/**</exclude>
               <exclude>**/dependency-reduced-pom.xml</exclude>
               <exclude>**/rat.txt</exclude>
               <!-- exclude the shaded protobuf files -->
@@ -862,7 +973,6 @@
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>${maven.assembly.version}</version>
           <configuration>
             <!--Defer to the hbase-assembly sub-module.  It
              does all assembly-->
@@ -876,15 +986,17 @@
           <configuration>
             <protocArtifact>com.google.protobuf:protoc:${external.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
             <protoSourceRoot>${basedir}/src/main/protobuf/</protoSourceRoot>
-            <outputDirectory>${basedir}/src/main/java/</outputDirectory>
             <clearOutputDirectory>false</clearOutputDirectory>
             <checkStaleness>true</checkStaleness>
           </configuration>
         </plugin>
         <plugin>
+          <!-- Approach followed here is roughly the same as mentioned here:
+          https://maven.apache.org/plugins/maven-checkstyle-plugin/examples/multi-module-config.html
+          -->
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>2.17</version>
+          <version>${maven.checkstyle.version}</version>
           <dependencies>
             <dependency>
               <groupId>org.apache.hbase</groupId>
@@ -900,15 +1012,62 @@
           <configuration>
             <configLocation>hbase/checkstyle.xml</configLocation>
             <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
+            <includeTestSourceDirectory>true</includeTestSourceDirectory>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>net.revelc.code</groupId>
+          <artifactId>warbucks-maven-plugin</artifactId>
+          <version>${maven.warbucks.version}</version>
+          <configuration>
+            <ignoreRuleFailures>false</ignoreRuleFailures>
+            <rules>
+              <rule>
+                <!-- exclude the generated java files -->
+                <classPattern>(?!.*(.generated.|.tmpl.|\$)).*</classPattern>
+                <includeTestClasses>false</includeTestClasses>
+                <includePublicClasses>true</includePublicClasses>
+                <includePackagePrivateClasses>false</includePackagePrivateClasses>
+                <includeProtectedClasses>false</includeProtectedClasses>
+                <includePrivateClasses>false</includePrivateClasses>
+                <classAnnotationPattern>org[.]apache[.]yetus[.]audience[.]InterfaceAudience.*</classAnnotationPattern>
+              </rule>
+            </rules>
+          </configuration>
+          <executions>
+            <execution>
+              <id>run-warbucks</id>
+              <goals>
+                <goal>check</goal><!-- runs at process-test-classes phase -->
+              </goals>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>negate-license-bundles-property</id>
+            <goals>
+              <goal>bsh-property</goal>
+            </goals>
+            <configuration>
+              <source>skip.license.check = !${license.bundles.dependencies};</source>
+              <properties>
+                <property>skip.license.check</property>
+              </properties>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.4</version>
+        <version>${enforcer.version}</version>
         <dependencies>
           <dependency>
             <groupId>org.codehaus.mojo</groupId>
@@ -919,12 +1078,17 @@
         <!-- version set by parent -->
         <executions>
           <execution>
-            <id>min-maven-min-java-banned-xerces</id>
+            <id>hadoop-profile-min-maven-min-java-banned-xerces</id>
             <goals>
               <goal>enforce</goal>
             </goals>
             <configuration>
               <rules>
+                <!-- Help people activate profiles correctly -->
+                <evaluateBeanshell>
+                  <condition>System.getProperty("hadoop-profile", "").isEmpty()</condition>
+                  <message>The hadoop-profile property is unused, did you mean to set hadoop.profile instead?</message>
+                </evaluateBeanshell>
                 <!-- The earliest maven version we verify builds for via ASF Jenkins -->
                 <requireMavenVersion>
                   <version>[${maven.min.version},)</version>
@@ -939,7 +1103,7 @@
                 <requireJavaVersion>
                   <version>[${java.min.version},)</version>
                   <message>Java is out of date.
-  HBase requirs at least version ${java.min.version} of the JDK to properly build from source.
+  HBase requires at least version ${java.min.version} of the JDK to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
   See the reference guide on building for more information: http://hbase.apache.org/book.html#build
@@ -970,13 +1134,80 @@
               </rules>
             </configuration>
           </execution>
+          <execution>
+            <id>banned-scala</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.scala-lang:scala-library</exclude>
+                  </excludes>
+                  <message>We don't allow Scala outside of the hbase-spark module, see HBASE-13992.</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-hbase-spark</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.apache.hbase:hbase-spark</exclude>
+                  </excludes>
+                  <message>We don't allow other modules to depend on hbase-spark, see HBASE-13992.</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>check-aggregate-license</id>
+            <!-- must check after LICENSE is built at 'generate-resources' -->
+            <phase>process-resources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <evaluateBeanshell>
+                  <condition>
+                    File license = new File("${license.aggregate.path}");
+
+                    // Beanshell does not support try-with-resources,
+                    // so we must close this scanner manually
+                    Scanner scanner = new Scanner(license);
+
+                    while (scanner.hasNextLine()) {
+                      if (scanner.nextLine().startsWith("ERROR:")) {
+                        scanner.close();
+                        return false;
+                      }
+                    }
+                    scanner.close();
+                    return true;
+                  </condition>
+                  <message>
+                    License errors detected, for more detail find ERROR in
+                    ${license.aggregate.path}
+                  </message>
+                </evaluateBeanshell>
+              </rules>
+              <skip>${skip.license.check}</skip>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <!-- parent-module only plugins -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0</version>
+        <version>${xml.maven.version}</version>
         <inherited>false</inherited>
         <executions>
           <execution>
@@ -1028,39 +1259,23 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-checkstyle</artifactId>
-            <version>${project.version}</version>
-          </dependency>
-          <dependency>
-            <groupId>com.puppycrawl.tools</groupId>
-            <artifactId>checkstyle</artifactId>
-            <version>${checkstyle.version}</version>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <configLocation>hbase/checkstyle.xml</configLocation>
-          <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
-        <version>3.4</version>
+        <version>${maven.site.version}</version>
         <inherited>false</inherited>
         <dependencies>
           <dependency>
             <!-- add support for ssh/scp -->
             <groupId>org.apache.maven.wagon</groupId>
             <artifactId>wagon-ssh</artifactId>
-            <version>2.2</version>
+            <version>${wagon.ssh.version}</version>
           </dependency>
         </dependencies>
         <configuration>
-          <siteDirectory>${basedir}/src/main/site</siteDirectory>
-          <customBundle>${basedir}/src/main/site/custom/project-info-report.properties</customBundle>
+          <siteDirectory>${basedir}/src/site</siteDirectory>
+          <customBundle>${basedir}/src/site/custom/project-info-report.properties</customBundle>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
@@ -1075,7 +1290,12 @@
           <dependency>
             <groupId>org.asciidoctor</groupId>
             <artifactId>asciidoctorj-pdf</artifactId>
-            <version>1.5.0-alpha.6</version>
+            <version>${asciidoctorj.pdf.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.jruby</groupId>
+            <artifactId>jruby-complete</artifactId>
+            <version>${jruby.version}</version>
           </dependency>
         </dependencies>
         <configuration>
@@ -1135,7 +1355,7 @@
               <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${basedir}/src/main/site/resources/</directory>
+                  <directory>${basedir}/src/site/resources/</directory>
                   <includes>
                     <include>.htaccess</include>
                   </includes>
@@ -1154,7 +1374,7 @@
               <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${basedir}/src/main/site/resources/</directory>
+                  <directory>${basedir}/src/site/resources/</directory>
                   <includes>
                     <include>book/**</include>
                   </includes>
@@ -1180,7 +1400,6 @@
             <configuration>
               <target name="rename file">
                 <move file="${project.reporting.outputDirectory}/book.pdf" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdf" />
-                <move file="${project.reporting.outputDirectory}/book.pdfmarks" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdfmarks" />
               </target>
             </configuration>
             <goals>
@@ -1208,14 +1427,14 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.5.3</version>
+        <version>${maven.bundle.version}</version>
         <inherited>true</inherited>
         <extensions>true</extensions>
       </plugin>
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
+        <version>${maven.scala.version}</version>
       </plugin>
     </plugins>
   </build>
@@ -1231,6 +1450,10 @@
     <license.bundles.bootstrap>false</license.bundles.bootstrap>
     <!-- modules that include jquery in their source tree should set true -->
     <license.bundles.jquery>false</license.bundles.jquery>
+    <!-- where to find the generated LICENSE files -->
+    <license.aggregate.path>
+      ${project.build.directory}/maven-shared-archive-resources/META-INF/LICENSE
+    </license.aggregate.path>
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
@@ -1241,71 +1464,104 @@
     <maven.min.version>3.0.4</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-two.version>2.7.1</hadoop-two.version>
-    <hadoop-three.version>3.0.0-alpha2</hadoop-three.version>
+    <hadoop-two.version>2.7.7</hadoop-two.version>
+    <hadoop-three.version>3.0.3</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
          They ought to match the values found in our default hadoop profile, which is
          currently "hadoop-2.0". See HBASE-15925 for more info. -->
     <hadoop.version>${hadoop-two.version}</hadoop.version>
+    <hadoop.guava.version>11.0.2</hadoop.guava.version>
     <compat.module>hbase-hadoop2-compat</compat.module>
     <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
+    <!--This property is for hadoops netty. HBase netty
+         comes in via hbase-thirdparty hbase-shaded-netty-->
+    <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
-    <commons-cli.version>1.4</commons-cli.version>
-    <commons-codec.version>1.9</commons-codec.version>
+    <audience-annotations.version>0.5.0</audience-annotations.version>
+    <avro.version>1.7.7</avro.version>
+    <commons-codec.version>1.10</commons-codec.version>
     <!-- pretty outdated -->
     <commons-io.version>2.5</commons-io.version>
-    <commons-lang.version>2.6</commons-lang.version>
-    <commons-logging.version>1.2</commons-logging.version>
-    <commons-math.version>2.2</commons-math.version>
+    <commons-lang3.version>3.6</commons-lang3.version>
+    <commons-math.version>3.6.1</commons-math.version>
     <disruptor.version>3.3.6</disruptor.version>
     <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
-    <collections.version>3.2.2</collections.version>
+    <collections.version>4.1</collections.version>
     <httpclient.version>4.5.3</httpclient.version>
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.1</metrics-core.version>
-    <guava.version>12.0.1</guava.version>
-    <jackson.version>2.23.2</jackson.version>
+    <jackson.version>2.9.2</jackson.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
-    <jetty.version>9.3.8.v20160314</jetty.version>
-    <jetty-jsp.version>9.2.19.v20160908</jetty-jsp.version>
-    <jackson1.version>1.9.13</jackson1.version>
+    <jetty.version>9.3.25.v20180904</jetty.version>
     <servlet.api.version>3.1.0</servlet.api.version>
+    <wx.rs.api.version>2.0.1</wx.rs.api.version>
+    <!-- Jersey 2.26 requires jetty 9.4 which breaks hadoop. Tread lightly. -->
     <jersey.version>2.25.1</jersey.version>
+    <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
+    <glassfish.el.version>3.0.1-b08</glassfish.el.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
-    <jruby.version>9.1.10.0</jruby.version>
+    <jruby.version>9.1.13.0</jruby.version>
     <junit.version>4.12</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
-    <htrace.version>3.2.0-incubating</htrace.version>
+    <htrace.version>4.2.0-incubating</htrace.version>
     <log4j.version>1.2.17</log4j.version>
-    <mockito-all.version>1.10.19</mockito-all.version>
+    <mockito-core.version>2.1.0</mockito-core.version>
     <!--Internally we use a different version of protobuf. See hbase-protocol-shaded-->
     <external.protobuf.version>2.5.0</external.protobuf.version>
     <protobuf.plugin.version>0.5.0</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.9.3</thrift.version>
-    <zookeeper.version>3.4.9</zookeeper.version>
-    <slf4j.version>1.7.24</slf4j.version>
+    <zookeeper.version>3.4.10</zookeeper.version>
+    <!-- What ZooKeeper 3.4.x depends on and nothing more -->
+    <jline.version>0.9.94</jline.version>
+    <slf4j.version>1.7.25</slf4j.version>
     <clover.version>4.0.3</clover.version>
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.3.8</jettison.version>
-    <netty.version>4.1.9.Final</netty.version>
-    <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
     <joni.version>2.1.11</joni.version>
     <jcodings.version>1.0.18</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.46</bouncycastle.version>
-    <kerby.version>1.0.0-RC2</kerby.version>
+    <bouncycastle.version>1.60</bouncycastle.version>
+    <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
-    <curator.version>2.12.0</curator.version>
+    <curator.version>4.0.0</curator.version>
     <!-- Plugin Dependencies -->
-    <maven.assembly.version>2.4</maven.assembly.version>
-    <maven.antrun.version>1.8</maven.antrun.version>
-    <jamon.plugin.version>2.4.1</jamon.plugin.version>
+    <apache.rat.version>0.12</apache.rat.version>
+    <asciidoctor.plugin.version>1.5.5</asciidoctor.plugin.version>
+    <asciidoctorj.pdf.version>1.5.0-alpha.15</asciidoctorj.pdf.version>
+    <build.helper.maven.version>3.0.0</build.helper.maven.version>
+    <buildnumber.maven.version>1.4</buildnumber.maven.version>
+    <checkstyle.version>8.11</checkstyle.version>
+    <exec.maven.version>1.6.0</exec.maven.version>
+    <error-prone.version>2.2.0</error-prone.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
-    <checkstyle.version>6.18</checkstyle.version>
-    <javadoc.version>2.10.3</javadoc.version>
-    <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
+    <findbugs.maven.version>3.0.4</findbugs.maven.version>
+    <jamon.plugin.version>2.4.2</jamon.plugin.version>
+    <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
+    <maven.antrun.version>1.8</maven.antrun.version>
+    <maven.bundle.version>3.3.0</maven.bundle.version>
+    <maven.checkstyle.version>3.0.0</maven.checkstyle.version>
+    <maven.compiler.version>3.6.1</maven.compiler.version>
+    <maven.dependency.version>3.0.1</maven.dependency.version>
+    <maven.eclipse.version>2.10</maven.eclipse.version>
+    <maven.install.version>2.5.2</maven.install.version>
+    <maven.jar.version>3.0.2</maven.jar.version>
+    <maven.javadoc.version>3.0.0</maven.javadoc.version>
+    <maven.patch.version>1.2</maven.patch.version>
+    <maven.scala.version>2.15.2</maven.scala.version>
+    <maven.shade.version>3.0.0</maven.shade.version>
+    <maven.site.version>3.4</maven.site.version>
+    <maven.source.version>3.0.1</maven.source.version>
+    <maven.warbucks.version>1.1.0</maven.warbucks.version>
+    <os.maven.version>1.5.0.Final</os.maven.version>
+    <plexus.errorprone.javac.version>2.8.2</plexus.errorprone.javac.version>
+    <scala.maven.version>3.2.2</scala.maven.version>
+    <scalatest.maven.version>1.0</scalatest.maven.version>
+    <spotbugs.version>3.1.0-RC3</spotbugs.version>
+    <wagon.ssh.version>2.12</wagon.ssh.version>
+    <xml.maven.version>1.0.1</xml.maven.version>
+    <hbase-thirdparty.version>2.1.0</hbase-thirdparty.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -1322,7 +1578,10 @@
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
     <rsgroup.test.jar>hbase-rsgroup-${project.version}-tests.jar</rsgroup.test.jar>
-    <surefire.version>2.18.1</surefire.version>
+    <mapreduce.test.jar>hbase-mapreduce-${project.version}-tests.jar</mapreduce.test.jar>
+    <zookeeper.test.jar>hbase-zookeeper-${project.version}-tests.jar</zookeeper.test.jar>
+    <shell-executable>bash</shell-executable>
+    <surefire.version>2.21.0</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
@@ -1351,7 +1610,8 @@
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine}</argLine>
     <jacoco.version>0.7.5.201505241946</jacoco.version>
-    <extra.enforcer.version>1.0-beta-3</extra.enforcer.version>
+    <extra.enforcer.version>1.0-beta-6</extra.enforcer.version>
+    <enforcer.version>3.0.0-M1</enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
@@ -1359,7 +1619,11 @@
         Default is the build start timestamp. Up on jenkins pass in the jenkins build id by setting
         this parameter by invoking mvn with -Dbuild.id=$BUILD_ID-->
     <build.id>${maven.build.timestamp}</build.id>
-    </properties>
+    <shell-executable>bash</shell-executable>
+    <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used.
+         property as of javadoc-plugin 3.0.0 -->
+    <doclint>none</doclint>
+  </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
     <dependencies>
@@ -1368,20 +1632,26 @@
           org.mortbay.jetty:servlet-api, javax.servlet:servlet-api: These are excluded because they are
           the same implementations. I chose org.mortbay.jetty:servlet-api-2.5 instead, which is a third
           implementation of the same, because Hadoop also uses this version
-          javax.servlet:jsp-api in favour of org.mortbay.jetty:jsp-api-2.1
+          javax.servlet:jsp-api in favour of javax.servlet.jsp:javax.servlet.jsp-api:2.3.1 since it
+          is what glassfish's jspC jar uses and that's where we get our own need for a jsp-api.
         -->
       <!-- Intra-module dependencies -->
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-annotations</artifactId>
         <version>${project.version}</version>
+        <type>test-jar</type>
+        <!--Was test scope only but if we want to run hbase-it tests, need the annotations test jar-->
+      </dependency>
+      <dependency>
+        <artifactId>hbase-backup</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-annotations</artifactId>
+        <artifactId>hbase-error-prone</artifactId>
         <version>${project.version}</version>
-        <type>test-jar</type>
-        <!--Was test scope only but if we want to run hbase-it tests, need the annotations test jar-->
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -1453,12 +1723,41 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <artifactId>hbase-replication</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-http</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-http</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <artifactId>hbase-server</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <artifactId>hbase-server</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-mapreduce</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-mapreduce</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
         <type>test-jar</type>
@@ -1498,14 +1797,6 @@
         <artifactId>hbase-testing-util</artifactId>
         <version>${project.version}</version>
         <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-prefix-tree</artifactId>
-        <version>${project.version}</version>
-        <!-- unfortunately, runtime scope causes Eclipse to give compile time access which isn't
-          needed, however it is apparently needed to run things within Eclipse -->
-        <scope>runtime</scope>
       </dependency>
       <dependency>
         <artifactId>hbase-examples</artifactId>
@@ -1553,6 +1844,55 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <artifactId>hbase-rest</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-resource-bundle</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-spark</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-spark-it</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-zookeeper</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-zookeeper</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-shaded-client</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-shaded-mapreduce</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>com.github.stephenc.findbugs</groupId>
@@ -1566,9 +1906,20 @@
         <version>${jettison.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>${log4j.version}</version>
+      </dependency>
+      <!-- Avro dependencies we mostly get transitively, manual version coallescing -->
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro</artifactId>
+        <version>${avro.version}</version>
       </dependency>
       <!--This is not used by hbase directly.  Used by thrift,
           dropwizard and zk.-->
@@ -1583,22 +1934,6 @@
         <version>${metrics-core.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>${guava.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>commons-collections</groupId>
-        <artifactId>commons-collections</artifactId>
-        <version>${collections.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>${httpclient.version}</version>
@@ -1607,11 +1942,6 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpcore</artifactId>
         <version>${httpcore.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-cli</groupId>
-        <artifactId>commons-cli</artifactId>
-        <version>${commons-cli.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-codec</groupId>
@@ -1624,19 +1954,22 @@
         <version>${commons-io.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-lang</groupId>
-        <artifactId>commons-lang</artifactId>
-        <version>${commons-lang.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>${commons-logging.version}</version>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${commons-lang3.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
-        <artifactId>commons-math</artifactId>
+        <artifactId>commons-math3</artifactId>
         <version>${commons-math.version}</version>
+      </dependency>
+      <dependency>
+        <!-- commons-logging is only used by hbase-http's HttpRequestLog and hbase-server's
+             HBaseTestingUtil.
+          -->
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>1.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -1666,9 +1999,9 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-all</artifactId>
-        <version>${netty.version}</version>
+        <groupId>jline</groupId>
+        <artifactId>jline</artifactId>
+        <version>${jline.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.thrift</groupId>
@@ -1696,28 +2029,25 @@
         <artifactId>joni</artifactId>
         <version>${joni.version}</version>
       </dependency>
-      <!-- While jackson is also a dependency of jersey it
-           can bring in jars from different, incompatible versions. We force
-           the same version with these dependencies -->
       <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-core-asl</artifactId>
-        <version>${jackson1.version}</version>
+        <groupId>com.fasterxml.jackson.jaxrs</groupId>
+        <artifactId>jackson-jaxrs-json-provider</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-mapper-asl</artifactId>
-        <version>${jackson1.version}</version>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-jaxrs</artifactId>
-        <version>${jackson1.version}</version>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-xc</artifactId>
-        <version>${jackson1.version}</version>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.jamon</groupId>
@@ -1729,6 +2059,11 @@
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>${servlet.api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.ws.rs</groupId>
+        <artifactId>javax.ws.rs-api</artifactId>
+        <version>${wx.rs.api.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
@@ -1768,11 +2103,6 @@
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-jsp</artifactId>
-        <version>${jetty-jsp.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-jmx</artifactId>
         <version>${jetty.version}</version>
       </dependency>
@@ -1797,9 +2127,31 @@
         <version>${jersey.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.glassfish.jersey.media</groupId>
-        <artifactId>jersey-media-json-jackson1</artifactId>
-        <version>${jackson.version}</version>
+        <groupId>org.glassfish.jersey.core</groupId>
+        <artifactId>jersey-client</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.jersey.core</groupId>
+        <artifactId>jersey-server</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
+      <dependency>
+        <!--This lib has JspC in it. Needed precompiling jsps in hbase-rest, etc.-->
+        <groupId>org.glassfish.web</groupId>
+        <artifactId>javax.servlet.jsp</artifactId>
+        <version>${glassfish.jsp.version}</version>
+      </dependency>
+      <dependency>
+        <!-- this lib is used by the compiled Jsp from the above JspC -->
+        <groupId>javax.servlet.jsp</groupId>
+        <artifactId>javax.servlet.jsp-api</artifactId>
+        <version>2.3.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish</groupId>
+        <artifactId>javax.el</artifactId>
+        <version>${glassfish.el.version}</version>
       </dependency>
       <dependency>
         <groupId>javax.xml.bind</groupId>
@@ -1825,13 +2177,13 @@
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
-        <artifactId>mockito-all</artifactId>
-        <version>${mockito-all.version}</version>
+        <artifactId>mockito-core</artifactId>
+        <version>${mockito-core.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.htrace</groupId>
-        <artifactId>htrace-core</artifactId>
+        <artifactId>htrace-core4</artifactId>
         <version>${htrace.version}</version>
       </dependency>
       <dependency>
@@ -1847,9 +2199,14 @@
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk16</artifactId>
+        <artifactId>bcprov-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.kerby</groupId>
+        <artifactId>kerb-core</artifactId>
+        <version>${kerby.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.kerby</groupId>
@@ -1874,13 +2231,14 @@
       </dependency>
       <dependency>
         <groupId>org.apache.curator</groupId>
-        <artifactId>curator-recipes</artifactId>
-        <version>${curator.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.curator</groupId>
         <artifactId>curator-framework</artifactId>
         <version>${curator.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.curator</groupId>
@@ -1891,31 +2249,60 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+          </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-recipes</artifactId>
+        <version>${curator.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.yetus</groupId>
+        <artifactId>audience-annotations</artifactId>
+        <version>${audience-annotations.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-miscellaneous</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-netty</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-protobuf</artifactId>
+        <version>${hbase-thirdparty.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
-  <!-- Dependencies needed by subprojects -->
   <dependencies>
-    <dependency>
-      <groupId>com.github.stephenc.findbugs</groupId>
-      <artifactId>findbugs-annotations</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-    </dependency>
-    <!-- Test dependencies -->
+    <!--REMOVE THIS. HERE TEMPORARILY.
+         Implication is that every module needs junit which is not so.
+         Cannot undo though because build runs test on each module and
+         it fails if no junit. TODO. -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-    </dependency>
   </dependencies>
+
   <!--
   To publish, use the following settings.xml file ( placed in ~/.m2/settings.xml )
 
@@ -1962,12 +2349,23 @@
         <pluginManagement>
           <plugins>
             <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-javadoc-plugin</artifactId>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>findbugs-maven-plugin</artifactId>
+              <version>${findbugs.maven.version}</version>
+              <!--NOTE: Findbugs 3.0.0 requires jdk7-->
               <configuration>
-                <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used -->
-                <additionalparam>-Xdoclint:none</additionalparam>
+                <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
+                <findbugsXmlOutput>true</findbugsXmlOutput>
+                <xmlOutput>true</xmlOutput>
+                <effort>Max</effort>
               </configuration>
+              <dependencies>
+                <dependency>
+                  <groupId>com.github.spotbugs</groupId>
+                  <artifactId>spotbugs</artifactId>
+                  <version>${spotbugs.version}</version>
+                </dependency>
+              </dependencies>
             </plugin>
           </plugins>
         </pluginManagement>
@@ -2102,6 +2500,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-enforcer-plugin</artifactId>
+            <version>${enforcer.version}</version>
             <configuration>
               <rules>
                 <enforceBytecodeVersion>
@@ -2143,6 +2542,9 @@
         <hadoop.version>${hadoop-two.version}</hadoop.version>
         <compat.module>hbase-hadoop2-compat</compat.module>
         <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
+        <!--This property is for hadoops netty. HBase netty
+             comes in via hbase-thirdparty hbase-shaded-netty-->
+        <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
       </properties>
       <dependencyManagement>
         <dependencies>
@@ -2159,6 +2561,18 @@
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -2196,6 +2610,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs</artifactId>
+            <version>${hadoop-two.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>javax.servlet.jsp</groupId>
@@ -2217,8 +2632,19 @@
                 <groupId>xerces</groupId>
                 <artifactId>xercesImpl</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+              </exclusion>
             </exclusions>
-            <version>${hadoop-two.version}</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -2246,6 +2672,18 @@
               <exclusion>
                 <groupId>xerces</groupId>
                 <artifactId>xercesImpl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -2259,6 +2697,10 @@
             <artifactId>hadoop-common</artifactId>
             <version>${hadoop-two.version}</version>
             <exclusions>
+              <exclusion>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+              </exclusion>
               <exclusion>
                 <groupId>javax.servlet.jsp</groupId>
                 <artifactId>jsp-api</artifactId>
@@ -2279,6 +2721,18 @@
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+              </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -2293,10 +2747,10 @@
             <artifactId>hadoop-minicluster</artifactId>
             <version>${hadoop-two.version}</version>
             <exclusions>
-            <exclusion>
-              <groupId>commons-httpclient</groupId>
-              <artifactId>commons-httpclient</artifactId>
-            </exclusion>
+              <exclusion>
+                <groupId>commons-httpclient</groupId>
+                <artifactId>commons-httpclient</artifactId>
+              </exclusion>
               <exclusion>
                 <groupId>javax.servlet.jsp</groupId>
                 <artifactId>jsp-api</artifactId>
@@ -2349,6 +2803,9 @@
         <!--Use this compat module for now. TODO: Make h3 one if we need one-->
         <compat.module>hbase-hadoop2-compat</compat.module>
         <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
+        <!--This property is for hadoops netty. HBase netty
+             comes in via hbase-thirdparty hbase-shaded-netty-->
+        <netty.hadoop.version>3.10.5.Final</netty.hadoop.version>
       </properties>
      <dependencyManagement>
        <dependencies>
@@ -2361,6 +2818,22 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
+             <exclusion>
+               <groupId>com.google.guava</groupId>
+               <artifactId>guava</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2390,7 +2863,16 @@
          <dependency>
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-hdfs</artifactId>
+           <version>${hadoop-three.version}</version>
            <exclusions>
+             <exclusion>
+               <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-core</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-server</artifactId>
+             </exclusion>
              <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
@@ -2407,8 +2889,19 @@
                <groupId>xerces</groupId>
                <artifactId>xercesImpl</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
+              <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+              </exclusion>
            </exclusions>
-           <version>${hadoop-three.version}</version>
          </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
@@ -2432,6 +2925,36 @@
              <exclusion>
                <groupId>xerces</groupId>
                <artifactId>xercesImpl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>com.google.guava</groupId>
+               <artifactId>guava</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-core</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-hdfs</artifactId>
+           <version>${hadoop-three.version}</version>
+           <type>test-jar</type>
+           <classifier>tests</classifier>
+           <scope>test</scope>
+           <exclusions>
+             <exclusion>
+               <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-core</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -2439,6 +2962,12 @@
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-auth</artifactId>
            <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>com.google.guava</groupId>
+               <artifactId>guava</artifactId>
+             </exclusion>
+           </exclusions>
          </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
@@ -2446,12 +2975,28 @@
            <version>${hadoop-three.version}</version>
            <exclusions>
              <exclusion>
+               <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-core</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-json</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-servlet</artifactId>
+             </exclusion>
+             <exclusion>
+              <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-server</artifactId>
+             </exclusion>
+             <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
              </exclusion>
              <exclusion>
                <groupId>javax.servlet</groupId>
-               <artifactId>servlet-api</artifactId>
+               <artifactId>javax.servlet-api</artifactId>
              </exclusion>
              <exclusion>
                <groupId>stax</groupId>
@@ -2464,6 +3009,31 @@
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>junit</groupId>
+               <artifactId>junit</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehause.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehause.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-common</artifactId>
+           <type>test-jar</type>
+           <classifier>tests</classifier>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>com.sun.jersey</groupId>
+               <artifactId>jersey-core</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -2484,10 +3054,10 @@
            <artifactId>hadoop-minicluster</artifactId>
            <version>${hadoop-three.version}</version>
            <exclusions>
-            <exclusion>
-              <groupId>commons-httpclient</groupId>
-              <artifactId>commons-httpclient</artifactId>
-            </exclusion>
+             <exclusion>
+               <groupId>commons-httpclient</groupId>
+               <artifactId>commons-httpclient</artifactId>
+             </exclusion>
              <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
@@ -2852,6 +3422,21 @@
         <surefire.secondPartGroups></surefire.secondPartGroups>
       </properties>
     </profile>
+    <profile>
+      <id>runZKTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.ZKTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
 
     <profile>
       <!-- Use it to launch tests locally-->
@@ -2935,31 +3520,42 @@
       </build>
     </profile>
     <profile>
-      <id>errorProne</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-        <build>
-            <plugins>
-                <!-- Turn on error-prone -->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.5.1</version>
-                    <configuration>
-                        <compilerId>javac-with-errorprone</compilerId>
-                        <forceJavacCompilerUse>true</forceJavacCompilerUse>
-                    </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.codehaus.plexus</groupId>
-                            <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                            <version>2.5</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-            </plugins>
-        </build>
+      <!-- Used by the website generation script on jenkins to
+           do a local install of the jars we need to run a normal
+           site build w/o forking.
+        -->
+      <id>site-install-step</id>
+      <properties>
+        <skipTests>true</skipTests>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <enforcer.skip>true</enforcer.skip>
+        <checkstyle.skip>true</checkstyle.skip>
+        <findbugs.skip>true</findbugs.skip>
+        <warbucks.skip>true</warbucks.skip>
+      </properties>
+    </profile>
+    <profile>
+      <!-- Used by the website generation script on jenkins to
+           mitigate the impact of unneeded build forks while building
+           our javadocs.
+        -->
+      <id>site-build-step</id>
+      <properties>
+        <skipTests>true</skipTests>
+        <enforcer.skip>true</enforcer.skip>
+        <maven.main.skip>true</maven.main.skip>
+        <maven.test.skip>true</maven.test.skip>
+        <warbucks.skip>true</warbucks.skip>
+        <protoc.skip>true</protoc.skip>
+        <remoteresources.skip>true</remoteresources.skip>
+        <!-- Because the scala-maven-plugin has no skip configuration option
+             this configuration setting here won't actually do anything.
+
+             However, if you pass it on the command line it'll activate
+             a profile in hbase-spark/pom.xml that will skip things.
+        -->
+        <scala.skip>true</scala.skip>
+      </properties>
     </profile>
   </profiles>
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
@@ -2967,7 +3563,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>2.7</version>
+        <version>2.9</version>
         <reportSets>
           <reportSet>
             <reports>
@@ -2988,7 +3584,7 @@
             </reports>
           </reportSet>
         </reportSets>
-        <!-- see src/main/site/site.xml for selected reports -->
+        <!-- see src/site/site.xml for selected reports -->
         <configuration>
           <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
         </configuration>
@@ -2997,7 +3593,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>${javadoc.version}</version>
+        <version>${maven.javadoc.version}</version>
         <reportSets>
           <!-- Dev API -->
           <reportSet>
@@ -3031,8 +3627,8 @@
               <additionalDependencies>
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
-                  <artifactId>mockito-all</artifactId>
-                  <version>${mockito-all.version}</version>
+                  <artifactId>mockito-core</artifactId>
+                  <version>${mockito-core.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3074,8 +3670,8 @@
               <additionalDependencies>
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
-                  <artifactId>mockito-all</artifactId>
-                  <version>${mockito-all.version}</version>
+                  <artifactId>mockito-core</artifactId>
+                  <version>${mockito-core.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3095,12 +3691,12 @@
             </reports>
             <configuration>
               <doclet>
-                org.apache.hadoop.hbase.classification.tools.IncludePublicAnnotationsStandardDoclet
+                org.apache.yetus.audience.tools.IncludePublicAnnotationsStandardDoclet
               </doclet>
               <docletArtifact>
-                <groupId>org.apache.hbase</groupId>
-                <artifactId>hbase-annotations</artifactId>
-                <version>${project.version}</version>
+                <groupId>org.apache.yetus</groupId>
+                <artifactId>audience-annotations</artifactId>
+                <version>${audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
               <destDir>apidocs</destDir>
@@ -3111,10 +3707,6 @@
               </excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
-              <dependencySourceIncludes>
-                <!-- include ONLY dependencies I control -->
-                <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
-              </dependencySourceIncludes>
               <sourceFilesExclude>**/generated/*</sourceFilesExclude>
               <show>protected</show> <!-- (shows only public and protected classes and members) -->
               <quiet>true</quiet>
@@ -3132,8 +3724,8 @@
               <additionalDependencies>
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
-                  <artifactId>mockito-all</artifactId>
-                  <version>${mockito-all.version}</version>
+                  <artifactId>mockito-core</artifactId>
+                  <version>${mockito-core.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3152,12 +3744,12 @@
             </reports>
             <configuration>
               <doclet>
-                org.apache.hadoop.hbase.classification.tools.IncludePublicAnnotationsStandardDoclet
+                org.apache.yetus.audience.tools.IncludePublicAnnotationsStandardDoclet
               </doclet>
               <docletArtifact>
-                <groupId>org.apache.hbase</groupId>
-                <artifactId>hbase-annotations</artifactId>
-                <version>${project.version}</version>
+                <groupId>org.apache.yetus</groupId>
+                <artifactId>audience-annotations</artifactId>
+                <version>${audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
               <destDir>testapidocs</destDir>
@@ -3168,10 +3760,6 @@
               </excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
-              <dependencySourceIncludes>
-                <!-- include ONLY dependencies I control -->
-                <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
-              </dependencySourceIncludes>
               <sourceFilesExclude>**/generated/*</sourceFilesExclude>
               <show>protected</show> <!-- (shows only public and protected classes and members) -->
               <quiet>true</quiet>
@@ -3189,8 +3777,8 @@
               <additionalDependencies>
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
-                  <artifactId>mockito-all</artifactId>
-                  <version>${mockito-all.version}</version>
+                  <artifactId>mockito-core</artifactId>
+                  <version>${mockito-core.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3207,17 +3795,16 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.17</version>
+        <version>${maven.checkstyle.version}</version>
         <configuration>
           <excludes>target/**</excludes>
-          <configLocation>hbase/checkstyle.xml</configLocation>
-          <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
         </configuration>
       </plugin>
 
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
+        <version>2.15.2</version>
       </plugin>
     </plugins>
   </reporting>
@@ -3231,11 +3818,4 @@
       <url>file:///tmp</url>
     </site>
   </distributionManagement>
-  <repositories>
-    <repository>
-        <id>project.local</id>
-        <name>project</name>
-        <url>file:${project.basedir}/src/main/site/resources/repo</url>
-    </repository>
-</repositories>
 </project>

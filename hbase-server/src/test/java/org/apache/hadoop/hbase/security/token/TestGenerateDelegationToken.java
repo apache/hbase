@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThat;
 
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
-
+import java.util.Arrays;
+import java.util.Collection;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -30,7 +35,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
-import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
@@ -44,18 +48,50 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
-import com.google.protobuf.ServiceException;
-
+@RunWith(Parameterized.class)
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestGenerateDelegationToken extends SecureTestCluster {
 
-  private void testTokenAuth(Class<? extends RpcClient> rpcImplClass) throws IOException,
-      ServiceException {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestGenerateDelegationToken.class);
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    SecureTestCluster.setUp();
+    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      Token<? extends TokenIdentifier> token = TokenUtil.obtainToken(conn);
+      UserGroupInformation.getCurrentUser().addToken(token);
+    }
+  }
+
+  @Parameters(name = "{index}: rpcClientImpl={0}")
+  public static Collection<Object[]> parameters() {
+    return Arrays.asList(new Object[] { BlockingRpcClient.class.getName() },
+      new Object[] { NettyRpcClient.class.getName() });
+  }
+
+  @Parameter
+  public String rpcClientImpl;
+
+  @Before
+  public void setUpBeforeMethod() {
     TEST_UTIL.getConfiguration().set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
-      rpcImplClass.getName());
+      rpcClientImpl);
+  }
+
+  @Test
+  public void test() throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
         Table table = conn.getTable(TableName.META_TABLE_NAME)) {
       CoprocessorRpcChannel rpcChannel = table.coprocessorService(HConstants.EMPTY_START_ROW);
@@ -67,20 +103,11 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
       try {
         service.getAuthenticationToken(null, GetAuthenticationTokenRequest.getDefaultInstance());
       } catch (ServiceException e) {
-        AccessDeniedException exc = (AccessDeniedException) ProtobufUtil.handleRemoteException(e);
-        assertTrue(exc.getMessage().contains(
-          "Token generation only allowed for Kerberos authenticated clients"));
+        IOException ioe = ProtobufUtil.getRemoteException(e);
+        assertThat(ioe, instanceOf(AccessDeniedException.class));
+        assertThat(ioe.getMessage(),
+          containsString("Token generation only allowed for Kerberos authenticated clients"));
       }
-    }
-  }
-
-  @Test
-  public void test() throws Exception {
-    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      Token<? extends TokenIdentifier> token = TokenUtil.obtainToken(conn);
-      UserGroupInformation.getCurrentUser().addToken(token);
-      testTokenAuth(BlockingRpcClient.class);
-      testTokenAuth(NettyRpcClient.class);
     }
   }
 }

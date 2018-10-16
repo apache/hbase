@@ -33,10 +33,10 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -44,8 +44,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -60,6 +62,10 @@ import org.mockito.stubbing.Answer;
  */
 @Category(SmallTests.class)
 public class TestClientScanner {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestClientScanner.class);
 
   Scan scan;
   ExecutorService pool;
@@ -131,20 +137,19 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testNoResultsHint() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
       Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
         private int count = 0;
         @Override
         public Result[] answer(InvocationOnMock invocation) throws Throwable {
-            ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-                ScannerCallableWithReplicas.class);
+            ScannerCallableWithReplicas callable = invocation.getArgument(0);
           switch (count) {
             case 0: // initialize
               count++;
@@ -176,7 +181,7 @@ public class TestClientScanner {
       // One for fetching the results
       // One for fetching empty results and quit as we do not have moreResults hint.
       inOrder.verify(caller, Mockito.times(2)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(1, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -192,20 +197,19 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testSizeLimit() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
       Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
         private int count = 0;
         @Override
         public Result[] answer(InvocationOnMock invocation) throws Throwable {
-          ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-              ScannerCallableWithReplicas.class);
+          ScannerCallableWithReplicas callable = invocation.getArgument(0);
           switch (count) {
             case 0: // initialize
               count++;
@@ -235,7 +239,7 @@ public class TestClientScanner {
       scanner.loadCache();
 
       inOrder.verify(caller, Mockito.times(1)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(1, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -250,9 +254,11 @@ public class TestClientScanner {
   @Test
   @SuppressWarnings("unchecked")
   public void testCacheLimit() throws IOException {
-    KeyValue kv1 = new KeyValue("row1".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
-        Type.Maximum), kv2 = new KeyValue("row2".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
-        Type.Maximum), kv3 = new KeyValue("row3".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
+        Type.Maximum);
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
+        Type.Maximum);
+    KeyValue kv3 = new KeyValue(Bytes.toBytes("row3"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     final Result[] results = new Result[] {Result.create(new Cell[] {kv1}),
         Result.create(new Cell[] {kv2}), Result.create(new Cell[] {kv3})};
@@ -260,13 +266,12 @@ public class TestClientScanner {
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
       Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
         private int count = 0;
         @Override
         public Result[] answer(InvocationOnMock invocation) throws Throwable {
-          ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-              ScannerCallableWithReplicas.class);
+          ScannerCallableWithReplicas callable = invocation.getArgument(0);
           switch (count) {
             case 0: // initialize
               count++;
@@ -296,7 +301,7 @@ public class TestClientScanner {
       scanner.loadCache();
 
       inOrder.verify(caller, Mockito.times(1)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(3, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -326,20 +331,19 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testNoMoreResults() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
       Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
         private int count = 0;
         @Override
         public Result[] answer(InvocationOnMock invocation) throws Throwable {
-          ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-              ScannerCallableWithReplicas.class);
+          ScannerCallableWithReplicas callable = invocation.getArgument(0);
           switch (count) {
             case 0: // initialize
               count++;
@@ -369,7 +373,7 @@ public class TestClientScanner {
       scanner.loadCache();
 
       inOrder.verify(caller, Mockito.times(1)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(1, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -385,12 +389,12 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testMoreResults() throws IOException {
     final Result[] results1 = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results1[0] = Result.create(new Cell[] {kv1});
 
     final Result[] results2 = new Result[1];
-    KeyValue kv2 = new KeyValue("row2".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results2[0] = Result.create(new Cell[] {kv2});
 
@@ -398,13 +402,12 @@ public class TestClientScanner {
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
         Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
           private int count = 0;
           @Override
           public Result[] answer(InvocationOnMock invocation) throws Throwable {
-            ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-                ScannerCallableWithReplicas.class);
+            ScannerCallableWithReplicas callable = invocation.getArgument(0);
             switch (count) {
               case 0: // initialize
                 count++;
@@ -436,7 +439,7 @@ public class TestClientScanner {
       scanner.loadCache();
 
       inOrder.verify(caller, Mockito.times(2)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(2, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -459,7 +462,7 @@ public class TestClientScanner {
    * Tests the case where all replicas of a region throw an exception. It should not cause a hang
    * but the exception should propagate to the client
    */
-  @Test (timeout = 30000)
+  @Test
   public void testExceptionsFromReplicasArePropagated() throws IOException {
     scan.setConsistency(Consistency.TIMELINE);
 

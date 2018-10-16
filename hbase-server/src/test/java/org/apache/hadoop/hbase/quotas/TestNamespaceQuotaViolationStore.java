@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static com.google.common.collect.Iterables.size;
+import static org.apache.hbase.thirdparty.com.google.common.collect.Iterables.size;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
@@ -27,36 +28,45 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
  * Test class for {@link NamespaceQuotaSnapshotStore}.
  */
 @Category(SmallTests.class)
 public class TestNamespaceQuotaViolationStore {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNamespaceQuotaViolationStore.class);
+
   private static final long ONE_MEGABYTE = 1024L * 1024L;
 
   private Connection conn;
   private QuotaObserverChore chore;
-  private Map<HRegionInfo, Long> regionReports;
+  private Map<RegionInfo, Long> regionReports;
   private NamespaceQuotaSnapshotStore store;
 
   @Before
@@ -70,7 +80,7 @@ public class TestNamespaceQuotaViolationStore {
   @Test
   public void testGetSpaceQuota() throws Exception {
     NamespaceQuotaSnapshotStore mockStore = mock(NamespaceQuotaSnapshotStore.class);
-    when(mockStore.getSpaceQuota(any(String.class))).thenCallRealMethod();
+    when(mockStore.getSpaceQuota(any())).thenCallRealMethod();
 
     Quotas quotaWithSpace = Quotas.newBuilder().setSpace(
         SpaceQuota.newBuilder()
@@ -81,7 +91,7 @@ public class TestNamespaceQuotaViolationStore {
     Quotas quotaWithoutSpace = Quotas.newBuilder().build();
 
     AtomicReference<Quotas> quotaRef = new AtomicReference<>();
-    when(mockStore.getQuotaForNamespace(any(String.class))).then(new Answer<Quotas>() {
+    when(mockStore.getQuotaForNamespace(any())).then(new Answer<Quotas>() {
       @Override
       public Quotas answer(InvocationOnMock invocation) throws Throwable {
         return quotaRef.get();
@@ -109,22 +119,38 @@ public class TestNamespaceQuotaViolationStore {
     // Create some junk data to filter. Makes sure it's so large that it would
     // immediately violate the quota.
     for (int i = 0; i < 3; i++) {
-      regionReports.put(new HRegionInfo(tn3, Bytes.toBytes(i), Bytes.toBytes(i + 1)),
+
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
+              .setStartKey(Bytes.toBytes(i))
+              .setEndKey(Bytes.toBytes(i + 1))
+              .build(),
           5L * ONE_MEGABYTE);
     }
 
-    regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(0), Bytes.toBytes(1)), 1024L * 512L);
-    regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(1), Bytes.toBytes(2)), 1024L * 256L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
+        .setStartKey(Bytes.toBytes(0))
+        .setEndKey(Bytes.toBytes(1))
+        .build(), 1024L * 512L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
+        .setStartKey(Bytes.toBytes(1))
+        .setEndKey(Bytes.toBytes(2))
+        .build(), 1024L * 256L);
 
     // Below the quota
     assertEquals(false, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
 
-    regionReports.put(new HRegionInfo(tn2, Bytes.toBytes(2), Bytes.toBytes(3)), 1024L * 256L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn2)
+        .setStartKey(Bytes.toBytes(2))
+        .setEndKey(Bytes.toBytes(3))
+        .build(), 1024L * 256L);
 
     // Equal to the quota is still in observance
     assertEquals(false, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
 
-    regionReports.put(new HRegionInfo(tn2, Bytes.toBytes(3), Bytes.toBytes(4)), 1024L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn2)
+        .setStartKey(Bytes.toBytes(3))
+        .setEndKey(Bytes.toBytes(4))
+        .build(), 1024L);
 
     // Exceeds the quota, should be in violation
     assertEquals(true, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
@@ -142,16 +168,28 @@ public class TestNamespaceQuotaViolationStore {
     assertEquals(0, size(store.filterBySubject("asdf")));
 
     for (int i = 0; i < 5; i++) {
-      regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(i), Bytes.toBytes(i+1)), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn1)
+          .setStartKey(Bytes.toBytes(i))
+          .setEndKey(Bytes.toBytes(i + 1))
+          .build(), 0L);
     }
     for (int i = 0; i < 3; i++) {
-      regionReports.put(new HRegionInfo(tn2, Bytes.toBytes(i), Bytes.toBytes(i+1)), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn2)
+          .setStartKey(Bytes.toBytes(i))
+          .setEndKey(Bytes.toBytes(i + 1))
+          .build(), 0L);
     }
     for (int i = 0; i < 10; i++) {
-      regionReports.put(new HRegionInfo(tn3, Bytes.toBytes(i), Bytes.toBytes(i+1)), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
+          .setStartKey(Bytes.toBytes(i))
+          .setEndKey(Bytes.toBytes(i + 1))
+          .build(), 0L);
     }
     for (int i = 0; i < 8; i++) {
-      regionReports.put(new HRegionInfo(tn4, Bytes.toBytes(i), Bytes.toBytes(i+1)), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn4)
+          .setStartKey(Bytes.toBytes(i))
+          .setEndKey(Bytes.toBytes(i + 1))
+          .build(), 0L);
     }
     assertEquals(26, regionReports.size());
     assertEquals(5, size(store.filterBySubject(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR)));

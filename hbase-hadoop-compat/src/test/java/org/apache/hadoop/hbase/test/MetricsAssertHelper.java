@@ -168,4 +168,11 @@ public interface MetricsAssertHelper {
    * @return long value of the gauge.
    */
   long getGaugeLong(String name, BaseSource source);
+
+  /**
+   * Generates a representation of all metrics exported by the given {@code source}.
+   * @param source The {@link BaseSource} that will provide the metrics.
+   * @return A representation of the metrics as a String.
+   */
+  String toDebugString(BaseSource source);
 }

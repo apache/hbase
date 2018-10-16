@@ -18,10 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.TABLES_ON_MASTER;
+import static org.apache.hadoop.hbase.master.LoadBalancer.TABLES_ON_MASTER;
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,26 +36,36 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * Will split the table, and move region randomly when testing.
  */
-@Ignore // Can't move hbase:meta off master server in AMv2. TODO.
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncTableGetMultiThreaded {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncTableGetMultiThreaded.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
@@ -69,7 +78,7 @@ public class TestAsyncTableGetMultiThreaded {
 
   private static AsyncConnection CONN;
 
-  private static RawAsyncTable TABLE;
+  private static AsyncTable<?> TABLE;
 
   private static byte[][] SPLIT_KEYS;
 
@@ -78,8 +87,7 @@ public class TestAsyncTableGetMultiThreaded {
     setUp(MemoryCompactionPolicy.NONE);
   }
 
-  protected static void setUp(MemoryCompactionPolicy memoryCompaction)
-      throws Exception {
+  protected static void setUp(MemoryCompactionPolicy memoryCompaction) throws Exception {
     TEST_UTIL.getConfiguration().set(TABLES_ON_MASTER, "none");
     TEST_UTIL.getConfiguration().setLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, 60000L);
     TEST_UTIL.getConfiguration().setInt(ByteBufferPool.MAX_POOL_SIZE_KEY, 100);
@@ -94,7 +102,7 @@ public class TestAsyncTableGetMultiThreaded {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    TABLE = CONN.getRawTableBuilder(TABLE_NAME).setReadRpcTimeout(1, TimeUnit.SECONDS)
+    TABLE = CONN.getTableBuilder(TABLE_NAME).setReadRpcTimeout(1, TimeUnit.SECONDS)
         .setMaxRetries(1000).build();
     TABLE.putAll(
       IntStream.range(0, COUNT).mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
@@ -118,11 +126,11 @@ public class TestAsyncTableGetMultiThreaded {
   }
 
   @Test
-  public void test() throws IOException, InterruptedException, ExecutionException {
+  public void test() throws Exception {
     int numThreads = 20;
     AtomicBoolean stop = new AtomicBoolean(false);
-    ExecutorService executor = Executors.newFixedThreadPool(numThreads,
-      Threads.newDaemonThreadFactory("TestAsyncGet-"));
+    ExecutorService executor =
+      Executors.newFixedThreadPool(numThreads, Threads.newDaemonThreadFactory("TestAsyncGet-"));
     List<Future<?>> futures = new ArrayList<>();
     IntStream.range(0, numThreads).forEach(i -> futures.add(executor.submit(() -> {
       run(stop);
@@ -131,18 +139,40 @@ public class TestAsyncTableGetMultiThreaded {
     Collections.shuffle(Arrays.asList(SPLIT_KEYS), new Random(123));
     Admin admin = TEST_UTIL.getAdmin();
     for (byte[] splitPoint : SPLIT_KEYS) {
+      int oldRegionCount = admin.getRegions(TABLE_NAME).size();
       admin.split(TABLE_NAME, splitPoint);
+      TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE_NAME).size() > oldRegionCount;
+        }
+
+        @Override
+        public String explainFailure() throws Exception {
+          return "Split has not finished yet";
+        }
+      });
+
       for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME)) {
         region.compact(true);
+
+        //Waiting for compaction to complete and references are cleaned up
+        RetryCounter retrier = new RetryCounter(30, 1, TimeUnit.SECONDS);
+        while (CompactionState.NONE != admin
+            .getCompactionStateForRegion(region.getRegionInfo().getRegionName())
+            && retrier.shouldRetry()) {
+          retrier.sleepUntilNextRetry();
+        }
+        region.getStores().get(0).closeAndArchiveCompactedFiles();
       }
       Thread.sleep(5000);
-      admin.balancer(true);
+      admin.balance(true);
       Thread.sleep(5000);
       ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
       ServerName newMetaServer = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
           .map(t -> t.getRegionServer().getServerName()).filter(s -> !s.equals(metaServer))
           .findAny().get();
-      admin.move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+      admin.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
         Bytes.toBytes(newMetaServer.getServerName()));
       Thread.sleep(5000);
     }

@@ -20,19 +20,31 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.TimeOffsetEnvironmentEdge;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestDefaultCompactSelection extends TestCompactionPolicy {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDefaultCompactSelection.class);
+
+  @Override
+  protected void config() {
+    super.config();
+    // DON'T change this config since all test cases assume HStore.BLOCKING_STOREFILES_KEY is 10.
+    this.conf.setLong(HStore.BLOCKING_STOREFILES_KEY, 10);
+  }
 
   @Test
   public void testCompactionRatio() throws IOException {
@@ -98,7 +110,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
       // timestamp a bit to make sure that now - lowestModTime is greater than major compaction
       // period(1ms).
       // trigger an aged major compaction
-      List<StoreFile> candidates = sfCreate(50, 25, 12, 12);
+      List<HStoreFile> candidates = sfCreate(50, 25, 12, 12);
       edge.increment(2);
       compactEquals(candidates, 50, 25, 12, 12);
       // major sure exceeding maxCompactSize also downgrades aged minors
@@ -158,22 +170,20 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
   public void testCompactionEmptyHFile() throws IOException {
     // Set TTL
     ScanInfo oldScanInfo = store.getScanInfo();
-    ScanInfo newScanInfo = new ScanInfo(oldScanInfo.getConfiguration(), oldScanInfo.getFamily(),
-        oldScanInfo.getMinVersions(), oldScanInfo.getMaxVersions(), 600,
-        oldScanInfo.getKeepDeletedCells(), oldScanInfo.getPreadMaxBytes(),
-        oldScanInfo.getTimeToPurgeDeletes(), oldScanInfo.getComparator());
+    ScanInfo newScanInfo = oldScanInfo.customize(oldScanInfo.getMaxVersions(), 600,
+        oldScanInfo.getKeepDeletedCells());
     store.setScanInfo(newScanInfo);
     // Do not compact empty store file
-    List<StoreFile> candidates = sfCreate(0);
-    for (StoreFile file : candidates) {
-      if (file instanceof MockStoreFile) {
-        MockStoreFile mockFile = (MockStoreFile) file;
-        mockFile.setTimeRangeTracker(new TimeRangeTracker(-1, -1));
+    List<HStoreFile> candidates = sfCreate(0);
+    for (HStoreFile file : candidates) {
+      if (file instanceof MockHStoreFile) {
+        MockHStoreFile mockFile = (MockHStoreFile) file;
+        mockFile.setTimeRangeTracker(TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, -1, -1));
         mockFile.setEntries(0);
       }
     }
     // Test Default compactions
-    CompactionRequest result = ((RatioBasedCompactionPolicy) store.storeEngine
+    CompactionRequestImpl result = ((RatioBasedCompactionPolicy) store.storeEngine
         .getCompactionPolicy()).selectCompaction(candidates,
         new ArrayList<>(), false, false, false);
     Assert.assertTrue(result.getFiles().isEmpty());

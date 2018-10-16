@@ -21,7 +21,7 @@ module Shell
   module Commands
     class SetQuota < Command
       def help
-        return <<-EOF
+        <<-EOF
 Set a quota for a user, table, or namespace.
 Syntax : set_quota TYPE => <type>, <args>
 
@@ -87,33 +87,33 @@ EOF
       end
 
       def command(args = {})
-        if args.has_key?(TYPE)
+        if args.key?(TYPE)
           qtype = args.delete(TYPE)
           case qtype
-            when THROTTLE
-              if args[LIMIT].eql? NONE
-                args.delete(LIMIT)
-                quotas_admin.unthrottle(args)
-              else
-                quotas_admin.throttle(args)
-              end
-            when SPACE
-              if args[LIMIT].eql? NONE
-                args.delete(LIMIT)
-                # Table/Namespace argument is verified in remove_space_limit
-                quotas_admin.remove_space_limit(args)
-              else
-                raise(ArgumentError, 'Expected a LIMIT to be provided') unless args.key?(LIMIT)
-                raise(ArgumentError, 'Expected a POLICY to be provided') unless args.key?(POLICY)
-                quotas_admin.limit_space(args)
-              end
+          when THROTTLE
+            if args[LIMIT].eql? NONE
+              args.delete(LIMIT)
+              quotas_admin.unthrottle(args)
             else
-              raise "Invalid TYPE argument. got " + qtype
+              quotas_admin.throttle(args)
+            end
+          when SPACE
+            if args[LIMIT].eql? NONE
+              args.delete(LIMIT)
+              # Table/Namespace argument is verified in remove_space_limit
+              quotas_admin.remove_space_limit(args)
+            else
+              raise(ArgumentError, 'Expected a LIMIT to be provided') unless args.key?(LIMIT)
+              raise(ArgumentError, 'Expected a POLICY to be provided') unless args.key?(POLICY)
+              quotas_admin.limit_space(args)
+            end
+          else
+            raise 'Invalid TYPE argument. got ' + qtype
           end
-        elsif args.has_key?(GLOBAL_BYPASS)
+        elsif args.key?(GLOBAL_BYPASS)
           quotas_admin.set_global_bypass(args.delete(GLOBAL_BYPASS), args)
         else
-          raise "Expected TYPE argument"
+          raise 'Expected TYPE argument'
         end
       end
     end

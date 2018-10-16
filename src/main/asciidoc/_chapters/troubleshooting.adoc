@@ -101,6 +101,11 @@ To disable, set the logging level back to `INFO` level.
 [[trouble.log.gc]]
 === JVM Garbage Collection Logs
 
+[NOTE]
+====
+All example Garbage Collection logs in this section are based on Java 8 output. The introduction of Unified Logging in Java 9 and newer will result in very different looking logs.
+====
+
 HBase is memory intensive, and using the default GC you can see long pauses in all threads including the _Juliet Pause_ aka "GC of Death". To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.
 
 To enable, in _hbase-env.sh_, uncomment one of the below lines :
@@ -225,7 +230,7 @@ Search here first when you have an issue as its more than likely someone has alr
 [[trouble.resources.lists]]
 === Mailing Lists
 
-Ask a question on the link:http://hbase.apache.org/mail-lists.html[Apache HBase mailing lists].
+Ask a question on the link:https://hbase.apache.org/mail-lists.html[Apache HBase mailing lists].
 The 'dev' mailing list is aimed at the community of developers actually building Apache HBase and for features currently under development, and 'user' is generally used for questions on released versions of Apache HBase.
 Before going to the mailing list, make sure your question has not already been answered by searching the mailing list archives first.
 Use <<trouble.resources.searchhadoop>>.
@@ -258,7 +263,6 @@ link:https://issues.apache.org/jira/browse/HBASE[JIRA] is also really helpful wh
 ==== Master Web Interface
 
 The Master starts a web-interface on port 16010 by default.
-(Up to and including 0.98 this was port 60010)
 
 The Master web UI lists created tables and their definition (e.g., ColumnFamilies, blocksize, etc.). Additionally, the available RegionServers in the cluster are listed along with selected high-level metrics (requests, number of regions, usedHeap, maxHeap). The Master web UI allows navigation to each RegionServer's web UI.
 
@@ -266,7 +270,6 @@ The Master web UI lists created tables and their definition (e.g., ColumnFamilie
 ==== RegionServer Web Interface
 
 RegionServers starts a web-interface on port 16030 by default.
-(Up to an including 0.98 this was port 60030)
 
 The RegionServer web UI lists online regions and their start/end keys, as well as point-in-time RegionServer metrics (requests, regions, storeFileIndexSize, compactionQueueSize, etc.).
 
@@ -564,14 +567,6 @@ You can also tail all the logs at the same time, edit files, etc.
 
 For more information on the HBase client, see <<architecture.client,client>>.
 
-=== Missed Scan Results Due To Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
-If either the client or server version is lower than 0.98.11/1.0.0 and the server
-has a smaller value for `hbase.client.scanner.max.result.size` than the client, scan
-requests that reach the server's `hbase.client.scanner.max.result.size` are likely
-to miss data. In particular, 0.98.11 defaults `hbase.client.scanner.max.result.size`
-to 2 MB but other versions default to larger values. For this reason, be very careful
-using 0.98.11 servers with any other client version.
-
 [[trouble.client.scantimeout]]
 === ScannerTimeoutException or UnknownScannerException
 
@@ -596,7 +591,7 @@ See also Jesse Andersen's link:http://blog.cloudera.com/blog/2014/04/how-to-use-
 In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual <<trouble.client.scantimeout>>.
 Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)` (line number may vary). It tends to happen in the context of a slow/freezing `RegionServer#next` call.
 It can be prevented by having `hbase.rpc.timeout` > `hbase.regionserver.lease.period`.
-Harsh J investigated the issue as part of the mailing list thread link:http://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E[HBase, mail # user - Lease does not exist exceptions]
+Harsh J investigated the issue as part of the mailing list thread link:https://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E[HBase, mail # user - Lease does not exist exceptions]
 
 [[trouble.client.scarylogs]]
 === Shell or client application throws lots of scary exceptions during normal operation
@@ -683,12 +678,6 @@ A workaround is passing your client-side JVM a reasonable value for `-XX:MaxDire
 By default, the `MaxDirectMemorySize` is equal to your `-Xmx` max heapsize setting (if `-Xmx` is set). Try setting it to something smaller (for example, one user had success setting it to `1g` when they had a client-side heap of `12g`). If you set it too small, it will bring on `FullGCs` so keep it a bit hefty.
 You want to make this setting client-side only especially if you are running the new experimental server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep separate client-side and server-side config dirs).
 
-[[trouble.client.slowdown.admin]]
-=== Client Slowdown When Calling Admin Methods (flush, compact, etc.)
-
-This is a client issue fixed by link:https://issues.apache.org/jira/browse/HBASE-5073[HBASE-5073] in 0.90.6.
-There was a ZooKeeper leak in the client and the client was getting pummeled by ZooKeeper events with each additional invocation of the admin API.
-
 [[trouble.client.security.rpc]]
 === Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided(Mechanism level: Failed to find any Kerberos tgt)])
 
@@ -706,7 +695,10 @@ Because of a change in the format in which MIT Kerberos writes its credentials c
 If you have this problematic combination of components in your environment, to work around this problem, first log in with `kinit` and then immediately refresh the credential cache with `kinit -R`.
 The refresh will rewrite the credential cache without the problematic formatting.
 
-Finally, depending on your Kerberos configuration, you may need to install the link:http://docs.oracle.com/javase/1.4.2/docs/guide/security/jce/JCERefGuide.html[Java Cryptography Extension], or JCE.
+Prior to JDK 1.4, the JCE was an unbundled product, and as such, the JCA and JCE were regularly referred to as separate, distinct components.
+As JCE is now bundled in the JDK 7.0, the distinction is becoming less apparent. Since the JCE uses the same architecture as the JCA, the JCE should be more properly thought of as a part of the JCA.
+
+You may need to install the link:https://docs.oracle.com/javase/1.5.0/docs/guide/security/jce/JCERefGuide.html[Java Cryptography Extension], or JCE because of JDK 1.5 or earlier version.
 Insure the JCE jars are on the classpath on both server and client systems.
 
 You may also need to download the link:http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html[unlimited strength JCE policy files].
@@ -755,10 +747,10 @@ For example (substitute VERSION with your HBase version):
 
 [source,bourne]
 ----
-HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-server-VERSION.jar rowcounter usertable
+HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-mapreduce-VERSION.jar rowcounter usertable
 ----
 
-See http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpathfor more information on HBase MapReduce jobs and classpaths.
+See <<hbase.mapreduce.classpath,HBase, MapReduce, and the CLASSPATH>> for more information on HBase MapReduce jobs and classpaths.
 
 [[trouble.hbasezerocopybytestring]]
 === Launching a job, you get java.lang.IllegalAccessError: com/google/protobuf/HBaseZeroCopyByteString or class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString
@@ -799,7 +791,7 @@ hadoop fs -du /hbase/myTable
 ----
 ...returns a list of the regions under the HBase table 'myTable' and their disk utilization.
 
-For more information on HDFS shell commands, see the link:http://hadoop.apache.org/common/docs/current/file_system_shell.html[HDFS FileSystem Shell documentation].
+For more information on HDFS shell commands, see the link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/FileSystemShell.html[HDFS FileSystem Shell documentation].
 
 [[trouble.namenode.hbase.objects]]
 === Browsing HDFS for HBase Objects
@@ -814,10 +806,12 @@ The HDFS directory structure of HBase tables in the cluster is...
 ----
 
 /hbase
-    /<Table>                    (Tables in the cluster)
-        /<Region>               (Regions for the table)
-            /<ColumnFamily>     (ColumnFamilies for the Region for the table)
-                /<StoreFile>    (StoreFiles for the ColumnFamily for the Regions for the table)
+    /data
+        /<Namespace>                    (Namespaces in the cluster)
+            /<Table>                    (Tables in the cluster)
+                /<Region>               (Regions for the table)
+                    /<ColumnFamily>     (ColumnFamilies for the Region for the table)
+                        /<StoreFile>    (StoreFiles for the ColumnFamily for the Regions for the table)
 ----
 
 The HDFS directory structure of HBase WAL is..
@@ -825,17 +819,17 @@ The HDFS directory structure of HBase WAL is..
 ----
 
 /hbase
-    /.logs
+    /WALs
         /<RegionServer>    (RegionServers)
             /<WAL>         (WAL files for the RegionServer)
 ----
 
-See the link:http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html[HDFS User Guide] for other non-shell diagnostic utilities like `fsck`.
+See the link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html[HDFS User Guide] for other non-shell diagnostic utilities like `fsck`.
 
 [[trouble.namenode.0size.hlogs]]
 ==== Zero size WALs with data in them
 
-Problem: when getting a listing of all the files in a RegionServer's _.logs_ directory, one file has a size of 0 but it contains data.
+Problem: when getting a listing of all the files in a RegionServer's _WALs_ directory, one file has a size of 0 but it contains data.
 
 Answer: It's an HDFS quirk.
 A file that's currently being written to will appear to have a size of 0 but once it's closed it will show its true size
@@ -856,9 +850,9 @@ Snapshots::
   When you create a snapshot, HBase retains everything it needs to recreate the table's
   state at that time of the snapshot. This includes deleted cells or expired versions.
   For this reason, your snapshot usage pattern should be well-planned, and you should
-  prune snapshots that you no longer need. Snapshots are stored in `/hbase/.snapshots`,
+  prune snapshots that you no longer need. Snapshots are stored in `/hbase/.hbase-snapshot`,
   and archives needed to restore snapshots are stored in
-  `/hbase/.archive/<_tablename_>/<_region_>/<_column_family_>/`.
+  `/hbase/archive/<_tablename_>/<_region_>/<_column_family_>/`.
 
   *Do not* manage snapshots or archives manually via HDFS. HBase provides APIs and
   HBase Shell commands for managing them. For more information, see <<ops.snapshots>>.
@@ -889,7 +883,6 @@ See <<managed.compactions>> for more information on managing compactions.
 === Loopback IP
 
 HBase expects the loopback IP Address to be 127.0.0.1.
-See the Getting Started section on <<loopback.ip>>.
 
 [[trouble.network.ints]]
 === Network Interfaces
@@ -949,6 +942,96 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
 
 \... then there is a path issue with the compression libraries.
 See the Configuration section on link:[LZO compression configuration].
+
+[[trouble.rs.startup.hsync]]
+==== RegionServer aborts due to lack of hsync for filesystem
+
+In order to provide data durability for writes to the cluster HBase relies on the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
+
+For RegionServer roles, the failure will show up in logs like this:
+
+----
+2018-04-05 11:36:22,785 ERROR [regionserver/192.168.1.123:16020] wal.AsyncFSWALProvider: The RegionServer async write ahead log provider relies on the ability to call hflush and hsync for proper operation during component failures, but the current FileSystem does not support doing so. Please check the config value of 'hbase.wal.dir' and ensure it points to a FileSystem mount that has suitable capabilities for output streams.
+2018-04-05 11:36:22,799 ERROR [regionserver/192.168.1.123:16020] regionserver.HRegionServer: ***** ABORTING region server 192.168.1.123,16020,1522946074234: Unhandled: cannot get log writer *****
+java.io.IOException: cannot get log writer
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createAsyncWriter(AsyncFSWALProvider.java:112)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.createWriterInstance(AsyncFSWAL.java:612)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.createWriterInstance(AsyncFSWAL.java:124)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.rollWriter(AbstractFSWAL.java:759)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL.rollWriter(AbstractFSWAL.java:489)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL.<init>(AsyncFSWAL.java:251)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createWAL(AsyncFSWALProvider.java:69)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createWAL(AsyncFSWALProvider.java:44)
+        at org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWAL(AbstractFSWALProvider.java:138)
+        at org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getWAL(AbstractFSWALProvider.java:57)
+        at org.apache.hadoop.hbase.wal.WALFactory.getWAL(WALFactory.java:252)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.getWAL(HRegionServer.java:2105)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.buildServerLoad(HRegionServer.java:1326)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.tryRegionServerReport(HRegionServer.java:1191)
+        at org.apache.hadoop.hbase.regionserver.HRegionServer.run(HRegionServer.java:1007)
+        at java.lang.Thread.run(Thread.java:745)
+Caused by: org.apache.hadoop.hbase.util.CommonFSUtils$StreamLacksCapabilityException: hflush and hsync
+        at org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper.createOutput(AsyncFSOutputHelper.java:69)
+        at org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter.initOutput(AsyncProtobufLogWriter.java:168)
+        at org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufLogWriter.init(AbstractProtobufLogWriter.java:167)
+        at org.apache.hadoop.hbase.wal.AsyncFSWALProvider.createAsyncWriter(AsyncFSWALProvider.java:99)
+        ... 15 more
+
+----
+
+If you are attempting to run in standalone mode and see this error, please walk back through the section <<quickstart>> and ensure you have included *all* the given configuration settings.
+
+[[trouble.rs.startup.asyncfs]]
+==== RegionServer aborts due to can not initialize access to HDFS
+
+We will try to use _AsyncFSWAL_ for HBase-2.x as it has better performance while consuming less resources. But the problem for _AsyncFSWAL_ is that it hacks into the internal of the DFSClient implementation, so it will easily be broken when upgrading hadoop, even for a simple patch release.
+
+If you do not specify the wal provider, we will try to fall back to the old _FSHLog_ if we fail to initialize _AsyncFSWAL_, but it may not always work. The failure will show up in logs like this:
+
+----
+18/07/02 18:51:06 WARN concurrent.DefaultPromise: An exception was
+thrown by org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper$13.operationComplete()
+java.lang.Error: Couldn't properly initialize access to HDFS
+internals. Please update your WAL Provider to not make use of the
+'asyncfs' provider. See HBASE-16110 for more information.
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.<clinit>(FanOutOneBlockAsyncDFSOutputSaslHelper.java:268)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.initialize(FanOutOneBlockAsyncDFSOutputHelper.java:661)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.access$300(FanOutOneBlockAsyncDFSOutputHelper.java:118)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper$13.operationComplete(FanOutOneBlockAsyncDFSOutputHelper.java:720)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper$13.operationComplete(FanOutOneBlockAsyncDFSOutputHelper.java:715)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.notifyListener0(DefaultPromise.java:507)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.notifyListeners0(DefaultPromise.java:500)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.notifyListenersNow(DefaultPromise.java:479)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.notifyListeners(DefaultPromise.java:420)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultPromise.trySuccess(DefaultPromise.java:104)
+     at org.apache.hbase.thirdparty.io.netty.channel.DefaultChannelPromise.trySuccess(DefaultChannelPromise.java:82)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.fulfillConnectPromise(AbstractEpollChannel.java:638)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.finishConnect(AbstractEpollChannel.java:676)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.AbstractEpollChannel$AbstractEpollUnsafe.epollOutReady(AbstractEpollChannel.java:552)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollEventLoop.processReady(EpollEventLoop.java:394)
+     at org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollEventLoop.run(EpollEventLoop.java:304)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:858)
+     at org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory$DefaultRunnableDecorator.run(DefaultThreadFactory.java:138)
+     at java.lang.Thread.run(Thread.java:748)
+ Caused by: java.lang.NoSuchMethodException:
+org.apache.hadoop.hdfs.DFSClient.decryptEncryptedDataEncryptionKey(org.apache.hadoop.fs.FileEncryptionInfo)
+     at java.lang.Class.getDeclaredMethod(Class.java:2130)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createTransparentCryptoHelper(FanOutOneBlockAsyncDFSOutputSaslHelper.java:232)
+     at org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.<clinit>(FanOutOneBlockAsyncDFSOutputSaslHelper.java:262)
+     ... 18 more
+----
+
+If you hit this error, please specify _FSHLog_, i.e, _filesystem_, explicitly in your config file.
+
+[source,xml]
+----
+<property>
+  <name>hbase.wal.provider</name>
+  <value>filesystem</value>
+</property>
+----
+
+And do not forget to send an email to the user@hbase.apache.org or dev@hbase.apache.org to report the failure and also your hadoop version, we will try to fix the problem ASAP in the next release.
 
 [[trouble.rs.runtime]]
 === Runtime Errors
@@ -1073,13 +1156,6 @@ This exception is returned back to the client and then the client goes back to `
 
 However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.
 
-[[trouble.rs.runtime.double_listed_regions]]
-==== Regions listed by domain name, then IP
-
-Fix your DNS.
-In versions of Apache HBase before 0.92.x, reverse DNS needs to give same answer as forward lookup.
-See link:https://issues.apache.org/jira/browse/HBASE-3431[HBASE 3431 RegionServer is not using the name given it by the master; double entry in master listing of servers] for gory details.
-
 [[brand.new.compressor]]
 ==== Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Gotbrand-new compressor' messages
 
@@ -1143,6 +1219,29 @@ Sure fire solution is to just use Hadoop dfs to delete the HBase root and let HB
 
 If you have many regions on your cluster and you see an error like that reported above in this sections title in your logs, see link:https://issues.apache.org/jira/browse/HBASE-4246[HBASE-4246 Cluster with too many regions cannot withstand some master failover scenarios].
 
+[[trouble.master.startup.hsync]]
+==== Master fails to become active due to lack of hsync for filesystem
+
+HBase's internal framework for cluster operations requires the ability to durably save state in a write ahead log. When using a version of Apache Hadoop Common's filesystem API that supports checking on the availability of needed calls, HBase will proactively abort the cluster if it finds it can't operate safely.
+
+For Master roles, the failure will show up in logs like this:
+
+----
+2018-04-05 11:18:44,653 ERROR [Thread-21] master.HMaster: Failed to become active master
+java.lang.IllegalStateException: The procedure WAL relies on the ability to hsync for proper operation during component failures, but the underlying filesystem does not support doing so. Please check the config value of 'hbase.procedure.store.wal.use.hsync' to set the desired level of robustness and ensure the config value of 'hbase.wal.dir' points to a FileSystem mount that can provide it.
+        at org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore.rollWriter(WALProcedureStore.java:1034)
+        at org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore.recoverLease(WALProcedureStore.java:374)
+        at org.apache.hadoop.hbase.procedure2.ProcedureExecutor.start(ProcedureExecutor.java:530)
+        at org.apache.hadoop.hbase.master.HMaster.startProcedureExecutor(HMaster.java:1267)
+        at org.apache.hadoop.hbase.master.HMaster.startServiceThreads(HMaster.java:1173)
+        at org.apache.hadoop.hbase.master.HMaster.finishActiveMasterInitialization(HMaster.java:881)
+        at org.apache.hadoop.hbase.master.HMaster.startActiveMasterManager(HMaster.java:2048)
+        at org.apache.hadoop.hbase.master.HMaster.lambda$run$0(HMaster.java:568)
+        at java.lang.Thread.run(Thread.java:745)
+----
+
+If you are attempting to run in standalone mode and see this error, please walk back through the section <<quickstart>> and ensure you have included *all* the given configuration settings.
+
 [[trouble.master.shutdown]]
 === Shutdown Errors
 
@@ -1171,7 +1270,7 @@ If you have a DNS server, you can set `hbase.zookeeper.dns.interface` and `hbase
 
 ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
 
-See the link:http://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting[ZooKeeper Operating Environment Troubleshooting] page.
+See the link:https://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting[ZooKeeper Operating Environment Troubleshooting] page.
 It has suggestions and tools for checking disk and networking performance; i.e.
 the operating environment your ZooKeeper and HBase are running in.
 
@@ -1213,31 +1312,6 @@ See Andrew's answer here, up on the user list: link:http://search-hadoop.com/m/s
 [[trouble.versions]]
 == HBase and Hadoop version issues
 
-[[trouble.versions.205]]
-=== `NoClassDefFoundError` when trying to run 0.90.x on hadoop-0.20.205.x (or hadoop-1.0.x)
-
-Apache HBase 0.90.x does not ship with hadoop-0.20.205.x, etc.
-To make it run, you need to replace the hadoop jars that Apache HBase shipped with in its _lib_ directory with those of the Hadoop you want to run HBase on.
-If even after replacing Hadoop jars you get the below exception:
-
-[source]
-----
-
-sv4r6s38: Exception in thread "main" java.lang.NoClassDefFoundError: org/apache/commons/configuration/Configuration
-sv4r6s38:       at org.apache.hadoop.metrics2.lib.DefaultMetricsSystem.<init>(DefaultMetricsSystem.java:37)
-sv4r6s38:       at org.apache.hadoop.metrics2.lib.DefaultMetricsSystem.<clinit>(DefaultMetricsSystem.java:34)
-sv4r6s38:       at org.apache.hadoop.security.UgiInstrumentation.create(UgiInstrumentation.java:51)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.initialize(UserGroupInformation.java:209)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:177)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.isSecurityEnabled(UserGroupInformation.java:229)
-sv4r6s38:       at org.apache.hadoop.security.KerberosName.<clinit>(KerberosName.java:83)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.initialize(UserGroupInformation.java:202)
-sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:177)
-----
-
-you need to copy under _hbase/lib_, the _commons-configuration-X.jar_ you find in your Hadoop's _lib_ directory.
-That should fix the above complaint.
-
 [[trouble.wrong.version]]
 === ...cannot communicate with client version...
 
@@ -1246,71 +1320,10 @@ If you see something like the following in your logs [computeroutput]+... 2012-0
           shutdown. org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate
           with client version 4 ...+ ...are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client? Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the +-Dhadoop.profile=2.0+ attribute to Maven (See <<maven.build.hadoop>> for more).
 
-== IPC Configuration Conflicts with Hadoop
-
-If the Hadoop configuration is loaded after the HBase configuration, and you have configured custom IPC settings in both HBase and Hadoop, the Hadoop values may overwrite the HBase values.
-There is normally no need to change these settings for HBase, so this problem is an edge case.
-However, link:https://issues.apache.org/jira/browse/HBASE-11492[HBASE-11492] renames these settings for HBase to remove the chance of a conflict.
-Each of the setting names have been prefixed with `hbase.`, as shown in the following table.
-No action is required related to these changes unless you are already experiencing a conflict.
-
-These changes were backported to HBase 0.98.x and apply to all newer versions.
-
-[cols="1,1", options="header"]
-|===
-| Pre-0.98.x
-| 0.98-x And Newer
-
-| ipc.server.listen.queue.size
-| hbase.ipc.server.listen.queue.size
-
-| ipc.server.max.callqueue.size
-| hbase.ipc.server.max.callqueue.size
-
-| ipc.server.callqueue.handler.factor
-| hbase.ipc.server.callqueue.handler.factor
-
-| ipc.server.callqueue.read.share
-| hbase.ipc.server.callqueue.read.share
-
-| ipc.server.callqueue.type
-| hbase.ipc.server.callqueue.type
-
-| ipc.server.queue.max.call.delay
-| hbase.ipc.server.queue.max.call.delay
-
-| ipc.server.max.callqueue.length
-| hbase.ipc.server.max.callqueue.length
-
-| ipc.server.read.threadpool.size
-| hbase.ipc.server.read.threadpool.size
-
-| ipc.server.tcpkeepalive
-| hbase.ipc.server.tcpkeepalive
-
-| ipc.server.tcpnodelay
-| hbase.ipc.server.tcpnodelay
-
-| ipc.client.call.purge.timeout
-| hbase.ipc.client.call.purge.timeout
-
-| ipc.client.connection.maxidletime
-| hbase.ipc.client.connection.maxidletime
-
-| ipc.client.idlethreshold
-| hbase.ipc.client.idlethreshold
-
-| ipc.client.kill.max
-| hbase.ipc.client.kill.max
-
-| ipc.server.scan.vtime.weight
-| hbase.ipc.server.scan.vtime.weight
-|===
-
 == HBase and HDFS
 
 General configuration guidance for Apache HDFS is out of the scope of this guide.
-Refer to the documentation available at http://hadoop.apache.org/ for extensive information about configuring HDFS.
+Refer to the documentation available at https://hadoop.apache.org/ for extensive information about configuring HDFS.
 This section deals with HDFS in terms of HBase.
 
 In most cases, HBase stores its data in Apache HDFS.

@@ -22,10 +22,10 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.Collection;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A compaction policy determines how to select files for compaction,
@@ -45,8 +45,8 @@ public abstract class CompactionPolicy {
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */
-  public abstract boolean shouldPerformMajorCompaction(
-    final Collection<StoreFile> filesToCompact) throws IOException;
+  public abstract boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
+      throws IOException;
 
   /**
    * @param compactionSize Total size of some compaction
@@ -61,8 +61,6 @@ public abstract class CompactionPolicy {
   public void setConf(Configuration conf) {
     this.comConf = new CompactionConfiguration(conf, this.storeConfigInfo);
   }
-
-
 
   /**
    * @return The current compaction configuration settings.

@@ -18,12 +18,14 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,13 +38,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+
 /**
  * Class to hold dead servers list and utility querying dead server list.
  * On znode expiration, servers are added here.
  */
 @InterfaceAudience.Private
 public class DeadServer {
-  private static final Log LOG = LogFactory.getLog(DeadServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeadServer.class);
 
   /**
    * Set of known dead servers.  On znode expiration, servers are added here.
@@ -54,14 +57,9 @@ public class DeadServer {
   private final Map<ServerName, Long> deadServers = new HashMap<>();
 
   /**
-   * Number of dead servers currently being processed
+   * Set of dead servers currently being processed
    */
-  private int numProcessing = 0;
-
-  /**
-   * Whether a dead server is being processed currently.
-   */
-  private volatile boolean processing = false;
+  private final Set<ServerName> processingServers = new HashSet<ServerName>();
 
   /**
    * A dead server that comes back alive has a different start code. The new start code should be
@@ -75,8 +73,14 @@ public class DeadServer {
     Iterator<ServerName> it = deadServers.keySet().iterator();
     while (it.hasNext()) {
       ServerName sn = it.next();
-      if (ServerName.isSameHostnameAndPort(sn, newServerName)) {
+      if (ServerName.isSameAddress(sn, newServerName)) {
+        // remove from deadServers
         it.remove();
+        // remove from processingServers
+        boolean removed = processingServers.remove(sn);
+        if (removed) {
+          LOG.debug("Removed " + sn + " ; numProcessing=" + processingServers.size());
+        }
         return true;
       }
     }
@@ -93,13 +97,23 @@ public class DeadServer {
   }
 
   /**
+   * @param serverName server name.
+   * @return true if this server is on the processing servers list false otherwise
+   */
+  public synchronized boolean isProcessingServer(final ServerName serverName) {
+    return processingServers.contains(serverName);
+  }
+
+  /**
    * Checks if there are currently any dead servers being processed by the
    * master.  Returns true if at least one region server is currently being
    * processed as dead.
    *
    * @return true if any RS are being processed as dead
    */
-  public synchronized boolean areDeadServersInProgress() { return processing; }
+  public synchronized boolean areDeadServersInProgress() {
+    return !processingServers.isEmpty();
+  }
 
   public synchronized Set<ServerName> copyServerNames() {
     Set<ServerName> clone = new HashSet<>(deadServers.size());
@@ -112,9 +126,12 @@ public class DeadServer {
    * @param sn the server name
    */
   public synchronized void add(ServerName sn) {
-    processing = true;
     if (!deadServers.containsKey(sn)){
       deadServers.put(sn, EnvironmentEdgeManager.currentTime());
+    }
+    boolean added = processingServers.add(sn);
+    if (LOG.isDebugEnabled() && added) {
+      LOG.debug("Added " + sn + "; numProcessing=" + processingServers.size());
     }
   }
 
@@ -123,23 +140,27 @@ public class DeadServer {
    * @param sn ServerName for the dead server.
    */
   public synchronized void notifyServer(ServerName sn) {
-    if (LOG.isTraceEnabled()) { LOG.trace("Started processing " + sn); }
-    processing = true;
-    numProcessing++;
+    boolean added = processingServers.add(sn);
+    if (LOG.isDebugEnabled()) {
+      if (added) {
+        LOG.debug("Added " + sn + "; numProcessing=" + processingServers.size());
+      }
+      LOG.debug("Started processing " + sn + "; numProcessing=" + processingServers.size());
+    }
   }
 
+  /**
+   * Complete processing for this dead server.
+   * @param sn ServerName for the dead server.
+   */
   public synchronized void finish(ServerName sn) {
-    numProcessing--;
-    if (LOG.isTraceEnabled()) LOG.trace("Finished " + sn + "; numProcessing=" + numProcessing);
-
-    assert numProcessing >= 0: "Number of dead servers in processing should always be non-negative";
-
-    if (numProcessing < 0) {
-      LOG.error("Number of dead servers in processing = " + numProcessing
-          + ". Something went wrong, this should always be non-negative.");
-      numProcessing = 0;
+    boolean removed = processingServers.remove(sn);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Finished processing " + sn + "; numProcessing=" + processingServers.size());
+      if (removed) {
+        LOG.debug("Removed " + sn + " ; numProcessing=" + processingServers.size());
+      }
     }
-    if (numProcessing == 0) { processing = false; }
   }
 
   public synchronized int size() {
@@ -154,19 +175,34 @@ public class DeadServer {
     Iterator<ServerName> it = deadServers.keySet().iterator();
     while (it.hasNext()) {
       ServerName sn = it.next();
-      if (ServerName.isSameHostnameAndPort(sn, newServerName)) {
+      if (ServerName.isSameAddress(sn, newServerName)) {
+        // remove from deadServers
         it.remove();
+        // remove from processingServers
+        boolean removed = processingServers.remove(sn);
+        if (removed) {
+          LOG.debug("Removed " + sn + " ; numProcessing=" + processingServers.size());
+        }
       }
     }
   }
 
+  @Override
   public synchronized String toString() {
+    // Display unified set of servers from both maps
+    Set<ServerName> servers = new HashSet<ServerName>();
+    servers.addAll(deadServers.keySet());
+    servers.addAll(processingServers);
     StringBuilder sb = new StringBuilder();
-    for (ServerName sn : deadServers.keySet()) {
+    for (ServerName sn : servers) {
       if (sb.length() > 0) {
         sb.append(", ");
       }
       sb.append(sn.toString());
+      // Star entries that are being processed
+      if (processingServers.contains(sn)) {
+        sb.append("*");
+      }
     }
     return sb.toString();
   }
@@ -207,4 +243,20 @@ public class DeadServer {
       return o1.getSecond().compareTo(o2.getSecond());
     }
   };
+
+  /**
+   * remove the specified dead server
+   * @param deadServerName the dead server name
+   * @return true if this server was removed
+   */
+
+  public synchronized boolean removeDeadServer(final ServerName deadServerName) {
+    Preconditions.checkState(!processingServers.contains(deadServerName),
+      "Asked to remove server still in processingServers set " + deadServerName +
+          " (numProcessing=" + processingServers.size() + ")");
+    if (deadServers.remove(deadServerName) == null) {
+      return false;
+    }
+    return true;
+  }
 }

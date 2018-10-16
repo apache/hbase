@@ -1,50 +1,66 @@
 /**
- * Copyright The Apache Software Foundation
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
-import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils.HFileBlockPair;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.BucketSizeInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Basic test of BucketCache.Puts and gets.
@@ -52,8 +68,12 @@ import org.junit.runners.Parameterized;
  * Tests will ensure that blocks' data correctness under several threads concurrency
  */
 @RunWith(Parameterized.class)
-@Category({ IOTests.class, SmallTests.class })
+@Category({ IOTests.class, MediumTests.class })
 public class TestBucketCache {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBucketCache.class);
 
   private static final Random RAND = new Random();
 
@@ -84,10 +104,10 @@ public class TestBucketCache {
   final long capacitySize = 32 * 1024 * 1024;
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
-  String ioEngineName = "heap";
+  String ioEngineName = "offheap";
   String persistencePath = null;
 
-  private class MockedBucketCache extends BucketCache {
+  private static class MockedBucketCache extends BucketCache {
 
     public MockedBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
         int writerThreads, int writerQLen, String persistencePath) throws FileNotFoundException,
@@ -98,19 +118,12 @@ public class TestBucketCache {
     }
 
     @Override
-    public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
-        boolean cacheDataInL1) {
-      if (super.getBlock(cacheKey, true, false, true) != null) {
-        throw new RuntimeException("Cached an already cached block");
-      }
-      super.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
+    public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+      super.cacheBlock(cacheKey, buf, inMemory);
     }
 
     @Override
     public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-      if (super.getBlock(cacheKey, true, false, true) != null) {
-        throw new RuntimeException("Cached an already cached block");
-      }
       super.cacheBlock(cacheKey, buf);
     }
   }
@@ -186,14 +199,19 @@ public class TestBucketCache {
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }
 
+  private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
+      throws InterruptedException {
+    while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
+      Thread.sleep(100);
+    }
+  }
+
   // BucketCache.cacheBlock is async, it first adds block to ramCache and writeQueue, then writer
   // threads will flush it to the bucket and put reference entry in backingMap.
   private void cacheAndWaitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey,
       Cacheable block) throws InterruptedException {
     cache.cacheBlock(cacheKey, block);
-    while (!cache.backingMap.containsKey(cacheKey)) {
-      Thread.sleep(100);
-    }
+    waitUntilFlushedToBucket(cache, cacheKey);
   }
 
   @Test
@@ -230,11 +248,13 @@ public class TestBucketCache {
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
 
-    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, testDir
-            + "/bucket.persistence");
+    String ioEngineName = "file:" + testDir + "/bucket.cache";
+    String persistencePath = testDir + "/bucket.persistence";
+
+    BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath);
     long usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize == 0);
+    assertEquals(0, usedSize);
 
     HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
     // Add blocks
@@ -245,27 +265,199 @@ public class TestBucketCache {
       cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize != 0);
+    assertNotEquals(0, usedSize);
     // persist cache to file
     bucketCache.shutdown();
+    assertTrue(new File(persistencePath).exists());
 
     // restore cache from file
-    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, testDir
-            + "/bucket.persistence");
+    bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+    assertFalse(new File(persistencePath).exists());
     assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
     // persist cache to file
     bucketCache.shutdown();
+    assertTrue(new File(persistencePath).exists());
 
     // reconfig buckets sizes, the biggest bucket is small than constructedBlockSize (8k or 16k)
     // so it can't restore cache from file
     int[] smallBucketSizes = new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024 };
-    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, smallBucketSizes, writeThreads,
-        writerQLen, testDir + "/bucket.persistence");
+    bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        smallBucketSizes, writeThreads, writerQLen, persistencePath);
+    assertFalse(new File(persistencePath).exists());
     assertEquals(0, bucketCache.getAllocator().getUsedSize());
     assertEquals(0, bucketCache.backingMap.size());
 
     TEST_UTIL.cleanupTestDir();
+  }
+
+  @Test
+  public void testBucketAllocatorLargeBuckets() throws BucketAllocatorException {
+    long availableSpace = 20 * 1024L * 1024 * 1024;
+    int[] bucketSizes = new int[]{1024, 1024 * 1024, 1024 * 1024 * 1024};
+    BucketAllocator allocator = new BucketAllocator(availableSpace, bucketSizes);
+    assertTrue(allocator.getBuckets().length > 0);
+  }
+
+  @Test
+  public void testGetPartitionSize() throws IOException {
+    //Test default values
+    validateGetPartitionSize(cache, BucketCache.DEFAULT_SINGLE_FACTOR, BucketCache.DEFAULT_MIN_FACTOR);
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.setFloat(BucketCache.MIN_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
+    conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
+    conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
+
+    BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+
+    validateGetPartitionSize(cache, 0.1f, 0.5f);
+    validateGetPartitionSize(cache, 0.7f, 0.5f);
+    validateGetPartitionSize(cache, 0.2f, 0.5f);
+  }
+
+  @Test
+  public void testValidBucketCacheConfigs() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setFloat(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, 0.9f);
+    conf.setFloat(BucketCache.MIN_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME, 0.5f);
+    conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
+    conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
+    conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
+
+    BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+
+    assertEquals(BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", 0.9f,
+        cache.getAcceptableFactor(), 0);
+    assertEquals(BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
+        cache.getMinFactor(), 0);
+    assertEquals(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
+        cache.getExtraFreeFactor(), 0);
+    assertEquals(BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.1f,
+        cache.getSingleFactor(), 0);
+    assertEquals(BucketCache.MULTI_FACTOR_CONFIG_NAME + " failed to propagate.", 0.7f,
+        cache.getMultiFactor(), 0);
+    assertEquals(BucketCache.MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.", 0.2f,
+        cache.getMemoryFactor(), 0);
+  }
+
+  @Test
+  public void testInvalidAcceptFactorConfig() throws IOException {
+    float[] configValues = {-1f, 0.2f, 0.86f, 1.05f};
+    boolean[] expectedOutcomes = {false, false, true, false};
+    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, configValues);
+    Configuration conf = HBaseConfiguration.create();
+    checkConfigValues(conf, configMappings, expectedOutcomes);
+  }
+
+  @Test
+  public void testInvalidMinFactorConfig() throws IOException {
+    float[] configValues = {-1f, 0f, 0.96f, 1.05f};
+    //throws due to <0, in expected range, minFactor > acceptableFactor, > 1.0
+    boolean[] expectedOutcomes = {false, true, false, false};
+    Map<String, float[]> configMappings = ImmutableMap
+      .of(BucketCache.MIN_FACTOR_CONFIG_NAME, configValues);
+    Configuration conf = HBaseConfiguration.create();
+    checkConfigValues(conf, configMappings, expectedOutcomes);
+  }
+
+  @Test
+  public void testInvalidExtraFreeFactorConfig() throws IOException {
+    float[] configValues = {-1f, 0f, 0.2f, 1.05f};
+    //throws due to <0, in expected range, in expected range, config can be > 1.0
+    boolean[] expectedOutcomes = {false, true, true, true};
+    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME, configValues);
+    Configuration conf = HBaseConfiguration.create();
+    checkConfigValues(conf, configMappings, expectedOutcomes);
+  }
+
+  @Test
+  public void testInvalidCacheSplitFactorConfig() throws IOException {
+    float[] singleFactorConfigValues = {0.2f, 0f, -0.2f, 1f};
+    float[] multiFactorConfigValues = {0.4f, 0f, 1f, .05f};
+    float[] memoryFactorConfigValues = {0.4f, 0f, 0.2f, .5f};
+    // All configs add up to 1.0 and are between 0 and 1.0, configs don't add to 1.0, configs can't be negative, configs don't add to 1.0
+    boolean[] expectedOutcomes = {true, false, false, false};
+    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.SINGLE_FACTOR_CONFIG_NAME,
+        singleFactorConfigValues, BucketCache.MULTI_FACTOR_CONFIG_NAME, multiFactorConfigValues,
+        BucketCache.MEMORY_FACTOR_CONFIG_NAME, memoryFactorConfigValues);
+    Configuration conf = HBaseConfiguration.create();
+    checkConfigValues(conf, configMappings, expectedOutcomes);
+  }
+
+  private void checkConfigValues(Configuration conf, Map<String, float[]> configMap, boolean[] expectSuccess) throws IOException {
+    Set<String> configNames = configMap.keySet();
+    for (int i = 0; i < expectSuccess.length; i++) {
+      try {
+        for (String configName : configNames) {
+          conf.setFloat(configName, configMap.get(configName)[i]);
+        }
+        BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+            constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+        assertTrue("Created BucketCache and expected it to succeed: " + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
+      } catch (IllegalArgumentException e) {
+        assertFalse("Created BucketCache and expected it to succeed: " + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
+      }
+    }
+  }
+
+  private void validateGetPartitionSize(BucketCache bucketCache, float partitionFactor, float minFactor) {
+    long expectedOutput = (long) Math.floor(bucketCache.getAllocator().getTotalSize() * partitionFactor * minFactor);
+    assertEquals(expectedOutput, bucketCache.getPartitionSize(partitionFactor));
+  }
+
+  @Test
+  public void testOffsetProducesPositiveOutput() {
+    //This number is picked because it produces negative output if the values isn't ensured to be positive.
+    //See HBASE-18757 for more information.
+    long testValue = 549888460800L;
+    BucketCache.BucketEntry bucketEntry = new BucketCache.BucketEntry(testValue, 10, 10L, true);
+    assertEquals(testValue, bucketEntry.offset());
+  }
+
+  @Test
+  public void testCacheBlockNextBlockMetadataMissing() throws Exception {
+    int size = 100;
+    int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    byte[] byteArr = new byte[length];
+    ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
+    HFileContext meta = new HFileContextBuilder().build();
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, -1, 52, -1, meta);
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, -1, -1, -1, meta);
+
+    BlockCacheKey key = new BlockCacheKey("key1", 0);
+    ByteBuffer actualBuffer = ByteBuffer.allocate(length);
+    ByteBuffer block1Buffer = ByteBuffer.allocate(length);
+    ByteBuffer block2Buffer = ByteBuffer.allocate(length);
+    blockWithNextBlockMetadata.serialize(block1Buffer, true);
+    blockWithoutNextBlockMetadata.serialize(block2Buffer, true);
+
+    // Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata back.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
+      block1Buffer);
+
+    waitUntilFlushedToBucket(cache, key);
+
+    // Add blockWithoutNextBlockMetada, expect blockWithNextBlockMetadata back.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
+      block1Buffer);
+
+    // Clear and add blockWithoutNextBlockMetadata
+    cache.evictBlock(key);
+    assertNull(cache.getBlock(key, false, false, false));
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
+      block2Buffer);
+
+    waitUntilFlushedToBucket(cache, key);
+
+    // Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
+      block1Buffer);
   }
 }

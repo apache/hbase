@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.visibility.expression;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface ExpressionNode {

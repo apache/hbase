@@ -18,17 +18,22 @@
 package org.apache.hadoop.hbase.spark
 
 import java.io.IOException
-
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.hbase.client.{Admin, Connection, ConnectionFactory, RegionLocator, Table}
+import org.apache.hadoop.hbase.client.Admin
+import org.apache.hadoop.hbase.client.Connection
+import org.apache.hadoop.hbase.client.ConnectionFactory
+import org.apache.hadoop.hbase.client.RegionLocator
+import org.apache.hadoop.hbase.client.Table
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory
-import org.apache.hadoop.hbase.security.{User, UserProvider}
+import org.apache.hadoop.hbase.security.User
+import org.apache.hadoop.hbase.security.UserProvider
 import org.apache.hadoop.hbase.spark.datasources.HBaseSparkConf
-import org.apache.hadoop.hbase.{HConstants, TableName}
-import org.apache.spark.Logging
-
+import org.apache.hadoop.hbase.HConstants
+import org.apache.hadoop.hbase.TableName
+import org.apache.yetus.audience.InterfaceAudience
 import scala.collection.mutable
 
+@InterfaceAudience.Private
 private[spark] object HBaseConnectionCache extends Logging {
 
   // A hashmap of Spark-HBase connections. Key is HBaseConnectionKey.
@@ -131,6 +136,7 @@ private[spark] object HBaseConnectionCache extends Logging {
   }
 }
 
+@InterfaceAudience.Private
 private[hbase] case class SmartConnection (
     connection: Connection, var refCount: Int = 0, var timestamp: Long = 0) {
   def getTable(tableName: TableName): Table = connection.getTable(tableName)
@@ -154,13 +160,13 @@ private[hbase] case class SmartConnection (
  * that may be used in the process of establishing a connection.
  *
  */
+@InterfaceAudience.Private
 class HBaseConnectionKey(c: Configuration) extends Logging {
   val conf: Configuration = c
   val CONNECTION_PROPERTIES: Array[String] = Array[String](
     HConstants.ZOOKEEPER_QUORUM,
     HConstants.ZOOKEEPER_ZNODE_PARENT,
     HConstants.ZOOKEEPER_CLIENT_PORT,
-    HConstants.ZOOKEEPER_RECOVERABLE_WAITTIME,
     HConstants.HBASE_CLIENT_PAUSE,
     HConstants.HBASE_CLIENT_RETRIES_NUMBER,
     HConstants.HBASE_RPC_TIMEOUT_KEY,
@@ -258,6 +264,7 @@ class HBaseConnectionKey(c: Configuration) extends Logging {
  * @param numActualConnectionsCreated number of actual HBase connections the cache ever created
  * @param numActiveConnections number of current alive HBase connections the cache is holding
  */
+@InterfaceAudience.Private
 case class HBaseConnectionCacheStat(var numTotalRequests: Long,
                                     var numActualConnectionsCreated: Long,
                                     var numActiveConnections: Long)

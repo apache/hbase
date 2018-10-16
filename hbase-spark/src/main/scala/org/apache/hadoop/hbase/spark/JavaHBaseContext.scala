@@ -22,12 +22,14 @@ import java.util.Map
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.util.Pair
-import org.apache.hadoop.hbase.classification.InterfaceAudience
+import org.apache.yetus.audience.InterfaceAudience
 import org.apache.hadoop.hbase.client.{Connection, Delete, Get, Put, Result, Scan}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.spark.api.java.{JavaRDD, JavaSparkContext}
 import org.apache.spark.api.java.function.{FlatMapFunction, Function, VoidFunction}
 import org.apache.spark.streaming.api.java.JavaDStream
+
+import java.lang.Iterable
 
 import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
@@ -41,8 +43,8 @@ import scala.reflect.ClassTag
  * @param config This is the config information to out HBase cluster
  */
 @InterfaceAudience.Public
-class JavaHBaseContext(@transient jsc: JavaSparkContext,
-                       @transient config: Configuration) extends Serializable {
+class JavaHBaseContext(@transient val jsc: JavaSparkContext,
+                       @transient val config: Configuration) extends Serializable {
   val hbaseContext = new HBaseContext(jsc.sc, config)
 
   /**
@@ -107,15 +109,9 @@ class JavaHBaseContext(@transient jsc: JavaSparkContext,
   def mapPartitions[T, R](javaRdd: JavaRDD[T],
                           f: FlatMapFunction[(java.util.Iterator[T],
                             Connection), R]): JavaRDD[R] = {
-
-    def fn = (it: Iterator[T], conn: Connection) =>
-      asScalaIterator(
-        f.call((asJavaIterator(it), conn)).iterator()
-      )
-
     JavaRDD.fromRDD(hbaseContext.mapPartitions(javaRdd.rdd,
-      (iterator: Iterator[T], connection: Connection) =>
-        fn(iterator, connection))(fakeClassTag[R]))(fakeClassTag[R])
+      (it: Iterator[T], conn: Connection) =>
+        f.call(it, conn))(fakeClassTag[R]))(fakeClassTag[R])
   }
 
   /**

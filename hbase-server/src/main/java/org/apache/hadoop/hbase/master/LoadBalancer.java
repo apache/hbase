@@ -18,21 +18,19 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-
-import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -50,21 +48,34 @@ import edu.umd.cs.findbugs.annotations.Nullable;
  */
 @InterfaceAudience.Private
 public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObserver {
+  /**
+   * Master can carry regions as of hbase-2.0.0.
+   * By default, it carries no tables.
+   * TODO: Add any | system as flags to indicate what it can do.
+   */
+  public static final String TABLES_ON_MASTER = "hbase.balancer.tablesOnMaster";
+
+  /**
+   * Master carries system tables.
+   */
+  public static final String SYSTEM_TABLES_ON_MASTER =
+    "hbase.balancer.tablesOnMaster.systemTablesOnly";
 
   // Used to signal to the caller that the region(s) cannot be assigned
-  ServerName BOGUS_SERVER_NAME = ServerName.valueOf("bogus.example.com,1,1");
+  // We deliberately use 'localhost' so the operation will fail fast
+  ServerName BOGUS_SERVER_NAME = ServerName.valueOf("localhost,1,1");
 
   /**
    * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
    * @param st
    */
-  void setClusterStatus(ClusterStatus st);
+  void setClusterMetrics(ClusterMetrics st);
 
   /**
    * Pass RegionStates and allow balancer to set the current cluster load.
    * @param ClusterLoad
    */
-  void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> ClusterLoad);
+  void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> ClusterLoad);
 
   /**
    * Set the master service.
@@ -79,7 +90,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @return List of plans
    */
   List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-      List<HRegionInfo>> clusterState) throws HBaseIOException;
+      List<RegionInfo>> clusterState) throws HBaseIOException;
 
   /**
    * Perform the major balance operation
@@ -87,7 +98,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @return List of plans
    */
   List<RegionPlan> balanceCluster(Map<ServerName,
-      List<HRegionInfo>> clusterState) throws HBaseIOException;
+      List<RegionInfo>> clusterState) throws HBaseIOException;
 
   /**
    * Perform a Round Robin assignment of regions.
@@ -95,8 +106,8 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param servers
    * @return Map of servername to regioninfos
    */
-  Map<ServerName, List<HRegionInfo>> roundRobinAssignment(
-    List<HRegionInfo> regions,
+  Map<ServerName, List<RegionInfo>> roundRobinAssignment(
+    List<RegionInfo> regions,
     List<ServerName> servers
   ) throws HBaseIOException;
 
@@ -107,8 +118,8 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @return List of plans
    */
   @Nullable
-  Map<ServerName, List<HRegionInfo>> retainAssignment(
-    Map<HRegionInfo, ServerName> regions,
+  Map<ServerName, List<RegionInfo>> retainAssignment(
+    Map<RegionInfo, ServerName> regions,
     List<ServerName> servers
   ) throws HBaseIOException;
 
@@ -119,7 +130,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @return Servername
    */
   ServerName randomAssignment(
-    HRegionInfo regionInfo, List<ServerName> servers
+    RegionInfo regionInfo, List<ServerName> servers
   ) throws HBaseIOException;
 
   /**
@@ -133,17 +144,37 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param regionInfo
    * @param sn
    */
-  void regionOnline(HRegionInfo regionInfo, ServerName sn);
+  void regionOnline(RegionInfo regionInfo, ServerName sn);
 
   /**
    * Marks the region as offline at balancer.
    * @param regionInfo
    */
-  void regionOffline(HRegionInfo regionInfo);
+  void regionOffline(RegionInfo regionInfo);
 
   /*
    * Notification that config has changed
    * @param conf
    */
+  @Override
   void onConfigurationChange(Configuration conf);
+
+  /**
+   * If balancer needs to do initialization after Master has started up, lets do that here.
+   */
+  void postMasterStartupInitialize();
+
+  /*Updates balancer status tag reported to JMX*/
+  void updateBalancerStatus(boolean status);
+
+  /**
+   * @return true if Master carries regions
+   */
+  static boolean isTablesOnMaster(Configuration conf) {
+    return conf.getBoolean(TABLES_ON_MASTER, false);
+  }
+
+  static boolean isSystemTablesOnlyOnMaster(Configuration conf) {
+    return conf.getBoolean(SYSTEM_TABLES_ON_MASTER, false);
+  }
 }

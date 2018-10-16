@@ -24,9 +24,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -39,13 +37,20 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher {
 
-  private static final Log LOG = LogFactory.getLog(TestCompactionScanQueryMatcher.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactionScanQueryMatcher.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionScanQueryMatcher.class);
 
   @Test
   public void testMatch_PartialRangeDropDeletes() throws Exception {
@@ -74,7 +79,7 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
     long now = EnvironmentEdgeManager.currentTime();
     // Set time to purge deletes to negative value to avoid it ever happening.
     ScanInfo scanInfo = new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE,
-        HConstants.DEFAULT_BLOCKSIZE, -1L, rowComparator);
+        HConstants.DEFAULT_BLOCKSIZE, -1L, rowComparator, false);
 
     CompactionScanQueryMatcher qm = CompactionScanQueryMatcher.create(scanInfo,
       ScanType.COMPACT_RETAIN_DELETES, Long.MAX_VALUE, HConstants.OLDEST_TIMESTAMP,

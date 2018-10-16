@@ -25,21 +25,21 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKLeaderManager;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages an internal list of secret keys used to sign new authentication
@@ -60,7 +60,7 @@ public class AuthenticationTokenSecretManager
 
   static final String NAME_PREFIX = "SecretManager-";
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       AuthenticationTokenSecretManager.class);
 
   private long lastKeyUpdate;
@@ -89,8 +89,8 @@ public class AuthenticationTokenSecretManager
    * org.apache.hadoop.hbase.ipc.SecureServer so public access is needed.
    */
   public AuthenticationTokenSecretManager(Configuration conf,
-      ZooKeeperWatcher zk, String serverName,
-      long keyUpdateInterval, long tokenMaxLifetime) {
+                                          ZKWatcher zk, String serverName,
+                                          long keyUpdateInterval, long tokenMaxLifetime) {
     this.zkWatcher = new ZKSecretWatcher(conf, zk, this);
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenMaxLifetime = tokenMaxLifetime;
@@ -144,9 +144,9 @@ public class AuthenticationTokenSecretManager
     AuthenticationKey masterKey = allKeys.get(identifier.getKeyId());
     if(masterKey == null) {
       if(zkWatcher.getWatcher().isAborted()) {
-        LOG.error("ZooKeeperWatcher is abort");
+        LOG.error("ZKWatcher is abort");
         throw new InvalidToken("Token keys could not be sync from zookeeper"
-            + " because of ZooKeeperWatcher abort");
+            + " because of ZKWatcher abort");
       }
       synchronized (this) {
         if (!leaderElector.isAlive() || leaderElector.isStopped()) {
@@ -254,7 +254,7 @@ public class AuthenticationTokenSecretManager
       }
     }
   }
-  
+
   synchronized boolean isCurrentKeyRolled() {
     return currentKey != null;
   }
@@ -297,11 +297,11 @@ public class AuthenticationTokenSecretManager
     private boolean isMaster = false;
     private ZKLeaderManager zkLeader;
 
-    public LeaderElector(ZooKeeperWatcher watcher, String serverName) {
+    public LeaderElector(ZKWatcher watcher, String serverName) {
       setDaemon(true);
       setName("ZKSecretWatcher-leaderElector");
       zkLeader = new ZKLeaderManager(watcher,
-          ZKUtil.joinZNode(zkWatcher.getRootKeyZNode(), "keymaster"),
+          ZNodePaths.joinZNode(zkWatcher.getRootKeyZNode(), "keymaster"),
           Bytes.toBytes(serverName), this);
     }
 
@@ -330,6 +330,7 @@ public class AuthenticationTokenSecretManager
       interrupt();
     }
 
+    @Override
     public void run() {
       zkLeader.start();
       zkLeader.waitToBecomeLeader();

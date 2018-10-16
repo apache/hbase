@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.hbase.io.crypto.aes;
 
-import com.google.common.base.Preconditions;
-import org.apache.commons.crypto.stream.CryptoInputStream;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.io.crypto.Decryptor;
-
-import javax.crypto.spec.IvParameterSpec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.Key;
 import java.util.Properties;
+import javax.crypto.spec.IvParameterSpec;
+
+import org.apache.commons.crypto.stream.CryptoInputStream;
+import org.apache.hadoop.hbase.io.crypto.Decryptor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -78,7 +79,5 @@ public class CommonsCryptoAESDecryptor implements Decryptor {
 
   @Override
   public void reset() {
-    ;
   }
-
 }

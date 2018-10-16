@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,17 +20,24 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.math.BigDecimal;
 import java.util.regex.Pattern;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+
 @Category({FilterTests.class, SmallTests.class})
 public class TestComparatorSerialization {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestComparatorSerialization.class);
 
   @Test
   public void testBinaryComparator() throws Exception {
@@ -75,7 +80,7 @@ public class TestComparatorSerialization {
     try {
       new RegexStringComparator("regex", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     } catch (Throwable t) {
-      assertNull("Exception occured while created the RegexStringComparator object", t);
+      assertNull("Exception occurred while created the RegexStringComparator object", t);
     }
   }
 
@@ -84,6 +89,14 @@ public class TestComparatorSerialization {
     SubstringComparator substringComparator = new SubstringComparator("substr");
     assertTrue(substringComparator.areSerializedFieldsEqual(
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(substringComparator))));
+  }
+
+  @Test
+  public void testBigDecimalComparator() throws Exception {
+    BigDecimal bigDecimal = new BigDecimal(Double.MIN_VALUE);
+    BigDecimalComparator bigDecimalComparator = new BigDecimalComparator(bigDecimal);
+    assertTrue(bigDecimalComparator.areSerializedFieldsEqual(ProtobufUtil.toComparator(ProtobufUtil
+        .toComparator(bigDecimalComparator))));
   }
 
 }

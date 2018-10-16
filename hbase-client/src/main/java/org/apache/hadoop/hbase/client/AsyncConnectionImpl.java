@@ -21,9 +21,12 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-import io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -34,19 +37,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -61,7 +64,7 @@ import org.apache.hadoop.hbase.util.Threads;
 @InterfaceAudience.Private
 class AsyncConnectionImpl implements AsyncConnection {
 
-  private static final Log LOG = LogFactory.getLog(AsyncConnectionImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionImpl.class);
 
   @VisibleForTesting
   static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
@@ -97,19 +100,24 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
 
   private final AtomicReference<CompletableFuture<MasterService.Interface>> masterStubMakeFuture =
-      new AtomicReference<>();
+    new AtomicReference<>();
+
+  private ChoreService authService;
 
   public AsyncConnectionImpl(Configuration conf, AsyncRegistry registry, String clusterId,
       User user) {
     this.conf = conf;
     this.user = user;
+    if (user.isLoginFromKeytab()) {
+      spawnRenewalChore(user.getUGI());
+    }
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     this.rpcClient = RpcClientFactory.createClient(conf, clusterId);
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
-    this.rpcTimeout = (int) Math.min(Integer.MAX_VALUE,
-      TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
+    this.rpcTimeout =
+      (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
     this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
     this.callerFactory = new AsyncRpcRetryingCallerFactory(this, RETRY_TIMER);
     if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
@@ -117,6 +125,11 @@ class AsyncConnectionImpl implements AsyncConnection {
     } else {
       nonceGenerator = NO_NONCE_GENERATOR;
     }
+  }
+
+  private void spawnRenewalChore(final UserGroupInformation user) {
+    authService = new ChoreService("Relogin service");
+    authService.scheduleChore(AuthUtil.getAuthRenewalChore(user));
   }
 
   @Override
@@ -128,6 +141,9 @@ class AsyncConnectionImpl implements AsyncConnection {
   public void close() {
     IOUtils.closeQuietly(rpcClient);
     IOUtils.closeQuietly(registry);
+    if (authService != null) {
+      authService.shutdown();
+    }
   }
 
   @Override
@@ -161,7 +177,7 @@ class AsyncConnectionImpl implements AsyncConnection {
     return MasterService.newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
   }
 
-  private AdminService.Interface createAdminServerStub(ServerName serverName) throws IOException{
+  private AdminService.Interface createAdminServerStub(ServerName serverName) throws IOException {
     return AdminService.newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
   }
 
@@ -172,38 +188,37 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   private void makeMasterStub(CompletableFuture<MasterService.Interface> future) {
-    registry.getMasterAddress().whenComplete(
-      (sn, error) -> {
-        if (sn == null) {
-          String msg = "ZooKeeper available but no active master location found";
-          LOG.info(msg);
-          this.masterStubMakeFuture.getAndSet(null).completeExceptionally(
-            new MasterNotRunningException(msg));
-          return;
-        }
-        try {
-          MasterService.Interface stub = createMasterStub(sn);
-          HBaseRpcController controller = getRpcController();
-          stub.isMasterRunning(controller, RequestConverter.buildIsMasterRunningRequest(),
-            new RpcCallback<IsMasterRunningResponse>() {
-              @Override
-              public void run(IsMasterRunningResponse resp) {
-                if (controller.failed() || resp == null
-                    || (resp != null && !resp.getIsMasterRunning())) {
-                  masterStubMakeFuture.getAndSet(null).completeExceptionally(
-                    new MasterNotRunningException("Master connection is not running anymore"));
-                } else {
-                  masterStub.set(stub);
-                  masterStubMakeFuture.set(null);
-                  future.complete(stub);
-                }
+    registry.getMasterAddress().whenComplete((sn, error) -> {
+      if (sn == null) {
+        String msg = "ZooKeeper available but no active master location found";
+        LOG.info(msg);
+        this.masterStubMakeFuture.getAndSet(null)
+            .completeExceptionally(new MasterNotRunningException(msg));
+        return;
+      }
+      try {
+        MasterService.Interface stub = createMasterStub(sn);
+        HBaseRpcController controller = getRpcController();
+        stub.isMasterRunning(controller, RequestConverter.buildIsMasterRunningRequest(),
+          new RpcCallback<IsMasterRunningResponse>() {
+            @Override
+            public void run(IsMasterRunningResponse resp) {
+              if (controller.failed() || resp == null ||
+                (resp != null && !resp.getIsMasterRunning())) {
+                masterStubMakeFuture.getAndSet(null).completeExceptionally(
+                  new MasterNotRunningException("Master connection is not running anymore"));
+              } else {
+                masterStub.set(stub);
+                masterStubMakeFuture.set(null);
+                future.complete(stub);
               }
-            });
-        } catch (IOException e) {
-          this.masterStubMakeFuture.getAndSet(null).completeExceptionally(
-            new IOException("Failed to create async master stub", e));
-        }
-      });
+            }
+          });
+      } catch (IOException e) {
+        this.masterStubMakeFuture.getAndSet(null)
+            .completeExceptionally(new IOException("Failed to create async master stub", e));
+      }
+    });
   }
 
   CompletableFuture<MasterService.Interface> getMasterStub() {
@@ -231,8 +246,8 @@ class AsyncConnectionImpl implements AsyncConnection {
           new RpcCallback<IsMasterRunningResponse>() {
             @Override
             public void run(IsMasterRunningResponse resp) {
-              if (controller.failed() || resp == null
-                  || (resp != null && !resp.getIsMasterRunning())) {
+              if (controller.failed() || resp == null ||
+                (resp != null && !resp.getIsMasterRunning())) {
                 makeMasterStub(future);
               } else {
                 future.complete(masterStub);
@@ -255,22 +270,23 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
-  public AsyncTableBuilder<RawAsyncTable> getRawTableBuilder(TableName tableName) {
-    return new AsyncTableBuilderBase<RawAsyncTable>(tableName, connConf) {
+  public AsyncTableBuilder<AdvancedScanResultConsumer> getTableBuilder(TableName tableName) {
+    return new AsyncTableBuilderBase<AdvancedScanResultConsumer>(tableName, connConf) {
 
       @Override
-      public RawAsyncTable build() {
+      public AsyncTable<AdvancedScanResultConsumer> build() {
         return new RawAsyncTableImpl(AsyncConnectionImpl.this, this);
       }
     };
   }
 
   @Override
-  public AsyncTableBuilder<AsyncTable> getTableBuilder(TableName tableName, ExecutorService pool) {
-    return new AsyncTableBuilderBase<AsyncTable>(tableName, connConf) {
+  public AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName,
+      ExecutorService pool) {
+    return new AsyncTableBuilderBase<ScanResultConsumer>(tableName, connConf) {
 
       @Override
-      public AsyncTable build() {
+      public AsyncTable<ScanResultConsumer> build() {
         RawAsyncTableImpl rawTable = new RawAsyncTableImpl(AsyncConnectionImpl.this, this);
         return new AsyncTableImpl(AsyncConnectionImpl.this, rawTable, pool);
       }
@@ -278,7 +294,35 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
-  public AsyncAdmin getAdmin() {
-    return new AsyncHBaseAdmin(this);
+  public AsyncAdminBuilder getAdminBuilder() {
+    return new AsyncAdminBuilderBase(connConf) {
+      @Override
+      public AsyncAdmin build() {
+        return new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, RETRY_TIMER, this);
+      }
+    };
+  }
+
+  @Override
+  public AsyncAdminBuilder getAdminBuilder(ExecutorService pool) {
+    return new AsyncAdminBuilderBase(connConf) {
+      @Override
+      public AsyncAdmin build() {
+        RawAsyncHBaseAdmin rawAdmin =
+          new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, RETRY_TIMER, this);
+        return new AsyncHBaseAdmin(rawAdmin, pool);
+      }
+    };
+  }
+
+  @Override
+  public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName) {
+    return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName));
+  }
+
+  @Override
+  public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
+      ExecutorService pool) {
+    return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName, pool));
   }
 }

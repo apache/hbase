@@ -26,18 +26,18 @@ import java.security.SecureRandom;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Context;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * AES-128, provided by the JCE
@@ -49,7 +49,7 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class AES extends Cipher {
 
-  private static final Log LOG = LogFactory.getLog(AES.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AES.class);
 
   public static final String CIPHER_MODE_KEY = "hbase.crypto.algorithm.aes.mode";
   public static final String CIPHER_PROVIDER_KEY = "hbase.crypto.algorithm.aes.provider";

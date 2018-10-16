@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Factory for creating {@link SpaceQuotaSnapshotNotifier} implementations. Implementations
@@ -54,8 +54,8 @@ public class SpaceQuotaSnapshotNotifierFactory {
         .getClass(SNAPSHOT_NOTIFIER_KEY, SNAPSHOT_NOTIFIER_DEFAULT,
             SpaceQuotaSnapshotNotifier.class);
     try {
-      return clz.newInstance();
-    } catch (InstantiationException | IllegalAccessException e) {
+      return clz.getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
       throw new IllegalArgumentException("Failed to instantiate the implementation", e);
     }
   }

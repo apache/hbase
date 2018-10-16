@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Ways to keep cells marked for delete around.
@@ -45,4 +45,7 @@ public enum KeepDeletedCells {
    * time remove deleted cells after the TTL.
    */
   TTL;
+  public static KeepDeletedCells getValue(String val) {
+    return valueOf(val.toUpperCase());
+  }
 }

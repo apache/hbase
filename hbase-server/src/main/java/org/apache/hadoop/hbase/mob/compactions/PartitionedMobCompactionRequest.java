@@ -25,10 +25,10 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An implementation of {@link MobCompactionRequest} that is used in
@@ -106,8 +106,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
      * Set start key of this partition, only if the input startKey is less than
      * the current start key.
      */
-    public void setStartKey(final byte[] startKey)
-    {
+    public void setStartKey(final byte[] startKey) {
       if ((this.startKey == null) || (Bytes.compareTo(startKey, this.startKey) < 0)) {
         this.startKey = startKey;
       }
@@ -227,7 +226,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
    */
   protected static class CompactionDelPartition {
     private List<Path> delFiles = new ArrayList<Path>();
-    private List<StoreFile> storeFiles = new ArrayList<>();
+    private List<HStoreFile> storeFiles = new ArrayList<>();
     private CompactionDelPartitionId id;
 
     public CompactionDelPartition(CompactionDelPartitionId id) {
@@ -241,11 +240,11 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
     void addDelFile(FileStatus file) {
       delFiles.add(file.getPath());
     }
-    public void addStoreFile(final StoreFile file) {
+    public void addStoreFile(HStoreFile file) {
       storeFiles.add(file);
     }
 
-    public List<StoreFile> getStoreFiles() {
+    public List<HStoreFile> getStoreFiles() {
       return storeFiles;
     }
 
@@ -295,6 +294,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
       this.endKey = endKey;
     }
 
+    @Override
     public int compareTo(CompactionDelPartitionId o) {
       /*
        * 1). Compare the start key, if the k1 < k2, then k1 is less

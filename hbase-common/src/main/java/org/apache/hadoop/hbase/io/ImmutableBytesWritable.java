@@ -24,10 +24,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A byte sequence that is usable as a key or value.  Based on
@@ -146,6 +146,7 @@ implements WritableComparable<ImmutableBytesWritable> {
     return this.offset;
   }
 
+  @Override
   public void readFields(final DataInput in) throws IOException {
     this.length = in.readInt();
     this.bytes = new byte[this.length];
@@ -153,6 +154,7 @@ implements WritableComparable<ImmutableBytesWritable> {
     this.offset = 0;
   }
 
+  @Override
   public void write(final DataOutput out) throws IOException {
     out.writeInt(this.length);
     out.write(this.bytes, this.offset, this.length);
@@ -173,6 +175,7 @@ implements WritableComparable<ImmutableBytesWritable> {
    * @return Positive if left is bigger than right, 0 if they are equal, and
    *         negative if left is smaller than right.
    */
+  @Override
   public int compareTo(ImmutableBytesWritable that) {
     return WritableComparator.compareBytes(
       this.bytes, this.offset, this.length,

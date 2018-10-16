@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,42 +17,49 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
+import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
-import org.apache.hadoop.hbase.procedure2.LockInfo;
+import org.apache.hadoop.hbase.procedure2.LockedResource;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
- * Services Master supplies
+ * A curated subset of services provided by {@link HMaster}.
+ * For use internally only. Passed to Managers, Services and Chores so can pass less-than-a
+ * full-on HMaster at test-time. Be judicious adding API. Changes cause ripples through
+ * the code base.
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
@@ -131,7 +137,7 @@ public interface MasterServices extends Server {
    * @return Tripped when Master has finished initialization.
    */
   @VisibleForTesting
-  public ProcedureEvent getInitializedEvent();
+  public ProcedureEvent<?> getInitializedEvent();
 
   /**
    * @return Master's instance of {@link MetricsMaster}
@@ -158,17 +164,17 @@ public interface MasterServices extends Server {
    *     a single region is created.
    */
   long createTable(
-      final HTableDescriptor desc,
+      final TableDescriptor desc,
       final byte[][] splitKeys,
       final long nonceGroup,
       final long nonce) throws IOException;
 
   /**
    * Create a system table using the given table definition.
-   * @param hTableDescriptor The system table definition
+   * @param tableDescriptor The system table definition
    *     a single region is created.
    */
-  long createSystemTable(final HTableDescriptor hTableDescriptor) throws IOException;
+  long createSystemTable(final TableDescriptor tableDescriptor) throws IOException;
 
   /**
    * Delete a table
@@ -206,7 +212,7 @@ public interface MasterServices extends Server {
    */
   long modifyTable(
       final TableName tableName,
-      final HTableDescriptor descriptor,
+      final TableDescriptor descriptor,
       final long nonceGroup,
       final long nonce)
       throws IOException;
@@ -246,7 +252,7 @@ public interface MasterServices extends Server {
    */
   long addColumn(
       final TableName tableName,
-      final HColumnDescriptor column,
+      final ColumnFamilyDescriptor column,
       final long nonceGroup,
       final long nonce)
       throws IOException;
@@ -261,7 +267,7 @@ public interface MasterServices extends Server {
    */
   long modifyColumn(
       final TableName tableName,
-      final HColumnDescriptor descriptor,
+      final ColumnFamilyDescriptor descriptor,
       final long nonceGroup,
       final long nonce)
       throws IOException;
@@ -282,23 +288,6 @@ public interface MasterServices extends Server {
       throws IOException;
 
   /**
-   * Merge two regions. The real implementation is on the regionserver, master
-   * just move the regions together and send MERGE RPC to regionserver
-   * @param region_a region to merge
-   * @param region_b region to merge
-   * @param forcible true if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @return procedure Id
-   * @throws IOException
-   */
-  long dispatchMergingRegions(
-    final HRegionInfo region_a,
-    final HRegionInfo region_b,
-    final boolean forcible,
-    final long nonceGroup,
-    final long nonce) throws IOException;
-
-  /**
    * Merge regions in a table.
    * @param regionsToMerge daughter regions to merge
    * @param forcible whether to force to merge even two regions are not adjacent
@@ -308,7 +297,7 @@ public interface MasterServices extends Server {
    * @throws IOException
    */
   long mergeRegions(
-      final HRegionInfo[] regionsToMerge,
+      final RegionInfo[] regionsToMerge,
       final boolean forcible,
       final long nonceGroup,
       final long nonce) throws IOException;
@@ -323,7 +312,7 @@ public interface MasterServices extends Server {
    * @throws IOException
    */
   long splitRegion(
-      final HRegionInfo regionInfo,
+      final RegionInfo regionInfo,
       final byte [] splitRow,
       final long nonceGroup,
       final long nonce) throws IOException;
@@ -332,11 +321,6 @@ public interface MasterServices extends Server {
    * @return Return table descriptors implementation.
    */
   TableDescriptors getTableDescriptors();
-
-  /**
-   * @return true if master enables ServerShutdownHandler;
-   */
-  boolean isServerCrashProcessingEnabled();
 
   /**
    * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint.
@@ -365,8 +349,9 @@ public interface MasterServices extends Server {
 
   /**
    * @return true if master is in maintanceMode
+   * @throws IOException if the inquiry failed due to an IO problem
    */
-  boolean isInMaintenanceMode();
+  boolean isInMaintenanceMode() throws IOException;
 
   /**
    * Abort a procedure.
@@ -379,18 +364,18 @@ public interface MasterServices extends Server {
       throws IOException;
 
   /**
-   * List procedures
+   * Get procedures
    * @return procedure list
    * @throws IOException
    */
-  public List<ProcedureInfo> listProcedures() throws IOException;
+  public List<Procedure<?>> getProcedures() throws IOException;
 
   /**
-   * List locks
+   * Get locks
    * @return lock list
    * @throws IOException
    */
-  public List<LockInfo> listLocks() throws IOException;
+  public List<LockedResource> getLocks() throws IOException;
 
   /**
    * Get list of table descriptors by namespace
@@ -398,7 +383,7 @@ public interface MasterServices extends Server {
    * @return descriptors
    * @throws IOException
    */
-  public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException;
+  public List<TableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException;
 
   /**
    * Get list of table names by namespace
@@ -429,11 +414,6 @@ public interface MasterServices extends Server {
    */
   public LoadBalancer getLoadBalancer();
 
-  /**
-   * @return True if this master is stopping.
-   */
-  boolean isStopping();
-
   boolean isSplitOrMergeEnabled(MasterSwitchType switchType);
 
   /**
@@ -445,27 +425,28 @@ public interface MasterServices extends Server {
    * Add a new replication peer for replicating data to slave cluster
    * @param peerId a short name that identifies the peer
    * @param peerConfig configuration for the replication slave cluster
+   * @param enabled peer state, true if ENABLED and false if DISABLED
    */
-  void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+  long addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
       throws ReplicationException, IOException;
 
   /**
    * Removes a peer and stops the replication
    * @param peerId a short name that identifies the peer
    */
-  void removeReplicationPeer(String peerId) throws ReplicationException, IOException;
+  long removeReplicationPeer(String peerId) throws ReplicationException, IOException;
 
   /**
    * Restart the replication stream to the specified peer
    * @param peerId a short name that identifies the peer
    */
-  void enableReplicationPeer(String peerId) throws ReplicationException, IOException;
+  long enableReplicationPeer(String peerId) throws ReplicationException, IOException;
 
   /**
    * Stop the replication stream to the specified peer
    * @param peerId a short name that identifies the peer
    */
-  void disableReplicationPeer(String peerId) throws ReplicationException, IOException;
+  long disableReplicationPeer(String peerId) throws ReplicationException, IOException;
 
   /**
    * Returns the configured ReplicationPeerConfig for the specified peer
@@ -476,11 +457,21 @@ public interface MasterServices extends Server {
       IOException;
 
   /**
+   * Returns the {@link ReplicationPeerManager}.
+   */
+  ReplicationPeerManager getReplicationPeerManager();
+
+  /**
+   * Returns the {@link SyncReplicationReplayWALManager}.
+   */
+  SyncReplicationReplayWALManager getSyncReplicationReplayWALManager();
+
+  /**
    * Update the peerConfig for the specified peer
    * @param peerId a short name that identifies the peer
    * @param peerConfig new config for the peer
    */
-  void updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
+  long updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
       throws ReplicationException, IOException;
 
   /**
@@ -492,25 +483,31 @@ public interface MasterServices extends Server {
       IOException;
 
   /**
-   * Mark a region server as draining to prevent additional regions from getting assigned to it.
-   * @param server Region servers to drain.
+   * Set current cluster state for a synchronous replication peer.
+   * @param peerId a short name that identifies the peer
+   * @param clusterState state of current cluster
    */
-  void drainRegionServer(final ServerName server);
-
-  /**
-   * List region servers marked as draining to not get additional regions assigned to them.
-   * @return List of draining servers.
-   */
-  List<ServerName> listDrainingRegionServers();
-
-  /**
-   * Remove drain from a region server to allow additional regions assignments.
-   * @param server Region server to remove drain from.
-   */
-  void removeDrainFromRegionServer(final ServerName server);
+  long transitReplicationPeerSyncReplicationState(String peerId, SyncReplicationState clusterState)
+      throws ReplicationException, IOException;
 
   /**
    * @return {@link LockManager} to lock namespaces/tables/regions.
    */
   LockManager getLockManager();
+
+  public String getRegionServerVersion(final ServerName sn);
+
+  /**
+   * Called when a new RegionServer is added to the cluster.
+   * Checks if new server has a newer version than any existing server and will move system tables
+   * there if so.
+   */
+  public void checkIfShouldMoveSystemRegionAsync();
+
+  String getClientIdAuditPrefix();
+
+  /**
+   * @return True if cluster is up; false if cluster is not up (we are shutting down).
+   */
+  boolean isClusterUp();
 }

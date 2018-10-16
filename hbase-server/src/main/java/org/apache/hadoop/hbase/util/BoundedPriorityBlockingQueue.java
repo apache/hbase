@@ -27,8 +27,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.AbstractQueue;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 
 /**
@@ -119,7 +119,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
 
     private int upperBound(int start, int end, E key) {
       while (start < end) {
-        int mid = (start + end) >>> 1;
+        int mid = start + ((end - start) >> 1);
         E mitem = objects[mid];
         int cmp = comparator.compare(mitem, key);
         if (cmp > 0) {
@@ -155,6 +155,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     this.queue = new PriorityQueue<>(capacity, comparator);
   }
 
+  @Override
   public boolean offer(E e) {
     if (e == null) throw new NullPointerException();
 
@@ -171,6 +172,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     return false;
   }
 
+  @Override
   public void put(E e) throws InterruptedException {
     if (e == null) throw new NullPointerException();
 
@@ -186,6 +188,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     }
   }
 
+  @Override
   public boolean offer(E e, long timeout, TimeUnit unit)
       throws InterruptedException {
     if (e == null) throw new NullPointerException();
@@ -206,6 +209,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     return true;
   }
 
+  @Override
   public E take() throws InterruptedException {
     E result = null;
     lock.lockInterruptibly();
@@ -221,6 +225,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     return result;
   }
 
+  @Override
   public E poll() {
     E result = null;
     lock.lock();
@@ -235,6 +240,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     return result;
   }
 
+  @Override
   public E poll(long timeout, TimeUnit unit)
       throws InterruptedException {
     long nanos = unit.toNanos(timeout);
@@ -254,6 +260,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     return result;
   }
 
+  @Override
   public E peek() {
     lock.lock();
     try {
@@ -263,6 +270,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     }
   }
 
+  @Override
   public int size() {
     lock.lock();
     try {
@@ -272,6 +280,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     }
   }
 
+  @Override
   public Iterator<E> iterator() {
     throw new UnsupportedOperationException();
   }
@@ -280,6 +289,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     return queue.comparator();
   }
 
+  @Override
   public int remainingCapacity() {
     lock.lock();
     try {
@@ -289,10 +299,12 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     }
   }
 
+  @Override
   public boolean remove(Object o) {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   public boolean contains(Object o) {
     lock.lock();
     try {
@@ -302,10 +314,12 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
     }
   }
 
+  @Override
   public int drainTo(Collection<? super E> c) {
     return drainTo(c, Integer.MAX_VALUE);
   }
 
+  @Override
   public int drainTo(Collection<? super E> c, int maxElements) {
     if (c == null)
         throw new NullPointerException();

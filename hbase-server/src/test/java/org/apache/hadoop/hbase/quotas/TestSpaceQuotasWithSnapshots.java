@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,12 +25,10 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -41,25 +40,34 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.SpaceQuotaSnapshotPredicate;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 
 /**
  * Test class to exercise the inclusion of snapshots in space quotas
  */
 @Category({LargeTests.class})
 public class TestSpaceQuotasWithSnapshots {
-  private static final Log LOG = LogFactory.getLog(TestSpaceQuotasWithSnapshots.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSpaceQuotasWithSnapshots.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotasWithSnapshots.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   // Global for all tests in the class
   private static final AtomicLong COUNTER = new AtomicLong(0);
@@ -173,6 +181,13 @@ public class TestSpaceQuotasWithSnapshots {
         return expectedFinalSize == snapshot.getUsage();
       }
     });
+
+    Map<String,Long> snapshotSizes = QuotaTableUtil.getObservedSnapshotSizes(conn);
+    Long size = snapshotSizes.get(snapshot1);
+    assertNotNull("Did not observe the size of the snapshot", size);
+    assertEquals(
+        "The recorded size of the HBase snapshot was not the size we expected", actualInitialSize,
+        size.longValue());
   }
 
   @Test
@@ -265,6 +280,13 @@ public class TestSpaceQuotasWithSnapshots {
         return expectedFinalSize == snapshot.getUsage();
       }
     });
+
+    Map<String,Long> snapshotSizes = QuotaTableUtil.getObservedSnapshotSizes(conn);
+    Long size = snapshotSizes.get(snapshot1);
+    assertNotNull("Did not observe the size of the snapshot", size);
+    assertEquals(
+        "The recorded size of the HBase snapshot was not the size we expected", actualInitialSize,
+        size.longValue());
   }
 
   @Test

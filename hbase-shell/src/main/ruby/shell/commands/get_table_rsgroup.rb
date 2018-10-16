@@ -19,7 +19,7 @@ module Shell
   module Commands
     class GetTableRsgroup < Command
       def help
-        return <<-EOF
+        <<-EOF
 Get the RegionServer group name the given table is a member of.
 
 Example:
@@ -31,7 +31,7 @@ EOF
 
       def command(table)
         group_name =
-            rsgroup_admin.get_rsgroup_of_table(table).getName
+          rsgroup_admin.get_rsgroup_of_table(table).getName
         formatter.row([group_name])
         formatter.footer(1)
       end

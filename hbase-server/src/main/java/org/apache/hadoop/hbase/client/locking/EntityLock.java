@@ -23,11 +23,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
 import org.apache.hadoop.hbase.util.Threads;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Lock for HBase Entity either a Table, a Namespace, or Regions.
@@ -81,7 +81,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Public
 public class EntityLock {
-  private static final Log LOG = LogFactory.getLog(EntityLock.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EntityLock.class);
 
   public static final String HEARTBEAT_TIME_BUFFER =
       "hbase.client.locks.heartbeat.time.buffer.ms";
@@ -227,6 +227,7 @@ public class EntityLock {
       return this;
     }
 
+    @Override
     public void run() {
       final LockHeartbeatRequest lockHeartbeatRequest =
           LockHeartbeatRequest.newBuilder().setProcId(procId).build();

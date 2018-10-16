@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This interface will be implemented to allow single regions to push metrics into
  * MetricsRegionAggregateSource that will in turn push data to the Hadoop metrics system.
  */
+@InterfaceAudience.Private
 public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
 
   String OPS_SAMPLE_NAME = "ops";
@@ -30,11 +32,19 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   String COMPACTIONS_COMPLETED_COUNT = "compactionsCompletedCount";
   String COMPACTIONS_FAILED_COUNT = "compactionsFailedCount";
   String LAST_MAJOR_COMPACTION_AGE = "lastMajorCompactionAge";
+  String COMPACTIONS_QUEUED_COUNT = "compactionsQueuedCount";
+  String MAX_COMPACTION_QUEUE_SIZE = "maxCompactionQueueSize";
   String NUM_BYTES_COMPACTED_COUNT = "numBytesCompactedCount";
   String NUM_FILES_COMPACTED_COUNT = "numFilesCompactedCount";
+  String FLUSHES_QUEUED_COUNT = "flushesQueuedCount";
+  String MAX_FLUSH_QUEUE_SIZE = "maxFlushQueueSize";
   String COMPACTIONS_COMPLETED_DESC = "Number of compactions that have completed.";
   String COMPACTIONS_FAILED_DESC = "Number of compactions that have failed.";
   String LAST_MAJOR_COMPACTION_DESC = "Age of the last major compaction in milliseconds.";
+  String COMPACTIONS_QUEUED_DESC = "Number of compactions that are queued/running for this region";
+  String MAX_COMPACTION_QUEUE_DESC = "Max number of compactions queued for this region";
+  String FLUSHES_QUEUED_DESC = "Number flushes requested/queued for this region";
+  String MAX_FLUSH_QUEUE_DESC = "Max number of flushes queued for this region";
   String  NUM_BYTES_COMPACTED_DESC =
       "Sum of filesize on all files entering a finished, successful or aborted, compaction";
   String NUM_FILES_COMPACTED_DESC =

@@ -17,42 +17,45 @@
 # limitations under the License.
 #
 
+require 'json'
+
 module Shell
   module Commands
     class ListLocks < Command
       def help
-        return <<-EOF
+        <<-EOF
 List all locks in hbase. Examples:
 
   hbase> list_locks
 EOF
       end
 
-      def command()
-        list = admin.list_locks()
+      def command
+        list = JSON.parse(admin.list_locks)
 
         list.each do |lock|
-          formatter.output_strln("#{lock.resourceType}(#{lock.resourceName})")
+          formatter.output_strln("#{lock['resourceType']}(#{lock['resourceName']})")
 
-          case lock.lockType
-          when org.apache.hadoop.hbase.procedure2.LockInfo::LockType::EXCLUSIVE then
-            formatter.output_strln("Lock type: EXCLUSIVE, procedure: #{lock.exclusiveLockOwnerProcedure.procId}")
-          when org.apache.hadoop.hbase.procedure2.LockInfo::LockType::SHARED then
-            formatter.output_strln("Lock type: SHARED, count: #{lock.sharedLockCount}")
+          case lock['lockType']
+          when 'EXCLUSIVE' then
+            formatter.output_strln("Lock type: #{lock['lockType']}, " \
+              "procedure: #{lock['exclusiveLockOwnerProcedure']}")
+          when 'SHARED' then
+            formatter.output_strln("Lock type: #{lock['lockType']}, " \
+              "count: #{lock['sharedLockCount']}")
           end
 
-          if lock.waitingProcedures.any?
-            formatter.output_strln("Waiting procedures:")
-            formatter.header([ "Lock type", "Procedure Id" ])
+          if lock['waitingProcedures']
+            formatter.header(['Waiting procedures'])
 
-            lock.waitingProcedures.each do |waitingProcedure|
-              formatter.row([ waitingProcedure.lockType.to_s, waitingProcedure.procedure.procId.to_s ]);
+            lock['waitingProcedures'].each do |waiting_procedure|
+              formatter.row([waiting_procedure])
             end
 
-            formatter.footer(lock.waitingProcedures.size)
+            formatter.footer(lock['waitingProcedures'].size)
           end
 
-          formatter.output_strln("");
+          formatter.output_strln('')
         end
       end
     end

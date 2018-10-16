@@ -61,7 +61,7 @@ coprocessor can severely degrade cluster performance and stability.
 
 In HBase, you fetch data using a `Get` or `Scan`, whereas in an RDBMS you use a SQL
 query. In order to fetch only the relevant data, you filter it using a HBase
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html[Filter]
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html[Filter]
 , whereas in an RDBMS you use a `WHERE` predicate.
 
 After fetching the data, you perform computations on it. This paradigm works well
@@ -121,8 +121,8 @@ package.
 
 Observer coprocessors are triggered either before or after a specific event occurs.
 Observers that happen before an event use methods that start with a `pre` prefix,
-such as link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#prePut%28org.apache.hadoop.hbase.coprocessor.ObserverContext,%20org.apache.hadoop.hbase.client.Put,%20org.apache.hadoop.hbase.regionserver.wal.WALEdit,%20org.apache.hadoop.hbase.client.Durability%29[`prePut`]. Observers that happen just after an event override methods that start
-with a `post` prefix, such as link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#postPut%28org.apache.hadoop.hbase.coprocessor.ObserverContext,%20org.apache.hadoop.hbase.client.Put,%20org.apache.hadoop.hbase.regionserver.wal.WALEdit,%20org.apache.hadoop.hbase.client.Durability%29[`postPut`].
+such as link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#prePut-org.apache.hadoop.hbase.coprocessor.ObserverContext-org.apache.hadoop.hbase.client.Put-org.apache.hadoop.hbase.wal.WALEdit-org.apache.hadoop.hbase.client.Durability-[`prePut`]. Observers that happen just after an event override methods that start
+with a `post` prefix, such as link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#postPut-org.apache.hadoop.hbase.coprocessor.ObserverContext-org.apache.hadoop.hbase.client.Put-org.apache.hadoop.hbase.wal.WALEdit-org.apache.hadoop.hbase.client.Durability-[`postPut`].
 
 
 ==== Use Cases for Observer Coprocessors
@@ -139,7 +139,7 @@ Referential Integrity::
 
 Secondary Indexes::
   You can use a coprocessor to maintain secondary indexes. For more information, see
-  link:http://wiki.apache.org/hadoop/Hbase/SecondaryIndexing[SecondaryIndexing].
+  link:https://wiki.apache.org/hadoop/Hbase/SecondaryIndexing[SecondaryIndexing].
 
 
 ==== Types of Observer Coprocessor
@@ -163,7 +163,7 @@ MasterObserver::
 WalObserver::
   A WalObserver allows you to observe events related to writes to the Write-Ahead
   Log (WAL). See
-  link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/WALObserver.html[WALObserver].
+  link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/WALObserver.html[WALObserver].
 
 <<cp_example,Examples>> provides working examples of observer coprocessors.
 
@@ -178,7 +178,7 @@ average or summation for an entire table which spans hundreds of regions.
 
 In contrast to observer coprocessors, where your code is run transparently, endpoint
 coprocessors must be explicitly invoked using the
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#coprocessorService%28java.lang.Class,%20byte%5B%5D,%20byte%5B%5D,%20org.apache.hadoop.hbase.client.coprocessor.Batch.Call%29[CoprocessorService()]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#coprocessorService-java.lang.Class-byte:A-byte:A-org.apache.hadoop.hbase.client.coprocessor.Batch.Call-[CoprocessorService()]
 method available in
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table]
 or

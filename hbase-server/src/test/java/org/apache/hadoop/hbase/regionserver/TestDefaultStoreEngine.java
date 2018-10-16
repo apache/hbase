@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,31 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
+import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
-import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestDefaultStoreEngine {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDefaultStoreEngine.class);
+
   public static class DummyStoreFlusher extends DefaultStoreFlusher {
-    public DummyStoreFlusher(Configuration conf, Store store) {
+    public DummyStoreFlusher(Configuration conf, HStore store) {
       super(conf, store);
     }
   }
 
   public static class DummyCompactor extends DefaultCompactor {
-    public DummyCompactor(Configuration conf, Store store) {
+    public DummyCompactor(Configuration conf, HStore store) {
       super(conf, store);
     }
   }
@@ -59,8 +64,8 @@ public class TestDefaultStoreEngine {
         DummyCompactionPolicy.class.getName());
     conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
         DummyStoreFlusher.class.getName());
-    Store mockStore = Mockito.mock(Store.class);
-    StoreEngine<?, ?, ?, ?> se = StoreEngine.create(mockStore, conf, CellComparator.COMPARATOR);
+    HStore mockStore = Mockito.mock(HStore.class);
+    StoreEngine<?, ?, ?, ?> se = StoreEngine.create(mockStore, conf, CellComparatorImpl.COMPARATOR);
     Assert.assertTrue(se instanceof DefaultStoreEngine);
     Assert.assertTrue(se.getCompactionPolicy() instanceof DummyCompactionPolicy);
     Assert.assertTrue(se.getStoreFlusher() instanceof DummyStoreFlusher);

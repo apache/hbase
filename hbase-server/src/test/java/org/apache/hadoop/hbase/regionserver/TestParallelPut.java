@@ -23,33 +23,33 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing of multiPut in parallel.
@@ -57,9 +57,14 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestParallelPut {
-  private static final Log LOG = LogFactory.getLog(TestParallelPut.class);
-  @Rule public TestName name = new TestName(); 
-  
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestParallelPut.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestParallelPut.class);
+  @Rule public TestName name = new TestName();
+
   private HRegion region = null;
   private static HBaseTestingUtility HBTU = new HBaseTestingUtility();
   private static final int THREADS100 = 100;
@@ -94,14 +99,14 @@ public class TestParallelPut {
     EnvironmentEdgeManagerTestHelper.reset();
     if (region != null) region.close(true);
   }
-  
+
   public String getName() {
     return name.getMethodName();
   }
 
   //////////////////////////////////////////////////////////////////////////////
   // New tests that don't spin up a mini cluster but rather just test the
-  // individual code pieces in the HRegion. 
+  // individual code pieces in the HRegion.
   //////////////////////////////////////////////////////////////////////////////
 
   /**
@@ -154,7 +159,7 @@ public class TestParallelPut {
                  " Ignoring....", e);
       }
     }
-    LOG.info("testParallelPuts successfully verified " + 
+    LOG.info("testParallelPuts successfully verified " +
              (numOps * THREADS100) + " put operations.");
   }
 
@@ -210,7 +215,7 @@ public class TestParallelPut {
       // iterate for the specified number of operations
       for (int i=0; i<numOps; i++) {
         // generate random bytes
-        rand.nextBytes(value);  
+        rand.nextBytes(value);
 
         // put the randombytes and verify that we can read it. This is one
         // way of ensuring that rwcc manipulation in HRegion.put() is fine.

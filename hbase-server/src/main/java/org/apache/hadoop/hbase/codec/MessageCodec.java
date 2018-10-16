@@ -21,13 +21,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 
 /**
@@ -64,16 +67,14 @@ public class MessageCodec implements Codec {
   }
 
   static class MessageDecoder extends BaseDecoder {
+    private final ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     MessageDecoder(final InputStream in) {
       super(in);
     }
 
+    @Override
     protected Cell parseCell() throws IOException {
-      CellProtos.Cell pbcell = CellProtos.Cell.parseDelimitedFrom(this.in);
-      return CellUtil.createCell(pbcell.getRow().toByteArray(),
-        pbcell.getFamily().toByteArray(), pbcell.getQualifier().toByteArray(),
-        pbcell.getTimestamp(), (byte)pbcell.getCellType().getNumber(),
-        pbcell.getValue().toByteArray());
+      return ProtobufUtil.toCell(cellBuilder, CellProtos.Cell.parseDelimitedFrom(this.in));
     }
   }
 

@@ -77,6 +77,7 @@ abstract public class MapreduceTestingShim {
   }
   
   private static class MapreduceV1Shim extends MapreduceTestingShim {
+    @Override
     public JobContext newJobContext(Configuration jobConf) throws IOException {
       // Implementing:
       // return new JobContext(jobConf, new JobID());
@@ -105,6 +106,7 @@ abstract public class MapreduceTestingShim {
       }
     }
     
+    @Override
     public JobConf obtainJobConf(MiniMRCluster cluster) {
       if (cluster == null) return null;
       try {
@@ -126,9 +128,10 @@ abstract public class MapreduceTestingShim {
     public String obtainMROutputDirProp() {
       return "mapred.output.dir";
     }
-  };
+  }
 
   private static class MapreduceV2Shim extends MapreduceTestingShim {
+    @Override
     public JobContext newJobContext(Configuration jobConf) {
       return newJob(jobConf);
     }
@@ -147,6 +150,7 @@ abstract public class MapreduceTestingShim {
       }
     }
     
+    @Override
     public JobConf obtainJobConf(MiniMRCluster cluster) {
       try {
         Method meth = MiniMRCluster.class.getMethod("getJobTrackerConf", emptyParam);
@@ -166,6 +170,5 @@ abstract public class MapreduceTestingShim {
       // from Hadoop 0.23.x.  If we use the source directly we break the hadoop 1.x compile. 
       return "mapreduce.output.fileoutputformat.outputdir";
     }
-  };
-
+  }
 }

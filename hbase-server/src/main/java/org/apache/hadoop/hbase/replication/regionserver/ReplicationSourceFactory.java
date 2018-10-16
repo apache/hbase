@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 
 /**
@@ -30,20 +30,19 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 @InterfaceAudience.Private
 public class ReplicationSourceFactory {
 
-  private static final Log LOG = LogFactory.getLog(ReplicationSourceFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceFactory.class);
 
-  static ReplicationSourceInterface create(Configuration conf, String peerId) {
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
+  static ReplicationSourceInterface create(Configuration conf, String queueId) {
+    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
     boolean isQueueRecovered = replicationQueueInfo.isQueueRecovered();
     ReplicationSourceInterface src;
     try {
       String defaultReplicationSourceImpl =
           isQueueRecovered ? RecoveredReplicationSource.class.getCanonicalName()
               : ReplicationSource.class.getCanonicalName();
-      @SuppressWarnings("rawtypes")
-      Class c = Class.forName(
+      Class<?> c = Class.forName(
         conf.get("replication.replicationsource.implementation", defaultReplicationSourceImpl));
-      src = (ReplicationSourceInterface) c.newInstance();
+      src = c.asSubclass(ReplicationSourceInterface.class).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       LOG.warn("Passed replication source implementation throws errors, "
           + "defaulting to ReplicationSource",

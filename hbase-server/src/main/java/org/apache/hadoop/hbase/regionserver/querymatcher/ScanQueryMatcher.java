@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -27,17 +28,20 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker.DeleteResult;
+import org.apache.hadoop.hbase.security.visibility.VisibilityNewVersionBehaivorTracker;
+import org.apache.hadoop.hbase.security.visibility.VisibilityScanDeleteTracker;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A query matcher that is specifically designed for the scan case.
@@ -144,7 +148,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     // Look for a TTL tag first. Use it instead of the family setting if
     // found. If a cell has multiple TTLs, resolve the conflict by using the
     // first tag encountered.
-    Iterator<Tag> i = CellUtil.tagsIterator(cell);
+    Iterator<Tag> i = PrivateCellUtil.tagsIterator(cell);
     while (i.hasNext()) {
       Tag t = i.next();
       if (TagType.TTL_TAG_TYPE == t.getType()) {
@@ -152,7 +156,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
         // to convert
         long ts = cell.getTimestamp();
         assert t.getValueLength() == Bytes.SIZEOF_LONG;
-        long ttl = TagUtil.getValueAsLong(t);
+        long ttl = Tag.getValueAsLong(t);
         if (ts + ttl < now) {
           return true;
         }
@@ -198,16 +202,21 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   }
 
   protected final MatchCode checkDeleted(DeleteTracker deletes, Cell cell) {
-    if (deletes.isEmpty()) {
+    if (deletes.isEmpty() && !(deletes instanceof NewVersionBehaviorTracker)) {
       return null;
     }
+    // MvccSensitiveTracker always need check all cells to save some infos.
     DeleteResult deleteResult = deletes.isDeleted(cell);
     switch (deleteResult) {
       case FAMILY_DELETED:
       case COLUMN_DELETED:
-        return columns.getNextRowOrNextColumn(cell);
+        if (!(deletes instanceof NewVersionBehaviorTracker)) {
+          // MvccSensitive can not seek to next because the Put with lower ts may have higher mvcc
+          return columns.getNextRowOrNextColumn(cell);
+        }
       case VERSION_DELETED:
       case FAMILY_VERSION_DELETED:
+      case VERSION_MASKED:
         return MatchCode.SKIP;
       case NOT_DELETED:
         return null;
@@ -215,6 +224,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
         throw new RuntimeException("Unexpected delete result: " + deleteResult);
     }
   }
+
 
   /**
    * Determines if the caller should do one of several things:
@@ -280,12 +290,25 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   public abstract boolean moreRowsMayExistAfter(Cell cell);
 
   public Cell getKeyForNextColumn(Cell cell) {
+    // We aren't sure whether any DeleteFamily cells exist, so we can't skip to next column.
+    // TODO: Current way disable us to seek to next column quickly. Is there any better solution?
+    // see HBASE-18471 for more details
+    // see TestFromClientSide3#testScanAfterDeletingSpecifiedRow
+    // see TestFromClientSide3#testScanAfterDeletingSpecifiedRowV2
+    if (cell.getQualifierLength() == 0) {
+      Cell nextKey = PrivateCellUtil.createNextOnRowCol(cell);
+      if (nextKey != cell) {
+        return nextKey;
+      }
+      // The cell is at the end of row/family/qualifier, so it is impossible to find any DeleteFamily cells.
+      // Let us seek to next column.
+    }
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return CellUtil.createLastOnRowCol(cell);
+      return PrivateCellUtil.createLastOnRowCol(cell);
     } else {
-      return CellUtil.createFirstOnRowCol(cell, nextColumn.getBuffer(), nextColumn.getOffset(),
-        nextColumn.getLength());
+      return PrivateCellUtil.createFirstOnRowCol(cell, nextColumn.getBuffer(),
+        nextColumn.getOffset(), nextColumn.getLength());
     }
   }
 
@@ -295,8 +318,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
   public int compareKeyForNextRow(Cell nextIndexed, Cell currentCell) {
-    return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell, 0, 0, null, 0, 0,
-      HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+    return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null, 0,
+      0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
   }
 
   /**
@@ -307,10 +330,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   public int compareKeyForNextColumn(Cell nextIndexed, Cell currentCell) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell, 0, 0, null, 0, 0,
-        HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+      return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null,
+        0, 0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
     } else {
-      return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell,
+      return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell,
         currentCell.getFamilyOffset(), currentCell.getFamilyLength(), nextColumn.getBuffer(),
         nextColumn.getOffset(), nextColumn.getLength(), HConstants.LATEST_TIMESTAMP,
         Type.Maximum.getCode());
@@ -330,7 +353,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   @Override
   public void beforeShipped() throws IOException {
     if (this.currentRow != null) {
-      this.currentRow = CellUtil.createFirstOnRow(CellUtil.copyRow(this.currentRow));
+      this.currentRow = PrivateCellUtil.createFirstOnRow(CellUtil.copyRow(this.currentRow));
     }
     if (columns != null) {
       columns.beforeShipped();
@@ -338,16 +361,52 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   }
 
   protected static Cell createStartKeyFromRow(byte[] startRow, ScanInfo scanInfo) {
-    return CellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
+    return PrivateCellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
   }
 
-  protected static DeleteTracker instantiateDeleteTracker(RegionCoprocessorHost host)
+  protected static Pair<DeleteTracker, ColumnTracker> getTrackers(RegionCoprocessorHost host,
+      NavigableSet<byte[]> columns, ScanInfo scanInfo, long oldestUnexpiredTS, Scan userScan)
       throws IOException {
-    DeleteTracker tracker = new ScanDeleteTracker();
-    if (host != null) {
-      tracker = host.postInstantiateDeleteTracker(tracker);
+    int resultMaxVersion = scanInfo.getMaxVersions();
+    int maxVersionToCheck = resultMaxVersion;
+    if (userScan != null) {
+      if (userScan.isRaw()) {
+        resultMaxVersion = userScan.getMaxVersions();
+      } else {
+        resultMaxVersion = Math.min(userScan.getMaxVersions(), scanInfo.getMaxVersions());
+      }
+      maxVersionToCheck = userScan.hasFilter() ? scanInfo.getMaxVersions() : resultMaxVersion;
     }
-    return tracker;
+
+    DeleteTracker deleteTracker;
+    if (scanInfo.isNewVersionBehavior() && (userScan == null || !userScan.isRaw())) {
+      deleteTracker = new NewVersionBehaviorTracker(columns, scanInfo.getComparator(),
+          scanInfo.getMinVersions(), scanInfo.getMaxVersions(), resultMaxVersion,
+          oldestUnexpiredTS);
+    } else {
+      deleteTracker = new ScanDeleteTracker(scanInfo.getComparator());
+    }
+    if (host != null) {
+      deleteTracker = host.postInstantiateDeleteTracker(deleteTracker);
+      if (deleteTracker instanceof VisibilityScanDeleteTracker && scanInfo.isNewVersionBehavior()) {
+        deleteTracker = new VisibilityNewVersionBehaivorTracker(columns, scanInfo.getComparator(),
+            scanInfo.getMinVersions(), scanInfo.getMaxVersions(), resultMaxVersion,
+            oldestUnexpiredTS);
+      }
+    }
+
+    ColumnTracker columnTracker;
+
+    if (deleteTracker instanceof NewVersionBehaviorTracker) {
+      columnTracker = (NewVersionBehaviorTracker) deleteTracker;
+    } else if (columns == null || columns.size() == 0) {
+      columnTracker = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersionToCheck,
+          oldestUnexpiredTS, scanInfo.getComparator());
+    } else {
+      columnTracker = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(),
+        maxVersionToCheck, oldestUnexpiredTS);
+    }
+    return new Pair<>(deleteTracker, columnTracker);
   }
 
   // Used only for testing purposes

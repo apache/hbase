@@ -18,26 +18,25 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
-
 import java.io.IOException;
+
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Normalization plan to merge regions (smallest region in the table with its smallest neighbor).
  */
 @InterfaceAudience.Private
 public class MergeNormalizationPlan implements NormalizationPlan {
-  private static final Log LOG = LogFactory.getLog(MergeNormalizationPlan.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(MergeNormalizationPlan.class.getName());
 
-  private final HRegionInfo firstRegion;
-  private final HRegionInfo secondRegion;
+  private final RegionInfo firstRegion;
+  private final RegionInfo secondRegion;
 
-  public MergeNormalizationPlan(HRegionInfo firstRegion, HRegionInfo secondRegion) {
+  public MergeNormalizationPlan(RegionInfo firstRegion, RegionInfo secondRegion) {
     this.firstRegion = firstRegion;
     this.secondRegion = secondRegion;
   }
@@ -47,11 +46,11 @@ public class MergeNormalizationPlan implements NormalizationPlan {
     return PlanType.MERGE;
   }
 
-  HRegionInfo getFirstRegion() {
+  RegionInfo getFirstRegion() {
     return firstRegion;
   }
 
-  HRegionInfo getSecondRegion() {
+  RegionInfo getSecondRegion() {
     return secondRegion;
   }
 

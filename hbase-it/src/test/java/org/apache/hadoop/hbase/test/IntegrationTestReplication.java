@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.hbase.test;
 
-import com.google.common.base.Joiner;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -33,14 +29,20 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -165,7 +167,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
    * {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Loop}
    */
   protected class VerifyReplicationLoop extends Configured implements Tool {
-    private final Log LOG = LogFactory.getLog(VerifyReplicationLoop.class);
+    private final Logger LOG = LoggerFactory.getLogger(VerifyReplicationLoop.class);
     protected ClusterID source;
     protected ClusterID sink;
 
@@ -222,24 +224,25 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
 
       // setup the replication on the source
       if (!source.equals(sink)) {
-        ReplicationAdmin replicationAdmin = new ReplicationAdmin(source.getConfiguration());
-        // remove any old replication peers
-        for (String oldPeer : replicationAdmin.listPeerConfigs().keySet()) {
-          replicationAdmin.removePeer(oldPeer);
+        try (final Admin admin = source.getConnection().getAdmin()) {
+          // remove any old replication peers
+          for (ReplicationPeerDescription peer : admin.listReplicationPeers()) {
+            admin.removeReplicationPeer(peer.getPeerId());
+          }
+
+          // set the test table to be the table to replicate
+          HashMap<TableName, List<String>> toReplicate = new HashMap<>();
+          toReplicate.put(tableName, Collections.emptyList());
+
+          // set the sink to be the target
+          final ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+              .setClusterKey(sink.toString())
+              .setReplicateAllUserTables(false)
+              .setTableCFsMap(toReplicate).build();
+
+          admin.addReplicationPeer("TestPeer", peerConfig);
+          admin.enableTableReplication(tableName);
         }
-
-        // set the sink to be the target
-        ReplicationPeerConfig peerConfig = new ReplicationPeerConfig();
-        peerConfig.setClusterKey(sink.toString());
-
-        // set the test table to be the table to replicate
-        HashMap<TableName, ArrayList<String>> toReplicate = new HashMap<>();
-        toReplicate.put(tableName, new ArrayList<>(0));
-
-        replicationAdmin.addPeer("TestPeer", peerConfig, toReplicate);
-
-        replicationAdmin.enableTableRep(tableName);
-        replicationAdmin.close();
       }
 
       for (ClusterID cluster : clusters) {
@@ -261,7 +264,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      */
     protected void runGenerator() throws Exception {
       Path outputPath = new Path(outputDir);
-      UUID uuid = UUID.randomUUID(); //create a random UUID.
+      UUID uuid = util.getRandomUUID(); //create a random UUID.
       Path generatorOutput = new Path(outputPath, uuid.toString());
 
       Generator generator = new Generator();
@@ -285,7 +288,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      */
     protected void runVerify(long expectedNumNodes) throws Exception {
       Path outputPath = new Path(outputDir);
-      UUID uuid = UUID.randomUUID(); //create a random UUID.
+      UUID uuid = util.getRandomUUID(); //create a random UUID.
       Path iterationOutput = new Path(outputPath, uuid.toString());
 
       Verify verify = new Verify();

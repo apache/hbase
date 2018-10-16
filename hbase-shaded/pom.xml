@@ -21,10 +21,10 @@
       -->
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>hbase</artifactId>
+        <artifactId>hbase-build-configuration</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>3.0.0-SNAPSHOT</version>
-        <relativePath>..</relativePath>
+        <relativePath>../hbase-build-configuration</relativePath>
     </parent>
     <artifactId>hbase-shaded</artifactId>
     <name>Apache HBase - Shaded</name>
@@ -36,10 +36,14 @@
       <!-- Don't make a source-jar -->
       <source.skip>true</source.skip>
       <license.bundles.dependencies>true</license.bundles.dependencies>
+      <shaded.prefix>org.apache.hadoop.hbase.shaded</shaded.prefix>
     </properties>
     <modules>
+        <module>hbase-shaded-client-byo-hadoop</module>
         <module>hbase-shaded-client</module>
-        <module>hbase-shaded-server</module>
+        <module>hbase-shaded-mapreduce</module>
+        <module>hbase-shaded-check-invariants</module>
+        <module>hbase-shaded-with-hadoop-check-invariants</module>
     </modules>
     <dependencies>
       <dependency>
@@ -48,16 +52,20 @@
          <version>${project.version}</version>
          <optional>true</optional>
       </dependency>
+      <!-- log4j has to be non-optional for Hadoop 2 atleast -->
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+      </dependency>
+      <!-- put the log implementations to optional -->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+        <optional>true</optional>
+      </dependency>
     </dependencies>
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-site-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
             <plugin>
                 <!--Make it so assembly:single does nothing in here-->
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -69,7 +77,6 @@
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-remote-resources-plugin</artifactId>
-              <version>1.5</version>
               <executions>
                 <execution>
                   <id>aggregate-licenses</id>
@@ -113,6 +120,7 @@
                     <artifactId>maven-shade-plugin</artifactId>
                     <executions>
                         <execution>
+                            <id>aggregate-into-a-jar-with-relocated-third-parties</id>
                             <phase>package</phase>
                             <goals>
                                 <goal>shade</goal>
@@ -121,15 +129,20 @@
                                 <createSourcesJar>false</createSourcesJar>
                                 <shadedArtifactAttached>false</shadedArtifactAttached>
                                 <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
-                                <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
                                 <shadeTestJar>false</shadeTestJar>
                                 <artifactSet>
                                     <excludes>
+                                        <!-- default to excluding Hadoop, have module that want
+                                             to include it redefine the exclude list -->
+                                        <exclude>org.apache.hadoop:*</exclude>
+                                        <!-- the rest of this needs to be kept in sync with any
+                                             hadoop-including module -->
                                         <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
                                         <exclude>org.slf4j:*</exclude>
                                         <exclude>com.google.code.findbugs:*</exclude>
                                         <exclude>com.github.stephenc.findbugs:*</exclude>
                                         <exclude>org.apache.htrace:*</exclude>
+                                        <exclude>org.apache.yetus:*</exclude>
                                         <exclude>log4j:*</exclude>
                                         <exclude>commons-logging:*</exclude>
                                     </excludes>
@@ -137,200 +150,282 @@
                                 <relocations>
                                     <!-- top level com not including sun-->
                                     <relocation>
-                                        <pattern>com.google</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.google</shadedPattern>
+                                        <pattern>com.cedarsoftware</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.cedarsoftware</shadedPattern>
                                     </relocation>
                                     <relocation>
-                                        <pattern>com.jcraft</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.jcraft</shadedPattern>
+                                        <pattern>com.codahale</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.codahale</shadedPattern>
                                     </relocation>
                                     <relocation>
-                                        <pattern>com.thoughtworks</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.thoughtworks</shadedPattern>
-                                    </relocation>
-                                    <relocation>
-                                        <pattern>com.jamesmurty</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.jamesmurty</shadedPattern>
-                                    </relocation>
-                                    <relocation>
-                                        <pattern>com.lmax</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.lmax</shadedPattern>
+                                        <pattern>com.ctc</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.ctc</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>com.dropwizard</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.dropwizard</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.com.dropwizard</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.fasterxml</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.fasterxml</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.google</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.google</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.jamesmurty</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.jamesmurty</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.jcraft</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.jcraft</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.lmax</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.lmax</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.microsoft</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.microsoft</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.nimbusds</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.nimbusds</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.squareup</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.squareup</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.thoughtworks</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.thoughtworks</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.zaxxer</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.zaxxer</shadedPattern>
                                     </relocation>
 
-                                    <!-- top level io -->
+
+                                    <!-- netty family -->
+                                    <relocation>
+                                        <pattern>org.jboss.netty</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.jboss.netty</shadedPattern>
+                                    </relocation>
                                     <relocation>
                                         <pattern>io.netty</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.io.netty</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.io.netty</shadedPattern>
+                                    </relocation>
+
+                                    <!-- top level okio -->
+                                    <relocation>
+                                        <pattern>okio</pattern>
+                                        <shadedPattern>${shaded.prefix}.okio</shadedPattern>
                                     </relocation>
 
                                     <!-- top level org -->
                                     <relocation>
                                         <pattern>org.codehaus</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.codehaus</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.codehaus</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.eclipse</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.eclipse</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.ehcache</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.ehcache</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.jcodings</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.jcodings</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.jcodings</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.joni</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.joni</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.joni</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.mortbay</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.mortbay</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.mortbay</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.nustaq</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.nustaq</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.terracotta</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.terracotta</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.tukaani</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.tukaani</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.tukaani</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.xerial</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.xerial</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.xerial</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.znerd</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.znerd</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.znerd</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.aopalliance</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.aopalliance</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.aopalliance</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.fusesource</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.fusesource</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.fusesource</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.iq80</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.iq80</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.iq80</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.jamon</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.jamon</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.jamon</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.jets3t</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.jets3t</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.jets3t</shadedPattern>
+                                    </relocation>
+                                    <!-- poorly named add-on package from jets3t dependency. TODO can we just exclude these? -->
+                                    <relocation>
+                                        <pattern>contribs.mx</pattern>
+                                        <shadedPattern>${shaded.prefix}.contribs.mx</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.objectweb</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.objectweb</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.objectweb</shadedPattern>
                                     </relocation>
 
 
                                     <!-- org.apache relocations not in org.apache.hadoop or org.apache.commons -->
                                     <relocation>
                                         <pattern>org.apache.avro</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.avro</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.avro</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.curator</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.curator</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.directory</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.directory</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.directory</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.http</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.http</shadedPattern>
-                                    </relocation>
-                                    <relocation>
-                                        <pattern>org.apache.jute</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.jute</shadedPattern>
-                                    </relocation>
-                                    <relocation>
-                                        <pattern>org.apache.zookeeper</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.zookeeper</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.http</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.jasper</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.jasper</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.jasper</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.jute</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.jute</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.kerby</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.kerby</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.taglibs</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.taglibs</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.zookeeper</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.zookeeper</shadedPattern>
                                     </relocation>
 
                                     <!-- org.apache.commons not including logging -->
                                     <relocation>
                                         <pattern>org.apache.commons.beanutils</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.beanutils</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.beanutils</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.cli</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.cli</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.cli</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.collections</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.collections</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.collections</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.configuration</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.configuration</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.configuration</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.crypto</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.crypto</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.csv</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.csv</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.daemon</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.daemon</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.daemon</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.io</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.io</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.io</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.math</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.math</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.math</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.math3</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.math3</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.math3</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.net</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.net</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.net</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.lang</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.lang</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.lang</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.lang3</pattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.lang3</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.el</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.el</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.el</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.httpclient</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.httpclient</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.httpclient</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.compress</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.compress</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.compress</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.digester</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.digester</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.digester</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.apache.commons.codec</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.codec</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.apache.commons.codec</shadedPattern>
                                     </relocation>
 
                                     <!-- top level net-->
                                     <relocation>
-                                        <pattern>net.iharder</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.net.iharder</shadedPattern>
+                                        <pattern>net</pattern>
+                                        <shadedPattern>${shaded.prefix}.net</shadedPattern>
                                     </relocation>
 
                                     <!-- junit -->
                                     <relocation>
                                         <pattern>junit</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.junit</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.junit</shadedPattern>
                                     </relocation>
                                     <relocation>
                                         <pattern>org.junit</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.junit</shadedPattern>
+                                        <shadedPattern>${shaded.prefix}.org.junit</shadedPattern>
                                     </relocation>
-
-
                                 </relocations>
                                 <transformers>
                                   <!-- Need to filter out some extraneous license files.
@@ -340,6 +435,9 @@
                                     <resources>
                                       <resource>LICENSE.txt</resource>
                                       <resource>ASL2.0</resource>
+                                      <resource>LICENSE-junit.txt</resource>
+                                      <!-- also this unneeded doc -->
+                                      <resource>overview.html</resource>
                                     </resources>
                                   </transformer>
                                   <!-- Where notices exist, just concat them -->
@@ -348,6 +446,85 @@
                                     <projectName>${project.name}</projectName>
                                   </transformer>
                                 </transformers>
+                                <filters>
+                                  <filter>
+                                    <!-- this is a signed osgi bundle -->
+                                    <artifact>org.eclipse.jetty.orbit:javax.servlet.jsp.jstl</artifact>
+                                    <excludes>
+                                      <exclude>META-INF/ECLIPSEF.SF</exclude>
+                                      <exclude>META-INF/ECLIPSEF.RSA</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <filter>
+                                    <!-- Duplication of classes that ship in commons-collections 2.x and 3.x
+                                         If we stop bundling a relevant commons-collections artifact we'll
+                                         need to revisit. See: https://s.apache.org/e09o
+                                    -->
+                                    <artifact>commons-beanutils:commons-beanutils-core</artifact>
+                                    <excludes>
+                                      <exclude>org/apache/commons/collections/*.class</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <filter>
+                                    <!-- server side webapps that we don't need -->
+                                    <artifact>org.apache.hbase:hbase-server</artifact>
+                                    <excludes>
+                                      <exclude>hbase-webapps/*</exclude>
+                                      <exclude>hbase-webapps/**/*</exclude>
+                                      <exclude>**/*_jsp.class</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <filter>
+                                    <!-- server side webapps that we don't need -->
+                                    <artifact>org.apache.hadoop:hadoop-yarn-common</artifact>
+                                    <excludes>
+                                      <exclude>webapps/*</exclude>
+                                      <exclude>webapps/**/*</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                      <!-- proto source files aren't needed -->
+                                      <exclude>*.proto</exclude>
+                                      <exclude>**/*.proto</exclude>
+                                      <!-- We already concat NOTICE, safe to drop individual ones -->
+                                      <exclude>LICENSE</exclude>
+                                      <exclude>NOTICE</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <filter>
+                                    <!-- skip french localization -->
+                                    <artifact>org.apache.commons:commons-math3</artifact>
+                                    <excludes>
+                                      <exclude>assets/org/apache/commons/math3/**/*</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <filter>
+                                    <!-- appears to be the result of a conflict in hadoop artifacts -->
+                                    <artifact>org.apache.hadoop:*</artifact>
+                                    <excludes>
+                                      <exclude>mapred-default.xml.orig</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <!-- unnecessary files that mess up our invariants check -->
+                                  <filter>
+                                    <artifact>org.eclipse.jetty:*</artifact>
+                                    <excludes>
+                                      <exclude>about.html</exclude>
+                                      <exclude>jetty-dir.css</exclude>
+                                    </excludes>
+                                  </filter>
+                                  <filter>
+                                    <artifact>org.apache.kerby:*</artifact>
+                                    <excludes>
+                                      <exclude>krb5-template.conf</exclude>
+                                      <exclude>krb5_udp-template.conf</exclude>
+                                      <exclude>ccache.txt</exclude>
+                                      <exclude>keytab.txt</exclude>
+                                    </excludes>
+                                  </filter>
+                                </filters>
                             </configuration>
                         </execution>
                     </executions>

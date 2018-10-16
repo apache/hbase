@@ -23,8 +23,8 @@ message StorageClusterStatus {
     optional int32 stores = 2;
     optional int32 storefiles = 3;
     optional int32 storefileSizeMB = 4;
-    optional int32 memstoreSizeMB = 5;
-    optional int32 storefileIndexSizeMB = 6;
+    optional int32 memStoreSizeMB = 5;
+    optional int64 storefileIndexSizeKB = 6;
     optional int64 readRequestsCount = 7;
     optional int64 writeRequestsCount = 8;
     optional int32 rootIndexSizeKB = 9;
@@ -32,6 +32,7 @@ message StorageClusterStatus {
     optional int32 totalStaticBloomSizeKB = 11;
     optional int64 totalCompactingKVs = 12;
     optional int64 currentCompactedKVs = 13;
+    optional int64 cpRequestsCount = 14;
   }
   message Node {
     required string name = 1;    // name:port
@@ -45,7 +46,7 @@ message StorageClusterStatus {
   repeated Node liveNodes = 1;
   repeated string deadNodes = 2;
   // summary statistics
-  optional int32 regions = 3; 
+  optional int32 regions = 3;
   optional int64 requests = 4;
   optional double averageLoad = 5;
 }

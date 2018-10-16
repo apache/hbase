@@ -28,16 +28,17 @@ import java.util.Properties;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
@@ -49,7 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class EncryptionUtil {
-  static private final Log LOG = LogFactory.getLog(EncryptionUtil.class);
+  static private final Logger LOG = LoggerFactory.getLogger(EncryptionUtil.class);
 
   static private final SecureRandom RNG = new SecureRandom();
 
@@ -182,7 +183,7 @@ public final class EncryptionUtil {
    * @throws IOException if an encryption key for the column cannot be unwrapped
    */
   public static Encryption.Context createEncryptionContext(Configuration conf,
-    HColumnDescriptor family) throws IOException {
+    ColumnFamilyDescriptor family) throws IOException {
     Encryption.Context cryptoContext = Encryption.Context.NONE;
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {

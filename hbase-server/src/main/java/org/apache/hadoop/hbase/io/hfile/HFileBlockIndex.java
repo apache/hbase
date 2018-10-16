@@ -30,17 +30,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+//import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
@@ -66,7 +68,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public class HFileBlockIndex {
 
-  private static final Log LOG = LogFactory.getLog(HFileBlockIndex.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileBlockIndex.class);
 
   static final int DEFAULT_MAX_CHUNK_SIZE = 128 * 1024;
 
@@ -264,7 +266,7 @@ public class HFileBlockIndex {
 
         // Adding blockKeys
         for (Cell key : blockKeys) {
-          heapSize += ClassSize.align(CellUtil.estimatedHeapSizeOf(key));
+          heapSize += ClassSize.align(PrivateCellUtil.estimatedSizeOfCell(key));
         }
       }
       // Add comparator and the midkey atomicreference
@@ -743,7 +745,7 @@ public class HFileBlockIndex {
       ByteBufferKeyOnlyKeyValue nonRootIndexkeyOnlyKV = new ByteBufferKeyOnlyKeyValue();
       ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<>();
       while (low <= high) {
-        mid = (low + high) >>> 1;
+        mid = low + ((high - low) >> 1);
 
         // Midkey's offset relative to the end of secondary index
         int midKeyRelOffset = nonRootIndex.getIntAfterPosition(Bytes.SIZEOF_INT * (mid + 1));
@@ -766,7 +768,7 @@ public class HFileBlockIndex {
         // TODO avoid array call.
         nonRootIndex.asSubByteBuffer(midKeyOffset, midLength, pair);
         nonRootIndexkeyOnlyKV.setKey(pair.getFirst(), pair.getSecond(), midLength);
-        int cmp = comparator.compareKeyIgnoresMvcc(key, nonRootIndexkeyOnlyKV);
+        int cmp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, nonRootIndexkeyOnlyKV);
 
         // key lives above the midpoint
         if (cmp > 0)
@@ -1479,7 +1481,7 @@ public class HFileBlockIndex {
      * The same as {@link #add(byte[], long, int, long)} but does not take the
      * key/value into account. Used for single-level indexes.
      *
-     * @see {@link #add(byte[], long, int, long)}
+     * @see #add(byte[], long, int, long)
      */
     public void add(byte[] firstKey, long blockOffset, int onDiskDataSize) {
       add(firstKey, blockOffset, onDiskDataSize, -1);

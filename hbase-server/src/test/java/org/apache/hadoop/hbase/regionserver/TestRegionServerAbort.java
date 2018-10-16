@@ -15,57 +15,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests around regionserver shutdown and abort
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionServerAbort {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionServerAbort.class);
+
   private static final byte[] FAMILY_BYTES = Bytes.toBytes("f");
 
-  private static final Log LOG = LogFactory.getLog(TestRegionServerAbort.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbort.class);
 
   private HBaseTestingUtility testUtil;
   private Configuration conf;
@@ -88,21 +102,25 @@ public class TestRegionServerAbort {
 
     testUtil.startMiniZKCluster();
     dfsCluster = testUtil.startMiniDFSCluster(2);
-    cluster = testUtil.startMiniHBaseCluster(1, 2);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
+    cluster = testUtil.startMiniHBaseCluster(option);
   }
 
   @After
   public void tearDown() throws Exception {
+    String className = StopBlockingRegionObserver.class.getName();
     for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
       HRegionServer rs = t.getRegionServer();
       RegionServerCoprocessorHost cpHost = rs.getRegionServerCoprocessorHost();
-      StopBlockingRegionObserver cp = (StopBlockingRegionObserver)
-          cpHost.findCoprocessor(StopBlockingRegionObserver.class.getName());
+      StopBlockingRegionObserver cp = (StopBlockingRegionObserver)cpHost.findCoprocessor(className);
       cp.setStopAllowed(true);
     }
-    ((StopBlockingRegionObserver) cluster.getMaster().getRegionServerCoprocessorHost().findCoprocessor(
-        StopBlockingRegionObserver.class.getName()
-    )).setStopAllowed(true);
+    HMaster master = cluster.getMaster();
+    RegionServerCoprocessorHost host = master.getRegionServerCoprocessorHost();
+    if (host != null) {
+      StopBlockingRegionObserver obs = (StopBlockingRegionObserver) host.findCoprocessor(className);
+      if (obs != null) obs.setStopAllowed(true);
+    }
     testUtil.shutdownMiniCluster();
   }
 
@@ -128,11 +146,10 @@ public class TestRegionServerAbort {
     put.addColumn(FAMILY_BYTES, Bytes.toBytes("c"), new byte[]{});
     put.setAttribute(StopBlockingRegionObserver.DO_ABORT, new byte[]{1});
 
-    table.put(put);
-    // should have triggered an abort due to FileNotFoundException
-
-    // verify that the regionserver is stopped
+    List<HRegion> regions = cluster.findRegionsForTable(tableName);
     HRegion firstRegion = cluster.findRegionsForTable(tableName).get(0);
+    table.put(put);
+    // Verify that the regionserver is stopped
     assertNotNull(firstRegion);
     assertNotNull(firstRegion.getRegionServerServices());
     LOG.info("isAborted = " + firstRegion.getRegionServerServices().isAborted());
@@ -155,17 +172,32 @@ public class TestRegionServerAbort {
     assertFalse(cluster.getRegionServer(0).isStopped());
   }
 
-  public static class StopBlockingRegionObserver implements RegionServerObserver, RegionObserver {
+  @CoreCoprocessor
+  public static class StopBlockingRegionObserver
+      implements RegionServerCoprocessor, RegionCoprocessor, RegionServerObserver, RegionObserver {
     public static final String DO_ABORT = "DO_ABORT";
     private boolean stopAllowed;
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
+    public Optional<RegionServerObserver> getRegionServerObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
                        Durability durability) throws IOException {
       if (put.getAttribute(DO_ABORT) != null) {
-        HRegionServer rs = (HRegionServer) c.getEnvironment().getRegionServerServices();
-        LOG.info("Triggering abort for regionserver " + rs.getServerName());
-        rs.abort("Aborting for test");
+        // TODO: Change this so it throws a CP Abort Exception instead.
+        RegionServerServices rss =
+            ((HasRegionServerServices)c.getEnvironment()).getRegionServerServices();
+        String str = "Aborting for test";
+        LOG.info(str  + " " + rss.getServerName());
+        rss.abort(str, new Throwable(str));
       }
     }
 
@@ -180,10 +212,6 @@ public class TestRegionServerAbort {
     public void setStopAllowed(boolean allowed) {
       this.stopAllowed = allowed;
     }
-
-    public boolean isStopAllowed() {
-      return stopAllowed;
-    }
   }
 
   /**
@@ -191,13 +219,13 @@ public class TestRegionServerAbort {
    */
   public static class ErrorThrowingHRegion extends HRegion {
     public ErrorThrowingHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-                                HRegionInfo regionInfo, HTableDescriptor htd,
+                                RegionInfo regionInfo, TableDescriptor htd,
                                 RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
     public ErrorThrowingHRegion(HRegionFileSystem fs, WAL wal, Configuration confParam,
-                                HTableDescriptor htd, RegionServerServices rsServices) {
+                                TableDescriptor htd, RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
 

@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  *
@@ -210,7 +210,7 @@ public class PoolMap<K, V> implements Map<K, V> {
         }
       }
     }
-    return null;
+    return entries;
   }
 
   protected interface Pool<R> {
@@ -298,7 +298,7 @@ public class PoolMap<K, V> implements Map<K, V> {
    *          the type of the resource
    */
   @SuppressWarnings("serial")
-  public class ReusablePool<R> extends ConcurrentLinkedQueue<R> implements Pool<R> {
+  public static class ReusablePool<R> extends ConcurrentLinkedQueue<R> implements Pool<R> {
     private int maxSize;
 
     public ReusablePool(int maxSize) {
@@ -342,7 +342,7 @@ public class PoolMap<K, V> implements Map<K, V> {
    *
    */
   @SuppressWarnings("serial")
-  class RoundRobinPool<R> extends CopyOnWriteArrayList<R> implements Pool<R> {
+  static class RoundRobinPool<R> extends CopyOnWriteArrayList<R> implements Pool<R> {
     private int maxSize;
     private int nextResource = 0;
 

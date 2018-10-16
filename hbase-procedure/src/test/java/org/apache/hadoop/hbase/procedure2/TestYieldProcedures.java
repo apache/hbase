@@ -15,37 +15,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Category({MasterTests.class, SmallTests.class})
 public class TestYieldProcedures {
-  private static final Log LOG = LogFactory.getLog(TestYieldProcedures.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestYieldProcedures.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestYieldProcedures.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
   private static final Procedure NULL_PROC = null;
@@ -67,12 +69,12 @@ public class TestYieldProcedures {
     assertTrue(testDir.depth() > 1);
 
     logDir = new Path(testDir, "proc-logs");
-    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
     procRunnables = new TestScheduler();
-    procExecutor = new ProcedureExecutor(htu.getConfiguration(), new TestProcEnv(),
-        procStore, procRunnables);
+    procExecutor =
+      new ProcedureExecutor<>(htu.getConfiguration(), new TestProcEnv(), procStore, procRunnables);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
   @After
@@ -115,9 +117,9 @@ public class TestYieldProcedures {
     // check runnable queue stats
     assertEquals(0, procRunnables.size());
     assertEquals(0, procRunnables.addFrontCalls);
-    assertEquals(18, procRunnables.addBackCalls);
-    assertEquals(15, procRunnables.yieldCalls);
-    assertEquals(19, procRunnables.pollCalls);
+    assertEquals(15, procRunnables.addBackCalls);
+    assertEquals(12, procRunnables.yieldCalls);
+    assertEquals(16, procRunnables.pollCalls);
     assertEquals(3, procRunnables.completionCalls);
   }
 
@@ -141,23 +143,25 @@ public class TestYieldProcedures {
       assertEquals(i, info.getStep().ordinal());
     }
 
-    // test rollback (we execute steps twice, one has the IE the other completes)
+    // test rollback (we execute steps twice, rollback counts both IE and completed)
     for (int i = NUM_STATES - 1; i >= 0; --i) {
       TestStateMachineProcedure.ExecutionInfo info = proc.getExecutionInfo().get(count++);
       assertEquals(true, info.isRollback());
       assertEquals(i, info.getStep().ordinal());
+    }
 
-      info = proc.getExecutionInfo().get(count++);
+    for (int i = NUM_STATES - 1; i >= 0; --i) {
+      TestStateMachineProcedure.ExecutionInfo info = proc.getExecutionInfo().get(count++);
       assertEquals(true, info.isRollback());
-      assertEquals(i, info.getStep().ordinal());
+      assertEquals(0, info.getStep().ordinal());
     }
 
     // check runnable queue stats
     assertEquals(0, procRunnables.size());
     assertEquals(0, procRunnables.addFrontCalls);
-    assertEquals(12, procRunnables.addBackCalls);
-    assertEquals(11, procRunnables.yieldCalls);
-    assertEquals(13, procRunnables.pollCalls);
+    assertEquals(11, procRunnables.addBackCalls);
+    assertEquals(10, procRunnables.yieldCalls);
+    assertEquals(12, procRunnables.pollCalls);
     assertEquals(1, procRunnables.completionCalls);
   }
 
@@ -188,7 +192,7 @@ public class TestYieldProcedures {
       extends StateMachineProcedure<TestProcEnv, TestStateMachineProcedure.State> {
     enum State { STATE_1, STATE_2, STATE_3 }
 
-    public class ExecutionInfo {
+    public static class ExecutionInfo {
       private final boolean rollback;
       private final long timestamp;
       private final State step;
@@ -336,11 +340,13 @@ public class TestYieldProcedures {
     }
 
     @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
 
     @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer)
+        throws IOException {
     }
   }
 
@@ -353,6 +359,7 @@ public class TestYieldProcedures {
 
     public TestScheduler() {}
 
+    @Override
     public void addFront(final Procedure proc) {
       addFrontCalls++;
       super.addFront(proc);

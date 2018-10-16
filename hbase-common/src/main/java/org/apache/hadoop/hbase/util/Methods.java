@@ -24,13 +24,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class Methods {
-  private static final Log LOG = LogFactory.getLog(Methods.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Methods.class);
 
   public static <T> Object call(Class<T> clazz, T instance, String methodName,
       Class[] types, Object[] args) throws Exception {
@@ -38,7 +39,7 @@ public class Methods {
       Method m = clazz.getMethod(methodName, types);
       return m.invoke(instance, args);
     } catch (IllegalArgumentException arge) {
-      LOG.fatal("Constructed invalid call. class="+clazz.getName()+
+      LOG.error(HBaseMarkers.FATAL, "Constructed invalid call. class="+clazz.getName()+
           " method=" + methodName + " types=" + Classes.stringify(types), arge);
       throw arge;
     } catch (NoSuchMethodException nsme) {
@@ -59,8 +60,9 @@ public class Methods {
       throw new IllegalArgumentException(
           "Denied access calling "+clazz.getName()+"."+methodName+"()", iae);
     } catch (SecurityException se) {
-      LOG.fatal("SecurityException calling method. class="+clazz.getName()+
-          " method=" + methodName + " types=" + Classes.stringify(types), se);
+      LOG.error(HBaseMarkers.FATAL, "SecurityException calling method. class="+
+          clazz.getName()+" method=" + methodName + " types=" +
+          Classes.stringify(types), se);
       throw se;
     }
   }

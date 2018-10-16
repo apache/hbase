@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,11 +24,17 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHRegionLocation {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHRegionLocation.class);
+
   /**
    * HRegionLocations are equal if they have the same 'location' -- i.e. host and
    * port -- even if they are carrying different regions.  Verify that is indeed
@@ -63,6 +68,7 @@ public class TestHRegionLocation {
     System.out.println(hrl1.toString());
   }
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareTo() {
     ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
@@ -71,12 +77,11 @@ public class TestHRegionLocation {
     ServerName hsa2 = ServerName.valueOf("localhost", 1235, -1L);
     HRegionLocation hsl2 =
       new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa2);
-    assertTrue(hsl1.compareTo(hsl1) == 0);
-    assertTrue(hsl2.compareTo(hsl2) == 0);
+    assertEquals(0, hsl1.compareTo(hsl1));
+    assertEquals(0, hsl2.compareTo(hsl2));
     int compare1 = hsl1.compareTo(hsl2);
     int compare2 = hsl2.compareTo(hsl1);
     assertTrue((compare1 > 0)? compare2 < 0: compare2 > 0);
   }
-
 }
 

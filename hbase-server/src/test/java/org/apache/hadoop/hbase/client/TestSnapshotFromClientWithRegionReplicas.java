@@ -17,12 +17,18 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotFromClientWithRegionReplicas extends TestSnapshotFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotFromClientWithRegionReplicas.class);
 
   @Override
   protected int getNumReplicas() {

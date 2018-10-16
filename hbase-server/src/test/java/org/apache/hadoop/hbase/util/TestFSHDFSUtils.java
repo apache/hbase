@@ -20,34 +20,40 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test our recoverLease loop against mocked up filesystem.
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestFSHDFSUtils {
-  private static final Log LOG = LogFactory.getLog(TestFSHDFSUtils.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFSHDFSUtils.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestFSHDFSUtils.class);
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   static {
     Configuration conf = HTU.getConfiguration();
     conf.setInt("hbase.lease.recovery.first.pause", 10);
     conf.setInt("hbase.lease.recovery.pause", 10);
-  };
+  }
   private FSHDFSUtils fsHDFSUtils = new FSHDFSUtils();
   private static Path FILE = new Path(HTU.getDataTestDir(), "file.txt");
   long startTime = -1;
@@ -59,9 +65,8 @@ public class TestFSHDFSUtils {
 
   /**
    * Test recover lease eventually succeeding.
-   * @throws IOException 
    */
-  @Test (timeout = 30000)
+  @Test
   public void testRecoverLease() throws IOException {
     HTU.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
     CancelableProgressable reporter = Mockito.mock(CancelableProgressable.class);
@@ -80,9 +85,8 @@ public class TestFSHDFSUtils {
 
   /**
    * Test that isFileClosed makes us recover lease faster.
-   * @throws IOException
    */
-  @Test (timeout = 30000)
+  @Test
   public void testIsFileClosed() throws IOException {
     // Make this time long so it is plain we broke out because of the isFileClosed invocation.
     HTU.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 100000);
@@ -148,12 +152,14 @@ public class TestFSHDFSUtils {
   public void testIsSameHdfs() throws IOException {
     String hadoopVersion = org.apache.hadoop.util.VersionInfo.getVersion();
     LOG.info("hadoop version is: "  + hadoopVersion);
-    boolean isHadoop3 = hadoopVersion.startsWith("3.");
-    if (isHadoop3) {
-      // Hadoop 3.0.0 alpha1+ change default nn port to 9820. See HDFS-9427
+    boolean isHadoop3_0_0 = hadoopVersion.startsWith("3.0.0");
+    if (isHadoop3_0_0) {
+      // Hadoop 3.0.0 alpha1+ ~ 3.0.0 GA changed default nn port to 9820.
+      // See HDFS-9427
       testIsSameHdfs(9820);
     } else {
       // pre hadoop 3.0.0 defaults to port 8020
+      // Hadoop 3.0.1 changed it back to port 8020. See HDFS-12990
       testIsSameHdfs(8020);
     }
   }
@@ -161,11 +167,12 @@ public class TestFSHDFSUtils {
   /**
    * Version of DFS that has HDFS-4525 in it.
    */
-  class IsFileClosedDistributedFileSystem extends DistributedFileSystem {
+  static class IsFileClosedDistributedFileSystem extends DistributedFileSystem {
     /**
      * Close status of a file. Copied over from HDFS-4525
      * @return true if file is already closed
      **/
+    @Override
     public boolean isFileClosed(Path f) throws IOException{
       return false;
     }

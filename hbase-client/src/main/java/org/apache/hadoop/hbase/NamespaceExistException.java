@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown when a namespace exists but should not
@@ -31,7 +31,7 @@ public class NamespaceExistException extends DoNotRetryIOException {
   public NamespaceExistException() {
   }
 
-  public NamespaceExistException(String namespace) {
-    super(namespace);
+  public NamespaceExistException(String msg) {
+    super(msg);
   }
 }

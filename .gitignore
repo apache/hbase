@@ -1,12 +1,12 @@
 /.externalToolBuilders
 .project
 *.settings/
+.DS_Store
 .classpath
 /build
 /.idea/
 /logs
 *target/
-*.iml
 *.orig
 *~
 hbase-*/test
@@ -15,3 +15,8 @@ hbase-*/test
 *.ipr
 patchprocess/
 dependency-reduced-pom.xml
+link_report/
+linklint-*.zip
+linklint/
+.checkstyle
+**/.checkstyle

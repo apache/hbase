@@ -21,13 +21,11 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.SpanReceiverBuilder;
-import org.apache.htrace.Trace;
+import org.apache.htrace.core.SpanReceiver;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from
@@ -37,14 +35,14 @@ import org.apache.htrace.Trace;
 @InterfaceAudience.Private
 public class SpanReceiverHost {
   public static final String SPAN_RECEIVERS_CONF_KEY = "hbase.trace.spanreceiver.classes";
-  private static final Log LOG = LogFactory.getLog(SpanReceiverHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SpanReceiverHost.class);
   private Collection<SpanReceiver> receivers;
   private Configuration conf;
   private boolean closed = false;
 
   private static enum SingletonHolder {
     INSTANCE;
-    transient Object lock = new Object();
+    final transient Object lock = new Object();
     transient SpanReceiverHost host = null;
   }
 
@@ -60,6 +58,16 @@ public class SpanReceiverHost {
       return SingletonHolder.INSTANCE.host;
     }
 
+  }
+
+  public static Configuration getConfiguration(){
+    synchronized (SingletonHolder.INSTANCE.lock) {
+      if (SingletonHolder.INSTANCE.host == null || SingletonHolder.INSTANCE.host.conf == null) {
+        return null;
+      }
+
+      return SingletonHolder.INSTANCE.host.conf;
+    }
   }
 
   SpanReceiverHost(Configuration conf) {
@@ -78,18 +86,18 @@ public class SpanReceiverHost {
       return;
     }
 
-    SpanReceiverBuilder builder = new SpanReceiverBuilder(new HBaseHTraceConfiguration(conf));
+    SpanReceiver.Builder builder = new SpanReceiver.Builder(new HBaseHTraceConfiguration(conf));
     for (String className : receiverNames) {
       className = className.trim();
 
-      SpanReceiver receiver = builder.spanReceiverClass(className).build();
+      SpanReceiver receiver = builder.className(className).build();
       if (receiver != null) {
         receivers.add(receiver);
         LOG.info("SpanReceiver " + className + " was loaded successfully.");
       }
     }
     for (SpanReceiver rcvr : receivers) {
-      Trace.addReceiver(rcvr);
+      TraceUtil.addReceiver(rcvr);
     }
   }
 

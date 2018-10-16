@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.replication;
 import java.util.UUID;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 
@@ -55,13 +55,11 @@ public class ClusterMarkingEntryFilter implements WALEntryFilter {
     if (replicationEndpoint.canReplicateToSameCluster()
         || !entry.getKey().getClusterIds().contains(peerClusterId)) {
       WALEdit edit = entry.getEdit();
-      WALKey logKey = entry.getKey();
+      WALKeyImpl logKey = (WALKeyImpl)entry.getKey();
 
       if (edit != null && !edit.isEmpty()) {
         // Mark that the current cluster has the change
         logKey.addClusterId(clusterId);
-        // We need to set the CC to null else it will be compressed when sent to the sink
-        entry.setCompressionContext(null);
         return entry;
       }
     }

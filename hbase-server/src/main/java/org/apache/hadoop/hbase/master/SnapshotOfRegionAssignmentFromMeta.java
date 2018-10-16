@@ -32,21 +32,21 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
-import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
+import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used internally for reading meta and constructing datastructures that are
@@ -56,24 +56,24 @@ import org.apache.hadoop.hbase.client.Result;
  */
 @InterfaceAudience.Private
 public class SnapshotOfRegionAssignmentFromMeta {
-  private static final Log LOG = LogFactory.getLog(SnapshotOfRegionAssignmentFromMeta.class
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class
       .getName());
 
   private final Connection connection;
 
   /** the table name to region map */
-  private final Map<TableName, List<HRegionInfo>> tableToRegionMap;
+  private final Map<TableName, List<RegionInfo>> tableToRegionMap;
   /** the region to region server map */
-  //private final Map<HRegionInfo, ServerName> regionToRegionServerMap;
-  private Map<HRegionInfo, ServerName> regionToRegionServerMap;
+  //private final Map<RegionInfo, ServerName> regionToRegionServerMap;
+  private Map<RegionInfo, ServerName> regionToRegionServerMap;
   /** the region name to region info map */
-  private final Map<String, HRegionInfo> regionNameToRegionInfoMap;
+  private final Map<String, RegionInfo> regionNameToRegionInfoMap;
 
   /** the regionServer to region map */
-  private final Map<ServerName, List<HRegionInfo>> currentRSToRegionMap;
-  private final Map<ServerName, List<HRegionInfo>> secondaryRSToRegionMap;
-  private final Map<ServerName, List<HRegionInfo>> teritiaryRSToRegionMap;
-  private final Map<ServerName, List<HRegionInfo>> primaryRSToRegionMap;
+  private final Map<ServerName, List<RegionInfo>> currentRSToRegionMap;
+  private final Map<ServerName, List<RegionInfo>> secondaryRSToRegionMap;
+  private final Map<ServerName, List<RegionInfo>> teritiaryRSToRegionMap;
+  private final Map<ServerName, List<RegionInfo>> primaryRSToRegionMap;
   /** the existing assignment plan in the hbase:meta region */
   private final FavoredNodesPlan existingAssignmentPlan;
   private final Set<TableName> disabledTables;
@@ -113,7 +113,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
           if (result ==  null || result.isEmpty()) return true;
           RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
           if (rl == null) return true;
-          HRegionInfo hri = rl.getRegionLocation(0).getRegionInfo();
+          RegionInfo hri = rl.getRegionLocation(0).getRegionInfo();
           if (hri == null) return true;
           if (hri.getTable() == null) return true;
           if (disabledTables.contains(hri.getTable())) {
@@ -172,13 +172,13 @@ public class SnapshotOfRegionAssignmentFromMeta {
       "snapshot");
   }
 
-  private void addRegion(HRegionInfo regionInfo) {
+  private void addRegion(RegionInfo regionInfo) {
     // Process the region name to region info map
     regionNameToRegionInfoMap.put(regionInfo.getRegionNameAsString(), regionInfo);
 
     // Process the table to region map
     TableName tableName = regionInfo.getTable();
-    List<HRegionInfo> regionList = tableToRegionMap.get(tableName);
+    List<RegionInfo> regionList = tableToRegionMap.get(tableName);
     if (regionList == null) {
       regionList = new ArrayList<>();
     }
@@ -187,14 +187,14 @@ public class SnapshotOfRegionAssignmentFromMeta {
     tableToRegionMap.put(tableName, regionList);
   }
 
-  private void addAssignment(HRegionInfo regionInfo, ServerName server) {
+  private void addAssignment(RegionInfo regionInfo, ServerName server) {
     // Process the region to region server map
     regionToRegionServerMap.put(regionInfo, server);
 
     if (server == null) return;
 
     // Process the region server to region map
-    List<HRegionInfo> regionList = currentRSToRegionMap.get(server);
+    List<RegionInfo> regionList = currentRSToRegionMap.get(server);
     if (regionList == null) {
       regionList = new ArrayList<>();
     }
@@ -202,9 +202,9 @@ public class SnapshotOfRegionAssignmentFromMeta {
     currentRSToRegionMap.put(server, regionList);
   }
 
-  private void addPrimaryAssignment(HRegionInfo regionInfo, ServerName server) {
+  private void addPrimaryAssignment(RegionInfo regionInfo, ServerName server) {
     // Process the region server to region map
-    List<HRegionInfo> regionList = primaryRSToRegionMap.get(server);
+    List<RegionInfo> regionList = primaryRSToRegionMap.get(server);
     if (regionList == null) {
       regionList = new ArrayList<>();
     }
@@ -212,9 +212,9 @@ public class SnapshotOfRegionAssignmentFromMeta {
     primaryRSToRegionMap.put(server, regionList);
   }
 
-  private void addSecondaryAssignment(HRegionInfo regionInfo, ServerName server) {
+  private void addSecondaryAssignment(RegionInfo regionInfo, ServerName server) {
     // Process the region server to region map
-    List<HRegionInfo> regionList = secondaryRSToRegionMap.get(server);
+    List<RegionInfo> regionList = secondaryRSToRegionMap.get(server);
     if (regionList == null) {
       regionList = new ArrayList<>();
     }
@@ -222,9 +222,9 @@ public class SnapshotOfRegionAssignmentFromMeta {
     secondaryRSToRegionMap.put(server, regionList);
   }
 
-  private void addTeritiaryAssignment(HRegionInfo regionInfo, ServerName server) {
+  private void addTeritiaryAssignment(RegionInfo regionInfo, ServerName server) {
     // Process the region server to region map
-    List<HRegionInfo> regionList = teritiaryRSToRegionMap.get(server);
+    List<RegionInfo> regionList = teritiaryRSToRegionMap.get(server);
     if (regionList == null) {
       regionList = new ArrayList<>();
     }
@@ -236,7 +236,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
    * Get the regioninfo for a region
    * @return the regioninfo
    */
-  public Map<String, HRegionInfo> getRegionNameToRegionInfoMap() {
+  public Map<String, RegionInfo> getRegionNameToRegionInfoMap() {
     return this.regionNameToRegionInfoMap;
   }
 
@@ -244,7 +244,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
    * Get regions for tables
    * @return a mapping from table to regions
    */
-  public Map<TableName, List<HRegionInfo>> getTableToRegionMap() {
+  public Map<TableName, List<RegionInfo>> getTableToRegionMap() {
     return tableToRegionMap;
   }
 
@@ -252,7 +252,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
    * Get region to region server map
    * @return region to region server map
    */
-  public Map<HRegionInfo, ServerName> getRegionToRegionServerMap() {
+  public Map<RegionInfo, ServerName> getRegionToRegionServerMap() {
     return regionToRegionServerMap;
   }
 
@@ -260,7 +260,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
    * Get regionserver to region map
    * @return regionserver to region map
    */
-  public Map<ServerName, List<HRegionInfo>> getRegionServerToRegionMap() {
+  public Map<ServerName, List<RegionInfo>> getRegionServerToRegionMap() {
     return currentRSToRegionMap;
   }
 
@@ -280,15 +280,15 @@ public class SnapshotOfRegionAssignmentFromMeta {
     return this.tableToRegionMap.keySet();
   }
 
-  public Map<ServerName, List<HRegionInfo>> getSecondaryToRegionInfoMap() {
+  public Map<ServerName, List<RegionInfo>> getSecondaryToRegionInfoMap() {
     return this.secondaryRSToRegionMap;
   }
 
-  public Map<ServerName, List<HRegionInfo>> getTertiaryToRegionInfoMap() {
+  public Map<ServerName, List<RegionInfo>> getTertiaryToRegionInfoMap() {
     return this.teritiaryRSToRegionMap;
   }
 
-  public Map<ServerName, List<HRegionInfo>> getPrimaryToRegionInfoMap() {
+  public Map<ServerName, List<RegionInfo>> getPrimaryToRegionInfoMap() {
     return this.primaryRSToRegionMap;
   }
 }

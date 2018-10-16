@@ -18,13 +18,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.hash.Hashing;
+import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.nio.charset.Charset;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -41,11 +43,19 @@ public class ScannerIdGenerator {
   private final AtomicInteger scannerIdGen = new AtomicInteger(0);
 
   public ScannerIdGenerator(ServerName serverName) {
-    this.serverNameHash = (long)Hashing.murmur3_32().hashString(serverName.toString()).asInt() << 32;
+    long hash = Hashing.murmur3_32().hashString(serverName.toString(),
+        java.nio.charset.StandardCharsets.UTF_8).asInt();
+    this.serverNameHash = hash << 32;
   }
 
   public long generateNewScannerId() {
     return (scannerIdGen.incrementAndGet() & 0x00000000FFFFFFFFL) | serverNameHash;
   }
 
+  public static void main(final String [] args) {
+    ScannerIdGenerator sig = new ScannerIdGenerator(ServerName.valueOf("a.example.org,1234,5678"));
+    for (int i = 0; i < 10; i++) {
+      System.out.println(sig.generateNewScannerId());
+    }
+  }
 }

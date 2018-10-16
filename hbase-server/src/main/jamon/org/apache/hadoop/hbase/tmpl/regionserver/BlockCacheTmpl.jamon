@@ -244,13 +244,13 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
         <td>Size</td>
         <td><% TraditionalBinaryPrefix.long2String(cacheConfig.getBlockCache().getCurrentSize(),
             "B", 1) %></td>
-        <td>Current size of block cache in use (bytes)</td>
+        <td>Current size of block cache in use</td>
     </tr>
     <tr>
         <td>Free</td>
         <td><% TraditionalBinaryPrefix.long2String(cacheConfig.getBlockCache().getFreeSize(),
             "B", 1) %></td>
-        <td>The total free memory currently available to store more cache entries (bytes)</td>
+        <td>The total free memory currently available to store more cache entries</td>
     </tr>
     <tr>
         <td>Count</td>
@@ -326,26 +326,31 @@ are combined counts. Request count is sum of hits and misses.</p>
     </tr>
 </%if>
     <tr>
-        <td>Count</td>
-        <td><% String.format("%,d", cbsbf.getCount()) %></td>
+        <td>Cache Size Limit</td>
+        <td><% TraditionalBinaryPrefix.long2String(bc.getMaxSize(), "B", 1) %></td>
+        <td>Max size of cache</td>
+    </tr>
+    <tr>
+        <td>Block Count</td>
+        <td><% String.format("%,d", bc.getBlockCount()) %></td>
         <td>Count of Blocks</td>
     </tr>
 <%if !bucketCache %>
     <tr>
-        <td>Count</td>
-        <td><% String.format("%,d", cbsbf.getDataCount()) %></td>
+        <td>Data Block Count</td>
+        <td><% String.format("%,d", bc.getDataBlockCount()) %></td>
         <td>Count of DATA Blocks</td>
     </tr>
 </%if>
     <tr>
-        <td>Size</td>
-        <td><% TraditionalBinaryPrefix.long2String(cbsbf.getSize(), "B", 1) %></td>
+        <td>Size of Blocks</td>
+        <td><% TraditionalBinaryPrefix.long2String(bc.getCurrentSize(), "B", 1) %></td>
         <td>Size of Blocks</td>
     </tr>
 <%if !bucketCache %>
     <tr>
-        <td>Size</td>
-        <td><% TraditionalBinaryPrefix.long2String(cbsbf.getDataSize(), "B", 1) %></td>
+        <td>Size of Data Blocks</td>
+        <td><% TraditionalBinaryPrefix.long2String(bc.getCurrentDataSize(), "B", 1) %></td>
         <td>Size of DATA Blocks</td>
     </tr>
 </%if> 

@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -26,39 +25,43 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
-
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
-import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * See the instructions under hbase-examples/README.txt
  */
+@InterfaceAudience.Private
 public class HttpDoAsClient {
+  private static final Logger LOG = LoggerFactory.getLogger(HttpDoAsClient.class);
 
   static protected int port;
   static protected String host;
@@ -113,7 +116,7 @@ public class HttpDoAsClient {
     try {
       return s.getBytes("UTF-8");
     } catch (UnsupportedEncodingException e) {
-      e.printStackTrace();
+      LOG.error("CharSetName {} not supported", s, e);
       return null;
     }
   }
@@ -188,7 +191,7 @@ public class HttpDoAsClient {
       try {
         httpClient.setCustomHeader("Authorization", generateTicket());
       } catch (GSSException e) {
-        e.printStackTrace();
+        LOG.error("Kerberos authentication failed", e);
       }
     }
     return client;
@@ -219,7 +222,7 @@ public class HttpDoAsClient {
     final byte[] outToken = context.initSecContext(new byte[0], 0, 0);
     StringBuffer outputBuffer = new StringBuffer();
     outputBuffer.append("Negotiate ");
-    outputBuffer.append(Base64.encodeBytes(outToken).replace("\n", ""));
+    outputBuffer.append(Bytes.toString(Base64.getEncoder().encode(outToken)));
     System.out.print("Ticket is: " + outputBuffer);
     return outputBuffer.toString();
   }

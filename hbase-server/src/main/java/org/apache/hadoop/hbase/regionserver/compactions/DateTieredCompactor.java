@@ -19,18 +19,19 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.OptionalLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.DateTieredMultiFileWriter;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This compactor will generate StoreFile for different time ranges.
@@ -38,19 +39,22 @@ import org.apache.hadoop.hbase.security.User;
 @InterfaceAudience.Private
 public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTieredMultiFileWriter> {
 
-  private static final Log LOG = LogFactory.getLog(DateTieredCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DateTieredCompactor.class);
 
-  public DateTieredCompactor(Configuration conf, Store store) {
+  public DateTieredCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
 
-  private boolean needEmptyFile(CompactionRequest request) {
+  private boolean needEmptyFile(CompactionRequestImpl request) {
     // if we are going to compact the last N files, then we need to emit an empty file to retain the
     // maxSeqId if we haven't written out anything.
-    return StoreUtils.getMaxSequenceIdInList(request.getFiles()) == store.getMaxSequenceId();
+    OptionalLong maxSeqId = StoreUtils.getMaxSequenceIdInList(request.getFiles());
+    OptionalLong storeMaxSeqId = store.getMaxSequenceId();
+    return maxSeqId.isPresent() && storeMaxSeqId.isPresent() &&
+        maxSeqId.getAsLong() == storeMaxSeqId.getAsLong();
   }
 
-  public List<Path> compact(final CompactionRequest request, final List<Long> lowerBoundaries,
+  public List<Path> compact(final CompactionRequestImpl request, final List<Long> lowerBoundaries,
       ThroughputController throughputController, User user) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Executing compaction with " + lowerBoundaries.size()
@@ -73,7 +77,7 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
 
   @Override
   protected List<Path> commitWriter(DateTieredMultiFileWriter writer, FileDetails fd,
-      CompactionRequest request) throws IOException {
+      CompactionRequestImpl request) throws IOException {
     return writer.commitWriters(fd.maxSeqId, request.isAllFiles());
   }
 }

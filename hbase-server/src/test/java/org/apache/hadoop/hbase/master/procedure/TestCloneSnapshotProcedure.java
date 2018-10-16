@@ -15,40 +15,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
-  private static final Log LOG = LogFactory.getLog(TestCloneSnapshotProcedure.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCloneSnapshotProcedure.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCloneSnapshotProcedure.class);
 
   protected final byte[] CF = Bytes.toBytes("cf1");
 
@@ -88,20 +93,18 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     return 1;
   }
 
-  public static HTableDescriptor createHTableDescriptor(
-      final TableName tableName, final byte[] ... family) {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    for (int i = 0; i < family.length; ++i) {
-      htd.addFamily(new HColumnDescriptor(family[i]));
-    }
-    return htd;
+  public static TableDescriptor createTableDescriptor(TableName tableName, byte[]... family) {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    Stream.of(family).map(ColumnFamilyDescriptorBuilder::of)
+      .forEachOrdered(builder::setColumnFamily);
+    return builder.build();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCloneSnapshot() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName clonedTableName = TableName.valueOf("testCloneSnapshot2");
-    final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
+    final TableDescriptor htd = createTableDescriptor(clonedTableName, CF);
 
     // take the snapshot
     SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
@@ -114,33 +117,36 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
       clonedTableName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCloneSnapshotToSameTable() throws Exception {
     // take the snapshot
     SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName clonedTableName = TableName.valueOf(snapshotDesc.getTable());
-    final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
+    final TableDescriptor htd = createTableDescriptor(clonedTableName, CF);
 
     long procId = ProcedureTestingUtility.submitAndWait(
       procExec, new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
-    ProcedureInfo result = procExec.getResult(procId);
+    Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Clone snapshot failed with exception: " + result.getExceptionFullMessage());
+    LOG.debug("Clone snapshot failed with exception: " + result.getException());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof TableExistsException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName clonedTableName = TableName.valueOf("testRecoveryAndDoubleExecution");
-    final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
+    final TableDescriptor htd = createTableDescriptor(clonedTableName, CF);
 
     // take the snapshot
     SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
 
+    // Here if you enable this then we will enter an infinite loop, as we will fail either after
+    // TRSP.openRegion or after OpenRegionProcedure.execute, so we can never finish the TRSP...
+    ProcedureTestingUtility.setKillIfHasParent(procExec, false);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Clone snapshot procedure && kill the executor
@@ -155,11 +161,11 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
       clonedTableName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName clonedTableName = TableName.valueOf("testRollbackAndDoubleExecution");
-    final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
+    final TableDescriptor htd = createTableDescriptor(clonedTableName, CF);
 
     // take the snapshot
     SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();

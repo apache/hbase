@@ -26,7 +26,9 @@ module Hbase
     include HBaseConstants
 
     def initialize(connection)
+      @connection = connection
       @admin = org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient.new(connection)
+      @hb_admin = @connection.getAdmin
     end
 
     def close
@@ -36,50 +38,15 @@ module Hbase
     #--------------------------------------------------------------------------
     # Returns a list of groups in hbase
     def list_rs_groups
-      @admin.listRSGroups.map { |g| g.getName }
+      @admin.listRSGroups
     end
 
     #--------------------------------------------------------------------------
     # get a group's information
     def get_rsgroup(group_name)
       group = @admin.getRSGroupInfo(group_name)
-      if group.nil?
-        raise(ArgumentError, 'Group does not exist: ' + group_name)
-      end
-
-      res = {}
-      if block_given?
-        yield('Servers:')
-      end
-
-      servers = []
-      group.getServers.each do |v|
-        if block_given?
-          yield(v.toString)
-        else
-          servers << v.toString
-        end
-      end
-      res[:servers] = servers
-
-      tables = []
-      if block_given?
-        yield('Tables:')
-      end
-      group.getTables.each do |v|
-        if block_given?
-          yield(v.toString)
-        else
-          tables << v.toString
-        end
-      end
-      res[:tables] = tables
-
-      if !block_given?
-        res
-      else
-        nil
-      end
+      raise(ArgumentError, 'Group does not exist: ' + group_name) if group.nil?
+      group
     end
 
     #--------------------------------------------------------------------------
@@ -111,9 +78,9 @@ module Hbase
     end
 
     #--------------------------------------------------------------------------
-    # move server to a group
+    # move tables to a group
     def move_tables(dest, *args)
-      tables = java.util.HashSet.new;
+      tables = java.util.HashSet.new
       args[0].each do |s|
         tables.add(org.apache.hadoop.hbase.TableName.valueOf(s))
       end
@@ -121,13 +88,19 @@ module Hbase
     end
 
     #--------------------------------------------------------------------------
+    # move namespaces to a group
+    def move_namespaces(dest, *args)
+      tables = get_tables(args[0])
+      @admin.moveTables(tables, dest)
+    end
+
+    #--------------------------------------------------------------------------
     # get group of server
     def get_rsgroup_of_server(server)
       res = @admin.getRSGroupOfServer(
-        org.apache.hadoop.hbase.net.Address.fromString(server))
-      if res.nil?
-        raise(ArgumentError,'Server has no group: ' + server)
-      end
+        org.apache.hadoop.hbase.net.Address.fromString(server)
+      )
+      raise(ArgumentError, 'Server has no group: ' + server) if res.nil?
       res
     end
 
@@ -135,26 +108,76 @@ module Hbase
     # get group of table
     def get_rsgroup_of_table(table)
       res = @admin.getRSGroupInfoOfTable(
-          org.apache.hadoop.hbase.TableName.valueOf(table))
-      if res.nil?
-        raise(ArgumentError,'Table has no group: ' + table)
-      end
+        org.apache.hadoop.hbase.TableName.valueOf(table)
+      )
+      raise(ArgumentError, 'Table has no group: ' + table) if res.nil?
       res
     end
 
     #--------------------------------------------------------------------------
     # move server and table to a group
     def move_servers_tables(dest, *args)
-      servers = java.util.HashSet.new
-      tables = java.util.HashSet.new;
-      args[0].each do |s|
-        servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
-      end
+      servers = get_servers(args[0])
+      tables = java.util.HashSet.new
       args[1].each do |t|
         tables.add(org.apache.hadoop.hbase.TableName.valueOf(t))
       end
       @admin.moveServersAndTables(servers, tables, dest)
     end
 
+    #--------------------------------------------------------------------------
+    # move server and namespace to a group
+    def move_servers_namespaces(dest, *args)
+      servers = get_servers(args[0])
+      tables = get_tables(args[1])
+      @admin.moveServersAndTables(servers, tables, dest)
+    end
+
+    def get_servers(servers)
+      server_set = java.util.HashSet.new
+      servers.each do |s|
+        server_set.add(org.apache.hadoop.hbase.net.Address.fromString(s))
+      end
+      server_set
+    end
+
+    def get_tables(namespaces)
+      table_set = java.util.HashSet.new
+      error = "Can't find a namespace: "
+      namespaces.each do |ns|
+        raise(ArgumentError, "#{error}#{ns}") unless namespace_exists?(ns)
+        table_set.addAll(get_tables_by_namespace(ns))
+      end
+      table_set
+    end
+
+    # Get tables by namespace
+    def get_tables_by_namespace(ns)
+      tables = java.util.HashSet.new
+      tablelist = @hb_admin.listTableNamesByNamespace(ns).map(&:getNameAsString)
+      tablelist.each do |table|
+        tables.add(org.apache.hadoop.hbase.TableName.valueOf(table))
+      end
+      tables
+    end
+
+    # Does Namespace exist
+    def namespace_exists?(ns)
+      return !@hb_admin.getNamespaceDescriptor(ns).nil?
+    rescue org.apache.hadoop.hbase.NamespaceNotFoundException
+      return false
+    end
+
+    #--------------------------------------------------------------------------
+    # remove decommissioned server from rsgroup
+    def remove_servers(*args)
+      # Flatten params array
+      args = args.flatten.compact
+      servers = java.util.HashSet.new
+      args.each do |s|
+        servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
+      end
+      @admin.removeServers(servers)
+    end
   end
 end

@@ -15,17 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -41,12 +38,14 @@ import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Client proxy for SecureBulkLoadProtocol used in conjunction with SecureBulkLoadEndpoint
  * @deprecated Use for backward compatibility testing only. Will be removed when
  *             SecureBulkLoadEndpoint is not supported.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class SecureBulkLoadEndpointClient {
   private Table table;
@@ -111,9 +110,8 @@ public class SecureBulkLoadEndpointClient {
   }
 
   public boolean bulkLoadHFiles(final List<Pair<byte[], String>> familyPaths,
-                         final Token<?> userToken,
-                         final String bulkToken,
-                         final byte[] startRow) throws IOException {
+          final Token<?> userToken, final String bulkToken, final byte[] startRow)
+          throws IOException {
     // we never want to send a batch of HFiles to all regions, thus cannot call
     // HTable#coprocessorService methods that take start and end rowkeys; see HBASE-9639
     try {
@@ -162,5 +160,4 @@ public class SecureBulkLoadEndpointClient {
       throw new IOException(throwable);
     }
   }
-
 }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Exception thrown when the result needs to be chunked on the server side.

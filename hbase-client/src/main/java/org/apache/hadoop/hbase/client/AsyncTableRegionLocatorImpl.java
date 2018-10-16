@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The implementation of AsyncRegionLocator.
@@ -45,6 +45,6 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
 
   @Override
   public CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, boolean reload) {
-    return locator.getRegionLocation(tableName, row, RegionLocateType.CURRENT, -1L);
+    return locator.getRegionLocation(tableName, row, RegionLocateType.CURRENT, reload, -1L);
   }
 }

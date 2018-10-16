@@ -18,15 +18,21 @@
 package org.apache.hadoop.hbase.util;
 
 import java.nio.ByteBuffer;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestSimplePositionedMutableByteRange {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSimplePositionedMutableByteRange.class);
+
   @Test
   public void testPosition() {
     PositionedByteRange r = new SimplePositionedMutableByteRange(new byte[5], 1, 3);

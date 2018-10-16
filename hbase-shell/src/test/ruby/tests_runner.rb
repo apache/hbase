@@ -37,6 +37,8 @@ unless defined?($TEST_CLUSTER)
   $TEST_CLUSTER.configuration.setInt("hbase.regionserver.msginterval", 100)
   $TEST_CLUSTER.configuration.setInt("hbase.client.pause", 250)
   $TEST_CLUSTER.configuration.set("hbase.quota.enabled", "true")
+  $TEST_CLUSTER.configuration.set('hbase.master.quotas.snapshot.chore.period', 5000)
+  $TEST_CLUSTER.configuration.set('hbase.master.quotas.snapshot.chore.delay', 5000)
   $TEST_CLUSTER.configuration.setInt(org.apache.hadoop.hbase.HConstants::HBASE_CLIENT_RETRIES_NUMBER, 6)
   $TEST_CLUSTER.startMiniCluster
   @own_cluster = true

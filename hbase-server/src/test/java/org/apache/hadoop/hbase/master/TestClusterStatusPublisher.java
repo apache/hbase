@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,10 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
-
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -28,14 +28,17 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Category({MasterTests.class, MediumTests.class}) // Plays with the ManualEnvironmentEdge
 public class TestClusterStatusPublisher {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestClusterStatusPublisher.class);
+
   private ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 
   @Before
@@ -59,6 +62,7 @@ public class TestClusterStatusPublisher {
   @Test
   public void testMaxSend() {
     ClusterStatusPublisher csp = new ClusterStatusPublisher() {
+      @SuppressWarnings("MissingDefault")
       @Override
       protected List<Pair<ServerName, Long>> getDeadServers(long since) {
         List<Pair<ServerName, Long>> res = new ArrayList<>();

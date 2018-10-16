@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.spark.example.hbasecontext;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -36,13 +35,14 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import scala.Tuple2;
 
 /**
  * This is a simple example of using the foreachPartition
  * method with a HBase connection
  */
+@InterfaceAudience.Private
 final public class JavaHBaseMapGetPutExample {
 
   private JavaHBaseMapGetPutExample() {}
@@ -73,24 +73,24 @@ final public class JavaHBaseMapGetPutExample {
 
       hbaseContext.foreachPartition(rdd,
               new VoidFunction<Tuple2<Iterator<byte[]>, Connection>>() {
-        public void call(Tuple2<Iterator<byte[]>, Connection> t)
-                throws Exception {
-          Table table = t._2().getTable(TableName.valueOf(tableName));
-          BufferedMutator mutator = t._2().getBufferedMutator(TableName.valueOf(tableName));
+          public void call(Tuple2<Iterator<byte[]>, Connection> t)
+                  throws Exception {
+            Table table = t._2().getTable(TableName.valueOf(tableName));
+            BufferedMutator mutator = t._2().getBufferedMutator(TableName.valueOf(tableName));
 
-          while (t._1().hasNext()) {
-            byte[] b = t._1().next();
-            Result r = table.get(new Get(b));
-            if (r.getExists()) {
-              mutator.mutate(new Put(b));
+            while (t._1().hasNext()) {
+              byte[] b = t._1().next();
+              Result r = table.get(new Get(b));
+              if (r.getExists()) {
+                mutator.mutate(new Put(b));
+              }
             }
-          }
 
-          mutator.flush();
-          mutator.close();
-          table.close();
-        }
-      });
+            mutator.flush();
+            mutator.close();
+            table.close();
+          }
+        });
     } finally {
       jsc.stop();
     }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * For creating {@link Table} instance.
@@ -55,12 +55,6 @@ public interface TableBuilder {
    * Set timeout for each write(put, delete) rpc request.
    */
   TableBuilder setWriteRpcTimeout(int timeout);
-
-  /**
-   * Set the write buffer size which by default is specified by the
-   * {@code hbase.client.write.buffer} setting.
-   */
-  TableBuilder setWriteBufferSize(long writeBufferSize);
 
   /**
    * Create the {@link Table} instance.

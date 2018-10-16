@@ -21,9 +21,9 @@ module Shell
   module Commands
     class Split < Command
       def help
-        return <<-EOF
-Split entire table or pass a region to split individual region.  With the 
-second parameter, you can specify an explicit split key for the region.  
+        <<-EOF
+Split entire table or pass a region to split individual region.  With the
+second parameter, you can specify an explicit split key for the region.
 Examples:
     split 'tableName'
     split 'namespace:tableName'

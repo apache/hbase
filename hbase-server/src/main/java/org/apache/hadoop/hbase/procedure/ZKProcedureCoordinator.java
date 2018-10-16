@@ -19,28 +19,31 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * ZooKeeper based {@link ProcedureCoordinatorRpcs} for a {@link ProcedureCoordinator}
  */
 @InterfaceAudience.Private
 public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
-  private static final Log LOG = LogFactory.getLog(ZKProcedureCoordinator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKProcedureCoordinator.class);
   private ZKProcedureUtil zkProc = null;
   protected ProcedureCoordinator coordinator = null;  // if started this should be non-null
 
-  ZooKeeperWatcher watcher;
+  ZKWatcher watcher;
   String procedureType;
   String coordName;
 
@@ -51,7 +54,7 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
    * @param coordName name of the node running the coordinator
    * @throws KeeperException if an unexpected zk error occurs
    */
-  public ZKProcedureCoordinator(ZooKeeperWatcher watcher,
+  public ZKProcedureCoordinator(ZKWatcher watcher,
       String procedureClass, String coordName) {
     this.watcher = watcher;
     this.procedureType = procedureClass;
@@ -96,7 +99,7 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
       ZKUtil.createWithParents(zkProc.getWatcher(), acquire, data);
       // loop through all the children of the acquire phase and watch for them
       for (String node : nodeNames) {
-        String znode = ZKUtil.joinZNode(acquire, node);
+        String znode = ZNodePaths.joinZNode(acquire, node);
         LOG.debug("Watching for acquire node:" + znode);
         if (ZKUtil.watchAndCheckExists(zkProc.getWatcher(), znode)) {
           coordinator.memberAcquiredBarrier(procName, node);
@@ -119,7 +122,7 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
       ZKUtil.createWithParents(zkProc.getWatcher(), reachedNode);
       // loop through all the children of the acquire phase and watch for them
       for (String node : nodeNames) {
-        String znode = ZKUtil.joinZNode(reachedNode, node);
+        String znode = ZNodePaths.joinZNode(reachedNode, node);
         if (ZKUtil.watchAndCheckExists(zkProc.getWatcher(), znode)) {
           byte[] dataFromMember = ZKUtil.getData(zkProc.getWatcher(), znode);
           // ProtobufUtil.isPBMagicPrefix will check null
@@ -217,8 +220,8 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
                 } else {
                   dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
                     dataFromMember.length);
-                  LOG.debug("Finished data from procedure '" + procName
-                    + "' member '" + member + "': " + new String(dataFromMember));
+                  LOG.debug("Finished data from procedure '{}' member '{}': {}", procName, member,
+                      new String(dataFromMember, StandardCharsets.UTF_8));
                   coordinator.memberFinishedBarrier(procName, member, dataFromMember);
                 }
               } else {
@@ -244,7 +247,7 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
       return false;
     }
 
-    LOG.debug("Starting the controller for procedure member:" + coordName);
+    LOG.debug("Starting controller for procedure member=" + coordName);
     return true;
   }
 

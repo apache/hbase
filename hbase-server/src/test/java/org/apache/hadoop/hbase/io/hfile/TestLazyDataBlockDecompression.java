@@ -17,12 +17,20 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import com.google.common.collect.Iterables;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,19 +42,15 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-import static org.junit.Assert.*;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * A kind of integration test at the intersection of {@link HFileBlock}, {@link CacheConfig},
@@ -55,7 +59,12 @@ import static org.junit.Assert.*;
 @Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestLazyDataBlockDecompression {
-  private static final Log LOG = LogFactory.getLog(TestLazyDataBlockDecompression.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestLazyDataBlockDecompression.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestLazyDataBlockDecompression.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private FileSystem fs;

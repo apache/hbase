@@ -26,21 +26,23 @@ import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for command lines that start up various HBase daemons.
  */
 @InterfaceAudience.Private
 public abstract class ServerCommandLine extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(ServerCommandLine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ServerCommandLine.class);
   @SuppressWarnings("serial")
   private static final Set<String> DEFAULT_SKIP_WORDS = new HashSet<String>() {
     {
@@ -84,6 +86,23 @@ public abstract class ServerCommandLine extends Configured implements Tool {
   }
 
   /**
+   * Print into log some of the important hbase attributes.
+   */
+  private static void logHBaseConfigs(Configuration conf) {
+    final String [] keys = new String [] {
+      // Expand this list as you see fit.
+      "hbase.tmp.dir",
+      HConstants.HBASE_DIR,
+      HConstants.CLUSTER_DISTRIBUTED,
+      HConstants.ZOOKEEPER_QUORUM,
+
+    };
+    for (String key: keys) {
+      LOG.info(key + ": " + conf.get(key));
+    }
+  }
+
+  /**
    * Logs information about the currently running JVM process including
    * the environment variables. Logging of env vars can be disabled by
    * setting {@code "hbase.envvars.logging.disabled"} to {@code "true"}.
@@ -92,6 +111,8 @@ public abstract class ServerCommandLine extends Configured implements Tool {
    * to comma separated list of such substrings.
    */
   public static void logProcessInfo(Configuration conf) {
+    logHBaseConfigs(conf);
+
     // log environment variables unless asked not to
     if (conf == null || !conf.getBoolean("hbase.envvars.logging.disabled", false)) {
       Set<String> skipWords = new HashSet<>(DEFAULT_SKIP_WORDS);
@@ -114,6 +135,7 @@ public abstract class ServerCommandLine extends Configured implements Tool {
         LOG.info("env:"+entry);
       }
     }
+
     // and JVM info
     logJVMInfo();
   }

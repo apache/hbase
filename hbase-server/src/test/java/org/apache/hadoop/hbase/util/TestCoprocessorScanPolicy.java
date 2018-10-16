@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,27 +16,29 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.junit.ClassRule;
+
 // this is deliberately not in the o.a.h.h.regionserver package
+
 // in order to make sure all required classes/method are available
 
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -46,17 +48,22 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.regionserver.DelegatingInternalScanner;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -65,9 +72,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class TestCoprocessorScanPolicy {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCoprocessorScanPolicy.class);
+
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] F = Bytes.toBytes("fam");
   private static final byte[] Q = Bytes.toBytes("qual");
@@ -76,8 +88,7 @@ public class TestCoprocessorScanPolicy {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        ScanObserver.class.getName());
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, ScanObserver.class.getName());
     TEST_UTIL.startMiniCluster();
   }
 
@@ -88,7 +99,7 @@ public class TestCoprocessorScanPolicy {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
   }
 
   public TestCoprocessorScanPolicy(boolean parallelSeekEnable) {
@@ -98,49 +109,58 @@ public class TestCoprocessorScanPolicy {
 
   @Test
   public void testBaseCases() throws Exception {
-    TableName tableName =
-        TableName.valueOf("baseCases");
+    TableName tableName = TableName.valueOf("baseCases");
     if (TEST_UTIL.getAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
-    Table t = TEST_UTIL.createTable(tableName, F, 1);
-    // set the version override to 2
-    Put p = new Put(R);
-    p.setAttribute("versions", new byte[]{});
-    p.addColumn(F, tableName.getName(), Bytes.toBytes(2));
-    t.put(p);
-
+    Table t = TEST_UTIL.createTable(tableName, F, 10);
+    // insert 3 versions
     long now = EnvironmentEdgeManager.currentTime();
-
-    // insert 2 versions
-    p = new Put(R);
+    Put p = new Put(R);
     p.addColumn(F, Q, now, Q);
     t.put(p);
     p = new Put(R);
     p.addColumn(F, Q, now + 1, Q);
     t.put(p);
+    p = new Put(R);
+    p.addColumn(F, Q, now + 2, Q);
+    t.put(p);
+
     Get g = new Get(R);
-    g.setMaxVersions(10);
+    g.readVersions(10);
     Result r = t.get(g);
+    assertEquals(3, r.size());
+
+    TEST_UTIL.flush(tableName);
+    TEST_UTIL.compact(tableName, true);
+
+    // still visible after a flush/compaction
+    r = t.get(g);
+    assertEquals(3, r.size());
+
+    // set the version override to 2
+    p = new Put(R);
+    p.setAttribute("versions", new byte[] {});
+    p.addColumn(F, tableName.getName(), Bytes.toBytes(2));
+    t.put(p);
+
+    // only 2 versions now
+    r = t.get(g);
     assertEquals(2, r.size());
 
     TEST_UTIL.flush(tableName);
     TEST_UTIL.compact(tableName, true);
 
-    // both version are still visible even after a flush/compaction
-    g = new Get(R);
-    g.setMaxVersions(10);
+    // still 2 versions after a flush/compaction
     r = t.get(g);
     assertEquals(2, r.size());
 
-    // insert a 3rd version
-    p = new Put(R);
-    p.addColumn(F, Q, now + 2, Q);
+    // insert a new version
+    p.addColumn(F, Q, now + 3, Q);
     t.put(p);
-    g = new Get(R);
-    g.setMaxVersions(10);
+
+    // still 2 versions
     r = t.get(g);
-    // still only two version visible
     assertEquals(2, r.size());
 
     t.close();
@@ -148,41 +168,33 @@ public class TestCoprocessorScanPolicy {
 
   @Test
   public void testTTL() throws Exception {
-    TableName tableName =
-        TableName.valueOf("testTTL");
+    TableName tableName = TableName.valueOf("testTTL");
     if (TEST_UTIL.getAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor(F)
-    .setMaxVersions(10)
-    .setTimeToLive(1);
-    desc.addFamily(hcd);
-    TEST_UTIL.getAdmin().createTable(desc);
-    Table t = TEST_UTIL.getConnection().getTable(tableName);
+    Table t = TEST_UTIL.createTable(tableName, F, 10);
     long now = EnvironmentEdgeManager.currentTime();
     ManualEnvironmentEdge me = new ManualEnvironmentEdge();
     me.setValue(now);
     EnvironmentEdgeManagerTestHelper.injectEdge(me);
     // 2s in the past
     long ts = now - 2000;
-    // Set the TTL override to 3s
-    Put p = new Put(R);
-    p.setAttribute("ttl", new byte[]{});
-    p.addColumn(F, tableName.getName(), Bytes.toBytes(3000L));
-    t.put(p);
 
-    p = new Put(R);
+    Put p = new Put(R);
     p.addColumn(F, Q, ts, Q);
     t.put(p);
     p = new Put(R);
     p.addColumn(F, Q, ts + 1, Q);
     t.put(p);
 
-    // these two should be expired but for the override
-    // (their ts was 2s in the past)
+    // Set the TTL override to 3s
+    p = new Put(R);
+    p.setAttribute("ttl", new byte[] {});
+    p.addColumn(F, tableName.getName(), Bytes.toBytes(3000L));
+    t.put(p);
+    // these two should still be there
     Get g = new Get(R);
-    g.setMaxVersions(10);
+    g.readAllVersions();
     Result r = t.get(g);
     // still there?
     assertEquals(2, r.size());
@@ -191,7 +203,7 @@ public class TestCoprocessorScanPolicy {
     TEST_UTIL.compact(tableName, true);
 
     g = new Get(R);
-    g.setMaxVersions(10);
+    g.readAllVersions();
     r = t.get(g);
     // still there?
     assertEquals(2, r.size());
@@ -200,7 +212,7 @@ public class TestCoprocessorScanPolicy {
     me.setValue(now + 2000);
     // now verify that data eventually does expire
     g = new Get(R);
-    g.setMaxVersions(10);
+    g.readAllVersions();
     r = t.get(g);
     // should be gone now
     assertEquals(0, r.size());
@@ -208,9 +220,14 @@ public class TestCoprocessorScanPolicy {
     EnvironmentEdgeManager.reset();
   }
 
-  public static class ScanObserver implements RegionObserver {
-    private Map<TableName, Long> ttls = new HashMap<>();
-    private Map<TableName, Integer> versions = new HashMap<>();
+  public static class ScanObserver implements RegionCoprocessor, RegionObserver {
+    private final ConcurrentMap<TableName, Long> ttls = new ConcurrentHashMap<>();
+    private final ConcurrentMap<TableName, Integer> versions = new ConcurrentHashMap<>();
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     // lame way to communicate with the coprocessor,
     // since it is loaded by a different class loader
@@ -218,80 +235,128 @@ public class TestCoprocessorScanPolicy {
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
       if (put.getAttribute("ttl") != null) {
-        Cell cell = put.getFamilyCellMap().values().iterator().next().get(0);
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        ttls.put(TableName.valueOf(
-          Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength())),
-          Bytes.toLong(CellUtil.cloneValue(kv)));
+        Cell cell = put.getFamilyCellMap().values().stream().findFirst().get().get(0);
+        ttls.put(
+          TableName.valueOf(Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(),
+            cell.getQualifierLength())),
+          Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         c.bypass();
       } else if (put.getAttribute("versions") != null) {
-        Cell cell = put.getFamilyCellMap().values().iterator().next().get(0);
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        versions.put(TableName.valueOf(
-          Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength())),
-          Bytes.toInt(CellUtil.cloneValue(kv)));
+        Cell cell = put.getFamilyCellMap().values().stream().findFirst().get().get(0);
+        versions.put(
+          TableName.valueOf(Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(),
+            cell.getQualifierLength())),
+          Bytes.toInt(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         c.bypass();
       }
     }
 
+    private InternalScanner wrap(Store store, InternalScanner scanner) {
+      Long ttl = this.ttls.get(store.getTableName());
+      Integer version = this.versions.get(store.getTableName());
+      return new DelegatingInternalScanner(scanner) {
+
+        private byte[] row;
+
+        private byte[] qualifier;
+
+        private int count;
+
+        private Predicate<Cell> checkTtl(long now, long ttl) {
+          return c -> now - c.getTimestamp() > ttl;
+        }
+
+        private Predicate<Cell> checkVersion(Cell firstCell, int version) {
+          if (version == 0) {
+            return c -> true;
+          } else {
+            if (row == null || !CellUtil.matchingRows(firstCell, row)) {
+              row = CellUtil.cloneRow(firstCell);
+              // reset qualifier as there is a row change
+              qualifier = null;
+            }
+            return c -> {
+              if (qualifier != null && CellUtil.matchingQualifier(c, qualifier)) {
+                if (count >= version) {
+                  return true;
+                }
+                count++;
+                return false;
+              } else { // qualifier switch
+                qualifier = CellUtil.cloneQualifier(c);
+                count = 1;
+                return false;
+              }
+            };
+          }
+        }
+
+        @Override
+        public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+          boolean moreRows = scanner.next(result, scannerContext);
+          if (result.isEmpty()) {
+            return moreRows;
+          }
+          long now = EnvironmentEdgeManager.currentTime();
+          Predicate<Cell> predicate = null;
+          if (ttl != null) {
+            predicate = checkTtl(now, ttl);
+          }
+          if (version != null) {
+            Predicate<Cell> vp = checkVersion(result.get(0), version);
+            if (predicate != null) {
+              predicate = predicate.and(vp);
+            } else {
+              predicate = vp;
+            }
+          }
+          if (predicate != null) {
+            result.removeIf(predicate);
+          }
+          return moreRows;
+        }
+      };
+    }
+
     @Override
-    public InternalScanner preFlushScannerOpen(
-        final ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<KeyValueScanner> scanners, InternalScanner s) throws IOException {
-      Long newTtl = ttls.get(store.getTableName());
-      if (newTtl != null) {
-        System.out.println("PreFlush:" + newTtl);
+    public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+      return wrap(store, scanner);
+    }
+
+    @Override
+    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+        CompactionRequest request) throws IOException {
+      return wrap(store, scanner);
+    }
+
+    @Override
+    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+        List<Cell> result) throws IOException {
+      TableName tableName = c.getEnvironment().getRegion().getTableDescriptor().getTableName();
+      Long ttl = this.ttls.get(tableName);
+      if (ttl != null) {
+        get.setTimeRange(EnvironmentEdgeManager.currentTime() - ttl, get.getTimeRange().getMax());
       }
-      Integer newVersions = versions.get(store.getTableName());
-      ScanInfo oldSI = store.getScanInfo();
-      HColumnDescriptor family = store.getFamily();
-      ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
-          family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
-          newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-      Scan scan = new Scan();
-      scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
-      return new StoreScanner(store, scanInfo, scan, scanners,
-          ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
-          HConstants.OLDEST_TIMESTAMP);
+      Integer version = this.versions.get(tableName);
+      if (version != null) {
+        get.readVersions(version);
+      }
     }
 
     @Override
-    public InternalScanner preCompactScannerOpen(
-        final ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
-        long earliestPutTs, InternalScanner s) throws IOException {
-      Long newTtl = ttls.get(store.getTableName());
-      Integer newVersions = versions.get(store.getTableName());
-      ScanInfo oldSI = store.getScanInfo();
-      HColumnDescriptor family = store.getFamily();
-      ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
-          family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
-          newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-          family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-      Scan scan = new Scan();
-      scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
-      return new StoreScanner(store, scanInfo, scan, scanners, scanType,
-          store.getSmallestReadPoint(), earliestPutTs);
-    }
-
-    @Override
-    public KeyValueScanner preStoreScannerOpen(
-        final ObserverContext<RegionCoprocessorEnvironment> c, Store store, final Scan scan,
-        final NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt) throws IOException {
-      TableName tn = store.getTableName();
-      if (!tn.isSystemTable()) {
-        Long newTtl = ttls.get(store.getTableName());
-        Integer newVersions = versions.get(store.getTableName());
-        ScanInfo oldSI = store.getScanInfo();
-        HColumnDescriptor family = store.getFamily();
-        ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
-            family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
-            newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
-            family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-        return new StoreScanner(store, scanInfo, scan, targetCols, readPt);
-      } else {
-        return s;
+    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+        throws IOException {
+      Region region = c.getEnvironment().getRegion();
+      TableName tableName = region.getTableDescriptor().getTableName();
+      Long ttl = this.ttls.get(tableName);
+      if (ttl != null) {
+        scan.setTimeRange(EnvironmentEdgeManager.currentTime() - ttl, scan.getTimeRange().getMax());
+      }
+      Integer version = this.versions.get(tableName);
+      if (version != null) {
+        scan.readVersions(version);
       }
     }
   }

@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 
 /**
@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.regionserver.CellSink;
 @InterfaceAudience.Private
 public abstract class AbstractMultiFileWriter implements CellSink, ShipperListener {
 
-  private static final Log LOG = LogFactory.getLog(AbstractMultiFileWriter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractMultiFileWriter.class);
 
   /** Factory that is used to produce single StoreFile.Writer-s */
   protected WriterFactory writerFactory;

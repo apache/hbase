@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /** Thrown when the file system needs to be upgraded */
 @InterfaceAudience.Public

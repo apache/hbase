@@ -22,11 +22,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class NoneEncoder {
@@ -50,7 +50,7 @@ public class NoneEncoder {
       int tagsLength = cell.getTagsLength();
       out.writeShort(tagsLength);
       if (tagsLength > 0) {
-        CellUtil.writeTags(out, cell, tagsLength);
+        PrivateCellUtil.writeTags(out, cell, tagsLength);
       }
       size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
     }

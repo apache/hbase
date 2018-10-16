@@ -17,13 +17,18 @@
 
 package org.apache.hadoop.hbase.spark.example.datasources
 
-import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{SparkContext, SparkConf}
-import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
+import org.apache.hadoop.hbase.spark.datasources.HBaseTableCatalog
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import org.apache.yetus.audience.InterfaceAudience
 
+@InterfaceAudience.Private
 class UserCustomizedSampleException(message: String = null, cause: Throwable = null) extends
   RuntimeException(UserCustomizedSampleException.message(message, cause), cause)
 
+@InterfaceAudience.Private
 object UserCustomizedSampleException {
   def message(message: String, cause: Throwable) =
     if (message != null) message
@@ -31,6 +36,7 @@ object UserCustomizedSampleException {
     else null
 }
 
+@InterfaceAudience.Private
 case class IntKeyRecord(
   col0: Integer,
   col1: Boolean,
@@ -56,6 +62,7 @@ object IntKeyRecord {
   }
 }
 
+@InterfaceAudience.Private
 object DataType {
   val cat = s"""{
                 |"table":{"namespace":"default", "name":"DataTypeExampleTable"},
@@ -100,56 +107,56 @@ object DataType {
     // test less than 0
     val df = withCatalog(cat)
     val s = df.filter($"col0" < 0)
-    s.show
+    s.show()
     if(s.count() != 16){
       throw new UserCustomizedSampleException("value invalid")
     }
 
     //test less or equal than -10. The number of results is 11
     val num1 = df.filter($"col0" <= -10)
-    num1.show
+    num1.show()
     val c1 = num1.count()
     println(s"test result count should be 11: $c1")
 
     //test less or equal than -9. The number of results is 12
     val num2 = df.filter($"col0" <= -9)
-    num2.show
+    num2.show()
     val c2 = num2.count()
     println(s"test result count should be 12: $c2")
 
     //test greater or equal than -9". The number of results is 21
     val num3 = df.filter($"col0" >= -9)
-    num3.show
+    num3.show()
     val c3 = num3.count()
     println(s"test result count should be 21: $c3")
 
     //test greater or equal than 0. The number of results is 16
     val num4 = df.filter($"col0" >= 0)
-    num4.show
+    num4.show()
     val c4 = num4.count()
     println(s"test result count should be 16: $c4")
 
     //test greater than 10. The number of results is 10
     val num5 = df.filter($"col0" > 10)
-    num5.show
+    num5.show()
     val c5 = num5.count()
     println(s"test result count should be 10: $c5")
 
     // test "and". The number of results is 11
     val num6 = df.filter($"col0" > -10 && $"col0" <= 10)
-    num6.show
+    num6.show()
     val c6 = num6.count()
     println(s"test result count should be 11: $c6")
 
     //test "or". The number of results is 21
     val num7 = df.filter($"col0" <= -10 || $"col0" > 10)
-    num7.show
+    num7.show()
     val c7 = num7.count()
     println(s"test result count should be 21: $c7")
 
     //test "all". The number of results is 32
     val num8 = df.filter($"col0" >= -100)
-    num8.show
+    num8.show()
     val c8 = num8.count()
     println(s"test result count should be 32: $c8")
 

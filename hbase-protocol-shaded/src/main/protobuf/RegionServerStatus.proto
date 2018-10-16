@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
 
 // This file contains protocol buffers that are used for RegionServerStatusProtocol.
 package hbase.pb;
@@ -27,6 +28,7 @@ option optimize_for = SPEED;
 
 import "HBase.proto";
 import "ClusterStatus.proto";
+import "ErrorHandling.proto";
 
 message RegionServerStartupRequest {
   /** Port number this regionserver is up on */
@@ -104,11 +106,13 @@ message RegionStateTransition {
     READY_TO_SPLIT = 3;
     READY_TO_MERGE = 4;
 
-    SPLIT_PONR = 5;
-    MERGE_PONR = 6;
 
+    /** We used to have PONR enums for split and merge in here occupying
+     positions 5 and 6 but they have since been removed. Do not reuse these
+     indices */
     SPLIT = 7;
     MERGED = 8;
+
     SPLIT_REVERTED = 9;
     MERGE_REVERTED = 10;
   }
@@ -140,7 +144,34 @@ message RegionSpaceUseReportRequest {
 }
 
 message RegionSpaceUseReportResponse {
+}
 
+message RemoteProcedureResult {
+  required uint64 proc_id = 1;
+  enum Status {
+    SUCCESS = 1;
+    ERROR = 2;
+  }
+  required Status status = 2;
+  optional ForeignExceptionMessage error = 3;
+}
+message ReportProcedureDoneRequest {
+  repeated RemoteProcedureResult result = 1;
+}
+
+message ReportProcedureDoneResponse {
+}
+
+message FileArchiveNotificationRequest {
+  message FileWithSize {
+    optional TableName table_name = 1;
+    optional string name = 2;
+    optional uint64 size = 3;
+  }
+  repeated FileWithSize archived_files = 1;
+}
+
+message FileArchiveNotificationResponse {
 }
 
 service RegionServerStatusService {
@@ -178,4 +209,11 @@ service RegionServerStatusService {
    */
   rpc ReportRegionSpaceUse(RegionSpaceUseReportRequest)
     returns(RegionSpaceUseReportResponse);
+
+  rpc ReportProcedureDone(ReportProcedureDoneRequest)
+    returns(ReportProcedureDoneResponse);
+
+  /** Reports files that were moved to the archive directory for space quotas */
+  rpc ReportFileArchival(FileArchiveNotificationRequest)
+    returns(FileArchiveNotificationResponse);
 }

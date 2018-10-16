@@ -16,14 +16,14 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This will load all the xml configuration files for the source cluster replication ID from
@@ -31,9 +31,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class DefaultSourceFSConfigurationProvider implements SourceFSConfigurationProvider {
-  private static final Log LOG = LogFactory.getLog(DefaultSourceFSConfigurationProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultSourceFSConfigurationProvider.class);
+
   // Map containing all the source clusters configurations against their replication cluster id
-  private Map<String, Configuration> sourceClustersConfs = new HashMap<>();
+  private final Map<String, Configuration> sourceClustersConfs = new HashMap<>();
   private static final String XML = ".xml";
 
   @Override

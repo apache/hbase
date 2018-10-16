@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
@@ -32,25 +32,26 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 
 @Category({ VerySlowRegionServerTests.class, LargeTests.class })
 public class TestAsyncLogRolling extends AbstractTestLogRolling {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-      withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncLogRolling.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TestAsyncLogRolling.TEST_UTIL.getConfiguration();
-    conf.setInt(AsyncFSWAL.ASYNC_WAL_CREATE_MAX_RETRIES, 100);
+    conf.setInt(FanOutOneBlockAsyncDFSOutputHelper.ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES, 100);
     conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
     AbstractTestLogRolling.setUpBeforeClass();
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testLogRollOnDatanodeDeath() throws IOException, InterruptedException {
     dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), 3, true, null, null);
     tableName = getName();
@@ -58,7 +59,7 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
     doPut(table, 1);
     server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
-    HRegionInfo hri = server.getOnlineRegions(table.getName()).get(0).getRegionInfo();
+    RegionInfo hri = server.getRegions(table.getName()).get(0).getRegionInfo();
     AsyncFSWAL wal = (AsyncFSWAL) server.getWAL(hri);
     int numRolledLogFiles = AsyncFSWALProvider.getNumRolledLogFiles(wal);
     DatanodeInfo[] dnInfos = wal.getPipeline();

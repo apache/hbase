@@ -20,18 +20,17 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalDouble;
+import java.util.OptionalLong;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -41,9 +40,12 @@ import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.metrics2.MetricsExecutor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Impl for exposing HRegionServer Information through Hadoop's metrics 2 system.
@@ -52,7 +54,7 @@ import org.apache.hadoop.metrics2.MetricsExecutor;
 class MetricsRegionServerWrapperImpl
     implements MetricsRegionServerWrapper {
 
-  private static final Log LOG = LogFactory.getLog(MetricsRegionServerWrapperImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionServerWrapperImpl.class);
 
   private final HRegionServer regionServer;
   private final MetricsWALSource metricsWALSource;
@@ -72,8 +74,11 @@ class MetricsRegionServerWrapperImpl
   private volatile long numReferenceFiles = 0;
   private volatile double requestsPerSecond = 0.0;
   private volatile long readRequestsCount = 0;
+  private volatile double readRequestsRatePerSecond = 0;
+  private volatile long cpRequestsCount = 0;
   private volatile long filteredReadRequestsCount = 0;
   private volatile long writeRequestsCount = 0;
+  private volatile double writeRequestsRatePerSecond = 0;
   private volatile long checkAndMutateChecksFailed = 0;
   private volatile long checkAndMutateChecksPassed = 0;
   private volatile long storefileIndexSize = 0;
@@ -107,6 +112,8 @@ class MetricsRegionServerWrapperImpl
   private volatile long averageRegionSize = 0L;
 
   private CacheStats cacheStats;
+  private CacheStats l1Stats = null;
+  private CacheStats l2Stats = null;
   private ScheduledExecutorService executor;
   private Runnable runnable;
   private long period;
@@ -148,8 +155,12 @@ class MetricsRegionServerWrapperImpl
    */
   private synchronized  void initBlockCache() {
     CacheConfig cacheConfig = this.regionServer.cacheConfig;
-    if (cacheConfig != null && this.blockCache == null) {
-      this.blockCache = cacheConfig.getBlockCache();
+    if (cacheConfig != null) {
+      l1Stats = cacheConfig.getOnHeapCacheStats();
+      l2Stats = cacheConfig.getL2CacheStats();
+      if (this.blockCache == null) {
+        this.blockCache = cacheConfig.getBlockCache();
+      }
     }
 
     if (this.blockCache != null && this.cacheStats == null) {
@@ -179,7 +190,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public String getZookeeperQuorum() {
-    ZooKeeperWatcher zk = regionServer.getZooKeeper();
+    ZKWatcher zk = regionServer.getZooKeeper();
     if (zk == null) {
       return "";
     }
@@ -206,7 +217,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getNumOnlineRegions() {
-    Collection<Region> onlineRegionsLocalContext = regionServer.getOnlineRegionsLocalContext();
+    Collection<HRegion> onlineRegionsLocalContext = regionServer.getOnlineRegionsLocalContext();
     if (onlineRegionsLocalContext == null) {
       return 0;
     }
@@ -216,6 +227,11 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getTotalRequestCount() {
     return regionServer.rpcServices.requestCount.sum();
+  }
+
+  @Override
+  public long getTotalRowActionRequestCount() {
+    return readRequestsCount + writeRequestsCount;
   }
 
   @Override
@@ -268,6 +284,11 @@ class MetricsRegionServerWrapperImpl
       return 0;
     }
     return this.blockCache.getBlockCount();
+  }
+
+  @Override
+  public long getMemStoreLimit() {
+    return this.regionServer.getRegionServerAccounting().getGlobalMemStoreLimit();
   }
 
   @Override
@@ -368,6 +389,70 @@ class MetricsRegionServerWrapperImpl
     return this.cacheStats.getFailedInserts();
   }
 
+  @Override
+  public long getL1CacheHitCount() {
+    if (this.l1Stats == null) {
+      return 0;
+    }
+    return this.l1Stats.getHitCount();
+  }
+
+  @Override
+  public long getL1CacheMissCount() {
+    if (this.l1Stats == null) {
+      return 0;
+    }
+    return this.l1Stats.getMissCount();
+  }
+
+  @Override
+  public double getL1CacheHitRatio() {
+    if (this.l1Stats == null) {
+      return 0;
+    }
+    return this.l1Stats.getHitRatio();
+  }
+
+  @Override
+  public double getL1CacheMissRatio() {
+    if (this.l1Stats == null) {
+      return 0;
+    }
+    return this.l1Stats.getMissRatio();
+  }
+
+  @Override
+  public long getL2CacheHitCount() {
+    if (this.l2Stats == null) {
+      return 0;
+    }
+    return this.l2Stats.getHitCount();
+  }
+
+  @Override
+  public long getL2CacheMissCount() {
+    if (this.l2Stats == null) {
+      return 0;
+    }
+    return this.l2Stats.getMissCount();
+  }
+
+  @Override
+  public double getL2CacheHitRatio() {
+    if (this.l2Stats == null) {
+      return 0;
+    }
+    return this.l2Stats.getHitRatio();
+  }
+
+  @Override
+  public double getL2CacheMissRatio() {
+    if (this.l2Stats == null) {
+      return 0;
+    }
+    return this.l2Stats.getMissRatio();
+  }
+
   @Override public void forceRecompute() {
     this.runnable.run();
   }
@@ -376,7 +461,7 @@ class MetricsRegionServerWrapperImpl
   public long getNumStores() {
     return numStores;
   }
-  
+
   @Override
   public long getNumWALFiles() {
     return numWALFiles;
@@ -391,7 +476,7 @@ class MetricsRegionServerWrapperImpl
   public long getNumWALSlowAppend() {
     return metricsWALSource.getSlowAppendCount();
   }
-  
+
   @Override
   public long getNumStoreFiles() {
     return numStoreFiles;
@@ -418,7 +503,7 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public long getMemstoreSize() {
+  public long getMemStoreSize() {
     return memstoreSize;
   }
 
@@ -437,6 +522,16 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getCpRequestsCount() {
+    return cpRequestsCount;
+  }
+
+  @Override
+  public double getReadRequestsRatePerSecond() {
+    return readRequestsRatePerSecond;
+  }
+
+  @Override
   public long getFilteredReadRequestsCount() {
     return filteredReadRequestsCount;
   }
@@ -444,6 +539,11 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getWriteRequestsCount() {
     return writeRequestsCount;
+  }
+
+  @Override
+  public double getWriteRequestsRatePerSecond() {
+    return writeRequestsRatePerSecond;
   }
 
   @Override
@@ -628,6 +728,8 @@ class MetricsRegionServerWrapperImpl
 
     private long lastRan = 0;
     private long lastRequestCount = 0;
+    private long lastReadRequestsCount = 0;
+    private long lastWriteRequestsCount = 0;
 
     @Override
     synchronized public void run() {
@@ -645,7 +747,7 @@ class MetricsRegionServerWrapperImpl
         long avgAgeNumerator = 0, numHFiles = 0;
         long tempMinStoreFileAge = Long.MAX_VALUE;
         long tempReadRequestsCount = 0, tempFilteredReadRequestsCount = 0,
-          tempWriteRequestsCount = 0;
+          tempWriteRequestsCount = 0, tempCpRequestsCount = 0;
         long tempCheckAndMutateChecksFailed = 0;
         long tempCheckAndMutateChecksPassed = 0;
         long tempStorefileIndexSize = 0;
@@ -672,36 +774,46 @@ class MetricsRegionServerWrapperImpl
         long tempMobScanCellsSize = 0;
         long tempBlockedRequestsCount = 0;
         int regionCount = 0;
-        for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+        for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
           tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
           tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
           tempReadRequestsCount += r.getReadRequestsCount();
+          tempCpRequestsCount += r.getCpRequestsCount();
           tempFilteredReadRequestsCount += r.getFilteredReadRequestsCount();
           tempWriteRequestsCount += r.getWriteRequestsCount();
           tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
           tempCheckAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
           tempBlockedRequestsCount += r.getBlockedRequestsCount();
-          List<Store> storeList = r.getStores();
+          List<? extends Store> storeList = r.getStores();
           tempNumStores += storeList.size();
           for (Store store : storeList) {
             tempNumStoreFiles += store.getStorefilesCount();
-            tempMemstoreSize += store.getSizeOfMemStore().getDataSize();
+            tempMemstoreSize += store.getMemStoreSize().getDataSize();
             tempStoreFileSize += store.getStorefilesSize();
 
-            long storeMaxStoreFileAge = store.getMaxStoreFileAge();
-            tempMaxStoreFileAge = (storeMaxStoreFileAge > tempMaxStoreFileAge) ?
-              storeMaxStoreFileAge : tempMaxStoreFileAge;
+            OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
+            if (storeMaxStoreFileAge.isPresent() &&
+                storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge) {
+              tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
+            }
 
-            long storeMinStoreFileAge = store.getMinStoreFileAge();
-            tempMinStoreFileAge = (storeMinStoreFileAge < tempMinStoreFileAge) ?
-              storeMinStoreFileAge : tempMinStoreFileAge;
+            OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
+            if (storeMinStoreFileAge.isPresent() &&
+                storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge) {
+              tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
+            }
 
             long storeHFiles = store.getNumHFiles();
-            avgAgeNumerator += store.getAvgStoreFileAge() * storeHFiles;
             numHFiles += storeHFiles;
             tempNumReferenceFiles += store.getNumReferenceFiles();
 
-            tempStorefileIndexSize += store.getStorefilesIndexSize();
+            OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
+            if (storeAvgStoreFileAge.isPresent()) {
+              avgAgeNumerator =
+                  (long) (avgAgeNumerator + storeAvgStoreFileAge.getAsDouble() * storeHFiles);
+            }
+
+            tempStorefileIndexSize += store.getStorefilesRootLevelIndexSize();
             tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
             tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
             tempFlushedCellsCount += store.getFlushedCellsCount();
@@ -754,6 +866,21 @@ class MetricsRegionServerWrapperImpl
           requestsPerSecond = (currentRequestCount - lastRequestCount) /
               ((currentTime - lastRan) / 1000.0);
           lastRequestCount = currentRequestCount;
+
+          long intervalReadRequestsCount = tempReadRequestsCount - lastReadRequestsCount;
+          long intervalWriteRequestsCount = tempWriteRequestsCount - lastWriteRequestsCount;
+
+          double readRequestsRatePerMilliSecond = ((double)intervalReadRequestsCount/
+              (double)period);
+          double writeRequestsRatePerMilliSecond = ((double)intervalWriteRequestsCount/
+              (double)period);
+
+          readRequestsRatePerSecond = readRequestsRatePerMilliSecond * 1000.0;
+          writeRequestsRatePerSecond = writeRequestsRatePerMilliSecond * 1000.0;
+
+          lastReadRequestsCount = tempReadRequestsCount;
+          lastWriteRequestsCount = tempWriteRequestsCount;
+
         }
         lastRan = currentTime;
 
@@ -782,6 +909,7 @@ class MetricsRegionServerWrapperImpl
 
         numReferenceFiles= tempNumReferenceFiles;
         readRequestsCount = tempReadRequestsCount;
+        cpRequestsCount = tempCpRequestsCount;
         filteredReadRequestsCount = tempFilteredReadRequestsCount;
         writeRequestsCount = tempWriteRequestsCount;
         checkAndMutateChecksFailed = tempCheckAndMutateChecksFailed;
@@ -841,6 +969,7 @@ class MetricsRegionServerWrapperImpl
     return averageRegionSize;
   }
 
+  @Override
   public long getDataMissCount() {
     if (this.cacheStats == null) {
       return 0;

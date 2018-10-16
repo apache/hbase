@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 
 /**
@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
  *   <li> {@link #reset()} : reset the filter state before filtering a new row. </li>
  *   <li> {@link #filterAllRemaining()}: true means row scan is over; false means keep going. </li>
  *   <li> {@link #filterRowKey(Cell)}: true means drop this row; false means include.</li>
- *   <li> {@link #filterKeyValue(Cell)}: decides whether to include or exclude this Cell.
+ *   <li> {@link #filterCell(Cell)}: decides whether to include or exclude this Cell.
  *        See {@link ReturnCode}. </li>
  *   <li> {@link #transformCell(Cell)}: if the Cell is included, let the filter transform the
  *        Cell. </li>
@@ -66,7 +66,7 @@ public abstract class Filter {
 
   /**
    * Filters a row based on the row key. If this returns true, the entire row will be excluded. If
-   * false, each KeyValue in the row will be passed to {@link #filterKeyValue(Cell)} below.
+   * false, each KeyValue in the row will be passed to {@link #filterCell(Cell)} below.
    * 
    * Concrete implementers can signal a failure condition in their code by throwing an
    * {@link IOException}.
@@ -84,7 +84,7 @@ public abstract class Filter {
 
   /**
    * Filters a row based on the row key. If this returns true, the entire row will be excluded. If
-   * false, each KeyValue in the row will be passed to {@link #filterKeyValue(Cell)} below.
+   * false, each KeyValue in the row will be passed to {@link #filterCell(Cell)} below.
    * If {@link #filterAllRemaining()} returns true, then {@link #filterRowKey(Cell)} should
    * also return true.
    *
@@ -120,16 +120,46 @@ public abstract class Filter {
    * If your filter returns <code>ReturnCode.NEXT_ROW</code>, it should return
    * <code>ReturnCode.NEXT_ROW</code> until {@link #reset()} is called just in case the caller calls
    * for the next row.
-   * 
+   *
    * Concrete implementers can signal a failure condition in their code by throwing an
    * {@link IOException}.
    * 
-   * @param v the Cell in question
+   * @param c the Cell in question
+   * @return code as described below, Filter.ReturnCode.INCLUDE by default
+   * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
+   * @see Filter.ReturnCode
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Instead use filterCell(Cell)
+   */
+  @Deprecated
+  public ReturnCode filterKeyValue(final Cell c) throws IOException {
+    return Filter.ReturnCode.INCLUDE;
+  }
+
+  /**
+   * A way to filter based on the column family, column qualifier and/or the column value. Return
+   * code is described below. This allows filters to filter only certain number of columns, then
+   * terminate without matching ever column.
+   *
+   * If filterRowKey returns true, filterCell needs to be consistent with it.
+   *
+   * filterCell can assume that filterRowKey has already been called for the row.
+   *
+   * If your filter returns <code>ReturnCode.NEXT_ROW</code>, it should return
+   * <code>ReturnCode.NEXT_ROW</code> until {@link #reset()} is called just in case the caller calls
+   * for the next row.
+   *
+   * Concrete implementers can signal a failure condition in their code by throwing an
+   * {@link IOException}.
+   *
+   * @param c the Cell in question
    * @return code as described below
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
    * @see Filter.ReturnCode
    */
-  abstract public ReturnCode filterKeyValue(final Cell v) throws IOException;
+  public ReturnCode filterCell(final Cell c) throws IOException{
+    return filterKeyValue(c);
+  }
 
   /**
    * Give the filter a chance to transform the passed KeyValue. If the Cell is changed a new
@@ -172,8 +202,12 @@ public abstract class Filter {
      */
     NEXT_COL,
     /**
-     * Done with columns, skip to next row. Note that filterRow() will
-     * still be called.
+     * Seek to next row in current family. It may still pass a cell whose family is different but
+     * row is the same as previous cell to {@link #filterCell(Cell)} , even if we get a NEXT_ROW
+     * returned for previous cell. For more details see HBASE-18368. <br>
+     * Once reset() method was invoked, then we switch to the next row for all family, and you can
+     * catch the event by invoking CellUtils.matchingRows(previousCell, currentCell). <br>
+     * Note that filterRow() will still be called. <br>
      */
     NEXT_ROW,
     /**
@@ -181,7 +215,7 @@ public abstract class Filter {
      */
     SEEK_NEXT_USING_HINT,
     /**
-     * Include KeyValue and done with row, seek to next.
+     * Include KeyValue and done with row, seek to next. See NEXT_ROW.
      */
     INCLUDE_AND_SEEK_NEXT_ROW,
 }
@@ -206,7 +240,7 @@ public abstract class Filter {
   abstract public boolean hasFilterRow();
 
   /**
-   * Last chance to veto row based on previous {@link #filterKeyValue(Cell)} calls. The filter
+   * Last chance to veto row based on previous {@link #filterCell(Cell)} calls. The filter
    * needs to retain state then return a particular value for this call if they wish to exclude a
    * row if a certain column is missing (for example).
    * 

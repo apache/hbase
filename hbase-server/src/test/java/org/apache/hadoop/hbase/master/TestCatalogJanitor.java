@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,18 +27,16 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -62,22 +59,27 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestCatalogJanitor {
-  private static final Log LOG = LogFactory.getLog(TestCatalogJanitor.class);
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-     withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCatalogJanitor.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitor.class);
   @Rule public final TestName name = new TestName();
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private MockMasterServices masterServices;
@@ -89,7 +91,7 @@ public class TestCatalogJanitor {
   }
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws IOException, KeeperException {
     setRootDirAndCleanIt(HTU, this.name.getMethodName());
     NavigableMap<ServerName, SortedSet<byte []>> regionsToRegionServers =
         new ConcurrentSkipListMap<ServerName, SortedSet<byte []>>();
@@ -172,7 +174,7 @@ public class TestCatalogJanitor {
    */
   private TableDescriptor createTableDescriptorForCurrentMethod() {
     return TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName())).
-        addColumnFamily(new HColumnDescriptor(MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME)).
+      setColumnFamily(new HColumnDescriptor(MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME)).
         build();
   }
 
@@ -478,7 +480,7 @@ public class TestCatalogJanitor {
   private void logFiles(String description, FileStatus[] storeFiles) {
     LOG.debug("Current " + description + ": ");
     for (FileStatus file : storeFiles) {
-      LOG.debug(file.getPath());
+      LOG.debug(Objects.toString(file.getPath()));
     }
   }
 

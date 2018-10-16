@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 
 /**
@@ -47,8 +47,8 @@ public abstract class NoncedRegionServerCallable<T> extends ClientServiceCallabl
    * @param row The row we want in <code>tableName</code>.
    */
   public NoncedRegionServerCallable(Connection connection, TableName tableName, byte [] row,
-      HBaseRpcController rpcController) {
-    super(connection, tableName, row, rpcController);
+      HBaseRpcController rpcController, int priority) {
+    super(connection, tableName, row, rpcController, priority);
     this.nonce = getConnection().getNonceGenerator().newNonce();
   }
 

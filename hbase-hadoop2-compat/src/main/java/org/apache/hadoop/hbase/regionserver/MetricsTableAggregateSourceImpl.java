@@ -20,19 +20,20 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
-implements MetricsTableAggregateSource {
+        implements MetricsTableAggregateSource {
 
-  private static final Log LOG = LogFactory.getLog(MetricsTableAggregateSourceImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsTableAggregateSourceImpl.class);
   private ConcurrentHashMap<String, MetricsTableSource> tableSources = new ConcurrentHashMap<>();
 
   public MetricsTableAggregateSourceImpl() {
@@ -46,22 +47,38 @@ implements MetricsTableAggregateSource {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
-  @Override
-  public void register(String table, MetricsTableSource source) {
-    tableSources.put(table, source);
+  private void register(MetricsTableSource source) {
+    source.registerMetrics();
   }
 
   @Override
-  public void deregister(String table) {
+  public void deleteTableSource(String table) {
     try {
-      tableSources.remove(table);
+      MetricsTableSource source = tableSources.remove(table);
+      if (source != null) {
+        source.close();
+      }
     } catch (Exception e) {
       // Ignored. If this errors out it means that someone is double
-      // closing the region source and the region is already nulled out.
-      LOG.info(
-        "Error trying to remove " + table + " from " + this.getClass().getSimpleName(),
-        e);
+      // closing the user source and the user metrics is already nulled out.
+      LOG.info("Error trying to remove " + table + " from " + getClass().getSimpleName(), e);
     }
+  }
+
+  @Override
+  public MetricsTableSource getOrCreateTableSource(String table,
+      MetricsTableWrapperAggregate wrapper) {
+    MetricsTableSource source = tableSources.get(table);
+    if (source != null) {
+      return source;
+    }
+    MetricsTableSource newSource = CompatibilitySingletonFactory
+      .getInstance(MetricsRegionServerSourceFactory.class).createTable(table, wrapper);
+    return tableSources.computeIfAbsent(table, k -> {
+      // register the new metrics now
+      newSource.registerMetrics();
+      return newSource;
+    });
   }
 
   /**

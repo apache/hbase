@@ -24,33 +24,32 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 
 /**
  * {@link QuotaSnapshotStore} for tables.
  */
 @InterfaceAudience.Private
 public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
-  private static final Log LOG = LogFactory.getLog(TableQuotaSnapshotStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableQuotaSnapshotStore.class);
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final ReadLock rlock = lock.readLock();
@@ -58,9 +57,9 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
 
   private final Connection conn;
   private final QuotaObserverChore chore;
-  private Map<HRegionInfo,Long> regionUsage;
+  private Map<RegionInfo,Long> regionUsage;
 
-  public TableQuotaSnapshotStore(Connection conn, QuotaObserverChore chore, Map<HRegionInfo,Long> regionUsage) {
+  public TableQuotaSnapshotStore(Connection conn, QuotaObserverChore chore, Map<RegionInfo,Long> regionUsage) {
     this.conn = Objects.requireNonNull(conn);
     this.chore = Objects.requireNonNull(chore);
     this.regionUsage = Objects.requireNonNull(regionUsage);
@@ -94,7 +93,7 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
     try {
       final long sizeLimitInBytes = spaceQuota.getSoftLimit();
       long sum = 0L;
-      for (Entry<HRegionInfo,Long> entry : filterBySubject(table)) {
+      for (Entry<RegionInfo,Long> entry : filterBySubject(table)) {
         sum += entry.getValue();
       }
       // Add in the size for any snapshots against this table
@@ -114,7 +113,7 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
    */
   long getSnapshotSizesForTable(TableName tn) throws IOException {
     try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
-      Scan s = QuotaTableUtil.createScanForSnapshotSizes(tn);
+      Scan s = QuotaTableUtil.createScanForSpaceSnapshotSizes(tn);
       ResultScanner rs = quotaTable.getScanner(s);
       try {
         long size = 0L;
@@ -145,12 +144,12 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
   }
 
   @Override
-  public Iterable<Entry<HRegionInfo,Long>> filterBySubject(TableName table) {
+  public Iterable<Entry<RegionInfo,Long>> filterBySubject(TableName table) {
     rlock.lock();
     try {
-      return Iterables.filter(regionUsage.entrySet(), new Predicate<Entry<HRegionInfo,Long>>() {
+      return Iterables.filter(regionUsage.entrySet(), new Predicate<Entry<RegionInfo,Long>>() {
         @Override
-        public boolean apply(Entry<HRegionInfo,Long> input) {
+        public boolean apply(Entry<RegionInfo,Long> input) {
           return table.equals(input.getKey().getTable());
         }
       });
@@ -166,7 +165,7 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
   }
 
   @Override
-  public void setRegionUsage(Map<HRegionInfo,Long> regionUsage) {
+  public void setRegionUsage(Map<RegionInfo,Long> regionUsage) {
     wlock.lock();
     try {
       this.regionUsage = Objects.requireNonNull(regionUsage);

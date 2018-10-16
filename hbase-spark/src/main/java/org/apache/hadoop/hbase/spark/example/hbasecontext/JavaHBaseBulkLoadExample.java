@@ -16,6 +16,9 @@
  */
 package org.apache.hadoop.hbase.spark.example.hbasecontext;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -25,24 +28,24 @@ import org.apache.hadoop.hbase.spark.JavaHBaseContext;
 import org.apache.hadoop.hbase.spark.KeyFamilyQualifier;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.function.Function;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Run this example using command below:
  *
- *  SPARK_HOME/bin/spark-submit --master local[2] --class org.apache.hadoop.hbase.spark.example.hbasecontext.JavaHBaseBulkLoadExample
+ *  SPARK_HOME/bin/spark-submit --master local[2]
+ *  --class org.apache.hadoop.hbase.spark.example.hbasecontext.JavaHBaseBulkLoadExample
  *  path/to/hbase-spark.jar {path/to/output/HFiles}
  *
  * This example will output put hfiles in {path/to/output/HFiles}, and user can run
- * 'hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles' to load the HFiles into table to verify this example.
+ * 'hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles' to load the HFiles into table to
+ * verify this example.
  */
+@InterfaceAudience.Private
 final public class JavaHBaseBulkLoadExample {
   private JavaHBaseBulkLoadExample() {}
 
@@ -85,17 +88,21 @@ final public class JavaHBaseBulkLoadExample {
     }
   }
 
-  public static class BulkLoadFunction implements Function<String, Pair<KeyFamilyQualifier, byte[]>> {
-
+  public static class BulkLoadFunction
+          implements Function<String, Pair<KeyFamilyQualifier, byte[]>> {
     @Override
     public Pair<KeyFamilyQualifier, byte[]> call(String v1) throws Exception {
-      if (v1 == null)
+      if (v1 == null) {
         return null;
+      }
+
       String[] strs = v1.split(",");
-      if(strs.length != 4)
+      if(strs.length != 4) {
         return null;
-      KeyFamilyQualifier kfq = new KeyFamilyQualifier(Bytes.toBytes(strs[0]), Bytes.toBytes(strs[1]),
-          Bytes.toBytes(strs[2]));
+      }
+
+      KeyFamilyQualifier kfq = new KeyFamilyQualifier(Bytes.toBytes(strs[0]),
+              Bytes.toBytes(strs[1]), Bytes.toBytes(strs[2]));
       return new Pair(kfq, Bytes.toBytes(strs[3]));
     }
   }

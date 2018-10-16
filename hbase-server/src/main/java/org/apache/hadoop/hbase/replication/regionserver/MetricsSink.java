@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 
 /**
@@ -94,9 +94,20 @@ public class MetricsSink {
    * Get the TimeStampOfLastAppliedOp. If no replication Op applied yet, the value is the timestamp
    * at which hbase instance starts
    * @return timeStampsOfLastAppliedOp;
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0.
+   * @see #getTimestampOfLastAppliedOp()
    */
+  @Deprecated
   public long getTimeStampOfLastAppliedOp() {
-    return this.lastTimestampForAge;
+    return getTimestampOfLastAppliedOp();
   }
 
+  /**
+   * Get the TimestampOfLastAppliedOp. If no replication Op applied yet, the value is the timestamp
+   * at which hbase instance starts
+   * @return timeStampsOfLastAppliedOp;
+   */
+  public long getTimestampOfLastAppliedOp() {
+    return this.lastTimestampForAge;
+  }
 }

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mob.compactions;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -31,31 +31,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -71,7 +68,6 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
@@ -81,16 +77,23 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestPartitionedMobCompactor {
-  private static final Log LOG = LogFactory.getLog(TestPartitionedMobCompactor.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestPartitionedMobCompactor.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestPartitionedMobCompactor.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String family = "family";
   private final static String qf = "qf";
@@ -132,8 +135,8 @@ public class TestPartitionedMobCompactor {
     Path testDir = FSUtils.getRootDir(conf);
     Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
     basePath = new Path(new Path(mobTestDir, tableName), family);
-    mobSuffix = UUID.randomUUID().toString().replaceAll("-", "");
-    delSuffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
+    mobSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
+    delSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "") + "_del";
     allFiles.clear();
     mobFiles.clear();
     delFiles.clear();
@@ -494,12 +497,12 @@ public class TestPartitionedMobCompactor {
         PartitionedMobCompactionRequest request = select(files, isForceAllFiles);
 
         // Make sure that there is no del Partitions
-        Assert.assertTrue(request.getDelPartitions().size() == 0);
+        assertTrue(request.getDelPartitions().size() == 0);
 
         // Make sure that when there is no startKey/endKey for partition.
         for (CompactionPartition p : request.getCompactionPartitions()) {
-          Assert.assertTrue(p.getStartKey() == null);
-          Assert.assertTrue(p.getEndKey() == null);
+          assertTrue(p.getStartKey() == null);
+          assertTrue(p.getEndKey() == null);
         }
         return null;
       }
@@ -514,7 +517,7 @@ public class TestPartitionedMobCompactor {
     CacheConfig cacheConfig = null;
 
     MyPartitionedMobCompactor(Configuration conf, FileSystem fs, TableName tableName,
-        HColumnDescriptor column, ExecutorService pool, final int delPartitionSize,
+        ColumnFamilyDescriptor column, ExecutorService pool, final int delPartitionSize,
         final CacheConfig cacheConf, final int PartitionsIncludeDelFiles)
         throws IOException {
       super(conf, fs, tableName, column, pool);
@@ -530,18 +533,18 @@ public class TestPartitionedMobCompactor {
       }
       PartitionedMobCompactionRequest request = select(files, isForceAllFiles);
 
-      Assert.assertTrue(request.getDelPartitions().size() == delPartitionSize);
+      assertTrue(request.getDelPartitions().size() == delPartitionSize);
       if (request.getDelPartitions().size() > 0) {
         for (CompactionPartition p : request.getCompactionPartitions()) {
-          Assert.assertTrue(p.getStartKey() != null);
-          Assert.assertTrue(p.getEndKey() != null);
+          assertTrue(p.getStartKey() != null);
+          assertTrue(p.getEndKey() != null);
         }
       }
 
       try {
         for (CompactionDelPartition delPartition : request.getDelPartitions()) {
           for (Path newDelPath : delPartition.listDelFiles()) {
-            StoreFile sf =
+            HStoreFile sf =
                 new HStoreFile(fs, newDelPath, conf, this.cacheConfig, BloomType.NONE, true);
             // pre-create reader of a del file to avoid race condition when opening the reader in
             // each partition.
@@ -553,11 +556,11 @@ public class TestPartitionedMobCompactor {
         // Make sure that CompactionDelPartitions does not overlap
         CompactionDelPartition prevDelP = null;
         for (CompactionDelPartition delP : request.getDelPartitions()) {
-          Assert.assertTrue(
+          assertTrue(
               Bytes.compareTo(delP.getId().getStartKey(), delP.getId().getEndKey()) <= 0);
 
           if (prevDelP != null) {
-            Assert.assertTrue(
+            assertTrue(
                 Bytes.compareTo(prevDelP.getId().getEndKey(), delP.getId().getStartKey()) < 0);
           }
         }
@@ -567,7 +570,7 @@ public class TestPartitionedMobCompactor {
         // Make sure that only del files within key range for a partition is included in compaction.
         // compact the mob files by partitions in parallel.
         for (CompactionPartition partition : request.getCompactionPartitions()) {
-          List<StoreFile> delFiles = getListOfDelFilesForPartition(partition, request.getDelPartitions());
+          List<HStoreFile> delFiles = getListOfDelFilesForPartition(partition, request.getDelPartitions());
           if (!request.getDelPartitions().isEmpty()) {
             if (!((Bytes.compareTo(request.getDelPartitions().get(0).getId().getStartKey(),
                 partition.getEndKey()) > 0) || (Bytes.compareTo(
@@ -575,23 +578,23 @@ public class TestPartitionedMobCompactor {
                     .getEndKey(), partition.getStartKey()) < 0))) {
 
               if (delFiles.size() > 0) {
-                Assert.assertTrue(delFiles.size() == 1);
+                assertTrue(delFiles.size() == 1);
                 affectedPartitions += delFiles.size();
-                Assert.assertTrue(Bytes.compareTo(partition.getStartKey(),
-                    CellUtil.cloneRow(delFiles.get(0).getLastKey())) <= 0);
-                Assert.assertTrue(Bytes.compareTo(partition.getEndKey(),
-                    CellUtil.cloneRow(delFiles.get(delFiles.size() - 1).getFirstKey())) >= 0);
+                assertTrue(Bytes.compareTo(partition.getStartKey(),
+                  CellUtil.cloneRow(delFiles.get(0).getLastKey().get())) <= 0);
+                assertTrue(Bytes.compareTo(partition.getEndKey(),
+                  CellUtil.cloneRow(delFiles.get(delFiles.size() - 1).getFirstKey().get())) >= 0);
               }
             }
           }
         }
         // The del file is only included in one partition
-        Assert.assertTrue(affectedPartitions == PartitionsIncludeDelFiles);
+        assertTrue(affectedPartitions == PartitionsIncludeDelFiles);
       } finally {
         for (CompactionDelPartition delPartition : request.getDelPartitions()) {
-          for (StoreFile storeFile : delPartition.getStoreFiles()) {
+          for (HStoreFile storeFile : delPartition.getStoreFiles()) {
             try {
-              storeFile.closeReader(true);
+              storeFile.closeStoreFile(true);
             } catch (IOException e) {
               LOG.warn("Failed to close the reader on store file " + storeFile.getPath(), e);
             }
@@ -679,19 +682,19 @@ public class TestPartitionedMobCompactor {
         // Make sure that when there is no del files, there will be no startKey/endKey for partition.
         if (request.getDelPartitions().size() == 0) {
           for (CompactionPartition p : request.getCompactionPartitions()) {
-            Assert.assertTrue(p.getStartKey() == null);
-            Assert.assertTrue(p.getEndKey() == null);
+            assertTrue(p.getStartKey() == null);
+            assertTrue(p.getEndKey() == null);
           }
         }
 
         // Make sure that CompactionDelPartitions does not overlap
         CompactionDelPartition prevDelP = null;
         for (CompactionDelPartition delP : request.getDelPartitions()) {
-          Assert.assertTrue(Bytes.compareTo(delP.getId().getStartKey(),
+          assertTrue(Bytes.compareTo(delP.getId().getStartKey(),
               delP.getId().getEndKey()) <= 0);
 
           if (prevDelP != null) {
-            Assert.assertTrue(Bytes.compareTo(prevDelP.getId().getEndKey(),
+            assertTrue(Bytes.compareTo(prevDelP.getId().getEndKey(),
                 delP.getId().getStartKey()) < 0);
           }
         }
@@ -699,25 +702,24 @@ public class TestPartitionedMobCompactor {
         // Make sure that only del files within key range for a partition is included in compaction.
         // compact the mob files by partitions in parallel.
         for (CompactionPartition partition : request.getCompactionPartitions()) {
-          List<StoreFile> delFiles = getListOfDelFilesForPartition(partition, request.getDelPartitions());
+          List<HStoreFile> delFiles = getListOfDelFilesForPartition(partition, request.getDelPartitions());
           if (!request.getDelPartitions().isEmpty()) {
             if (!((Bytes.compareTo(request.getDelPartitions().get(0).getId().getStartKey(),
                 partition.getEndKey()) > 0) || (Bytes.compareTo(
                 request.getDelPartitions().get(request.getDelPartitions().size() - 1).getId()
                     .getEndKey(), partition.getStartKey()) < 0))) {
               if (delFiles.size() > 0) {
-                Assert.assertTrue(Bytes
-                    .compareTo(partition.getStartKey(), delFiles.get(0).getFirstKey().getRowArray())
-                    >= 0);
-                Assert.assertTrue(Bytes.compareTo(partition.getEndKey(),
-                    delFiles.get(delFiles.size() - 1).getLastKey().getRowArray()) <= 0);
+                assertTrue(Bytes.compareTo(partition.getStartKey(),
+                  delFiles.get(0).getFirstKey().get().getRowArray()) >= 0);
+                assertTrue(Bytes.compareTo(partition.getEndKey(),
+                  delFiles.get(delFiles.size() - 1).getLastKey().get().getRowArray()) <= 0);
               }
             }
           }
         }
 
         // assert the compaction type
-        Assert.assertEquals(type, request.type);
+        assertEquals(type, request.type);
         // assert get the right partitions
         compareCompactedPartitions(expected, request.compactionPartitions);
         // assert get the right del files
@@ -750,8 +752,8 @@ public class TestPartitionedMobCompactor {
         }
         List<Path> newDelPaths = compactDelFiles(request, delFilePaths);
         // assert the del files are merged.
-        Assert.assertEquals(expectedFileCount, newDelPaths.size());
-        Assert.assertEquals(expectedCellCount, countDelCellsInDelFiles(newDelPaths));
+        assertEquals(expectedFileCount, newDelPaths.size());
+        assertEquals(expectedCellCount, countDelCellsInDelFiles(newDelPaths));
         return null;
       }
     };
@@ -784,9 +786,9 @@ public class TestPartitionedMobCompactor {
     }
     Collections.sort(expected);
     Collections.sort(actualKeys);
-    Assert.assertEquals(expected.size(), actualKeys.size());
+    assertEquals(expected.size(), actualKeys.size());
     for (int i = 0; i < expected.size(); i++) {
-      Assert.assertEquals(expected.get(i), actualKeys.get(i));
+      assertEquals(expected.get(i), actualKeys.get(i));
     }
   }
 
@@ -802,7 +804,7 @@ public class TestPartitionedMobCompactor {
       }
     }
     for (Path f : delFiles) {
-      Assert.assertTrue(delMap.containsKey(f));
+      assertTrue(delMap.containsKey(f));
     }
   }
 
@@ -829,8 +831,8 @@ public class TestPartitionedMobCompactor {
       if (sameStartKey) {
         // When creating multiple files under one partition, suffix needs to be different.
         startRow = Bytes.toBytes(startKey);
-        mobSuffix = UUID.randomUUID().toString().replaceAll("-", "");
-        delSuffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
+        mobSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
+        delSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "") + "_del";
       } else {
         startRow = Bytes.toBytes(startKey + i);
       }
@@ -874,21 +876,18 @@ public class TestPartitionedMobCompactor {
    * @return the cell size
    */
   private int countDelCellsInDelFiles(List<Path> paths) throws IOException {
-    List<StoreFile> sfs = new ArrayList<>();
+    List<HStoreFile> sfs = new ArrayList<>();
     int size = 0;
     for (Path path : paths) {
-      StoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
+      HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
       sfs.add(sf);
     }
     List<KeyValueScanner> scanners = new ArrayList<>(StoreFileScanner.getScannersForStoreFiles(sfs,
       false, true, false, false, HConstants.LATEST_TIMESTAMP));
-    Scan scan = new Scan();
-    scan.setMaxVersions(hcd.getMaxVersions());
     long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
     long ttl = HStore.determineTTLFromFamily(hcd);
-    ScanInfo scanInfo = new ScanInfo(conf, hcd, ttl, timeToPurgeDeletes, CellComparator.COMPARATOR);
-    StoreScanner scanner = new StoreScanner(scan, scanInfo, ScanType.COMPACT_RETAIN_DELETES, null,
-        scanners, 0L, HConstants.LATEST_TIMESTAMP);
+    ScanInfo scanInfo = new ScanInfo(conf, hcd, ttl, timeToPurgeDeletes, CellComparatorImpl.COMPARATOR);
+    StoreScanner scanner = new StoreScanner(scanInfo, ScanType.COMPACT_RETAIN_DELETES, scanners);
     List<Cell> results = new ArrayList<>();
     boolean hasMore = true;
 

@@ -22,26 +22,26 @@ import static org.apache.hadoop.hbase.ipc.CallEvent.Type.TIMEOUT;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 
-import io.netty.handler.timeout.ReadTimeoutHandler;
+import org.apache.hbase.thirdparty.io.netty.handler.timeout.ReadTimeoutHandler;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
+import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
+import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelFuture;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelFutureListener;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandler;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
+import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.Future;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.FutureListener;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -49,9 +49,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -65,11 +65,12 @@ import org.apache.hadoop.security.UserGroupInformation;
  * <p>
  * Most operations are executed in handlers. Netty handler is always executed in the same
  * thread(EventLoop) so no lock is needed.
+ * @since 2.0.0
  */
 @InterfaceAudience.Private
 class NettyRpcConnection extends RpcConnection {
 
-  private static final Log LOG = LogFactory.getLog(NettyRpcConnection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NettyRpcConnection.class);
 
   private static final ScheduledExecutorService RELOGIN_EXECUTOR =
       Executors.newSingleThreadScheduledExecutor(Threads.newDaemonThreadFactory("Relogin"));
@@ -162,7 +163,7 @@ class NettyRpcConnection extends RpcConnection {
               relogin();
             }
           } catch (IOException e) {
-            LOG.warn("relogin failed", e);
+            LOG.warn("Relogin failed", e);
           }
           synchronized (this) {
             reloginInProgress = false;
@@ -250,9 +251,7 @@ class NettyRpcConnection extends RpcConnection {
   }
 
   private void connect() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Connecting to " + remoteId.address);
-    }
+    LOG.trace("Connecting to {}", remoteId.address);
 
     this.channel = new Bootstrap().group(rpcClient.group).channel(rpcClient.channelClass)
         .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
@@ -266,7 +265,7 @@ class NettyRpcConnection extends RpcConnection {
             Channel ch = future.channel();
             if (!future.isSuccess()) {
               failInit(ch, toIOE(future.cause()));
-              rpcClient.failedServers.addToFailedServers(remoteId.address);
+              rpcClient.failedServers.addToFailedServers(remoteId.address, future.cause());
               return;
             }
             ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());

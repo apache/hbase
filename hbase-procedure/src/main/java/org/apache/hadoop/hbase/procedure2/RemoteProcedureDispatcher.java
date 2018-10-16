@@ -32,10 +32,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedContainerWithTimestamp;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedWithTimeout;
@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 
-import com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 
 /**
  * A procedure dispatcher that aggregates and sends after elapsed time or after we hit
@@ -57,7 +57,7 @@ import com.google.common.collect.ArrayListMultimap;
  */
 @InterfaceAudience.Private
 public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable<TRemote>> {
-  private static final Log LOG = LogFactory.getLog(RemoteProcedureDispatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RemoteProcedureDispatcher.class);
 
   public static final String THREAD_POOL_SIZE_CONF_KEY =
       "hbase.procedure.remote.dispatcher.threadpool.size";
@@ -94,8 +94,8 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
       return false;
     }
 
-    LOG.info("Starting procedure remote dispatcher; threads=" + this.corePoolSize +
-      ", queueMaxSize=" + this.queueMaxSize + ", operationDelay=" + this.operationDelay);
+    LOG.info("Instantiated, coreThreads={} (allowCoreThreadTimeOut=true), queueMaxSize={}, " +
+        "operationDelay={}", this.corePoolSize, this.queueMaxSize, this.operationDelay);
 
     // Create the timeout executor
     timeoutExecutor = new TimeoutExecutorThread();
@@ -162,19 +162,25 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   }
 
   /**
-   * Add a remote rpc. Be sure to check result for successful add.
+   * Add a remote rpc.
    * @param key the node identifier
-   * @return True if we successfully added the operation.
    */
-  public boolean addOperationToNode(final TRemote key, RemoteProcedure rp) {
-    assert key != null : "found null key for node";
+  public void addOperationToNode(final TRemote key, RemoteProcedure rp)
+  throws NullTargetServerDispatchException, NoServerDispatchException, NoNodeDispatchException {
+    if (key == null) {
+      throw new NullTargetServerDispatchException(rp.toString());
+    }
     BufferNode node = nodeMap.get(key);
     if (node == null) {
-      return false;
+      // If null here, it means node has been removed because it crashed. This happens when server
+      // is expired in ServerManager. ServerCrashProcedure may or may not have run.
+      throw new NoServerDispatchException(key.toString() + "; " + rp.toString());
     }
     node.add(rp);
     // Check our node still in the map; could have been removed by #removeNode.
-    return nodeMap.contains(node);
+    if (!nodeMap.containsValue(node)) {
+      throw new NoNodeDispatchException(key.toString() + "; " + rp.toString());
+    }
   }
 
   /**
@@ -221,13 +227,29 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
 
   /**
    * Remote procedure reference.
-   * @param <TEnv>
-   * @param <TRemote>
    */
   public interface RemoteProcedure<TEnv, TRemote> {
+    /**
+     * For building the remote operation.
+     */
     RemoteOperation remoteCallBuild(TEnv env, TRemote remote);
-    void remoteCallCompleted(TEnv env, TRemote remote, RemoteOperation response);
+
+    /**
+     * Called when the executeProcedure call is failed.
+     */
     void remoteCallFailed(TEnv env, TRemote remote, IOException exception);
+
+    /**
+     * Called when RS tells the remote procedure is succeeded through the
+     * {@code reportProcedureDone} method.
+     */
+    void remoteOperationCompleted(TEnv env);
+
+    /**
+     * Called when RS tells the remote procedure is failed through the {@code reportProcedureDone}
+     * method.
+     */
+    void remoteOperationFailed(TEnv env, RemoteProcedureException error);
   }
 
   /**
@@ -242,9 +264,9 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   }
 
   protected ArrayListMultimap<Class<?>, RemoteOperation> buildAndGroupRequestByType(final TEnv env,
-      final TRemote remote, final Set<RemoteProcedure> operations) {
+      final TRemote remote, final Set<RemoteProcedure> remoteProcedures) {
     final ArrayListMultimap<Class<?>, RemoteOperation> requestByType = ArrayListMultimap.create();
-    for (RemoteProcedure proc: operations) {
+    for (RemoteProcedure proc: remoteProcedures) {
       RemoteOperation operation = proc.remoteCallBuild(env, remote);
       requestByType.put(operation.getClass(), operation);
     }
@@ -326,10 +348,12 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
       super(key, 0);
     }
 
+    @Override
     public TRemote getKey() {
       return getObject();
     }
 
+    @Override
     public synchronized void add(final RemoteProcedure operation) {
       if (this.operations == null) {
         this.operations = new HashSet<>();
@@ -343,6 +367,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
       }
     }
 
+    @Override
     public synchronized void dispatch() {
       if (operations != null) {
         remoteDispatch(getKey(), operations);
@@ -371,5 +396,5 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     public DelayedTask(final FutureTask<Void> task, final long delay, final TimeUnit unit) {
       super(task, EnvironmentEdgeManager.currentTime() + unit.toMillis(delay));
     }
-  };
+  }
 }

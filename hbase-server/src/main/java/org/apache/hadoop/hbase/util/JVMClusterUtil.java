@@ -23,12 +23,13 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
  */
 @InterfaceAudience.Private
 public class JVMClusterUtil {
-  private static final Log LOG = LogFactory.getLog(JVMClusterUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JVMClusterUtil.class);
 
   /**
    * Datastructure to hold RegionServer Thread and RegionServer instance
@@ -72,23 +73,18 @@ public class JVMClusterUtil {
    * Creates a {@link RegionServerThread}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
-   * @param cp consensus provider to use
    * @param hrsc Class to create.
    * @param index Used distinguishing the object returned.
    * @throws IOException
    * @return Region server added.
    */
-  public static JVMClusterUtil.RegionServerThread createRegionServerThread(
-      final Configuration c, CoordinatedStateManager cp, final Class<? extends HRegionServer> hrsc,
-      final int index)
-  throws IOException {
+  public static JVMClusterUtil.RegionServerThread createRegionServerThread(final Configuration c,
+      final Class<? extends HRegionServer> hrsc, final int index) throws IOException {
     HRegionServer server;
     try {
-
-      Constructor<? extends HRegionServer> ctor = hrsc.getConstructor(Configuration.class,
-      CoordinatedStateManager.class);
+      Constructor<? extends HRegionServer> ctor = hrsc.getConstructor(Configuration.class);
       ctor.setAccessible(true);
-      server = ctor.newInstance(c, cp);
+      server = ctor.newInstance(c);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException();
       throw new RuntimeException("Failed construction of RegionServer: " +
@@ -124,20 +120,16 @@ public class JVMClusterUtil {
    * Creates a {@link MasterThread}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
-   * @param cp consensus provider to use
    * @param hmc Class to create.
    * @param index Used distinguishing the object returned.
    * @throws IOException
    * @return Master added.
    */
-  public static JVMClusterUtil.MasterThread createMasterThread(
-      final Configuration c, CoordinatedStateManager cp, final Class<? extends HMaster> hmc,
-      final int index)
-  throws IOException {
+  public static JVMClusterUtil.MasterThread createMasterThread(final Configuration c,
+      final Class<? extends HMaster> hmc, final int index) throws IOException {
     HMaster server;
     try {
-      server = hmc.getConstructor(Configuration.class, CoordinatedStateManager.class).
-        newInstance(c, cp);
+      server = hmc.getConstructor(Configuration.class).newInstance(c);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException();
       throw new RuntimeException("Failed construction of Master: " +
@@ -171,6 +163,8 @@ public class JVMClusterUtil {
    */
   public static String startup(final List<JVMClusterUtil.MasterThread> masters,
       final List<JVMClusterUtil.RegionServerThread> regionservers) throws IOException {
+    // Implementation note: This method relies on timed sleeps in a loop. It's not great, and
+    // should probably be re-written to use actual synchronization objects, but it's ok for now
 
     Configuration configuration = null;
 
@@ -186,19 +180,9 @@ public class JVMClusterUtil {
     // Wait for an active master
     //  having an active master before starting the region threads allows
     //  then to succeed on their connection to master
-    long startTime = System.currentTimeMillis();
-    while (findActiveMaster(masters) == null) {
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-      }
-      int startTimeout = configuration != null ? Integer.parseInt(
+    final int startTimeout = configuration != null ? Integer.parseInt(
         configuration.get("hbase.master.start.timeout.localHBaseCluster", "30000")) : 30000;
-      if (System.currentTimeMillis() > startTime + startTimeout) {
-        throw new RuntimeException(String.format("Master not active after %s seconds", startTimeout));
-      }
-    }
+    waitForEvent(startTimeout, "active", () -> findActiveMaster(masters) != null);
 
     if (regionservers != null) {
       for (JVMClusterUtil.RegionServerThread t: regionservers) {
@@ -208,33 +192,50 @@ public class JVMClusterUtil {
 
     // Wait for an active master to be initialized (implies being master)
     //  with this, when we return the cluster is complete
-    startTime = System.currentTimeMillis();
-    final int maxwait = 200000;
+    final int initTimeout = configuration != null ? Integer.parseInt(
+        configuration.get("hbase.master.init.timeout.localHBaseCluster", "200000")) : 200000;
+    waitForEvent(initTimeout, "initialized", () -> {
+        JVMClusterUtil.MasterThread t = findActiveMaster(masters);
+        // master thread should never be null at this point, but let's keep the check anyway
+        return t != null && t.master.isInitialized();
+      }
+    );
+
+    return findActiveMaster(masters).master.getServerName().toString();
+  }
+
+  /**
+   * Utility method to wait some time for an event to occur, and then return control to the caller.
+   * @param millis How long to wait, in milliseconds.
+   * @param action The action that we are waiting for. Will be used in log message if the event
+   *               does not occur.
+   * @param check A Supplier that will be checked periodically to produce an updated true/false
+   *              result indicating if the expected event has happened or not.
+   * @throws InterruptedIOException If we are interrupted while waiting for the event.
+   * @throws RuntimeException If we reach the specified timeout while waiting for the event.
+   */
+  private static void waitForEvent(long millis, String action, Supplier<Boolean> check)
+      throws InterruptedIOException {
+    long end = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+
     while (true) {
-      JVMClusterUtil.MasterThread t = findActiveMaster(masters);
-      if (t != null && t.master.isInitialized()) {
-        return t.master.getServerName().toString();
+      if (check.get()) {
+        return;
       }
-      // REMOVE
-      if (System.currentTimeMillis() > startTime + 10000) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-        }
-      }
-      if (System.currentTimeMillis() > startTime + maxwait) {
-        String msg = "Master not initialized after " + maxwait + "ms seconds";
-        Threads.printThreadInfo(System.out,
-          "Thread dump because: " + msg);
+
+      if (System.nanoTime() > end) {
+        String msg = "Master not " + action + " after " + millis + "ms";
+        Threads.printThreadInfo(System.out, "Thread dump because: " + msg);
         throw new RuntimeException(msg);
       }
+
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
         throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
     }
+
   }
 
   /**
@@ -266,7 +267,6 @@ public class JVMClusterUtil {
           LOG.error("Exception occurred in HMaster.shutdown()", e);
         }
       }
-
     }
     boolean wasInterrupted = false;
     final long maxTime = System.currentTimeMillis() + 30 * 1000;
@@ -305,7 +305,11 @@ public class JVMClusterUtil {
         if (!atLeastOneLiveServer) break;
         for (RegionServerThread t : regionservers) {
           if (t.isAlive()) {
-            LOG.warn("RegionServerThreads taking too long to stop, interrupting");
+            LOG.warn("RegionServerThreads taking too long to stop, interrupting; thread dump "  +
+              "if > 3 attempts: i=" + i);
+            if (i > 3) {
+              Threads.printThreadInfo(System.out, "Thread dump " + t.getName());
+            }
             t.interrupt();
           }
         }

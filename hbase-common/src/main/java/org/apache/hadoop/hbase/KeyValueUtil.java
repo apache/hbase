@@ -29,16 +29,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.base.Function;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
 
 /**
  * static convenience methods for dealing with KeyValues and collections of KeyValues
@@ -90,7 +90,7 @@ public class KeyValueUtil {
   public static int totalLengthWithMvccVersion(final Iterable<? extends KeyValue> kvs,
       final boolean includeMvccVersion) {
     int length = 0;
-    for (KeyValue kv : IterableUtils.nullSafe(kvs)) {
+    for (KeyValue kv : IterableUtils.emptyIfNull(kvs)) {
       length += lengthWithMvccVersion(kv, includeMvccVersion);
     }
     return length;
@@ -163,7 +163,7 @@ public class KeyValueUtil {
     pos = CellUtil.copyValueTo(cell, output, pos);
     if (withTags && (cell.getTagsLength() > 0)) {
       pos = Bytes.putAsShort(output, pos, cell.getTagsLength());
-      pos = CellUtil.copyTagTo(cell, output, pos);
+      pos = PrivateCellUtil.copyTagsTo(cell, output, pos);
     }
     return pos;
   }
@@ -179,7 +179,7 @@ public class KeyValueUtil {
     int tagsLength = cell.getTagsLength();
     if (withTags && (tagsLength > 0)) {
       offset = ByteBufferUtils.putAsShort(buf, offset, tagsLength);// Tags length
-      offset = CellUtil.copyTagTo(cell, buf, offset);// Tags bytes
+      offset = PrivateCellUtil.copyTagsTo(cell, buf, offset);// Tags bytes
     }
     return offset;
   }
@@ -515,7 +515,7 @@ public class KeyValueUtil {
     int length = kv.getLength();
     out.writeInt(length);
     out.write(kv.getBuffer(), kv.getOffset(), length);
-    return length + Bytes.SIZEOF_INT;
+    return (long) length + Bytes.SIZEOF_INT;
   }
 
   /**

@@ -22,21 +22,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -47,10 +40,17 @@ import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 @InterfaceAudience.Private
 public class HMasterCommandLine extends ServerCommandLine {
-  private static final Log LOG = LogFactory.getLog(HMasterCommandLine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HMasterCommandLine.class);
 
   private static final String USAGE =
     "Usage: Master [opts] start|stop|clear\n" +
@@ -70,11 +70,12 @@ public class HMasterCommandLine extends ServerCommandLine {
     this.masterClass = masterClass;
   }
 
+  @Override
   protected String getUsage() {
     return USAGE;
   }
 
-
+  @Override
   public int run(String args[]) throws Exception {
     Options opt = new Options();
     opt.addOption("localRegionServers", true,
@@ -149,6 +150,8 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   private int startMaster() {
     Configuration conf = getConf();
+    TraceUtil.initTracer(conf);
+
     try {
       // If 'local', defer to LocalHBaseCluster instance.  Starts master
       // and regionserver both in the one JVM.
@@ -230,9 +233,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         waitOnMasterThreads(cluster);
       } else {
         logProcessInfo(getConf());
-        CoordinatedStateManager csm =
-          CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
-        HMaster master = HMaster.constructMaster(masterClass, conf, csm);
+        HMaster master = HMaster.constructMaster(masterClass, conf);
         if (master.isStopped()) {
           LOG.info("Won't bring the Master up as a shutdown is requested");
           return 1;
@@ -302,9 +303,9 @@ public class HMasterCommandLine extends ServerCommandLine {
   public static class LocalHMaster extends HMaster {
     private MiniZooKeeperCluster zkcluster = null;
 
-    public LocalHMaster(Configuration conf, CoordinatedStateManager csm)
+    public LocalHMaster(Configuration conf)
     throws IOException, KeeperException, InterruptedException {
-      super(conf, csm);
+      super(conf);
     }
 
     @Override
@@ -314,7 +315,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         try {
           this.zkcluster.shutdown();
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.error("Failed to shutdown MiniZooKeeperCluster", e);
         }
       }
     }

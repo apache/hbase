@@ -17,26 +17,26 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Ordering;
+import org.apache.hbase.thirdparty.com.google.common.base.Function;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.Ordering;
 
 import java.util.Comparator;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Useful comparators for comparing StoreFiles.
+ * Useful comparators for comparing store files.
  */
 @InterfaceAudience.Private
 final class StoreFileComparators {
   /**
-   * Comparator that compares based on the Sequence Ids of the the StoreFiles. Bulk loads that did
+   * Comparator that compares based on the Sequence Ids of the the store files. Bulk loads that did
    * not request a seq ID are given a seq id of -1; thus, they are placed before all non- bulk
    * loads, and bulk loads with sequence Id. Among these files, the size is used to determine the
    * ordering, then bulkLoadTime. If there are ties, the path name is used as a tie-breaker.
    */
-  public static final Comparator<StoreFile> SEQ_ID =
+  public static final Comparator<HStoreFile> SEQ_ID =
       Ordering.compound(ImmutableList.of(Ordering.natural().onResultOf(new GetSeqId()),
         Ordering.natural().onResultOf(new GetFileSize()).reverse(),
         Ordering.natural().onResultOf(new GetBulkTime()),
@@ -46,23 +46,23 @@ final class StoreFileComparators {
    * Comparator for time-aware compaction. SeqId is still the first ordering criterion to maintain
    * MVCC.
    */
-  public static final Comparator<StoreFile> SEQ_ID_MAX_TIMESTAMP =
+  public static final Comparator<HStoreFile> SEQ_ID_MAX_TIMESTAMP =
       Ordering.compound(ImmutableList.of(Ordering.natural().onResultOf(new GetSeqId()),
         Ordering.natural().onResultOf(new GetMaxTimestamp()),
         Ordering.natural().onResultOf(new GetFileSize()).reverse(),
         Ordering.natural().onResultOf(new GetBulkTime()),
         Ordering.natural().onResultOf(new GetPathName())));
 
-  private static class GetSeqId implements Function<StoreFile, Long> {
+  private static class GetSeqId implements Function<HStoreFile, Long> {
     @Override
-    public Long apply(StoreFile sf) {
+    public Long apply(HStoreFile sf) {
       return sf.getMaxSequenceId();
     }
   }
 
-  private static class GetFileSize implements Function<StoreFile, Long> {
+  private static class GetFileSize implements Function<HStoreFile, Long> {
     @Override
-    public Long apply(StoreFile sf) {
+    public Long apply(HStoreFile sf) {
       if (sf.getReader() != null) {
         return sf.getReader().length();
       } else {
@@ -73,23 +73,23 @@ final class StoreFileComparators {
     }
   }
 
-  private static class GetBulkTime implements Function<StoreFile, Long> {
+  private static class GetBulkTime implements Function<HStoreFile, Long> {
     @Override
-    public Long apply(StoreFile sf) {
+    public Long apply(HStoreFile sf) {
       return sf.getBulkLoadTimestamp().orElse(Long.MAX_VALUE);
     }
   }
 
-  private static class GetPathName implements Function<StoreFile, String> {
+  private static class GetPathName implements Function<HStoreFile, String> {
     @Override
-    public String apply(StoreFile sf) {
+    public String apply(HStoreFile sf) {
       return sf.getPath().getName();
     }
   }
 
-  private static class GetMaxTimestamp implements Function<StoreFile, Long> {
+  private static class GetMaxTimestamp implements Function<HStoreFile, Long> {
     @Override
-    public Long apply(StoreFile sf) {
+    public Long apply(HStoreFile sf) {
       return sf.getMaximumTimestamp().orElse(Long.MAX_VALUE);
     }
   }

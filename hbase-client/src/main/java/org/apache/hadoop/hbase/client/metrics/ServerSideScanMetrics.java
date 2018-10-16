@@ -21,9 +21,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Provides server side metrics related to scan operations.
@@ -49,9 +49,20 @@ public class ServerSideScanMetrics {
   public static final String COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME = "ROWS_SCANNED";
   public static final String COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME = "ROWS_FILTERED";
 
-  /** @deprecated Use {@link #COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME} instead */
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17886">HBASE-17886</a>).
+   *             Use {@link #COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME}.
+   */
+  @Deprecated
   public static final String COUNT_OF_ROWS_SCANNED_KEY = COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
-  /** @deprecated Use {@link #COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME} instead */
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17886">HBASE-17886</a>).
+   *             Use {@link #COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME}.
+   */
+  @Deprecated
   public static final String COUNT_OF_ROWS_FILTERED_KEY = COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME;
 
   /**

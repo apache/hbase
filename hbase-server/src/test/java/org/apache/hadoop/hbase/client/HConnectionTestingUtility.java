@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -48,7 +50,7 @@ public class HConnectionTestingUtility {
   /**
    * Get a Mocked {@link ClusterConnection} that goes with the passed <code>conf</code>
    * configuration instance.  Minimally the mock will return
-   * <code>conf</conf> when {@link ClusterConnection#getConfiguration()} is invoked.
+   * &lt;code>conf&lt;/conf> when {@link ClusterConnection#getConfiguration()} is invoked.
    * Be sure to shutdown the connection when done by calling
    * {@link Connection#close()} else it will stick around; this is probably not what you want.
    * @param conf configuration
@@ -81,7 +83,7 @@ public class HConnectionTestingUtility {
    * itself a mock.
    * @param sn ServerName to include in the region location returned by this
    * <code>connection</code>
-   * @param hri HRegionInfo to include in the location returned when
+   * @param hri RegionInfo to include in the location returned when
    * getRegionLocator is called on the mocked connection
    * @return Mock up a connection that returns a {@link Configuration} when
    * {@link ClusterConnection#getConfiguration()} is called, a 'location' when
@@ -97,7 +99,7 @@ public class HConnectionTestingUtility {
   public static ClusterConnection getMockedConnectionAndDecorate(final Configuration conf,
       final AdminProtos.AdminService.BlockingInterface admin,
       final ClientProtos.ClientService.BlockingInterface client,
-      final ServerName sn, final HRegionInfo hri)
+      final ServerName sn, final RegionInfo hri)
   throws IOException {
     ConnectionImplementation c = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
@@ -114,18 +116,18 @@ public class HConnectionTestingUtility {
         .thenReturn(new RegionLocations(loc));
     if (admin != null) {
       // If a call to getAdmin, return this implementation.
-      Mockito.when(c.getAdmin(Mockito.any(ServerName.class))).
+      Mockito.when(c.getAdmin(Mockito.any())).
         thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this client.
-      Mockito.when(c.getClient(Mockito.any(ServerName.class))).
+      Mockito.when(c.getClient(Mockito.any())).
         thenReturn(client);
     }
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
     Mockito.when(c.getAsyncProcess()).thenReturn(
-      new AsyncProcess(c, conf, RpcRetryingCallerFactory.instantiate(conf), false,
+      new AsyncProcess(c, conf, RpcRetryingCallerFactory.instantiate(conf),
           RpcControllerFactory.instantiate(conf)));
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(
         RpcRetryingCallerFactory.instantiate(conf,
@@ -146,7 +148,7 @@ public class HConnectionTestingUtility {
    * @param conf configuration
    * @return ClusterConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
-   * @see @link
+   * [Dead link]: See also
    * {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
    */
   public static ClusterConnection getSpiedConnection(final Configuration conf)
@@ -159,12 +161,17 @@ public class HConnectionTestingUtility {
   /**
    * This coproceesor sleep 2s at first increment/append rpc call.
    */
-  public static class SleepAtFirstRpcCall implements RegionObserver {
+  public static class SleepAtFirstRpcCall implements RegionCoprocessor, RegionObserver {
     static final AtomicLong ct = new AtomicLong(0);
     static final String SLEEP_TIME_CONF_KEY =
         "hbase.coprocessor.SleepAtFirstRpcCall.sleepTime";
     static final long DEFAULT_SLEEP_TIME = 2000;
     static final AtomicLong sleepTime = new AtomicLong(DEFAULT_SLEEP_TIME);
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     public SleepAtFirstRpcCall() {
     }

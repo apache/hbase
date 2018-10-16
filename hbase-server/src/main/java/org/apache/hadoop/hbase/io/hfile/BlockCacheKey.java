@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -68,7 +68,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
 
   @Override
   public String toString() {
-    return String.format("%s_%d", hfileName, offset);
+    return this.hfileName + '_' + this.offset;
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(

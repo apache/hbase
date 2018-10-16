@@ -22,7 +22,7 @@ module Shell
   module Commands
     class AddRsgroup < Command
       def help
-        return <<-EOF
+        <<-EOF
 Create a new RegionServer group.
 
 Example:

@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Balanced queue executor with a fastpath. Because this is FIFO, it has no respect for
@@ -80,6 +80,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
     // if an empty queue of CallRunners so we are available for direct handoff when one comes in.
     final Deque<FastPathHandler> fastPathHandlerStack;
     // Semaphore to coordinate loading of fastpathed loadedTask and our running it.
+    // UNFAIR synchronization.
     private Semaphore semaphore = new Semaphore(0);
     // The task we get when fast-pathing.
     private CallRunner loadedCallRunner;
@@ -91,6 +92,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
       this.fastPathHandlerStack = fastPathHandlerStack;
     }
 
+    @Override
     protected CallRunner getCallRunner() throws InterruptedException {
       // Get a callrunner if one in the Q.
       CallRunner cr = this.q.poll();
@@ -111,7 +113,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
     }
 
     /**
-     * @param task Task gotten via fastpath.
+     * @param cr Task gotten via fastpath.
      * @return True if we successfully loaded our task
      */
     boolean loadCallRunner(final CallRunner cr) {

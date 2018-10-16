@@ -16,8 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.metrics.impl;
 
 import java.util.Collection;
@@ -26,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A map of K to V, but does ref counting for added and removed values. The values are
@@ -69,7 +67,7 @@ class RefCountingMap<K, V> {
    * @return the value associated with the specified key or null if key is removed from map.
    */
   V remove(K k) {
-    Payload<V> p = map.computeIfPresent(k, (k1, v) -> --v.refCount <= 0 ? null : v );
+    Payload<V> p = map.computeIfPresent(k, (k1, v) -> --v.refCount <= 0 ? null : v);
     return p == null ? null : p.v;
   }
 

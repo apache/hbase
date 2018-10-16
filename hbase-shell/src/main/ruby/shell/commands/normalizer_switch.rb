@@ -21,7 +21,7 @@ module Shell
   module Commands
     class NormalizerSwitch < Command
       def help
-        return <<-EOF
+        <<-EOF
 Enable/Disable region normalizer. Returns previous normalizer state.
 When normalizer is enabled, it handles all tables with 'NORMALIZATION_ENABLED' => true.
 Examples:
@@ -32,7 +32,7 @@ EOF
       end
 
       def command(enableDisable)
-        formatter.row([admin.normalizer_switch(enableDisable)? "true" : "false"])
+        formatter.row([admin.normalizer_switch(enableDisable) ? 'true' : 'false'])
       end
     end
   end

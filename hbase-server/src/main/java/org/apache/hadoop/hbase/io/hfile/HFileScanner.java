@@ -22,7 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.Cell;
 
@@ -166,5 +166,6 @@ public interface HFileScanner extends Shipper, Closeable {
   /**
    * Close this HFile scanner and do necessary cleanup.
    */
+  @Override
   void close();
 }

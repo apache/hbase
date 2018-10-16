@@ -22,19 +22,18 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A client scanner for a region opened for read-only on the client side. Assumes region data
@@ -43,17 +42,19 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 @InterfaceAudience.Private
 public class ClientSideRegionScanner extends AbstractClientScanner {
 
-  private static final Log LOG = LogFactory.getLog(ClientSideRegionScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientSideRegionScanner.class);
 
   private HRegion region;
   RegionScanner scanner;
   List<Cell> values;
 
   public ClientSideRegionScanner(Configuration conf, FileSystem fs,
-      Path rootDir, HTableDescriptor htd, HRegionInfo hri, Scan scan, ScanMetrics scanMetrics)
+      Path rootDir, TableDescriptor htd, RegionInfo hri, Scan scan, ScanMetrics scanMetrics)
           throws IOException {
     // region is immutable, set isolation level
     scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
+
+    htd = TableDescriptorBuilder.newBuilder(htd).setReadOnly(true).build();
 
     // open region from the snapshot directory
     this.region = HRegion.openHRegion(conf, fs, rootDir, hri, htd, null, null, null);
@@ -83,9 +84,10 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     if (this.scanMetrics != null) {
       long resultSize = 0;
       for (Cell cell : values) {
-        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
+        resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
+      this.scanMetrics.countOfRowsScanned.incrementAndGet();
     }
 
     return result;

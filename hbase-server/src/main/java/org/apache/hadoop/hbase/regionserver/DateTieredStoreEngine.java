@@ -23,9 +23,9 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactor;
@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.security.User;
 public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   DateTieredCompactionPolicy, DateTieredCompactor, DefaultStoreFileManager> {
   @Override
-  public boolean needsCompaction(List<StoreFile> filesCompacting) {
+  public boolean needsCompaction(List<HStoreFile> filesCompacting) {
     return compactionPolicy.needsCompaction(storeFileManager.getStorefiles(),
       filesCompacting);
   }
@@ -54,7 +54,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   }
 
   @Override
-  protected void createComponents(Configuration conf, Store store, CellComparator kvComparator)
+  protected void createComponents(Configuration conf, HStore store, CellComparator kvComparator)
       throws IOException {
     this.compactionPolicy = new DateTieredCompactionPolicy(conf, store);
     this.storeFileManager =
@@ -67,13 +67,13 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   private final class DateTieredCompactionContext extends CompactionContext {
 
     @Override
-    public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
+    public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
       return compactionPolicy.preSelectCompactionForCoprocessor(storeFileManager.getStorefiles(),
         filesCompacting);
     }
 
     @Override
-    public boolean select(List<StoreFile> filesCompacting, boolean isUserCompaction,
+    public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
         boolean mayUseOffPeak, boolean forceMajor) throws IOException {
       request = compactionPolicy.selectCompaction(storeFileManager.getStorefiles(), filesCompacting,
         isUserCompaction, mayUseOffPeak, forceMajor);
@@ -81,7 +81,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
     }
 
     @Override
-    public void forceSelect(CompactionRequest request) {
+    public void forceSelect(CompactionRequestImpl request) {
       if (!(request instanceof DateTieredCompactionRequest)) {
         throw new IllegalArgumentException("DateTieredCompactionRequest is expected. Actual: "
             + request.getClass().getCanonicalName());
@@ -89,6 +89,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
       super.forceSelect(request);
     }
 
+    @Override
     public List<Path> compact(ThroughputController throughputController, User user)
         throws IOException {
       if (request instanceof DateTieredCompactionRequest) {

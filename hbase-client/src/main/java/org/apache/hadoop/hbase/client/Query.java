@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.util.Map;
 
-import com.google.common.collect.Maps;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -32,10 +31,13 @@ import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.util.Bytes;
 
+/**
+ * Base class for HBase read operations; e.g. Scan and Get.
+ */
 @InterfaceAudience.Public
 public abstract class Query extends OperationWithAttributes {
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
@@ -44,7 +46,6 @@ public abstract class Query extends OperationWithAttributes {
   protected Consistency consistency = Consistency.STRONG;
   protected Map<byte[], TimeRange> colFamTimeRangeMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
   protected Boolean loadColumnFamiliesOnDemand = null;
-  protected TimeRange tr = new TimeRange();
   /**
    * @return Filter
    */
@@ -53,44 +54,14 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
-   * Apply the specified server-side filter when performing the Query.
-   * Only {@link Filter#filterKeyValue(org.apache.hadoop.hbase.Cell)} is called AFTER all tests
-   * for ttl, column match, deletes and max versions have been run.
+   * Apply the specified server-side filter when performing the Query. Only
+   * {@link Filter#filterCell(org.apache.hadoop.hbase.Cell)} is called AFTER all tests for ttl,
+   * column match, deletes and column family's max versions have been run.
    * @param filter filter to run on the server
    * @return this for invocation chaining
    */
   public Query setFilter(Filter filter) {
     this.filter = filter;
-    return this;
-  }
-
-  /**
-   * @return TimeRange
-   */
-  public TimeRange getTimeRange() {
-    return tr;
-  }
-
-  /**
-   * Sets the TimeRange to be used by this Query
-   * @param tr TimeRange
-   * @return Query
-   */
-  public Query setTimeRange(TimeRange tr) {
-    this.tr = tr;
-    return this;
-  }
-
-  /**
-   * Sets the TimeRange to be used by this Query
-   * [minStamp, maxStamp).
-   * @param minStamp minimum timestamp value, inclusive
-   * @param maxStamp maximum timestamp value, exclusive
-   * @throws IOException
-   * @return this for invocation chaining
-   */
-  public Query setTimeRange(long minStamp, long maxStamp) throws IOException {
-    tr = new TimeRange(minStamp, maxStamp);
     return this;
   }
 
@@ -257,13 +228,9 @@ public abstract class Query extends OperationWithAttributes {
    * @param maxStamp maximum timestamp value, exclusive
    * @return this
    */
+
   public Query setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
     colFamTimeRangeMap.put(cf, new TimeRange(minStamp, maxStamp));
-    return this;
-  }
-
-  public Query setColumnFamilyTimeRange(byte[] cf, TimeRange tr) {
-    colFamTimeRangeMap.put(cf, tr);
     return this;
   }
 

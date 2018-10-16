@@ -20,21 +20,24 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * A Scanner which performs a scan over snapshot files. Using this class requires copying the
@@ -44,7 +47,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * <p>
  * This also allows one to run the scan from an
  * online or offline hbase cluster. The snapshot files can be exported by using the
- * {@link org.apache.hadoop.hbase.snapshot.ExportSnapshot} tool,
+ * org.apache.hadoop.hbase.snapshot.ExportSnapshot tool,
  * to a pure-hdfs cluster, and this scanner can be used to
  * run the scan directly over the snapshot files. The snapshot should not be deleted while there
  * are open scanners reading from snapshot files.
@@ -61,12 +64,12 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * snapshot files, the job has to be run as the HBase user or the user must have group or other
  * priviledges in the filesystem (See HBASE-8369). Note that, given other users access to read from
  * snapshot/data files will completely circumvent the access control enforced by HBase.
- * @see org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat
+ * See org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class TableSnapshotScanner extends AbstractClientScanner {
 
-  private static final Log LOG = LogFactory.getLog(TableSnapshotScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableSnapshotScanner.class);
 
   private Configuration conf;
   private String snapshotName;
@@ -74,8 +77,9 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private Path rootDir;
   private Path restoreDir;
   private Scan scan;
-  private ArrayList<HRegionInfo> regions;
-  private HTableDescriptor htd;
+  private ArrayList<RegionInfo> regions;
+  private TableDescriptor htd;
+  private final boolean snapshotAlreadyRestored;
 
   private ClientSideRegionScanner currentRegionScanner  = null;
   private int currentRegion = -1;
@@ -84,15 +88,20 @@ public class TableSnapshotScanner extends AbstractClientScanner {
    * Creates a TableSnapshotScanner.
    * @param conf the configuration
    * @param restoreDir a temporary directory to copy the snapshot files into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * The scanner deletes the contents of the directory once the scanner is closed.
+   *          have write permissions to this directory, and this should not be a subdirectory of
+   *          rootDir. The scanner deletes the contents of the directory once the scanner is closed.
    * @param snapshotName the name of the snapshot to read from
    * @param scan a Scan representing scan parameters
    * @throws IOException in case of error
    */
-  public TableSnapshotScanner(Configuration conf, Path restoreDir,
-      String snapshotName, Scan scan) throws IOException {
+  public TableSnapshotScanner(Configuration conf, Path restoreDir, String snapshotName, Scan scan)
+      throws IOException {
     this(conf, FSUtils.getRootDir(conf), restoreDir, snapshotName, scan);
+  }
+
+  public TableSnapshotScanner(Configuration conf, Path rootDir, Path restoreDir,
+      String snapshotName, Scan scan) throws IOException {
+    this(conf, rootDir, restoreDir, snapshotName, scan, false);
   }
 
   /**
@@ -100,45 +109,68 @@ public class TableSnapshotScanner extends AbstractClientScanner {
    * @param conf the configuration
    * @param rootDir root directory for HBase.
    * @param restoreDir a temporary directory to copy the snapshot files into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * The scanner deletes the contents of the directory once the scanner is closed.
+   *          have write permissions to this directory, and this should not be a subdirectory of
+   *          rootdir. The scanner deletes the contents of the directory once the scanner is closed.
    * @param snapshotName the name of the snapshot to read from
    * @param scan a Scan representing scan parameters
+   * @param snapshotAlreadyRestored true to indicate that snapshot has been restored.
    * @throws IOException in case of error
    */
-  public TableSnapshotScanner(Configuration conf, Path rootDir,
-      Path restoreDir, String snapshotName, Scan scan) throws IOException {
+  public TableSnapshotScanner(Configuration conf, Path rootDir, Path restoreDir,
+      String snapshotName, Scan scan, boolean snapshotAlreadyRestored) throws IOException {
     this.conf = conf;
     this.snapshotName = snapshotName;
     this.rootDir = rootDir;
-    // restoreDir will be deleted in close(), use a unique sub directory
-    this.restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
     this.scan = scan;
+    this.snapshotAlreadyRestored = snapshotAlreadyRestored;
     this.fs = rootDir.getFileSystem(conf);
-    init();
+
+    if (snapshotAlreadyRestored) {
+      this.restoreDir = restoreDir;
+      openWithoutRestoringSnapshot();
+    } else {
+      // restoreDir will be deleted in close(), use a unique sub directory
+      this.restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
+      openWithRestoringSnapshot();
+    }
+
+    initScanMetrics(scan);
   }
 
-  private void init() throws IOException {
+  private void openWithoutRestoringSnapshot() throws IOException {
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+    SnapshotProtos.SnapshotDescription snapshotDesc =
+        SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+
+    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
+    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
+    if (regionManifests == null) {
+      throw new IllegalArgumentException("Snapshot seems empty, snapshotName: " + snapshotName);
+    }
+
+    regions = new ArrayList<>(regionManifests.size());
+    regionManifests.stream().map(r -> HRegionInfo.convert(r.getRegionInfo()))
+        .filter(this::isValidRegion).sorted().forEach(r -> regions.add(r));
+    htd = manifest.getTableDescriptor();
+  }
+
+  private boolean isValidRegion(RegionInfo hri) {
+    // An offline split parent region should be excluded.
+    if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+      return false;
+    }
+    return PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
+      hri.getEndKey());
+  }
+
+  private void openWithRestoringSnapshot() throws IOException {
     final RestoreSnapshotHelper.RestoreMetaChanges meta =
-      RestoreSnapshotHelper.copySnapshotForScanner(
-        conf, fs, rootDir, restoreDir, snapshotName);
-    final List<HRegionInfo> restoredRegions = meta.getRegionsToAdd();
+        RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+    final List<RegionInfo> restoredRegions = meta.getRegionsToAdd();
 
     htd = meta.getTableDescriptor();
     regions = new ArrayList<>(restoredRegions.size());
-    for (HRegionInfo hri : restoredRegions) {
-      if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
-        continue;
-      }
-      if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
-        hri.getEndKey())) {
-        regions.add(hri);
-      }
-    }
-
-    // sort for regions according to startKey.
-    Collections.sort(regions);
-    initScanMetrics(scan);
+    restoredRegions.stream().filter(this::isValidRegion).sorted().forEach(r -> regions.add(r));
   }
 
   @Override
@@ -151,7 +183,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
           return null;
         }
 
-        HRegionInfo hri = regions.get(currentRegion);
+        RegionInfo hri = regions.get(currentRegion);
         currentRegionScanner = new ClientSideRegionScanner(conf, fs,
           restoreDir, htd, hri, scan, scanMetrics);
         if (this.scanMetrics != null) {
@@ -173,15 +205,28 @@ public class TableSnapshotScanner extends AbstractClientScanner {
     }
   }
 
+  private void cleanup() {
+    try {
+      if (fs.exists(this.restoreDir)) {
+        if (!fs.delete(this.restoreDir, true)) {
+          LOG.warn(
+            "Delete restore directory for the snapshot failed. restoreDir: " + this.restoreDir);
+        }
+      }
+    } catch (IOException ex) {
+      LOG.warn(
+        "Could not delete restore directory for the snapshot. restoreDir: " + this.restoreDir, ex);
+    }
+  }
+
   @Override
   public void close() {
     if (currentRegionScanner != null) {
       currentRegionScanner.close();
     }
-    try {
-      fs.delete(this.restoreDir, true);
-    } catch (IOException ex) {
-      LOG.warn("Could not delete restore directory for the snapshot:" + ex);
+    // if snapshotAlreadyRestored is true, then we should invoke cleanup() method by hand.
+    if (!this.snapshotAlreadyRestored) {
+      cleanup();
     }
   }
 

@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -25,11 +28,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Cell.Type;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -41,42 +46,47 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerImpl;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Lists;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests RegionReplicaReplicationEndpoint class by setting up region replicas and verifying
  * async wal replication replays the edits to the secondary region in various scenarios.
  */
-@Category({FlakeyTests.class, MediumTests.class})
+@Category({FlakeyTests.class, LargeTests.class})
 public class TestRegionReplicaReplicationEndpoint {
 
-  private static final Log LOG = LogFactory.getLog(TestRegionReplicaReplicationEndpoint.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionReplicaReplicationEndpoint.class);
 
-  static {
-    ((Log4JLogger) RpcRetryingCallerImpl.LOG).getLogger().setLevel(Level.ALL);
-  }
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRegionReplicaReplicationEndpoint.class);
 
   private static final int NB_SERVERS = 2;
 
@@ -100,7 +110,7 @@ public class TestRegionReplicaReplicationEndpoint {
     conf.setInt("replication.stats.thread.period.seconds", 5);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5); // less number of retries is needed
-    conf.setInt("hbase.client.serverside.retries.multiplier", 1);
+    conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
 
     HTU.startMiniCluster(NB_SERVERS);
   }
@@ -149,12 +159,12 @@ public class TestRegionReplicaReplicationEndpoint {
     assertNotNull(peerConfig);
     assertEquals(peerConfig.getClusterKey(), ZKConfig.getZooKeeperClusterKey(
         HTU.getConfiguration()));
-    assertEquals(peerConfig.getReplicationEndpointImpl(),
-      RegionReplicaReplicationEndpoint.class.getName());
+    assertEquals(RegionReplicaReplicationEndpoint.class.getName(),
+        peerConfig.getReplicationEndpointImpl());
     admin.close();
   }
 
-  @Test (timeout=240000)
+  @Test
   public void testRegionReplicaReplicationPeerIsCreatedForModifyTable() throws Exception {
     // modify a table by adding region replicas. Check whether the replication peer is created
     // and replication started.
@@ -196,8 +206,8 @@ public class TestRegionReplicaReplicationEndpoint {
     assertNotNull(peerConfig);
     assertEquals(peerConfig.getClusterKey(), ZKConfig.getZooKeeperClusterKey(
         HTU.getConfiguration()));
-    assertEquals(peerConfig.getReplicationEndpointImpl(),
-      RegionReplicaReplicationEndpoint.class.getName());
+    assertEquals(RegionReplicaReplicationEndpoint.class.getName(),
+        peerConfig.getReplicationEndpointImpl());
     admin.close();
   }
 
@@ -247,8 +257,8 @@ public class TestRegionReplicaReplicationEndpoint {
 
     for (int i=0; i < NB_SERVERS; i++) {
       HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(i);
-      List<Region> onlineRegions = rs.getOnlineRegions(tableName);
-      for (Region region : onlineRegions) {
+      List<HRegion> onlineRegions = rs.getRegions(tableName);
+      for (HRegion region : onlineRegions) {
         regions[region.getRegionInfo().getReplicaId()] = region;
       }
     }
@@ -260,7 +270,7 @@ public class TestRegionReplicaReplicationEndpoint {
     for (int i = 1; i < regionReplication; i++) {
       final Region region = regions[i];
       // wait until all the data is replicated to all secondary regions
-      Waiter.waitFor(HTU.getConfiguration(), 90000, new Waiter.Predicate<Exception>() {
+      Waiter.waitFor(HTU.getConfiguration(), 90000, 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           LOG.info("verifying replication for region replica:" + region.getRegionInfo());
@@ -277,22 +287,22 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
-  @Test(timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationWith2Replicas() throws Exception {
     testRegionReplicaReplication(2);
   }
 
-  @Test(timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationWith3Replicas() throws Exception {
     testRegionReplicaReplication(3);
   }
 
-  @Test(timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationWith10Replicas() throws Exception {
     testRegionReplicaReplication(10);
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaWithoutMemstoreReplication() throws Exception {
     int regionReplication = 3;
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -324,7 +334,7 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationForFlushAndCompaction() throws Exception {
     // Tests a table with region replication 3. Writes some data, and causes flushes and
     // compactions. Verifies that the data is readable from the replicas. Note that this
@@ -339,7 +349,6 @@ public class TestRegionReplicaReplicationEndpoint {
 
     Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
     Table table = connection.getTable(tableName);
-
     try {
       // load the data to the table
 
@@ -359,28 +368,37 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationIgnoresDisabledTables() throws Exception {
-    testRegionReplicaReplicationIgnoresDisabledTables(false);
+    testRegionReplicaReplicationIgnores(false, false);
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationIgnoresDroppedTables() throws Exception {
-    testRegionReplicaReplicationIgnoresDisabledTables(true);
+    testRegionReplicaReplicationIgnores(true, false);
   }
 
-  public void testRegionReplicaReplicationIgnoresDisabledTables(boolean dropTable)
+  @Test
+  public void testRegionReplicaReplicationIgnoresNonReplicatedTables() throws Exception {
+    testRegionReplicaReplicationIgnores(false, true);
+  }
+
+  public void testRegionReplicaReplicationIgnores(boolean dropTable, boolean disableReplication)
       throws Exception {
+
     // tests having edits from a disabled or dropped table is handled correctly by skipping those
     // entries and further edits after the edits from dropped/disabled table can be replicated
     // without problems.
-    final TableName tableName = TableName.valueOf(name.getMethodName() + dropTable);
+    final TableName tableName = TableName.valueOf(
+      name.getMethodName() + "_drop_" + dropTable + "_disabledReplication_" + disableReplication);
     HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     int regionReplication = 3;
     htd.setRegionReplication(regionReplication);
     HTU.deleteTableIfAny(tableName);
+
     HTU.getAdmin().createTable(htd);
-    TableName toBeDisabledTable = TableName.valueOf(dropTable ? "droppedTable" : "disabledTable");
+    TableName toBeDisabledTable = TableName.valueOf(
+      dropTable ? "droppedTable" : (disableReplication ? "disableReplication" : "disabledTable"));
     HTU.deleteTableIfAny(toBeDisabledTable);
     htd = HTU.createTableDescriptor(toBeDisabledTable.toString());
     htd.setRegionReplication(regionReplication);
@@ -402,27 +420,43 @@ public class TestRegionReplicaReplicationEndpoint {
     RegionReplicaReplicationEndpoint.RegionReplicaOutputSink sink =
         mock(RegionReplicaReplicationEndpoint.RegionReplicaOutputSink.class);
     when(sink.getSkippedEditsCounter()).thenReturn(skippedEdits);
+    FSTableDescriptors fstd = new FSTableDescriptors(HTU.getConfiguration(),
+        FileSystem.get(HTU.getConfiguration()), HTU.getDefaultRootDirPath());
     RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter sinkWriter =
         new RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter(sink,
-          (ClusterConnection) connection,
-          Executors.newSingleThreadExecutor(), Integer.MAX_VALUE);
+            (ClusterConnection) connection, Executors.newSingleThreadExecutor(), Integer.MAX_VALUE,
+            fstd);
     RegionLocator rl = connection.getRegionLocator(toBeDisabledTable);
     HRegionLocation hrl = rl.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY);
     byte[] encodedRegionName = hrl.getRegionInfo().getEncodedNameAsBytes();
 
+    Cell cell = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(Bytes.toBytes("A"))
+        .setFamily(HTU.fam1).setValue(Bytes.toBytes("VAL")).setType(Type.Put).build();
     Entry entry = new Entry(
-      new WALKey(encodedRegionName, toBeDisabledTable, 1),
-      new WALEdit());
+      new WALKeyImpl(encodedRegionName, toBeDisabledTable, 1),
+        new WALEdit()
+            .add(cell));
 
     HTU.getAdmin().disableTable(toBeDisabledTable); // disable the table
     if (dropTable) {
       HTU.getAdmin().deleteTable(toBeDisabledTable);
+    } else if (disableReplication) {
+      htd.setRegionReplication(regionReplication - 2);
+      HTU.getAdmin().modifyTable(toBeDisabledTable, htd);
+      HTU.getAdmin().enableTable(toBeDisabledTable);
     }
-
     sinkWriter.append(toBeDisabledTable, encodedRegionName,
       HConstants.EMPTY_BYTE_ARRAY, Lists.newArrayList(entry, entry));
 
     assertEquals(2, skippedEdits.get());
+
+    if (disableReplication) {
+      // enable replication again so that we can verify replication
+      HTU.getAdmin().disableTable(toBeDisabledTable); // disable the table
+      htd.setRegionReplication(regionReplication);
+      HTU.getAdmin().modifyTable(toBeDisabledTable, htd);
+      HTU.getAdmin().enableTable(toBeDisabledTable);
+    }
 
     try {
       // load some data to the to-be-dropped table

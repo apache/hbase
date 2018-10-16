@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collection;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link FlushPolicy} that always flushes all stores for a given region.
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class FlushAllStoresPolicy extends FlushPolicy {
 
   @Override
-  public Collection<Store> selectStoresToFlush() {
+  public Collection<HStore> selectStoresToFlush() {
     return region.stores.values();
   }
 

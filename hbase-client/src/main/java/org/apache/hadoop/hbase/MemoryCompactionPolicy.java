@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Enum describing all possible memory compaction policies
@@ -42,5 +42,11 @@ public enum MemoryCompactionPolicy {
    * on-disk compaction does after the data is flushed to disk). This policy is most useful for
    * applications with high data churn or small working sets.
    */
-  EAGER
+  EAGER,
+  /**
+   * Adaptive compaction adapts to the workload. It applies either index compaction or data
+   * compaction based on the ratio of duplicate cells in the data.
+   */
+  ADAPTIVE
+
 }

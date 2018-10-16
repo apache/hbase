@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Enum describing the durability guarantees for tables and {@link Mutation}s
@@ -50,7 +50,6 @@ public enum Durability {
   SYNC_WAL,
   /**
    * Write the Mutation to the WAL synchronously and force the entries to disk.
-   * (Note: this is currently not supported and will behave identical to {@link #SYNC_WAL})
    * See <a href="https://issues.apache.org/jira/browse/HADOOP-6313">HADOOP-6313</a>
    */
   FSYNC_WAL

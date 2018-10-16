@@ -112,6 +112,7 @@ MetricsRegionServerWrapper mWrap;
         <th>Direct Memory Used</th>
         <th>Direct Memory Configured</th>
         <th>Memstore Size</th>
+        <th>Memstore Limit</th>
     </tr>
 </tr>
 <tr>
@@ -127,7 +128,12 @@ MetricsRegionServerWrapper mWrap;
     <td>
         <% TraditionalBinaryPrefix.long2String(DirectMemoryUtils.getDirectMemorySize(), "B", 1) %>
     </td>
-    <td><% TraditionalBinaryPrefix.long2String(mWrap.getMemstoreSize(), "B", 1) %></td>
+    <td>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getMemStoreSize(), "B", 1) %>
+    </td>
+    <td>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getMemStoreLimit(), "B", 1) %>
+    </td>
 </tr>
 </table>
 </%def>
@@ -140,7 +146,7 @@ MetricsRegionServerWrapper mWrap;
 <tr>
     <tr>
         <th>Num. WAL Files</th>
-        <th>Size. WAL Files (bytes)</th>
+        <th>Size. WAL Files</th>
     </tr>
 </tr>
 <tr>
@@ -159,9 +165,9 @@ MetricsRegionServerWrapper mWrap;
 
     <th>Num. Stores</th>
     <th>Num. Storefiles</th>
-    <th>Root Index Size (bytes)</th>
-    <th>Index Size (bytes)</th>
-    <th>Bloom Size (bytes)</th>
+    <th>Root Index Size</th>
+    <th>Index Size</th>
+    <th>Bloom Size</th>
 </tr>
 <tr>
     <td><% mWrap.getNumStores() %></td>
@@ -206,7 +212,7 @@ MetricsHBaseServerWrapper mServerWrap;
     <th>Priority Call Queue Length</th>
     <th>General Call Queue Length</th>
     <th>Replication Call Queue Length</th>
-    <th>Total Call Queue Size (bytes)</th>
+    <th>Total Call Queue Size</th>
 
 </tr>
 <tr>

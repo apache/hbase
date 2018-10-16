@@ -15,29 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ReplicationTests.class, SmallTests.class})
 public class TestReplicationThrottler {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationThrottler.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationThrottler.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationThrottler.class);
 
   /**
    * unit test for throttling
    */
-  @Test(timeout=10000)
+  @Test
   public void testThrottling() {
     LOG.info("testThrottling");
 

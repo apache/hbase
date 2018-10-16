@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,14 +27,12 @@ import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -54,10 +51,13 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assume;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test cases that ensure that file system level errors are bubbled up
@@ -65,7 +65,12 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestFSErrorsExposed {
-  private static final Log LOG = LogFactory.getLog(TestFSErrorsExposed.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFSErrorsExposed.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestFSErrorsExposed.class);
 
   HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -94,7 +99,7 @@ public class TestFSErrorsExposed {
     TestHStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
+    HStoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
         BloomType.NONE, true);
     sf.initReader();
     StoreFileReader reader = sf.getReader();
@@ -144,12 +149,12 @@ public class TestFSErrorsExposed {
     TestHStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
+    HStoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
         BloomType.NONE, true);
 
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
         Collections.singletonList(sf), false, true, false, false,
-        // 0 is passed as readpoint because this test operates on StoreFile directly
+        // 0 is passed as readpoint because this test operates on HStoreFile directly
         0);
     KeyValueScanner scanner = scanners.get(0);
 
@@ -179,7 +184,7 @@ public class TestFSErrorsExposed {
    * removes the data from HDFS underneath it, and ensures that
    * errors are bubbled to the client.
    */
-  @Test(timeout=5 * 60 * 1000)
+  @Test
   public void testFullSystemBubblesFSErrors() throws Exception {
     // We won't have an error if the datanode is not there if we use short circuit
     //  it's a known 'feature'.
@@ -188,6 +193,7 @@ public class TestFSErrorsExposed {
     try {
       // Make it fail faster.
       util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 90000);
       util.getConfiguration().setInt("hbase.lease.recovery.timeout", 10000);
       util.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
       util.startMiniCluster(1);

@@ -19,26 +19,27 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A zk watcher that watches the labels table znode. This would create a znode
  * /hbase/visibility_labels and will have a serialized form of a set of labels in the system.
  */
 @InterfaceAudience.Private
-public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
+public class ZKVisibilityLabelWatcher extends ZKListener {
 
-  private static final Log LOG = LogFactory.getLog(ZKVisibilityLabelWatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKVisibilityLabelWatcher.class);
   private static final String VISIBILITY_LABEL_ZK_PATH = "zookeeper.znode.visibility.label.parent";
   private static final String DEFAULT_VISIBILITY_LABEL_NODE = "visibility/labels";
-  private static final String VISIBILITY_USER_AUTHS_ZK_PATH = 
+  private static final String VISIBILITY_USER_AUTHS_ZK_PATH =
       "zookeeper.znode.visibility.user.auths.parent";
   private static final String DEFAULT_VISIBILITY_USER_AUTHS_NODE = "visibility/user_auths";
 
@@ -46,15 +47,16 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
   private String labelZnode;
   private String userAuthsZnode;
 
-  public ZKVisibilityLabelWatcher(ZooKeeperWatcher watcher, VisibilityLabelsCache labelsCache,
-      Configuration conf) {
+  public ZKVisibilityLabelWatcher(ZKWatcher watcher, VisibilityLabelsCache labelsCache,
+                                  Configuration conf) {
     super(watcher);
     this.labelsCache = labelsCache;
     String labelZnodeParent = conf.get(VISIBILITY_LABEL_ZK_PATH, DEFAULT_VISIBILITY_LABEL_NODE);
     String userAuthsZnodeParent = conf.get(VISIBILITY_USER_AUTHS_ZK_PATH,
         DEFAULT_VISIBILITY_USER_AUTHS_NODE);
-    this.labelZnode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, labelZnodeParent);
-    this.userAuthsZnode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, userAuthsZnodeParent);
+    this.labelZnode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, labelZnodeParent);
+    this.userAuthsZnode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode,
+            userAuthsZnodeParent);
   }
 
   public void start() throws KeeperException {
@@ -131,7 +133,7 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
 
   /**
    * Write a labels mirror or user auths mirror into zookeeper
-   * 
+   *
    * @param data
    * @param labelsOrUserAuths true for writing labels and false for user auths.
    */

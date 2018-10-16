@@ -23,22 +23,28 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility for this RSGroup package in hbase-rsgroup.
  */
 @InterfaceAudience.Private
-class Utility {
+final class Utility {
+  private Utility() {
+  }
+
   /**
-   * @param master
+   * @param master the master to get online servers for
    * @return Set of online Servers named for their hostname and port (not ServerName).
    */
   static Set<Address> getOnlineServers(final MasterServices master) {
     Set<Address> onlineServers = new HashSet<Address>();
-    if (master == null) return onlineServers;
+    if (master == null) {
+      return onlineServers;
+    }
+
     for(ServerName server: master.getServerManager().getOnlineServers().keySet()) {
       onlineServers.add(server.getAddress());
     }

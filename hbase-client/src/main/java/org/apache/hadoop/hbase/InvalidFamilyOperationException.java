@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown if a request is table schema modification is requested but
@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class InvalidFamilyOperationException extends DoNotRetryIOException {
-  private static final long serialVersionUID = 1L << 22 - 1L;
+  private static final long serialVersionUID = (1L << 22) - 1L;
   /** default constructor */
   public InvalidFamilyOperationException() {
     super();

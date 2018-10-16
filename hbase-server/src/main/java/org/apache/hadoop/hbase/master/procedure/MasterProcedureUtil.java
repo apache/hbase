@@ -15,27 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import java.util.regex.Pattern;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class MasterProcedureUtil {
-  private static final Log LOG = LogFactory.getLog(MasterProcedureUtil.class);
 
   private MasterProcedureUtil() {}
 
@@ -101,7 +99,7 @@ public final class MasterProcedureUtil {
     protected abstract void run() throws IOException;
     protected abstract String getDescription();
 
-    protected long submitProcedure(final Procedure proc) {
+    protected long submitProcedure(final Procedure<MasterProcedureEnv> proc) {
       assert procId == null : "submitProcedure() was already called, running procId=" + procId;
       procId = getProcedureExecutor().submitProcedure(proc, nonceKey);
       return procId;
@@ -140,5 +138,42 @@ public final class MasterProcedureUtil {
       procExec.unregisterNonceIfProcedureWasNotSubmitted(runnable.getNonceKey());
     }
     return runnable.getProcId();
+  }
+
+  /**
+   * Pattern used to validate a Procedure WAL file name see
+   * {@link #validateProcedureWALFilename(String)} for description.
+   */
+  private static final Pattern pattern = Pattern.compile(".*pv2-\\d{20}.log");
+
+  /**
+   * A Procedure WAL file name is of the format: pv-&lt;wal-id&gt;.log where wal-id is 20 digits.
+   * @param filename name of the file to validate
+   * @return <tt>true</tt> if the filename matches a Procedure WAL, <tt>false</tt> otherwise
+   */
+  public static boolean validateProcedureWALFilename(String filename) {
+    return pattern.matcher(filename).matches();
+  }
+
+  /**
+   * Return the priority for the given table. Now meta table is 3, other system tables are 2, and
+   * user tables are 1.
+   */
+  public static int getTablePriority(TableName tableName) {
+    if (TableName.isMetaTableName(tableName)) {
+      return 3;
+    } else if (tableName.isSystemTable()) {
+      return 2;
+    } else {
+      return 1;
+    }
+  }
+
+  /**
+   * Return the priority for the given procedure. For now we only have two priorities, 100 for
+   * server carrying meta, and 1 for others.
+   */
+  public static int getServerPriority(ServerProcedureInterface proc) {
+    return proc.hasMetaTableRegion() ? 100 : 1;
   }
 }

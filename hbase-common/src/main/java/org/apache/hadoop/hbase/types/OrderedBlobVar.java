@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An alternative to {@link OrderedBlob} for use by {@link Struct} fields that
@@ -33,7 +33,9 @@ public class OrderedBlobVar extends OrderedBytesBase<byte[]> {
   public static final OrderedBlobVar ASCENDING = new OrderedBlobVar(Order.ASCENDING);
   public static final OrderedBlobVar DESCENDING = new OrderedBlobVar(Order.DESCENDING);
 
-  protected OrderedBlobVar(Order order) { super(order); }
+  protected OrderedBlobVar(Order order) {
+    super(order);
+  }
 
   @Override
   public int encodedLength(byte[] val) {
@@ -41,7 +43,9 @@ public class OrderedBlobVar extends OrderedBytesBase<byte[]> {
   }
 
   @Override
-  public Class<byte[]> encodedClass() { return byte[].class; }
+  public Class<byte[]> encodedClass() {
+    return byte[].class;
+  }
 
   @Override
   public byte[] decode(PositionedByteRange src) {

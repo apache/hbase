@@ -26,9 +26,9 @@ import java.io.InputStream;
 import java.io.FileNotFoundException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * The FileLink is a sort of hardlink, that allows access to a file given a set of locations.
@@ -91,7 +92,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 public class FileLink {
-  private static final Log LOG = LogFactory.getLog(FileLink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileLink.class);
 
   /** Define the Back-reference directory name prefix: .links-&lt;hfile&gt;/ */
   public static final String BACK_REFERENCES_DIRECTORY_PREFIX = ".links-";
@@ -304,6 +305,9 @@ public class FileLink {
           return(in);
         } catch (FileNotFoundException e) {
           // Try another file location
+        } catch (RemoteException re) {
+          IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
+          if (!(ioe instanceof FileNotFoundException)) throw re;
         }
       }
       throw new FileNotFoundException("Unable to open link: " + fileLink);

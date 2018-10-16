@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,45 +22,52 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests around replay of recovered.edits content.
  */
 @Category({MediumTests.class})
 public class TestRecoveredEdits {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRecoveredEdits.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestRecoveredEdits.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEdits.class);
   @Rule public TestName testName = new TestName();
 
   /**
@@ -70,7 +77,7 @@ public class TestRecoveredEdits {
    * made it in.
    * @throws IOException
    */
-  @Test (timeout=180000)
+  @Test
   public void testReplayWorksThoughLotsOfFlushing() throws
       IOException {
     for(MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {
@@ -83,7 +90,7 @@ public class TestRecoveredEdits {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     // Set it so we flush every 1M or so.  Thats a lot.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
-    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy));
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy).toLowerCase());
     // The file of recovered edits has a column family of 'meta'. Also has an encoded regionname
     // of 4823016d8fca70b25503ee07f4c6d79f which needs to match on replay.
     final String encodedRegionName = "4823016d8fca70b25503ee07f4c6d79f";
@@ -140,7 +147,7 @@ public class TestRecoveredEdits {
     // Our 0000000000000016310 is 10MB. Most of the edits are for one region. Lets assume that if
     // we flush at 1MB, that there are at least 3 flushed files that are there because of the
     // replay of edits.
-    if(policy == MemoryCompactionPolicy.EAGER) {
+    if(policy == MemoryCompactionPolicy.EAGER || policy == MemoryCompactionPolicy.ADAPTIVE) {
       assertTrue("Files count=" + storeFiles.size(), storeFiles.size() >= 1);
     } else {
       assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
@@ -179,7 +186,7 @@ public class TestRecoveredEdits {
         Cell previous = null;
         for (Cell cell: val.getCells()) {
           if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) continue;
-          if (previous != null && CellComparator.COMPARATOR.compareRows(previous, cell) == 0)
+          if (previous != null && CellComparatorImpl.COMPARATOR.compareRows(previous, cell) == 0)
             continue;
           previous = cell;
           Get g = new Get(CellUtil.cloneRow(cell));
@@ -187,7 +194,8 @@ public class TestRecoveredEdits {
           boolean found = false;
           for (CellScanner scanner = r.cellScanner(); scanner.advance();) {
             Cell current = scanner.current();
-            if (CellComparator.COMPARATOR.compareKeyIgnoresMvcc(cell, current) == 0) {
+            if (PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, cell,
+              current) == 0) {
               found = true;
               break;
             }

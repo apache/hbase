@@ -30,7 +30,7 @@
 [IMPORTANT]
 .Reporting Security Bugs
 ====
-NOTE: To protect existing HBase installations from exploitation, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
+NOTE: To protect existing HBase installations from exploitation, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@hbase.apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
 
 HBase adheres to the Apache Software Foundation's policy on reported vulnerabilities, available at http://apache.org/security/.
 
@@ -179,7 +179,25 @@ Add the following to the `hbase-site.xml` file on every client:
 </property>
 ----
 
-The client environment must be logged in to Kerberos from KDC or keytab via the `kinit` command before communication with the HBase cluster will be possible.
+Before 2.2.0 version, the client environment must be logged in to Kerberos from KDC or keytab via the `kinit` command before communication with the HBase cluster will be possible.
+
+Since 2.2.0, client can specify the following configurations in `hbase-site.xml`:
+[source,xml]
+----
+<property>
+  <name>hbase.client.keytab.file</name>
+  <value>/local/path/to/client/keytab</value>
+</property>
+
+<property>
+  <name>hbase.client.keytab.principal</name>
+  <value>foo@EXAMPLE.COM</value>
+</property>
+----
+Then application can automatically do the login and credential renewal jobs without client interference.
+
+It's optional feature, client, who upgrades to 2.2.0, can still keep their login and credential renewal logic already did in older version, as long as keeping `hbase.client.keytab.file`
+and `hbase.client.keytab.principal` are unset.
 
 Be advised that if the `hbase.security.authentication` in the client- and server-side site files do not match, the client will not be able to communicate with the cluster.
 
@@ -354,7 +372,7 @@ grant 'rest_server', 'RWCA'
 
 For more information about ACLs, please see the <<hbase.accesscontrol.configuration>> section
 
-HBase REST gateway supports link:http://hadoop.apache.org/docs/stable/hadoop-auth/index.html[SPNEGO HTTP authentication] for client access to the gateway.
+HBase REST gateway supports link:https://hadoop.apache.org/docs/stable/hadoop-auth/index.html[SPNEGO HTTP authentication] for client access to the gateway.
 To enable REST gateway Kerberos authentication for client access, add the following to the `hbase-site.xml` file for every REST gateway.
 
 [source,xml]
@@ -390,7 +408,7 @@ Substitute the keytab for HTTP for _$KEYTAB_.
 
 HBase REST gateway supports different 'hbase.rest.authentication.type': simple, kerberos.
 You can also implement a custom authentication by implementing Hadoop AuthenticationHandler, then specify the full class name as 'hbase.rest.authentication.type' value.
-For more information, refer to link:http://hadoop.apache.org/docs/stable/hadoop-auth/index.html[SPNEGO HTTP authentication].
+For more information, refer to link:https://hadoop.apache.org/docs/stable/hadoop-auth/index.html[SPNEGO HTTP authentication].
 
 [[security.rest.gateway]]
 === REST Gateway Impersonation Configuration
@@ -662,6 +680,7 @@ You also need to enable the DataBlockEncoder for the column family, for encoding
 You can enable compression of each tag in the WAL, if WAL compression is also enabled, by setting the value of `hbase.regionserver.wal.tags.enablecompression` to `true` in _hbase-site.xml_.
 Tag compression uses dictionary encoding.
 
+Coprocessors that run server-side on RegionServers can perform get and set operations on cell Tags. Tags are stripped out at the RPC layer before the read response is sent back, so clients do not see these tags.
 Tag compression is not supported when using WAL encryption.
 
 [[hbase.accesscontrol.configuration]]
@@ -806,6 +825,10 @@ For an example of using both together, see <<security.example.config>>.
 +
 [source,xml]
 ----
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
 <property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController, org.apache.hadoop.hbase.security.token.TokenProvider</value>
@@ -989,7 +1012,7 @@ hbase> help "scan"
 ----
 
 +
-This example grants read access to the 'testuser' user and read/write access to the 'developers' group, on cells in the 'pii' column which match the filter.
+If you need to enable cell acl,the hfile.format.version option in hbase-site.xml should be greater than or equal to 3,and the hbase.security.access.early_out option should be set to false.This example grants read access to the 'testuser' user and read/write access to the 'developers' group, on cells in the 'pii' column which match the filter.
 +
 ----
 hbase> grant 'user', \
@@ -1082,7 +1105,6 @@ public static void revokeFromTable(final HBaseTestingUtility util, final String 
 . Showing a User's Effective Permissions
 +
 .HBase Shell
-====
 ----
 hbase> user_permission 'user'
 
@@ -1090,7 +1112,6 @@ hbase> user_permission '.*'
 
 hbase> user_permission JAVA_REGEX
 ----
-====
 
 .API
 ====
@@ -1187,6 +1208,10 @@ NOTE: Visibility labels are not currently applied for superusers.
 [source,xml]
 ----
 <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
 </property>
@@ -1226,11 +1251,9 @@ Refer to the official API for usage instructions.
 . Define the List of Visibility Labels
 +
 .HBase Shell
-====
 ----
 hbase> add_labels [ 'admin', 'service', 'developer', 'test' ]
 ----
-====
 +
 .Java API
 ====
@@ -1257,7 +1280,6 @@ public static void addLabels() throws Exception {
 . Associate Labels with Users
 +
 .HBase Shell
-====
 ----
 hbase> set_auths 'service', [ 'service' ]
 ----
@@ -1273,7 +1295,6 @@ hbase> set_auths 'qa', [ 'test', 'developer' ]
 ----
 hbase> set_auths '@qagroup', [ 'test' ]
 ----
-====
 +
 .Java API
 ====
@@ -1297,7 +1318,6 @@ public void testSetAndGetUserAuths() throws Throwable {
 . Clear Labels From Users
 +
 .HBase Shell
-====
 ----
 hbase> clear_auths 'service', [ 'service' ]
 ----
@@ -1313,7 +1333,6 @@ hbase> clear_auths 'qa', [ 'test', 'developer' ]
 ----
 hbase> clear_auths '@qagroup', [ 'test', 'developer' ]
 ----
-====
 +
 .Java API
 ====
@@ -1337,7 +1356,6 @@ The label is only applied when data is written.
 The label is associated with a given version of the cell.
 +
 .HBase Shell
-====
 ----
 hbase> set_visibility 'user', 'admin|service|developer', { COLUMNS => 'i' }
 ----
@@ -1349,7 +1367,6 @@ hbase> set_visibility 'user', 'admin|service', { COLUMNS => 'pii' }
 ----
 hbase> set_visibility 'user', 'test', { COLUMNS => [ 'i', 'pii' ], FILTER => "(PrefixFilter ('test'))" }
 ----
-====
 +
 NOTE: HBase Shell support for applying labels or permissions to cells is for testing and verification support, and should not be employed for production use because it won't apply the labels to cells that don't exist yet.
 The correct way to apply cell level labels is to do so in the application code when storing the values.
@@ -1390,22 +1407,20 @@ When you issue a Scan or Get, HBase uses your default set of authorizations to
 filter out cells that you do not have access to. A superuser can set the default
 set of authorizations for a given user by using the `set_auths` HBase Shell command
 or the
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.hbase.client.Connection,%20java.lang.String\[\],%20java.lang.String)[VisibilityClient.setAuths()] method.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths-org.apache.hadoop.hbase.client.Connection-java.lang.String:A-java.lang.String-[VisibilityClient.setAuths()] method.
 
 You can specify a different authorization during the Scan or Get, by passing the
 AUTHORIZATIONS option in HBase Shell, or the
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations%28org.apache.hadoop.hbase.security.visibility.Authorizations%29[setAuthorizations()]
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations-org.apache.hadoop.hbase.security.visibility.Authorizations-[Scan.setAuthorizations()]
 method if you use the API. This authorization will be combined with your default
 set as an additional filter. It will further filter your results, rather than
 giving you additional authorization.
 
 .HBase Shell
-====
 ----
 hbase> get_auths 'myUser'
 hbase> scan 'table1', AUTHORIZATIONS => ['private']
 ----
-====
 
 .Java API
 ====
@@ -1453,6 +1468,10 @@ As mentioned in the above sections, the interface `VisibilityLabelService` could
 
 [source,xml]
 ----
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
 <property>
   <name>hbase.coprocessor.regionserver.classes</name>
   <value>org.apache.hadoop.hbase.security.visibility.VisibilityController$VisibilityReplication</value>
@@ -1644,7 +1663,7 @@ Rotate the Master Key::
 
 Bulk loading in secure mode is a bit more involved than normal setup, since the client has to transfer the ownership of the files generated from the MapReduce job to HBase.
 Secure bulk loading is implemented by a coprocessor, named
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html[SecureBulkLoadEndpoint],
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html[SecureBulkLoadEndpoint],
 which uses a staging directory configured by the configuration property `hbase.bulkload.staging.dir`, which defaults to
 _/tmp/hbase-staging/_.
 
@@ -1672,6 +1691,10 @@ To enable secure bulk load, add the following properties to _hbase-site.xml_.
 [source,xml]
 ----
 <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
   <name>hbase.bulkload.staging.dir</name>
   <value>/tmp/hbase-staging</value>
 </property>
@@ -1679,6 +1702,22 @@ To enable secure bulk load, add the following properties to _hbase-site.xml_.
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.token.TokenProvider,
   org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
+</property>
+----
+
+[[hbase.secure.enable]]
+=== Secure Enable
+After hbase-2.x, the default 'hbase.security.authorization' changed.
+Before hbase-2.x, it defaulted to true, in later HBase versions, the
+default became false.
+So to enable hbase authorization, the following propertie must be configured in _hbase-site.xml_.
+See link:https://issues.apache.org/jira/browse/HBASE-19483[HBASE-19483];
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
 </property>
 ----
 
@@ -1700,9 +1739,13 @@ All options have been discussed separately in the sections above.
 <!-- HBase Superuser -->
 <property>
   <name>hbase.superuser</name>
-  <value>hbase, admin</value>
+  <value>hbase,admin</value>
 </property>
 <!-- Coprocessors for ACLs and Visibility Tags -->
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
 <property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController,
@@ -1716,8 +1759,7 @@ All options have been discussed separately in the sections above.
 </property>
 <property>
   <name>hbase.coprocessor.regionserver.classes</name>
-  <value>org.apache.hadoop/hbase.security.access.AccessController,
-  org.apache.hadoop.hbase.security.access.VisibilityController</value>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
 </property>
 <!-- Executable ACL for Coprocessor Endpoints -->
 <property>

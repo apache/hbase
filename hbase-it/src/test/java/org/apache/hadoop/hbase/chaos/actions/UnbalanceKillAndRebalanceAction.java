@@ -23,9 +23,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.commons.lang.math.RandomUtils;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.junit.Assert;
 
@@ -41,38 +40,52 @@ public class UnbalanceKillAndRebalanceAction extends Action {
   private long waitForUnbalanceMilliSec;
   private long waitForKillsMilliSec;
   private long waitAfterBalanceMilliSec;
+  private boolean killMetaRs;
 
-  public UnbalanceKillAndRebalanceAction(long waitUnbalance, long waitKill, long waitAfterBalance) {
+  public UnbalanceKillAndRebalanceAction(long waitUnbalance, long waitKill, long waitAfterBalance,
+      boolean killMetaRs) {
     super();
     waitForUnbalanceMilliSec = waitUnbalance;
     waitForKillsMilliSec = waitKill;
     waitAfterBalanceMilliSec = waitAfterBalance;
+    this.killMetaRs = killMetaRs;
   }
 
   @Override
   public void perform() throws Exception {
-    ClusterStatus status = this.cluster.getClusterStatus();
-    List<ServerName> victimServers = new LinkedList<>(status.getServers());
+    ClusterMetrics status = this.cluster.getClusterMetrics();
+    List<ServerName> victimServers = new LinkedList<>(status.getLiveServerMetrics().keySet());
     Set<ServerName> killedServers = new HashSet<>();
 
     int liveCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_LIVE * victimServers.size());
     int deadCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_DIE * victimServers.size());
-    Assert.assertTrue((liveCount + deadCount) < victimServers.size());
+    Assert.assertTrue(
+        "There are not enough victim servers: " + victimServers.size(),
+        liveCount + deadCount < victimServers.size());
     List<ServerName> targetServers = new ArrayList<>(liveCount);
     for (int i = 0; i < liveCount + deadCount; ++i) {
-      int victimIx = RandomUtils.nextInt(victimServers.size());
+      int victimIx = RandomUtils.nextInt(0, victimServers.size());
       targetServers.add(victimServers.remove(victimIx));
     }
     unbalanceRegions(status, victimServers, targetServers, HOARD_FRC_OF_REGIONS);
     Thread.sleep(waitForUnbalanceMilliSec);
-    for (int i = 0; i < liveCount; ++i) {
+    ServerName metaServer = cluster.getServerHoldingMeta();
+    for (ServerName targetServer: targetServers) {
       // Don't keep killing servers if we're
       // trying to stop the monkey.
       if (context.isStopping()) {
         break;
       }
-      killRs(targetServers.get(i));
-      killedServers.add(targetServers.get(i));
+      if (killedServers.size() >= liveCount) {
+        break;
+      }
+
+      if (!killMetaRs && targetServer.equals(metaServer)) {
+        LOG.info("Not killing server because it holds hbase:meta.");
+      } else {
+        killRs(targetServer);
+        killedServers.add(targetServer);
+      }
     }
 
     Thread.sleep(waitForKillsMilliSec);

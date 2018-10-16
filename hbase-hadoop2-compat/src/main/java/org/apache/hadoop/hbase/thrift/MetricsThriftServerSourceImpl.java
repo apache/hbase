@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Hadoop 2 version of MetricsThriftServerSource{@link org.apache.hadoop.hbase.thrift.MetricsThriftServerSource}
+ * Hadoop 2 version of {@link org.apache.hadoop.hbase.thrift.MetricsThriftServerSource}
  *
  * Implements BaseSource through BaseSourceImpl, following the pattern
  */

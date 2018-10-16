@@ -24,17 +24,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.OptionalLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The default algorithm for selecting files for compaction.
@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
-  private static final Log LOG = LogFactory.getLog(RatioBasedCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RatioBasedCompactionPolicy.class);
 
   public RatioBasedCompactionPolicy(Configuration conf,
                                     StoreConfigInformation storeConfigInfo) {
@@ -55,7 +55,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
    * @return True if we should run a major compaction.
    */
   @Override
-  public boolean shouldPerformMajorCompaction(final Collection<StoreFile> filesToCompact)
+  public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
     throws IOException {
     boolean result = false;
     long mcTime = getNextMajorCompactTime(filesToCompact);
@@ -79,7 +79,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
       }
       if (filesToCompact.size() == 1) {
         // Single file
-        StoreFile sf = filesToCompact.iterator().next();
+        HStoreFile sf = filesToCompact.iterator().next();
         OptionalLong minTimestamp = sf.getMinimumTimestamp();
         long oldest = minTimestamp.isPresent() ? now - minTimestamp.getAsLong() : Long.MIN_VALUE;
         if (sf.isMajorCompactionResult() && (cfTTL == Long.MAX_VALUE || oldest < cfTTL)) {
@@ -106,14 +106,14 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
       } else {
         LOG.debug("Major compaction triggered on store " + regionInfo
           + "; time since last major compaction " + (now - lowTimestamp) + "ms");
+        result = true;
       }
-      result = true;
     }
     return result;
   }
 
   @Override
-  protected CompactionRequest createCompactionRequest(ArrayList<StoreFile>
+  protected CompactionRequestImpl createCompactionRequest(ArrayList<HStoreFile>
     candidateSelection, boolean tryingMajor, boolean mayUseOffPeak, boolean mayBeStuck)
     throws IOException {
     if (!tryingMajor) {
@@ -122,7 +122,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
       candidateSelection = checkMinFilesCriteria(candidateSelection,
         comConf.getMinFilesToCompact());
     }
-    return new CompactionRequest(candidateSelection);
+    return new CompactionRequestImpl(candidateSelection);
   }
 
   /**
@@ -155,7 +155,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
     * @param candidates pre-filtrate
     * @return filtered subset
     */
-  protected ArrayList<StoreFile> applyCompactionPolicy(ArrayList<StoreFile> candidates,
+  protected ArrayList<HStoreFile> applyCompactionPolicy(ArrayList<HStoreFile> candidates,
     boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
     if (candidates.isEmpty()) {
       return candidates;
@@ -174,7 +174,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
     long[] fileSizes = new long[countOfFiles];
     long[] sumSize = new long[countOfFiles];
     for (int i = countOfFiles - 1; i >= 0; --i) {
-      StoreFile file = candidates.get(i);
+      HStoreFile file = candidates.get(i);
       fileSizes[i] = file.getReader().length();
       // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
       int tooFar = i + comConf.getMaxFilesToCompact() - 1;
@@ -209,8 +209,9 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
    * @param filesCompacting files being scheduled to compact.
    * @return true to schedule a request.
    */
-  public boolean needsCompaction(final Collection<StoreFile> storeFiles,
-      final List<StoreFile> filesCompacting) {
+  @Override
+  public boolean needsCompaction(Collection<HStoreFile> storeFiles,
+      List<HStoreFile> filesCompacting) {
     int numCandidates = storeFiles.size() - filesCompacting.size();
     return numCandidates >= comConf.getMinFilesToCompact();
   }

@@ -18,9 +18,9 @@
 
 module Shell
   module Commands
-    class DisableTableReplication< Command
+    class DisableTableReplication < Command
       def help
-        return <<-EOF
+        <<-EOF
 Disable a table's replication switch.
 
 Examples:

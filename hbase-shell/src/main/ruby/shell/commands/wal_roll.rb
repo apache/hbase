@@ -20,7 +20,7 @@ module Shell
   module Commands
     class WalRoll < Command
       def help
-        return <<-EOF
+        <<-EOF
 Roll the log writer. That is, start writing log messages to a new file.
 The name of the regionserver should be given as the parameter.  A
 'server_name' is the host, port plus startcode of a regionserver. For
@@ -34,7 +34,7 @@ EOF
       end
     end
 
-    #TODO remove old HLog version
+    # TODO: remove old HLog version
     class HlogRoll < WalRoll
     end
   end

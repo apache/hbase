@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,16 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -33,15 +34,23 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsTableSourceImpl {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetricsTableSourceImpl.class);
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareToHashCode() throws Exception {
     MetricsRegionServerSourceFactory metricsFact =
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
 
-    MetricsTableSource one = metricsFact.createTable("ONETABLE", new TableWrapperStub("ONETABLE"));
-    MetricsTableSource oneClone = metricsFact.createTable("ONETABLE", new TableWrapperStub("ONETABLE"));
-    MetricsTableSource two = metricsFact.createTable("TWOTABLE", new TableWrapperStub("TWOTABLE"));
+    MetricsTableSource one = metricsFact.createTable(
+        "ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
+    MetricsTableSource oneClone = metricsFact.createTable(
+        "ONETABLE",
+            new MetricsTableWrapperStub("ONETABLE"));
+    MetricsTableSource two = metricsFact.createTable(
+        "TWOTABLE", new MetricsTableWrapperStub("TWOTABLE"));
 
     assertEquals(0, one.compareTo(oneClone));
     assertEquals(one.hashCode(), oneClone.hashCode());
@@ -54,60 +63,18 @@ public class TestMetricsTableSourceImpl {
   }
 
   @Test(expected = RuntimeException.class)
-  public void testNoGetTableMetricsSourceImpl() throws Exception {
+  public void testNoGetTableMetricsSourceImpl() {
     // This should throw an exception because MetricsTableSourceImpl should only
     // be created by a factory.
     CompatibilitySingletonFactory.getInstance(MetricsTableSourceImpl.class);
   }
 
   @Test
-  public void testGetTableMetrics() throws Exception{
+  public void testGetTableMetrics() {
     MetricsTableSource oneTbl =
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-        .createTable("ONETABLE", new TableWrapperStub("ONETABLE"));
+        .createTable("ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
     assertEquals("ONETABLE", oneTbl.getTableName());
   }
 
-  static class TableWrapperStub implements MetricsTableWrapperAggregate {
-
-    private String tableName;
-
-    public TableWrapperStub(String tableName) {
-      this.tableName = tableName;
-    }
-
-    @Override
-    public long getReadRequestsCount(String table) {
-      return 10;
-    }
-
-    @Override
-    public long getWriteRequestsCount(String table) {
-      return 20;
-    }
-
-    @Override
-    public long getTotalRequestsCount(String table) {
-      return 30;
-    }
-
-    @Override
-    public long getMemstoresSize(String table) {
-      return 1000;
-    }
-
-    @Override
-    public long getStoreFilesSize(String table) {
-      return 2000;
-    }
-
-    @Override
-    public long getTableSize(String table) {
-      return 3000;
-    }
-
-    public String getTableName() {
-      return tableName;
-    }
-  }
 }

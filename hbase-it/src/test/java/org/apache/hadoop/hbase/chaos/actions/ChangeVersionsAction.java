@@ -21,10 +21,7 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 
 /**
  * Action that changes the number of versions on a column family from a list of tables.
@@ -34,7 +31,6 @@ import org.apache.hadoop.hbase.client.Admin;
 public class ChangeVersionsAction extends Action {
   private final TableName tableName;
 
-  private Admin admin;
   private Random random;
 
   public ChangeVersionsAction(TableName tableName) {
@@ -43,29 +39,13 @@ public class ChangeVersionsAction extends Action {
   }
 
   @Override
-  public void init(ActionContext context) throws IOException {
-    super.init(context);
-    this.admin = context.getHBaseIntegrationTestingUtility().getAdmin();
-  }
+  public void perform() throws IOException {
+    final int versions =  random.nextInt(3) + 1;
 
-  @Override
-  public void perform() throws Exception {
-    HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
-    HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
-
-    if ( columnDescriptors == null || columnDescriptors.length == 0) {
-      return;
-    }
-
-    int versions =  random.nextInt(3) + 1;
-    for(HColumnDescriptor descriptor:columnDescriptors) {
-      descriptor.setVersions(versions, versions);
-    }
-    // Don't try the modify if we're stopping
-    if (context.isStopping()) {
-      return;
-    }
-    LOG.debug("Performing action: Changing versions on " + tableName.getNameAsString());
-    admin.modifyTable(tableName, tableDescriptor);
+    LOG.debug("Performing action: Changing versions on " + tableName + " to " + versions);
+    modifyAllTableColumns(tableName, columnBuilder -> {
+     columnBuilder.setMinVersions(versions).setMaxVersions(versions);
+    });
+    LOG.debug("Performing action: Just changed versions on " + tableName);
   }
 }

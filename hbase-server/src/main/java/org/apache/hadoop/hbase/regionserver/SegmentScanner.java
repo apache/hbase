@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.SortedSet;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
@@ -35,12 +35,6 @@ import org.apache.hadoop.hbase.client.Scan;
 @InterfaceAudience.Private
 public class SegmentScanner implements KeyValueScanner {
 
-  /**
-   * Order of this scanner relative to other scanners. See
-   * {@link KeyValueScanner#getScannerOrder()}.
-   */
-  private long scannerOrder;
-  private static final long DEFAULT_SCANNER_ORDER = Long.MAX_VALUE;
 
   // the observed structure
   protected final Segment segment;
@@ -61,15 +55,11 @@ public class SegmentScanner implements KeyValueScanner {
   // flag to indicate if this scanner is closed
   protected boolean closed = false;
 
-  protected SegmentScanner(Segment segment, long readPoint) {
-    this(segment, readPoint, DEFAULT_SCANNER_ORDER);
-  }
 
   /**
-   * @param scannerOrder see {@link KeyValueScanner#getScannerOrder()}.
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
    */
-  protected SegmentScanner(Segment segment, long readPoint, long scannerOrder) {
+  protected SegmentScanner(Segment segment, long readPoint) {
     this.segment = segment;
     this.readPoint = readPoint;
     //increase the reference count so the underlying structure will not be de-allocated
@@ -77,7 +67,6 @@ public class SegmentScanner implements KeyValueScanner {
     iter = segment.iterator();
     // the initialization of the current is required for working with heap of SegmentScanners
     updateCurrent();
-    this.scannerOrder = scannerOrder;
     if (current == null) {
       // nothing to fetch from this scanner
       close();
@@ -205,14 +194,14 @@ public class SegmentScanner implements KeyValueScanner {
     boolean keepSeeking;
     Cell key = cell;
     do {
-      Cell firstKeyOnRow = CellUtil.createFirstOnRow(key);
+      Cell firstKeyOnRow = PrivateCellUtil.createFirstOnRow(key);
       SortedSet<Cell> cellHead = segment.headSet(firstKeyOnRow);
       Cell lastCellBeforeRow = cellHead.isEmpty() ? null : cellHead.last();
       if (lastCellBeforeRow == null) {
         current = null;
         return false;
       }
-      Cell firstKeyOnPreviousRow = CellUtil.createFirstOnRow(lastCellBeforeRow);
+      Cell firstKeyOnPreviousRow = PrivateCellUtil.createFirstOnRow(lastCellBeforeRow);
       this.stopSkippingKVsIfNextRow = true;
       seek(firstKeyOnPreviousRow);
       this.stopSkippingKVsIfNextRow = false;
@@ -243,7 +232,7 @@ public class SegmentScanner implements KeyValueScanner {
       return false;
     }
 
-    Cell firstCellOnLastRow = CellUtil.createFirstOnRow(higherCell);
+    Cell firstCellOnLastRow = PrivateCellUtil.createFirstOnRow(higherCell);
 
     if (seek(firstCellOnLastRow)) {
       return true;
@@ -252,13 +241,6 @@ public class SegmentScanner implements KeyValueScanner {
     }
   }
 
-  /**
-   * @see KeyValueScanner#getScannerOrder()
-   */
-  @Override
-  public long getScannerOrder() {
-    return scannerOrder;
-  }
 
   /**
    * Close the KeyValue scanner.
@@ -279,8 +261,9 @@ public class SegmentScanner implements KeyValueScanner {
    * overridden method
    */
   @Override
-  public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
-    return getSegment().shouldSeek(scan,oldestUnexpiredTS);
+  public boolean shouldUseScanner(Scan scan, HStore store, long oldestUnexpiredTS) {
+    return getSegment().shouldSeek(scan.getColumnFamilyTimeRange()
+            .getOrDefault(store.getColumnFamilyDescriptor().getName(), scan.getTimeRange()), oldestUnexpiredTS);
   }
 
   @Override

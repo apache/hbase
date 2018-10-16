@@ -21,25 +21,19 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.TreeMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
-import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to perform Put operations for a single row.
@@ -50,7 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * setting the timestamp.
  */
 @InterfaceAudience.Public
-public class Put extends Mutation implements HeapSize, Comparable<Row> {
+public class Put extends Mutation implements HeapSize {
   /**
    * Create a Put operation for the specified row.
    * @param row row key
@@ -158,15 +152,19 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param putToCopy put to copy
    */
   public Put(Put putToCopy) {
-    this(putToCopy.getRow(), putToCopy.ts);
-    this.familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(Map.Entry<byte [], List<Cell>> entry: putToCopy.getFamilyCellMap().entrySet()) {
-      this.familyMap.put(entry.getKey(), new ArrayList<>(entry.getValue()));
-    }
-    this.durability = putToCopy.durability;
-    for (Map.Entry<String, byte[]> entry : putToCopy.getAttributesMap().entrySet()) {
-      this.setAttribute(entry.getKey(), entry.getValue());
-    }
+    super(putToCopy);
+  }
+
+  /**
+   * Construct the Put with user defined data. NOTED:
+   * 1) all cells in the familyMap must have the Type.Put
+   * 2) the row of each cell must be same with passed row.
+   * @param row row. CAN'T be null
+   * @param ts timestamp
+   * @param familyMap the map to collect all cells internally. CAN'T be null
+   */
+  public Put(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+    super(row, ts, familyMap);
   }
 
   /**
@@ -184,20 +182,12 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * See {@link #addColumn(byte[], byte[], byte[])}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
    */
+  @Deprecated
   public Put addImmutable(byte [] family, byte [] qualifier, byte [] value) {
     return addImmutable(family, qualifier, this.ts, value);
-  }
-
-  /**
-   * This expects that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
-   * that should not be exposed publicly.
-   */
-  @InterfaceAudience.Private
-  public Put addImmutable(byte[] family, byte [] qualifier, byte [] value, Tag[] tag) {
-    return addImmutable(family, qualifier, this.ts, value, tag);
   }
 
   /**
@@ -216,7 +206,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
-    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
 
@@ -224,7 +213,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * See {@link #addColumn(byte[], byte[], long, byte[])}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
    */
+  @Deprecated
   public Put addImmutable(byte [] family, byte [] qualifier, long ts, byte [] value) {
     // Family can not be null, otherwise NullPointerException is thrown when putting the cell into familyMap
     if (family == null) {
@@ -238,44 +230,8 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
 
     List<Cell> list = getCellList(family);
     list.add(new IndividualBytesFieldCell(this.row, family, qualifier, ts, KeyValue.Type.Put, value));
-    familyMap.put(family, list);
     return this;
   }
-
-  /**
-   * This expects that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
-   * that should not be exposed publicly.
-   */
-  @InterfaceAudience.Private
-  public Put addImmutable(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag) {
-    List<Cell> list = getCellList(family);
-    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
-    list.add(kv);
-    familyMap.put(family, list);
-    return this;
-  }
-
-  /**
-   * This expects that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
-   * that should not be exposed publicly.
-   */
-  @InterfaceAudience.Private
-  public Put addImmutable(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value,
-                          Tag[] tag) {
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
-    List<Cell> list = getCellList(family);
-    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
-    list.add(kv);
-    familyMap.put(family, list);
-    return this;
-  }
-
 
   /**
    * Add the specified column and value, with the specified timestamp as
@@ -293,7 +249,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
     list.add(kv);
-    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
 
@@ -301,7 +256,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * See {@link #addColumn(byte[], ByteBuffer, long, ByteBuffer)}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
    */
+  @Deprecated
   public Put addImmutable(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
     if (ts < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
@@ -309,7 +267,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
     list.add(kv);
-    familyMap.put(family, list);
     return this;
   }
 
@@ -317,158 +274,19 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * Add the specified KeyValue to this Put operation.  Operation assumes that
    * the passed KeyValue is immutable and its backing array will not be modified
    * for the duration of this Put.
-   * @param kv individual KeyValue
+   * @param cell individual cell
    * @return this
    * @throws java.io.IOException e
    */
-  public Put add(Cell kv) throws IOException{
-    byte [] family = CellUtil.cloneFamily(kv);
-    List<Cell> list = getCellList(family);
-    //Checking that the row of the kv is the same as the put
-    if (!CellUtil.matchingRow(kv, this.row)) {
-      throw new WrongRowIOException("The row in " + kv.toString() +
-        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
-    }
-    list.add(kv);
-    familyMap.put(family, list);
+  public Put add(Cell cell) throws IOException {
+    super.add(cell);
     return this;
   }
 
-  /**
-   * A convenience method to determine if this object's familyMap contains
-   * a value assigned to the given family &amp; qualifier.
-   * Both given arguments must match the KeyValue object to return true.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @return returns true if the given family and qualifier already has an
-   * existing KeyValue object in the family map.
-   */
-  public boolean has(byte [] family, byte [] qualifier) {
-  return has(family, qualifier, this.ts, new byte[0], true, true);
-  }
-
-  /**
-   * A convenience method to determine if this object's familyMap contains
-   * a value assigned to the given family, qualifier and timestamp.
-   * All 3 given arguments must match the KeyValue object to return true.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param ts timestamp
-   * @return returns true if the given family, qualifier and timestamp already has an
-   * existing KeyValue object in the family map.
-   */
-  public boolean has(byte [] family, byte [] qualifier, long ts) {
-  return has(family, qualifier, ts, new byte[0], false, true);
-  }
-
-  /**
-   * A convenience method to determine if this object's familyMap contains
-   * a value assigned to the given family, qualifier and timestamp.
-   * All 3 given arguments must match the KeyValue object to return true.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param value value to check
-   * @return returns true if the given family, qualifier and value already has an
-   * existing KeyValue object in the family map.
-   */
-  public boolean has(byte [] family, byte [] qualifier, byte [] value) {
-    return has(family, qualifier, this.ts, value, true, false);
-  }
-
-  /**
-   * A convenience method to determine if this object's familyMap contains
-   * the given value assigned to the given family, qualifier and timestamp.
-   * All 4 given arguments must match the KeyValue object to return true.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param ts timestamp
-   * @param value value to check
-   * @return returns true if the given family, qualifier timestamp and value
-   * already has an existing KeyValue object in the family map.
-   */
-  public boolean has(byte [] family, byte [] qualifier, long ts, byte [] value) {
-      return has(family, qualifier, ts, value, false, false);
-  }
-
-  /*
-   * Private method to determine if this object's familyMap contains
-   * the given value assigned to the given family, qualifier and timestamp
-   * respecting the 2 boolean arguments
-   *
-   * @param family
-   * @param qualifier
-   * @param ts
-   * @param value
-   * @param ignoreTS
-   * @param ignoreValue
-   * @return returns true if the given family, qualifier timestamp and value
-   * already has an existing KeyValue object in the family map.
-   */
-  private boolean has(byte[] family, byte[] qualifier, long ts, byte[] value,
-                      boolean ignoreTS, boolean ignoreValue) {
-    List<Cell> list = getCellList(family);
-    if (list.isEmpty()) {
-      return false;
-    }
-    // Boolean analysis of ignoreTS/ignoreValue.
-    // T T => 2
-    // T F => 3 (first is always true)
-    // F T => 2
-    // F F => 1
-    if (!ignoreTS && !ignoreValue) {
-      for (Cell cell : list) {
-        if (CellUtil.matchingFamily(cell, family) &&
-            CellUtil.matchingQualifier(cell, qualifier)  &&
-            CellUtil.matchingValue(cell, value) &&
-            cell.getTimestamp() == ts) {
-          return true;
-        }
-      }
-    } else if (ignoreValue && !ignoreTS) {
-      for (Cell cell : list) {
-        if (CellUtil.matchingFamily(cell, family) && CellUtil.matchingQualifier(cell, qualifier)
-            && cell.getTimestamp() == ts) {
-          return true;
-        }
-      }
-    } else if (!ignoreValue && ignoreTS) {
-      for (Cell cell : list) {
-        if (CellUtil.matchingFamily(cell, family) && CellUtil.matchingQualifier(cell, qualifier)
-            && CellUtil.matchingValue(cell, value)) {
-          return true;
-        }
-      }
-    } else {
-      for (Cell cell : list) {
-        if (CellUtil.matchingFamily(cell, family) &&
-            CellUtil.matchingQualifier(cell, qualifier)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Returns a list of all KeyValue objects with matching column family and qualifier.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @return a list of KeyValue objects with the matching family and qualifier,
-   * returns an empty list if one doesn't exist for the given family.
-   */
-  public List<Cell> get(byte[] family, byte[] qualifier) {
-    List<Cell> filteredList = new ArrayList<>();
-    for (Cell cell: getCellList(family)) {
-      if (CellUtil.matchingQualifier(cell, qualifier)) {
-        filteredList.add(cell);
-      }
-    }
-    return filteredList;
+  @Override
+  public Put setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
+    return this;
   }
 
   @Override
@@ -486,6 +304,12 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     return (Put) super.setDurability(d);
   }
 
+  /**
+   * Method for setting the put's familyMap
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Put#Put(byte[], long, NavigableMap)} instead
+   */
+  @Deprecated
   @Override
   public Put setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Put) super.setFamilyCellMap(map);

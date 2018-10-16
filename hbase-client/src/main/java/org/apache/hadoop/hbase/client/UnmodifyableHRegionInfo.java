@@ -20,9 +20,13 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+ */
 @InterfaceAudience.Public
+@Deprecated
 class UnmodifyableHRegionInfo extends HRegionInfo {
   /*
    * Creates an unmodifyable copy of an HRegionInfo

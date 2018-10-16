@@ -51,6 +51,7 @@
     <module name="VisibilityModifier">
       <property name="packageAllowed" value="true"/>
       <property name="protectedAllowed" value="true"/>
+      <property name="allowPublicImmutableFields" value="true"/>
     </module>
 
     <!-- Coding Checks
@@ -60,13 +61,13 @@
     <module name="EqualsHashCode"/>
     <module name="IllegalInstantiation"/>
     <module name="InnerAssignment"/>
-    <module name="MissingSwitchDefault"/>
     <module name="NoFinalizer"/>
 
     <!-- Import Checks
     http://checkstyle.sourceforge.net/config_imports.html -->
     <module name="AvoidStarImport"/>
     <module name="ImportOrder">
+      <property name="groups" value="*,org.apache.hbase.thirdparty,org.apache.hadoop.hbase.shaded"/>
       <property name="option" value="top" />
       <property name="ordered" value="true"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
@@ -75,7 +76,29 @@
     <module name="UnusedImports">
       <property name="processJavadoc" value="true"/>
     </module>
-
+    <module name="IllegalImport">
+<!--
+  TODO include the o.a.htrace package for HTrace v3 once we can upgrade
+  to checkstyle 8.6 plus and use a message filter to suppress
+  errors from proper use of o.a.htrace.core
+          org.apache.htrace,
+-->
+      <property name="illegalPkgs" value="
+          com.google.common,
+          io.netty,
+          org.apache.commons.cli,
+          org.apache.commons.collections,
+          org.apache.commons.collections4,
+          org.apache.commons.lang,
+          org.apache.curator.shaded,
+          org.apache.hadoop.classification,
+          org.apache.htrace.shaded,
+          org.codehaus.jackson,
+          org.htrace"/>
+      <property name="illegalClasses" value="
+          org.apache.commons.logging.Log,
+          org.apache.commons.logging.LogFactory"/>
+    </module>
     <!-- Javadoc Checks
     http://checkstyle.sourceforge.net/config_javadoc.html -->
     <module name="JavadocTagContinuationIndentation">

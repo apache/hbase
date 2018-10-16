@@ -21,20 +21,21 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handles everything on master-side related to master election.
@@ -50,8 +51,8 @@ import org.apache.zookeeper.KeeperException;
  * the active master of the cluster.
  */
 @InterfaceAudience.Private
-public class ActiveMasterManager extends ZooKeeperListener {
-  private static final Log LOG = LogFactory.getLog(ActiveMasterManager.class);
+public class ActiveMasterManager extends ZKListener {
+  private static final Logger LOG = LoggerFactory.getLogger(ActiveMasterManager.class);
 
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
   final AtomicBoolean clusterShutDown = new AtomicBoolean(false);
@@ -65,7 +66,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
    * @param sn ServerName
    * @param master In an instance of a Master.
    */
-  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master) {
+  ActiveMasterManager(ZKWatcher watcher, ServerName sn, Server master) {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;
@@ -92,7 +93,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
     // shut down, so that state is now irrelevant. This means that the shutdown
     // state must be set while we wait on the active master in order
     // to shutdown this master. See HBASE-8519.
-    if(path.equals(watcher.znodePaths.clusterStateZNode) && !master.isStopped()) {
+    if(path.equals(watcher.getZNodePaths().clusterStateZNode) && !master.isStopped()) {
       clusterShutDown.set(true);
     }
 
@@ -100,7 +101,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
   }
 
   void handle(final String path) {
-    if (path.equals(watcher.znodePaths.masterAddressZNode) && !master.isStopped()) {
+    if (path.equals(watcher.getZNodePaths().masterAddressZNode) && !master.isStopped()) {
       handleMasterNodeChange();
     }
   }
@@ -122,9 +123,9 @@ public class ActiveMasterManager extends ZooKeeperListener {
     // Watch the node and check if it exists.
     try {
       synchronized(clusterHasActiveMaster) {
-        if (ZKUtil.watchAndCheckExists(watcher, watcher.znodePaths.masterAddressZNode)) {
+        if (ZKUtil.watchAndCheckExists(watcher, watcher.getZNodePaths().masterAddressZNode)) {
           // A master node exists, there is an active master
-          LOG.debug("A master is now available");
+          LOG.trace("A master is now available");
           clusterHasActiveMaster.set(true);
         } else {
           // Node is no longer there, cluster does not have an active master
@@ -155,15 +156,15 @@ public class ActiveMasterManager extends ZooKeeperListener {
    */
   boolean blockUntilBecomingActiveMaster(
       int checkInterval, MonitoredTask startupStatus) {
-    String backupZNode = ZKUtil.joinZNode(
-      this.watcher.znodePaths.backupMasterAddressesZNode, this.sn.toString());
+    String backupZNode = ZNodePaths.joinZNode(
+      this.watcher.getZNodePaths().backupMasterAddressesZNode, this.sn.toString());
     while (!(master.isAborted() || master.isStopped())) {
       startupStatus.setStatus("Trying to register in ZK as active master");
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
       try {
         if (MasterAddressTracker.setMasterAddress(this.watcher,
-            this.watcher.znodePaths.masterAddressZNode, this.sn, infoPort)) {
+            this.watcher.getZNodePaths().masterAddressZNode, this.sn, infoPort)) {
 
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now)
@@ -177,7 +178,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
           // We are the master, return
           startupStatus.setStatus("Successfully registered as active master.");
           this.clusterHasActiveMaster.set(true);
-          LOG.info("Registered Active Master=" + this.sn);
+          LOG.info("Registered as active master=" + this.sn);
           return true;
         }
 
@@ -187,7 +188,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
 
         String msg;
         byte[] bytes =
-          ZKUtil.getDataAndWatch(this.watcher, this.watcher.znodePaths.masterAddressZNode);
+          ZKUtil.getDataAndWatch(this.watcher, this.watcher.getZNodePaths().masterAddressZNode);
         if (bytes == null) {
           msg = ("A master was detected, but went down before its address " +
             "could be read.  Attempting to become the next active master");
@@ -200,11 +201,11 @@ public class ActiveMasterManager extends ZooKeeperListener {
             // Hopefully next time around we won't fail the parse.  Dangerous.
             continue;
           }
-          if (ServerName.isSameHostnameAndPort(currentMaster, this.sn)) {
+          if (ServerName.isSameAddress(currentMaster, this.sn)) {
             msg = ("Current master has this master's address, " +
               currentMaster + "; master was restarted? Deleting node.");
             // Hurry along the expiration of the znode.
-            ZKUtil.deleteNode(this.watcher, this.watcher.znodePaths.masterAddressZNode);
+            ZKUtil.deleteNode(this.watcher, this.watcher.getZNodePaths().masterAddressZNode);
 
             // We may have failed to delete the znode at the previous step, but
             //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
@@ -244,7 +245,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
    */
   boolean hasActiveMaster() {
     try {
-      if (ZKUtil.checkExists(watcher, watcher.znodePaths.masterAddressZNode) >= 0) {
+      if (ZKUtil.checkExists(watcher, watcher.getZNodePaths().masterAddressZNode) >= 0) {
         return true;
       }
     }
@@ -270,13 +271,14 @@ public class ActiveMasterManager extends ZooKeeperListener {
         LOG.warn("Failed get of master address: " + e.toString());
       }
       if (activeMaster != null &&  activeMaster.equals(this.sn)) {
-        ZKUtil.deleteNode(watcher, watcher.znodePaths.masterAddressZNode);
+        ZKUtil.deleteNode(watcher, watcher.getZNodePaths().masterAddressZNode);
         // We may have failed to delete the znode at the previous step, but
         //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
         ZNodeClearer.deleteMyEphemeralNodeOnDisk();
       }
     } catch (KeeperException e) {
-      LOG.error(this.watcher.prefix("Error deleting our own master address node"), e);
+      LOG.debug(this.watcher.prefix("Failed delete of our master address node; " +
+          e.getMessage()));
     }
   }
 }

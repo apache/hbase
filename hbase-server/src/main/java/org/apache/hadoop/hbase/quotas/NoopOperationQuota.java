@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
 
@@ -43,7 +43,7 @@ class NoopOperationQuota implements OperationQuota {
 
   @Override
   public void checkQuota(int numWrites, int numReads, int numScans)
-      throws ThrottlingException {
+      throws RpcThrottlingException {
     // no-op
   }
 

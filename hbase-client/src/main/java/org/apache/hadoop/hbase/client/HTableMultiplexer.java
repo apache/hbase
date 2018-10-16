@@ -19,9 +19,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -38,18 +35,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables.
@@ -67,7 +65,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Public
 public class HTableMultiplexer {
-  private static final Log LOG = LogFactory.getLog(HTableMultiplexer.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(HTableMultiplexer.class.getName());
 
   public static final String TABLE_MULTIPLEXER_FLUSH_PERIOD_MS =
       "hbase.tablemultiplexer.flush.period.ms";
@@ -207,7 +205,7 @@ public class HTableMultiplexer {
         LinkedBlockingQueue<PutStatus> queue = getQueue(loc);
 
         // Generate a MultiPutStatus object and offer it into the queue
-        PutStatus s = new PutStatus(loc.getRegionInfo(), put, maxAttempts);
+        PutStatus s = new PutStatus(loc.getRegion(), put, maxAttempts);
 
         return queue.offer(s);
       }
@@ -372,11 +370,11 @@ public class HTableMultiplexer {
 
   @VisibleForTesting
   static class PutStatus {
-    final HRegionInfo regionInfo;
+    final RegionInfo regionInfo;
     final Put put;
     final int maxAttempCount;
 
-    public PutStatus(HRegionInfo regionInfo, Put put, int maxAttempCount) {
+    public PutStatus(RegionInfo regionInfo, Put put, int maxAttempCount) {
       this.regionInfo = regionInfo;
       this.put = put;
       this.maxAttempCount = maxAttempCount;
@@ -454,7 +452,7 @@ public class HTableMultiplexer {
               HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
       this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
           HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, false, rpcControllerFactory);
+      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, rpcControllerFactory);
       this.executor = executor;
       this.maxRetryInQueue = conf.getInt(TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE, 10000);
       this.pool = pool;
@@ -469,7 +467,7 @@ public class HTableMultiplexer {
     }
 
     public long getTotalBufferedCount() {
-      return queue.size() + currentProcessingCount.get();
+      return (long) queue.size() + currentProcessingCount.get();
     }
 
     public AtomicAverageCounter getAverageLatencyCounter() {

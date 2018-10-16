@@ -199,6 +199,13 @@ JRuby's licence.
 
 ## jruby bundles jquery, but we already ref that above.
 #end
+#macro(commons_lang3_notice)
+--
+## commons-lang3 has following note in the NOTICE file
+This product includes software from the Spring Framework,
+under the Apache License 2.0 (see: StringUtils.containsWhitespace())
+
+#end
 ## first bundled source
 #if(${bundled-logo})
 #orca_logo_notice()
@@ -255,6 +262,11 @@ JRuby's licence.
 #if(${dep.artifactId.equals("jruby-complete")})
 #set($jruby=true)
 #end
+#if(${dep.artifactId.equals("commons-lang3")})
+#if(${dep.groupId.equals("org.apache.commons")})
+#commons_lang3_notice()
+#end
+#end
 #if( ${dep.licenses.isEmpty()} )
 ERROR: This product includes ${dep.name} which has no licenses!
 Revert the change if invalid or if intentional add license info to supplemental-models.xml
@@ -270,14 +282,7 @@ project website
 ${dep.url}
 project source
 ${dep.scm.url}
-
-
-
-## fail the template. If you're looking at the source NOTICE.vm
-## file based on a stacktrace or exception message, you need to find
-## the generated NOTICE file that has the actual dependency info printed.
-${dep.license[0]}
-#end
+#else
 #if( !(${dep.licenses[0].name.contains("BSD")} || ${dep.licenses[0].name.contains("MIT")}) )
 #if( !(${dep.licenses[0].name.equals("Public Domain")}) )
 #if( !(${dep.licenses[0].name.contains("Apache Software License, Version 2.0")}) )
@@ -304,6 +309,7 @@ Licensed under ${dep.licenses[0].name}, see LICENSE for details.
 incorporated from ${dep.groupId}:${dep.artifactId}:${dep.packaging}:${dep.version}
 
 For source see '${dep.url}'.
+#end
 #end
 #end
 #end

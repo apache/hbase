@@ -19,12 +19,11 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
-
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Get notification of WAL events. The invocations are inline
@@ -39,7 +38,7 @@ public interface WALActionsListener {
    * @param oldPath the path to the old wal
    * @param newPath the path to the new wal
    */
-  void preLogRoll(Path oldPath, Path newPath) throws IOException;
+  default void preLogRoll(Path oldPath, Path newPath) throws IOException {}
 
   /**
    * The WAL has been rolled. The oldPath can be null if this is
@@ -47,51 +46,46 @@ public interface WALActionsListener {
    * @param oldPath the path to the old wal
    * @param newPath the path to the new wal
    */
-  void postLogRoll(Path oldPath, Path newPath) throws IOException;
+  default void postLogRoll(Path oldPath, Path newPath) throws IOException {}
 
   /**
    * The WAL is going to be archived.
    * @param oldPath the path to the old wal
    * @param newPath the path to the new wal
    */
-  void preLogArchive(Path oldPath, Path newPath) throws IOException;
+  default void preLogArchive(Path oldPath, Path newPath) throws IOException {}
 
   /**
    * The WAL has been archived.
    * @param oldPath the path to the old wal
    * @param newPath the path to the new wal
    */
-  void postLogArchive(Path oldPath, Path newPath) throws IOException;
+  default void postLogArchive(Path oldPath, Path newPath) throws IOException {}
 
   /**
    * A request was made that the WAL be rolled.
    */
-  void logRollRequested(boolean tooFewReplicas);
+  default void logRollRequested(boolean tooFewReplicas) {}
 
   /**
    * The WAL is about to close.
    */
-  void logCloseRequested();
+  default void logCloseRequested() {}
 
   /**
   * Called before each write.
-  * @param info
-  * @param logKey
-  * @param logEdit
   */
-  void visitLogEntryBeforeWrite(
-    HRegionInfo info, WALKey logKey, WALEdit logEdit
-  );
+  default void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {}
 
   /**
    * @param logKey
    * @param logEdit TODO: Retire this in favor of
-   *          {@link #visitLogEntryBeforeWrite(HRegionInfo, WALKey, WALEdit)} It only exists to get
+   *          {@link #visitLogEntryBeforeWrite(RegionInfo, WALKey, WALEdit)} It only exists to get
    *          scope when replicating. Scope should be in the WALKey and not need us passing in a
    *          <code>htd</code>.
    * @throws IOException If failed to parse the WALEdit
    */
-  void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException;
+  default void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
    * For notification post append to the writer.  Used by metrics system at least.
@@ -102,8 +96,8 @@ public interface WALActionsListener {
    * @param logEdit A WAL edit containing list of cells.
    * @throws IOException if any network or I/O error occurred
    */
-  void postAppend(final long entryLen, final long elapsedTimeMillis, final WALKey logKey,
-      final WALEdit logEdit) throws IOException;
+  default void postAppend(final long entryLen, final long elapsedTimeMillis, final WALKey logKey,
+      final WALEdit logEdit) throws IOException {}
 
   /**
    * For notification post writer sync.  Used by metrics system at least.
@@ -111,40 +105,5 @@ public interface WALActionsListener {
    * @param handlerSyncs How many sync handler calls were released by this call to filesystem
    * sync.
    */
-  void postSync(final long timeInNanos, final int handlerSyncs);
-
-  static class Base implements WALActionsListener {
-    @Override
-    public void preLogRoll(Path oldPath, Path newPath) throws IOException {}
-
-    @Override
-    public void postLogRoll(Path oldPath, Path newPath) throws IOException {}
-
-    @Override
-    public void preLogArchive(Path oldPath, Path newPath) throws IOException {}
-
-    @Override
-    public void postLogArchive(Path oldPath, Path newPath) throws IOException {}
-
-    @Override
-    public void logRollRequested(boolean tooFewReplicas) {}
-
-    @Override
-    public void logCloseRequested() {}
-
-    @Override
-    public void visitLogEntryBeforeWrite(HRegionInfo info, WALKey logKey, WALEdit logEdit) {}
-
-    @Override
-    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
-    }
-
-    @Override
-    public void postAppend(final long entryLen, final long elapsedTimeMillis, final WALKey logKey,
-        final WALEdit logEdit) throws IOException {
-    }
-
-    @Override
-    public void postSync(final long timeInNanos, final int handlerSyncs) {}
-  }
+  default void postSync(final long timeInNanos, final int handlerSyncs) {}
 }

@@ -1,18 +1,19 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
@@ -43,13 +44,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -58,6 +61,11 @@ import org.junit.runners.Parameterized;
 @Category({MiscTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestByteBufferUtils {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestByteBufferUtils.class);
+
   private static final String UNSAFE_AVAIL_NAME = "UNSAFE_AVAIL";
   private static final String UNSAFE_UNALIGNED_NAME = "UNSAFE_UNALIGNED";
   private byte[] array;
@@ -69,12 +77,7 @@ public class TestByteBufferUtils {
 
   @Parameterized.Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<>(2);
-    {
-      paramList.add(new Object[] { false });
-      paramList.add(new Object[] { true });
-    }
-    return paramList;
+    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
   }
 
   private static void setUnsafe(String fieldName, boolean value) throws Exception {
@@ -317,8 +320,8 @@ public class TestByteBufferUtils {
   public void testLongFitsIn() {
     assertEquals(1, ByteBufferUtils.longFitsIn(0));
     assertEquals(1, ByteBufferUtils.longFitsIn(1));
-    assertEquals(3, ByteBufferUtils.longFitsIn(1l << 16));
-    assertEquals(5, ByteBufferUtils.longFitsIn(1l << 32));
+    assertEquals(3, ByteBufferUtils.longFitsIn(1L << 16));
+    assertEquals(5, ByteBufferUtils.longFitsIn(1L << 32));
     assertEquals(8, ByteBufferUtils.longFitsIn(-1));
     assertEquals(8, ByteBufferUtils.longFitsIn(Long.MIN_VALUE));
     assertEquals(8, ByteBufferUtils.longFitsIn(Long.MAX_VALUE));

@@ -22,19 +22,20 @@ import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 import org.apache.hadoop.conf.Configuration;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Class which sets up a simple thread which runs in a loop sleeping
@@ -50,7 +51,7 @@ import com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public class JvmPauseMonitor {
-  private static final Log LOG = LogFactory.getLog(JvmPauseMonitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JvmPauseMonitor.class);
 
   /** The target sleep time */
   private static final long SLEEP_INTERVAL_MS = 500;
@@ -145,7 +146,7 @@ public class JvmPauseMonitor {
   private class Monitor implements Runnable {
     @Override
     public void run() {
-      Stopwatch sw = new Stopwatch();
+      Stopwatch sw = Stopwatch.createUnstarted();
       Map<String, GcTimes> gcTimesBeforeSleep = getGcTimes();
       while (shouldRun) {
         sw.reset().start();
@@ -155,7 +156,7 @@ public class JvmPauseMonitor {
           return;
         }
 
-        long extraSleepTime = sw.elapsedMillis() - SLEEP_INTERVAL_MS;
+        long extraSleepTime = sw.elapsed(TimeUnit.MILLISECONDS) - SLEEP_INTERVAL_MS;
         Map<String, GcTimes> gcTimesAfterSleep = getGcTimes();
 
         if (extraSleepTime > infoThresholdMs) {

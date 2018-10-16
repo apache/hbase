@@ -19,15 +19,19 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public interface MetricsReplicationSourceSource extends BaseSource {
 
   public static final String SOURCE_SIZE_OF_LOG_QUEUE = "source.sizeOfLogQueue";
   public static final String SOURCE_AGE_OF_LAST_SHIPPED_OP = "source.ageOfLastShippedOp";
   public static final String SOURCE_SHIPPED_BATCHES = "source.shippedBatches";
 
+  /**
+   * @deprecated Use {@link #SOURCE_SHIPPED_BYTES} instead
+   */
   @Deprecated
-  /** @deprecated Use SOURCE_SHIPPED_BYTES instead */
   public static final String SOURCE_SHIPPED_KBS = "source.shippedKBs";
   public static final String SOURCE_SHIPPED_BYTES = "source.shippedBytes";
   public static final String SOURCE_SHIPPED_OPS = "source.shippedOps";
@@ -49,6 +53,7 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   public static final String SOURCE_REPEATED_LOG_FILE_BYTES = "source.repeatedLogFileBytes";
   public static final String SOURCE_COMPLETED_LOGS = "source.completedLogs";
   public static final String SOURCE_COMPLETED_RECOVERY_QUEUES = "source.completedRecoverQueues";
+  public static final String SOURCE_FAILED_RECOVERY_QUEUES = "source.failedRecoverQueues";
 
   void setLastShippedAge(long age);
   void incrSizeOfLogQueue(int size);
@@ -72,4 +77,5 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   void incrRepeatedFileBytes(final long bytes);
   void incrCompletedWAL();
   void incrCompletedRecoveryQueue();
+  void incrFailedRecoveryQueue();
 }

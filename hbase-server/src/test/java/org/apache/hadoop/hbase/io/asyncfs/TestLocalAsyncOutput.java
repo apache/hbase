@@ -17,34 +17,37 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
-
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
-import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestLocalAsyncOutput {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestLocalAsyncOutput.class);
+
   private static EventLoopGroup GROUP = new NioEventLoopGroup();
 
-  private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
+  private static Class<? extends Channel> CHANNEL_CLASS = NioSocketChannel.class;
+
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @AfterClass
   public static void tearDownAfterClass() throws IOException {
@@ -53,21 +56,12 @@ public class TestLocalAsyncOutput {
   }
 
   @Test
-  public void test() throws IOException, InterruptedException, ExecutionException {
+  public void test() throws IOException, InterruptedException, ExecutionException,
+      FSUtils.StreamLacksCapabilityException {
     Path f = new Path(TEST_UTIL.getDataTestDir(), "test");
     FileSystem fs = FileSystem.getLocal(TEST_UTIL.getConfiguration());
     AsyncFSOutput out = AsyncFSOutputHelper.createOutput(fs, f, false, true,
-      fs.getDefaultReplication(f), fs.getDefaultBlockSize(f), GROUP.next());
-    byte[] b = new byte[10];
-    ThreadLocalRandom.current().nextBytes(b);
-    out.write(b);
-    assertEquals(b.length, out.flush(true).get().longValue());
-    out.close();
-    assertEquals(b.length, fs.getFileStatus(f).getLen());
-    byte[] actual = new byte[b.length];
-    try (FSDataInputStream in = fs.open(f)) {
-      in.readFully(actual);
-    }
-    assertArrayEquals(b, actual);
+      fs.getDefaultReplication(f), fs.getDefaultBlockSize(f), GROUP, CHANNEL_CLASS);
+    TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(fs, f, out);
   }
 }

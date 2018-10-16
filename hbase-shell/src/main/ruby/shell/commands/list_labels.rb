@@ -19,7 +19,7 @@ module Shell
   module Commands
     class ListLabels < Command
       def help
-        return <<-EOF
+        <<-EOF
 List the visibility labels defined in the system.
 Optional regular expression parameter could be used to filter the labels being returned.
 Syntax : list_labels
@@ -31,10 +31,10 @@ For example:
 EOF
       end
 
-      def command(regex = ".*")
+      def command(regex = '.*')
         list = visibility_labels_admin.list_labels(regex)
         list.each do |label|
-          formatter.row([org.apache.hadoop.hbase.util.Bytes::toStringBinary(label.toByteArray)])
+          formatter.row([org.apache.hadoop.hbase.util.Bytes.toStringBinary(label.toByteArray)])
         end
       end
     end

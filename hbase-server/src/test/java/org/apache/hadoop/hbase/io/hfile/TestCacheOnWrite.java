@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
@@ -33,14 +31,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,7 +54,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -65,23 +62,30 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for the following block
  * types: data blocks, non-root index blocks, and Bloom filter blocks.
  */
 @RunWith(Parameterized.class)
-@Category({IOTests.class, MediumTests.class})
+@Category({IOTests.class, LargeTests.class})
 public class TestCacheOnWrite {
 
-  private static final Log LOG = LogFactory.getLog(TestCacheOnWrite.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCacheOnWrite.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWrite.class);
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private Configuration conf;
@@ -179,7 +183,7 @@ public class TestCacheOnWrite {
     List<Object[]> params = new ArrayList<>();
     for (BlockCache blockCache : getBlockCaches()) {
       for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
-        for (Compression.Algorithm compress : HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
+        for (Compression.Algorithm compress : HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS) {
           for (boolean cacheCompressedData : new boolean[] { false, true }) {
             params.add(new Object[] { cowType, compress, cacheCompressedData, blockCache });
           }
@@ -229,7 +233,7 @@ public class TestCacheOnWrite {
         new CacheConfig(blockCache, true, true, cowType.shouldBeCached(BlockType.DATA),
         cowType.shouldBeCached(BlockType.LEAF_INDEX),
         cowType.shouldBeCached(BlockType.BLOOM_CHUNK), false, cacheCompressedData,
-            false, false, false);
+            false, false);
   }
 
   @After
@@ -297,7 +301,7 @@ public class TestCacheOnWrite {
         // block we cached at write-time and block read from file should be identical
         assertEquals(block.getChecksumType(), fromCache.getChecksumType());
         assertEquals(block.getBlockType(), fromCache.getBlockType());
-        assertNotEquals(block.getBlockType(), BlockType.ENCODED_DATA);
+        assertNotEquals(BlockType.ENCODED_DATA, block.getBlockType());
         assertEquals(block.getOnDiskSizeWithHeader(), fromCache.getOnDiskSizeWithHeader());
         assertEquals(block.getOnDiskSizeWithoutHeader(), fromCache.getOnDiskSizeWithoutHeader());
         assertEquals(
@@ -371,7 +375,7 @@ public class TestCacheOnWrite {
         .withDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
         .withIncludesTags(useTags).build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(storeFileParentDir).withComparator(CellComparator.COMPARATOR)
+        .withOutputDir(storeFileParentDir).withComparator(CellComparatorImpl.COMPARATOR)
         .withFileContext(meta)
         .withBloomType(BLOOM_TYPE).withMaxKeyCount(NUM_KV).build();
     byte[] cf = Bytes.toBytes("fam");
@@ -410,7 +414,7 @@ public class TestCacheOnWrite {
     final String cf = "myCF";
     final byte[] cfBytes = Bytes.toBytes(cf);
     final int maxVersions = 3;
-    Region region = TEST_UTIL.createTestRegion(table, 
+    HRegion region = TEST_UTIL.createTestRegion(table,
         new HColumnDescriptor(cf)
             .setCompressionType(compress)
             .setBloomFilterType(BLOOM_TYPE)
@@ -421,7 +425,7 @@ public class TestCacheOnWrite {
     long ts = EnvironmentEdgeManager.currentTime();
     for (int iFile = 0; iFile < 5; ++iFile) {
       for (int iRow = 0; iRow < 500; ++iRow) {
-        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" + 
+        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" +
             iRow;
         Put p = new Put(Bytes.toBytes(rowStr));
         ++rowIdx;

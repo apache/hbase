@@ -34,14 +34,15 @@
 # export HBASE_HEAPSIZE=1G
 
 # Uncomment below if you intend to use off heap cache. For example, to allocate 8G of 
-# offheap, set the value to "8G".
+# offheap, set the value to "8G". See http://hbase.apache.org/book.html#direct.memory
+# in the refguide for guidance setting this config.
 # export HBASE_OFFHEAPSIZE=1G
 
 # Extra Java runtime options.
 # Below are what we set by default.  May only work with SUN JVM.
 # For more on why as well as other possible settings,
 # see http://hbase.apache.org/book.html#performance
-export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
+export HBASE_OPTS="$HBASE_OPTS -XX:+UseConcMarkSweepGC"
 
 # Uncomment one of the below three options to enable java garbage collection logging for the server-side processes.
 

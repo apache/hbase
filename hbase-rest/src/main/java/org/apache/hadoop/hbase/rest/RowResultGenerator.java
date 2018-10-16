@@ -23,21 +23,21 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RowResultGenerator extends ResultGenerator {
-  private static final Log LOG = LogFactory.getLog(RowResultGenerator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowResultGenerator.class);
 
   private Iterator<Cell> valuesI;
   private Cell cache;
@@ -50,7 +50,7 @@ public class RowResultGenerator extends ResultGenerator {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {
         for (byte[] col: rowspec.getColumns()) {
-          byte[][] split = KeyValue.parseColumn(col);
+          byte[][] split = CellUtil.parseColumn(col);
           if (split.length == 1) {
             get.addFamily(split[0]);
           } else if (split.length == 2) {
@@ -83,9 +83,11 @@ public class RowResultGenerator extends ResultGenerator {
     }
   }
 
+  @Override
   public void close() {
   }
 
+  @Override
   public boolean hasNext() {
     if (cache != null) {
       return true;
@@ -96,6 +98,7 @@ public class RowResultGenerator extends ResultGenerator {
     return valuesI.hasNext();
   }
 
+  @Override
   public Cell next() {
     if (cache != null) {
       Cell kv = cache;
@@ -112,10 +115,12 @@ public class RowResultGenerator extends ResultGenerator {
     }
   }
 
+  @Override
   public void putBack(Cell kv) {
     this.cache = kv;
   }
 
+  @Override
   public void remove() {
     throw new UnsupportedOperationException("remove not supported");
   }

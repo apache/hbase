@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -42,16 +40,23 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestMultiRowRangeFilter {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultiRowRangeFilter.class);
+
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestMultiRowRangeFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiRowRangeFilter.class);
   private byte[] family = Bytes.toBytes("family");
   private byte[] qf = Bytes.toBytes("qf");
   private byte[] value = Bytes.toBytes("val");
@@ -97,7 +102,7 @@ public class TestMultiRowRangeFilter {
      * Expected :SEEK_NEXT_USING_HINT
      * Actual   :INCLUDE
      * */
-    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(null));
   }
 
   @Test
@@ -107,15 +112,15 @@ public class TestMultiRowRangeFilter {
             new MultiRowRangeFilter.RowRange(Bytes.toBytes("d"), true, Bytes.toBytes("e"), true)
     ));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("a")));
-    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(null));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("b")));
-    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(null));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("c")));
-    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(null));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("d")));
-    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(null));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("e")));
-    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(null));
   }
 
   @Test

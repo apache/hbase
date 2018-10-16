@@ -51,7 +51,7 @@ public class EncodedSeekPerformanceTest {
   /** Use this benchmark with default options */
   public EncodedSeekPerformanceTest() {
     configuration.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.5f);
-    randomizer = new Random(42l);
+    randomizer = new Random(42L);
     numberOfSeeks = DEFAULT_NUMBER_OF_SEEKS;
   }
 
@@ -59,7 +59,7 @@ public class EncodedSeekPerformanceTest {
     List<Cell> allKeyValues = new ArrayList<>();
 
     // read all of the key values
-    StoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(),
+    HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(),
         path, configuration, cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     StoreFileReader reader = storeFile.getReader();
@@ -71,7 +71,7 @@ public class EncodedSeekPerformanceTest {
       allKeyValues.add(current);
     }
 
-    storeFile.closeReader(cacheConf.shouldEvictOnClose());
+    storeFile.closeStoreFile(cacheConf.shouldEvictOnClose());
 
     // pick seeks by random
     List<Cell> seeks = new ArrayList<>();
@@ -89,7 +89,7 @@ public class EncodedSeekPerformanceTest {
   private void runTest(Path path, DataBlockEncoding blockEncoding,
       List<Cell> seeks) throws IOException {
     // read all of the key values
-    StoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(),
+    HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(),
       path, configuration, cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     long totalSize = 0;
@@ -132,7 +132,7 @@ public class EncodedSeekPerformanceTest {
     double seeksPerSec = (seeks.size() * NANOSEC_IN_SEC) /
         (finishSeeksTime - startSeeksTime);
 
-    storeFile.closeReader(cacheConf.shouldEvictOnClose());
+    storeFile.closeStoreFile(cacheConf.shouldEvictOnClose());
     clearBlockCache();
 
     System.out.println(blockEncoding);

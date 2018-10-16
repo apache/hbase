@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ReversedMobStoreScanner extends from ReversedStoreScanner, and is used to support
@@ -40,7 +40,7 @@ public class ReversedMobStoreScanner extends ReversedStoreScanner {
   private boolean readEmptyValueOnMobCellMiss = false;
   protected final HMobStore mobStore;
 
-  ReversedMobStoreScanner(Store store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
+  ReversedMobStoreScanner(HStore store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
       long readPt) throws IOException {
     super(store, scanInfo, scan, columns, readPt);
     cacheMobBlocks = MobUtils.isCacheMobBlocks(scan);

@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -53,7 +53,7 @@ class AsyncClientScanner {
 
   private final ScanMetrics scanMetrics;
 
-  private final RawScanResultConsumer consumer;
+  private final AdvancedScanResultConsumer consumer;
 
   private final TableName tableName;
 
@@ -71,7 +71,7 @@ class AsyncClientScanner {
 
   private final ScanResultCache resultCache;
 
-  public AsyncClientScanner(Scan scan, RawScanResultConsumer consumer, TableName tableName,
+  public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
       AsyncConnectionImpl conn, long pauseNs, int maxAttempts, long scanTimeoutNs,
       long rpcTimeoutNs, int startLogErrorsCnt) {
     if (scan.getStartRow() == null) {

@@ -17,40 +17,79 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Performs Append operations on a single row.
  * <p>
- * Note that this operation does not appear atomic to readers. Appends are done
- * under a single row lock, so write operations to a row are synchronized, but
- * readers do not take row locks so get and scan operations can see this
- * operation partially completed.
+ * This operation ensures atomicty to readers. Appends are done
+ * under a single row lock, so write operations to a row are synchronized, and
+ * readers are guaranteed to see this operation fully completed.
  * <p>
  * To append to a set of columns of a row, instantiate an Append object with the
  * row to append to. At least one column to append must be specified using the
- * {@link #add(byte[], byte[], byte[])} method.
+ * {@link #addColumn(byte[], byte[], byte[])} method.
  */
 @InterfaceAudience.Public
 public class Append extends Mutation {
+  private static final Logger LOG = LoggerFactory.getLogger(Append.class);
+  private static final long HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
+  private TimeRange tr = TimeRange.allTime();
+
+  /**
+   * Sets the TimeRange to be used on the Get for this append.
+   * <p>
+   * This is useful for when you have counters that only last for specific
+   * periods of time (ie. counters that are partitioned by time).  By setting
+   * the range of valid times for this append, you can potentially gain
+   * some performance with a more optimal Get operation.
+   * Be careful adding the time range to this class as you will update the old cell if the
+   * time range doesn't include the latest cells.
+   * <p>
+   * This range is used as [minStamp, maxStamp).
+   * @param minStamp minimum timestamp value, inclusive
+   * @param maxStamp maximum timestamp value, exclusive
+   * @return this
+   */
+  public Append setTimeRange(long minStamp, long maxStamp) {
+    tr = new TimeRange(minStamp, maxStamp);
+    return this;
+  }
+
+  /**
+   * Gets the TimeRange used for this append.
+   * @return TimeRange
+   */
+  public TimeRange getTimeRange() {
+    return this.tr;
+  }
+
+  @Override
+  protected long extraHeapSize(){
+    return HEAP_OVERHEAD;
+  }
+
   /**
    * @param returnResults
    *          True (default) if the append operation should return the results.
    *          A client that is not interested in the result can save network
    *          bandwidth setting this to false.
    */
+  @Override
   public Append setReturnResults(boolean returnResults) {
     super.setReturnResults(returnResults);
     return this;
@@ -60,6 +99,7 @@ public class Append extends Mutation {
    * @return current setting for returnResults
    */
   // This method makes public the superclasses's protected method.
+  @Override
   public boolean isReturnResults() {
     return super.isReturnResults();
   }
@@ -75,15 +115,11 @@ public class Append extends Mutation {
   }
   /**
    * Copy constructor
-   * @param a
+   * @param appendToCopy append to copy
    */
-  public Append(Append a) {
-    this.row = a.getRow();
-    this.ts = a.getTimeStamp();
-    this.familyMap.putAll(a.getFamilyCellMap());
-    for (Map.Entry<String, byte[]> entry : a.getAttributesMap().entrySet()) {
-      this.setAttribute(entry.getKey(), entry.getValue());
-    }
+  public Append(Append appendToCopy) {
+    super(appendToCopy);
+    this.tr = appendToCopy.getTimeRange();
   }
 
   /** Create a Append operation for the specified row.
@@ -99,13 +135,39 @@ public class Append extends Mutation {
   }
 
   /**
+   * Construct the Append with user defined data. NOTED:
+   * 1) all cells in the familyMap must have the Type.Put
+   * 2) the row of each cell must be same with passed row.
+   * @param row row. CAN'T be null
+   * @param ts timestamp
+   * @param familyMap the map to collect all cells internally. CAN'T be null
+   */
+  public Append(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+    super(row, ts, familyMap);
+  }
+
+  /**
+   * Add the specified column and value to this Append operation.
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param value value to append to specified column
+   * @return this
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #addColumn(byte[], byte[], byte[])} instead
+   */
+  @Deprecated
+  public Append add(byte [] family, byte [] qualifier, byte [] value) {
+    return this.addColumn(family, qualifier, value);
+  }
+
+  /**
    * Add the specified column and value to this Append operation.
    * @param family family name
    * @param qualifier column qualifier
    * @param value value to append to specified column
    * @return this
    */
-  public Append add(byte [] family, byte [] qualifier, byte [] value) {
+  public Append addColumn(byte[] family, byte[] qualifier, byte[] value) {
     KeyValue kv = new KeyValue(this.row, family, qualifier, this.ts, KeyValue.Type.Put, value);
     return add(kv);
   }
@@ -117,15 +179,18 @@ public class Append extends Mutation {
    */
   @SuppressWarnings("unchecked")
   public Append add(final Cell cell) {
-    // Presume it is KeyValue for now.
-    byte [] family = CellUtil.cloneFamily(cell);
-    List<Cell> list = this.familyMap.get(family);
-    if (list == null) {
-      list  = new ArrayList<>(1);
+    try {
+      super.add(cell);
+    } catch (IOException e) {
+      // we eat the exception of wrong row for BC..
+      LOG.error(e.toString(), e);
     }
-    // find where the new entry should be placed in the List
-    list.add(cell);
-    this.familyMap.put(family, list);
+    return this;
+  }
+
+  @Override
+  public Append setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
     return this;
   }
 
@@ -144,6 +209,12 @@ public class Append extends Mutation {
     return (Append) super.setDurability(d);
   }
 
+  /**
+   * Method for setting the Append's familyMap
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Append#Append(byte[], long, NavigableMap)} instead
+   */
+  @Deprecated
   @Override
   public Append setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Append) super.setFamilyCellMap(map);
@@ -167,6 +238,11 @@ public class Append extends Mutation {
   @Override
   public Append setACL(Map<String, Permission> perms) {
     return (Append) super.setACL(perms);
+  }
+
+  @Override
+  public Append setPriority(int priority) {
+    return (Append) super.setPriority(priority);
   }
 
   @Override
