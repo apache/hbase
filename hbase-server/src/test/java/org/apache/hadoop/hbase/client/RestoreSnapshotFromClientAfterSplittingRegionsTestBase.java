@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
 public class RestoreSnapshotFromClientAfterSplittingRegionsTestBase
@@ -36,12 +34,6 @@ public class RestoreSnapshotFromClientAfterSplittingRegionsTestBase
 
     // Take a snapshot
     admin.snapshot(snapshotName1, tableName);
-
-    // Load more data
-    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
-
-    // Split the second region
-    splitRegion(regionInfos.get(1));
 
     // Restore the snapshot
     admin.disableTable(tableName);
