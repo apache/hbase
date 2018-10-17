@@ -368,6 +368,11 @@ public class ProcedureExecutor<TEnvironment> {
     this(conf, environment, store, new SimpleProcedureScheduler());
   }
 
+  private boolean isRootFinished(Procedure<?> proc) {
+    Procedure<?> rootProc = procedures.get(proc.getRootProcId());
+    return rootProc == null || rootProc.isFinished();
+  }
+
   private void forceUpdateProcedure(long procId) throws IOException {
     IdLock.Entry lockEntry = procExecutionLock.getLockEntry(procId);
     try {
@@ -376,7 +381,9 @@ public class ProcedureExecutor<TEnvironment> {
         LOG.debug("No pending procedure with id = {}, skip force updating.", procId);
         return;
       }
-      if (proc.isFinished()) {
+      // For a sub procedure which root parent has not been finished, we still need to retain the
+      // wal even if the procedure itself is finished.
+      if (proc.isFinished() && (!proc.hasParent() || isRootFinished(proc))) {
         LOG.debug("Procedure {} has already been finished, skip force updating.", proc);
         return;
       }
