@@ -70,6 +70,18 @@ public class ReopenTableRegionsProcedure
     return TableOperationType.REGION_EDIT;
   }
 
+  private boolean canSchedule(MasterProcedureEnv env, HRegionLocation loc) {
+    if (loc.getSeqNum() < 0) {
+      return false;
+    }
+    RegionStateNode regionNode =
+      env.getAssignmentManager().getRegionStates().getRegionStateNode(loc.getRegion());
+    // If the region node is null, then at least in the next round we can remove this region to make
+    // progress. And the second condition is a normal one, if there are no TRSP with it then we can
+    // schedule one to make progress.
+    return regionNode == null || !regionNode.isInTransition();
+  }
+
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ReopenTableRegionsState state)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
@@ -85,8 +97,12 @@ public class ReopenTableRegionsProcedure
         return Flow.HAS_MORE_STATE;
       case REOPEN_TABLE_REGIONS_REOPEN_REGIONS:
         for (HRegionLocation loc : regions) {
-          RegionStateNode regionNode = env.getAssignmentManager().getRegionStates()
-            .getOrCreateRegionStateNode(loc.getRegion());
+          RegionStateNode regionNode =
+            env.getAssignmentManager().getRegionStates().getRegionStateNode(loc.getRegion());
+          // this possible, maybe the region has already been merged or split, see HBASE-20921
+          if (regionNode == null) {
+            continue;
+          }
           TransitRegionStateProcedure proc;
           regionNode.lock();
           try {
@@ -108,13 +124,13 @@ public class ReopenTableRegionsProcedure
         if (regions.isEmpty()) {
           return Flow.NO_MORE_STATE;
         }
-        if (regions.stream().anyMatch(l -> l.getSeqNum() >= 0)) {
+        if (regions.stream().anyMatch(loc -> canSchedule(env, loc))) {
           attempt = 0;
           setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
           return Flow.HAS_MORE_STATE;
         }
-        // All the regions need to reopen are in OPENING state which means we can not schedule any
-        // MRPs.
+        // We can not schedule TRSP for all the regions need to reopen, wait for a while and retry
+        // again.
         long backoff = ProcedureUtil.getBackoffTimeMs(this.attempt++);
         LOG.info(
           "There are still {} region(s) which need to be reopened for table {} are in " +
@@ -138,6 +154,7 @@ public class ReopenTableRegionsProcedure
     env.getProcedureScheduler().addFront(this);
     return false; // 'false' means that this procedure handled the timeout
   }
+
   @Override
   protected void rollbackState(MasterProcedureEnv env, ReopenTableRegionsState state)
       throws IOException, InterruptedException {
