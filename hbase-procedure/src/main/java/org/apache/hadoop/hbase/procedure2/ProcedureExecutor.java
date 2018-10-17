@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -376,6 +377,11 @@ public class ProcedureExecutor<TEnvironment> {
     this(conf, environment, store, new SimpleProcedureScheduler());
   }
 
+  private boolean isRootFinished(Procedure<?> proc) {
+    Procedure<?> rootProc = procedures.get(proc.getRootProcId());
+    return rootProc == null || rootProc.isFinished();
+  }
+
   private void forceUpdateProcedure(long procId) throws IOException {
     IdLock.Entry lockEntry = procExecutionLock.getLockEntry(procId);
     try {
@@ -384,7 +390,9 @@ public class ProcedureExecutor<TEnvironment> {
         LOG.debug("No pending procedure with id = {}, skip force updating.", procId);
         return;
       }
-      if (proc.isFinished()) {
+      // For a sub procedure which root parent has not been finished, we still need to retain the
+      // wal even if the procedure itself is finished.
+      if (proc.isFinished() && (!proc.hasParent() || isRootFinished(proc))) {
         LOG.debug("Procedure {} has already been finished, skip force updating.", proc);
         return;
       }
@@ -1394,6 +1402,18 @@ public class ProcedureExecutor<TEnvironment> {
     // Procedure either does not exist or has already completed and got cleaned up.
     // At this time, we cannot check the owner of the procedure
     return false;
+  }
+
+
+  /**
+   * Should only be used when starting up, where the procedure workers have not been started.
+   * <p/>
+   * If the procedure works has been started, the return values maybe changed when you are
+   * processing it so usually this is not safe. Use {@link #getProcedures()} below for most cases as
+   * it will do a copy, and also include the finished procedures.
+   */
+  public Collection<Procedure<TEnvironment>> getActiveProceduresNoCopy() {
+    return procedures.values();
   }
 
   /**

@@ -123,7 +123,34 @@ public class TestForceUpdateProcedure {
     @Override
     protected Procedure<Void>[] execute(Void env)
         throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-      return new Procedure[] { new WaitingProcedure() };
+      return new Procedure[] { new DummyProcedure(), new WaitingProcedure() };
+    }
+
+    @Override
+    protected void rollback(Void env) throws IOException, InterruptedException {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean abort(Void env) {
+      return false;
+    }
+
+    @Override
+    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    }
+
+    @Override
+    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    }
+  }
+
+  public static final class DummyProcedure extends Procedure<Void> {
+
+    @Override
+    protected Procedure<Void>[] execute(Void env)
+        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      return null;
     }
 
     @Override
@@ -207,12 +234,13 @@ public class TestForceUpdateProcedure {
     stopStoreAndExecutor();
     createStoreAndExecutor();
     Map<Class<?>, Procedure<Void>> procMap = new HashMap<>();
-    EXEC.getProcedures().stream().filter(p -> !p.isFinished())
-      .forEach(p -> procMap.put(p.getClass(), p));
-    assertEquals(2, procMap.size());
+    EXEC.getActiveProceduresNoCopy().forEach(p -> procMap.put(p.getClass(), p));
+    assertEquals(3, procMap.size());
     ParentProcedure parentProc = (ParentProcedure) procMap.get(ParentProcedure.class);
     assertEquals(ProcedureState.WAITING, parentProc.getState());
     WaitingProcedure waitingProc = (WaitingProcedure) procMap.get(WaitingProcedure.class);
     assertEquals(ProcedureState.WAITING_TIMEOUT, waitingProc.getState());
+    DummyProcedure dummyProc = (DummyProcedure) procMap.get(DummyProcedure.class);
+    assertEquals(ProcedureState.SUCCESS, dummyProc.getState());
   }
 }
