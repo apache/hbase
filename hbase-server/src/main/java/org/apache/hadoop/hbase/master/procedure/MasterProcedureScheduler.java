@@ -693,7 +693,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
         regionLocks[i] = locking.getRegionLock(regionInfo[i].getEncodedName());
         if (!regionLocks[i].tryExclusiveLock(procedure)) {
-          LOG.info("Waiting xlock for {} held by pid={}", procedure,
+          LOG.info("Waiting on xlock for {} held by pid={}", procedure,
               regionLocks[i].getExclusiveLockProcIdOwner());
           waitProcedure(regionLocks[i], procedure);
           hasLock = false;
@@ -702,7 +702,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
           }
           break;
         } else {
-          LOG.info("xlock for {}", procedure);
+          LOG.info("Took xlock for {}", procedure);
         }
       }
 
