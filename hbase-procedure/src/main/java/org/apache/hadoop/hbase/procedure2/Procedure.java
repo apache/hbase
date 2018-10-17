@@ -322,7 +322,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * @see #holdLock(Object)
    * @return true if the procedure has the lock, false otherwise.
    */
-  protected final boolean hasLock() {
+  @VisibleForTesting
+  public final boolean hasLock() {
     return locked;
   }
 
