@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.hadoop.hbase.util.DNS;
+import org.apache.hadoop.hbase.util.HttpServerUtil;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -128,6 +129,7 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.jetty.webapp.WebAppContext;
 import org.mortbay.thread.QueuedThreadPool;
 
 import com.google.common.base.Joiner;
@@ -202,6 +204,9 @@ public class ThriftServerRunner implements Runnable {
 
   private final boolean securityEnabled;
   private final boolean doAsEnabled;
+
+  static String THRIFT_HTTP_ALLOW_OPTIONS_METHOD = "hbase.thrift.http.allow.options.method";
+  private static boolean THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT = false;
 
   /** An enum of server implementation selections */
   enum ImplType {
@@ -410,11 +415,14 @@ public class ThriftServerRunner implements Runnable {
 
     httpServer = new Server();
     // Context handler
-    Context context = new Context(httpServer, "/", Context.SESSIONS);
+    Context context = new WebAppContext();
     context.setContextPath("/");
+    context.setResourceBase("hbase-webapps/");
     String httpPath = "/*";
     httpServer.setHandler(context);
     context.addServlet(new ServletHolder(thriftHttpServlet), httpPath);
+    HttpServerUtil.constrainHttpMethods(context,
+        conf.getBoolean(THRIFT_HTTP_ALLOW_OPTIONS_METHOD, THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // set up Jetty and run the embedded server
     Connector connector = new SelectChannelConnector();
