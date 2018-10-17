@@ -433,21 +433,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     if (initCost > currentCost) {
       plans = createRegionPlans(cluster);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Finished computing new load balance plan.  Computation took "
-            + (endTime - startTime) + "ms to try " + step
-            + " different iterations.  Found a solution that moves "
-            + plans.size() + " regions; Going from a computed cost of "
-            + initCost + " to a new cost of " + currentCost);
-      }
-
+      LOG.info("Finished computing new load balance plan. Computation took {}" +
+        " to try {} different iterations.  Found a solution that moves " +
+        "{} regions; Going from a computed cost of {}" +
+        " to a new cost of {}", java.time.Duration.ofMillis(endTime - startTime),
+        step, plans.size(), initCost, currentCost);
       return plans;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Could not find a better load balance plan.  Tried "
-          + step + " different configurations in " + (endTime - startTime)
-          + "ms, and did not find anything with a computed cost less than " + initCost);
-    }
+    LOG.info("Could not find a better load balance plan.  Tried {} different configurations in " +
+      "{}, and did not find anything with a computed cost less than {}", step,
+      java.time.Duration.ofMillis(endTime - startTime), initCost);
     return null;
   }
 
