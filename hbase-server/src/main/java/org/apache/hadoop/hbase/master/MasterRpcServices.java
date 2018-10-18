@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -44,7 +43,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -595,7 +593,7 @@ public class MasterRpcServices extends RSRpcServices
       BalanceRequest request) throws ServiceException {
     try {
       return BalanceResponse.newBuilder().setBalancerRan(master.balance(
-        request.hasForce() ? request.getForce() : false)).build();
+        request.hasForce()? request.getForce(): false)).build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }
@@ -1181,7 +1179,8 @@ public class MasterRpcServices extends RSRpcServices
         if (executor.isFinished(procId)) {
           builder.setState(GetProcedureResultResponse.State.FINISHED);
           if (result.isFailed()) {
-            IOException exception = result.getException().unwrapRemoteIOException();
+            IOException exception =
+                MasterProcedureUtil.unwrapRemoteIOException(result);
             builder.setException(ForeignExceptionUtil.toProtoForeignException(exception));
           }
           byte[] resultData = result.getResult();
@@ -2346,15 +2345,16 @@ public class MasterRpcServices extends RSRpcServices
     MasterProtos.AssignsResponse.Builder responseBuilder =
         MasterProtos.AssignsResponse.newBuilder();
     try {
+      boolean override = request.getOverride();
       for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
-        // Assign is synchronous as of hbase-2.2. Need an asynchronous one.
         RegionInfo ri = getRegionInfo(rs);
         if (ri == null) {
           LOG.info("Unknown={}", rs);
           responseBuilder.addPid(Procedure.NO_PROC_ID);
           continue;
         }
-        responseBuilder.addPid(this.master.getAssignmentManager().assign(ri));
+        responseBuilder.addPid(this.master.getMasterProcedureExecutor().submitProcedure(this.master
+            .getAssignmentManager().createOneAssignProcedure(ri, override)));
       }
       return responseBuilder.build();
     } catch (IOException ioe) {
@@ -2377,15 +2377,16 @@ public class MasterRpcServices extends RSRpcServices
     MasterProtos.UnassignsResponse.Builder responseBuilder =
         MasterProtos.UnassignsResponse.newBuilder();
     try {
+      boolean override = request.getOverride();
       for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
-        // Unassign is synchronous as of hbase-2.2. Need an asynchronous one.
         RegionInfo ri = getRegionInfo(rs);
         if (ri == null) {
           LOG.info("Unknown={}", rs);
           responseBuilder.addPid(Procedure.NO_PROC_ID);
           continue;
         }
-        responseBuilder.addPid(this.master.getAssignmentManager().unassign(ri));
+        responseBuilder.addPid(this.master.getMasterProcedureExecutor().submitProcedure(this.master
+            .getAssignmentManager().createOneUnassignProcedure(ri, override)));
       }
       return responseBuilder.build();
     } catch (IOException ioe) {
@@ -2410,7 +2411,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       List<Boolean> ret =
           master.getMasterProcedureExecutor().bypassProcedure(request.getProcIdList(),
-          request.getWaitTime(), request.getForce());
+          request.getWaitTime(), request.getOverride(), request.getRecursive());
       return MasterProtos.BypassProcedureResponse.newBuilder().addAllBypassed(ret).build();
     } catch (IOException e) {
       throw new ServiceException(e);

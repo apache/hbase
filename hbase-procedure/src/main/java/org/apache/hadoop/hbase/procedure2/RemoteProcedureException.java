@@ -74,6 +74,10 @@ public class RemoteProcedureException extends ProcedureException {
     return new Exception(cause);
   }
 
+  // NOTE: Does not throw DoNotRetryIOE because it does not
+  // have access (DNRIOE is in the client module). Use
+  // MasterProcedureUtil.unwrapRemoteIOException if need to
+  // throw DNRIOE.
   public IOException unwrapRemoteIOException() {
     final Exception cause = unwrapRemoteException();
     if (cause instanceof IOException) {

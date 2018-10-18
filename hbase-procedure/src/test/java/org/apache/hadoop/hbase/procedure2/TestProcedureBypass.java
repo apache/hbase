@@ -89,7 +89,7 @@ public class TestProcedureBypass {
     long id = procExecutor.submitProcedure(proc);
     Thread.sleep(500);
     //bypass the procedure
-    assertTrue(procExecutor.bypassProcedure(id, 30000, false));
+    assertTrue(procExecutor.bypassProcedure(id, 30000, false, false));
     htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);
   }
@@ -100,7 +100,7 @@ public class TestProcedureBypass {
     long id = procExecutor.submitProcedure(proc);
     Thread.sleep(500);
     //bypass the procedure
-    assertTrue(procExecutor.bypassProcedure(id, 1000, true));
+    assertTrue(procExecutor.bypassProcedure(id, 1000, true, false));
     //Since the procedure is stuck there, we need to restart the executor to recovery.
     ProcedureTestingUtility.restart(procExecutor);
     htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
@@ -116,7 +116,7 @@ public class TestProcedureBypass {
       .size() > 0);
     SuspendProcedure suspendProcedure = (SuspendProcedure)procExecutor.getProcedures().stream()
         .filter(p -> p.getParentProcId() == rootId).collect(Collectors.toList()).get(0);
-    assertTrue(procExecutor.bypassProcedure(suspendProcedure.getProcId(), 1000, false));
+    assertTrue(procExecutor.bypassProcedure(suspendProcedure.getProcId(), 1000, false, false));
     htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);
   }
@@ -128,14 +128,26 @@ public class TestProcedureBypass {
     long id = procExecutor.submitProcedure(proc);
     Thread.sleep(500);
     // bypass the procedure
-    assertFalse(procExecutor.bypassProcedure(id, 1000, false));
-    assertTrue(procExecutor.bypassProcedure(id, 1000, true));
+    assertFalse(procExecutor.bypassProcedure(id, 1000, false, false));
+    assertTrue(procExecutor.bypassProcedure(id, 1000, true, false));
 
     htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);
   }
 
-
+  @Test
+  public void testBypassingProcedureWithParentRecursive() throws Exception {
+    final RootProcedure proc = new RootProcedure();
+    long rootId = procExecutor.submitProcedure(proc);
+    htu.waitFor(5000, () -> procExecutor.getProcedures().stream()
+        .filter(p -> p.getParentProcId() == rootId).collect(Collectors.toList())
+        .size() > 0);
+    SuspendProcedure suspendProcedure = (SuspendProcedure)procExecutor.getProcedures().stream()
+        .filter(p -> p.getParentProcId() == rootId).collect(Collectors.toList()).get(0);
+    assertTrue(procExecutor.bypassProcedure(rootId, 1000, false, true));
+    htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
+    LOG.info("{} finished", proc);
+  }
 
   @AfterClass
   public static void tearDown() throws Exception {
