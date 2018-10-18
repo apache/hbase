@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.balancer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
@@ -75,7 +76,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
-  private static final List<RegionInfo> EMPTY_REGION_LIST = new ArrayList<>(0);
+  private static final List<RegionInfo> EMPTY_REGION_LIST = Collections.emptyList();
 
   static final Predicate<ServerMetrics> IDLE_SERVER_PREDICATOR
     = load -> load.getRegionMetrics().isEmpty();
