@@ -77,6 +77,8 @@ public class UnassignProcedure extends RegionTransitionProcedure {
 
   /**
    * Where to send the unassign RPC.
+   * this one may not accurate since another RTP may change this location for
+   * the region. The hostingServer will be updated in updateTransition
    */
   protected volatile ServerName hostingServer;
   /**
@@ -196,6 +198,13 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     if (aborted.get() && regionNode.isInState(State.OPEN)) {
       setAbortFailure(getClass().getSimpleName(), "abort requested");
       return false;
+    }
+
+    if (regionNode.getRegionLocation() != null && !regionNode
+        .getRegionLocation().equals(hostingServer)) {
+      LOG.info("HostingServer changed from {} to {} for {}", hostingServer,
+          regionNode.getRegionLocation(), this);
+      this.hostingServer = regionNode.getRegionLocation();
     }
 
 
@@ -357,7 +366,12 @@ public class UnassignProcedure extends RegionTransitionProcedure {
 
   @Override
   public ServerName getServer(final MasterProcedureEnv env) {
-    return this.hostingServer;
+    RegionStateNode node =
+        env.getAssignmentManager().getRegionStates().getRegionStateNode(this.getRegionInfo());
+    if (node == null) {
+      return null;
+    }
+    return node.getRegionLocation();
   }
 
   @Override

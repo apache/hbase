@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -1550,6 +1551,20 @@ public class HMaster extends HRegionServer implements MasterServices {
       if (this.serverManager.areDeadServersInProgress()) {
         LOG.info("Not running balancer because processing dead regionserver(s): " +
           this.serverManager.getDeadServers());
+        return false;
+      }
+      Map<ServerName, ServerMetrics> onlineServers = serverManager.getOnlineServers();
+      int regionNotOnOnlineServer = 0;
+      for (RegionState regionState : assignmentManager.getRegionStates().getRegionStates()) {
+        if (regionState.isOpened() && !onlineServers
+            .containsKey(regionState.getServerName())) {
+          LOG.warn("{} 's server is not in the online server list.", regionState);
+          regionNotOnOnlineServer++;
+        }
+      }
+      if (regionNotOnOnlineServer > 0) {
+        LOG.info("Not running balancer because {} regions found not on an online server",
+            regionNotOnOnlineServer);
         return false;
       }
 
