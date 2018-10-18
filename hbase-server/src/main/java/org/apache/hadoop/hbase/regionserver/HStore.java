@@ -352,7 +352,7 @@ public class HStore implements Store {
 
     LOG.info("Store=" + getColumnFamilyName() +
       ", memstore type=" + this.memstore.getClass().getSimpleName() +
-      ", storagePolicy=" + policyName + ", verifyBulkLoads=" + verifyBulkLoads +
+      ", verifyBulkLoads=" + verifyBulkLoads +
       ", encoding=" + family.getDataBlockEncoding() +
       ", compression=" + family.getCompressionType());
   }
