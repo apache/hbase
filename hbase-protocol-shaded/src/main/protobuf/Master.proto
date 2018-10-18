@@ -99,6 +99,7 @@ message MergeTableRegionsResponse {
 
 message AssignRegionRequest {
   required RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
 }
 
 message AssignRegionResponse {
@@ -1009,6 +1010,7 @@ message SetTableStateInMetaRequest {
 // Region at a time.
 message AssignsRequest {
   repeated RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
 }
 
 /** Like Admin's AssignRegionResponse except it can
@@ -1023,6 +1025,7 @@ message AssignsResponse {
  */
 message UnassignsRequest {
   repeated RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
 }
 
 /** Like Admin's UnassignRegionResponse except it can
@@ -1035,7 +1038,8 @@ message UnassignsResponse {
 message BypassProcedureRequest {
   repeated uint64 proc_id = 1;
   optional uint64 waitTime = 2; // wait time in ms to acquire lock on a procedure
-  optional bool force = 3; // if true, procedure is marked for bypass even if its executing
+  optional bool override = 3 [default = false]; // if true, procedure is marked for bypass even if its executing
+  optional bool recursive = 4;
 }
 
 message BypassProcedureResponse {

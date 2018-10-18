@@ -682,10 +682,13 @@ public class AssignmentManager implements ServerListener {
   }
 
   private TransitRegionStateProcedure createAssignProcedure(RegionStateNode regionNode,
-      ServerName targetServer) {
+      ServerName targetServer, boolean override) {
     TransitRegionStateProcedure proc;
     regionNode.lock();
     try {
+      if(override && regionNode.getProcedure() != null) {
+        regionNode.unsetProcedure(regionNode.getProcedure());
+      }
       assert regionNode.getProcedure() == null;
       proc = TransitRegionStateProcedure.assign(getProcedureEnvironment(),
         regionNode.getRegionInfo(), targetServer);
@@ -694,6 +697,42 @@ public class AssignmentManager implements ServerListener {
       regionNode.unlock();
     }
     return proc;
+  }
+
+  private TransitRegionStateProcedure createUnassignProcedure(RegionStateNode regionNode,
+      boolean override) {
+    TransitRegionStateProcedure proc;
+    regionNode.lock();
+    try {
+      if(override && regionNode.getProcedure() != null) {
+        regionNode.unsetProcedure(regionNode.getProcedure());
+      }
+      assert regionNode.getProcedure() == null;
+      proc = TransitRegionStateProcedure.unassign(getProcedureEnvironment(),
+          regionNode.getRegionInfo());
+      regionNode.setProcedure(proc);
+    } finally {
+      regionNode.unlock();
+    }
+    return proc;
+  }
+
+  /**
+   * Create one TransitRegionStateProcedure to assign a region w/o specifying a target server.
+   * This method is specified for HBCK2
+   */
+  public TransitRegionStateProcedure createOneAssignProcedure(RegionInfo hri, boolean override) {
+    RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(hri);
+    return createAssignProcedure(regionNode, null, override);
+  }
+
+  /**
+   * Create one TransitRegionStateProcedure to unassign a region.
+   * This method is specified for HBCK2
+   */
+  public TransitRegionStateProcedure createOneUnassignProcedure(RegionInfo hri, boolean override) {
+    RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(hri);
+    return createUnassignProcedure(regionNode, override);
   }
 
   /**
@@ -707,8 +746,8 @@ public class AssignmentManager implements ServerListener {
    */
   public TransitRegionStateProcedure[] createAssignProcedures(List<RegionInfo> hris) {
     return hris.stream().map(hri -> regionStates.getOrCreateRegionStateNode(hri))
-      .map(regionNode -> createAssignProcedure(regionNode, null)).sorted(AssignmentManager::compare)
-      .toArray(TransitRegionStateProcedure[]::new);
+        .map(regionNode -> createAssignProcedure(regionNode, null, false))
+        .sorted(AssignmentManager::compare).toArray(TransitRegionStateProcedure[]::new);
   }
 
   /**
@@ -719,7 +758,7 @@ public class AssignmentManager implements ServerListener {
       Map<ServerName, List<RegionInfo>> assignments) {
     return assignments.entrySet().stream()
       .flatMap(e -> e.getValue().stream().map(hri -> regionStates.getOrCreateRegionStateNode(hri))
-        .map(regionNode -> createAssignProcedure(regionNode, e.getKey())))
+        .map(regionNode -> createAssignProcedure(regionNode, e.getKey(), false)))
       .sorted(AssignmentManager::compare).toArray(TransitRegionStateProcedure[]::new);
   }
 

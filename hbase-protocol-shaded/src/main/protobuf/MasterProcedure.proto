@@ -533,6 +533,7 @@ message RegionStateTransitionStateData {
   required RegionStateTransitionState lastState = 2;
   optional ServerName assign_candidate = 3;
   required bool force_new_plan = 4;
+  optional bool override = 5 [default = false];
 }
 
 message RegionRemoteProcedureBaseStateData {
