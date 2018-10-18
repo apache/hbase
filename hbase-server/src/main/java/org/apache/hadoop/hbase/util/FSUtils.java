@@ -1020,7 +1020,7 @@ public abstract class FSUtils extends CommonFSUtils {
     // assumes we are in a table dir.
     List<FileStatus> rds = listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
     if (rds == null) {
-      return new ArrayList<>();
+      return Collections.emptyList();
     }
     List<Path> regionDirs = new ArrayList<>(rds.size());
     for (FileStatus rdfs: rds) {
@@ -1087,7 +1087,7 @@ public abstract class FSUtils extends CommonFSUtils {
   public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir) throws IOException {
     List<FileStatus> fds = listStatusWithStatusFilter(fs, familyDir, new ReferenceFileFilter(fs));
     if (fds == null) {
-      return new ArrayList<>();
+      return Collections.emptyList();
     }
     List<Path> referenceFiles = new ArrayList<>(fds.size());
     for (FileStatus fdfs: fds) {

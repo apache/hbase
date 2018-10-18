@@ -996,7 +996,9 @@ public class StripeStoreFileManager
 
   @Override
   public List<byte[]> getStripeBoundaries() {
-    if (this.state.stripeFiles.isEmpty()) return new ArrayList<>();
+    if (this.state.stripeFiles.isEmpty()) {
+      return Collections.emptyList();
+    }
     ArrayList<byte[]> result = new ArrayList<>(this.state.stripeEndRows.length + 2);
     result.add(OPEN_KEY);
     Collections.addAll(result, this.state.stripeEndRows);
