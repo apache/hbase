@@ -2310,12 +2310,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Return the number of rows in the given table.
+   * @param table to count rows
+   * @return count of rows
    */
-  public int countRows(final Table table) throws IOException {
+  public static int countRows(final Table table) throws IOException {
     return countRows(table, new Scan());
   }
 
-  public int countRows(final Table table, final Scan scan) throws IOException {
+  public static int countRows(final Table table, final Scan scan) throws IOException {
     try (ResultScanner results = table.getScanner(scan)) {
       int count = 0;
       while (results.next() != null) {
