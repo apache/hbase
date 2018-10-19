@@ -921,7 +921,10 @@ public class MasterRpcServices extends RSRpcServices
       GetClusterStatusRequest req) throws ServiceException {
     GetClusterStatusResponse.Builder response = GetClusterStatusResponse.newBuilder();
     try {
-      master.checkInitialized();
+      // We used to check if Master was up at this point but let this call proceed even if
+      // Master is initializing... else we shut out stuff like hbck2 tool from making progress
+      // since it queries this method to figure cluster version. hbck2 wants to be able to work
+      // against Master even if it is 'initializing' so it can do fixup.
       response.setClusterStatus(ClusterMetricsBuilder.toClusterStatus(
         master.getClusterMetrics(ClusterMetricsBuilder.toOptions(req.getOptionsList()))));
     } catch (IOException e) {
