@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Exchanger;
-import java.util.stream.Collectors;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -211,7 +209,7 @@ public class TestForceUpdateProcedure {
     EXEC.submitProcedure(new ParentProcedure());
     EXCHANGER.exchange(Boolean.TRUE);
     UTIL.waitFor(10000, () -> EXEC.getActiveExecutorCount() == 0);
-    // The above operations are to make sure that we have persisted the states of the two
+    // The above operations are used to make sure that we have persist the states of the two
     // procedures.
     long procId = EXEC.submitProcedure(new ExchangeProcedure());
     assertEquals(1, STORE.getActiveLogs().size());
@@ -238,13 +236,12 @@ public class TestForceUpdateProcedure {
     Map<Class<?>, Procedure<Void>> procMap = new HashMap<>();
     EXEC.getProcedures().stream().filter(p -> !p.isFinished())
       .forEach(p -> procMap.put(p.getClass(), p));
-    StringBuffer sb = new StringBuffer();
-    String mapAsStr = procMap.entrySet().stream().map(e -> e.getKey() + " " + e.getValue()).
-        collect(Collectors.joining(", "));
-    assertEquals(mapAsStr, 2, procMap.size());
+    assertEquals(3, procMap.size());
     ParentProcedure parentProc = (ParentProcedure) procMap.get(ParentProcedure.class);
     assertEquals(ProcedureState.WAITING, parentProc.getState());
     WaitingProcedure waitingProc = (WaitingProcedure) procMap.get(WaitingProcedure.class);
     assertEquals(ProcedureState.WAITING_TIMEOUT, waitingProc.getState());
+    DummyProcedure dummyProc = (DummyProcedure) procMap.get(DummyProcedure.class);
+    assertEquals(ProcedureState.SUCCESS, dummyProc.getState());
   }
 }
