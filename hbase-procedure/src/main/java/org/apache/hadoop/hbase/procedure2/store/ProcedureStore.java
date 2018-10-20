@@ -85,12 +85,18 @@ public interface ProcedureStore {
     boolean hasNext();
 
     /**
+     * Calling this method does not need to converting the protobuf message to the Procedure class,
+     * so if it returns true we can call {@link #skipNext()} to skip the procedure without
+     * deserializing. This could increase the performance.
      * @return true if the iterator next element is a completed procedure.
      */
     boolean isNextFinished();
 
     /**
      * Skip the next procedure
+     * <p/>
+     * This method is used to skip the deserializing of the procedure to increase performance, as
+     * when calling next we need to convert the protobuf message to the Procedure class.
      */
     void skipNext();
 
