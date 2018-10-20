@@ -742,6 +742,8 @@ public class DefaultMemStore implements MemStore {
     // A flag represents whether could stop skipping Cells for MVCC
     // if have encountered the next row. Only used for reversed scan
     private boolean stopSkippingCellsIfNextRow = false;
+    // Stop skipping KeyValues for MVCC if finish this row. Only used for reversed scan
+    private Cell stopSkippingKVsRow;
 
     private long readPoint;
 
@@ -791,7 +793,6 @@ public class DefaultMemStore implements MemStore {
      * @return Next Cell
      */
     private Cell getNext(Iterator<Cell> it) {
-      Cell startCell = theNext;
       Cell v = null;
       try {
         while (it.hasNext()) {
@@ -799,8 +800,8 @@ public class DefaultMemStore implements MemStore {
           if (v.getSequenceId() <= this.readPoint) {
             return v;
           }
-          if (stopSkippingCellsIfNextRow && startCell != null
-              && comparator.compareRows(v, startCell) > 0) {
+          if (stopSkippingCellsIfNextRow && stopSkippingKVsRow != null
+              && comparator.compareRows(v, stopSkippingKVsRow) > 0) {
             return null;
           }
         }
@@ -1019,6 +1020,7 @@ public class DefaultMemStore implements MemStore {
         Cell firstKeyOnPreviousRow = KeyValueUtil.createFirstOnRow(lastCellBeforeRow.getRowArray(),
             lastCellBeforeRow.getRowOffset(), lastCellBeforeRow.getRowLength());
         this.stopSkippingCellsIfNextRow = true;
+        this.stopSkippingKVsRow = firstKeyOnPreviousRow;
         seek(firstKeyOnPreviousRow);
         this.stopSkippingCellsIfNextRow = false;
         if (peek() == null
