@@ -6432,4 +6432,44 @@ public class TestHRegion {
     assertEquals("19995", Bytes.toString(currRow.get(1).getRowArray(),
       currRow.get(1).getRowOffset(), currRow.get(1).getRowLength()));
   }
+
+  @Test
+  public void testReverseScanWhenPutCellsAfterOpenReverseScan() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+    byte[] col = Bytes.toBytes("C");
+
+    HBaseConfiguration conf = new HBaseConfiguration();
+    this.region = initHRegion(tableName, method, conf, families);
+
+    Put put = new Put(Bytes.toBytes("199996"));
+    put.addColumn(cf1, col, Bytes.toBytes("val"));
+    region.put(put);
+    Put put2 = new Put(Bytes.toBytes("199995"));
+    put2.addColumn(cf1, col, Bytes.toBytes("val"));
+    region.put(put2);
+
+    // Create a reverse scan
+    Scan scan = new Scan(Bytes.toBytes("199996"));
+    scan.setReversed(true);
+    RegionScanner scanner = region.getScanner(scan);
+
+    // Put a lot of cells that have sequenceIDs grater than the readPt of the reverse scan
+    for (int i = 100000; i < 200000; i++) {
+      Put p = new Put(Bytes.toBytes("" + i));
+      p.addColumn(cf1, col, Bytes.toBytes("" + i));
+      region.put(p);
+    }
+    List<Cell> currRow = new ArrayList<>();
+    boolean hasNext;
+    do {
+      hasNext = scanner.next(currRow);
+    } while (hasNext);
+
+    assertEquals(2, currRow.size());
+    assertEquals("199996", Bytes.toString(currRow.get(0).getRowArray(),
+      currRow.get(0).getRowOffset(), currRow.get(0).getRowLength()));
+    assertEquals("199995", Bytes.toString(currRow.get(1).getRowArray(),
+      currRow.get(1).getRowOffset(), currRow.get(1).getRowLength()));
+  }
 }
