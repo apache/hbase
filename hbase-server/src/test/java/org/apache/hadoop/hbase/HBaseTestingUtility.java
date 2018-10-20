@@ -171,6 +171,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * avoiding port contention if another local HBase instance is already running).
  * <p>To preserve test data directories, pass the system property "hbase.testing.preserve.testdir"
  * setting it to true.
+ * Trigger pre commit.
  */
 @InterfaceAudience.Public
 @SuppressWarnings("deprecation")
