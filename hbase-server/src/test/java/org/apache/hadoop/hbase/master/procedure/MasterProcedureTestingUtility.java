@@ -510,13 +510,18 @@ public class MasterProcedureTestingUtility {
       // Sometimes there are other procedures still executing (including asynchronously spawned by
       // procId) and due to KillAndToggleBeforeStoreUpdate flag ProcedureExecutor is stopped before
       // store update. Let all pending procedures finish normally.
-      if (!procExec.isRunning()) {
-        LOG.warn("ProcedureExecutor not running, may have been stopped by pending procedure due to"
-            + " KillAndToggleBeforeStoreUpdate flag.");
-        ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-        restartMasterProcedureExecutor(procExec);
-        ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+      // check 3 times to confirm that the procedure executor has not been killed
+      for (int i = 0; i < 3; i++) {
+        if (!procExec.isRunning()) {
+          LOG.warn("ProcedureExecutor not running, may have been stopped by pending procedure due" +
+            " to KillAndToggleBeforeStoreUpdate flag.");
+          restartMasterProcedureExecutor(procExec);
+          break;
+        }
+        Thread.sleep(1000);
       }
+      ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     }
 
     assertEquals(true, procExec.isRunning());
