@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.8
+Release Notes - HBase - Version 1.2.8 2018/10/20
 
 ** Sub-task
     * [HBASE-21189] - flaky job should gather machine stats
