@@ -290,6 +290,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
     this.storeEngine = createStoreEngine(this, this.conf, this.comparator);
     List<HStoreFile> hStoreFiles = loadStoreFiles();
+    // Move the storeSize calculation out of loadStoreFiles() method, because the secondary read
+    // replica's refreshStoreFiles() will also use loadStoreFiles() to refresh its store files and
+    // update the storeSize in the completeCompaction(..) finally (just like compaction) , so
+    // no need calculate the storeSize twice.
     this.storeSize.addAndGet(getStorefilesSize(hStoreFiles, sf -> true));
     this.totalUncompressedBytes.addAndGet(getTotalUmcompressedBytes(hStoreFiles));
     this.storeEngine.getStoreFileManager().loadFiles(hStoreFiles);
@@ -1635,26 +1639,16 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   @Override
   public boolean hasReferences() {
     List<HStoreFile> reloadedStoreFiles = null;
+    // Grab the read lock here, because we need to ensure that: only when the atomic
+    // replaceStoreFiles(..) finished, we can get all the complete store file list.
+    this.lock.readLock().lock();
     try {
-      // Reloading the store files from file system due to HBASE-20940. As split can happen with an
-      // region which has references
-      reloadedStoreFiles = loadStoreFiles();
-      return StoreUtils.hasReferences(reloadedStoreFiles);
-    } catch (IOException ioe) {
-      LOG.error("Error trying to determine if store has references, assuming references exists",
-        ioe);
-      return true;
+      // Merge the current store files with compacted files here due to HBASE-20940.
+      Collection<HStoreFile> allStoreFiles = new ArrayList<>(getStorefiles());
+      allStoreFiles.addAll(getCompactedFiles());
+      return StoreUtils.hasReferences(allStoreFiles);
     } finally {
-      if (reloadedStoreFiles != null) {
-        for (HStoreFile storeFile : reloadedStoreFiles) {
-          try {
-            storeFile.closeStoreFile(false);
-          } catch (IOException ioe) {
-            LOG.warn("Encountered exception closing " + storeFile + ": " + ioe.getMessage());
-            // continue with closing the remaining store files
-          }
-        }
-      }
+      this.lock.readLock().unlock();
     }
   }
 
