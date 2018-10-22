@@ -55,6 +55,7 @@ import java.util.stream.LongStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -783,8 +784,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     try {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
           + "store " + this + " region " + this.getRegionInfo().getRegionNameAsString());
-      reader = HFile.createReader(srcPath.getFileSystem(conf), srcPath, cacheConf,
-        isPrimaryReplicaStore(), conf);
+      FileSystem srcFs = srcPath.getFileSystem(conf);
+      srcFs.access(srcPath, FsAction.READ_WRITE);
+      reader = HFile.createReader(srcFs, srcPath, cacheConf, isPrimaryReplicaStore(), conf);
       reader.loadFileInfo();
 
       Optional<byte[]> firstKey = reader.getFirstRowKey();
