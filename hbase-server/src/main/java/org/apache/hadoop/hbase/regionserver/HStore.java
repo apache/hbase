@@ -278,7 +278,10 @@ public class HStore implements Store {
     }
 
     this.storeEngine = StoreEngine.create(this, this.conf, this.comparator);
-    this.storeEngine.getStoreFileManager().loadFiles(loadStoreFiles());
+    List<StoreFile> storeFiles = loadStoreFiles();
+    this.storeSize.addAndGet(getStorefilesSize(storeFiles));
+    this.totalUncompressedBytes.addAndGet(getTotalUmcompressedBytes(storeFiles));
+    this.storeEngine.getStoreFileManager().loadFiles(storeFiles);
 
     // Initialize checksum type from name. The names are CRC32, CRC32C, etc.
     this.checksumType = getChecksumType(conf);
@@ -557,9 +560,6 @@ public class HStore implements Store {
           Future<StoreFile> future = completionService.take();
           StoreFile storeFile = future.get();
           if (storeFile != null) {
-            long length = storeFile.getReader().length();
-            this.storeSize.addAndGet(length);
-            this.totalUncompressedBytes.addAndGet(storeFile.getReader().getTotalUncompressedBytes());
             if (LOG.isDebugEnabled()) {
               LOG.debug("loaded " + storeFile.toStringDetailed());
             }
@@ -2312,18 +2312,33 @@ public class HStore implements Store {
     return this.totalUncompressedBytes.get();
   }
 
-  @Override
-  public long getStorefilesSize() {
+  private long getTotalUmcompressedBytes(Collection<StoreFile> files) {
     long size = 0;
-    for (StoreFile s: this.storeEngine.getStoreFileManager().getStorefiles()) {
-      StoreFile.Reader r = s.getReader();
-      if (r == null) {
-        LOG.warn("StoreFile " + s + " has a null Reader");
-        continue;
+    for (StoreFile sf : files) {
+      if (sf != null && sf.getReader() != null) {
+        size += sf.getReader().getTotalUncompressedBytes();
       }
-      size += r.length();
     }
     return size;
+  }
+
+  private long getStorefilesSize(Collection<StoreFile> files) {
+    long size = 0;
+    for (StoreFile sf : files) {
+      if (sf != null) {
+        if (sf.getReader() == null) {
+          LOG.warn("StoreFile " + sf + " has a null Reader");
+          continue;
+        }
+        size += sf.getReader().length();
+      }
+    }
+    return size;
+  }
+
+  @Override
+  public long getStorefilesSize() {
+    return getStorefilesSize(storeEngine.getStoreFileManager().getStorefiles());
   }
 
   @Override

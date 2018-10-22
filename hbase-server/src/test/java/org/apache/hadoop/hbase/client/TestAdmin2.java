@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -824,5 +826,42 @@ public class TestAdmin2 {
         .getRegionStates().logSplit(ServerName.valueOf("fakeServer", 5000, 0));
     admin.enableTable(TABLENAME);
     TEST_UTIL.waitUntilAllRegionsAssigned(TableName.valueOf(TABLENAME), 10000);
+  }
+
+  /**
+   * TestCase for HBASE-21355
+   */
+  @Test
+  public void testGetRegionInfo() throws Exception {
+    final TableName tableName = TableName.valueOf("testGetRegionInfo");
+    Table table = TEST_UTIL.createTable(tableName, Bytes.toBytes("f"));
+    for (int i = 0; i < 100; i++) {
+      table.put(new Put(Bytes.toBytes(i)).addColumn(Bytes.toBytes("f"), Bytes.toBytes("q"),
+        Bytes.toBytes(i)));
+    }
+    admin.flush(tableName);
+
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
+    List<Region> regions = rs.getOnlineRegions(tableName);
+    Assert.assertEquals(1, regions.size());
+
+    Region region = regions.get(0);
+    byte[] regionName = region.getRegionInfo().getRegionName();
+    Store store = region.getStore(Bytes.toBytes("f"));
+    long expectedStoreFilesSize = store.getStorefilesSize();
+    Assert.assertNotNull(store);
+    Assert.assertEquals(expectedStoreFilesSize, store.getSize());
+
+    ClusterConnection conn = (ClusterConnection) admin.getConnection();
+    HBaseRpcController controller = conn.getRpcControllerFactory().newController();
+    for (int i = 0; i < 10; i++) {
+      HRegionInfo ri =
+          ProtobufUtil.getRegionInfo(controller, conn.getAdmin(rs.getServerName()), regionName);
+      Assert.assertEquals(region.getRegionInfo(), ri);
+      Assert.assertNull(store.getSplitPoint());
+
+      // Make sure that the store size is still the actual file system's store size.
+      Assert.assertEquals(expectedStoreFilesSize, store.getSize());
+    }
   }
 }
