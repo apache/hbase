@@ -372,9 +372,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     for (int i = 0; i < this.curFunctionCosts.length; i++) {
       curFunctionCosts[i] = tempFunctionCosts[i];
     }
-    LOG.info("start StochasticLoadBalancer.balancer, initCost=" + currentCost + ", functionCost="
-        + functionCost());
-
     double initCost = currentCost;
     double newCost = currentCost;
 
@@ -383,9 +380,20 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       computedMaxSteps = Math.max(this.maxSteps,
           ((long)cluster.numRegions * (long)this.stepsPerRegion * (long)cluster.numServers));
     } else {
-      computedMaxSteps = Math.min(this.maxSteps,
-          ((long)cluster.numRegions * (long)this.stepsPerRegion * (long)cluster.numServers));
+      long calculatedMaxSteps = (long)cluster.numRegions * (long)this.stepsPerRegion *
+          (long)cluster.numServers;
+      computedMaxSteps = Math.min(this.maxSteps, calculatedMaxSteps);
+      if (calculatedMaxSteps > maxSteps) {
+        LOG.warn("calculatedMaxSteps:{} for loadbalancer's stochastic walk is larger than "
+            + "maxSteps:{}. Hence load balancing may not work well. Setting parameter "
+            + "\"hbase.master.balancer.stochastic.runMaxSteps\" to true can overcome this issue."
+            + "(This config change does not require service restart)", calculatedMaxSteps,
+            maxRunningTime);
+      }
     }
+    LOG.info("start StochasticLoadBalancer.balancer, initCost=" + currentCost + ", functionCost="
+        + functionCost() + " computedMaxSteps: " + computedMaxSteps);
+
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
 
