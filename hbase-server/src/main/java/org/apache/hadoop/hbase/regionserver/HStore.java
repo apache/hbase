@@ -279,6 +279,10 @@ public class HStore implements Store {
 
     this.storeEngine = StoreEngine.create(this, this.conf, this.comparator);
     List<StoreFile> storeFiles = loadStoreFiles();
+    // Move the storeSize calculation out of loadStoreFiles() method, because the secondary read
+    // replica's refreshStoreFiles() will also use loadStoreFiles() to refresh its store files and
+    // update the storeSize in the completeCompaction(..) finally (just like compaction) , so
+    // no need calculate the storeSize twice.
     this.storeSize.addAndGet(getStorefilesSize(storeFiles));
     this.totalUncompressedBytes.addAndGet(getTotalUmcompressedBytes(storeFiles));
     this.storeEngine.getStoreFileManager().loadFiles(storeFiles);
@@ -744,6 +748,12 @@ public class HStore implements Store {
   @Override
   public Collection<StoreFile> getStorefiles() {
     return this.storeEngine.getStoreFileManager().getStorefiles();
+  }
+
+  public Collection<StoreFile> getCompactedfiles() {
+    Collection<StoreFile> compactedFiles =
+        this.storeEngine.getStoreFileManager().getCompactedfiles();
+    return compactedFiles == null ? new ArrayList<StoreFile>() : compactedFiles;
   }
 
   @Override
@@ -1632,28 +1642,17 @@ public class HStore implements Store {
 
   @Override
   public boolean hasReferences() {
-    List<StoreFile> reloadedStoreFiles = null;
+    // Grab the read lock here, because we need to ensure that: only when the atomic
+    // replaceStoreFiles(..) finished, we can get all the complete store file list.
+    this.lock.readLock().lock();
     try {
-      // Reloading the store files from file system due to HBASE-20940. As split can happen with an
-      // region which has references
-      reloadedStoreFiles = loadStoreFiles();
-    } catch (IOException ioe) {
-      LOG.error("Error trying to determine if store has referenes, " + "assuming references exists",
-        ioe);
-      return true;
+      // Merge the current store files with compacted files here due to HBASE-20940.
+      Collection<StoreFile> allStoreFiles = new ArrayList<>(getStorefiles());
+      allStoreFiles.addAll(getCompactedfiles());
+      return StoreUtils.hasReferences(allStoreFiles);
     } finally {
-      if (reloadedStoreFiles != null) {
-        for (StoreFile storeFile : reloadedStoreFiles) {
-          try {
-            storeFile.closeReader(false);
-          } catch (IOException ioe) {
-            LOG.warn("Encountered exception closing " + storeFile + ": " + ioe.getMessage());
-            // continue with closing the remaining store files
-          }
-        }
-      }
+      this.lock.readLock().unlock();
     }
-    return StoreUtils.hasReferences(reloadedStoreFiles);
   }
 
   @Override
@@ -2773,8 +2772,7 @@ public class HStore implements Store {
       lock.readLock().lock();
       Collection<StoreFile> copyCompactedfiles = null;
       try {
-        Collection<StoreFile> compactedfiles =
-            this.getStoreEngine().getStoreFileManager().getCompactedfiles();
+        Collection<StoreFile> compactedfiles = getCompactedfiles();
         if (compactedfiles != null && compactedfiles.size() != 0) {
           // Do a copy under read lock
           copyCompactedfiles = new ArrayList<StoreFile>(compactedfiles);
