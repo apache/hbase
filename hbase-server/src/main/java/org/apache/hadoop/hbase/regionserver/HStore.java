@@ -289,7 +289,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
 
     this.storeEngine = createStoreEngine(this, this.conf, this.comparator);
-    this.storeEngine.getStoreFileManager().loadFiles(loadStoreFiles());
+    List<HStoreFile> hStoreFiles = loadStoreFiles();
+    this.storeSize.addAndGet(getStorefilesSize(hStoreFiles, sf -> true));
+    this.totalUncompressedBytes.addAndGet(getTotalUmcompressedBytes(hStoreFiles));
+    this.storeEngine.getStoreFileManager().loadFiles(hStoreFiles);
 
     // Initialize checksum type from name. The names are CRC32, CRC32C, etc.
     this.checksumType = getChecksumType(conf);
@@ -557,10 +560,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         try {
           HStoreFile storeFile = completionService.take().get();
           if (storeFile != null) {
-            long length = storeFile.getReader().length();
-            this.storeSize.addAndGet(length);
-            this.totalUncompressedBytes
-                .addAndGet(storeFile.getReader().getTotalUncompressedBytes());
             LOG.debug("loaded {}", storeFile);
             results.add(storeFile);
           }
@@ -2088,24 +2087,24 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   @Override
   public long getStorefilesSize() {
     // Include all StoreFiles
-    return getStorefilesSize(storeFile -> true);
+    return getStorefilesSize(this.storeEngine.getStoreFileManager().getStorefiles(), sf -> true);
   }
 
   @Override
   public long getHFilesSize() {
     // Include only StoreFiles which are HFiles
-    return getStorefilesSize(storeFile -> storeFile.isHFile());
+    return getStorefilesSize(this.storeEngine.getStoreFileManager().getStorefiles(),
+      HStoreFile::isHFile);
   }
 
-  private long getStorefilesSize(Predicate<HStoreFile> predicate) {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream().filter(sf -> {
-      if (sf.getReader() == null) {
-        LOG.warn("StoreFile {} has a null Reader", sf);
-        return false;
-      } else {
-        return true;
-      }
-    }).filter(predicate).mapToLong(sf -> sf.getReader().length()).sum();
+  private long getTotalUmcompressedBytes(List<HStoreFile> files) {
+    return files.stream().filter(f -> f != null && f.getReader() != null)
+        .mapToLong(f -> f.getReader().getTotalUncompressedBytes()).sum();
+  }
+
+  private long getStorefilesSize(Collection<HStoreFile> files, Predicate<HStoreFile> predicate) {
+    return files.stream().filter(f -> f != null && f.getReader() != null).filter(predicate)
+        .mapToLong(f -> f.getReader().length()).sum();
   }
 
   private long getStoreFileFieldSize(ToLongFunction<StoreFileReader> f) {
