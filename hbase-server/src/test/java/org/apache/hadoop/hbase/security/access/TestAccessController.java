@@ -154,6 +154,7 @@ public class TestAccessController extends SecureTestUtil {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAccessController.class);
 
+  private static final FsPermission FS_PERMISSION_ALL = FsPermission.valueOf("-rwxrwxrwx");
   private static final Logger LOG = LoggerFactory.getLogger(TestAccessController.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -980,7 +981,7 @@ public class TestAccessController extends SecureTestUtil {
       fs.mkdirs(dir);
       // need to make it globally writable
       // so users creating HFiles have write permissions
-      fs.setPermission(dir, FsPermission.valueOf("-rwxrwxrwx"));
+      fs.setPermission(dir, FS_PERMISSION_ALL);
 
       AccessTestAction bulkLoadAction = new AccessTestAction() {
         @Override
@@ -991,9 +992,8 @@ public class TestAccessController extends SecureTestUtil {
           byte[][][] hfileRanges = { { { (byte) 0 }, { (byte) 9 } } };
 
           Path bulkLoadBasePath = new Path(dir, new Path(User.getCurrent().getName()));
-          new BulkLoadHelper(bulkLoadBasePath).bulkLoadHFile(TEST_TABLE, TEST_FAMILY,
-            TEST_QUALIFIER, hfileRanges, numRows);
-
+          new BulkLoadHelper(bulkLoadBasePath).initHFileData(TEST_FAMILY, TEST_QUALIFIER,
+            hfileRanges, numRows, FS_PERMISSION_ALL).bulkLoadHFile(TEST_TABLE);
           return null;
         }
       };
@@ -1011,6 +1011,51 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
+  private class BulkLoadAccessTestAction implements AccessTestAction {
+    private FsPermission filePermission;
+    private Path testDataDir;
+
+    public BulkLoadAccessTestAction(FsPermission perm, Path testDataDir) {
+      this.filePermission = perm;
+      this.testDataDir = testDataDir;
+    }
+
+    @Override
+    public Object run() throws Exception {
+      FileSystem fs = TEST_UTIL.getTestFileSystem();
+      fs.mkdirs(testDataDir);
+      fs.setPermission(testDataDir, FS_PERMISSION_ALL);
+      // Making the assumption that the test table won't split between the range
+      byte[][][] hfileRanges = { { { (byte) 0 }, { (byte) 9 } } };
+      Path bulkLoadBasePath = new Path(testDataDir, new Path(User.getCurrent().getName()));
+      new BulkLoadHelper(bulkLoadBasePath)
+          .initHFileData(TEST_FAMILY, TEST_QUALIFIER, hfileRanges, 3, filePermission)
+          .bulkLoadHFile(TEST_TABLE);
+      return null;
+    }
+  }
+
+  @Test
+  public void testBulkLoadWithoutWritePermission() throws Exception {
+    // Use the USER_CREATE to initialize the source directory.
+    Path testDataDir0 = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoadWithoutWritePermission0");
+    Path testDataDir1 = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoadWithoutWritePermission1");
+    AccessTestAction bulkLoadAction1 =
+        new BulkLoadAccessTestAction(FsPermission.valueOf("-r-xr-xr-x"), testDataDir0);
+    AccessTestAction bulkLoadAction2 =
+        new BulkLoadAccessTestAction(FS_PERMISSION_ALL, testDataDir1);
+    // Test the incorrect case.
+    BulkLoadHelper.setPermission(TEST_UTIL.getTestFileSystem(),
+      TEST_UTIL.getTestFileSystem().getWorkingDirectory(), FS_PERMISSION_ALL);
+    try {
+      USER_CREATE.runAs(bulkLoadAction1);
+      fail("Should fail because the hbase user has no write permission on hfiles.");
+    } catch (IOException e) {
+    }
+    // Ensure the correct case.
+    USER_CREATE.runAs(bulkLoadAction2);
+  }
+
   public static class BulkLoadHelper {
     private final FileSystem fs;
     private final Path loadPath;
@@ -1026,64 +1071,65 @@ public class TestAccessController extends SecureTestUtil {
     private void createHFile(Path path,
         byte[] family, byte[] qualifier,
         byte[] startKey, byte[] endKey, int numRows) throws IOException {
-
       HFile.Writer writer = null;
       long now = System.currentTimeMillis();
       try {
         HFileContext context = new HFileContextBuilder().build();
-        writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
-            .withPath(fs, path)
-            .withFileContext(context)
-            .create();
+        writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, path)
+            .withFileContext(context).create();
         // subtract 2 since numRows doesn't include boundary keys
-        for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, true, numRows-2)) {
+        for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, true, numRows - 2)) {
           KeyValue kv = new KeyValue(key, family, qualifier, now, key);
           writer.append(kv);
         }
       } finally {
-        if(writer != null)
+        if (writer != null) {
           writer.close();
+        }
       }
     }
 
-    private void bulkLoadHFile(
-        TableName tableName,
-        byte[] family,
-        byte[] qualifier,
-        byte[][][] hfileRanges,
-        int numRowsPerRange) throws Exception {
-
+    private BulkLoadHelper initHFileData(byte[] family, byte[] qualifier, byte[][][] hfileRanges,
+        int numRowsPerRange, FsPermission filePermission) throws Exception {
       Path familyDir = new Path(loadPath, Bytes.toString(family));
       fs.mkdirs(familyDir);
       int hfileIdx = 0;
+      List<Path> hfiles = new ArrayList<>();
       for (byte[][] range : hfileRanges) {
         byte[] from = range[0];
         byte[] to = range[1];
-        createHFile(new Path(familyDir, "hfile_"+(hfileIdx++)),
-            family, qualifier, from, to, numRowsPerRange);
+        Path hfile = new Path(familyDir, "hfile_" + (hfileIdx++));
+        hfiles.add(hfile);
+        createHFile(hfile, family, qualifier, from, to, numRowsPerRange);
       }
-      //set global read so RegionServer can move it
-      setPermission(loadPath, FsPermission.valueOf("-rwxrwxrwx"));
+      // set global read so RegionServer can move it
+      setPermission(fs, loadPath, FS_PERMISSION_ALL);
+      // Ensure the file permission as requested.
+      for (Path hfile : hfiles) {
+        setPermission(fs, hfile, filePermission);
+      }
+      return this;
+    }
 
-
+    private void bulkLoadHFile(TableName tableName) throws Exception {
       try (Connection conn = ConnectionFactory.createConnection(conf);
-           Admin admin = conn.getAdmin();
-           RegionLocator locator = conn.getRegionLocator(tableName);
-           Table table = conn.getTable(tableName)) {
+          Admin admin = conn.getAdmin();
+          RegionLocator locator = conn.getRegionLocator(tableName);
+          Table table = conn.getTable(tableName)) {
         TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
         LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
         loader.doBulkLoad(loadPath, admin, table, locator);
       }
     }
 
-    public void setPermission(Path dir, FsPermission perm) throws IOException {
-      if(!fs.getFileStatus(dir).isDirectory()) {
-        fs.setPermission(dir,perm);
-      }
-      else {
-        for(FileStatus el : fs.listStatus(dir)) {
+    private static void setPermission(FileSystem fs, Path dir, FsPermission perm)
+        throws IOException {
+      if (!fs.getFileStatus(dir).isDirectory()) {
+        fs.setPermission(dir, perm);
+      } else {
+        for (FileStatus el : fs.listStatus(dir)) {
           fs.setPermission(el.getPath(), perm);
-          setPermission(el.getPath() , perm);
+          setPermission(fs, el.getPath(), perm);
         }
       }
     }
