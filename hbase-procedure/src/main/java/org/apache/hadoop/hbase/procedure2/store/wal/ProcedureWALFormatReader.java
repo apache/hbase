@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -30,25 +31,70 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALEntry;
 
 /**
- * Helper class that loads the procedures stored in a WAL.
+ * Helper class that loads the procedures stored in a WAL
  */
 @InterfaceAudience.Private
 public class ProcedureWALFormatReader {
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureWALFormatReader.class);
 
-  /**
-   * We will use the localProcedureMap to track the active procedures for the current proc wal file,
-   * and when we finished reading one proc wal file, we will merge he localProcedureMap to the
-   * procedureMap, which tracks the global active procedures.
-   * <p/>
-   * See the comments of {@link WALProcedureMap} for more details.
-   * <p/>
-   * After reading all the proc wal files, we will use the procedures in the procedureMap to build a
-   * {@link WALProcedureTree}, and then give the result to the upper layer. See the comments of
-   * {@link WALProcedureTree} and the code in {@link #finish()} for more details.
-   */
-  private final WALProcedureMap localProcedureMap = new WALProcedureMap();
-  private final WALProcedureMap procedureMap = new WALProcedureMap();
+  // ==============================================================================================
+  //  We read the WALs in reverse order from the newest to the oldest.
+  //  We have different entry types:
+  //   - INIT: Procedure submitted by the user (also known as 'root procedure')
+  //   - INSERT: Children added to the procedure <parentId>:[<childId>, ...]
+  //   - UPDATE: The specified procedure was updated
+  //   - DELETE: The procedure was removed (finished/rolledback and result TTL expired)
+  //
+  // In the WAL we can find multiple times the same procedure as UPDATE or INSERT.
+  // We read the WAL from top to bottom, so every time we find an entry of the
+  // same procedure, that will be the "latest" update (Caveat: with multiple threads writing
+  // the store, this assumption does not hold).
+  //
+  // We keep two in-memory maps:
+  //  - localProcedureMap: is the map containing the entries in the WAL we are processing
+  //  - procedureMap: is the map containing all the procedures we found up to the WAL in process.
+  // localProcedureMap is merged with the procedureMap once we reach the WAL EOF.
+  //
+  // Since we are reading the WALs in reverse order (newest to oldest),
+  // if we find an entry related to a procedure we already have in 'procedureMap' we can discard it.
+  //
+  // The WAL is append-only so the last procedure in the WAL is the one that
+  // was in execution at the time we crashed/closed the server.
+  // Given that, the procedure replay order can be inferred by the WAL order.
+  //
+  // Example:
+  //    WAL-2: [A, B, A, C, D]
+  //    WAL-1: [F, G, A, F, B]
+  //    Replay-Order: [D, C, A, B, F, G]
+  //
+  // The "localProcedureMap" keeps a "replayOrder" list. Every time we add the
+  // record to the map that record is moved to the head of the "replayOrder" list.
+  // Using the example above:
+  //    WAL-2 localProcedureMap.replayOrder is [D, C, A, B]
+  //    WAL-1 localProcedureMap.replayOrder is [F, G]
+  //
+  // Each time we reach the WAL-EOF, the "replayOrder" list is merged/appended in 'procedureMap'
+  // so using the example above we end up with: [D, C, A, B] + [F, G] as replay order.
+  //
+  //  Fast Start: INIT/INSERT record and StackIDs
+  // ---------------------------------------------
+  // We have two special records, INIT and INSERT, that track the first time
+  // the procedure was added to the WAL. We can use this information to be able
+  // to start procedures before reaching the end of the WAL, or before reading all WALs.
+  // But in some cases, the WAL with that record can be already gone.
+  // As an alternative, we can use the stackIds on each procedure,
+  // to identify when a procedure is ready to start.
+  // If there are gaps in the sum of the stackIds we need to read more WALs.
+  //
+  // Example (all procs child of A):
+  //   WAL-2: [A, B]                   A stackIds = [0, 4], B stackIds = [1, 5]
+  //   WAL-1: [A, B, C, D]
+  //
+  // In the case above we need to read one more WAL to be able to consider
+  // the root procedure A and all children as ready.
+  // ==============================================================================================
+  private final WALProcedureMap localProcedureMap = new WALProcedureMap(1024);
+  private final WALProcedureMap procedureMap = new WALProcedureMap(1024);
 
   private final ProcedureWALFormat.Loader loader;
 
@@ -132,7 +178,7 @@ public class ProcedureWALFormatReader {
         localTracker.setMinMaxModifiedProcIds(localProcedureMap.getMinModifiedProcId(),
           localProcedureMap.getMaxModifiedProcId());
       }
-      procedureMap.merge(localProcedureMap);
+      procedureMap.mergeTail(localProcedureMap);
     }
     if (localTracker.isPartial()) {
       localTracker.setPartialFlag(false);
@@ -143,11 +189,18 @@ public class ProcedureWALFormatReader {
     // notify the loader about the max proc ID
     loader.setMaxProcId(maxProcId);
 
-    // build the procedure execution tree. When building we will verify that whether a procedure is
-    // valid.
-    WALProcedureTree tree = WALProcedureTree.build(procedureMap.getProcedures());
-    loader.load(tree.getValidProcs());
-    loader.handleCorrupted(tree.getCorruptedProcs());
+    // fetch the procedure ready to run.
+    ProcedureIterator procIter = procedureMap.fetchReady();
+    if (procIter != null) {
+      loader.load(procIter);
+    }
+
+    // remaining procedures have missing link or dependencies
+    // consider them as corrupted, manual fix is probably required.
+    procIter = procedureMap.fetchAll();
+    if (procIter != null) {
+      loader.handleCorrupted(procIter);
+    }
   }
 
   private void setDeletedIfPartial(ProcedureStoreTracker tracker, long procId) {

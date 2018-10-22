@@ -505,10 +505,8 @@ public class ProcedureExecutor<TEnvironment> {
   private void loadProcedures(ProcedureIterator procIter, boolean abortOnCorruption)
       throws IOException {
     // 1. Build the rollback stack
-    int runnableCount = 0;
+    int runnablesCount = 0;
     int failedCount = 0;
-    int waitingCount = 0;
-    int waitingTimeoutCount = 0;
     while (procIter.hasNext()) {
       boolean finished = procIter.isNextFinished();
       @SuppressWarnings("unchecked")
@@ -528,21 +526,11 @@ public class ProcedureExecutor<TEnvironment> {
         // add the procedure to the map
         proc.beforeReplay(getEnvironment());
         procedures.put(proc.getProcId(), proc);
-        switch (proc.getState()) {
-          case RUNNABLE:
-            runnableCount++;
-            break;
-          case FAILED:
-            failedCount++;
-            break;
-          case WAITING:
-            waitingCount++;
-            break;
-          case WAITING_TIMEOUT:
-            waitingTimeoutCount++;
-            break;
-          default:
-            break;
+
+        if (proc.getState() == ProcedureState.RUNNABLE) {
+          runnablesCount++;
+        } else if (proc.getState() == ProcedureState.FAILED) {
+          failedCount++;
         }
       }
 
@@ -563,10 +551,9 @@ public class ProcedureExecutor<TEnvironment> {
     // have been polled out already, so when loading we can not add the procedure to scheduler first
     // and then call acquireLock, since the procedure is still in the queue, and since we will
     // remove the queue from runQueue, then no one can poll it out, then there is a dead lock
-    List<Procedure<TEnvironment>> runnableList = new ArrayList<>(runnableCount);
+    List<Procedure<TEnvironment>> runnableList = new ArrayList<>(runnablesCount);
     List<Procedure<TEnvironment>> failedList = new ArrayList<>(failedCount);
-    List<Procedure<TEnvironment>> waitingList = new ArrayList<>(waitingCount);
-    List<Procedure<TEnvironment>> waitingTimeoutList = new ArrayList<>(waitingTimeoutCount);
+    Set<Procedure<TEnvironment>> waitingSet = null;
     procIter.reset();
     while (procIter.hasNext()) {
       if (procIter.isNextFinished()) {
@@ -604,10 +591,26 @@ public class ProcedureExecutor<TEnvironment> {
           runnableList.add(proc);
           break;
         case WAITING:
-          waitingList.add(proc);
+          if (!proc.hasChildren()) {
+            // Normally, WAITING procedures should be waken by its children.
+            // But, there is a case that, all the children are successful and before
+            // they can wake up their parent procedure, the master was killed.
+            // So, during recovering the procedures from ProcedureWal, its children
+            // are not loaded because of their SUCCESS state.
+            // So we need to continue to run this WAITING procedure. But before
+            // executing, we need to set its state to RUNNABLE, otherwise, a exception
+            // will throw:
+            // Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE,
+            // "NOT RUNNABLE! " + procedure.toString());
+            proc.setState(ProcedureState.RUNNABLE);
+            runnableList.add(proc);
+          }
           break;
         case WAITING_TIMEOUT:
-          waitingTimeoutList.add(proc);
+          if (waitingSet == null) {
+            waitingSet = new HashSet<>();
+          }
+          waitingSet.add(proc);
           break;
         case FAILED:
           failedList.add(proc);
@@ -622,32 +625,39 @@ public class ProcedureExecutor<TEnvironment> {
       }
     }
 
-    // 4. Check the waiting procedures to see if some of them can be added to runnable.
-    waitingList.forEach(proc -> {
-      if (!proc.hasChildren()) {
-        // Normally, WAITING procedures should be waken by its children.
-        // But, there is a case that, all the children are successful and before
-        // they can wake up their parent procedure, the master was killed.
-        // So, during recovering the procedures from ProcedureWal, its children
-        // are not loaded because of their SUCCESS state.
-        // So we need to continue to run this WAITING procedure. But before
-        // executing, we need to set its state to RUNNABLE, otherwise, a exception
-        // will throw:
-        // Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE,
-        // "NOT RUNNABLE! " + procedure.toString());
-        proc.setState(ProcedureState.RUNNABLE);
-        runnableList.add(proc);
-      }
-    });
+    // 3. Validate the stacks
+    int corruptedCount = 0;
+    Iterator<Map.Entry<Long, RootProcedureState<TEnvironment>>> itStack =
+      rollbackStack.entrySet().iterator();
+    while (itStack.hasNext()) {
+      Map.Entry<Long, RootProcedureState<TEnvironment>> entry = itStack.next();
+      RootProcedureState<TEnvironment> procStack = entry.getValue();
+      if (procStack.isValid()) continue;
 
-    // 5. Push the procedures to the timeout executor
-    waitingTimeoutList.forEach(proc -> {
-      proc.afterReplay(getEnvironment());
-      timeoutExecutor.add(proc);
-    });
-    // 6. restore locks
+      for (Procedure<TEnvironment> proc : procStack.getSubproceduresStack()) {
+        LOG.error("Corrupted " + proc);
+        procedures.remove(proc.getProcId());
+        runnableList.remove(proc);
+        if (waitingSet != null) waitingSet.remove(proc);
+        corruptedCount++;
+      }
+      itStack.remove();
+    }
+
+    if (abortOnCorruption && corruptedCount > 0) {
+      throw new IOException("found " + corruptedCount + " procedures on replay");
+    }
+
+    // 4. Push the procedures to the timeout executor
+    if (waitingSet != null && !waitingSet.isEmpty()) {
+      for (Procedure<TEnvironment> proc: waitingSet) {
+        proc.afterReplay(getEnvironment());
+        timeoutExecutor.add(proc);
+      }
+    }
+    // 5. restore locks
     restoreLocks();
-    // 7. Push the procedure to the scheduler
+    // 6. Push the procedure to the scheduler
     failedList.forEach(scheduler::addBack);
     runnableList.forEach(p -> {
       p.afterReplay(getEnvironment());
