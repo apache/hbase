@@ -67,19 +67,37 @@ public class ProcedureTestingUtility {
     });
   }
 
+  public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor,
+      boolean abort, boolean startWorkers) throws Exception {
+    restart(procExecutor, false, true, null, null, null,  abort, startWorkers);
+  }
+
+  public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor,
+      boolean abort) throws Exception {
+    restart(procExecutor, false, true, null, null, null, abort, true);
+  }
+
   public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor) throws Exception {
-    restart(procExecutor, false, true, null, null, null);
+    restart(procExecutor, false, true, null, null, null, false, true);
   }
 
   public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
       boolean abortOnCorruption) throws IOException {
+    initAndStartWorkers(procExecutor, numThreads, abortOnCorruption, true);
+  }
+
+  public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
+      boolean abortOnCorruption, boolean startWorkers) throws IOException {
     procExecutor.init(numThreads, abortOnCorruption);
-    procExecutor.startWorkers();
+    if (startWorkers) {
+      procExecutor.startWorkers();
+    }
   }
 
   public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor,
       boolean avoidTestKillDuringRestart, boolean failOnCorrupted, Callable<Void> stopAction,
-      Callable<Void> actionBeforeStartWorker, Callable<Void> startAction)
+      Callable<Void> actionBeforeStartWorker, Callable<Void> startAction,
+      boolean abort, boolean startWorkers)
       throws Exception {
     final ProcedureStore procStore = procExecutor.getStore();
     final int storeThreads = procExecutor.getCorePoolSize();
@@ -93,7 +111,7 @@ public class ProcedureTestingUtility {
     // stop
     LOG.info("RESTART - Stop");
     procExecutor.stop();
-    procStore.stop(false);
+    procStore.stop(abort);
     if (stopAction != null) {
       stopAction.call();
     }
@@ -109,7 +127,9 @@ public class ProcedureTestingUtility {
     if (actionBeforeStartWorker != null) {
       actionBeforeStartWorker.call();
     }
-    procExecutor.startWorkers();
+    if (startWorkers) {
+      procExecutor.startWorkers();
+    }
     if (startAction != null) {
       startAction.call();
     }
@@ -207,7 +227,7 @@ public class ProcedureTestingUtility {
     NoopProcedureStore procStore = new NoopProcedureStore();
     ProcedureExecutor<TEnv> procExecutor = new ProcedureExecutor<>(conf, env, procStore);
     procStore.start(1);
-    initAndStartWorkers(procExecutor, 1, false);
+    initAndStartWorkers(procExecutor, 1, false, true);
     try {
       return submitAndWait(procExecutor, proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
     } finally {
