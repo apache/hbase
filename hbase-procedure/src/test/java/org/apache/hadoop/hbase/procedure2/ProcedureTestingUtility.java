@@ -96,9 +96,15 @@ public class ProcedureTestingUtility {
 
   public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor,
       boolean avoidTestKillDuringRestart, boolean failOnCorrupted, Callable<Void> stopAction,
-      Callable<Void> actionBeforeStartWorker, Callable<Void> startAction,
-      boolean abort, boolean startWorkers)
-      throws Exception {
+      Callable<Void> actionBeforeStartWorker, Callable<Void> startAction) throws Exception {
+    restart(procExecutor, avoidTestKillDuringRestart, failOnCorrupted, stopAction,
+      actionBeforeStartWorker, startAction, false, true);
+  }
+
+  public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor,
+      boolean avoidTestKillDuringRestart, boolean failOnCorrupted, Callable<Void> stopAction,
+      Callable<Void> actionBeforeStartWorker, Callable<Void> startAction, boolean abort,
+      boolean startWorkers) throws Exception {
     final ProcedureStore procStore = procExecutor.getStore();
     final int storeThreads = procExecutor.getCorePoolSize();
     final int execThreads = procExecutor.getCorePoolSize();
