@@ -203,7 +203,7 @@ public class ProcedureStoreTracker {
    * then we mark it as deleted.
    * @see #setDeletedIfModified(long...)
    */
-  public void setDeletedIfModifiedInBoth(ProcedureStoreTracker tracker) {
+  public void setDeletedIfModifiedInBoth(ProcedureStoreTracker tracker, boolean globalTracker) {
     BitSetNode trackerNode = null;
     for (BitSetNode node : map.values()) {
       final long minProcId = node.getStart();
@@ -214,9 +214,26 @@ public class ProcedureStoreTracker {
         }
 
         trackerNode = tracker.lookupClosestNode(trackerNode, procId);
-        if (trackerNode == null || !trackerNode.contains(procId) ||
-          trackerNode.isModified(procId)) {
-          // the procedure was removed or modified
+        if (trackerNode == null || !trackerNode.contains(procId)) {
+          // the procId is not exist in the track, we can only delete the proc
+          // if globalTracker set to true.
+          // Only if the procedure is not in the global tracker we can delete the
+          // the procedure. In other cases, the procedure may not update in a single
+          // log, we cannot delete it just because the log's track doesn't have
+          // any info for the procedure.
+          if (globalTracker) {
+            node.delete(procId);
+          }
+          continue;
+        }
+        // Only check delete in the global tracker, only global tracker has the
+        // whole picture
+        if (globalTracker && trackerNode.isDeleted(procId) == DeleteState.YES) {
+          node.delete(procId);
+          continue;
+        }
+        if (trackerNode.isModified(procId)) {
+          // the procedure was modified
           node.delete(procId);
         }
       }
