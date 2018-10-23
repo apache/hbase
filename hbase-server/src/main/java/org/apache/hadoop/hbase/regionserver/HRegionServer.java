@@ -239,8 +239,6 @@ public class HRegionServer extends HasThread implements
 
   protected HeapMemoryManager hMemManager;
 
-  //trival change to trigger the UT
-
   /**
    * Cluster connection to be shared by services.
    * Initialized at server startup and closed when server shuts down.
