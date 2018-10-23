@@ -1687,12 +1687,14 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.debug("Master has not been initialized, don't run region normalizer.");
       return false;
     }
-
+    if (this.getServerManager().isClusterShutdown()) {
+      LOG.info("Cluster is shutting down, don't run region normalizer.");
+      return false;
+    }
     if (isInMaintenanceMode()) {
       LOG.info("Master is in maintenance mode, don't run region normalizer.");
       return false;
     }
-
     if (!this.regionNormalizerTracker.isNormalizerOn()) {
       LOG.debug("Region normalization is disabled, don't run region normalizer.");
       return false;
