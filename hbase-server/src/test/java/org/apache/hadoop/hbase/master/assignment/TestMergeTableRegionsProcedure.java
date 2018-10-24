@@ -275,31 +275,36 @@ public class TestMergeTableRegionsProcedure {
 
   @Test
   public void testMergeWithoutPONR() throws Exception {
-    final TableName tableName = TableName.valueOf("testMergeWithoutPONR");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    try {
+      final TableName tableName = TableName.valueOf("testMergeWithoutPONR");
+      final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    List<RegionInfo> tableRegions = createTable(tableName);
+      List<RegionInfo> tableRegions = createTable(tableName);
 
-    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+      ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    RegionInfo[] regionsToMerge = new RegionInfo[2];
-    regionsToMerge[0] = tableRegions.get(0);
-    regionsToMerge[1] = tableRegions.get(1);
+      RegionInfo[] regionsToMerge = new RegionInfo[2];
+      regionsToMerge[0] = tableRegions.get(0);
+      regionsToMerge[1] = tableRegions.get(1);
 
-    long procId = procExec.submitProcedure(
+      long procId = procExec.submitProcedure(
         new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true));
 
-    // Execute until step 9 of split procedure
-    // NOTE: step 9 is after step MERGE_TABLE_REGIONS_UPDATE_META
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 9, false);
+      // Execute until step 9 of split procedure
+      // NOTE: step 9 is after step MERGE_TABLE_REGIONS_UPDATE_META
+      MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 9, false);
 
-    // Unset Toggle Kill and make ProcExec work correctly
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    MasterProcedureTestingUtility.restartMasterProcedureExecutor(procExec);
-    ProcedureTestingUtility.waitProcedure(procExec, procId);
+      // Unset Toggle Kill and make ProcExec work correctly
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+      MasterProcedureTestingUtility.restartMasterProcedureExecutor(procExec);
+      ProcedureTestingUtility.waitProcedure(procExec, procId);
 
-    assertRegionCount(tableName, initialRegionCount - 1);
+      assertRegionCount(tableName, initialRegionCount - 1);
+    } catch (Throwable t) {
+      LOG.error("error!", t);
+      throw t;
+    }
   }
 
   private List<RegionInfo> createTable(final TableName tableName) throws Exception {
