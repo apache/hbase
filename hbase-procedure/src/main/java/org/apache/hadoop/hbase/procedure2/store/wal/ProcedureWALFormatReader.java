@@ -134,9 +134,8 @@ public class ProcedureWALFormatReader {
       }
       procedureMap.merge(localProcedureMap);
     }
-    if (localTracker.isPartial()) {
-      localTracker.setPartialFlag(false);
-    }
+    // Do not reset the partial flag for local tracker, as here the local tracker only know the
+    // procedures which are modified in this file.
   }
 
   public void finish() throws IOException {

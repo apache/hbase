@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.BiFunction;
 import java.util.stream.LongStream;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -87,7 +88,10 @@ public class ProcedureStoreTracker {
    */
   public void resetTo(ProcedureStoreTracker tracker, boolean resetDelete) {
     reset();
-    this.partial = tracker.partial;
+    // resetDelete will true if we are building the cleanup tracker, as we will reset deleted flags
+    // for all the unmodified bits to 1, the partial flag is useless so set it to false for not
+    // confusing the developers when debugging.
+    this.partial = resetDelete ? false : tracker.partial;
     this.minModifiedProcId = tracker.minModifiedProcId;
     this.maxModifiedProcId = tracker.maxModifiedProcId;
     this.keepDeletes = tracker.keepDeletes;
@@ -197,47 +201,43 @@ public class ProcedureStoreTracker {
     }
   }
 
-  /**
-   * Similar with {@link #setDeletedIfModified(long...)}, but here the {@code procId} are given by
-   * the {@code tracker}. If a procedure is modified by us, and also by the given {@code tracker},
-   * then we mark it as deleted.
-   * @see #setDeletedIfModified(long...)
-   */
-  public void setDeletedIfModifiedInBoth(ProcedureStoreTracker tracker, boolean globalTracker) {
+  private void setDeleteIf(ProcedureStoreTracker tracker,
+      BiFunction<BitSetNode, Long, Boolean> func) {
     BitSetNode trackerNode = null;
     for (BitSetNode node : map.values()) {
-      final long minProcId = node.getStart();
-      final long maxProcId = node.getEnd();
+      long minProcId = node.getStart();
+      long maxProcId = node.getEnd();
       for (long procId = minProcId; procId <= maxProcId; ++procId) {
         if (!node.isModified(procId)) {
           continue;
         }
 
         trackerNode = tracker.lookupClosestNode(trackerNode, procId);
-        if (trackerNode == null || !trackerNode.contains(procId)) {
-          // the procId is not exist in the track, we can only delete the proc
-          // if globalTracker set to true.
-          // Only if the procedure is not in the global tracker we can delete the
-          // the procedure. In other cases, the procedure may not update in a single
-          // log, we cannot delete it just because the log's track doesn't have
-          // any info for the procedure.
-          if (globalTracker) {
-            node.delete(procId);
-          }
-          continue;
-        }
-        // Only check delete in the global tracker, only global tracker has the
-        // whole picture
-        if (globalTracker && trackerNode.isDeleted(procId) == DeleteState.YES) {
-          node.delete(procId);
-          continue;
-        }
-        if (trackerNode.isModified(procId)) {
-          // the procedure was modified
+        if (func.apply(trackerNode, procId)) {
           node.delete(procId);
         }
       }
     }
+  }
+
+  /**
+   * For the global tracker, we will use this method to build the holdingCleanupTracker, as the
+   * modified flags will be cleared after rolling so we only need to test the deleted flags.
+   * @see #setDeletedIfModifiedInBoth(ProcedureStoreTracker)
+   */
+  public void setDeletedIfDeletedByThem(ProcedureStoreTracker tracker) {
+    setDeleteIf(tracker, (node, procId) -> node == null || !node.contains(procId) ||
+      node.isDeleted(procId) == DeleteState.YES);
+  }
+
+  /**
+   * Similar with {@link #setDeletedIfModified(long...)}, but here the {@code procId} are given by
+   * the {@code tracker}. If a procedure is modified by us, and also by the given {@code tracker},
+   * then we mark it as deleted.
+   * @see #setDeletedIfModified(long...)
+   */
+  public void setDeletedIfModifiedInBoth(ProcedureStoreTracker tracker) {
+    setDeleteIf(tracker, (node, procId) -> node != null && node.isModified(procId));
   }
 
   /**
