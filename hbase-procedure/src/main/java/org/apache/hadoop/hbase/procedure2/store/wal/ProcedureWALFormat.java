@@ -73,6 +73,17 @@ public final class ProcedureWALFormat {
 
   private ProcedureWALFormat() {}
 
+  /**
+   * Load all the procedures in these ProcedureWALFiles, and rebuild the given {@code tracker} if
+   * needed, i.e, the {@code tracker} is a partial one.
+   * <p/>
+   * The method in the give {@code loader} will be called at the end after we load all the
+   * procedures and construct the hierarchy.
+   * <p/>
+   * And we will call the {@link ProcedureStoreTracker#resetModified()} method for the given
+   * {@code tracker} before returning, as it will be used to track the next proc wal file's modified
+   * procedures.
+   */
   public static void load(Iterator<ProcedureWALFile> logs, ProcedureStoreTracker tracker,
       Loader loader) throws IOException {
     ProcedureWALFormatReader reader = new ProcedureWALFormatReader(tracker, loader);
