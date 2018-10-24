@@ -331,7 +331,10 @@ As noted in the section <<basic.prerequisites>>, HBase 2.0+ requires a minimum o
 .HBCK must match HBase server version
 You *must not* use an HBase 1.x version of HBCK against an HBase 2.0+ cluster. HBCK is strongly tied to the HBase server version. Using the HBCK tool from an earlier release against an HBase 2.0+ cluster will destructively alter said cluster in unrecoverable ways.
 
-As of HBase 2.0, HBCK is a read-only tool that can report the status of some non-public system internals. You should not rely on the format nor content of these internals to remain consistent across HBase releases.
+As of HBase 2.0, HBCK (A.K.A _HBCK1_ or _hbck1_) is a read-only tool that can report the status of some non-public system internals. You should not rely on the format nor content of these internals to remain consistent across HBase releases.
+
+To read about HBCK's replacement, see <<HBCK2>> in <<ops_mgt>>.
+
 
 ////
 Link to a ref guide section on HBCK in 2.0 that explains use and calls out the inability of clients and server sides to detect version of each other.

@@ -51,7 +51,8 @@ Options:
 Commands:
 Some commands take arguments. Pass no args or -h for usage.
   shell           Run the HBase shell
-  hbck            Run the hbase 'fsck' tool
+  hbck            Run the HBase 'fsck' tool. Defaults read-only hbck1.
+                  Pass '-j /path/to/HBCK2.jar' to run hbase-2.x HBCK2.
   snapshot        Tool for managing snapshots
   wal             Write-ahead-log analyzer
   hfile           Store file analyzer
@@ -386,12 +387,33 @@ Each command except `RowCounter` and `CellCounter` accept a single `--help` argu
 [[hbck]]
 === HBase `hbck`
 
-To run `hbck` against your HBase cluster run `$./bin/hbase hbck`. At the end of the command's output it prints `OK` or `INCONSISTENCY`.
-If your cluster reports inconsistencies, pass `-details` to see more detail emitted.
-If inconsistencies, run `hbck` a few times because the inconsistency may be transient (e.g. cluster is starting up or a region is splitting).
- Passing `-fix` may correct the inconsistency (This is an experimental feature).
+The `hbck` tool that shipped with hbase-1.x has been made read-only in hbase-2.x. It is not able to repair
+hbase-2.x clusters as hbase internals have changed. Nor should its assessments in read-only mode be
+trusted as it does not understand hbase-2.x operation.
 
-For more information, see <<hbck.in.depth>>.
+A new tool, <<HBCK2>>, described in the next section, replaces `hbck`.
+
+[[HBCK2]]
+=== HBase `HBCK2`
+
+`HBCK2` is the successor to <<hbck>>, the hbase-1.x fix tool (A.K.A `hbck1`). Use it in place of `hbck1`
+making repairs against hbase-2.x installs.
+
+`HBCK2` does not ship as part of hbase. It can be found as a subproject of the companion
+link:https://github.com/apache/hbase-operator-tools[hbase-operator-tools] repository at
+link:https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2[Apache HBase HBCK2 Tool].
+`HBCK2` was moved out of hbase so it could evolve at a cadence apart from that of hbase core.
+
+See the [https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2](HBCK2) Home Page
+for how `HBCK2` differs from `hbck1`, and for how to build and use it.
+
+Once built, you can run `HBCK2` as follows:
+
+```
+$ hbase hbck -j /path/to/HBCK2.jar
+```
+
+This will generate `HBCK2` usage describing commands and options.
 
 [[hfile_tool2]]
 === HFile Tool
@@ -1272,15 +1294,6 @@ Monitor the output of the _/tmp/log.txt_ file to follow the progress of the scri
 Use the following guidelines if you want to create your own rolling restart script.
 
 . Extract the new release, verify its configuration, and synchronize it to all nodes of your cluster using `rsync`, `scp`, or another secure synchronization mechanism.
-. Use the hbck utility to ensure that the cluster is consistent.
-+
-----
-
-$ ./bin/hbck
-----
-+
-Perform repairs if required.
-See <<hbck,hbck>> for details.
 
 . Restart the master first.
   You may need to modify these commands if your new HBase directory is different from the old one, such as for an upgrade.
@@ -1312,7 +1325,6 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
 ----
 
 . Restart the Master again, to clear out the dead servers list and re-enable the load balancer.
-. Run the `hbck` utility again, to be sure the cluster is consistent.
 
 [[adding.new.node]]
 === Adding a New Node
@@ -2704,8 +2716,6 @@ HDFS replication factor only affects your disk usage and is invisible to most HB
 You can view the current number of regions for a given table using the HMaster UI.
 In the [label]#Tables# section, the number of online regions for each table is listed in the [label]#Online Regions# column.
 This total only includes the in-memory state and does not include disabled or offline regions.
-If you do not want to use the HMaster UI, you can determine the number of regions by counting the number of subdirectories of the /hbase/<table>/ subdirectories in HDFS, or by running the `bin/hbase hbck` command.
-Each of these methods may return a slightly different number, depending on the status of each region.
 
 [[ops.capacity.regions.count]]
 ==== Number of regions per RS - upper bound
