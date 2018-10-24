@@ -652,6 +652,17 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             return;
           } catch (IOException ex) {
             LOG.info(getName() + ": IOException in Reader", ex);
+          } catch (OutOfMemoryError e) {
+            if (getErrorHandler() != null) {
+              if (getErrorHandler().checkOOME(e)) {
+                RpcServer.LOG.info(Thread.currentThread().getName()
+                    + ": exiting on OutOfMemoryError");
+                return;
+              }
+            } else {
+              // rethrow if no handler
+              throw e;
+            }
           }
         }
       }
