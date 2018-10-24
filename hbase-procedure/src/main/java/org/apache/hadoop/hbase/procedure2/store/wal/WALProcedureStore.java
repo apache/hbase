@@ -95,7 +95,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
  * will first be initialized to the oldest file's tracker(which is stored in the trailer), using the
  * method {@link ProcedureStoreTracker#resetTo(ProcedureStoreTracker, boolean)}, and then merge it
  * with the tracker of every newer wal files, using the
- * {@link ProcedureStoreTracker#setDeletedIfModifiedInBoth(ProcedureStoreTracker, boolean)}.
+ * {@link ProcedureStoreTracker#setDeletedIfModifiedInBoth(ProcedureStoreTracker)}.
  * If we find out
  * that all the modified procedures for the oldest wal file are modified or deleted in newer wal
  * files, then we can delete it. This is because that, every time we call
@@ -1170,27 +1170,26 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
 
     // compute the holding tracker.
-    //  - the first WAL is used for the 'updates'
-    //  - the global tracker is passed in first to decide which procedures are not
-    //    exist anymore, so we can mark them as deleted in holdingCleanupTracker.
-    //    Only global tracker have the whole picture here.
-    //  - the other WALs are scanned to remove procs already updated in a newer wal.
-    //    If it is updated in a newer wal, we can mark it as delelted in holdingCleanupTracker
-    //    But, we can not delete it if it was shown deleted in the newer wal, as said
-    //    above.
-    // TODO: exit early if holdingCleanupTracker.isEmpty()
+    // - the first WAL is used for the 'updates'
+    // - the global tracker will be used to determine whether a procedure has been deleted
+    // - other trackers will be used to determine whether a procedure has been updated, as a deleted
+    // procedure can always be detected by checking the global tracker, we can save the deleted
+    // checks when applying other trackers
     holdingCleanupTracker.resetTo(logs.getFirst().getTracker(), true);
-    //Passing in the global tracker, we can delete the procedures not in the global
-    //tracker, because they are deleted in the later logs
-    holdingCleanupTracker.setDeletedIfModifiedInBoth(storeTracker, true);
-    for (int i = 1, size = logs.size() - 1; i < size; ++i) {
-      // Set deleteIfNotExists to false since a single log's tracker is passed in.
-      // Since a specific procedure may not show up in the log at all(not executed or
-      // updated during the time), we can not delete the procedure just because this log
-      // don't have the info of the procedure. We can delete the procedure only if
-      // in this log's tracker, it was cleanly showed that the procedure is modified or deleted
-      // in the corresponding BitSetNode.
-      holdingCleanupTracker.setDeletedIfModifiedInBoth(logs.get(i).getTracker(), false);
+    holdingCleanupTracker.setDeletedIfDeletedByThem(storeTracker);
+    // the logs is a linked list, so avoid calling get(index) on it.
+    Iterator<ProcedureWALFile> iter = logs.iterator();
+    // skip the tracker for the first file when creating the iterator.
+    iter.next();
+    ProcedureStoreTracker tracker = iter.next().getTracker();
+    // testing iter.hasNext after calling iter.next to skip applying the tracker for last file,
+    // which is just the storeTracker above.
+    while (iter.hasNext()) {
+      holdingCleanupTracker.setDeletedIfModifiedInBoth(tracker);
+      if (holdingCleanupTracker.isEmpty()) {
+        break;
+      }
+      iter.next();
     }
   }
 
