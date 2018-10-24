@@ -2949,7 +2949,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if(family == null) {
           throw new NoSuchColumnFamilyException("Empty family is invalid");
         }
-        checkFamily(family);
+        checkFamily(family, delete.getDurability());
       }
     }
   }
@@ -3561,7 +3561,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public void checkAndPreparePut(Put p) throws IOException {
-      region.checkFamilies(p.getFamilyCellMap().keySet());
+      region.checkFamilies(p.getFamilyCellMap().keySet(), p.getDurability());
     }
 
     @Override
@@ -4454,14 +4454,30 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     store.add(cell, memstoreAccounting);
   }
 
-  /**
-   * Check the collection of families for validity.
-   * @param families
-   * @throws NoSuchColumnFamilyException
-   */
-  public void checkFamilies(Collection<byte[]> families) throws NoSuchColumnFamilyException {
+  private void checkFamilies(Collection<byte[]> families, Durability durability)
+      throws NoSuchColumnFamilyException, InvalidMutationDurabilityException {
     for (byte[] family : families) {
-      checkFamily(family);
+      checkFamily(family, durability);
+    }
+  }
+
+  private void checkFamily(final byte[] family, Durability durability)
+      throws NoSuchColumnFamilyException, InvalidMutationDurabilityException {
+    checkFamily(family);
+    if (durability.equals(Durability.SKIP_WAL)
+        && htableDescriptor.getColumnFamily(family).getScope()
+        != HConstants.REPLICATION_SCOPE_LOCAL) {
+      throw new InvalidMutationDurabilityException(
+          "Mutation's durability is SKIP_WAL but table's column family " + Bytes.toString(family)
+              + " need replication");
+    }
+  }
+
+  void checkFamily(final byte[] family) throws NoSuchColumnFamilyException {
+    if (!this.htableDescriptor.hasColumnFamily(family)) {
+      throw new NoSuchColumnFamilyException(
+          "Column family " + Bytes.toString(family) + " does not exist in region " + this
+              + " in table " + this.htableDescriptor);
     }
   }
 
@@ -7762,7 +7778,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkReadOnly();
     checkResources();
     checkRow(mutation.getRow(), op.toString());
-    checkFamilies(mutation.getFamilyCellMap().keySet());
+    checkFamilies(mutation.getFamilyCellMap().keySet(), mutation.getDurability());
     this.writeRequestsCount.increment();
     WriteEntry writeEntry = null;
     startRegionOperation(op);
@@ -8110,19 +8126,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private static List<Cell> sort(List<Cell> cells, final CellComparator comparator) {
     cells.sort(comparator);
     return cells;
-  }
-
-  //
-  // New HBASE-880 Helpers
-  //
-
-  void checkFamily(final byte [] family)
-  throws NoSuchColumnFamilyException {
-    if (!this.htableDescriptor.hasColumnFamily(family)) {
-      throw new NoSuchColumnFamilyException("Column family " +
-          Bytes.toString(family) + " does not exist in region " + this
-          + " in table " + this.htableDescriptor);
-    }
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
