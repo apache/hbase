@@ -720,6 +720,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     this.lockedWhenLoading = true;
   }
 
+  public boolean isLockedWhenLoading() {
+    return lockedWhenLoading;
+  }
+
   // ==============================================================================================
   //  Runtime state, updated every operation by the ProcedureExecutor
   //

@@ -652,8 +652,17 @@ public class ProcedureExecutor<TEnvironment> {
       if (!p.hasParent()) {
         sendProcedureLoadedNotification(p.getProcId());
       }
-      scheduler.addBack(p);
+      // If the procedure holds the lock, put the procedure in front
+      if (p.isLockedWhenLoading()) {
+        scheduler.addFront(p, false);
+      } else {
+        // if it was not, it can wait.
+        scheduler.addBack(p, false);
+      }
     });
+    // After all procedures put into the queue, signal the worker threads.
+    // Otherwise, there is a race condition. See HBASE-21364.
+    scheduler.signalAll();
   }
 
   /**
