@@ -523,6 +523,26 @@ public class TestAdmin1 {
     assertFalse(this.admin.tableExists(tableName));
   }
 
+  @Test(expected = TableNotDisabledException.class)
+  public void testModifyRegionReplicasEnabledTable() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
+
+    // Modify region replication count
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName))
+        .setRegionReplication(3).build();
+    try {
+      // try to modify the region replication count without disabling the table
+      admin.modifyTable(htd);
+      fail("Expected an exception");
+    } finally {
+      // Delete the table
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+      assertFalse(admin.tableExists(tableName));
+    }
+  }
+
   /**
    * Verify schema modification takes.
    */
