@@ -73,7 +73,8 @@ public class LockAndQueue implements LockStatus {
 
   @Override
   public boolean hasParentLock(Procedure<?> proc) {
-    // TODO: need to check all the ancestors
+    // TODO: need to check all the ancestors. need to passed in the procedures
+    // to find the ancestors.
     return proc.hasParent() &&
       (isLockOwner(proc.getParentProcId()) || isLockOwner(proc.getRootProcId()));
   }
