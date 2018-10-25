@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -60,7 +61,7 @@ public class TestMetaShutdownHandler {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(1, 3, null, null, MyRegionServer.class);
+    TEST_UTIL.startMiniCluster(2, 3, null, null, MyRegionServer.class);
   }
 
   @AfterClass
@@ -128,6 +129,55 @@ public class TestMetaShutdownHandler {
       regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
     assertNotEquals("Meta should be assigned on a different server",
       metaState.getServerName(), metaServerName);
+  }
+
+  /**
+   * Master should be able to recover from any unexpected state of meta-region-server znode
+   */
+  @Test
+  public void testMetaAssignmentFailure() throws Exception {
+    final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HMaster master = cluster.getMaster();
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    ServerName metaServerName =
+        regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO);
+    if (master.getServerName().equals(metaServerName) || metaServerName == null
+        || !metaServerName.equals(cluster.getServerHoldingMeta())) {
+      metaServerName =
+          cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
+      master.move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+        Bytes.toBytes(metaServerName.getServerName()));
+      TEST_UTIL.waitUntilNoRegionsInTransition(60000);
+      metaServerName = regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO);
+    }
+    RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
+    assertEquals("Wrong state for meta!", RegionState.State.OPEN, metaState.getState());
+    assertNotEquals("Meta is on master!", metaServerName, master.getServerName());
+    // Setting meta state to incorrect state OPENING, to see if master restarts or standby node can
+    // recover it
+    MetaTableLocator.setMetaLocation(master.getZooKeeper(), metaServerName,
+      RegionState.State.OPENING);
+    master.abort("Abort to test whether standby assign the meta OPENING region");
+    AssignmentTestingUtil.killRs(TEST_UTIL, metaServerName);
+    final HMaster oldMaster = master;
+    TEST_UTIL.decrementMinRegionServerCount(conf);
+    TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        // test that standby master should be able to recover meta
+        return cluster.getMaster() != null && cluster.getMaster().isInitialized()
+            && oldMaster != cluster.getMaster();
+      }
+    });
+    master = cluster.getMaster();
+    // Now, make sure meta is assigned
+    assertTrue("Meta should be assigned", master.getAssignmentManager().getRegionStates()
+        .isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
+    // Now, make sure meta is registered in zk as well
+    metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
+    assertEquals("Meta should not be in transition", RegionState.State.OPEN, metaState.getState());
+    assertEquals("Meta should be assigned", metaState.getServerName(), master.getAssignmentManager()
+        .getRegionStates().getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
   }
 
   public static class MyRegionServer extends MiniHBaseClusterRegionServer {

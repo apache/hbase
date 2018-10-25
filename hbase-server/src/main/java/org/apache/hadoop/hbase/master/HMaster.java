@@ -926,7 +926,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (initMetaProc != null) {
       initMetaProc.await();
     }
-    tableStateManager.start();
     // Wake up this server to check in
     sleeper.skipSleepCycle();
 

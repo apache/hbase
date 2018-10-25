@@ -2669,12 +2669,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
   }
 
-  private void decrementMinRegionServerCount(Configuration conf) {
-    int currentCount = conf.getInt(
-        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
+  /*
+   * Doesn't need to be called when using expireRegionServerSession as it will automatically
+   * decrement the min count
+   */
+  public void decrementMinRegionServerCount(Configuration conf) {
+    int currentCount = conf.getInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     if (currentCount != -1) {
-      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-          Math.max(currentCount - 1, 1));
+      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, Math.max(currentCount - 1, 1));
     }
   }
 
