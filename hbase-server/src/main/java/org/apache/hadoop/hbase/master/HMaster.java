@@ -902,8 +902,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
     this.regionServerTracker.start(
-      procedureExecutor.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
-        .map(p -> ((ServerCrashProcedure) p).getServerName()).collect(Collectors.toSet()),
+      procedureExecutor.getProcedures().stream()
+          .filter(p -> p instanceof ServerCrashProcedure && !p.isFinished())
+          .map(p -> ((ServerCrashProcedure) p).getServerName())
+          .collect(Collectors.toSet()),
       walManager.getLiveServersFromWALDir(), walManager.getSplittingServersFromWALDir());
     // This manager will be started AFTER hbase:meta is confirmed on line.
     // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
