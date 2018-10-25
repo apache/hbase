@@ -487,35 +487,20 @@ public class HTable implements Table {
   }
 
   @Override
-  public void delete(final Delete delete)
-  throws IOException {
-    CancellableRegionServerCallable<SingleResponse> callable =
-        new CancellableRegionServerCallable<SingleResponse>(
-            connection, getName(), delete.getRow(), this.rpcControllerFactory.newController(),
-            writeRpcTimeoutMs, new RetryingTimeTracker().start(), delete.getPriority()) {
+  public void delete(final Delete delete) throws IOException {
+    ClientServiceCallable<Void> callable =
+        new ClientServiceCallable<Void>(this.connection, getName(), delete.getRow(),
+            this.rpcControllerFactory.newController(), delete.getPriority()) {
       @Override
-      protected SingleResponse rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), delete);
-        MutateResponse response = doMutate(request);
-        return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
+      protected Void rpcCall() throws Exception {
+        MutateRequest request = RequestConverter
+            .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), delete);
+        doMutate(request);
+        return null;
       }
     };
-    List<Delete> rows = Collections.singletonList(delete);
-    AsyncProcessTask task = AsyncProcessTask.newBuilder()
-            .setPool(pool)
-            .setTableName(tableName)
-            .setRowAccess(rows)
-            .setCallable(callable)
-            .setRpcTimeout(writeRpcTimeoutMs)
-            .setOperationTimeout(operationTimeoutMs)
-            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-            .build();
-    AsyncRequestFuture ars = multiAp.submit(task);
-    ars.waitUntilDone();
-    if (ars.hasError()) {
-      throw ars.getErrors();
-    }
+    rpcCallerFactory.<Void>newCaller(this.writeRpcTimeoutMs)
+        .callWithRetries(callable, this.operationTimeoutMs);
   }
 
   @Override
