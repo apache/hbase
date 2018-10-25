@@ -860,9 +860,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.assignmentManager.start();
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
     this.regionServerTracker.start(
-      procedureExecutor.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
-        .map(p -> ((ServerCrashProcedure) p).getServerName()).collect(Collectors.toSet()),
-      walManager.getLiveServersFromWALDir());
+      procedureExecutor.getProcedures().stream()
+         .filter(p -> p instanceof ServerCrashProcedure && !p.isFinished())
+         .map(p -> ((ServerCrashProcedure) p).getServerName())
+         .collect(Collectors.toSet()),
+         walManager.getLiveServersFromWALDir());
     // This manager will be started AFTER hbase:meta is confirmed on line.
     // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
     // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
