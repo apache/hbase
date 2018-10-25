@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -117,7 +118,7 @@ public class RegionServerTracker extends ZKListener {
    * @param liveServersFromWALDir the live region servers from wal directory.
    * @param splittingServersFromWALDir Servers whose WALs are being actively 'split'.
    */
-  public void start(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersFromWALDir,
+  public void start(Set<ServerCrashProcedure> deadServersFromPE, Set<ServerName> liveServersFromWALDir,
       Set<ServerName> splittingServersFromWALDir)
       throws KeeperException, IOException {
     LOG.info("Starting RegionServerTracker; {} have existing ServerCrashProcedures, {} " +
@@ -126,7 +127,9 @@ public class RegionServerTracker extends ZKListener {
     // deadServersFromPE is made from a list of outstanding ServerCrashProcedures.
     // splittingServersFromWALDir are being actively split -- the directory in the FS ends in
     // '-SPLITTING'. Each splitting server should have a corresponding SCP. Log if not.
-    splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s)).
+    Set<ServerName> deadServerNames = deadServersFromPE.stream()
+        .map(s -> s.getServerName()).collect(Collectors.toSet());
+    splittingServersFromWALDir.stream().filter(s -> !deadServerNames.contains(s)).
       forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
     watcher.registerListener(this);
     synchronized (this) {

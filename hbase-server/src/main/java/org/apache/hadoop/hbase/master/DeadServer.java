@@ -121,17 +121,26 @@ public class DeadServer {
     return clone;
   }
 
+
   /**
    * Adds the server to the dead server list if it's not there already.
    * @param sn the server name
    */
   public synchronized void add(ServerName sn) {
+    add(sn, true);
+  }
+
+  /**
+   * Adds the server to the dead server list if it's not there already.
+   * @param sn the server name
+   * @param processing whether there is an active SCP associated with the server
+   */
+  public synchronized void add(ServerName sn, boolean processing) {
     if (!deadServers.containsKey(sn)){
       deadServers.put(sn, EnvironmentEdgeManager.currentTime());
     }
-    boolean added = processingServers.add(sn);
-    if (LOG.isDebugEnabled() && added) {
-      LOG.debug("Added " + sn + "; numProcessing=" + processingServers.size());
+    if (processing && processingServers.add(sn)) {
+      LOG.debug("Added {}; numProcessing={}", sn, processingServers.size());
     }
   }
 

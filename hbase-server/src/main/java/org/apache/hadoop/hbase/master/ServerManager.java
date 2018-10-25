@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -316,9 +317,9 @@ public class ServerManager {
    * @param deadServersFromPE the region servers which already have a SCP associated.
    * @param liveServersFromWALDir the live region servers from wal directory.
    */
-  void findDeadServersAndProcess(Set<ServerName> deadServersFromPE,
+  void findDeadServersAndProcess(Set<ServerCrashProcedure> deadServersFromPE,
       Set<ServerName> liveServersFromWALDir) {
-    deadServersFromPE.forEach(deadservers::add);
+    deadServersFromPE.forEach(scp -> deadservers.add(scp.getServerName(), !scp.isFinished()));
     liveServersFromWALDir.stream().filter(sn -> !onlineServers.containsKey(sn))
       .forEach(this::expireServer);
   }
