@@ -653,7 +653,20 @@ public class ProcedureExecutor<TEnvironment> {
         sendProcedureLoadedNotification(p.getProcId());
       }
       // If the procedure holds the lock, put the procedure in front
-      if (p.isLockedWhenLoading()) {
+      // If its parent holds the lock, put the procedure in front
+      // TODO. Is that possible that its ancestor holds the lock?
+      // For now, the deepest procedure hierarchy is:
+      // ModifyTableProcedure -> ReopenTableProcedure ->
+      // MoveTableProcedure -> Unassign/AssignProcedure
+      // But ModifyTableProcedure and ReopenTableProcedure won't hold the lock
+      // So, check parent lock is enough(a tricky case is resovled by HBASE-21384).
+      // If some one change or add new procedures making 'grandpa' procedure
+      // holds the lock, but parent procedure don't hold the lock, there will
+      // be a problem here. We have to check one procedure's ancestors.
+      // And we need to change LockAndQueue.hasParentLock(Procedure<?> proc) method
+      // to check all ancestors too.
+      if (p.isLockedWhenLoading() || (p.hasParent() && procedures
+          .get(p.getParentProcId()).isLockedWhenLoading())) {
         scheduler.addFront(p, false);
       } else {
         // if it was not, it can wait.
