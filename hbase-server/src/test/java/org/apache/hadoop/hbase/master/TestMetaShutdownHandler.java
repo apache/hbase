@@ -61,7 +61,7 @@ public class TestMetaShutdownHandler {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(2, 3, null, null, MyRegionServer.class);
+    TEST_UTIL.startMiniCluster(2, 4, null, null, MyRegionServer.class);
   }
 
   @AfterClass
@@ -105,6 +105,7 @@ public class TestMetaShutdownHandler {
     String rsEphemeralNodePath =
         ZNodePaths.joinZNode(master.getZooKeeper().znodePaths.rsZNode, metaServerName.toString());
     ZKUtil.deleteNode(master.getZooKeeper(), rsEphemeralNodePath);
+    TEST_UTIL.decrementMinRegionServerCount();
     LOG.info("Deleted the znode for the RegionServer hosting hbase:meta; waiting on SSH");
     // Wait for SSH to finish
     final ServerManager serverManager = master.getServerManager();
@@ -160,7 +161,7 @@ public class TestMetaShutdownHandler {
     master.abort("Abort to test whether standby assign the meta OPENING region");
     AssignmentTestingUtil.killRs(TEST_UTIL, metaServerName);
     final HMaster oldMaster = master;
-    TEST_UTIL.decrementMinRegionServerCount(conf);
+    TEST_UTIL.decrementMinRegionServerCount();
     TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {

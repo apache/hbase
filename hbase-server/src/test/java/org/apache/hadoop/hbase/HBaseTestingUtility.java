@@ -2658,7 +2658,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     decrementMinRegionServerCount();
   }
 
-  private void decrementMinRegionServerCount() {
+  /*
+   * Doesn't need to be called when using expireRegionServerSession as it will automatically
+   * decrement the min count
+   */
+  public void decrementMinRegionServerCount() {
     // decrement the count for this.conf, for newly spwaned master
     // this.hbaseCluster shares this configuration too
     decrementMinRegionServerCount(getConfiguration());
