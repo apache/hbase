@@ -376,24 +376,6 @@ public class ProcedureStoreTracker {
   }
 
   private BitSetNode getOrCreateNode(long procId) {
-    // See HBASE-20973, grow or merge can lead to ArrayIndexOutOfBoundsException
-    // The root cause is not revealed yet, disable grow or merge for now
-    return getOrCreateNodeNoGrowOrMerge(procId);
-  }
-
-  private BitSetNode getOrCreateNodeNoGrowOrMerge(long procId) {
-    Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
-    if (entry != null && entry.getValue().contains(procId)) {
-      return entry.getValue();
-    } else {
-      BitSetNode node = new BitSetNode(procId, partial);
-      assert !map.containsKey(node.getStart());
-      map.put(node.getStart(), node);
-      return node;
-    }
-  }
-
-  private BitSetNode getOrCreateNodeWithGrowOrMerge(long procId) {
     // If procId can fit in left node (directly or by growing it)
     BitSetNode leftNode = null;
     boolean leftCanGrow = false;
