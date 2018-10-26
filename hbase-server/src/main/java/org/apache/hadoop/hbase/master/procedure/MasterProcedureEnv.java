@@ -82,9 +82,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   public MasterProcedureEnv(final MasterServices master,
       final RSProcedureDispatcher remoteDispatcher) {
     this.master = master;
-    boolean verbose = master.getConfiguration()
-        .getBoolean("hbase.master.procedure.scheduler.verbose", false);
-    this.procSched = new MasterProcedureScheduler(verbose);
+    this.procSched = new MasterProcedureScheduler();
     this.remoteDispatcher = remoteDispatcher;
   }
 
