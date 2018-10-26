@@ -51,7 +51,8 @@ Options:
 Commands:
 Some commands take arguments. Pass no args or -h for usage.
   shell           Run the HBase shell
-  hbck            Run the hbase 'fsck' tool
+  hbck            Run the HBase 'fsck' tool. Defaults read-only hbck1.
+                  Pass '-j /path/to/HBCK2.jar' to run hbase-2.x HBCK2.
   snapshot        Tool for managing snapshots
   wal             Write-ahead-log analyzer
   hfile           Store file analyzer
@@ -386,12 +387,33 @@ Each command except `RowCounter` and `CellCounter` accept a single `--help` argu
 [[hbck]]
 === HBase `hbck`
 
-To run `hbck` against your HBase cluster run `$./bin/hbase hbck`. At the end of the command's output it prints `OK` or `INCONSISTENCY`.
-If your cluster reports inconsistencies, pass `-details` to see more detail emitted.
-If inconsistencies, run `hbck` a few times because the inconsistency may be transient (e.g. cluster is starting up or a region is splitting).
- Passing `-fix` may correct the inconsistency (This is an experimental feature).
+The `hbck` tool that shipped with hbase-1.x has been made read-only in hbase-2.x. It is not able to repair
+hbase-2.x clusters as hbase internals have changed. Nor should its assessments in read-only mode be
+trusted as it does not understand hbase-2.x operation.
 
-For more information, see <<hbck.in.depth>>.
+A new tool, <<HBCK2>>, described in the next section, replaces `hbck`.
+
+[[HBCK2]]
+=== HBase `HBCK2`
+
+`HBCK2` is the successor to <<hbck>>, the hbase-1.x fix tool (A.K.A `hbck1`). Use it in place of `hbck1`
+making repairs against hbase-2.x installs.
+
+`HBCK2` does not ship as part of hbase. It can be found as a subproject of the companion
+link:https://github.com/apache/hbase-operator-tools[hbase-operator-tools] repository at
+link:https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2[Apache HBase HBCK2 Tool].
+`HBCK2` was moved out of hbase so it could evolve at a cadence apart from that of hbase core.
+
+See the [https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2](HBCK2) Home Page
+for how `HBCK2` differs from `hbck1`, and for how to build and use it.
+
+Once built, you can run `HBCK2` as follows:
+
+```
+$ hbase hbck -j /path/to/HBCK2.jar
+```
+
+This will generate `HBCK2` usage describing commands and options.
 
 [[hfile_tool2]]
 === HFile Tool
@@ -916,7 +938,8 @@ $ bin/hbase pre-upgrade validate-cp -table .*
 It validates every table level co-processors where the table name matches to `.*` regular expression.
 
 ==== DataBlockEncoding validation
-HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families.
+HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families. For further information
+please check <<upgrade2.0.prefix-tree.removed,_prefix-tree_ encoding removed>>.
 To verify that none of the column families are using incompatible Data Block Encodings in the cluster run the following command.
 
 [source, bash]
@@ -924,8 +947,103 @@ To verify that none of the column families are using incompatible Data Block Enc
 $ bin/hbase pre-upgrade validate-dbe
 ----
 
-This check validates all column families and print out any incompatibilities.
-To change `PREFIX_TREE` encoding to supported one check <<upgrade2.0.prefix-tree.removed,_prefix-tree_ encoding removed>>.
+This check validates all column families and print out any incompatibilities. For example:
+
+----
+2018-07-13 09:58:32,028 WARN  [main] tool.DataBlockEncodingValidator: Incompatible DataBlockEncoding for table: t, cf: f, encoding: PREFIX_TREE
+----
+
+Which means that Data Block Encoding of table `t`, column family `f` is incompatible. To fix, use `alter` command in HBase shell:
+
+----
+alter 't', { NAME => 'f', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
+----
+
+Please also validate HFiles, which is described in the next section.
+
+==== HFile Content validation
+Even though Data Block Encoding is changed from `PREFIX_TREE` it is still possible to have HFiles that contain data encoded that way.
+To verify that HFiles are readable with HBase 2 please use _HFile content validator_.
+
+[source, bash]
+----
+$ bin/hbase pre-upgrade validate-hfile
+----
+
+The tool will log the corrupt HFiles and details about the root cause.
+If the problem is about PREFIX_TREE encoding it is necessary to change encodings before upgrading to HBase 2.
+
+The following log message shows an example of incorrect HFiles.
+
+----
+2018-06-05 16:20:46,976 WARN  [hfilevalidator-pool1-t3] hbck.HFileCorruptionChecker: Found corrupt HFile hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+org.apache.hadoop.hbase.io.hfile.CorruptHFileException: Problem reading HFile Trailer from file hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+    ...
+Caused by: java.io.IOException: Invalid data block encoding type in file info: PREFIX_TREE
+    ...
+Caused by: java.lang.IllegalArgumentException: No enum constant org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.PREFIX_TREE
+    ...
+2018-06-05 16:20:47,322 INFO  [main] tool.HFileContentValidator: Corrupted file: hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+2018-06-05 16:20:47,383 INFO  [main] tool.HFileContentValidator: Corrupted file: hdfs://example.com:8020/hbase/archive/data/default/t/56be41796340b757eb7fff1eb5e2a905/f/29c641ae91c34fc3bee881f45436b6d1
+----
+
+===== Fixing PREFIX_TREE errors
+
+It's possible to get `PREFIX_TREE` errors after changing Data Block Encoding to a supported one. It can happen
+because there are some HFiles which still encoded with `PREFIX_TREE` or there are still some snapshots.
+
+For fixing HFiles, please run a major compaction on the table (it was `default:t` according to the log message):
+
+----
+major_compact 't'
+----
+
+HFiles can be referenced from snapshots, too. It's the case when the HFile is located under `archive/data`.
+The first step is to determine which snapshot references that HFile (the name of the file was `29c641ae91c34fc3bee881f45436b6d1`
+according to the logs):
+
+[source, bash]
+----
+for snapshot in $(hbase snapshotinfo -list-snapshots 2> /dev/null | tail -n -1 | cut -f 1 -d \|);
+do
+  echo "checking snapshot named '${snapshot}'";
+  hbase snapshotinfo -snapshot "${snapshot}" -files 2> /dev/null | grep 29c641ae91c34fc3bee881f45436b6d1;
+done
+----
+
+The output of this shell script is:
+
+----
+checking snapshot named 't_snap'
+   1.0 K t/56be41796340b757eb7fff1eb5e2a905/f/29c641ae91c34fc3bee881f45436b6d1 (archive)
+----
+
+Which means `t_snap` snapshot references the incompatible HFile. If the snapshot is still needed,
+then it has to be recreated with HBase shell:
+
+----
+# creating a new namespace for the cleanup process
+create_namespace 'pre_upgrade_cleanup'
+
+# creating a new snapshot
+clone_snapshot 't_snap', 'pre_upgrade_cleanup:t'
+alter 'pre_upgrade_cleanup:t', { NAME => 'f', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
+major_compact 'pre_upgrade_cleanup:t'
+
+# removing the invalid snapshot
+delete_snapshot 't_snap'
+
+# creating a new snapshot
+snapshot 'pre_upgrade_cleanup:t', 't_snap'
+
+# removing temporary table
+disable 'pre_upgrade_cleanup:t'
+drop 'pre_upgrade_cleanup:t'
+drop_namespace 'pre_upgrade_cleanup'
+----
+
+For further information, please refer to
+link:https://issues.apache.org/jira/browse/HBASE-20649?focusedCommentId=16535476#comment-16535476[HBASE-20649].
 
 === Data Block Encoding Tool
 
@@ -1176,15 +1294,6 @@ Monitor the output of the _/tmp/log.txt_ file to follow the progress of the scri
 Use the following guidelines if you want to create your own rolling restart script.
 
 . Extract the new release, verify its configuration, and synchronize it to all nodes of your cluster using `rsync`, `scp`, or another secure synchronization mechanism.
-. Use the hbck utility to ensure that the cluster is consistent.
-+
-----
-
-$ ./bin/hbck
-----
-+
-Perform repairs if required.
-See <<hbck,hbck>> for details.
 
 . Restart the master first.
   You may need to modify these commands if your new HBase directory is different from the old one, such as for an upgrade.
@@ -1216,7 +1325,6 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
 ----
 
 . Restart the Master again, to clear out the dead servers list and re-enable the load balancer.
-. Run the `hbck` utility again, to be sure the cluster is consistent.
 
 [[adding.new.node]]
 === Adding a New Node
@@ -1531,6 +1639,9 @@ Some use cases for cluster replication include:
 
 NOTE: Replication is enabled at the granularity of the column family.
 Before enabling replication for a column family, create the table and all column families to be replicated, on the destination cluster.
+
+NOTE: Replication is asynchronous as we send WAL to another cluster in background, which means that when you want to do recovery through replication, you could loss some data. To address this problem, we have introduced a new feature called synchronous replication. As the mechanism is a bit different so we use a separated section to describe it. Please see
+<<Synchronous Replication,Synchronous Replication>>.
 
 === Replication Overview
 
@@ -2337,9 +2448,12 @@ Since the cluster is up, there is a risk that edits could be missed in the expor
 [[ops.snapshots]]
 == HBase Snapshots
 
-HBase Snapshots allow you to take a snapshot of a table without too much impact on Region Servers.
-Snapshot, Clone and restore operations don't involve data copying.
-Also, Exporting the snapshot to another cluster doesn't have impact on the Region Servers.
+HBase Snapshots allow you to take a copy of a table (both contents and metadata)with a very small performance impact. A Snapshot is an immutable
+collection of table metadata and a list of HFiles that comprised the table at the time the Snapshot was taken. A "clone"
+of a snapshot creates a new table from that snapshot, and a "restore" of a snapshot returns the contents of a table to
+what it was when the snapshot was created. The "clone" and "restore" operations do not require any data to be copied,
+as the underlying HFiles (the files which contain the data for an HBase table) are not modified with either action.
+Simiarly, exporting a snapshot to another cluster has little impact on RegionServers of the local cluster.
 
 Prior to version 0.94.6, the only way to backup or to clone a table is to use CopyTable/ExportTable, or to copy all the hfiles in HDFS after disabling the table.
 The disadvantages of these methods are that you can degrade region server performance (Copy/Export Table) or you need to disable the table, that means no reads or writes; and this is usually unacceptable.
@@ -2602,8 +2716,6 @@ HDFS replication factor only affects your disk usage and is invisible to most HB
 You can view the current number of regions for a given table using the HMaster UI.
 In the [label]#Tables# section, the number of online regions for each table is listed in the [label]#Online Regions# column.
 This total only includes the in-memory state and does not include disabled or offline regions.
-If you do not want to use the HMaster UI, you can determine the number of regions by counting the number of subdirectories of the /hbase/<table>/ subdirectories in HDFS, or by running the `bin/hbase hbck` command.
-Each of these methods may return a slightly different number, depending on the status of each region.
 
 [[ops.capacity.regions.count]]
 ==== Number of regions per RS - upper bound
@@ -2890,8 +3002,8 @@ If it appears stuck, restart the Master process.
 
 === Remove RegionServer Grouping
 Removing RegionServer Grouping feature from a cluster on which it was enabled involves
-more steps in addition to removing the relevant properties from `hbase-site.xml`. This is
-to clean the RegionServer grouping related meta data so that if the feature is re-enabled
+more steps in addition to removing the relevant properties from `hbase-site.xml`. This is 
+to clean the RegionServer grouping related meta data so that if the feature is re-enabled 
 in the future, the old meta data will not affect the functioning of the cluster.
 
 - Move all tables in non-default rsgroups to `default` regionserver group
@@ -2900,7 +3012,7 @@ in the future, the old meta data will not affect the functioning of the cluster.
 #Reassigning table t1 from non default group - hbase shell
 hbase(main):005:0> move_tables_rsgroup 'default',['t1']
 ----
-- Move all regionservers in non-default rsgroups to `default` regionserver group
+- Move all regionservers in non-default rsgroups to `default` regionserver group    
 [source, bash]
 ----
 #Reassigning all the servers in the non-default rsgroup to default - hbase shell
@@ -2975,21 +3087,21 @@ To check normalizer status and enable/disable normalizer
 [source,bash]
 ----
 hbase(main):001:0> normalizer_enabled
-true
+true 
 0 row(s) in 0.4870 seconds
-
+ 
 hbase(main):002:0> normalizer_switch false
-true
+true 
 0 row(s) in 0.0640 seconds
-
+ 
 hbase(main):003:0> normalizer_enabled
-false
+false 
 0 row(s) in 0.0120 seconds
-
+ 
 hbase(main):004:0> normalizer_switch true
 false
 0 row(s) in 0.0200 seconds
-
+ 
 hbase(main):005:0> normalizer_enabled
 true
 0 row(s) in 0.0090 seconds
@@ -3008,19 +3120,19 @@ merge action being taken as a result of the normalization plan computed by Simpl
 
 Consider an user table with some pre-split regions having 3 equally large regions
 (about 100K rows) and 1 relatively small region (about 25K rows). Following is the
-snippet from an hbase meta table scan showing each of the pre-split regions for
+snippet from an hbase meta table scan showing each of the pre-split regions for 
 the user table.
 
 ----
-table_p8ddpd6q5z,,1469494305548.68b9892220865cb6048 column=info:regioninfo, timestamp=1469494306375, value={ENCODED => 68b9892220865cb604809c950d1adf48, NAME => 'table_p8ddpd6q5z,,1469494305548.68b989222 09c950d1adf48.   0865cb604809c950d1adf48.', STARTKEY => '', ENDKEY => '1'}
-....
-table_p8ddpd6q5z,1,1469494317178.867b77333bdc75a028 column=info:regioninfo, timestamp=1469494317848, value={ENCODED => 867b77333bdc75a028bb4c5e4b235f48, NAME => 'table_p8ddpd6q5z,1,1469494317178.867b7733 bb4c5e4b235f48.  3bdc75a028bb4c5e4b235f48.', STARTKEY => '1', ENDKEY => '3'}
-....
-table_p8ddpd6q5z,3,1469494328323.98f019a753425e7977 column=info:regioninfo, timestamp=1469494328486, value={ENCODED => 98f019a753425e7977ab8636e32deeeb, NAME => 'table_p8ddpd6q5z,3,1469494328323.98f019a7 ab8636e32deeeb.  53425e7977ab8636e32deeeb.', STARTKEY => '3', ENDKEY => '7'}
-....
-table_p8ddpd6q5z,7,1469494339662.94c64e748979ecbb16 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 94c64e748979ecbb166f6cc6550e25c6, NAME => 'table_p8ddpd6q5z,7,1469494339662.94c64e74 6f6cc6550e25c6.   8979ecbb166f6cc6550e25c6.', STARTKEY => '7', ENDKEY => '8'}
-....
-table_p8ddpd6q5z,8,1469494339662.6d2b3f5fd1595ab8e7 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 6d2b3f5fd1595ab8e7c031876057b1ee, NAME => 'table_p8ddpd6q5z,8,1469494339662.6d2b3f5f c031876057b1ee.   d1595ab8e7c031876057b1ee.', STARTKEY => '8', ENDKEY => ''}
+table_p8ddpd6q5z,,1469494305548.68b9892220865cb6048 column=info:regioninfo, timestamp=1469494306375, value={ENCODED => 68b9892220865cb604809c950d1adf48, NAME => 'table_p8ddpd6q5z,,1469494305548.68b989222 09c950d1adf48.   0865cb604809c950d1adf48.', STARTKEY => '', ENDKEY => '1'} 
+.... 
+table_p8ddpd6q5z,1,1469494317178.867b77333bdc75a028 column=info:regioninfo, timestamp=1469494317848, value={ENCODED => 867b77333bdc75a028bb4c5e4b235f48, NAME => 'table_p8ddpd6q5z,1,1469494317178.867b7733 bb4c5e4b235f48.  3bdc75a028bb4c5e4b235f48.', STARTKEY => '1', ENDKEY => '3'} 
+.... 
+table_p8ddpd6q5z,3,1469494328323.98f019a753425e7977 column=info:regioninfo, timestamp=1469494328486, value={ENCODED => 98f019a753425e7977ab8636e32deeeb, NAME => 'table_p8ddpd6q5z,3,1469494328323.98f019a7 ab8636e32deeeb.  53425e7977ab8636e32deeeb.', STARTKEY => '3', ENDKEY => '7'} 
+.... 
+table_p8ddpd6q5z,7,1469494339662.94c64e748979ecbb16 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 94c64e748979ecbb166f6cc6550e25c6, NAME => 'table_p8ddpd6q5z,7,1469494339662.94c64e74 6f6cc6550e25c6.   8979ecbb166f6cc6550e25c6.', STARTKEY => '7', ENDKEY => '8'} 
+.... 
+table_p8ddpd6q5z,8,1469494339662.6d2b3f5fd1595ab8e7 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 6d2b3f5fd1595ab8e7c031876057b1ee, NAME => 'table_p8ddpd6q5z,8,1469494339662.6d2b3f5f c031876057b1ee.   d1595ab8e7c031876057b1ee.', STARTKEY => '8', ENDKEY => ''}  
 ----
 Invoking the normalizer using ‘normalize’ int the HBase shell, the below log snippet
 from HMaster log shows the normalization plan computed as per the logic defined for
@@ -3046,15 +3158,15 @@ and end key as ‘1’, with another region having start key as ‘1’ and end 
 Now, that these regions have been merged we see a single new region with start key
 as ‘’ and end key as ‘3’
 ----
-table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeA, timestamp=1469516907431,
-value=PBUF\x08\xA5\xD9\x9E\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x00"\x011(\x000\x00 ea74d246741ba.   8\x00
+table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeA, timestamp=1469516907431, 
+value=PBUF\x08\xA5\xD9\x9E\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x00"\x011(\x000\x00 ea74d246741ba.   8\x00 
 table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeB, timestamp=1469516907431,
-value=PBUF\x08\xB5\xBA\x9F\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x011"\x013(\x000\x0 ea74d246741ba.   08\x00
+value=PBUF\x08\xB5\xBA\x9F\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x011"\x013(\x000\x0 ea74d246741ba.   08\x00 
 table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:regioninfo, timestamp=1469516907431, value={ENCODED => e06c9b83c4a252b130eea74d246741ba, NAME => 'table_p8ddpd6q5z,,1469516907210.e06c9b83c ea74d246741ba.   4a252b130eea74d246741ba.', STARTKEY => '', ENDKEY => '3'}
-....
-table_p8ddpd6q5z,3,1469514778736.bf024670a847c0adff column=info:regioninfo, timestamp=1469514779417, value={ENCODED => bf024670a847c0adffb74b2e13408b32, NAME => 'table_p8ddpd6q5z,3,1469514778736.bf024670 b74b2e13408b32.  a847c0adffb74b2e13408b32.' STARTKEY => '3', ENDKEY => '7'}
-....
-table_p8ddpd6q5z,7,1469514790152.7c5a67bc755e649db2 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 7c5a67bc755e649db22f49af6270f1e1, NAME => 'table_p8ddpd6q5z,7,1469514790152.7c5a67bc 2f49af6270f1e1.  755e649db22f49af6270f1e1.', STARTKEY => '7', ENDKEY => '8'}
+.... 
+table_p8ddpd6q5z,3,1469514778736.bf024670a847c0adff column=info:regioninfo, timestamp=1469514779417, value={ENCODED => bf024670a847c0adffb74b2e13408b32, NAME => 'table_p8ddpd6q5z,3,1469514778736.bf024670 b74b2e13408b32.  a847c0adffb74b2e13408b32.' STARTKEY => '3', ENDKEY => '7'} 
+.... 
+table_p8ddpd6q5z,7,1469514790152.7c5a67bc755e649db2 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 7c5a67bc755e649db22f49af6270f1e1, NAME => 'table_p8ddpd6q5z,7,1469514790152.7c5a67bc 2f49af6270f1e1.  755e649db22f49af6270f1e1.', STARTKEY => '7', ENDKEY => '8'} 
 ....
 table_p8ddpd6q5z,8,1469514790152.58e7503cda69f98f47 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 58e7503cda69f98f4755178e74288c3a, NAME => 'table_p8ddpd6q5z,8,1469514790152.58e7503c 55178e74288c3a.  da69f98f4755178e74288c3a.', STARTKEY => '8', ENDKEY => ''}
 ----

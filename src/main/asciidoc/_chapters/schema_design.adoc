@@ -1158,7 +1158,7 @@ the regionserver/dfsclient side.
 
 * In `hbase-site.xml`, set the following parameters:
 - `dfs.client.read.shortcircuit = true`
-- `dfs.client.read.shortcircuit.skip.checksum = true` so we don't double checksum (HBase does its own checksumming to save on i/os. See <<hbase.regionserver.checksum.verify.performance>> for more on this.
+- `dfs.client.read.shortcircuit.skip.checksum = true` so we don't double checksum (HBase does its own checksumming to save on i/os. See <<hbase.regionserver.checksum.verify.performance>> for more on this. 
 - `dfs.domain.socket.path` to match what was set for the datanodes.
 - `dfs.client.read.shortcircuit.buffer.size = 131072` Important to avoid OOME -- hbase has a default it uses if unset, see `hbase.dfs.client.read.shortcircuit.buffer.size`; its default is 131072.
 * Ensure data locality. In `hbase-site.xml`, set `hbase.hstore.min.locality.to.skip.major.compact = 0.7` (Meaning that 0.7 \<= n \<= 1)

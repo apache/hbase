@@ -594,6 +594,80 @@ See <<regions.arch.assignment>> for more information on region assignment.
 Periodically checks and cleans up the `hbase:meta` table.
 See <<arch.catalog.meta>> for more information on the meta table.
 
+[[master.wal]]
+=== MasterProcWAL
+
+HMaster records administrative operations and their running states, such as the handling of a crashed server,
+table creation, and other DDLs, into its own WAL file. The WALs are stored under the MasterProcWALs
+directory. The Master WALs are not like RegionServer WALs. Keeping up the Master WAL allows
+us run a state machine that is resilient across Master failures. For example, if a HMaster was in the
+middle of creating a table encounters an issue and fails, the next active HMaster can take up where
+the previous left off and carry the operation to completion. Since hbase-2.0.0, a
+new AssignmentManager (A.K.A AMv2) was introduced and the HMaster handles region assignment
+operations, server crash processing, balancing, etc., all via AMv2 persisting all state and
+transitions into MasterProcWALs rather than up into ZooKeeper, as we do in hbase-1.x.
+
+See <<amv2>> (and <<pv2>> for its basis) if you would like to learn more about the new
+AssignmentManager.
+
+[[master.wal.conf]]
+==== Configurations for MasterProcWAL
+Here are the list of configurations that effect MasterProcWAL operation.
+You should not have to change your defaults.
+
+[[hbase.procedure.store.wal.periodic.roll.msec]]
+*`hbase.procedure.store.wal.periodic.roll.msec`*::
++
+.Description
+Frequency of generating a new WAL
++
+.Default
+`1h (3600000 in msec)`
+
+[[hbase.procedure.store.wal.roll.threshold]]
+*`hbase.procedure.store.wal.roll.threshold`*::
++
+.Description
+Threshold in size before the WAL rolls. Every time the WAL reaches this size or the above period, 1 hour, passes since last log roll, the HMaster will generate a new WAL.
++
+.Default
+`32MB (33554432 in byte)`
+
+[[hbase.procedure.store.wal.warn.threshold]]
+*`hbase.procedure.store.wal.warn.threshold`*::
++
+.Description
+If the number of WALs goes beyond this threshold, the following message should appear in the HMaster log with WARN level when rolling.
+
+ procedure WALs count=xx above the warning threshold 64. check running procedures to see if something is stuck.
+
++
+.Default
+`64`
+
+[[hbase.procedure.store.wal.max.retries.before.roll]]
+*`hbase.procedure.store.wal.max.retries.before.roll`*::
++
+.Description
+Max number of retry when syncing slots (records) to its underlying storage, such as HDFS. Every attempt, the following message should appear in the HMaster log.
+
+ unable to sync slots, retry=xx
+
++
+.Default
+`3`
+
+[[hbase.procedure.store.wal.sync.failure.roll.max]]
+*`hbase.procedure.store.wal.sync.failure.roll.max`*::
++
+.Description
+After the above 3 retrials, the log is rolled and the retry count is reset to 0, thereon a new set of retrial starts. This configuration controls the max number of attempts of log rolling upon sync failure. That is, HMaster is allowed to fail to sync 9 times in total. Once it exceeds, the following log should appear in the HMaster log.
+
+ Sync slots after log roll failed, abort.
++
+.Default
+`3`
+
 [[regionserver.arch]]
 == RegionServer
 
@@ -947,20 +1021,20 @@ For an end-to-end off-heaped read-path, first of all there should be an off-heap
 _hbase-site.xml_. Also specify the total capacity of the BC using `hbase.bucketcache.size` config. Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in
 _hbase-env.sh_. This is how we specify the max possible off-heap memory allocation for the
 RegionServer java process. This should be bigger than the off-heap BC size. Please keep in mind that there is no default for `hbase.bucketcache.ioengine`
-which means the BC is turned OFF by default (See <<direct.memory>>).
+which means the BC is turned OFF by default (See <<direct.memory>>). 
 
 Next thing to tune is the ByteBuffer pool on the RPC server side.
 The buffers from this pool will be used to accumulate the cell bytes and create a result cell block to send back to the client side.
 `hbase.ipc.server.reservoir.enabled` can be used to turn this pool ON or OFF. By default this pool is ON and available. HBase will create off heap ByteBuffers
 and pool them. Please make sure not to turn this OFF if you want end-to-end off-heaping in read path.
 If this pool is turned off, the server will create temp buffers on heap to accumulate the cell bytes and make a result cell block. This can impact the GC on a highly read loaded server.
-The user can tune this pool with respect to how many buffers are in the pool and what should be the size of each ByteBuffer.
-Use the config `hbase.ipc.server.reservoir.initial.buffer.size` to tune each of the buffer sizes. Default is 64 KB.
+The user can tune this pool with respect to how many buffers are in the pool and what should be the size of each ByteBuffer. 
+Use the config `hbase.ipc.server.reservoir.initial.buffer.size` to tune each of the buffer sizes. Default is 64 KB. 
 
 When the read pattern is a random row read load and each of the rows are smaller in size compared to this 64 KB, try reducing this.
-When the result size is larger than one ByteBuffer size, the server will try to grab more than one buffer and make a result cell block out of these. When the pool is running out of buffers, the server will end up creating temporary on-heap buffers.
+When the result size is larger than one ByteBuffer size, the server will try to grab more than one buffer and make a result cell block out of these. When the pool is running out of buffers, the server will end up creating temporary on-heap buffers. 
 
-The maximum number of ByteBuffers in the pool can be tuned using the config 'hbase.ipc.server.reservoir.initial.max'. Its value defaults to 64 * region server handlers configured (See the config 'hbase.regionserver.handler.count'). The math is such that by default we consider 2 MB as the result cell block size per read result and each handler will be handling a read. For 2 MB size, we need 32 buffers each of size 64 KB (See default buffer size in pool). So per handler 32 ByteBuffers(BB). We allocate twice this size as the max BBs count such that one handler can be creating the response and handing it to the RPC Responder thread and then handling a new request creating a new response cell block (using pooled buffers). Even if the responder could not send back the first TCP reply immediately, our count should allow that we should still have enough buffers in our pool without having to make temporary buffers on the heap. Again for smaller sized random row reads, tune this max count. There are lazily created buffers and the count is the max count to be pooled.
+The maximum number of ByteBuffers in the pool can be tuned using the config 'hbase.ipc.server.reservoir.initial.max'. Its value defaults to 64 * region server handlers configured (See the config 'hbase.regionserver.handler.count'). The math is such that by default we consider 2 MB as the result cell block size per read result and each handler will be handling a read. For 2 MB size, we need 32 buffers each of size 64 KB (See default buffer size in pool). So per handler 32 ByteBuffers(BB). We allocate twice this size as the max BBs count such that one handler can be creating the response and handing it to the RPC Responder thread and then handling a new request creating a new response cell block (using pooled buffers). Even if the responder could not send back the first TCP reply immediately, our count should allow that we should still have enough buffers in our pool without having to make temporary buffers on the heap. Again for smaller sized random row reads, tune this max count. There are lazily created buffers and the count is the max count to be pooled. 
 
 If you still see GC issues even after making end-to-end read path off-heap, look for issues in the appropriate buffer pool. Check the below RegionServer log with INFO level:
 [source]
@@ -968,7 +1042,7 @@ If you still see GC issues even after making end-to-end read path off-heap, look
 Pool already reached its max capacity : XXX and no free buffers now. Consider increasing the value for 'hbase.ipc.server.reservoir.initial.max' ?
 ----
 
-The setting for _HBASE_OFFHEAPSIZE_ in _hbase-env.sh_ should consider this off heap buffer pool at the RPC side also. We need to config this max off heap size for the RegionServer as a bit higher than the sum of this max pool size and the off heap cache size. The TCP layer will also need to create direct bytebuffers for TCP communication. Also the DFS client will need some off-heap to do its workings especially if short-circuit reads are configured. Allocating an extra of 1 - 2 GB for the max direct memory size has worked in tests.
+The setting for _HBASE_OFFHEAPSIZE_ in _hbase-env.sh_ should consider this off heap buffer pool at the RPC side also. We need to config this max off heap size for the RegionServer as a bit higher than the sum of this max pool size and the off heap cache size. The TCP layer will also need to create direct bytebuffers for TCP communication. Also the DFS client will need some off-heap to do its workings especially if short-circuit reads are configured. Allocating an extra of 1 - 2 GB for the max direct memory size has worked in tests. 
 
 If you are using co processors and refer the Cells in the read results, DO NOT store reference to these Cells out of the scope of the CP hook methods. Some times the CPs need store info about the cell (Like its row key) for considering in the next CP hook call etc. For such cases, pls clone the required fields of the entire Cell as per the use cases. [ See CellUtil#cloneXXX(Cell) APIs ]
 
@@ -1845,6 +1919,14 @@ See <<managed.compactions>>.
 
 Compactions do not perform region merges.
 See <<ops.regionmgt.merge>> for more information on region merging.
+
+.Compaction Switch
+We can switch on and off the compactions at region servers. Switching off compactions will also
+interrupt any currently ongoing compactions. It can be done dynamically using the "compaction_switch"
+command from hbase shell. If done from the command line, this setting will be lost on restart of the
+server. To persist the changes across region servers modify the configuration hbase.regionserver
+.compaction.enabled in hbase-site.xml and restart HBase.
+
 
 [[compaction.file.selection]]
 ===== Compaction Policy - HBase 0.96.x and newer

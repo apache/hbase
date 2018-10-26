@@ -331,7 +331,10 @@ As noted in the section <<basic.prerequisites>>, HBase 2.0+ requires a minimum o
 .HBCK must match HBase server version
 You *must not* use an HBase 1.x version of HBCK against an HBase 2.0+ cluster. HBCK is strongly tied to the HBase server version. Using the HBCK tool from an earlier release against an HBase 2.0+ cluster will destructively alter said cluster in unrecoverable ways.
 
-As of HBase 2.0, HBCK is a read-only tool that can report the status of some non-public system internals. You should not rely on the format nor content of these internals to remain consistent across HBase releases.
+As of HBase 2.0, HBCK (A.K.A _HBCK1_ or _hbck1_) is a read-only tool that can report the status of some non-public system internals. You should not rely on the format nor content of these internals to remain consistent across HBase releases.
+
+To read about HBCK's replacement, see <<HBCK2>> in <<ops_mgt>>.
+
 
 ////
 Link to a ref guide section on HBCK in 2.0 that explains use and calls out the inability of clients and server sides to detect version of each other.
@@ -611,6 +614,19 @@ Performance is also an area that is now under active review so look forward to
 improvement in coming releases (See
 link:https://issues.apache.org/jira/browse/HBASE-20188[HBASE-20188 TESTING Performance]).
 
+[[upgrade2.0.it.kerberos]]
+.Integration Tests and Kerberos
+Integration Tests (`IntegrationTests*`) used to rely on the Kerberos credential cache
+for authentication against secured clusters. This used to lead to tests failing due
+to authentication failures when the tickets in the credential cache expired.
+As of hbase-2.0.0 (and hbase-1.3.0+), the integration test clients will make use
+of the configuration properties `hbase.client.keytab.file` and
+`hbase.client.kerberos.principal`. They are required. The clients will perform a
+login from the configured keytab file and automatically refresh the credentials
+in the background for the process lifetime (See
+link:https://issues.apache.org/jira/browse/HBASE-16231[HBASE-16231]).
+
+
 ////
 This would be a good place to link to an appendix on migrating applications
 ////
@@ -730,6 +746,11 @@ Notes:
 ==== Raw scan now ignores TTL
 
 Doing a raw scan will now return results that have expired according to TTL settings.
+
+[[upgrade1.3]]
+=== Upgrading from pre-1.3 to 1.3+
+If running Integration Tests under Kerberos, see <<upgrade2.0.it.kerberos>>.
+
 
 [[upgrade1.0]]
 === Upgrading to 1.x
