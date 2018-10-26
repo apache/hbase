@@ -27,7 +27,8 @@ import java.util.function.BiFunction;
 import java.util.stream.LongStream;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
@@ -38,8 +39,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * deleted/completed to avoid the deserialization step on restart
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public class ProcedureStoreTracker {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureStoreTracker.class);
+
   // Key is procedure id corresponding to first bit of the bitmap.
   private final TreeMap<Long, BitSetNode> map = new TreeMap<>();
 
@@ -153,8 +156,10 @@ public class ProcedureStoreTracker {
 
   private BitSetNode delete(BitSetNode node, long procId) {
     node = lookupClosestNode(node, procId);
-    assert node != null : "expected node to delete procId=" + procId;
-    assert node.contains(procId) : "expected procId=" + procId + " in the node";
+    if (node == null || !node.contains(procId)) {
+      LOG.warn("The BitSetNode for procId={} does not exist, maybe a double deletion?", procId);
+      return node;
+    }
     node.delete(procId);
     if (!keepDeletes && node.isEmpty()) {
       // TODO: RESET if (map.size() == 1)
