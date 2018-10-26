@@ -135,3 +135,7 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -XX:PermSize=128m -XX:M
 # HBASE_ROOT_LOGGER=INFO,DRFA
 # The reason for changing default to RFA is to avoid the boundary case of filling out disk space as 
 # DRFA doesn't put any cap on the log size. Please refer to HBase-5655 for more context.
+
+# Tell HBase whether it should include Hadoop's lib when start up,
+# the default value is false,means that includes Hadoop's lib.
+# export HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP="true"
