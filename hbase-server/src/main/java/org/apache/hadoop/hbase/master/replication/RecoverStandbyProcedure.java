@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverStandbyStateData;
 
 @InterfaceAudience.Private
-public class RecoverStandbyProcedure extends AbstractPeerProcedure<RecoverStandbyState> {
+public class RecoverStandbyProcedure extends AbstractPeerNoLockProcedure<RecoverStandbyState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RecoverStandbyProcedure.class);
 

@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
 
 @InterfaceAudience.Private
 public class SyncReplicationReplayWALProcedure
-    extends AbstractPeerProcedure<SyncReplicationReplayWALState> {
+    extends AbstractPeerNoLockProcedure<SyncReplicationReplayWALState> {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(SyncReplicationReplayWALProcedure.class);
