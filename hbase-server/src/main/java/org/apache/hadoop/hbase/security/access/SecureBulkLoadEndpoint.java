@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -138,6 +139,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   private Connection conn;
 
   private UserProvider userProvider;
+  private static HashMap<UserGroupInformation, Integer> ugiReferenceCounter = new HashMap<>();
 
   @Override
   public void start(CoprocessorEnvironment env) {
@@ -250,7 +252,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     } finally {
       UserGroupInformation ugi = getActiveUser().getUGI();
       try {
-        if (!UserGroupInformation.getLoginUser().equals(ugi)) {
+        if (!UserGroupInformation.getLoginUser().equals(ugi) && !isUserReferenced(ugi)) {
           FileSystem.closeAllForUGI(ugi);
         }
       } catch (IOException e) {
@@ -258,6 +260,43 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       }
     }
     done.run(null);
+  }
+
+  @VisibleForTesting
+  interface Consumer<T> {
+    void accept(T t);
+  }
+  private static Consumer<Region> fsCreatedListener;
+
+  @VisibleForTesting
+  static void setFsCreatedListener(Consumer<Region> listener) {
+    fsCreatedListener = listener;
+  }
+
+
+  private void incrementUgiReference(UserGroupInformation ugi) {
+    synchronized (ugiReferenceCounter) {
+      Integer counter = ugiReferenceCounter.get(ugi);
+      ugiReferenceCounter.put(ugi, counter == null ? 1 : ++counter);
+    }
+  }
+
+  private void decrementUgiReference(UserGroupInformation ugi) {
+    synchronized (ugiReferenceCounter) {
+      Integer counter = ugiReferenceCounter.get(ugi);
+      if(counter == null || counter <= 1) {
+        ugiReferenceCounter.remove(ugi);
+      } else {
+        ugiReferenceCounter.put(ugi,--counter);
+      }
+    }
+  }
+
+  private boolean isUserReferenced(UserGroupInformation ugi) {
+    synchronized (ugiReferenceCounter) {
+      Integer count = ugiReferenceCounter.get(ugi);
+      return count != null && count > 0;
+    }
   }
 
   @Override
@@ -334,6 +373,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         }
       }
 
+      incrementUgiReference(ugi);
       loaded = ugi.doAs(new PrivilegedAction<Boolean>() {
         @Override
         public Boolean run() {
@@ -348,6 +388,9 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
                 fs.setPermission(stageFamily, PERM_ALL_ACCESS);
               }
             }
+            if (fsCreatedListener != null) {
+              fsCreatedListener.accept(env.getRegion());
+            }
             //We call bulkLoadHFiles as requesting user
             //To enable access prior to staging
             return env.getRegion().bulkLoadHFiles(familyPaths, true,
@@ -358,6 +401,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
           return false;
         }
       });
+      decrementUgiReference(ugi);
     }
     if (region.getCoprocessorHost() != null) {
       try {
