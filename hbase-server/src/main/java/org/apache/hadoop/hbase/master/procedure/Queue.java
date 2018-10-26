@@ -118,9 +118,10 @@ abstract class Queue<TKey extends Comparable<TKey>> extends AvlLinkedNode<Queue<
 
   @Override
   public String toString() {
-    return String.format("%s(%s, xlock=%s sharedLock=%s size=%s)", getClass().getSimpleName(), key,
-      lockStatus.hasExclusiveLock() ? "true (" + lockStatus.getExclusiveLockProcIdOwner() + ")"
-          : "false",
-      lockStatus.getSharedLockCount(), size());
+    return String.format("%s(%s, xlock=%s sharedLock=%s size=%s peek=%s)",
+        getClass().getSimpleName(), key, lockStatus.hasExclusiveLock() ?
+            "true (" + lockStatus.getExclusiveLockProcIdOwner() + ")" :
+            "false", lockStatus.getSharedLockCount(), size(),
+        (size() > 0 ? peek() : "null"));
   }
 }
