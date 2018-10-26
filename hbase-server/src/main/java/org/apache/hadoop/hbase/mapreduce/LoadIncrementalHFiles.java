@@ -264,7 +264,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * region boundary, and each part is added back into the queue.
    * The import process finishes when the queue is empty.
    */
-  static class LoadQueueItem {
+  @InterfaceAudience.Private
+  public static class LoadQueueItem {
     final byte[] family;
     final Path hfilePath;
 
