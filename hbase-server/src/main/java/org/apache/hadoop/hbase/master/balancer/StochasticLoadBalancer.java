@@ -103,6 +103,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       "hbase.master.balancer.stochastic.stepsPerRegion";
   protected static final String MAX_STEPS_KEY =
       "hbase.master.balancer.stochastic.maxSteps";
+  protected static final String RUN_MAX_STEPS_KEY =
+      "hbase.master.balancer.stochastic.runMaxSteps";
   protected static final String MAX_RUNNING_TIME_KEY =
       "hbase.master.balancer.stochastic.maxRunningTime";
   protected static final String KEEP_REGION_LOADS =
@@ -116,6 +118,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   // values are defaults
   private int maxSteps = 1000000;
+  private boolean runMaxSteps = false;
   private int stepsPerRegion = 800;
   private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
   private int numRegionLoadsToRemember = 15;
@@ -160,6 +163,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     stepsPerRegion = conf.getInt(STEPS_PER_REGION_KEY, stepsPerRegion);
     maxRunningTime = conf.getLong(MAX_RUNNING_TIME_KEY, maxRunningTime);
+    runMaxSteps = conf.getBoolean(RUN_MAX_STEPS_KEY, runMaxSteps);
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
     isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
@@ -322,8 +326,26 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     double initCost = currentCost;
     double newCost = currentCost;
 
-    long computedMaxSteps = Math.min(this.maxSteps,
-        ((long)cluster.numRegions * (long)this.stepsPerRegion * (long)cluster.numServers));
+    long computedMaxSteps = 0;
+    if (runMaxSteps) {
+      computedMaxSteps = Math.max(this.maxSteps,
+          ((long)cluster.numRegions * (long)this.stepsPerRegion * (long)cluster.numServers));
+    } else {
+      long calculatedMaxSteps =
+          (long) cluster.numRegions * (long) this.stepsPerRegion * (long) cluster.numServers;
+      computedMaxSteps = Math.min(this.maxSteps, calculatedMaxSteps);
+      if (calculatedMaxSteps > maxSteps) {
+        LOG.warn(String.format("calculatedMaxSteps:%d for loadbalancer's stochastic walk is larger "
+                + "than maxSteps:%dß. Hence load balancing may not work well. Setting parameter "
+                + "\"hbase.master.balancer.stochastic.runMaxSteps\" to true to overcome this issue."
+                + "(This config change does not require service restart)", calculatedMaxSteps,
+            maxRunningTime));
+
+      }
+    }
+    LOG.info("start StochasticLoadBalancer.balancer, initCost=" + currentCost +
+        " computedMaxSteps: " + computedMaxSteps);
+
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
 
