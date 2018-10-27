@@ -1897,6 +1897,13 @@ public final class RequestConverter {
         setOverride(override).build();
   }
 
+  public static MasterProtos.ScheduleServerCrashProcedureRequest
+      toScheduleServerCrashProcedureRequest(List<HBaseProtos.ServerName> serverNames) {
+    MasterProtos.ScheduleServerCrashProcedureRequest.Builder b =
+        MasterProtos.ScheduleServerCrashProcedureRequest.newBuilder();
+    return b.addAllServerName(serverNames).build();
+  }
+
   private static List<RegionSpecifier> toEncodedRegionNameRegionSpecifiers(
       List<String> encodedRegionNames) {
     return encodedRegionNames.stream().
