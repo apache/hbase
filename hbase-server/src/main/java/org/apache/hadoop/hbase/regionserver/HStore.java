@@ -1640,7 +1640,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public boolean hasReferences() {
-    List<HStoreFile> reloadedStoreFiles = null;
     // Grab the read lock here, because we need to ensure that: only when the atomic
     // replaceStoreFiles(..) finished, we can get all the complete store file list.
     this.lock.readLock().lock();
