@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,6 +51,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Class to test HBaseHbck.
@@ -171,6 +175,23 @@ public class TestHbck {
         assertEquals(org.apache.hadoop.hbase.procedure2.Procedure.NO_PROC_ID, pid);
       }
     }
+  }
+
+  @Test
+  public void testScheduleSCP() throws Exception {
+    HRegionServer testRs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    TEST_UTIL.loadTable(TEST_UTIL.getConnection().getTable(TABLE_NAME), Bytes.toBytes("family1"),
+      true);
+    ServerName serverName = testRs.getServerName();
+    Hbck hbck = TEST_UTIL.getHbck();
+    List<Long> pids =
+        hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+    assertTrue(pids.get(0) > 0);
+    LOG.info("pid is {}", pids.get(0));
+
+    pids = hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+    assertTrue(pids.get(0) == -1);
+    LOG.info("pid is {}", pids.get(0));
   }
 
   private void waitOnPids(List<Long> pids) {

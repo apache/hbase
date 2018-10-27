@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+
 /**
  * Hbck APIs for HBase. Obtain an instance from {@link ClusterConnection#getHbck()} and call
  * {@link #close()} when done.
@@ -105,5 +107,8 @@ public interface Hbck extends Abortable, Closeable {
    * @return true if procedure is marked for bypass successfully, false otherwise
    */
   List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override, boolean recursive)
+      throws IOException;
+
+  List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
       throws IOException;
 }

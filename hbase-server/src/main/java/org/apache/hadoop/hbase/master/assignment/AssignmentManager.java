@@ -1312,13 +1312,14 @@ public class AssignmentManager implements ServerListener {
     return 0;
   }
 
-  public void submitServerCrash(final ServerName serverName, final boolean shouldSplitWal) {
+  public long submitServerCrash(final ServerName serverName, final boolean shouldSplitWal) {
     boolean carryingMeta = isCarryingMeta(serverName);
     ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-    procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(), serverName,
-      shouldSplitWal, carryingMeta));
-    LOG.debug("Added=" + serverName +
-      " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
+    long pid = procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(),
+        serverName, shouldSplitWal, carryingMeta));
+    LOG.debug("Added=" + serverName
+        + " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
+    return pid;
   }
 
   public void offlineRegion(final RegionInfo regionInfo) {
