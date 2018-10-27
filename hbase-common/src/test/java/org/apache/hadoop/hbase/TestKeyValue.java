@@ -18,11 +18,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -590,181 +592,152 @@ public class TestKeyValue {
 
   @Test
   public void testKeyValueSerialization() throws Exception {
-    KeyValue kvA1 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
-        Bytes.toBytes("1"));
-    KeyValue kvA2 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
-        Bytes.toBytes("2"));
-    MockKeyValue mkvA1 = new MockKeyValue(kvA1);
-    MockKeyValue mkvA2 = new MockKeyValue(kvA2);
+    KeyValue[] keyValues = new KeyValue[] {
+        new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
+            Bytes.toBytes("1")),
+        new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
+            Bytes.toBytes("2")),
+        new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
+            System.currentTimeMillis(), Bytes.toBytes("2"),
+            new Tag[] { new ArrayBackedTag((byte) 120, "tagA"),
+                new ArrayBackedTag((byte) 121, Bytes.toBytes("tagB")) }),
+        new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
+            System.currentTimeMillis(), Bytes.toBytes("2"),
+            new Tag[] { new ArrayBackedTag((byte) 0, "tagA") }),
+        new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes(""),
+            Bytes.toBytes("1")) };
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    DataOutputStream os = new DataOutputStream(byteArrayOutputStream);
-    ByteBufferUtils.putInt(os, KeyValueUtil.getSerializedSize(mkvA1, true));
-    KeyValueUtil.oswrite(mkvA1, os, true);
-    ByteBufferUtils.putInt(os, KeyValueUtil.getSerializedSize(mkvA2, true));
-    KeyValueUtil.oswrite(mkvA2, os, true);
-    DataInputStream is = new DataInputStream(new ByteArrayInputStream(
-        byteArrayOutputStream.toByteArray()));
-    KeyValue deSerKV1 = KeyValueUtil.iscreate(is, true);
-    assertTrue(kvA1.equals(deSerKV1));
-    KeyValue deSerKV2 = KeyValueUtil.iscreate(is, true);
-    assertTrue(kvA2.equals(deSerKV2));
+    for (KeyValue kv : keyValues) {
+      DataOutputStream os = new DataOutputStream(byteArrayOutputStream);
+      ByteBufferUtils.putInt(os, KeyValueUtil.getSerializedSize(kv, true));
+      KeyValueUtil.oswrite(kv, os, true);
+    }
+    DataInputStream is =
+        new DataInputStream(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+    for (int i = 0; i < keyValues.length; i++) {
+      LOG.info("Case#" + i + ": deserialize the kv: " + keyValues[i]);
+      KeyValue destKv = KeyValueUtil.createKeyValueFromInputStream(is, true);
+      assertEquals(keyValues[i], destKv);
+      assertArrayEquals(CellUtil.cloneValue(keyValues[i]), CellUtil.cloneValue(destKv));
+      assertArrayEquals(PrivateCellUtil.cloneTags(keyValues[i]), PrivateCellUtil.cloneTags(destKv));
+    }
   }
 
-  private static class MockKeyValue implements Cell {
-    private final KeyValue kv;
+  private static class FailureCase {
+    byte[] buf;
+    int offset;
+    int length;
+    boolean withTags;
+    String expectedMessage;
 
-    public MockKeyValue(KeyValue kv) {
-      this.kv = kv;
+    public FailureCase(byte[] buf, int offset, int length, boolean withTags,
+        String expectedMessage) {
+      this.buf = buf;
+      this.offset = offset;
+      this.length = length;
+      this.withTags = withTags;
+      this.expectedMessage = expectedMessage;
     }
 
-    /**
-     * This returns the offset where the tag actually starts.
-     */
     @Override
-    public int getTagsOffset() {
-      return this.kv.getTagsOffset();
+    public String toString() {
+      return "FailureCaseDetails: [buf=" + Bytes.toStringBinary(buf, offset, length) + ", offset="
+          + offset + ", " + "length=" + length + ", expectedMessage=" + expectedMessage
+          + ", withtags=" + withTags + "]";
     }
 
-    /**
-     * used to achieve atomic operations in the memstore.
-     */
-    @Override
-    public long getSequenceId() {
-      return this.kv.getSequenceId();
+    public String getExpectedMessage() {
+      return this.expectedMessage + KeyValueUtil.bytesToHex(buf, offset, length);
+    }
+  }
+
+  @Test
+  public void testCheckKeyValueBytesFailureCase() throws Exception {
+    byte[][] inputs = new byte[][] { HConstants.EMPTY_BYTE_ARRAY, // case.0
+      Bytes.toBytesBinary("a"), // case.1
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01"), // case.2
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00"), // case.3
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01"), // case.4
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00"), // case.5
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x01"), // case.6
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x03ROW"), // case.7
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01"), // case.8
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\xFF"
+          + "\\xFF\\xFF\\xFF\\xFF\\xFF\\xFF\\xFF\\x03"), // case.9
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x03"), // case.10
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04"), // case.11
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04VALUE"), // case.12
+    };
+    String[] outputs = new String[] { "Overflow when reading key length at position=0",
+      "Overflow when reading key length at position=0",
+      "Invalid key length in KeyValue. keyLength=1",
+      "Overflow when reading value length at position=4",
+      "Invalid value length in KeyValue, valueLength=1",
+      "Overflow when reading row length at position=8",
+      "Invalid row length in KeyValue, rowLength=1",
+      "Overflow when reading family length at position=13",
+      "Invalid family length in KeyValue, familyLength=1", "Timestamp cannot be negative, ts=-1",
+      "Invalid type in KeyValue, type=3", "Overflow when reading value part at position=25",
+      "Invalid tags length in KeyValue at position=26", };
+    byte[][] withTagsInputs = new byte[][] {
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x01"), // case.13
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x01"), // case.14
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x04\\x00\\x03\\x00A"), // case.15
+      // case.16
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0A\\x00\\x04\\x00TAG\\x00\\x04"
+          + "\\xFFT"),
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0C\\x00\\x04\\x00TAG\\x00\\x05"
+          + "\\xF0COME\\x00"), // case.17
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0C\\x00\\x04\\x00TAG\\x00\\x05"
+          + "\\xF0COME"), // case.18
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x00"), // case.19
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x1B\\x00\\x05\\x01TAG1\\x00\\x05"
+          + "\\x02TAG2\\x00\\x05\\x03TAG3\\x00\\x05\\x04TAG4"), // case.20
+    };
+    String[] withTagsOutputs = new String[] { "Overflow when reading tags length at position=26",
+      "Invalid tags length in KeyValue at position=26",
+      "Invalid tag length at position=28, tagLength=3",
+      "Invalid tag length at position=34, tagLength=4",
+      "Some redundant bytes in KeyValue's buffer, startOffset=41, endOffset=42", null, null,
+      null, };
+    assertEquals(inputs.length, outputs.length);
+    assertEquals(withTagsInputs.length, withTagsOutputs.length);
+
+    FailureCase[] cases = new FailureCase[inputs.length + withTagsInputs.length];
+    for (int i = 0; i < inputs.length; i++) {
+      cases[i] = new FailureCase(inputs[i], 0, inputs[i].length, false, outputs[i]);
+    }
+    for (int i = 0; i < withTagsInputs.length; i++) {
+      cases[inputs.length + i] =
+          new FailureCase(withTagsInputs[i], 0, withTagsInputs[i].length, true, withTagsOutputs[i]);
     }
 
-    /**
-     * This returns the total length of the tag bytes
-     */
-    @Override
-    public int getTagsLength() {
-      return this.kv.getTagsLength();
-    }
-
-    /**
-     *
-     * @return Timestamp
-     */
-    @Override
-    public long getTimestamp() {
-      return this.kv.getTimestamp();
-    }
-
-    /**
-     * @return KeyValue.TYPE byte representation
-     */
-    @Override
-    public byte getTypeByte() {
-      return this.kv.getTypeByte();
-    }
-
-    /**
-     * @return the backing array of the entire KeyValue (all KeyValue fields are
-     *         in a single array)
-     */
-    @Override
-    public byte[] getValueArray() {
-      return this.kv.getValueArray();
-    }
-
-    /**
-     * @return the value offset
-     */
-    @Override
-    public int getValueOffset() {
-      return this.kv.getValueOffset();
-    }
-
-    /**
-     * @return Value length
-     */
-    @Override
-    public int getValueLength() {
-      return this.kv.getValueLength();
-    }
-
-    /**
-     * @return the backing array of the entire KeyValue (all KeyValue fields are
-     *         in a single array)
-     */
-    @Override
-    public byte[] getRowArray() {
-      return this.kv.getRowArray();
-    }
-
-    /**
-     * @return Row offset
-     */
-    @Override
-    public int getRowOffset() {
-      return this.kv.getRowOffset();
-    }
-
-    /**
-     * @return Row length
-     */
-    @Override
-    public short getRowLength() {
-      return this.kv.getRowLength();
-    }
-
-    /**
-     * @return the backing array of the entire KeyValue (all KeyValue fields are
-     *         in a single array)
-     */
-    @Override
-    public byte[] getFamilyArray() {
-      return this.kv.getFamilyArray();
-    }
-
-    /**
-     * @return Family offset
-     */
-    @Override
-    public int getFamilyOffset() {
-      return this.kv.getFamilyOffset();
-    }
-
-    /**
-     * @return Family length
-     */
-    @Override
-    public byte getFamilyLength() {
-      return this.kv.getFamilyLength();
-    }
-
-    /**
-     * @return the backing array of the entire KeyValue (all KeyValue fields are
-     *         in a single array)
-     */
-    @Override
-    public byte[] getQualifierArray() {
-      return this.kv.getQualifierArray();
-    }
-
-    /**
-     * @return Qualifier offset
-     */
-    @Override
-    public int getQualifierOffset() {
-      return this.kv.getQualifierOffset();
-    }
-
-    /**
-     * @return Qualifier length
-     */
-    @Override
-    public int getQualifierLength() {
-      return this.kv.getQualifierLength();
-    }
-
-    /**
-     * @return the backing array of the entire KeyValue (all KeyValue fields are
-     *         in a single array)
-     */
-    @Override
-    public byte[] getTagsArray() {
-      return this.kv.getTagsArray();
+    for (int i = 0; i < cases.length; i++) {
+      FailureCase c = cases[i];
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      DataOutputStream os = new DataOutputStream(baos);
+      ByteBufferUtils.putInt(os, c.length);
+      os.write(c.buf, c.offset, c.length);
+      try {
+        KeyValueUtil.createKeyValueFromInputStream(
+          new DataInputStream(new ByteArrayInputStream(baos.toByteArray())), c.withTags);
+        if (c.expectedMessage != null) {
+          fail("Should fail when parse key value from an invalid bytes for case#" + i + ". " + c);
+        }
+      } catch (IllegalArgumentException e) {
+        assertEquals("Case#" + i + " failed," + c, c.getExpectedMessage(), e.getMessage());
+      }
     }
   }
 }

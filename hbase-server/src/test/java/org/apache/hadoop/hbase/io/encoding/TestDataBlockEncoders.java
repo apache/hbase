@@ -332,7 +332,7 @@ public class TestDataBlockEncoders {
     byte[] family = new byte[0];
     byte[] qualifier = new byte[0];
     byte[] value = new byte[0];
-    KeyValue expectedKV = new KeyValue(row, family, qualifier, -1L, Type.Put, value);
+    KeyValue expectedKV = new KeyValue(row, family, qualifier, 1L, Type.Put, value);
     kvList.add(expectedKV);
     DataBlockEncoding encoding = DataBlockEncoding.ROW_INDEX_V1;
     DataBlockEncoder encoder = encoding.getEncoder();
