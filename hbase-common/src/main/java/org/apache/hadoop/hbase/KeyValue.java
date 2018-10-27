@@ -252,6 +252,15 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
+     * True to indicate that the byte b is a valid type.
+     * @param b byte to check
+     * @return true or false
+     */
+    static boolean isValidType(byte b) {
+      return codeArray[b & 0xff] != null;
+    }
+
+    /**
      * Cannot rely on enum ordinals . They change if item is removed or moved.
      * Do our own codes.
      * @param b
