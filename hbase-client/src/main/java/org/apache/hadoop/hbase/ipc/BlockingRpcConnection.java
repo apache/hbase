@@ -579,7 +579,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   private void negotiateCryptoAes(RPCProtos.CryptoCipherMeta cryptoCipherMeta)
       throws IOException {
-    // initilize the Crypto AES with CryptoCipherMeta
+    // initialize the Crypto AES with CryptoCipherMeta
     saslRpcClient.initCryptoCipher(cryptoCipherMeta, this.rpcClient.conf);
     // reset the inputStream/outputStream for Crypto AES encryption
     this.in = new DataInputStream(new BufferedInputStream(saslRpcClient.getInputStream()));
