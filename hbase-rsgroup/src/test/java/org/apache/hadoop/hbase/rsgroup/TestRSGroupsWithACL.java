@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.security.access.TableAuthManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -177,9 +178,10 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     try {
       assertEquals(4, AccessControlClient.getUserPermissions(systemUserConnection,
           TEST_TABLE.toString()).size());
+    } catch (AssertionError e) {
+      fail(e.getMessage());
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
-      fail("error during call of AccessControlClient.getUserPermissions.");
     }
   }
 

@@ -21,9 +21,11 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -139,16 +141,13 @@ public class Action {
       return new ServerName [] {};
     }
     ServerName master = clusterStatus.getMasterName();
-    if (master == null || !regionServers.contains(master)) {
-      return regionServers.toArray(new ServerName[count]);
-    }
-    if (count == 1) {
-      return new ServerName [] {};
-    }
+    Set<ServerName> masters = new HashSet<ServerName>();
+    masters.add(master);
+    masters.addAll(clusterStatus.getBackupMasterNames());
     ArrayList<ServerName> tmp = new ArrayList<>(count);
     tmp.addAll(regionServers);
-    tmp.remove(master);
-    return tmp.toArray(new ServerName[count-1]);
+    tmp.removeAll(masters);
+    return tmp.toArray(new ServerName[tmp.size()]);
   }
 
   protected void killMaster(ServerName server) throws IOException {

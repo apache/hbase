@@ -758,14 +758,15 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public void requestFlush(HRegion region, boolean forceFlushAllStores,
+    public boolean requestFlush(HRegion region, boolean forceFlushAllStores,
         FlushLifeCycleTracker tracker) {
       this.listener.flushRequested(flushType, region);
+      return true;
     }
 
     @Override
-    public void requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores) {
-
+    public boolean requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores) {
+      return true;
     }
 
     @Override

@@ -86,6 +86,11 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   @Override
+  public void addFront(final Procedure procedure, boolean notify) {
+    push(procedure, true, notify);
+  }
+
+  @Override
   public void addFront(Iterator<Procedure> procedureIterator) {
     schedLock();
     try {
@@ -107,6 +112,11 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   @Override
   public void addBack(final Procedure procedure) {
     push(procedure, false, true);
+  }
+
+  @Override
+  public void addBack(final Procedure procedure, boolean notify) {
+    push(procedure, false, notify);
   }
 
   protected void push(final Procedure procedure, final boolean addFront, final boolean notify) {

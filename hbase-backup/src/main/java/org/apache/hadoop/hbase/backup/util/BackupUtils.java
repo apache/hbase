@@ -327,7 +327,7 @@ public final class BackupUtils {
       if (expMsg.contains("No FileSystem for scheme")) {
         newMsg =
             "Unsupported filesystem scheme found in the backup target url. Error Message: "
-                + newMsg;
+                + expMsg;
         LOG.error(newMsg);
         throw new IOException(newMsg);
       } else {

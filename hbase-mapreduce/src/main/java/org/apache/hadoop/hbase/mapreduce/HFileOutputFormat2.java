@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -149,6 +150,8 @@ public class HFileOutputFormat2
       "hbase.hfileoutputformat.families.compression";
   static final String BLOOM_TYPE_FAMILIES_CONF_KEY =
       "hbase.hfileoutputformat.families.bloomtype";
+  static final String BLOOM_PARAM_FAMILIES_CONF_KEY =
+      "hbase.hfileoutputformat.families.bloomparam";
   static final String BLOCK_SIZE_FAMILIES_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.blocksize";
   static final String DATABLOCK_ENCODING_FAMILIES_CONF_KEY =
@@ -216,6 +219,7 @@ public class HFileOutputFormat2
     // create a map from column family to the compression algorithm
     final Map<byte[], Algorithm> compressionMap = createFamilyCompressionMap(conf);
     final Map<byte[], BloomType> bloomTypeMap = createFamilyBloomTypeMap(conf);
+    final Map<byte[], String> bloomParamMap = createFamilyBloomParamMap(conf);
     final Map<byte[], Integer> blockSizeMap = createFamilyBlockSizeMap(conf);
 
     String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_OVERRIDE_CONF_KEY);
@@ -399,6 +403,12 @@ public class HFileOutputFormat2
         compression = compression == null ? defaultCompression : compression;
         BloomType bloomType = bloomTypeMap.get(tableAndFamily);
         bloomType = bloomType == null ? BloomType.NONE : bloomType;
+        String bloomParam = bloomParamMap.get(tableAndFamily);
+        if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+          conf.set(BloomFilterUtil.PREFIX_LENGTH_KEY, bloomParam);
+        } else if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
+          conf.set(BloomFilterUtil.DELIMITER_KEY, bloomParam);
+        }
         Integer blockSize = blockSizeMap.get(tableAndFamily);
         blockSize = blockSize == null ? HConstants.DEFAULT_BLOCKSIZE : blockSize;
         DataBlockEncoding encoding = overriddenEncoding;
@@ -667,6 +677,8 @@ public class HFileOutputFormat2
             tableDescriptors));
     conf.set(BLOOM_TYPE_FAMILIES_CONF_KEY, serializeColumnFamilyAttribute(bloomTypeDetails,
             tableDescriptors));
+    conf.set(BLOOM_PARAM_FAMILIES_CONF_KEY, serializeColumnFamilyAttribute(bloomParamDetails,
+        tableDescriptors));
     conf.set(DATABLOCK_ENCODING_FAMILIES_CONF_KEY,
             serializeColumnFamilyAttribute(dataBlockEncodingDetails, tableDescriptors));
 
@@ -694,6 +706,8 @@ public class HFileOutputFormat2
         serializeColumnFamilyAttribute(blockSizeDetails, singleTableDescriptor));
     conf.set(BLOOM_TYPE_FAMILIES_CONF_KEY,
         serializeColumnFamilyAttribute(bloomTypeDetails, singleTableDescriptor));
+    conf.set(BLOOM_PARAM_FAMILIES_CONF_KEY,
+        serializeColumnFamilyAttribute(bloomParamDetails, singleTableDescriptor));
     conf.set(DATABLOCK_ENCODING_FAMILIES_CONF_KEY,
         serializeColumnFamilyAttribute(dataBlockEncodingDetails, singleTableDescriptor));
 
@@ -740,6 +754,19 @@ public class HFileOutputFormat2
     }
     return bloomTypeMap;
   }
+
+  /**
+   * Runs inside the task to deserialize column family to bloom filter param
+   * map from the configuration.
+   *
+   * @param conf to read the serialized values from
+   * @return a map from column family to the the configured bloom filter param
+   */
+  @VisibleForTesting
+  static Map<byte[], String> createFamilyBloomParamMap(Configuration conf) {
+    return createFamilyConfValueMap(conf, BLOOM_PARAM_FAMILIES_CONF_KEY);
+  }
+
 
   /**
    * Runs inside the task to deserialize column family to block size
@@ -906,6 +933,30 @@ public class HFileOutputFormat2
       bloomType = ColumnFamilyDescriptorBuilder.DEFAULT_BLOOMFILTER.name();
     }
     return bloomType;
+  };
+
+  /**
+   * Serialize column family to bloom param map to configuration. Invoked while
+   * configuring the MR job for incremental load.
+   *
+   * @param tableDescriptor
+   *          to read the properties from
+   * @param conf
+   *          to persist serialized values into
+   *
+   * @throws IOException
+   *           on failure to read column family descriptors
+   */
+  @VisibleForTesting
+  static Function<ColumnFamilyDescriptor, String> bloomParamDetails = familyDescriptor -> {
+    BloomType bloomType = familyDescriptor.getBloomFilterType();
+    String bloomParam = "";
+    if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+      bloomParam = familyDescriptor.getConfigurationValue(BloomFilterUtil.PREFIX_LENGTH_KEY);
+    } else if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
+      bloomParam = familyDescriptor.getConfigurationValue(BloomFilterUtil.DELIMITER_KEY);
+    }
+    return bloomParam;
   };
 
   /**

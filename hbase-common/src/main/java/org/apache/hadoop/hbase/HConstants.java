@@ -1325,6 +1325,7 @@ public final class HConstants {
     "hbase.regionserver.region.split.threads.max";
 
   /** Canary config keys */
+  // TODO: Move these defines to Canary Class
   public static final String HBASE_CANARY_WRITE_DATA_TTL_KEY = "hbase.canary.write.data.ttl";
 
   public static final String HBASE_CANARY_WRITE_PERSERVER_REGIONS_LOWERLIMIT_KEY =

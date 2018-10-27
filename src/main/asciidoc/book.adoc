@@ -86,7 +86,6 @@ include::_chapters/community.adoc[]
 
 include::_chapters/appendix_contributing_to_documentation.adoc[]
 include::_chapters/faq.adoc[]
-include::_chapters/hbck_in_depth.adoc[]
 include::_chapters/appendix_acl_matrix.adoc[]
 include::_chapters/compression.adoc[]
 include::_chapters/sql.adoc[]

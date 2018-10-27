@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -271,7 +272,7 @@ public final class ProcedureUtil {
     }
 
     if (proto.getBypass()) {
-      proc.bypass();
+      proc.bypass(null);
     }
 
     ProcedureStateSerializer serializer = null;
@@ -343,6 +344,9 @@ public final class ProcedureUtil {
     if (attempts >= 30) {
       return maxBackoffTime;
     }
-    return Math.min((long) (1000 * Math.pow(2, attempts)), maxBackoffTime);
+    long backoffTimeMs = Math.min((long) (1000 * Math.pow(2, attempts)), maxBackoffTime);
+    // 1% possible jitter
+    long jitter = (long) (backoffTimeMs * ThreadLocalRandom.current().nextFloat() * 0.01f);
+    return backoffTimeMs + jitter;
   }
 }

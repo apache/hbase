@@ -120,6 +120,10 @@
       <item name="Bulk Loads" href="book.html#arch.bulk.load" target="_blank" />
       <item name="Metrics" href="metrics.html" target="_blank" />
       <item name="Cluster replication" href="book.html#replication" target="_blank" />
+      <item name="2.1 Documentation">
+        <item name="API" href="2.1/apidocs/index.html" target="_blank" />
+        <item name="Ref Guide (single-page)" href="2.1/book.html" target="_blank" />
+      </item>
       <item name="2.0 Documentation">
         <item name="API" href="2.0/apidocs/index.html" target="_blank" />
         <item name="Ref Guide (single-page)" href="2.0/book.html" target="_blank" />

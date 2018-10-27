@@ -30,7 +30,7 @@ String format = "html";
 <%if format.equals("json")%>
     <& renderTasks; filter=filter &>
 <%else>
-  <h2>Tasks</h2>
+  <h2><a name="tasks">Tasks</a></h2>
 
   <div class="tabbable">
       <ul class="nav nav-pills">

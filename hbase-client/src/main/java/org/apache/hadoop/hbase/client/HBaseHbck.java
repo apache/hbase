@@ -18,24 +18,37 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
  * Use {@link ClusterConnection#getHbck()} to obtain an instance of {@link Hbck} instead of
- * constructing
- * an HBaseHbck directly. This will be mostly used by hbck tool.
+ * constructing an HBaseHbck directly.
  *
  * <p>Connection should be an <i>unmanaged</i> connection obtained via
  * {@link ConnectionFactory#createConnection(Configuration)}.</p>
+ *
+ * <p>NOTE: The methods in here can do damage to a cluster if applied in the wrong sequence or at
+ * the wrong time. Use with caution. For experts only. These methods are only for the
+ * extreme case where the cluster has been damaged or has achieved an inconsistent state because
+ * of some unforeseen circumstance or bug and requires manual intervention.
  *
  * <p>An instance of this class is lightweight and not-thread safe. A new instance should be created
  * by each thread. Pooling or caching of the instance is not recommended.</p>
@@ -75,10 +88,6 @@ public class HBaseHbck implements Hbck {
     return this.aborted;
   }
 
-  /**
-   * NOTE: This is a dangerous action, as existing running procedures for the table or regions
-   * which belong to the table may get confused.
-   */
   @Override
   public TableState setTableStateInMeta(TableState state) throws IOException {
     try {
@@ -87,9 +96,62 @@ public class HBaseHbck implements Hbck {
           RequestConverter.buildSetTableStateInMetaRequest(state));
       return TableState.convert(state.getTableName(), response.getTableState());
     } catch (ServiceException se) {
-      LOG.debug("ServiceException while updating table state in meta. table={}, state={}",
-          state.getTableName(), state.getState());
+      LOG.debug("table={}, state={}", state.getTableName(), state.getState(), se);
       throw new IOException(se);
     }
+  }
+
+  @Override
+  public List<Long> assigns(List<String> encodedRegionNames, boolean override)
+      throws IOException {
+    try {
+      MasterProtos.AssignsResponse response =
+          this.hbck.assigns(rpcControllerFactory.newController(),
+              RequestConverter.toAssignRegionsRequest(encodedRegionNames, override));
+      return response.getPidList();
+    } catch (ServiceException se) {
+      LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
+      throw new IOException(se);
+    }
+  }
+
+  @Override
+  public List<Long> unassigns(List<String> encodedRegionNames, boolean override)
+      throws IOException {
+    try {
+      MasterProtos.UnassignsResponse response =
+          this.hbck.unassigns(rpcControllerFactory.newController(),
+              RequestConverter.toUnassignRegionsRequest(encodedRegionNames, override));
+      return response.getPidList();
+    } catch (ServiceException se) {
+      LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
+      throw new IOException(se);
+    }
+  }
+
+  private static String toCommaDelimitedString(List<String> list) {
+    return list.stream().collect(Collectors.joining(", "));
+  }
+
+  @Override
+  public List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override,
+      boolean recursive)
+      throws IOException {
+    MasterProtos.BypassProcedureResponse response = ProtobufUtil.call(
+        new Callable<MasterProtos.BypassProcedureResponse>() {
+          @Override
+          public MasterProtos.BypassProcedureResponse call() throws Exception {
+            try {
+              return hbck.bypassProcedure(rpcControllerFactory.newController(),
+                  MasterProtos.BypassProcedureRequest.newBuilder().addAllProcId(pids).
+                      setWaitTime(waitTime).setOverride(override).setRecursive(recursive).build());
+            } catch (Throwable t) {
+              LOG.error(pids.stream().map(i -> i.toString()).
+                  collect(Collectors.joining(", ")), t);
+              throw t;
+            }
+          }
+        });
+    return response.getBypassedList();
   }
 }

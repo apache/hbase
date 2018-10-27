@@ -299,11 +299,9 @@ public class TestChecksum {
         long expectedChunks = ChecksumUtil.numChunks(
                                dataSize + HConstants.HFILEBLOCK_HEADER_SIZE,
                                bytesPerChecksum);
-        LOG.info("testChecksumChunks: pread=" + pread +
-                   ", bytesPerChecksum=" + bytesPerChecksum +
-                   ", fileSize=" + totalSize +
-                   ", dataSize=" + dataSize +
-                   ", expectedChunks=" + expectedChunks);
+        LOG.info("testChecksumChunks: pread={}, bytesPerChecksum={}, fileSize={}, "
+                + "dataSize={}, expectedChunks={}, compression={}", pread, bytesPerChecksum,
+            totalSize, dataSize, expectedChunks, algo.toString());
 
         // Verify hbase checksums.
         assertEquals(true, hfs.useHBaseChecksum());

@@ -33,7 +33,9 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -51,6 +53,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
@@ -64,6 +67,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -827,8 +831,8 @@ public class TestFromClientSide3 {
         }
       });
       ExecutorService cpService = Executors.newSingleThreadExecutor();
+      AtomicBoolean exceptionDuringMutateRows = new AtomicBoolean();
       cpService.execute(() -> {
-        boolean threw;
         Put put1 = new Put(row);
         Put put2 = new Put(rowLocked);
         put1.addColumn(FAMILY, QUALIFIER, value1);
@@ -842,26 +846,25 @@ public class TestFromClientSide3 {
                       org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.PUT, put2))
               .build();
           table.coprocessorService(MultiRowMutationProtos.MultiRowMutationService.class,
-            ROW, ROW,
+              ROW, ROW,
             (MultiRowMutationProtos.MultiRowMutationService exe) -> {
               ServerRpcController controller = new ServerRpcController();
               CoprocessorRpcUtils.BlockingRpcCallback<MultiRowMutationProtos.MutateRowsResponse>
                 rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
               exe.mutateRows(controller, request, rpcCallback);
+              if (controller.failedOnException() && !(controller.getFailedOn() instanceof UnknownProtocolException)) {
+                exceptionDuringMutateRows.set(true);
+              }
               return rpcCallback.get();
             });
-          threw = false;
         } catch (Throwable ex) {
-          threw = true;
-        }
-        if (!threw) {
-          // Can't call fail() earlier because the catch would eat it.
-          fail("This cp should fail because the target lock is blocked by previous put");
+          LOG.error("encountered " + ex);
         }
       });
       cpService.shutdown();
       cpService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-      WaitingForMultiMutationsObserver observer = find(tableName, WaitingForMultiMutationsObserver.class);
+      WaitingForMultiMutationsObserver observer = find(tableName,
+          WaitingForMultiMutationsObserver.class);
       observer.latch.countDown();
       putService.shutdown();
       putService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -875,6 +878,9 @@ public class TestFromClientSide3 {
         assertTrue(Bytes.equals(r1.getValue(FAMILY, QUALIFIER), value0));
       }
       assertNoLocks(tableName);
+      if (!exceptionDuringMutateRows.get()) {
+        fail("This cp should fail because the target lock is blocked by previous put");
+      }
     }
   }
 
@@ -1050,6 +1056,79 @@ public class TestFromClientSide3 {
             final Scan scan, final RegionScanner s) throws IOException {
       latch.countDown();
       return s;
+    }
+  }
+
+  private static byte[] generateHugeValue(int size) {
+    Random rand = ThreadLocalRandom.current();
+    byte[] value = new byte[size];
+    for (int i = 0; i < value.length; i++) {
+      value[i] = (byte) rand.nextInt(256);
+    }
+    return value;
+  }
+
+  @Test
+  public void testScanWithBatchSizeReturnIncompleteCells() throws IOException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor hd = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3).build())
+        .build();
+
+    Table table = TEST_UTIL.createTable(hd, null);
+
+    Put put = new Put(ROW);
+    put.addColumn(FAMILY, Bytes.toBytes(0), generateHugeValue(3 * 1024 * 1024));
+    table.put(put);
+
+    put = new Put(ROW);
+    put.addColumn(FAMILY, Bytes.toBytes(1), generateHugeValue(4 * 1024 * 1024));
+    table.put(put);
+
+    for (int i = 2; i < 5; i++) {
+      for (int version = 0; version < 2; version++) {
+        put = new Put(ROW);
+        put.addColumn(FAMILY, Bytes.toBytes(i), generateHugeValue(1024));
+        table.put(put);
+      }
+    }
+
+    Scan scan = new Scan();
+    scan.withStartRow(ROW).withStopRow(ROW).addFamily(FAMILY).setBatch(3)
+        .setMaxResultSize(4 * 1024 * 1024);
+    Result result;
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      List<Result> list = new ArrayList<>();
+      /*
+       * The first scan rpc should return a result with 2 cells, because 3MB + 4MB > 4MB; The second
+       * scan rpc should return a result with 3 cells, because reach the batch limit = 3; The
+       * mayHaveMoreCellsInRow in last result should be false in the scan rpc. BTW, the
+       * moreResultsInRegion also would be false. Finally, the client should collect all the cells
+       * into two result: 2+3 -> 3+2;
+       */
+      while ((result = scanner.next()) != null) {
+        list.add(result);
+      }
+
+      Assert.assertEquals(5, list.stream().mapToInt(Result::size).sum());
+      Assert.assertEquals(2, list.size());
+      Assert.assertEquals(3, list.get(0).size());
+      Assert.assertEquals(2, list.get(1).size());
+    }
+
+    scan = new Scan();
+    scan.withStartRow(ROW).withStopRow(ROW).addFamily(FAMILY).setBatch(2)
+        .setMaxResultSize(4 * 1024 * 1024);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      List<Result> list = new ArrayList<>();
+      while ((result = scanner.next()) != null) {
+        list.add(result);
+      }
+      Assert.assertEquals(5, list.stream().mapToInt(Result::size).sum());
+      Assert.assertEquals(3, list.size());
+      Assert.assertEquals(2, list.get(0).size());
+      Assert.assertEquals(2, list.get(1).size());
+      Assert.assertEquals(1, list.get(2).size());
     }
   }
 }

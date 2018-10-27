@@ -111,14 +111,16 @@ public class CatalogJanitor extends ScheduledChore {
   protected void chore() {
     try {
       AssignmentManager am = this.services.getAssignmentManager();
-      if (this.enabled.get() && !this.services.isInMaintenanceMode() && am != null &&
+      if (this.enabled.get() && !this.services.isInMaintenanceMode() &&
+        !this.services.getServerManager().isClusterShutdown() && am != null &&
         am.isMetaLoaded() && !am.hasRegionsInTransition()) {
         scan();
       } else {
         LOG.warn("CatalogJanitor is disabled! Enabled=" + this.enabled.get() +
           ", maintenanceMode=" + this.services.isInMaintenanceMode() + ", am=" + am +
           ", metaLoaded=" + (am != null && am.isMetaLoaded()) + ", hasRIT=" +
-          (am != null && am.hasRegionsInTransition()));
+          (am != null && am.hasRegionsInTransition()) + " clusterShutDown=" + this.services
+          .getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
       LOG.warn("Failed scan of catalog table", e);

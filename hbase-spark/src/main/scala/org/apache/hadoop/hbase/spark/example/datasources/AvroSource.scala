@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.spark.example.datasources
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData
 import org.apache.hadoop.hbase.spark.AvroSerdes
-import org.apache.spark.sql.datasources.hbase.HBaseTableCatalog
+import org.apache.hadoop.hbase.spark.datasources.HBaseTableCatalog
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.SparkConf

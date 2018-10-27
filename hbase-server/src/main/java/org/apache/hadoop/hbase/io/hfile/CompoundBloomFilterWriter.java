@@ -174,12 +174,12 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
             + Bytes.toStringBinary(firstKeyInChunk));
       }
       // This will be done only once per chunk
-      if (bloomType == BloomType.ROW) {
-        firstKeyInChunk = CellUtil.copyRow(cell);
-      } else {
+      if (bloomType == BloomType.ROWCOL) {
         firstKeyInChunk =
             PrivateCellUtil
                 .getCellKeySerializedAsKeyValueKey(PrivateCellUtil.createFirstOnRowCol(cell));
+      } else {
+        firstKeyInChunk = CellUtil.copyRow(cell);
       }
       allocateNewChunk();
     }

@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
@@ -1010,8 +1012,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected ClusterMetrics clusterStatus = null;
   protected ServerName masterServerName;
   protected MasterServices services;
-  protected boolean tablesOnMaster;
   protected boolean onlySystemTablesOnMaster;
+  protected boolean maintenanceMode;
 
   @Override
   public void setConf(Configuration conf) {
@@ -1023,20 +1025,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     if (overallSlop < 0) overallSlop = 0;
     else if (overallSlop > 1) overallSlop = 1;
 
-    this.tablesOnMaster = LoadBalancer.isTablesOnMaster(this.config);
     this.onlySystemTablesOnMaster = LoadBalancer.isSystemTablesOnlyOnMaster(this.config);
-    // If system tables on master, implies tablesOnMaster = true.
-    if (this.onlySystemTablesOnMaster && !this.tablesOnMaster) {
-      LOG.warn("Set " + TABLES_ON_MASTER + "=true because " + SYSTEM_TABLES_ON_MASTER + "=true");
-      this.tablesOnMaster = true;
-    }
+
     this.rackManager = new RackManager(getConf());
     if (useRegionFinder) {
       regionFinder.setConf(conf);
     }
     // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.
-    LOG.info("slop=" + this.slop + ", tablesOnMaster=" + this.tablesOnMaster +
-      ", systemTablesOnMaster=" + this.onlySystemTablesOnMaster);
+    LOG.info("slop={}, systemTablesOnMaster={}",
+        this.slop, this.onlySystemTablesOnMaster);
   }
 
   protected void setSlop(Configuration conf) {
@@ -1049,7 +1046,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * If so, the primary replica may be expected to be put on the master regionserver.
    */
   public boolean shouldBeOnMaster(RegionInfo region) {
-    return this.onlySystemTablesOnMaster && region.getTable().isSystemTable();
+    return (this.maintenanceMode || this.onlySystemTablesOnMaster)
+        && region.getTable().isSystemTable();
   }
 
   /**
@@ -1110,7 +1108,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return null;
     }
     Map<ServerName, List<RegionInfo>> assignments = new TreeMap<>();
-    if (this.onlySystemTablesOnMaster) {
+    if (this.maintenanceMode || this.onlySystemTablesOnMaster) {
       if (masterServerName != null && servers.contains(masterServerName)) {
         assignments.put(masterServerName, new ArrayList<>());
         for (RegionInfo region : regions) {
@@ -1147,6 +1145,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     this.services = masterServices;
     if (useRegionFinder) {
       this.regionFinder.setServices(masterServices);
+    }
+    if (this.services.isInMaintenanceMode()) {
+      this.maintenanceMode = true;
     }
   }
 
@@ -1240,7 +1241,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         regions.removeAll(masterRegions);
       }
     }
-    if (regions == null || regions.isEmpty()) {
+    if (this.maintenanceMode || regions == null || regions.isEmpty()) {
       return assignments;
     }
 
@@ -1413,7 +1414,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       regions = regions.entrySet().stream().filter(e -> !masterRegions.contains(e.getKey()))
           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
-    if (regions.isEmpty()) {
+    if (this.maintenanceMode || regions.isEmpty()) {
       return assignments;
     }
 
@@ -1456,10 +1457,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       ServerName oldServerName = entry.getValue();
       // In the current set of regions even if one has region replica let us go with
       // getting the entire snapshot
-      if (this.services != null && this.services.getAssignmentManager() != null) { // for tests
-        if (!hasRegionReplica && this.services.getAssignmentManager().getRegionStates()
-            .isReplicaAvailableForRegion(region)) {
-          hasRegionReplica = true;
+      if (this.services != null) { // for tests
+        AssignmentManager am = this.services.getAssignmentManager();
+        if (am != null) {
+          RegionStates states = am.getRegionStates();
+          if (!hasRegionReplica && states != null && states.isReplicaAvailableForRegion(region)) {
+            hasRegionReplica = true;
+          }
         }
       }
       List<ServerName> localServers = new ArrayList<>();
@@ -1550,6 +1554,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   public void stop(String why) {
     LOG.info("Load Balancer stop requested: "+why);
     stopped = true;
+  }
+
+  /**
+  * Updates the balancer status tag reported to JMX
+  */
+  public void updateBalancerStatus(boolean status) {
+    metricsBalancer.balancerStatus(status);
   }
 
   /**

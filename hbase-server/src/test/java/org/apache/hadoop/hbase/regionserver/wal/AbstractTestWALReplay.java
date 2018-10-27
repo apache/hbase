@@ -869,7 +869,7 @@ public abstract class AbstractTestWALReplay {
     final TableName tableName = TableName.valueOf(currentTest.getMethodName());
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir =
-        FSUtils.getTableDir(this.hbaseRootDir, tableName);
+        FSUtils.getWALTableDir(conf, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
@@ -902,7 +902,7 @@ public abstract class AbstractTestWALReplay {
     WALSplitter.splitLogFile(hbaseRootDir, listStatus[0],
         this.fs, this.conf, null, null, null, wals);
     FileStatus[] listStatus1 = this.fs.listStatus(
-      new Path(FSUtils.getTableDir(hbaseRootDir, tableName), new Path(hri.getEncodedName(),
+      new Path(FSUtils.getWALTableDir(conf, tableName), new Path(hri.getEncodedName(),
           "recovered.edits")), new PathFilter() {
         @Override
         public boolean accept(Path p) {
@@ -929,13 +929,13 @@ public abstract class AbstractTestWALReplay {
   public void testDatalossWhenInputError() throws Exception {
     final TableName tableName = TableName.valueOf("testDatalossWhenInputError");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    final Path basedir = FSUtils.getTableDir(this.hbaseRootDir, tableName);
+    final Path basedir = FSUtils.getWALTableDir(conf, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
     final HTableDescriptor htd = createBasic1FamilyHTD(tableName);
     HRegion region1 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    Path regionDir = region1.getRegionFileSystem().getRegionDir();
+    Path regionDir = region1.getWALRegionDir();
     HBaseTestingUtility.closeRegionAndWAL(region1);
 
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
@@ -1110,16 +1110,18 @@ public abstract class AbstractTestWALReplay {
     private HRegion r;
 
     @Override
-    public void requestFlush(HRegion region, boolean force, FlushLifeCycleTracker tracker) {
+    public boolean requestFlush(HRegion region, boolean force, FlushLifeCycleTracker tracker) {
       try {
         r.flush(force);
+        return true;
       } catch (IOException e) {
         throw new RuntimeException("Exception flushing", e);
       }
     }
 
     @Override
-    public void requestDelayedFlush(HRegion region, long when, boolean forceFlushAllStores) {
+    public boolean requestDelayedFlush(HRegion region, long when, boolean forceFlushAllStores) {
+      return true;
     }
 
     @Override

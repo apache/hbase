@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -80,6 +81,8 @@ public class TestSeekBeforeWithInlineBlocks {
   @Test
   public void testMultiIndexLevelRandomHFileWithBlooms() throws IOException {
     conf = TEST_UTIL.getConfiguration();
+    TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
+    TEST_UTIL.getConfiguration().set(BloomFilterUtil.DELIMITER_KEY, "#");
 
     // Try out different HFile versions to ensure reverse scan works on each version
     for (int hfileVersion = HFile.MIN_FORMAT_VERSION_WITH_TAGS;
@@ -101,6 +104,8 @@ public class TestSeekBeforeWithInlineBlocks {
 
           conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, indexBlockSize);
           conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE, BLOOM_BLOCK_SIZE);
+          conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
+          conf.set(BloomFilterUtil.DELIMITER_KEY, "#");
 
           Cell[] cells = new Cell[NUM_KV];
 

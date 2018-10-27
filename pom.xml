@@ -453,6 +453,12 @@
       <timezone>-5</timezone>
     </developer>
     <developer>
+      <id>meszibalu</id>
+      <name>Balazs Meszaros</name>
+      <email>meszibalu@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>misty</id>
       <name>Misty Stanley-Jones</name>
       <email>misty@apache.org</email>
@@ -942,6 +948,7 @@
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
               <!-- MIT http://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
+              <exclude>**/jquery.tablesorter.min.js</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
@@ -1485,7 +1492,7 @@
     <metrics-core.version>3.2.1</metrics-core.version>
     <jackson.version>2.9.2</jackson.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
-    <jetty.version>9.3.19.v20170502</jetty.version>
+    <jetty.version>9.3.25.v20180904</jetty.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.0.1</wx.rs.api.version>
     <!-- Jersey 2.26 requires jetty 9.4 which breaks hadoop. Tread lightly. -->
@@ -1515,7 +1522,7 @@
     <joni.version>2.1.11</joni.version>
     <jcodings.version>1.0.18</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.46</bouncycastle.version>
+    <bouncycastle.version>1.60</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.0.0</curator.version>
@@ -2192,7 +2199,7 @@
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk16</artifactId>
+        <artifactId>bcprov-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -2959,6 +2966,10 @@
              <exclusion>
                <groupId>com.google.guava</groupId>
                <artifactId>guava</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>net.minidev</groupId>
+               <artifactId>json-smart</artifactId>
              </exclusion>
            </exclusions>
          </dependency>

@@ -39,6 +39,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionStateData;
@@ -114,7 +115,8 @@ public class TransitRegionStateProcedure
   public TransitRegionStateProcedure() {
   }
 
-  private TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
+  @VisibleForTesting
+  protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
       ServerName assignCandidate, boolean forceNewPlan, RegionStateTransitionState initialState,
       RegionStateTransitionState lastState) {
     super(env, hri);
@@ -329,6 +331,7 @@ public class TransitRegionStateProcedure
         backoff / 1000, this, regionNode.toShortString(), e);
       setTimeout(Math.toIntExact(backoff));
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+      skipPersistence();
       throw new ProcedureSuspendedException();
     }
   }
@@ -475,8 +478,9 @@ public class TransitRegionStateProcedure
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
-    RegionStateTransitionStateData.Builder builder = RegionStateTransitionStateData.newBuilder()
-      .setInitialState(initialState).setLastState(lastState).setForceNewPlan(forceNewPlan);
+    RegionStateTransitionStateData.Builder builder =
+        RegionStateTransitionStateData.newBuilder().setInitialState(initialState)
+            .setLastState(lastState).setForceNewPlan(forceNewPlan);
     if (assignCandidate != null) {
       builder.setAssignCandidate(ProtobufUtil.toServerName(assignCandidate));
     }

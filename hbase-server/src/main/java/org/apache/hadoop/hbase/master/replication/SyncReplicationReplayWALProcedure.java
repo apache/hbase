@@ -23,11 +23,9 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
-import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -38,13 +36,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
 
 @InterfaceAudience.Private
 public class SyncReplicationReplayWALProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, SyncReplicationReplayWALState>
-    implements PeerProcedureInterface {
+    extends AbstractPeerProcedure<SyncReplicationReplayWALState> {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(SyncReplicationReplayWALProcedure.class);
-
-  private String peerId;
 
   private ServerName worker = null;
 
@@ -58,9 +53,9 @@ public class SyncReplicationReplayWALProcedure
     this.wals = wals;
   }
 
-  @Override protected Flow executeFromState(MasterProcedureEnv env,
-      SyncReplicationReplayWALState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+  @Override
+  protected Flow executeFromState(MasterProcedureEnv env, SyncReplicationReplayWALState state)
+      throws ProcedureSuspendedException {
     SyncReplicationReplayWALManager syncReplicationReplayWALManager =
         env.getMasterServices().getSyncReplicationReplayWALManager();
     switch (state) {
@@ -68,15 +63,19 @@ public class SyncReplicationReplayWALProcedure
         try {
           worker = syncReplicationReplayWALManager.getPeerWorker(peerId);
         } catch (ReplicationException e) {
-          LOG.info("Failed to get worker to replay wals {} for peer id={}, retry", wals, peerId);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("Failed to get worker to replay wals {} for peer id={}, sleep {} secs and retry",
+            wals, peerId, backoff / 1000, e);
+          throw suspend(backoff);
         }
         if (worker == null) {
-          LOG.info("No worker to replay wals {} for peer id={}, retry", wals, peerId);
-          setNextState(SyncReplicationReplayWALState.ASSIGN_WORKER);
-        } else {
-          setNextState(SyncReplicationReplayWALState.DISPATCH_WALS_TO_WORKER);
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.info("No worker to replay wals {} for peer id={}, sleep {} secs and retry", wals,
+            peerId, backoff / 1000);
+          throw suspend(backoff);
         }
+        attempts = 0;
+        setNextState(SyncReplicationReplayWALState.DISPATCH_WALS_TO_WORKER);
         return Flow.HAS_MORE_STATE;
       case DISPATCH_WALS_TO_WORKER:
         addChildProcedure(new SyncReplicationReplayWALRemoteProcedure(peerId, wals, worker));
@@ -87,17 +86,23 @@ public class SyncReplicationReplayWALProcedure
         try {
           finished = syncReplicationReplayWALManager.isReplayWALFinished(wals.get(0));
         } catch (IOException e) {
-          LOG.info("Failed to check whether replay wals {} finished for peer id={}", wals, peerId);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("Failed to check whether replay wals {} finished for peer id={}" +
+              ", sleep {} secs and retry",
+            wals, peerId, backoff / 1000, e);
+          throw suspend(backoff);
         }
         try {
           syncReplicationReplayWALManager.removePeerWorker(peerId, worker);
         } catch (ReplicationException e) {
-          LOG.info("Failed to remove worker for peer id={}, retry", peerId);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("Failed to remove worker {} for peer id={}, sleep {} secs and retry", worker,
+            peerId, backoff / 1000, e);
+          throw suspend(backoff);
         }
+        attempts = 0;
         if (!finished) {
-          LOG.info("Failed to replay wals {} for peer id={}, retry", wals, peerId);
+          LOG.warn("Failed to replay wals {} for peer id={}, retry", wals, peerId);
           setNextState(SyncReplicationReplayWALState.ASSIGN_WORKER);
           return Flow.HAS_MORE_STATE;
         }
@@ -150,11 +155,6 @@ public class SyncReplicationReplayWALProcedure
     peerId = data.getPeerId();
     wals = new ArrayList<>();
     data.getWalList().forEach(wals::add);
-  }
-
-  @Override
-  public String getPeerId() {
-    return peerId;
   }
 
   @Override

@@ -1064,6 +1064,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Returns the ClusterStatus of the cluster
+    def getClusterStatus
+      @admin.getClusterStatus
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns a list of regionservers
     def getRegionServers
       @admin.getClusterStatus.getServers.map { |serverName| serverName }
@@ -1222,15 +1228,6 @@ module Hbase
     # Get security capabilities
     def get_security_capabilities
       @admin.getSecurityCapabilities
-    end
-
-    # Abort a procedure
-    def abort_procedure?(proc_id, may_interrupt_if_running = nil)
-      if may_interrupt_if_running.nil?
-        @admin.abortProcedure(proc_id, true)
-      else
-        @admin.abortProcedure(proc_id, may_interrupt_if_running)
-      end
     end
 
     # List all procedures

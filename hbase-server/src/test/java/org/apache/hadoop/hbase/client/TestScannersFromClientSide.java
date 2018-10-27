@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.RPC_CODEC_CONF_KEY;
+import static org.apache.hadoop.hbase.ipc.RpcClient.DEFAULT_CODEC_CLASS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -606,6 +608,30 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[5], 1, VALUE));
     verifyResult(result, kvListExp, toLog,
        "Testing offset + multiple CFs + maxResults");
+  }
+
+  @Test
+  public void testScanRawDeleteFamilyVersion() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, FAMILY);
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set(RPC_CODEC_CONF_KEY, "");
+    conf.set(DEFAULT_CODEC_CLASS, "");
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+        Table table = connection.getTable(tableName)) {
+      Delete delete = new Delete(ROW);
+      delete.addFamilyVersion(FAMILY, 0L);
+      table.delete(delete);
+      Scan scan = new Scan(ROW).setRaw(true);
+      ResultScanner scanner = table.getScanner(scan);
+      int count = 0;
+      while (scanner.next() != null) {
+        count++;
+      }
+      assertEquals(1, count);
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
   }
 
   /**

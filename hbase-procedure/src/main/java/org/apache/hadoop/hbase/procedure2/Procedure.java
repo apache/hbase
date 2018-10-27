@@ -145,29 +145,62 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   private boolean lockedWhenLoading = false;
 
   /**
-   * Used for force complete of the procedure without
-   * actually doing any logic in the procedure.
+   * Used for override complete of the procedure without actually doing any logic in the procedure.
    * If bypass is set to true, when executing it will return null when
-   * {@link #doExecute(Object)} to finish the procedure and releasing any locks
-   * it may currently hold.
-   * Bypassing a procedure is not like aborting. Aborting a procedure will trigger
+   * {@link #doExecute(Object)} is called to finish the procedure and release any locks
+   * it may currently hold. The bypass does cleanup around the Procedure as far as the
+   * Procedure framework is concerned. It does not clean any internal state that the
+   * Procedure's themselves may have set. That is for the Procedures to do themselves
+   * when bypass is called. They should override bypass and do their cleanup in the
+   * overridden bypass method (be sure to call the parent bypass to ensure proper
+   * processing).
+   * <p></p>Bypassing a procedure is not like aborting. Aborting a procedure will trigger
    * a rollback. And since the {@link #abort(Object)} method is overrideable
    * Some procedures may have chosen to ignore the aborting.
    */
   private volatile boolean bypass = false;
+
+  /**
+   * Indicate whether we need to persist the procedure to ProcedureStore after execution. Default to
+   * true, and the implementation can all {@link #skipPersistence()} to let the framework skip the
+   * persistence of the procedure.
+   * <p/>
+   * This is useful when the procedure is in error and you want to retry later. The retry interval
+   * and the number of retries are usually not critical so skip the persistence can save some
+   * resources, and also speed up the restart processing.
+   * <p/>
+   * Notice that this value will be reset to true every time before execution. And when rolling back
+   * we do not test this value.
+   */
+  private boolean persist = true;
 
   public boolean isBypass() {
     return bypass;
   }
 
   /**
-   * set the bypass to true
-   * Only called in {@link ProcedureExecutor#bypassProcedure(long, long, boolean)} for now,
-   * DO NOT use this method alone, since we can't just bypass
-   * one single procedure. We need to bypass its ancestor too. So making it package private
+   * Set the bypass to true.
+   * Only called in {@link ProcedureExecutor#bypassProcedure(long, long, boolean, boolean)} for now.
+   * DO NOT use this method alone, since we can't just bypass one single procedure. We need to
+   * bypass its ancestor too. If your Procedure has set state, it needs to undo it in here.
+   * @param env Current environment. May be null because of context; e.g. pretty-printing
+   *            procedure WALs where there is no 'environment' (and where Procedures that require
+   *            an 'environment' won't be run.
    */
-  void bypass() {
+  protected void bypass(TEnvironment env) {
     this.bypass = true;
+  }
+
+  boolean needPersistence() {
+    return persist;
+  }
+
+  void resetPersistence() {
+    persist = true;
+  }
+
+  protected final void skipPersistence() {
+    persist = false;
   }
 
   /**
@@ -296,7 +329,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * @see #holdLock(Object)
    * @return true if the procedure has the lock, false otherwise.
    */
-  protected final boolean hasLock() {
+  @VisibleForTesting
+  public final boolean hasLock() {
     return locked;
   }
 
@@ -677,10 +711,14 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Will only be called when loading procedures from procedure store, where we need to record
    * whether the procedure has already held a lock. Later we will call
-   * {@link #doAcquireLock(Object)} to actually acquire the lock.
+   * {@link #doAcquireLock(Object, ProcedureStore)} to actually acquire the lock.
    */
   final void lockedWhenLoading() {
     this.lockedWhenLoading = true;
+  }
+
+  public boolean isLockedWhenLoading() {
+    return lockedWhenLoading;
   }
 
   // ==============================================================================================
@@ -949,7 +987,13 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       LOG.debug("{} is already bypassed, skip acquiring lock.", this);
       return;
     }
-
+    // this can happen if the parent stores the sub procedures but before it can
+    // release its lock, the master restarts
+    if (getState() == ProcedureState.WAITING && !holdLock(env)) {
+      LOG.debug("{} is in WAITING STATE, and holdLock= false, skip acquiring lock.", this);
+      lockedWhenLoading = false;
+      return;
+    }
     LOG.debug("{} held the lock before restarting, call acquireLock to restore it.", this);
     LockState state = acquireLock(env);
     assert state == LockState.LOCK_ACQUIRED;

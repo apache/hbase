@@ -32,6 +32,7 @@ enum CellType {
     PUT = 4;
 
     DELETE = 8;
+    DELETE_FAMILY_VERSION = 10;
     DELETE_COLUMN = 12;
     DELETE_FAMILY = 14;
 

@@ -311,6 +311,24 @@ The commands (and arguments) are:
   setquota -n|-b val path
 ----
 
+[[trouble.tools.maintenancemode]]
+==== Maintenance Mode
+If the cluster has gotten stuck in some state and the standard techniques aren't making progress,
+ it is possible to restart the cluster in "maintenance mode." This mode features drastically
+ reduced capabilities and surface area, making it easier to enact very low-level changes such
+ as repairing/recovering the `hbase:meta` table.
+
+To enter maintenance mode, set `hbase.master.maintenance_mode` to `true` either in your
+`hbase-site.xml` or via system propery when starting the master process (`-D...=true`). Entering
+and exiting this mode requires a service restart, however the typical use will be when HBase Master
+is already facing startup difficulties.
+
+When maintenance mode is enabled, the master will host all system tables - ensure that it has
+enough memory to do so. RegionServers will not be assigned any regions from user-space tables;
+in fact, they will go completely unused while in maintenance mode. Additionally, the master will
+not load any coprocessors, will not run any normalization or merge/split operations, and will not
+enforce quotas.
+
 [[trouble.tools.external]]
 === External Tools
 

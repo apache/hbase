@@ -92,7 +92,8 @@ if [ $# = 0 ]; then
   echo "Commands:"
   echo "Some commands take arguments. Pass no args or -h for usage."
   echo "  shell           Run the HBase shell"
-  echo "  hbck            Run the hbase 'fsck' tool"
+  echo "  hbck            Run the HBase 'fsck' tool. Defaults read-only hbck1."
+  echo "                  Pass '-j /path/to/HBCK2.jar' to run hbase-2.x HBCK2."
   echo "  snapshot        Tool for managing snapshots"
   if [ "${in_omnibus_tarball}" = "true" ]; then
     echo "  wal             Write-ahead-log analyzer"
@@ -482,7 +483,25 @@ if [ "$COMMAND" = "shell" ] ; then
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
   CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then
-  CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
+  # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
+  case "${1}" in
+    -j)
+    # Found -j parameter. Add arg to CLASSPATH and set CLASS to HBCK2.
+    shift
+    JAR="${1}"
+    if [ ! -f "${JAR}" ]; then
+      echo "${JAR} file not found!"
+      echo "Usage: hbase [<options>] hbck -jar /path/to/HBCK2.jar [<args>]"
+      exit 1
+    fi
+    CLASSPATH="${JAR}:${CLASSPATH}";
+    CLASS="org.apache.hbase.HBCK2"
+    shift # past argument=value
+    ;;
+    *)
+    CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
+    ;;
+  esac
 elif [ "$COMMAND" = "wal" ] ; then
   CLASS='org.apache.hadoop.hbase.wal.WALPrettyPrinter'
 elif [ "$COMMAND" = "hfile" ] ; then

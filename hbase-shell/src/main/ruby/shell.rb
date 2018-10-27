@@ -361,6 +361,7 @@ Shell.load_command_group(
     clear_block_cache
     stop_master
     stop_regionserver
+    rit
   ],
   # TODO: remove older hlog_roll command
   aliases: {
@@ -451,7 +452,6 @@ Shell.load_command_group(
   'procedures',
   full_name: 'PROCEDURES & LOCKS MANAGEMENT',
   commands: %w[
-    abort_procedure
     list_procedures
     list_locks
   ]

@@ -479,6 +479,9 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     for (int i = 0; i < serverLoadList.size(); i++) {
       ServerAndLoad serverload = serverLoadList.get(i);
       BalanceInfo balanceInfo = serverBalanceInfo.get(serverload.getServerName());
+      if (balanceInfo == null) {
+        continue;
+      }
       setLoad(serverLoadList, i, balanceInfo.getNumRegionsAdded());
       if (balanceInfo.getHriList().size() + balanceInfo.getNumRegionsAdded() == max) {
         RegionInfo hriToPlan;

@@ -296,7 +296,7 @@ public class TestEndToEndSplitTransaction {
     Throwable ex;
 
     RegionChecker(Configuration conf, Stoppable stopper, TableName tableName) throws IOException {
-      super("RegionChecker", stopper, 10);
+      super("RegionChecker", stopper, 100);
       this.conf = conf;
       this.tableName = tableName;
 
@@ -509,7 +509,7 @@ public class TestEndToEndSplitTransaction {
         log("found region in META: " + hri.getRegionNameAsString());
         break;
       }
-      Threads.sleep(10);
+      Threads.sleep(100);
     }
   }
 
@@ -532,7 +532,7 @@ public class TestEndToEndSplitTransaction {
         } catch (IOException ex) {
           // wait some more
         }
-        Threads.sleep(10);
+        Threads.sleep(100);
       }
     }
   }

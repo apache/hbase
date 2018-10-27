@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -103,6 +104,8 @@ public class TestScanWithBloomError {
   public void setUp() throws IOException{
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
+    conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
+    conf.set(BloomFilterUtil.DELIMITER_KEY, "#");
   }
 
   @Test

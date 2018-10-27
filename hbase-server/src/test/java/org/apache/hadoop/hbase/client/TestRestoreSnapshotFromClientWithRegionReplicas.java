@@ -28,14 +28,13 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
-@Category({LargeTests.class, ClientTests.class})
-public class TestRestoreSnapshotFromClientWithRegionReplicas extends
-    TestRestoreSnapshotFromClient {
+@Category({ LargeTests.class, ClientTests.class })
+public class TestRestoreSnapshotFromClientWithRegionReplicas
+    extends RestoreSnapshotFromClientTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRestoreSnapshotFromClientWithRegionReplicas.class);
+    HBaseClassTestRule.forClass(TestRestoreSnapshotFromClientWithRegionReplicas.class);
 
   @Override
   protected int getNumReplicas() {
@@ -54,8 +53,8 @@ public class TestRestoreSnapshotFromClientWithRegionReplicas extends
     admin.snapshot(snapshotName1, tableName);
 
     // Clone the snapshot to another table
-    TableName clonedTableName = TableName.valueOf(name.getMethodName() + "-" +
-        System.currentTimeMillis());
+    TableName clonedTableName =
+      TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName1, clonedTableName);
 
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);

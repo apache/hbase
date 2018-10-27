@@ -23,8 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.spark.datasources.{BytesEncoder, JavaBytesEncoder}
 import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder.JavaBytesEncoder
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.sql.datasources.hbase.{Field, Utils}
-import org.apache.spark.sql.types._
+
 /**
  * Dynamic logic for SQL push down logic there is an instance for most
  * common operations and a pass through for other operations not covered here

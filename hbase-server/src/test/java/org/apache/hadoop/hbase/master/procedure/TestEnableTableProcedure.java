@@ -138,8 +138,8 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     long procId = procExec.submitProcedure(
         new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
 
-    int numberOfSteps = 0; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 3; // fail before ENABLE_TABLE_SET_ENABLING_TABLE_STATE
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 }

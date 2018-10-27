@@ -352,7 +352,7 @@ public class VerifyReplication extends Configured implements Tool {
       return Pair.newPair(peerConfig,
         ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf));
     } catch (ReplicationException e) {
-      throw new IOException("An error occurred while trying to connect to the remove peer cluster",
+      throw new IOException("An error occurred while trying to connect to the remote peer cluster",
           e);
     } finally {
       if (localZKW != null) {

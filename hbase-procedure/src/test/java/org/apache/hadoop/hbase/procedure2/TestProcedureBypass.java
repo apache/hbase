@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -87,7 +89,7 @@ public class TestProcedureBypass {
     long id = procExecutor.submitProcedure(proc);
     Thread.sleep(500);
     //bypass the procedure
-    assertTrue(procExecutor.bypassProcedure(id, 30000, false));
+    assertTrue(procExecutor.bypassProcedure(id, 30000, false, false));
     htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);
   }
@@ -98,7 +100,7 @@ public class TestProcedureBypass {
     long id = procExecutor.submitProcedure(proc);
     Thread.sleep(500);
     //bypass the procedure
-    assertTrue(procExecutor.bypassProcedure(id, 1000, true));
+    assertTrue(procExecutor.bypassProcedure(id, 1000, true, false));
     //Since the procedure is stuck there, we need to restart the executor to recovery.
     ProcedureTestingUtility.restart(procExecutor);
     htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
@@ -114,12 +116,38 @@ public class TestProcedureBypass {
       .size() > 0);
     SuspendProcedure suspendProcedure = (SuspendProcedure)procExecutor.getProcedures().stream()
         .filter(p -> p.getParentProcId() == rootId).collect(Collectors.toList()).get(0);
-    assertTrue(procExecutor.bypassProcedure(suspendProcedure.getProcId(), 1000, false));
+    assertTrue(procExecutor.bypassProcedure(suspendProcedure.getProcId(), 1000, false, false));
     htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);
   }
 
+  @Test
+  public void testBypassingStuckStateMachineProcedure() throws Exception {
+    final StuckStateMachineProcedure proc =
+        new StuckStateMachineProcedure(procEnv, StuckStateMachineState.START);
+    long id = procExecutor.submitProcedure(proc);
+    Thread.sleep(500);
+    // bypass the procedure
+    assertFalse(procExecutor.bypassProcedure(id, 1000, false, false));
+    assertTrue(procExecutor.bypassProcedure(id, 1000, true, false));
 
+    htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
+    LOG.info("{} finished", proc);
+  }
+
+  @Test
+  public void testBypassingProcedureWithParentRecursive() throws Exception {
+    final RootProcedure proc = new RootProcedure();
+    long rootId = procExecutor.submitProcedure(proc);
+    htu.waitFor(5000, () -> procExecutor.getProcedures().stream()
+        .filter(p -> p.getParentProcId() == rootId).collect(Collectors.toList())
+        .size() > 0);
+    SuspendProcedure suspendProcedure = (SuspendProcedure)procExecutor.getProcedures().stream()
+        .filter(p -> p.getParentProcId() == rootId).collect(Collectors.toList()).get(0);
+    assertTrue(procExecutor.bypassProcedure(rootId, 1000, false, true));
+    htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
+    LOG.info("{} finished", proc);
+  }
 
   @AfterClass
   public static void tearDown() throws Exception {
@@ -180,6 +208,53 @@ public class TestProcedureBypass {
     }
   }
 
+
+  public enum StuckStateMachineState {
+    START, THEN, END
+  }
+
+  public static class StuckStateMachineProcedure extends
+      ProcedureTestingUtility.NoopStateMachineProcedure<TestProcEnv, StuckStateMachineState> {
+    private AtomicBoolean stop = new AtomicBoolean(false);
+
+    public StuckStateMachineProcedure() {
+      super();
+    }
+
+    public StuckStateMachineProcedure(TestProcEnv env, StuckStateMachineState initialState) {
+      super(env, initialState);
+    }
+
+    @Override
+    protected Flow executeFromState(TestProcEnv env, StuckStateMachineState tState)
+            throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      switch (tState) {
+        case START:
+          LOG.info("PHASE 1: START");
+          setNextState(StuckStateMachineState.THEN);
+          return Flow.HAS_MORE_STATE;
+        case THEN:
+          if (stop.get()) {
+            setNextState(StuckStateMachineState.END);
+          }
+          return Flow.HAS_MORE_STATE;
+        case END:
+          return Flow.NO_MORE_STATE;
+        default:
+          throw new UnsupportedOperationException("unhandled state=" + tState);
+      }
+    }
+
+    @Override
+    protected StuckStateMachineState getState(int stateId) {
+      return StuckStateMachineState.values()[stateId];
+    }
+
+    @Override
+    protected int getStateId(StuckStateMachineState tState) {
+      return tState.ordinal();
+    }
+  }
 
 
 }

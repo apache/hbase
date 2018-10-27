@@ -18,14 +18,20 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerProcedureStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
  * The base class for all replication peer related procedure.
@@ -38,6 +44,8 @@ public abstract class AbstractPeerProcedure<TState>
 
   // used to keep compatible with old client where we can only returns after updateStorage.
   protected ProcedurePrepareLatch latch;
+
+  protected int attempts;
 
   protected AbstractPeerProcedure() {
   }
@@ -105,5 +113,27 @@ public abstract class AbstractPeerProcedure<TState>
   protected final void refreshPeer(MasterProcedureEnv env, PeerOperationType type) {
     addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
       .map(sn -> new RefreshPeerProcedure(peerId, type, sn)).toArray(RefreshPeerProcedure[]::new));
+  }
+
+  @Override
+  protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
+    setState(ProcedureProtos.ProcedureState.RUNNABLE);
+    env.getProcedureScheduler().addFront(this);
+    return false;
+  }
+
+  protected final ProcedureSuspendedException suspend(long backoff)
+      throws ProcedureSuspendedException {
+    attempts++;
+    setTimeout(Math.toIntExact(backoff));
+    setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+    skipPersistence();
+    throw new ProcedureSuspendedException();
+  }
+
+  // will be override in test to simulate error
+  @VisibleForTesting
+  protected void enablePeer(MasterProcedureEnv env) throws ReplicationException {
+    env.getReplicationPeerManager().enablePeer(peerId);
   }
 }
