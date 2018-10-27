@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
@@ -153,5 +154,22 @@ public class HBaseHbck implements Hbck {
           }
         });
     return response.getBypassedList();
+  }
+
+  @Override
+  public List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
+      throws IOException {
+    try {
+      MasterProtos.ScheduleServerCrashProcedureResponse response =
+          this.hbck.scheduleServerCrashProcedure(rpcControllerFactory.newController(),
+            RequestConverter.toScheduleServerCrashProcedureRequest(serverNames));
+      return response.getPidList();
+    } catch (ServiceException se) {
+      LOG.debug(toCommaDelimitedString(
+        serverNames.stream().map(serverName -> ProtobufUtil.toServerName(serverName).toString())
+            .collect(Collectors.toList())),
+        se);
+      throw new IOException(se);
+    }
   }
 }
