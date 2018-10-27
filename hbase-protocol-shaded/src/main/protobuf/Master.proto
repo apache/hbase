@@ -1046,6 +1046,14 @@ message BypassProcedureResponse {
   repeated bool bypassed = 1;
 }
 
+message ScheduleServerCrashProcedureRequest {
+  repeated ServerName serverName = 1;
+}
+
+message ScheduleServerCrashProcedureResponse {
+  repeated uint64 pid = 1;
+}
+
 service HbckService {
   /** Update state of the table in meta only*/
   rpc SetTableStateInMeta(SetTableStateInMetaRequest)
@@ -1072,4 +1080,8 @@ service HbckService {
   /** Bypass a procedure to completion, procedure is completed but no actual work is done*/
   rpc BypassProcedure(BypassProcedureRequest)
     returns(BypassProcedureResponse);
+
+  /** Schedule a ServerCrashProcedure to help recover a crash server */
+  rpc ScheduleServerCrashProcedure(ScheduleServerCrashProcedureRequest)
+    returns(ScheduleServerCrashProcedureResponse);
 }
