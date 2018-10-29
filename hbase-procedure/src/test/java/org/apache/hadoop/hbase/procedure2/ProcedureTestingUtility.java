@@ -403,7 +403,7 @@ public class ProcedureTestingUtility {
     public NoopProcedure() {}
 
     @Override
-    protected Procedure[] execute(TEnv env)
+    protected Procedure<TEnv>[] execute(TEnv env)
         throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       return null;
     }

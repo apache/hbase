@@ -82,7 +82,8 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   public MasterProcedureEnv(final MasterServices master,
       final RSProcedureDispatcher remoteDispatcher) {
     this.master = master;
-    this.procSched = new MasterProcedureScheduler();
+    this.procSched = new MasterProcedureScheduler(
+      procId -> master.getMasterProcedureExecutor().getProcedure(procId));
     this.remoteDispatcher = remoteDispatcher;
   }
 
