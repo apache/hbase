@@ -135,7 +135,8 @@ public class ChunkCreator {
     return instance;
   }
 
-  static ChunkCreator getInstance() {
+  @VisibleForTesting
+  public static ChunkCreator getInstance() {
     return instance;
   }
 
