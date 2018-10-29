@@ -329,7 +329,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * @see #holdLock(Object)
    * @return true if the procedure has the lock, false otherwise.
    */
-  @VisibleForTesting
   public final boolean hasLock() {
     return locked;
   }
@@ -711,12 +710,20 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Will only be called when loading procedures from procedure store, where we need to record
    * whether the procedure has already held a lock. Later we will call
-   * {@link #doAcquireLock(Object, ProcedureStore)} to actually acquire the lock.
+   * {@link #restoreLock(Object, ProcedureStore)} to actually acquire the lock.
    */
   final void lockedWhenLoading() {
     this.lockedWhenLoading = true;
   }
 
+  /**
+   * Can only be called when restarting, before the procedure actually being executed, as after we
+   * actually call the {@link #doAcquireLock(Object, ProcedureStore)} method, we will reset
+   * {@link #lockedWhenLoading} to false.
+   * <p/>
+   * Now it is only used in the ProcedureScheduler to determine whether we should put a Procedure in
+   * front of a queue.
+   */
   public boolean isLockedWhenLoading() {
     return lockedWhenLoading;
   }
@@ -990,7 +997,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     // this can happen if the parent stores the sub procedures but before it can
     // release its lock, the master restarts
     if (getState() == ProcedureState.WAITING && !holdLock(env)) {
-      LOG.debug("{} is in WAITING STATE, and holdLock= false, skip acquiring lock.", this);
+      LOG.debug("{} is in WAITING STATE, and holdLock=false, skip acquiring lock.", this);
       lockedWhenLoading = false;
       return;
     }

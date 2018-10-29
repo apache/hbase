@@ -637,14 +637,15 @@ public class ProcedureExecutor<TEnvironment> {
         proc.afterReplay(getEnvironment());
       }
     });
+    // 4. restore locks
+    restoreLocks();
 
-    // 4. Push the procedures to the timeout executor
+    // 5. Push the procedures to the timeout executor
     waitingTimeoutList.forEach(proc -> {
       proc.afterReplay(getEnvironment());
       timeoutExecutor.add(proc);
     });
-    // 5. restore locks
-    restoreLocks();
+
     // 6. Push the procedure to the scheduler
     failedList.forEach(scheduler::addBack);
     runnableList.forEach(p -> {
@@ -652,26 +653,7 @@ public class ProcedureExecutor<TEnvironment> {
       if (!p.hasParent()) {
         sendProcedureLoadedNotification(p.getProcId());
       }
-      // If the procedure holds the lock, put the procedure in front
-      // If its parent holds the lock, put the procedure in front
-      // TODO. Is that possible that its ancestor holds the lock?
-      // For now, the deepest procedure hierarchy is:
-      // ModifyTableProcedure -> ReopenTableProcedure ->
-      // MoveTableProcedure -> Unassign/AssignProcedure
-      // But ModifyTableProcedure and ReopenTableProcedure won't hold the lock
-      // So, check parent lock is enough(a tricky case is resovled by HBASE-21384).
-      // If some one change or add new procedures making 'grandpa' procedure
-      // holds the lock, but parent procedure don't hold the lock, there will
-      // be a problem here. We have to check one procedure's ancestors.
-      // And we need to change LockAndQueue.hasParentLock(Procedure<?> proc) method
-      // to check all ancestors too.
-      if (p.isLockedWhenLoading() || (p.hasParent() && procedures
-          .get(p.getParentProcId()).isLockedWhenLoading())) {
-        scheduler.addFront(p, false);
-      } else {
-        // if it was not, it can wait.
-        scheduler.addBack(p, false);
-      }
+      scheduler.addBack(p);
     });
     // After all procedures put into the queue, signal the worker threads.
     // Otherwise, there is a race condition. See HBASE-21364.
