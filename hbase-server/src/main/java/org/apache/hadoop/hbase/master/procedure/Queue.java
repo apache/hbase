@@ -60,21 +60,8 @@ abstract class Queue<TKey extends Comparable<TKey>> extends AvlLinkedNode<Queue<
     return lockStatus;
   }
 
-  // This should go away when we have the new AM and its events
-  // and we move xlock to the lock-event-queue.
   public boolean isAvailable() {
-    if (isEmpty()) {
-      return false;
-    }
-    if (getLockStatus().hasExclusiveLock()) {
-      // If we have an exclusive lock already taken, only child of the lock owner can be executed
-      // And now we will restore locks when master restarts, so it is possible that the procedure
-      // which is holding the lock is also in the queue, so we need to use hasLockAccess here
-      // instead of hasParentLock
-      Procedure<?> nextProc = peek();
-      return nextProc != null && getLockStatus().hasLockAccess(nextProc);
-    }
-    return true;
+    return !isEmpty();
   }
 
   // ======================================================================

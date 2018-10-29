@@ -256,7 +256,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
 
   @Override
   protected int doWork() throws Exception {
-    procedureScheduler = new MasterProcedureScheduler();
+    procedureScheduler = new MasterProcedureScheduler(pid -> null);
     procedureScheduler.start();
     setupOperations();
 
