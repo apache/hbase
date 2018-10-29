@@ -34,21 +34,7 @@ class TableQueue extends Queue<TableName> {
 
   @Override
   public boolean isAvailable() {
-    // if there are no items in the queue, or the namespace is locked.
-    // we can't execute operation on this table
-    if (isEmpty() || namespaceLockStatus.hasExclusiveLock()) {
-      return false;
-    }
-
-    if (getLockStatus().hasExclusiveLock()) {
-      // if we have an exclusive lock already taken
-      // only child of the lock owner can be executed
-      final Procedure<?> nextProc = peek();
-      return nextProc != null && getLockStatus().hasLockAccess(nextProc);
-    }
-
-    // no xlock
-    return true;
+    return !isEmpty() && !namespaceLockStatus.hasExclusiveLock();
   }
 
   @Override

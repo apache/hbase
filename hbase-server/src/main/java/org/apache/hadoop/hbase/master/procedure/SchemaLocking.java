@@ -45,17 +45,24 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
  */
 @InterfaceAudience.Private
 class SchemaLocking {
+
+  private final Function<Long, Procedure<?>> procedureRetriever;
   private final Map<ServerName, LockAndQueue> serverLocks = new HashMap<>();
   private final Map<String, LockAndQueue> namespaceLocks = new HashMap<>();
   private final Map<TableName, LockAndQueue> tableLocks = new HashMap<>();
   // Single map for all regions irrespective of tables. Key is encoded region name.
   private final Map<String, LockAndQueue> regionLocks = new HashMap<>();
-  private final LockAndQueue metaLock = new LockAndQueue();
+  private final LockAndQueue metaLock;
+
+  public SchemaLocking(Function<Long, Procedure<?>> procedureRetriever) {
+    this.procedureRetriever = procedureRetriever;
+    this.metaLock = new LockAndQueue(procedureRetriever);
+  }
 
   private <T> LockAndQueue getLock(Map<T, LockAndQueue> map, T key) {
     LockAndQueue lock = map.get(key);
     if (lock == null) {
-      lock = new LockAndQueue();
+      lock = new LockAndQueue(procedureRetriever);
       map.put(key, lock);
     }
     return lock;

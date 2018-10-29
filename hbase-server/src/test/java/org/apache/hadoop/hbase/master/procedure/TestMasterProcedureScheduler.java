@@ -29,7 +29,6 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -55,12 +54,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestMasterProcedureScheduler {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterProcedureScheduler.class);
+    HBaseClassTestRule.forClass(TestMasterProcedureScheduler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterProcedureScheduler.class);
 
@@ -71,7 +70,7 @@ public class TestMasterProcedureScheduler {
 
   @Before
   public void setUp() throws IOException {
-    queue = new MasterProcedureScheduler();
+    queue = new MasterProcedureScheduler(pid -> null);
     queue.start();
   }
 
@@ -104,9 +103,9 @@ public class TestMasterProcedureScheduler {
 
     for (int j = 1; j <= NUM_ITEMS; ++j) {
       for (int i = 1; i <= NUM_TABLES; ++i) {
-        Procedure proc = queue.poll();
+        Procedure<?> proc = queue.poll();
         assertTrue(proc != null);
-        TableName tableName = ((TestTableProcedure)proc).getTableName();
+        TableName tableName = ((TestTableProcedure) proc).getTableName();
         queue.waitTableExclusiveLock(proc, tableName);
         queue.wakeTableExclusiveLock(proc, tableName);
         queue.completionCleanup(proc);
@@ -118,32 +117,32 @@ public class TestMasterProcedureScheduler {
 
     for (int i = 1; i <= NUM_TABLES; ++i) {
       final TableName tableName = TableName.valueOf(String.format("test-%04d", i));
-      final TestTableProcedure dummyProc = new TestTableProcedure(100, tableName,
-        TableProcedureInterface.TableOperationType.DELETE);
+      final TestTableProcedure dummyProc =
+        new TestTableProcedure(100, tableName, TableProcedureInterface.TableOperationType.DELETE);
       // complete the table deletion
       assertTrue(queue.markTableAsDeleted(tableName, dummyProc));
     }
   }
 
   /**
-   * Check that the table queue is not deletable until every procedure
-   * in-progress is completed (this is a special case for write-locks).
+   * Check that the table queue is not deletable until every procedure in-progress is completed
+   * (this is a special case for write-locks).
    */
   @Test
   public void testCreateDeleteTableOperationsWithWriteLock() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    final TestTableProcedure dummyProc = new TestTableProcedure(100, tableName,
-        TableProcedureInterface.TableOperationType.DELETE);
+    final TestTableProcedure dummyProc =
+      new TestTableProcedure(100, tableName, TableProcedureInterface.TableOperationType.DELETE);
 
-    queue.addBack(new TestTableProcedure(1, tableName,
-          TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT));
 
     // table can't be deleted because one item is in the queue
     assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
 
     // fetch item and take a lock
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(1, proc.getProcId());
     // take the xlock
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
@@ -157,29 +156,30 @@ public class TestMasterProcedureScheduler {
   }
 
   /**
-   * Check that the table queue is not deletable until every procedure
-   * in-progress is completed (this is a special case for read-locks).
+   * Check that the table queue is not deletable until every procedure in-progress is completed
+   * (this is a special case for read-locks).
    */
   @Test
   public void testCreateDeleteTableOperationsWithReadLock() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final int nitems = 2;
 
-    final TestTableProcedure dummyProc = new TestTableProcedure(100, tableName,
-        TableProcedureInterface.TableOperationType.DELETE);
+    final TestTableProcedure dummyProc =
+      new TestTableProcedure(100, tableName, TableProcedureInterface.TableOperationType.DELETE);
 
     for (int i = 1; i <= nitems; ++i) {
-      queue.addBack(new TestTableProcedure(i, tableName,
-            TableProcedureInterface.TableOperationType.READ));
+      queue.addBack(
+        new TestTableProcedure(i, tableName, TableProcedureInterface.TableOperationType.READ));
     }
 
     // table can't be deleted because one item is in the queue
     assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
 
-    Procedure[] procs = new Procedure[nitems];
+    Procedure<?>[] procs = new Procedure[nitems];
     for (int i = 0; i < nitems; ++i) {
       // fetch item and take a lock
-      Procedure proc = procs[i] = queue.poll();
+      Procedure<?> proc = queue.poll();
+      procs[i] = proc;
       assertEquals(i + 1, proc.getProcId());
       // take the rlock
       assertEquals(false, queue.waitTableSharedLock(proc, tableName));
@@ -206,19 +206,15 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testVerifyRwLocks() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    queue.addBack(new TestTableProcedure(1, tableName,
-          TableProcedureInterface.TableOperationType.EDIT));
-    queue.addBack(new TestTableProcedure(2, tableName,
-          TableProcedureInterface.TableOperationType.READ));
-    queue.addBack(new TestTableProcedure(3, tableName,
-          TableProcedureInterface.TableOperationType.EDIT));
-    queue.addBack(new TestTableProcedure(4, tableName,
-          TableProcedureInterface.TableOperationType.READ));
-    queue.addBack(new TestTableProcedure(5, tableName,
-          TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(
+      new TestTableProcedure(3, tableName, TableProcedureInterface.TableOperationType.EDIT));
 
     // Fetch the 1st item and take the write lock
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(1, proc.getProcId());
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
 
@@ -229,7 +225,7 @@ public class TestMasterProcedureScheduler {
     queue.wakeTableExclusiveLock(proc, tableName);
 
     // Fetch the 2nd item and take the read lock
-    Procedure rdProc = queue.poll();
+    Procedure<?> rdProc = queue.poll();
     assertEquals(2, rdProc.getProcId());
     assertEquals(false, queue.waitTableSharedLock(rdProc, tableName));
 
@@ -239,8 +235,13 @@ public class TestMasterProcedureScheduler {
     // release the rdlock of item 2 and take the wrlock for the 3d item
     queue.wakeTableSharedLock(rdProc, tableName);
 
+    queue.addBack(
+      new TestTableProcedure(4, tableName, TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(
+      new TestTableProcedure(5, tableName, TableProcedureInterface.TableOperationType.READ));
+
     // Fetch the 3rd item and take the write lock
-    Procedure wrProc = queue.poll();
+    Procedure<?> wrProc = queue.poll();
     assertEquals(false, queue.waitTableExclusiveLock(wrProc, tableName));
 
     // Fetch 4th item and verify that the lock can't be acquired
@@ -255,7 +256,7 @@ public class TestMasterProcedureScheduler {
     assertEquals(false, queue.waitTableSharedLock(rdProc, tableName));
 
     // Fetch the 4th item and take the read lock
-    Procedure rdProc2 = queue.poll();
+    Procedure<?> rdProc2 = queue.poll();
     assertEquals(5, rdProc2.getProcId());
     assertEquals(false, queue.waitTableSharedLock(rdProc2, tableName));
 
@@ -274,22 +275,22 @@ public class TestMasterProcedureScheduler {
     String nsName2 = "ns2";
     TableName tableName1 = TableName.valueOf(nsName1, name.getMethodName());
     TableName tableName2 = TableName.valueOf(nsName2, name.getMethodName());
-    queue.addBack(new TestNamespaceProcedure(1, nsName1,
-          TableProcedureInterface.TableOperationType.EDIT));
-    queue.addBack(new TestTableProcedure(2, tableName1,
-          TableProcedureInterface.TableOperationType.EDIT));
-    queue.addBack(new TestTableProcedure(3, tableName2,
-          TableProcedureInterface.TableOperationType.EDIT));
-    queue.addBack(new TestNamespaceProcedure(4, nsName2,
-          TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestNamespaceProcedure(1, nsName1, TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(2, tableName1, TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(3, tableName2, TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestNamespaceProcedure(4, nsName2, TableProcedureInterface.TableOperationType.EDIT));
 
     // Fetch the 1st item and take the write lock
-    Procedure procNs1 = queue.poll();
+    Procedure<?> procNs1 = queue.poll();
     assertEquals(1, procNs1.getProcId());
     assertFalse(queue.waitNamespaceExclusiveLock(procNs1, nsName1));
 
     // namespace table has higher priority so we still return procedure for it
-    Procedure procNs2 = queue.poll();
+    Procedure<?> procNs2 = queue.poll();
     assertEquals(4, procNs2.getProcId());
     assertFalse(queue.waitNamespaceExclusiveLock(procNs2, nsName2));
     queue.wakeNamespaceExclusiveLock(procNs2, nsName2);
@@ -324,13 +325,13 @@ public class TestMasterProcedureScheduler {
   public void testVerifyNamespaceXLock() throws Exception {
     String nsName = "ns1";
     TableName tableName = TableName.valueOf(nsName, name.getMethodName());
-    queue.addBack(new TestNamespaceProcedure(1, nsName,
-          TableProcedureInterface.TableOperationType.CREATE));
-    queue.addBack(new TestTableProcedure(2, tableName,
-          TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(
+      new TestNamespaceProcedure(1, nsName, TableProcedureInterface.TableOperationType.CREATE));
+    queue.addBack(
+      new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.READ));
 
     // Fetch the ns item and take the xlock
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(1, proc.getProcId());
     assertEquals(false, queue.waitNamespaceExclusiveLock(proc, nsName));
 
@@ -349,17 +350,16 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testXLockWaitingForExecutingSharedLockToRelease() {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
+    final RegionInfo regionA = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
 
     queue.addBack(new TestRegionProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.REGION_ASSIGN, regionA));
-    queue.addBack(new TestTableProcedure(2, tableName,
-          TableProcedureInterface.TableOperationType.EDIT));
-    queue.addBack(new TestRegionProcedure(3, tableName,
-        TableProcedureInterface.TableOperationType.REGION_UNASSIGN, regionA));
+      TableProcedureInterface.TableOperationType.REGION_ASSIGN, regionA));
+    queue.addBack(
+      new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.EDIT));
 
     // Fetch the 1st item and take the shared lock
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(1, proc.getProcId());
     assertEquals(false, queue.waitRegion(proc, regionA));
 
@@ -373,6 +373,9 @@ public class TestMasterProcedureScheduler {
     proc = queue.poll();
     assertEquals(2, proc.getProcId());
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
+
+    queue.addBack(new TestRegionProcedure(3, tableName,
+      TableProcedureInterface.TableOperationType.REGION_UNASSIGN, regionA));
 
     // everything is locked by the table operation
     assertEquals(null, queue.poll(0));
@@ -393,23 +396,26 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testVerifyRegionLocks() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
-    final HRegionInfo regionB = new HRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c"));
-    final HRegionInfo regionC = new HRegionInfo(tableName, Bytes.toBytes("c"), Bytes.toBytes("d"));
+    final RegionInfo regionA = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
+    final RegionInfo regionB = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("b")).setEndKey(Bytes.toBytes("c")).build();
+    final RegionInfo regionC = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("c")).setEndKey(Bytes.toBytes("d")).build();
 
-    queue.addBack(new TestTableProcedure(1, tableName,
-          TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT));
     queue.addBack(new TestRegionProcedure(2, tableName,
-        TableProcedureInterface.TableOperationType.REGION_MERGE, regionA, regionB));
+      TableProcedureInterface.TableOperationType.REGION_MERGE, regionA, regionB));
     queue.addBack(new TestRegionProcedure(3, tableName,
-        TableProcedureInterface.TableOperationType.REGION_SPLIT, regionA));
+      TableProcedureInterface.TableOperationType.REGION_SPLIT, regionA));
     queue.addBack(new TestRegionProcedure(4, tableName,
-        TableProcedureInterface.TableOperationType.REGION_SPLIT, regionB));
+      TableProcedureInterface.TableOperationType.REGION_SPLIT, regionB));
     queue.addBack(new TestRegionProcedure(5, tableName,
-        TableProcedureInterface.TableOperationType.REGION_UNASSIGN, regionC));
+      TableProcedureInterface.TableOperationType.REGION_UNASSIGN, regionC));
 
     // Fetch the 1st item and take the write lock
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(1, proc.getProcId());
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
 
@@ -420,24 +426,24 @@ public class TestMasterProcedureScheduler {
     queue.wakeTableExclusiveLock(proc, tableName);
 
     // Fetch the 2nd item and the the lock on regionA and regionB
-    Procedure mergeProc = queue.poll();
+    Procedure<?> mergeProc = queue.poll();
     assertEquals(2, mergeProc.getProcId());
     assertEquals(false, queue.waitRegions(mergeProc, tableName, regionA, regionB));
 
     // Fetch the 3rd item and the try to lock region A which will fail
     // because already locked. this procedure will go in waiting.
     // (this stuff will be explicit until we get rid of the zk-lock)
-    Procedure procA = queue.poll();
+    Procedure<?> procA = queue.poll();
     assertEquals(3, procA.getProcId());
     assertEquals(true, queue.waitRegions(procA, tableName, regionA));
 
     // Fetch the 4th item, same story as the 3rd
-    Procedure procB = queue.poll();
+    Procedure<?> procB = queue.poll();
     assertEquals(4, procB.getProcId());
     assertEquals(true, queue.waitRegions(procB, tableName, regionB));
 
     // Fetch the 5th item, since it is a non-locked region we are able to execute it
-    Procedure procC = queue.poll();
+    Procedure<?> procC = queue.poll();
     assertEquals(5, procC.getProcId());
     assertEquals(false, queue.waitRegions(procC, tableName, regionC));
 
@@ -466,15 +472,18 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testVerifySubProcRegionLocks() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
-    final HRegionInfo regionB = new HRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c"));
-    final HRegionInfo regionC = new HRegionInfo(tableName, Bytes.toBytes("c"), Bytes.toBytes("d"));
+    final RegionInfo regionA = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
+    final RegionInfo regionB = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("b")).setEndKey(Bytes.toBytes("c")).build();
+    final RegionInfo regionC = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("c")).setEndKey(Bytes.toBytes("d")).build();
 
-    queue.addBack(new TestTableProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.ENABLE));
+    queue.addBack(
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.ENABLE));
 
     // Fetch the 1st item from the queue, "the root procedure" and take the table lock
-    Procedure rootProc = queue.poll();
+    Procedure<?> rootProc = queue.poll();
     assertEquals(1, rootProc.getProcId());
     assertEquals(false, queue.waitTableExclusiveLock(rootProc, tableName));
     assertEquals(null, queue.poll(0));
@@ -482,14 +491,13 @@ public class TestMasterProcedureScheduler {
     // Execute the 1st step of the root-proc.
     // we should get 3 sub-proc back, one for each region.
     // (this step is done by the executor/rootProc, we are simulating it)
-    Procedure[] subProcs = new Procedure[] {
+    Procedure<?>[] subProcs = new Procedure[] {
       new TestRegionProcedure(1, 2, tableName,
         TableProcedureInterface.TableOperationType.REGION_EDIT, regionA),
       new TestRegionProcedure(1, 3, tableName,
         TableProcedureInterface.TableOperationType.REGION_EDIT, regionB),
       new TestRegionProcedure(1, 4, tableName,
-        TableProcedureInterface.TableOperationType.REGION_EDIT, regionC),
-    };
+        TableProcedureInterface.TableOperationType.REGION_EDIT, regionC), };
 
     // at this point the rootProc is going in a waiting state
     // and the sub-procedures will be added in the queue.
@@ -502,7 +510,7 @@ public class TestMasterProcedureScheduler {
     // we should be able to fetch and execute all the sub-procs,
     // since they are operating on different regions
     for (int i = 0; i < subProcs.length; ++i) {
-      TestRegionProcedure regionProc = (TestRegionProcedure)queue.poll(0);
+      TestRegionProcedure regionProc = (TestRegionProcedure) queue.poll(0);
       assertEquals(subProcs[i].getProcId(), regionProc.getProcId());
       assertEquals(false, queue.waitRegions(regionProc, tableName, regionProc.getRegionInfo()));
     }
@@ -512,7 +520,7 @@ public class TestMasterProcedureScheduler {
 
     // release all the region locks
     for (int i = 0; i < subProcs.length; ++i) {
-      TestRegionProcedure regionProc = (TestRegionProcedure)subProcs[i];
+      TestRegionProcedure regionProc = (TestRegionProcedure) subProcs[i];
       queue.wakeRegions(regionProc, tableName, regionProc.getRegionInfo());
     }
 
@@ -526,27 +534,28 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testInheritedRegionXLock() {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final HRegionInfo region = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
+    final RegionInfo region = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
 
     queue.addBack(new TestRegionProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.REGION_SPLIT, region));
+      TableProcedureInterface.TableOperationType.REGION_SPLIT, region));
     queue.addBack(new TestRegionProcedure(1, 2, tableName,
-        TableProcedureInterface.TableOperationType.REGION_UNASSIGN, region));
+      TableProcedureInterface.TableOperationType.REGION_UNASSIGN, region));
     queue.addBack(new TestRegionProcedure(3, tableName,
-        TableProcedureInterface.TableOperationType.REGION_EDIT, region));
+      TableProcedureInterface.TableOperationType.REGION_EDIT, region));
 
     // fetch the root proc and take the lock on the region
-    Procedure rootProc = queue.poll();
+    Procedure<?> rootProc = queue.poll();
     assertEquals(1, rootProc.getProcId());
     assertEquals(false, queue.waitRegion(rootProc, region));
 
     // fetch the sub-proc and take the lock on the region (inherited lock)
-    Procedure childProc = queue.poll();
+    Procedure<?> childProc = queue.poll();
     assertEquals(2, childProc.getProcId());
     assertEquals(false, queue.waitRegion(childProc, region));
 
     // proc-3 will be fetched but it can't take the lock
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(3, proc.getProcId());
     assertEquals(true, queue.waitRegion(proc, region));
 
@@ -570,16 +579,16 @@ public class TestMasterProcedureScheduler {
   public void testSuspendedProcedure() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    queue.addBack(new TestTableProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.READ));
-    queue.addBack(new TestTableProcedure(2, tableName,
-        TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(
+      new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.READ));
 
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(1, proc.getProcId());
 
     // suspend
-    ProcedureEvent event = new ProcedureEvent("testSuspendedProcedureEvent");
+    ProcedureEvent<?> event = new ProcedureEvent<>("testSuspendedProcedureEvent");
     assertEquals(true, event.suspendIfNotReady(proc));
 
     proc = queue.poll();
@@ -594,51 +603,50 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
   }
 
-  private static HRegionInfo[] generateRegionInfo(final TableName tableName) {
-    return new HRegionInfo[] {
-      new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b")),
-      new HRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c")),
-      new HRegionInfo(tableName, Bytes.toBytes("c"), Bytes.toBytes("d")),
-    };
+  private static RegionInfo[] generateRegionInfo(final TableName tableName) {
+    return new RegionInfo[] {
+      RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("a"))
+        .setEndKey(Bytes.toBytes("b")).build(),
+      RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("b"))
+        .setEndKey(Bytes.toBytes("c")).build(),
+      RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("c"))
+        .setEndKey(Bytes.toBytes("d")).build() };
   }
 
   @Test
   public void testParentXLockAndChildrenSharedLock() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final HRegionInfo[] regions = generateRegionInfo(tableName);
+    final RegionInfo[] regions = generateRegionInfo(tableName);
     final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
     for (int i = 0; i < regions.length; ++i) {
       childProcs[i] = new TestRegionProcedure(1, 2 + i, tableName,
-          TableProcedureInterface.TableOperationType.REGION_ASSIGN, regions[i]);
+        TableProcedureInterface.TableOperationType.REGION_ASSIGN, regions[i]);
     }
     testInheritedXLockAndChildrenSharedLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.CREATE),
-      childProcs
-    );
+      childProcs);
   }
 
   @Test
   public void testRootXLockAndChildrenSharedLock() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final HRegionInfo[] regions = generateRegionInfo(tableName);
+    final RegionInfo[] regions = generateRegionInfo(tableName);
     final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
     for (int i = 0; i < regions.length; ++i) {
       childProcs[i] = new TestRegionProcedure(1, 2, 3 + i, tableName,
-          TableProcedureInterface.TableOperationType.REGION_ASSIGN, regions[i]);
+        TableProcedureInterface.TableOperationType.REGION_ASSIGN, regions[i]);
     }
     testInheritedXLockAndChildrenSharedLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.CREATE),
-      childProcs
-    );
+      childProcs);
   }
 
   private void testInheritedXLockAndChildrenSharedLock(final TableName tableName,
-      final TestTableProcedure rootProc, final TestRegionProcedure[] childProcs)
-      throws Exception {
+      final TestTableProcedure rootProc, final TestRegionProcedure[] childProcs) throws Exception {
     queue.addBack(rootProc);
 
     // fetch and acquire first xlock proc
-    Procedure parentProc = queue.poll();
+    Procedure<?> parentProc = queue.poll();
     assertEquals(rootProc, parentProc);
     assertEquals(false, queue.waitTableExclusiveLock(parentProc, tableName));
 
@@ -648,12 +656,12 @@ public class TestMasterProcedureScheduler {
     }
 
     // add another xlock procedure (no parent)
-    queue.addBack(new TestTableProcedure(100, tableName,
-        TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(100, tableName, TableProcedureInterface.TableOperationType.EDIT));
 
     // fetch and execute child
     for (int i = 0; i < childProcs.length; ++i) {
-      TestRegionProcedure childProc = (TestRegionProcedure)queue.poll();
+      TestRegionProcedure childProc = (TestRegionProcedure) queue.poll();
       LOG.debug("fetch children " + childProc);
       assertEquals(false, queue.waitRegions(childProc, tableName, childProc.getRegionInfo()));
       queue.wakeRegions(childProc, tableName, childProc.getRegionInfo());
@@ -666,7 +674,7 @@ public class TestMasterProcedureScheduler {
     queue.wakeTableExclusiveLock(parentProc, tableName);
 
     // fetch the other xlock proc
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(100, proc.getProcId());
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
     queue.wakeTableExclusiveLock(proc, tableName);
@@ -677,8 +685,7 @@ public class TestMasterProcedureScheduler {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testInheritedXLockAndChildrenXLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
-      new TestTableProcedure(1, 2, tableName, TableProcedureInterface.TableOperationType.EDIT)
-    );
+      new TestTableProcedure(1, 2, tableName, TableProcedureInterface.TableOperationType.EDIT));
   }
 
   @Test
@@ -687,8 +694,7 @@ public class TestMasterProcedureScheduler {
     // simulate 3 procedures: 1 (root), (2) child of root, (3) child of proc-2
     testInheritedXLockAndChildrenXLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
-      new TestTableProcedure(1, 2, 3, tableName, TableProcedureInterface.TableOperationType.EDIT)
-    );
+      new TestTableProcedure(1, 2, 3, tableName, TableProcedureInterface.TableOperationType.EDIT));
   }
 
   private void testInheritedXLockAndChildrenXLock(final TableName tableName,
@@ -696,7 +702,7 @@ public class TestMasterProcedureScheduler {
     queue.addBack(rootProc);
 
     // fetch and acquire first xlock proc
-    Procedure parentProc = queue.poll();
+    Procedure<?> parentProc = queue.poll();
     assertEquals(rootProc, parentProc);
     assertEquals(false, queue.waitTableExclusiveLock(parentProc, tableName));
 
@@ -704,7 +710,7 @@ public class TestMasterProcedureScheduler {
     queue.addFront(childProc);
 
     // fetch the other xlock proc
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(childProc, proc);
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
     queue.wakeTableExclusiveLock(proc, tableName);
@@ -717,13 +723,13 @@ public class TestMasterProcedureScheduler {
   public void testYieldWithXLockHeld() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    queue.addBack(new TestTableProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.EDIT));
-    queue.addBack(new TestTableProcedure(2, tableName,
-        TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.EDIT));
 
     // fetch from the queue and acquire xlock for the first proc
-    Procedure proc = queue.poll();
+    Procedure<?> proc = queue.poll();
     assertEquals(1, proc.getProcId());
     assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
 
@@ -748,20 +754,20 @@ public class TestMasterProcedureScheduler {
   public void testYieldWithSharedLockHeld() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    queue.addBack(new TestTableProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.READ));
-    queue.addBack(new TestTableProcedure(2, tableName,
-        TableProcedureInterface.TableOperationType.READ));
-    queue.addBack(new TestTableProcedure(3, tableName,
-        TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(
+      new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(
+      new TestTableProcedure(3, tableName, TableProcedureInterface.TableOperationType.EDIT));
 
     // fetch and acquire the first shared-lock
-    Procedure proc1 = queue.poll();
+    Procedure<?> proc1 = queue.poll();
     assertEquals(1, proc1.getProcId());
     assertEquals(false, queue.waitTableSharedLock(proc1, tableName));
 
     // fetch and acquire the second shared-lock
-    Procedure proc2 = queue.poll();
+    Procedure<?> proc2 = queue.poll();
     assertEquals(2, proc2.getProcId());
     assertEquals(false, queue.waitTableSharedLock(proc2, tableName));
 
@@ -769,8 +775,8 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
 
     // put the procs back in the queue
-    queue.yield(proc2);
     queue.yield(proc1);
+    queue.yield(proc2);
 
     // fetch from the queue, it should fetch the ones with just added back
     proc1 = queue.poll();
@@ -782,12 +788,11 @@ public class TestMasterProcedureScheduler {
     queue.wakeTableSharedLock(proc1, tableName);
     queue.wakeTableSharedLock(proc2, tableName);
 
-    Procedure proc3 = queue.poll();
+    Procedure<?> proc3 = queue.poll();
     assertEquals(3, proc3.getProcId());
   }
 
-  public static class TestTableProcedure extends TestProcedure
-      implements TableProcedureInterface {
+  public static class TestTableProcedure extends TestProcedure implements TableProcedureInterface {
     private final TableOperationType opType;
     private final TableName tableName;
 
@@ -810,6 +815,7 @@ public class TestMasterProcedureScheduler {
       this.tableName = tableName;
       this.opType = opType;
     }
+
     @Override
     public TableName getTableName() {
       return tableName;
@@ -830,14 +836,15 @@ public class TestMasterProcedureScheduler {
   }
 
   public static class TestTableProcedureWithEvent extends TestTableProcedure {
-    private final ProcedureEvent event;
+    private final ProcedureEvent<?> event;
 
-    public TestTableProcedureWithEvent(long procId, TableName tableName, TableOperationType opType) {
+    public TestTableProcedureWithEvent(long procId, TableName tableName,
+        TableOperationType opType) {
       super(procId, tableName, opType);
-      event = new ProcedureEvent(tableName + " procId=" + procId);
+      event = new ProcedureEvent<>(tableName + " procId=" + procId);
     }
 
-    public ProcedureEvent getEvent() {
+    public ProcedureEvent<?> getEvent() {
       return event;
     }
   }
@@ -912,7 +919,8 @@ public class TestMasterProcedureScheduler {
     }
   }
 
-  private static LockProcedure createLockProcedure(LockType lockType, long procId) throws Exception {
+  private static LockProcedure createLockProcedure(LockType lockType, long procId)
+      throws Exception {
     LockProcedure procedure = new LockProcedure();
 
     Field typeField = LockProcedure.class.getDeclaredField("type");
@@ -983,7 +991,7 @@ public class TestMasterProcedureScheduler {
 
     LockedResource tableResource = locks.get(1);
     assertLockResource(tableResource, LockedResourceType.TABLE,
-        TableName.NAMESPACE_TABLE_NAME.getNameAsString());
+      TableName.NAMESPACE_TABLE_NAME.getNameAsString());
     assertSharedLock(tableResource, 1);
     assertTrue(tableResource.getWaitingProcedures().isEmpty());
   }
@@ -1010,7 +1018,8 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testListLocksRegion() throws Exception {
     LockProcedure procedure = createExclusiveLockProcedure(3);
-    HRegionInfo regionInfo = new HRegionInfo(TableName.valueOf("ns3", "table3"));
+    RegionInfo regionInfo =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("ns3", "table3")).build();
 
     queue.waitRegion(procedure, regionInfo);
 
@@ -1093,4 +1102,3 @@ public class TestMasterProcedureScheduler {
     queue.wakeTableExclusiveLock(parentProc, tableName);
   }
 }
-
