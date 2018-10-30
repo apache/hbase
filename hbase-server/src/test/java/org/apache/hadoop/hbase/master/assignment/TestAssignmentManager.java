@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
@@ -54,6 +55,8 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionCloseOperation;
+import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionOpenOperation;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -835,9 +838,22 @@ public class TestAssignmentManager {
     }
 
     private class MockRemoteCall extends ExecuteProceduresRemoteCall {
-      public MockRemoteCall(final ServerName serverName,
-          final Set<RemoteProcedure> operations) {
+      public MockRemoteCall(final ServerName serverName, final Set<RemoteProcedure> operations) {
         super(serverName, operations);
+      }
+
+      @Override
+      public void dispatchOpenRequests(MasterProcedureEnv env,
+          List<RegionOpenOperation> operations) {
+        request.addOpenRegion(buildOpenRegionRequest(env, getServerName(), operations));
+      }
+
+      @Override
+      public void dispatchCloseRequests(MasterProcedureEnv env,
+          List<RegionCloseOperation> operations) {
+        for (RegionCloseOperation op : operations) {
+          request.addCloseRegion(op.buildCloseRegionRequest(getServerName()));
+        }
       }
 
       @Override

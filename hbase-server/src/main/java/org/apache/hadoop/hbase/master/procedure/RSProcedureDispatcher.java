@@ -111,10 +111,7 @@ public class RSProcedureDispatcher
     if (rsVersion == 0 && !master.getServerManager().isServerOnline(serverName)) {
       submitTask(new DeadRSRemoteCall(serverName, remoteProcedures));
     } else {
-      // See HBASE-21237, fallback to CompatRemoteProcedureResolver for now. Since
-      // ExecuteProceduresRemoteCall will group all the open/close requests. If one
-      // fails, master will regard all the requests as failure and then cause some trouble.
-      submitTask(new CompatRemoteProcedureResolver(serverName, remoteProcedures));
+      submitTask(new ExecuteProceduresRemoteCall(serverName, remoteProcedures));
     }
   }
 
@@ -279,7 +276,7 @@ public class RSProcedureDispatcher
       implements RemoteProcedureResolver {
     protected final Set<RemoteProcedure> remoteProcedures;
 
-    private ExecuteProceduresRequest.Builder request = null;
+    protected ExecuteProceduresRequest.Builder request = null;
 
     public ExecuteProceduresRemoteCall(final ServerName serverName,
         final Set<RemoteProcedure> remoteProcedures) {
@@ -312,14 +309,14 @@ public class RSProcedureDispatcher
     @Override
     public void dispatchOpenRequests(final MasterProcedureEnv env,
         final List<RegionOpenOperation> operations) {
-      request.addOpenRegion(buildOpenRegionRequest(env, getServerName(), operations));
+      submitTask(new OpenRegionRemoteCall(getServerName(), operations));
     }
 
     @Override
     public void dispatchCloseRequests(final MasterProcedureEnv env,
         final List<RegionCloseOperation> operations) {
       for (RegionCloseOperation op: operations) {
-        request.addCloseRegion(op.buildCloseRegionRequest(getServerName()));
+        submitTask(new CloseRegionRemoteCall(getServerName(), op));
       }
     }
 
@@ -348,7 +345,7 @@ public class RSProcedureDispatcher
     }
   }
 
-  private static OpenRegionRequest buildOpenRegionRequest(final MasterProcedureEnv env,
+  protected static OpenRegionRequest buildOpenRegionRequest(final MasterProcedureEnv env,
       final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     builder.setServerStartCode(serverName.getStartcode());
@@ -469,41 +466,6 @@ public class RSProcedureDispatcher
 
     private void remoteCallFailed(final MasterProcedureEnv env, final IOException e) {
       operation.getRemoteProcedure().remoteCallFailed(env, getServerName(), e);
-    }
-  }
-
-  /**
-   * Compatibility class to open and close regions using old endpoints (openRegion/closeRegion) in
-   * {@link AdminService}.
-   */
-  protected class CompatRemoteProcedureResolver implements Callable<Void>, RemoteProcedureResolver {
-    private final Set<RemoteProcedure> operations;
-    private final ServerName serverName;
-
-    public CompatRemoteProcedureResolver(final ServerName serverName,
-        final Set<RemoteProcedure> operations) {
-      this.serverName = serverName;
-      this.operations = operations;
-    }
-
-    @Override
-    public Void call() {
-      splitAndResolveOperation(serverName, operations, this);
-      return null;
-    }
-
-    @Override
-    public void dispatchOpenRequests(final MasterProcedureEnv env,
-        final List<RegionOpenOperation> operations) {
-      submitTask(new OpenRegionRemoteCall(serverName, operations));
-    }
-
-    @Override
-    public void dispatchCloseRequests(final MasterProcedureEnv env,
-        final List<RegionCloseOperation> operations) {
-      for (RegionCloseOperation op: operations) {
-        submitTask(new CloseRegionRemoteCall(serverName, op));
-      }
     }
   }
 
