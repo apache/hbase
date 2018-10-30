@@ -62,7 +62,7 @@ when the corresponding events happen. The master transitions regions
 through the following states:
 <p>
 &nbsp;&nbsp;&nbsp;
-unassigned -&gt; pendingOpen -&gt; open -&gt; pendingClose -7gt; closed.
+unassigned -&gt; pendingOpen -&gt; open -&gt; pendingClose -&gt; closed.
 <p>
 Coprocessors have opportunity to intercept and handle events in
 pendingOpen, open, and pendingClose states.
