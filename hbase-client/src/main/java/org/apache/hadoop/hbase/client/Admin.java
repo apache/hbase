@@ -1333,9 +1333,10 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
-   * taken. If the table is disabled, an offline snapshot is taken. Snapshots are considered unique
-   * based on <b>the name of the snapshot</b>. Attempts to take a snapshot with the same name (even
-   * a different type or with different parameters) will fail with a
+   * taken. If the table is disabled, an offline snapshot is taken. Snapshots are taken
+   * sequentially even when requested concurrently, across all tables. Snapshots are considered
+   * unique based on <b>the name of the snapshot</b>. Attempts to take a snapshot with the same
+   * name (even a different type or with different parameters) will fail with a
    * {@link org.apache.hadoop.hbase.snapshot.SnapshotCreationException} indicating the duplicate
    * naming. Snapshot names follow the same naming constraints as tables in HBase. See
    * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
@@ -1352,7 +1353,8 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Create typed snapshot of the table. Snapshots are considered unique based on <b>the name of the
-   * snapshot</b>. Attempts to take a snapshot with the same name (even a different type or with
+   * snapshot</b>. Snapshots are taken sequentially even when requested concurrently, across
+   * all tables. Attempts to take a snapshot with the same name (even a different type or with
    * different parameters) will fail with a {@link SnapshotCreationException} indicating the
    * duplicate naming. Snapshot names follow the same naming constraints as tables in HBase. See
    * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
@@ -1370,13 +1372,12 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Take a snapshot and wait for the server to complete that snapshot (blocking). Only a single
-   * snapshot should be taken at a time for an instance of HBase, or results may be undefined (you
-   * can tell multiple HBase clusters to snapshot at the same time, but only one at a time for a
-   * single cluster). Snapshots are considered unique based on <b>the name of the snapshot</b>.
-   * Attempts to take a snapshot with the same name (even a different type or with different
-   * parameters) will fail with a {@link SnapshotCreationException} indicating the duplicate naming.
-   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * Take a snapshot and wait for the server to complete that snapshot (blocking). Snapshots are
+   * considered unique based on <b>the name of the snapshot</b>. Snapshots are taken sequentially
+   * even when requested concurrently, across all tables. Attempts to take a snapshot with the same
+   * name (even a different type or with different parameters) will fail with a
+   * {@link SnapshotCreationException} indicating the duplicate naming. Snapshot names follow the
+   * same naming constraints as tables in HBase. See
    * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}. You should
    * probably use {@link #snapshot(String, org.apache.hadoop.hbase.TableName)} unless you are sure
    * about the type of snapshot that you want to take.
@@ -1389,8 +1390,9 @@ public interface Admin extends Abortable, Closeable {
       throws IOException, SnapshotCreationException, IllegalArgumentException;
 
   /**
-   * Take a snapshot without waiting for the server to complete that snapshot (asynchronous) Only a
-   * single snapshot should be taken at a time, or results may be undefined.
+   * Take a snapshot without waiting for the server to complete that snapshot (asynchronous).
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Snapshots are taken
+   * sequentially even when requested concurrently, across all tables.
    *
    * @param snapshot snapshot to take
    * @throws IOException if the snapshot did not succeed or we lose contact with the master.
