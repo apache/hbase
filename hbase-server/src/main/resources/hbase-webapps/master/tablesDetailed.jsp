@@ -51,6 +51,7 @@
   <table class="table table-striped">
     <tr>
       <th>Table</th>
+      <th>Heatmap</th>
       <th>Description</th>
     </tr>
     <% for (TableDescriptor htDesc : tables) { %>
@@ -58,6 +59,9 @@
       <td>
         <a href="/table.jsp?name=<%= escapeXml(htDesc.getTableName().getNameAsString()) %>"><%= escapeXml(
             htDesc.getTableName().getNameAsString()) %>
+        </a></td>
+        <td>
+        <a href="/accessStats.jsp?name=<%= escapeXml(htDesc.getTableName().getNameAsString()) %>">Key Access Heatmap
         </a></td>
       <td><%= htDesc.toString() %>
       </td>

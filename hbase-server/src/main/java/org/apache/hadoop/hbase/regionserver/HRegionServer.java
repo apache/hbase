@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -131,6 +132,12 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
+import org.apache.hadoop.hbase.regionserver.stats.AccessStats;
+import org.apache.hadoop.hbase.regionserver.stats.AccessStats.AccessStatsType;
+import org.apache.hadoop.hbase.regionserver.stats.AccessStatsRecorderTableImpl;
+import org.apache.hadoop.hbase.regionserver.stats.AccessStatsRecorderUtils;
+import org.apache.hadoop.hbase.regionserver.stats.IAccessStatsRecorder;
+import org.apache.hadoop.hbase.regionserver.stats.RegionAccessStats;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -385,6 +392,11 @@ public class HRegionServer extends HasThread implements
    * Check for flushes
    */
   ScheduledChore periodicFlusher;
+  
+  /*
+   * Record periodic region counters (read and write)
+   */
+  ScheduledChore regionStatsRecorder;
 
   protected volatile WALFactory walFactory;
 
@@ -1818,6 +1830,83 @@ public class HRegionServer extends HasThread implements
       }
     }
   }
+  
+  /*
+   * This class is to periodically store information about region access stats.
+   */
+  private static class RegionStatsRecorder extends ScheduledChore {
+    private final HRegionServer instance;
+    IAccessStatsRecorder accessStatsRecorder;
+
+    Map<String, Long> regionLastReadCountMap = new HashMap<String, Long>();
+    Map<String, Long> regionLastWriteCountMap = new HashMap<String, Long>();
+
+    RegionStatsRecorder(final HRegionServer h, final Stoppable stopper, final int durationInMinutes,
+        final Configuration configuration) {
+      super("RegionStatsRecorder", stopper, durationInMinutes * 60 * 1000);
+      this.instance = h;
+
+      accessStatsRecorder = new AccessStatsRecorderTableImpl(configuration);
+
+      LOG.info(this.getName() + " runs every " + durationInMinutes
+          + " minutes with initial delay of " + durationInMinutes + " minutes.");
+    }
+
+    @Override
+    protected void chore() {
+      List<AccessStats> accessStatsList = new ArrayList<>();
+
+      for (Region region : this.instance.onlineRegions.values()) {
+        if (region == null) continue;
+
+        String regionName = region.getRegionInfo().getRegionNameAsString();
+
+        long currentReadRequestCount = region.getReadRequestsCount();
+        long currentWriteRequestCount = region.getWriteRequestsCount();
+
+        Long lastReadRequestCount = regionLastReadCountMap.get(regionName);
+        Long lastWriteRequestCount = regionLastWriteCountMap.get(regionName);
+
+        long readRequestCountSinceLastIteration = currentReadRequestCount;
+        long writeRequestCountSinceLastIteration = currentWriteRequestCount;
+
+        if (lastReadRequestCount != null) {
+          readRequestCountSinceLastIteration = currentReadRequestCount - lastReadRequestCount;
+        }
+
+        if (lastWriteRequestCount != null) {
+          writeRequestCountSinceLastIteration = currentWriteRequestCount - lastWriteRequestCount;
+        }
+
+        RegionAccessStats regionAccessStats =
+            new RegionAccessStats(region.getRegionInfo().getTable(), AccessStatsType.READCOUNT,
+                region.getRegionInfo().getStartKey(), region.getRegionInfo().getEndKey(),
+                readRequestCountSinceLastIteration);
+        regionAccessStats.setRegionName(regionName);
+        accessStatsList.add(regionAccessStats);
+
+        regionAccessStats = new RegionAccessStats(region.getRegionInfo().getTable(),
+            AccessStatsType.WRITECOUNT, region.getRegionInfo().getStartKey(),
+            region.getRegionInfo().getEndKey(), writeRequestCountSinceLastIteration);
+        regionAccessStats.setRegionName(regionName);
+        accessStatsList.add(regionAccessStats);
+
+        regionLastReadCountMap.put(regionName, currentReadRequestCount);
+        regionLastWriteCountMap.put(regionName, currentWriteRequestCount);
+      }
+
+      accessStatsRecorder.writeAccessStats(accessStatsList);
+    }
+
+    @Override
+    protected synchronized void cleanup() {
+      try {
+        accessStatsRecorder.close();
+      } catch (IOException e) {
+        LOG.error("Exception in cleanup of RegionStatsRecorder - "+e.getMessage());
+      }
+    }
+  }
 
   /**
    * Report the status of the server. A server is online once all the startup is
@@ -1977,6 +2066,7 @@ public class HRegionServer extends HasThread implements
     if (this.nonceManagerChore != null) choreService.scheduleChore(nonceManagerChore);
     if (this.storefileRefresher != null) choreService.scheduleChore(storefileRefresher);
     if (this.movedRegionsCleaner != null) choreService.scheduleChore(movedRegionsCleaner);
+    if (this.regionStatsRecorder != null) choreService.scheduleChore(regionStatsRecorder);
     if (this.fsUtilizationChore != null) choreService.scheduleChore(fsUtilizationChore);
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
@@ -2019,6 +2109,11 @@ public class HRegionServer extends HasThread implements
     // in a while. It will take care of not checking too frequently on store-by-store basis.
     this.compactionChecker = new CompactionChecker(this, this.threadWakeFrequency, this);
     this.periodicFlusher = new PeriodicMemStoreFlusher(this.threadWakeFrequency, this);
+    
+    AccessStatsRecorderUtils.createInstance(conf);
+    this.regionStatsRecorder = new RegionStatsRecorder(this, this,
+        AccessStatsRecorderUtils.getInstance().getIterationDuration(), conf);
+    
     this.leases = new Leases(this.threadWakeFrequency);
 
     // Create the thread to clean the moved regions list
@@ -2131,7 +2226,8 @@ public class HRegionServer extends HasThread implements
         && (this.cacheFlusher == null || this.cacheFlusher.isAlive())
         && (this.walRoller == null || this.walRoller.isAlive())
         && (this.compactionChecker == null || this.compactionChecker.isScheduled())
-        && (this.periodicFlusher == null || this.periodicFlusher.isScheduled());
+        && (this.periodicFlusher == null || this.periodicFlusher.isScheduled()
+        && (this.regionStatsRecorder == null || this.regionStatsRecorder.isScheduled()));
     if (!healthy) {
       stop("One or more threads are no longer alive -- stop");
     }
@@ -2473,6 +2569,7 @@ public class HRegionServer extends HasThread implements
       choreService.cancelChore(healthCheckChore);
       choreService.cancelChore(storefileRefresher);
       choreService.cancelChore(movedRegionsCleaner);
+      choreService.cancelChore(regionStatsRecorder);
       choreService.cancelChore(fsUtilizationChore);
       // clean up the remaining scheduled chores (in case we missed out any)
       choreService.shutdown();
