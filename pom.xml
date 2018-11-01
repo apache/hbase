@@ -1342,7 +1342,7 @@
     <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
     <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx${surefire.Xmx}
       ${maxpermsize} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
-      -Djava.awt.headless=true
+      -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true
     </hbase-surefire.argLine>
     <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx} ${maxpermsize}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
