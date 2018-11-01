@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -150,9 +151,18 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     // which means it can be executed immediately.
     // 2. The exclusive lock for this queue has not been held.
     // 3. The given procedure has the exclusive lock permission for this queue.
-    if (proc.hasLock() || proc.isLockedWhenLoading() || !queue.getLockStatus().hasExclusiveLock() ||
-      queue.getLockStatus().hasLockAccess(proc)) {
-      addToRunQueue(fairq, queue);
+    Supplier<String> reason = null;
+    if (proc.hasLock()) {
+      reason = () -> proc + " has lock";
+    } else if (proc.isLockedWhenLoading()) {
+      reason = () -> proc + " restores lock when restarting";
+    } else if (!queue.getLockStatus().hasExclusiveLock()) {
+      reason = () -> "the exclusive lock is not held by anyone when adding " + proc;
+    } else if (queue.getLockStatus().hasLockAccess(proc)) {
+      reason = () -> proc + " has the excusive lock access";
+    }
+    if (reason != null) {
+      addToRunQueue(fairq, queue, reason);
     }
   }
 
@@ -205,7 +215,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (isLockReady(proc, rq)) {
         // the queue is empty, remove from run queue
         if (rq.isEmpty()) {
-          removeFromRunQueue(fairq, rq);
+          removeFromRunQueue(fairq, rq, () -> "queue is empty after polling out " + proc);
         }
         return proc;
       }
@@ -213,7 +223,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       rq.add(proc, false);
     }
     // no procedure is ready for execution, remove from run queue
-    removeFromRunQueue(fairq, rq);
+    removeFromRunQueue(fairq, rq, () -> "no procedure can be executed");
     return null;
   }
 
@@ -263,11 +273,13 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   private <T extends Comparable<T>, TNode extends Queue<T>> void clear(TNode treeMap,
-      final FairQueue<T> fairq, final AvlKeyComparator<TNode> comparator) {
+      FairQueue<T> fairq, AvlKeyComparator<TNode> comparator) {
     while (treeMap != null) {
       Queue<T> node = AvlTree.getFirst(treeMap);
       treeMap = AvlTree.remove(treeMap, node.getKey(), comparator);
-      if (fairq != null) removeFromRunQueue(fairq, node);
+      if (fairq != null) {
+        removeFromRunQueue(fairq, node, () -> "clear all queues");
+      }
     }
   }
 
@@ -321,14 +333,21 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
   }
 
-  private static <T extends Comparable<T>> void addToRunQueue(FairQueue<T> fairq, Queue<T> queue) {
+  private static <T extends Comparable<T>> void addToRunQueue(FairQueue<T> fairq, Queue<T> queue,
+      Supplier<String> reason) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Add {} to run queue because: {}", queue, reason.get());
+    }
     if (!AvlIterableList.isLinked(queue) && !queue.isEmpty()) {
       fairq.add(queue);
     }
   }
 
-  private static <T extends Comparable<T>> void removeFromRunQueue(
-      FairQueue<T> fairq, Queue<T> queue) {
+  private static <T extends Comparable<T>> void removeFromRunQueue(FairQueue<T> fairq,
+      Queue<T> queue, Supplier<String> reason) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Remove {} from run queue because: {}", queue, reason.get());
+    }
     if (AvlIterableList.isLinked(queue)) {
       fairq.remove(queue);
     }
@@ -399,7 +418,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
       LockAndQueue lock = locking.getServerLock(serverName);
       if (node.isEmpty() && lock.tryExclusiveLock(proc)) {
-        removeFromRunQueue(serverRunQueue, node);
+        removeFromRunQueue(serverRunQueue, node,
+          () -> "clean up server queue after " + proc + " completed");
         removeServerQueue(serverName);
       }
     } finally {
@@ -484,7 +504,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         logLockedResource(LockedResourceType.TABLE, table.getNameAsString());
         return true;
       }
-      removeFromRunQueue(tableRunQueue, getTableQueue(table));
+      removeFromRunQueue(tableRunQueue, getTableQueue(table),
+        () -> procedure + " held the exclusive lock");
       return false;
     } finally {
       schedUnlock();
@@ -508,7 +529,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (namespaceLock.releaseSharedLock()) {
         waitingCount += wakeWaitingProcedures(namespaceLock);
       }
-      addToRunQueue(tableRunQueue, getTableQueue(table));
+      addToRunQueue(tableRunQueue, getTableQueue(table),
+        () -> procedure + " released the exclusive lock");
       wakePollIfNeeded(waitingCount);
     } finally {
       schedUnlock();
@@ -560,7 +582,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final LockAndQueue tableLock = locking.getTableLock(table);
       int waitingCount = 0;
       if (tableLock.releaseSharedLock()) {
-        addToRunQueue(tableRunQueue, getTableQueue(table));
+        addToRunQueue(tableRunQueue, getTableQueue(table),
+          () -> procedure + " released the shared lock");
         waitingCount += wakeWaitingProcedures(tableLock);
       }
       if (namespaceLock.releaseSharedLock()) {
@@ -768,7 +791,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         waitingCount += wakeWaitingProcedures(namespaceLock);
       }
       if (systemNamespaceTableLock.releaseSharedLock()) {
-        addToRunQueue(tableRunQueue, getTableQueue(TableName.NAMESPACE_TABLE_NAME));
+        addToRunQueue(tableRunQueue, getTableQueue(TableName.NAMESPACE_TABLE_NAME),
+          () -> procedure + " released namespace exclusive lock");
         waitingCount += wakeWaitingProcedures(systemNamespaceTableLock);
       }
       wakePollIfNeeded(waitingCount);
@@ -797,7 +821,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         removeFromRunQueue(serverRunQueue,
           getServerQueue(serverName,
             procedure instanceof ServerProcedureInterface ? (ServerProcedureInterface) procedure
-              : null));
+              : null),
+          () -> procedure + " held exclusive lock");
         return false;
       }
       waitProcedure(lock, procedure);
@@ -825,7 +850,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       addToRunQueue(serverRunQueue,
         getServerQueue(serverName,
           procedure instanceof ServerProcedureInterface ? (ServerProcedureInterface) procedure
-            : null));
+            : null), () -> procedure + " released exclusive lock");
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {
@@ -850,7 +875,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getMetaLock();
       if (lock.tryExclusiveLock(procedure)) {
-        removeFromRunQueue(metaRunQueue, getMetaQueue());
+        removeFromRunQueue(metaRunQueue, getMetaQueue(), () -> procedure + " held exclusive lock");
         return false;
       }
       waitProcedure(lock, procedure);
@@ -874,7 +899,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getMetaLock();
       lock.releaseExclusiveLock(procedure);
-      addToRunQueue(metaRunQueue, getMetaQueue());
+      addToRunQueue(metaRunQueue, getMetaQueue(), () -> procedure + " released exclusive lock");
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {
