@@ -1601,7 +1601,7 @@
      -->
     <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
-      -Djava.awt.headless=true
+      -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true
     </hbase-surefire.argLine>
     <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
