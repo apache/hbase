@@ -21,7 +21,7 @@ pipeline {
     }
   }
   triggers {
-    cron('H */6 * * *')  // Run every 6 hours.
+    cron('H */12 * * *')  // Run every 12 hours. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '30'))
