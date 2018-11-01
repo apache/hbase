@@ -273,7 +273,7 @@ public class TableStateManager {
       throws IOException {
     Map<String, TableDescriptor> allDescriptors = tableDescriptors.getAll();
     Map<String, TableState> states = new HashMap<>();
-    // NOTE: Ful hbase:meta table scan!
+    // NOTE: Full hbase:meta table scan!
     MetaTableAccessor.fullScanTables(connection, new MetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
