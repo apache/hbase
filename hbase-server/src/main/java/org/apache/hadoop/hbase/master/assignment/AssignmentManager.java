@@ -1264,8 +1264,6 @@ public class AssignmentManager implements ServerListener {
     }
     LOG.info("Number of RegionServers={}", master.getServerManager().countOfRegionServers());
 
-    processOfflineRegions();
-
     // Start the RIT chore
     master.getMasterProcedureExecutor().addChore(this.ritChore);
 
@@ -1273,14 +1271,18 @@ public class AssignmentManager implements ServerListener {
     LOG.info("Joined the cluster in {}", StringUtils.humanTimeDiff(costMs));
   }
 
-  // Create assign procedure for offline regions.
-  // Just follow the old processofflineServersWithOnlineRegions method. Since now we do not need to
-  // deal with dead server any more, we only deal with the regions in OFFLINE state in this method.
-  // And this is a bit strange, that for new regions, we will add it in CLOSED state instead of
-  // OFFLINE state, and usually there will be a procedure to track them. The
-  // processofflineServersWithOnlineRegions is a legacy from long ago, as things are going really
-  // different now, maybe we do not need this method any more. Need to revisit later.
-  private void processOfflineRegions() {
+  /**
+   * Create assign procedure for offline regions.
+   * Just follow the old processofflineServersWithOnlineRegions method. Since now we do not need to
+   * deal with dead server any more, we only deal with the regions in OFFLINE state in this method.
+   * And this is a bit strange, that for new regions, we will add it in CLOSED state instead of
+   * OFFLINE state, and usually there will be a procedure to track them. The
+   * processofflineServersWithOnlineRegions is a legacy from long ago, as things are going really
+   * different now, maybe we do not need this method any more. Need to revisit later.
+   */
+  // Public so can be run by the Master as part of the startup. Needs hbase:meta to be online.
+  // Needs to be done after the table state manager has been started.
+  public void processOfflineRegions() {
     List<RegionInfo> offlineRegions = regionStates.getRegionStates().stream()
       .filter(RegionState::isOffline).filter(s -> isTableEnabled(s.getRegion().getTable()))
       .map(RegionState::getRegion).collect(Collectors.toList());
