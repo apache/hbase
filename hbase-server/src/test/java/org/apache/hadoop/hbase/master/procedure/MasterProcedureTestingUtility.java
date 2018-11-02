@@ -110,8 +110,12 @@ public class MasterProcedureTestingUtility {
         @Override
         public Void call() throws Exception {
           AssignmentManager am = env.getAssignmentManager();
-          am.joinCluster();
-          master.setInitialized(true);
+          try {
+            am.joinCluster();
+            master.setInitialized(true);
+          } catch (Exception e) {
+            LOG.warn("Failed to load meta", e);
+          }
           return null;
         }
       });
