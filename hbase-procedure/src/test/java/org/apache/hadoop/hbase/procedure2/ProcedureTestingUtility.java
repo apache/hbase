@@ -133,15 +133,14 @@ public class ProcedureTestingUtility {
     if (actionBeforeStartWorker != null) {
       actionBeforeStartWorker.call();
     }
+    if (avoidTestKillDuringRestart) {
+      procExecutor.testing = testing;
+    }
     if (startWorkers) {
       procExecutor.startWorkers();
     }
     if (startAction != null) {
       startAction.call();
-    }
-
-    if (avoidTestKillDuringRestart) {
-      procExecutor.testing = testing;
     }
   }
 

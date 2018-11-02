@@ -288,7 +288,7 @@ public class TestMergeTableRegionsProcedure {
     regionsToMerge[1] = tableRegions.get(1);
 
     long procId = procExec.submitProcedure(
-        new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true));
+      new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true));
 
     // Execute until step 9 of split procedure
     // NOTE: step 9 is after step MERGE_TABLE_REGIONS_UPDATE_META

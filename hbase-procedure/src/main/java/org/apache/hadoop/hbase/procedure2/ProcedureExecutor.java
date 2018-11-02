@@ -92,29 +92,29 @@ public class ProcedureExecutor<TEnvironment> {
    * break PE having it fail at various junctures. When non-null, testing is set to an instance of
    * the below internal {@link Testing} class with flags set for the particular test.
    */
-  Testing testing = null;
+  volatile Testing testing = null;
 
   /**
    * Class with parameters describing how to fail/die when in testing-context.
    */
   public static class Testing {
-    protected boolean killIfHasParent = true;
-    protected boolean killIfSuspended = false;
+    protected volatile boolean killIfHasParent = true;
+    protected volatile boolean killIfSuspended = false;
 
     /**
      * Kill the PE BEFORE we store state to the WAL. Good for figuring out if a Procedure is
      * persisting all the state it needs to recover after a crash.
      */
-    protected boolean killBeforeStoreUpdate = false;
-    protected boolean toggleKillBeforeStoreUpdate = false;
+    protected volatile boolean killBeforeStoreUpdate = false;
+    protected volatile boolean toggleKillBeforeStoreUpdate = false;
 
     /**
      * Set when we want to fail AFTER state has been stored into the WAL. Rarely used. HBASE-20978
      * is about a case where memory-state was being set after store to WAL where a crash could
      * cause us to get stuck. This flag allows killing at what was a vulnerable time.
      */
-    protected boolean killAfterStoreUpdate = false;
-    protected boolean toggleKillAfterStoreUpdate = false;
+    protected volatile boolean killAfterStoreUpdate = false;
+    protected volatile boolean toggleKillAfterStoreUpdate = false;
 
     protected boolean shouldKillBeforeStoreUpdate() {
       final boolean kill = this.killBeforeStoreUpdate;

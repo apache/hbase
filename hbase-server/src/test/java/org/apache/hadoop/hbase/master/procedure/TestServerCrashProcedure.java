@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -63,7 +64,8 @@ public class TestServerCrashProcedure {
   private void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.set("hbase.balancer.tablesOnMaster", "none");
-    conf.setInt("hbase.client.retries.number", 3);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 3);
   }
 
   @Before
