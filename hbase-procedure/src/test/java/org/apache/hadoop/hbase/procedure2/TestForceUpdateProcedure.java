@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store.wal;
+package org.apache.hadoop.hbase.procedure2;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -27,19 +27,19 @@ import java.util.concurrent.Exchanger;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
@@ -60,8 +60,12 @@ public class TestForceUpdateProcedure {
 
   private static int WAL_COUNT = 5;
 
-  private static void createStoreAndExecutor() throws IOException {
-    Path logDir = UTIL.getDataTestDir("proc-wals");
+  @Rule
+  public final TestName name = new TestName();
+
+  private void createStoreAndExecutor() throws IOException {
+    UTIL.getConfiguration().setInt(CompletedProcedureCleaner.CLEANER_INTERVAL_CONF_KEY, 1000);
+    Path logDir = UTIL.getDataTestDir(name.getMethodName());
     STORE = ProcedureTestingUtility.createWalStore(UTIL.getConfiguration(), logDir);
     STORE.start(1);
     EXEC = new ProcedureExecutor<Void>(UTIL.getConfiguration(), null, STORE);
@@ -69,12 +73,11 @@ public class TestForceUpdateProcedure {
   }
 
   @BeforeClass
-  public static void setUp() throws IOException {
+  public static void setUpBeforeClass() throws IOException {
     UTIL.getConfiguration().setInt(WALProcedureStore.WAL_COUNT_WARN_THRESHOLD_CONF_KEY, WAL_COUNT);
-    createStoreAndExecutor();
   }
 
-  private static void stopStoreAndExecutor() {
+  private void stopStoreAndExecutor() {
     EXEC.stop();
     STORE.stop(false);
     EXEC = null;
@@ -82,12 +85,21 @@ public class TestForceUpdateProcedure {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException {
-    stopStoreAndExecutor();
+  public static void tearDownAfterClass() throws IOException {
     UTIL.cleanupTestDir();
   }
 
-  public static final class WaitingProcedure extends Procedure<Void> {
+  @Before
+  public void setUp() throws IOException {
+    createStoreAndExecutor();
+  }
+
+  @After
+  public void tearDown() {
+    stopStoreAndExecutor();
+  }
+
+  public static final class WaitingProcedure extends NoopProcedure<Void> {
 
     @Override
     protected Procedure<Void>[] execute(Void env)
@@ -97,82 +109,19 @@ public class TestForceUpdateProcedure {
       setTimeout(Integer.MAX_VALUE);
       throw new ProcedureSuspendedException();
     }
-
-    @Override
-    protected void rollback(Void env) throws IOException, InterruptedException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean abort(Void env) {
-      return false;
-    }
-
-    @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    }
-
-    @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    }
   }
 
-  public static final class ParentProcedure extends Procedure<Void> {
+  public static final class ParentProcedure extends NoopProcedure<Void> {
 
     @SuppressWarnings("unchecked")
     @Override
     protected Procedure<Void>[] execute(Void env)
         throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-      return new Procedure[] { new DummyProcedure(), new WaitingProcedure() };
-    }
-
-    @Override
-    protected void rollback(Void env) throws IOException, InterruptedException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean abort(Void env) {
-      return false;
-    }
-
-    @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    }
-
-    @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
+      return new Procedure[] { new NoopProcedure<>(), new WaitingProcedure() };
     }
   }
 
-  public static final class DummyProcedure extends Procedure<Void> {
-
-    @Override
-    protected Procedure<Void>[] execute(Void env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-      return null;
-    }
-
-    @Override
-    protected void rollback(Void env) throws IOException, InterruptedException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean abort(Void env) {
-      return false;
-    }
-
-    @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    }
-
-    @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    }
-  }
-
-  public static final class ExchangeProcedure extends Procedure<Void> {
+  public static final class ExchangeProcedure extends NoopProcedure<Void> {
 
     @SuppressWarnings("unchecked")
     @Override
@@ -184,28 +133,18 @@ public class TestForceUpdateProcedure {
         return null;
       }
     }
+  }
+
+  public static final class NoopNoAckProcedure extends NoopProcedure<Void> {
 
     @Override
-    protected void rollback(Void env) throws IOException, InterruptedException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean abort(Void env) {
+    protected boolean shouldWaitClientAck(Void env) {
       return false;
-    }
-
-    @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    }
-
-    @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     }
   }
 
   @Test
-  public void test() throws IOException, InterruptedException {
+  public void testProcedureStuck() throws IOException, InterruptedException {
     EXEC.submitProcedure(new ParentProcedure());
     EXCHANGER.exchange(Boolean.TRUE);
     UTIL.waitFor(10000, () -> EXEC.getActiveExecutorCount() == 0);
@@ -240,7 +179,26 @@ public class TestForceUpdateProcedure {
     assertEquals(ProcedureState.WAITING, parentProc.getState());
     WaitingProcedure waitingProc = (WaitingProcedure) procMap.get(WaitingProcedure.class);
     assertEquals(ProcedureState.WAITING_TIMEOUT, waitingProc.getState());
-    DummyProcedure dummyProc = (DummyProcedure) procMap.get(DummyProcedure.class);
-    assertEquals(ProcedureState.SUCCESS, dummyProc.getState());
+    NoopProcedure<Void> noopProc = (NoopProcedure<Void>) procMap.get(NoopProcedure.class);
+    assertEquals(ProcedureState.SUCCESS, noopProc.getState());
+  }
+
+  @Test
+  public void testCompletedProcedure() throws InterruptedException, IOException {
+    long procId = EXEC.submitProcedure(new ExchangeProcedure());
+    EXCHANGER.exchange(Boolean.FALSE);
+    UTIL.waitFor(10000, () -> EXEC.isFinished(procId));
+    for (int i = 0; i < WAL_COUNT - 1; i++) {
+      assertTrue(STORE.rollWriterForTesting());
+      // The exchange procedure is completed but still not deleted yet so we can not delete the
+      // oldest wal file
+      long pid = EXEC.submitProcedure(new NoopNoAckProcedure());
+      assertEquals(2 + i, STORE.getActiveLogs().size());
+      UTIL.waitFor(10000, () -> EXEC.isFinished(pid));
+    }
+    // Only the exchange procedure can not be deleted
+    UTIL.waitFor(10000, () -> EXEC.getCompletedSize() == 1);
+    STORE.rollWriterForTesting();
+    UTIL.waitFor(10000, () -> STORE.getActiveLogs().size() <= 1);
   }
 }
