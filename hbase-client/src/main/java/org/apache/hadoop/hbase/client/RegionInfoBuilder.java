@@ -287,15 +287,7 @@ public class RegionInfoBuilder {
      */
     @Override
     public String getRegionNameAsString() {
-      if (RegionInfo.hasEncodedName(this.regionName)) {
-        // new format region names already have their encoded name.
-        return Bytes.toStringBinary(this.regionName);
-      }
-
-      // old format. regionNameStr doesn't have the region name.
-      //
-      //
-      return Bytes.toStringBinary(this.regionName) + "." + this.getEncodedName();
+      return RegionInfo.getRegionNameAsString(this, this.regionName);
     }
 
     /** @return the encoded region name */

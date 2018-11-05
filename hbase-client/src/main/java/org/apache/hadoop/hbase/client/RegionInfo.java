@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -269,6 +271,26 @@ public interface RegionInfo {
       encodedName = String.valueOf(hashVal);
     }
     return encodedName;
+  }
+
+  @InterfaceAudience.Private
+  static String getRegionNameAsString(byte[] regionName) {
+    return getRegionNameAsString(null, regionName);
+  }
+
+  @InterfaceAudience.Private
+  static String getRegionNameAsString(@CheckForNull RegionInfo ri, byte[] regionName) {
+    if (RegionInfo.hasEncodedName(regionName)) {
+      // new format region names already have their encoded name.
+      return Bytes.toStringBinary(regionName);
+    }
+
+    // old format. regionNameStr doesn't have the region name.
+    if (ri == null) {
+      return Bytes.toStringBinary(regionName) + "." + RegionInfo.encodeRegionName(regionName);
+    } else {
+      return Bytes.toStringBinary(regionName) + "." + ri.getEncodedName();
+    }
   }
 
   /**
