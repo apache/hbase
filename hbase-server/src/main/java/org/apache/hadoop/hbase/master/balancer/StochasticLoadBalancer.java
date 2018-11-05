@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRe
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.base.Optional;
@@ -545,7 +544,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         continue;
       }
       for (Entry<byte[], RegionLoad> entry : sl.getRegionsLoad().entrySet()) {
-        Deque<RegionLoad> rLoads = oldLoads.get(Bytes.toString(entry.getKey()));
+        String regionNameAsString = HRegionInfo.getRegionNameAsString(entry.getKey());
+        Deque<RegionLoad> rLoads = oldLoads.get(regionNameAsString);
         if (rLoads == null) {
           // There was nothing there
           rLoads = new ArrayDeque<RegionLoad>();
@@ -553,8 +553,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           rLoads.remove();
         }
         rLoads.add(entry.getValue());
-        loads.put(Bytes.toString(entry.getKey()), rLoads);
-
+        loads.put(regionNameAsString, rLoads);
       }
     }
 
