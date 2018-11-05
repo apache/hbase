@@ -32,6 +32,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -54,8 +56,10 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
+import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.master.procedure.TableQueue;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
@@ -501,6 +505,24 @@ public class SplitTableRegionProcedure
       setFailure(new IOException("Split region " + parentHRI.getRegionNameAsString() +
           " failed due to split switch off"));
       return false;
+    }
+
+    // See HBASE-21395, for 2.0.x and 2.1.x only.
+    // A safe fence here, if there is a table procedure going on, abort the split.
+    // There some cases that may lead to table procedure roll back (more serious
+    // than roll back the split procedure here), or the split parent was brought online
+    // by the table procedure because of the race between split procedure and table procedure
+    List<AbstractStateMachineTableProcedure> tableProcedures = env
+        .getMasterServices().getProcedures().stream()
+        .filter(p -> p instanceof AbstractStateMachineTableProcedure)
+        .map(p -> (AbstractStateMachineTableProcedure) p)
+        .filter(p -> p.getTableName().equals(getParentRegion().getTable()) &&
+            !p.isFinished() && TableQueue.requireTableExclusiveLock(p))
+        .collect(Collectors.toList());
+    if (tableProcedures != null && tableProcedures.size() > 0) {
+      throw new DoNotRetryIOException(tableProcedures.get(0).toString()
+          + " is going on against the same table, abort the split of " + this
+          .toString());
     }
 
     // set node state as SPLITTING
