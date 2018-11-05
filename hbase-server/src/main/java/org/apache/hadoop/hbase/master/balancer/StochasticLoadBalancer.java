@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRe
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -531,14 +530,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     clusterStatus.getLiveServerMetrics().forEach((ServerName sn, ServerMetrics sm) -> {
       sm.getRegionMetrics().forEach((byte[] regionName, RegionMetrics rm) -> {
-        Deque<BalancerRegionLoad> rLoads = oldLoads.get(Bytes.toString(regionName));
+        String regionNameAsString = RegionInfo.getRegionNameAsString(regionName);
+        Deque<BalancerRegionLoad> rLoads = oldLoads.get(regionNameAsString);
         if (rLoads == null) {
           rLoads = new ArrayDeque<>(numRegionLoadsToRemember + 1);
         } else if (rLoads.size() >= numRegionLoadsToRemember) {
           rLoads.remove();
         }
         rLoads.add(new BalancerRegionLoad(rm));
-        loads.put(Bytes.toString(regionName), rLoads);
+        loads.put(regionNameAsString, rLoads);
       });
     });
 
