@@ -71,7 +71,7 @@ public class TestProcedureExecutor {
 
   private void createNewExecutor(final Configuration conf, final int numThreads) throws Exception {
     procExecutor = new ProcedureExecutor<>(conf, procEnv, procStore);
-    ProcedureTestingUtility.initAndStartWorkers(procExecutor, numThreads, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, numThreads, 0, false, true);
   }
 
   @Test

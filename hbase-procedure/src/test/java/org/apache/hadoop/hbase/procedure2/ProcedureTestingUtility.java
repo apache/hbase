@@ -87,7 +87,12 @@ public class ProcedureTestingUtility {
 
   public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
       boolean abortOnCorruption, boolean startWorkers) throws IOException {
-    procExecutor.init(numThreads, abortOnCorruption);
+    initAndStartWorkers(procExecutor, numThreads, 1, abortOnCorruption, startWorkers);
+  }
+
+  public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
+      int numUrgentThreads, boolean abortOnCorruption, boolean startWorkers) throws IOException {
+    procExecutor.init(numThreads, numUrgentThreads, abortOnCorruption);
     if (startWorkers) {
       procExecutor.startWorkers();
     }
@@ -109,6 +114,7 @@ public class ProcedureTestingUtility {
     final ProcedureStore procStore = procExecutor.getStore();
     final int storeThreads = procExecutor.getCorePoolSize();
     final int execThreads = procExecutor.getCorePoolSize();
+    final int urgentThreads = procExecutor.getUrgentPoolSize();
 
     final ProcedureExecutor.Testing testing = procExecutor.testing;
     if (avoidTestKillDuringRestart) {
@@ -130,7 +136,7 @@ public class ProcedureTestingUtility {
     // re-start
     LOG.info("RESTART - Start");
     procStore.start(storeThreads);
-    initAndStartWorkers(procExecutor, execThreads, failOnCorrupted, startWorkers);
+    initAndStartWorkers(procExecutor, execThreads, urgentThreads, failOnCorrupted, startWorkers);
     if (startAction != null) {
       startAction.call();
     }

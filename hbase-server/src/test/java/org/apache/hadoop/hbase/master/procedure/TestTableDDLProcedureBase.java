@@ -39,6 +39,8 @@ public abstract class TestTableDDLProcedureBase {
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
+    //testxxxDoubleExecution requires only one worker
+    conf.setInt(MasterProcedureConstants.MASTER_URGENT_PROCEDURE_THREADS, 0);
   }
 
   @BeforeClass

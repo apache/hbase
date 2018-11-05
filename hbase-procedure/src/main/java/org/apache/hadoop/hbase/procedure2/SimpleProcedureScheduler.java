@@ -43,7 +43,7 @@ public class SimpleProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   @Override
-  protected Procedure dequeue() {
+  protected Procedure dequeue(boolean onlyUrgent) {
     return runnables.poll();
   }
 

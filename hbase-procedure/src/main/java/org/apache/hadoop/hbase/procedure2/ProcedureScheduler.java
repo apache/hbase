@@ -104,11 +104,28 @@ public interface ProcedureScheduler {
 
   /**
    * Fetch one Procedure from the queue
+   * @param onlyUrgent Only poll the urgent procedure to execute
+   * @return a Procedure
+   */
+  Procedure poll(boolean onlyUrgent);
+
+  /**
+   * Fetch one Procedure from the queue
    * @param timeout how long to wait before giving up, in units of unit
    * @param unit a TimeUnit determining how to interpret the timeout parameter
    * @return the Procedure to execute, or null if nothing present.
    */
   Procedure poll(long timeout, TimeUnit unit);
+
+  /**
+   * Fetch one Procedure from the queue
+   * @param onlyUrgent Only poll the urgent procedure to execute
+   * @param timeout how long to wait before giving up, in units of unit
+   * @param unit a TimeUnit determining how to interpret the timeout parameter
+   * @return a Procedure
+   */
+  Procedure poll(boolean onlyUrgent, long timeout, TimeUnit unit);
+
 
   /**
    * List lock queues.

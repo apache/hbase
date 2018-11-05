@@ -209,6 +209,11 @@ public class ProcedureExecutor<TEnvironment> {
   private CopyOnWriteArrayList<WorkerThread> workerThreads;
 
   /**
+   * Worker thread only for urgent tasks.
+   */
+  private List<WorkerThread> urgentWorkerThreads;
+
+  /**
    * Created in the {@link #init(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
    * resource handling rather than observing in a #join is unexpected).
    * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
@@ -218,6 +223,7 @@ public class ProcedureExecutor<TEnvironment> {
 
   private int corePoolSize;
   private int maxPoolSize;
+  private int urgentPoolSize;
 
   private volatile long keepAliveTime;
 
@@ -558,12 +564,30 @@ public class ProcedureExecutor<TEnvironment> {
    *          is found on replay. otherwise false.
    */
   public void init(int numThreads, boolean abortOnCorruption) throws IOException {
+    init(numThreads, 1, abortOnCorruption);
+  }
+
+  /**
+   * Initialize the procedure executor, but do not start workers. We will start them later.
+   * <p/>
+   * It calls ProcedureStore.recoverLease() and ProcedureStore.load() to recover the lease, and
+   * ensure a single executor, and start the procedure replay to resume and recover the previous
+   * pending and in-progress procedures.
+   * @param numThreads number of threads available for procedure execution.
+   * @param urgentNumThreads number of threads available for urgent procedure execution.
+   * @param abortOnCorruption true if you want to abort your service in case a corrupted procedure
+   *          is found on replay. otherwise false.
+   */
+  public void init(int numThreads, int urgentNumThreads,
+      boolean abortOnCorruption) throws IOException {
     // We have numThreads executor + one timer thread used for timing out
     // procedures and triggering periodic procedures.
     this.corePoolSize = numThreads;
     this.maxPoolSize = 10 * numThreads;
-    LOG.info("Starting {} core workers (bigger of cpus/4 or 16) with max (burst) worker count={}",
-        corePoolSize, maxPoolSize);
+    this.urgentPoolSize = urgentNumThreads;
+    LOG.info("Starting {} core workers (bigger of cpus/4 or 16) with max (burst) worker "
+            + "count={}, start {} urgent thread(s)",
+        corePoolSize, maxPoolSize, urgentPoolSize);
 
     this.threadGroup = new ThreadGroup("PEWorkerGroup");
     this.timeoutExecutor = new TimeoutExecutorThread<>(this, threadGroup);
@@ -571,8 +595,13 @@ public class ProcedureExecutor<TEnvironment> {
     // Create the workers
     workerId.set(0);
     workerThreads = new CopyOnWriteArrayList<>();
+    urgentWorkerThreads = new ArrayList<>();
     for (int i = 0; i < corePoolSize; ++i) {
       workerThreads.add(new WorkerThread(threadGroup));
+    }
+    for (int i = 0; i < urgentNumThreads; ++i) {
+      urgentWorkerThreads
+          .add(new WorkerThread(threadGroup, "UrgentPEWorker-", true));
     }
 
     long st, et;
@@ -608,9 +637,14 @@ public class ProcedureExecutor<TEnvironment> {
       return;
     }
     // Start the executors. Here we must have the lastProcId set.
-    LOG.trace("Start workers {}", workerThreads.size());
+    LOG.debug("Start workers {}, urgent workers", workerThreads.size(),
+        urgentWorkerThreads.size());
     timeoutExecutor.start();
     for (WorkerThread worker: workerThreads) {
+      worker.start();
+    }
+
+    for (WorkerThread worker: urgentWorkerThreads) {
       worker.start();
     }
 
@@ -663,6 +697,11 @@ public class ProcedureExecutor<TEnvironment> {
       worker.awaitTermination();
     }
 
+    // stop the worker threads
+    for (WorkerThread worker: urgentWorkerThreads) {
+      worker.awaitTermination();
+    }
+
     // Destroy the Thread Group for the executors
     // TODO: Fix. #join is not place to destroy resources.
     try {
@@ -700,7 +739,7 @@ public class ProcedureExecutor<TEnvironment> {
    * @return the current number of worker threads.
    */
   public int getWorkerThreadCount() {
-    return workerThreads.size();
+    return workerThreads.size() + urgentWorkerThreads.size();
   }
 
   /**
@@ -708,6 +747,10 @@ public class ProcedureExecutor<TEnvironment> {
    */
   public int getCorePoolSize() {
     return corePoolSize;
+  }
+
+  public int getUrgentPoolSize() {
+    return urgentPoolSize;
   }
 
   public int getActiveExecutorCount() {
@@ -1949,13 +1992,18 @@ public class ProcedureExecutor<TEnvironment> {
   private class WorkerThread extends StoppableThread {
     private final AtomicLong executionStartTime = new AtomicLong(Long.MAX_VALUE);
     private volatile Procedure<TEnvironment> activeProcedure;
-
+    private boolean onlyPollUrgent = false;
     public WorkerThread(ThreadGroup group) {
       this(group, "PEWorker-");
     }
 
     protected WorkerThread(ThreadGroup group, String prefix) {
+      this(group, prefix, false);
+    }
+
+    protected WorkerThread(ThreadGroup group, String prefix, boolean onlyPollUrgent) {
       super(group, prefix + workerId.incrementAndGet());
+      this.onlyPollUrgent = onlyPollUrgent;
       setDaemon(true);
     }
 
@@ -2000,7 +2048,11 @@ public class ProcedureExecutor<TEnvironment> {
       } finally {
         LOG.trace("Worker terminated.");
       }
-      workerThreads.remove(this);
+      if (onlyPollUrgent) {
+        urgentWorkerThreads.remove(this);
+      } else {
+        workerThreads.remove(this);
+      }
     }
 
     @Override

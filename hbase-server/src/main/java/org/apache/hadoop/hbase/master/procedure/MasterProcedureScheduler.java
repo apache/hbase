@@ -129,7 +129,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   @Override
   protected void enqueue(final Procedure proc, final boolean addFront) {
-    if (isMetaProcedure(proc)) {
+    if (isMetaProcedure(proc) ||
+        (isTableProcedure(proc) && getTableName(proc).equals(TableName.META_TABLE_NAME))) {
       doAdd(metaRunQueue, getMetaQueue(), proc, addFront);
     } else if (isTableProcedure(proc)) {
       doAdd(tableRunQueue, getTableQueue(getTableName(proc)), proc, addFront);
@@ -169,9 +170,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   @Override
-  protected Procedure dequeue() {
+  protected Procedure dequeue(boolean onlyUrgent) {
     // meta procedure is always the first priority
     Procedure<?> pollResult = doPoll(metaRunQueue);
+    if (onlyUrgent) {
+      return pollResult;
+    }
     // For now, let server handling have precedence over table handling; presumption is that it
     // is more important handling crashed servers than it is running the
     // enabling/disabling tables, etc.
