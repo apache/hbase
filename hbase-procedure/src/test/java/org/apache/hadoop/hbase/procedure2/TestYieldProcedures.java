@@ -74,7 +74,8 @@ public class TestYieldProcedures {
     procExecutor =
       new ProcedureExecutor<>(htu.getConfiguration(), new TestProcEnv(), procStore, procRunnables);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, 0, false, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, 0, false,
+            true);
   }
 
   @After

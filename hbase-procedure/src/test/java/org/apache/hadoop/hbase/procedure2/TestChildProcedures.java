@@ -69,7 +69,8 @@ public class TestChildProcedures {
     procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), procEnv, procStore);
     procExecutor.testing = new ProcedureExecutor.Testing();
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, 0, false, true);
+    ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, 0, false,
+            true);
   }
 
   @After
