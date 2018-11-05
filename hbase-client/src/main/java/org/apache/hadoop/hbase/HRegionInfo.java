@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.io.DataInputBuffer;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+
 /**
  * Information about a region. A region is a range of keys in the whole keyspace of a table, an
  * identifier (a timestamp) for differentiating between subset ranges (after region split)
@@ -187,6 +189,26 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       encodedName = String.valueOf(hashVal);
     }
     return encodedName;
+  }
+
+  @InterfaceAudience.Private
+  public static String getRegionNameAsString(byte[] regionName) {
+    return getRegionNameAsString(null, regionName);
+  }
+
+  @InterfaceAudience.Private
+  public static String getRegionNameAsString(@CheckForNull HRegionInfo ri, byte[] regionName) {
+    if (hasEncodedName(regionName)) {
+      // new format region names already have their encoded name.
+      return Bytes.toStringBinary(regionName);
+    }
+
+    // old format. regionNameStr doesn't have the region name.
+    if (ri == null) {
+      return Bytes.toStringBinary(regionName) + "." + encodeRegionName(regionName);
+    } else {
+      return Bytes.toStringBinary(regionName) + "." + ri.getEncodedName();
+    }
   }
 
   /**
