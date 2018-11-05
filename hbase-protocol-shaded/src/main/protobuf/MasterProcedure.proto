@@ -507,6 +507,7 @@ message RecoverStandbyStateData {
 message SyncReplicationReplayWALStateData {
   required string peer_id = 1;
   repeated string wal = 2;
+  optional ServerName worker = 3;
 }
 
 message SyncReplicationReplayWALRemoteStateData {

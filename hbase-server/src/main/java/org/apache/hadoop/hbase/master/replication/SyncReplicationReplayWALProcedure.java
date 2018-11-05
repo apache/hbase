@@ -18,28 +18,31 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SyncReplicationReplayWALState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SyncReplicationReplayWALStateData;
 
+/**
+ * The procedure for replaying a set of remote wals. It will get an available region server and
+ * schedule a {@link SyncReplicationReplayWALRemoteProcedure} to actually send the request to region
+ * server.
+ */
 @InterfaceAudience.Private
 public class SyncReplicationReplayWALProcedure
     extends AbstractPeerNoLockProcedure<SyncReplicationReplayWALState> {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(SyncReplicationReplayWALProcedure.class);
+    LoggerFactory.getLogger(SyncReplicationReplayWALProcedure.class);
 
   private ServerName worker = null;
 
@@ -57,24 +60,10 @@ public class SyncReplicationReplayWALProcedure
   protected Flow executeFromState(MasterProcedureEnv env, SyncReplicationReplayWALState state)
       throws ProcedureSuspendedException {
     SyncReplicationReplayWALManager syncReplicationReplayWALManager =
-        env.getMasterServices().getSyncReplicationReplayWALManager();
+      env.getMasterServices().getSyncReplicationReplayWALManager();
     switch (state) {
       case ASSIGN_WORKER:
-        try {
-          worker = syncReplicationReplayWALManager.getPeerWorker(peerId);
-        } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn("Failed to get worker to replay wals {} for peer id={}, sleep {} secs and retry",
-            wals, peerId, backoff / 1000, e);
-          throw suspend(backoff);
-        }
-        if (worker == null) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.info("No worker to replay wals {} for peer id={}, sleep {} secs and retry", wals,
-            peerId, backoff / 1000);
-          throw suspend(backoff);
-        }
-        attempts = 0;
+        worker = syncReplicationReplayWALManager.acquirePeerWorker(peerId, this);
         setNextState(SyncReplicationReplayWALState.DISPATCH_WALS_TO_WORKER);
         return Flow.HAS_MORE_STATE;
       case DISPATCH_WALS_TO_WORKER:
@@ -88,19 +77,11 @@ public class SyncReplicationReplayWALProcedure
         } catch (IOException e) {
           long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
           LOG.warn("Failed to check whether replay wals {} finished for peer id={}" +
-              ", sleep {} secs and retry",
-            wals, peerId, backoff / 1000, e);
+            ", sleep {} secs and retry", wals, peerId, backoff / 1000, e);
           throw suspend(backoff);
         }
-        try {
-          syncReplicationReplayWALManager.removePeerWorker(peerId, worker);
-        } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn("Failed to remove worker {} for peer id={}, sleep {} secs and retry", worker,
-            peerId, backoff / 1000, e);
-          throw suspend(backoff);
-        }
-        attempts = 0;
+        syncReplicationReplayWALManager.releasePeerWorker(peerId, worker,
+          env.getProcedureScheduler());
         if (!finished) {
           LOG.warn("Failed to replay wals {} for peer id={}, retry", wals, peerId);
           setNextState(SyncReplicationReplayWALState.ASSIGN_WORKER);
@@ -113,8 +94,7 @@ public class SyncReplicationReplayWALProcedure
   }
 
   @Override
-  protected void rollbackState(MasterProcedureEnv env,
-      SyncReplicationReplayWALState state)
+  protected void rollbackState(MasterProcedureEnv env, SyncReplicationReplayWALState state)
       throws IOException, InterruptedException {
     if (state == getInitialState()) {
       return;
@@ -128,8 +108,7 @@ public class SyncReplicationReplayWALProcedure
   }
 
   @Override
-  protected int getStateId(
-      SyncReplicationReplayWALState state) {
+  protected int getStateId(SyncReplicationReplayWALState state) {
     return state.getNumber();
   }
 
@@ -139,26 +118,40 @@ public class SyncReplicationReplayWALProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.serializeStateData(serializer);
     SyncReplicationReplayWALStateData.Builder builder =
-        SyncReplicationReplayWALStateData.newBuilder();
-    builder.setPeerId(peerId);
-    wals.stream().forEach(builder::addWal);
+      SyncReplicationReplayWALStateData.newBuilder().setPeerId(peerId).addAllWal(wals);
+    if (worker != null) {
+      builder.setWorker(ProtobufUtil.toServerName(worker));
+    }
     serializer.serialize(builder.build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.deserializeStateData(serializer);
     SyncReplicationReplayWALStateData data =
-        serializer.deserialize(SyncReplicationReplayWALStateData.class);
+      serializer.deserialize(SyncReplicationReplayWALStateData.class);
     peerId = data.getPeerId();
-    wals = new ArrayList<>();
-    data.getWalList().forEach(wals::add);
+    wals = data.getWalList();
+    if (data.hasWorker()) {
+      worker = ProtobufUtil.toServerName(data.getWorker());
+    }
   }
 
   @Override
   public PeerOperationType getPeerOperationType() {
     return PeerOperationType.SYNC_REPLICATION_REPLAY_WAL;
+  }
+
+  @Override
+  protected void afterReplay(MasterProcedureEnv env) {
+    // If the procedure is not finished and the worker is not null, we should add it to the used
+    // worker set, to prevent the worker being used by others.
+    if (worker != null && !isFinished()) {
+      env.getMasterServices().getSyncReplicationReplayWALManager().addUsedPeerWorker(peerId,
+        worker);
+    }
   }
 }

@@ -91,7 +91,8 @@ public class ProcedureEvent<T> {
    * when waking up multiple events.
    * Access should remain package-private.
    */
-  synchronized void wakeInternal(AbstractProcedureScheduler procedureScheduler) {
+  @VisibleForTesting
+  public synchronized void wakeInternal(AbstractProcedureScheduler procedureScheduler) {
     if (ready && !suspendedProcedures.isEmpty()) {
       LOG.warn("Found procedures suspended in a ready event! Size=" + suspendedProcedures.size());
     }

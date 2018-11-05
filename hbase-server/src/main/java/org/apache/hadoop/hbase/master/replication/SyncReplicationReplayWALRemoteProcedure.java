@@ -43,12 +43,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReplaySyncReplicationWALParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SyncReplicationReplayWALRemoteStateData;
 
+/**
+ * A remote procedure which is used to send replaying remote wal work to region server.
+ */
 @InterfaceAudience.Private
 public class SyncReplicationReplayWALRemoteProcedure extends Procedure<MasterProcedureEnv>
     implements RemoteProcedure<MasterProcedureEnv, ServerName>, PeerProcedureInterface {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(SyncReplicationReplayWALRemoteProcedure.class);
+    LoggerFactory.getLogger(SyncReplicationReplayWALRemoteProcedure.class);
 
   private String peerId;
 
@@ -75,11 +78,11 @@ public class SyncReplicationReplayWALRemoteProcedure extends Procedure<MasterPro
   @Override
   public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
     ReplaySyncReplicationWALParameter.Builder builder =
-        ReplaySyncReplicationWALParameter.newBuilder();
+      ReplaySyncReplicationWALParameter.newBuilder();
     builder.setPeerId(peerId);
     wals.stream().forEach(builder::addWal);
     return new ServerOperation(this, getProcId(), ReplaySyncReplicationWALCallable.class,
-        builder.build().toByteArray());
+      builder.build().toByteArray());
   }
 
   @Override
@@ -116,8 +119,8 @@ public class SyncReplicationReplayWALRemoteProcedure extends Procedure<MasterPro
   }
 
   /**
-   * Only truncate wals one by one when task succeed. The parent procedure will check the first
-   * wal length to know whether this task succeed.
+   * Only truncate wals one by one when task succeed. The parent procedure will check the first wal
+   * length to know whether this task succeed.
    */
   private void truncateWALs(MasterProcedureEnv env) {
     String firstWal = wals.get(0);
@@ -159,10 +162,8 @@ public class SyncReplicationReplayWALRemoteProcedure extends Procedure<MasterPro
     try {
       env.getRemoteDispatcher().addOperationToNode(targetServer, this);
     } catch (FailedRemoteDispatchException e) {
-      LOG.warn(
-          "Can not add remote operation for replay wals {} on {} for peer id={}, "
-              + "this usually because the server is already dead",
-          wals, targetServer, peerId);
+      LOG.warn("Can not add remote operation for replay wals {} on {} for peer id={}, " +
+        "this usually because the server is already dead", wals, targetServer, peerId);
       // Return directly and the parent procedure will assign a new worker to replay wals
       return null;
     }
@@ -183,11 +184,10 @@ public class SyncReplicationReplayWALRemoteProcedure extends Procedure<MasterPro
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SyncReplicationReplayWALRemoteStateData.Builder builder =
-        SyncReplicationReplayWALRemoteStateData.newBuilder().setPeerId(peerId)
-            .setTargetServer(ProtobufUtil.toServerName(targetServer));
+      SyncReplicationReplayWALRemoteStateData.newBuilder().setPeerId(peerId)
+        .setTargetServer(ProtobufUtil.toServerName(targetServer));
     wals.stream().forEach(builder::addWal);
     serializer.serialize(builder.build());
   }
@@ -195,7 +195,7 @@ public class SyncReplicationReplayWALRemoteProcedure extends Procedure<MasterPro
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SyncReplicationReplayWALRemoteStateData data =
-        serializer.deserialize(SyncReplicationReplayWALRemoteStateData.class);
+      serializer.deserialize(SyncReplicationReplayWALRemoteStateData.class);
     peerId = data.getPeerId();
     wals = new ArrayList<>();
     data.getWalList().forEach(wals::add);
