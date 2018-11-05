@@ -57,7 +57,11 @@ class BitSetNode {
   private static final long WORD_MASK = 0xffffffffffffffffL;
   private static final int ADDRESS_BITS_PER_WORD = 6;
   private static final int BITS_PER_WORD = 1 << ADDRESS_BITS_PER_WORD;
-  private static final int MAX_NODE_SIZE = 1 << ADDRESS_BITS_PER_WORD;
+  // The BitSetNode itself has 48 bytes overhead, which is the size of 6 longs, so here we use a max
+  // node size 4, which is 8 longs since we have an array for modified and also an array for
+  // deleted. The assumption here is that most procedures will be deleted soon so we'd better keep
+  // the BitSetNode small.
+  private static final int MAX_NODE_SIZE = 4 << ADDRESS_BITS_PER_WORD;
 
   /**
    * Mimics {@link ProcedureStoreTracker#partial}. It will effect how we fill the new deleted bits
@@ -162,6 +166,9 @@ class BitSetNode {
     return start;
   }
 
+  /**
+   * Inclusive.
+   */
   public long getEnd() {
     return start + (modified.length << ADDRESS_BITS_PER_WORD) - 1;
   }
@@ -176,6 +183,8 @@ class BitSetNode {
     if (wordIndex >= deleted.length) {
       return DeleteState.MAYBE;
     }
+    // The left shift of java only takes care of the lowest several bits(5 for int and 6 for long),
+    // so here we can use bitmapIndex directly, without mod 64
     return (deleted[wordIndex] & (1L << bitmapIndex)) != 0 ? DeleteState.YES : DeleteState.NO;
   }
 
@@ -185,6 +194,8 @@ class BitSetNode {
     if (wordIndex >= modified.length) {
       return false;
     }
+    // The left shift of java only takes care of the lowest several bits(5 for int and 6 for long),
+    // so here we can use bitmapIndex directly, without mod 64
     return (modified[wordIndex] & (1L << bitmapIndex)) != 0;
   }
 
@@ -269,72 +280,72 @@ class BitSetNode {
   // ========================================================================
   // Grow/Merge Helpers
   // ========================================================================
-  public boolean canGrow(final long procId) {
-    return Math.abs(procId - start) < MAX_NODE_SIZE;
+  public boolean canGrow(long procId) {
+    if (procId <= start) {
+      return getEnd() - procId < MAX_NODE_SIZE;
+    } else {
+      return procId - start < MAX_NODE_SIZE;
+    }
   }
 
-  public boolean canMerge(final BitSetNode rightNode) {
+  public boolean canMerge(BitSetNode rightNode) {
     // Can just compare 'starts' since boundaries are aligned to multiples of BITS_PER_WORD.
     assert start < rightNode.start;
     return (rightNode.getEnd() - start) < MAX_NODE_SIZE;
   }
 
-  public void grow(final long procId) {
-    int delta, offset;
-
+  public void grow(long procId) {
+    // make sure you have call canGrow first before calling this method
+    assert canGrow(procId);
     if (procId < start) {
-      // add to head
+      // grow to left
       long newStart = alignDown(procId);
-      delta = (int) (start - newStart) >> ADDRESS_BITS_PER_WORD;
-      offset = delta;
+      int delta = (int) (start - newStart) >> ADDRESS_BITS_PER_WORD;
       start = newStart;
+      long[] newModified = new long[modified.length + delta];
+      System.arraycopy(modified, 0, newModified, delta, modified.length);
+      modified = newModified;
+      long[] newDeleted = new long[deleted.length + delta];
+      if (!partial) {
+        for (int i = 0; i < delta; i++) {
+          newDeleted[i] = WORD_MASK;
+        }
+      }
+      System.arraycopy(deleted, 0, newDeleted, delta, deleted.length);
+      deleted = newDeleted;
     } else {
-      // Add to tail
+      // grow to right
       long newEnd = alignUp(procId + 1);
-      delta = (int) (newEnd - getEnd()) >> ADDRESS_BITS_PER_WORD;
-      offset = 0;
+      int delta = (int) (newEnd - getEnd()) >> ADDRESS_BITS_PER_WORD;
+      int newSize = modified.length + delta;
+      long[] newModified = Arrays.copyOf(modified, newSize);
+      modified = newModified;
+      long[] newDeleted = Arrays.copyOf(deleted, newSize);
+      if (!partial) {
+        for (int i = deleted.length; i < newSize; i++) {
+          newDeleted[i] = WORD_MASK;
+        }
+      }
+      deleted = newDeleted;
     }
-
-    long[] newBitmap;
-    int oldSize = modified.length;
-
-    newBitmap = new long[oldSize + delta];
-    for (int i = 0; i < newBitmap.length; ++i) {
-      newBitmap[i] = 0;
-    }
-    System.arraycopy(modified, 0, newBitmap, offset, oldSize);
-    modified = newBitmap;
-
-    newBitmap = new long[deleted.length + delta];
-    for (int i = 0; i < newBitmap.length; ++i) {
-      newBitmap[i] = partial ? 0 : WORD_MASK;
-    }
-    System.arraycopy(deleted, 0, newBitmap, offset, oldSize);
-    deleted = newBitmap;
   }
 
-  public void merge(final BitSetNode rightNode) {
-    int delta = (int) (rightNode.getEnd() - getEnd()) >> ADDRESS_BITS_PER_WORD;
-
-    long[] newBitmap;
-    int oldSize = modified.length;
-    int newSize = (delta - rightNode.modified.length);
-    int offset = oldSize + newSize;
-
-    newBitmap = new long[oldSize + delta];
-    System.arraycopy(modified, 0, newBitmap, 0, oldSize);
-    System.arraycopy(rightNode.modified, 0, newBitmap, offset, rightNode.modified.length);
-    modified = newBitmap;
-
-    newBitmap = new long[oldSize + delta];
-    System.arraycopy(deleted, 0, newBitmap, 0, oldSize);
-    System.arraycopy(rightNode.deleted, 0, newBitmap, offset, rightNode.deleted.length);
-    deleted = newBitmap;
-
-    for (int i = 0; i < newSize; ++i) {
-      modified[offset + i] = 0;
-      deleted[offset + i] = partial ? 0 : WORD_MASK;
+  public void merge(BitSetNode rightNode) {
+    assert start < rightNode.start;
+    int newSize = (int) (rightNode.getEnd() - start + 1) >> ADDRESS_BITS_PER_WORD;
+    long[] newModified = Arrays.copyOf(modified, newSize);
+    System.arraycopy(rightNode.modified, 0, newModified, newSize - rightNode.modified.length,
+      rightNode.modified.length);
+    long[] newDeleted = Arrays.copyOf(deleted, newSize);
+    System.arraycopy(rightNode.deleted, 0, newDeleted, newSize - rightNode.deleted.length,
+      rightNode.deleted.length);
+    if (!partial) {
+      for (int i = deleted.length, n = newSize - rightNode.deleted.length; i < n; i++) {
+        newDeleted[i] = WORD_MASK;
+      }
     }
+    modified = newModified;
+    deleted = newDeleted;
   }
 
   @Override
