@@ -97,6 +97,8 @@ public class TestSplitTableRegionProcedure {
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
+    //testRecoveryAndDoubleExecution requires only one worker
+    conf.setInt(MasterProcedureConstants.MASTER_URGENT_PROCEDURE_THREADS, 0);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 0);
   }
 

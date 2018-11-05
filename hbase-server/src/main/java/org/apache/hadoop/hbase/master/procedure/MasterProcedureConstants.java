@@ -28,6 +28,13 @@ public final class MasterProcedureConstants {
   public static final String MASTER_PROCEDURE_THREADS = "hbase.master.procedure.threads";
   public static final int DEFAULT_MIN_MASTER_PROCEDURE_THREADS = 16;
 
+  /** Number of threads used by the procedure executor for urgent proceudres
+   *  For now, only meta table procedure is urgent
+   */
+  public static final String MASTER_URGENT_PROCEDURE_THREADS =
+      "hbase.master.urgent.procedure.threads";
+  public static final int DEFAULT_MASTER_URGENT_PROCEDURE_THREADS = 1;
+
   /**
    * Procedure replay sanity check. In case a WAL is missing or unreadable we
    * may lose information about pending/running procedures.

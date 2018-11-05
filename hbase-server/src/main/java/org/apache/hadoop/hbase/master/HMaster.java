@@ -1396,6 +1396,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     int cpus = Runtime.getRuntime().availableProcessors();
     final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, Math.max(
       (cpus > 0 ? cpus / 4 : 0), MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS));
+    final int urgentWorkers = conf
+        .getInt(MasterProcedureConstants.MASTER_URGENT_PROCEDURE_THREADS,
+            MasterProcedureConstants.DEFAULT_MASTER_URGENT_PROCEDURE_THREADS);
     final boolean abortOnCorruption =
       conf.getBoolean(MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
         MasterProcedureConstants.DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION);
@@ -1403,7 +1406,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Just initialize it but do not start the workers, we will start the workers later by calling
     // startProcedureExecutor. See the javadoc for finishActiveMasterInitialization for more
     // details.
-    procedureExecutor.init(numThreads, abortOnCorruption);
+    procedureExecutor.init(numThreads, urgentWorkers, abortOnCorruption);
     procEnv.getRemoteDispatcher().start();
   }
 

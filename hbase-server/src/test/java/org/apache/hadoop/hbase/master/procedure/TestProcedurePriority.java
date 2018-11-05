@@ -106,6 +106,7 @@ public class TestProcedurePriority {
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setLong(ProcedureExecutor.WORKER_KEEP_ALIVE_TIME_CONF_KEY, 5000);
     UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 4);
+    UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_URGENT_PROCEDURE_THREADS, 0);
     UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, MyCP.class.getName());
     UTIL.startMiniCluster(3);
     CORE_POOL_SIZE =
