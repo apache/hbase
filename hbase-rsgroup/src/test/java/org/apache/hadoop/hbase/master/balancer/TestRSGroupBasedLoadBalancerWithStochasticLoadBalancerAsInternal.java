@@ -84,7 +84,7 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
       when(rl.getWriteRequestsCount()).thenReturn(0L);
       when(rl.getMemStoreSizeMB()).thenReturn(0);
       when(rl.getStorefileSizeMB()).thenReturn(0);
-      regionLoadMap.put(info.getEncodedNameAsBytes(), rl);
+      regionLoadMap.put(info.getRegionName(), rl);
     }
     when(serverMetrics.getRegionsLoad()).thenReturn(regionLoadMap);
     return serverMetrics;

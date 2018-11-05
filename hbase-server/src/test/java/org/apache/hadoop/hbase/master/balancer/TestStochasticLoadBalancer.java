@@ -142,10 +142,12 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
       loadBalancer.setClusterStatus(clusterStatus);
     }
-    assertTrue(loadBalancer.loads.get(REGION_KEY) != null);
-    assertTrue(loadBalancer.loads.get(REGION_KEY).size() == 15);
 
-    Queue<RegionLoad> loads = loadBalancer.loads.get(REGION_KEY);
+    String regionNameAsString = HRegionInfo.getRegionNameAsString(Bytes.toBytes(REGION_KEY));
+    assertTrue(loadBalancer.loads.get(regionNameAsString) != null);
+    assertTrue(loadBalancer.loads.get(regionNameAsString).size() == 15);
+
+    Queue<RegionLoad> loads = loadBalancer.loads.get(regionNameAsString);
     int i = 0;
     while(loads.size() > 0) {
       RegionLoad rl = loads.remove();
