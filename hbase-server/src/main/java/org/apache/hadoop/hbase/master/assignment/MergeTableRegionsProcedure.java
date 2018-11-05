@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.master.procedure.TableQueue;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
@@ -527,6 +529,24 @@ public class MergeTableRegionsProcedure
       super.setFailure(getClass().getSimpleName(),
           new IOException("Merge of " + regionsStr + " failed because merge switch is off"));
       return false;
+    }
+    // See HBASE-21395, for 2.0.x and 2.1.x only.
+    // A safe fence here, if there is a table procedure going on, abort the merge.
+    // There some cases that may lead to table procedure roll back (more serious
+    // than roll back the merge procedure here), or the merged regions was brought online
+    // by the table procedure because of the race between merge procedure and table procedure
+    List<AbstractStateMachineTableProcedure> tableProcedures = env
+        .getMasterServices().getProcedures().stream()
+        .filter(p -> p instanceof AbstractStateMachineTableProcedure)
+        .map(p -> (AbstractStateMachineTableProcedure) p)
+        .filter(p -> p.getProcId() != this.getProcId() && p.getTableName()
+            .equals(regionsToMerge[0].getTable()) && !p.isFinished()
+            && TableQueue.requireTableExclusiveLock(p))
+        .collect(Collectors.toList());
+    if (tableProcedures != null && tableProcedures.size() > 0) {
+      throw new MergeRegionException(tableProcedures.get(0).toString()
+          + " is going on against the same table, abort the merge of " + this
+          .toString());
     }
 
     // Ask the remote regionserver if regions are mergeable. If we get an IOE, report it
