@@ -742,4 +742,28 @@ public class TestWALFactory {
         WALFactory.WAL_PROVIDER, Providers.multiwal.name());
     assertEquals(Providers.multiwal.clazz, multiwalProviderClass);
   }
+
+  @Test
+  public void testCustomProvider() throws IOException {
+    final Configuration config = new Configuration();
+    config.set(WALFactory.WAL_PROVIDER, IOTestProvider.class.getName());
+    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
+    Class<? extends WALProvider> walProvider = walFactory.getProviderClass(
+        WALFactory.WAL_PROVIDER, Providers.filesystem.name());
+    assertEquals(IOTestProvider.class, walProvider);
+    WALProvider metaWALProvider = walFactory.getMetaProvider();
+    assertEquals(IOTestProvider.class, metaWALProvider.getClass());
+  }
+
+  @Test
+  public void testCustomMetaProvider() throws IOException {
+    final Configuration config = new Configuration();
+    config.set(WALFactory.META_WAL_PROVIDER, IOTestProvider.class.getName());
+    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
+    Class<? extends WALProvider> walProvider = walFactory.getProviderClass(
+        WALFactory.WAL_PROVIDER, Providers.filesystem.name());
+    assertEquals(Providers.filesystem.clazz, walProvider);
+    WALProvider metaWALProvider = walFactory.getMetaProvider();
+    assertEquals(IOTestProvider.class, metaWALProvider.getClass());
+  }
 }
