@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.procedure2.store;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker.DeleteState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -55,5 +58,50 @@ public class TestBitSetNode {
     node.delete(5L);
     assertEquals(Procedure.NO_PROC_ID, node.getActiveMinProcId());
     assertEquals(Procedure.NO_PROC_ID, node.getActiveMaxProcId());
+  }
+
+  @Test
+  public void testGrow() {
+    BitSetNode node = new BitSetNode(1000, false);
+    // contains, do not need to grow but should not fail
+    assertTrue(node.canGrow(1024));
+    assertTrue(node.canGrow(900));
+    assertTrue(node.canGrow(1100));
+    assertFalse(node.canGrow(100));
+    assertFalse(node.canGrow(10000));
+
+    // grow to right
+    node.grow(1100);
+    assertTrue(node.contains(1100));
+    assertTrue(node.isModified(1000));
+    // grow to left
+    node.grow(900);
+    assertTrue(node.contains(900));
+    assertTrue(node.isModified(1000));
+    for (long i = node.getStart(); i <= node.getEnd(); i++) {
+      if (i != 1000) {
+        assertEquals(DeleteState.YES, node.isDeleted(i));
+      } else {
+        assertEquals(DeleteState.NO, node.isDeleted(i));
+      }
+    }
+  }
+
+  @Test
+  public void testMerge() {
+    BitSetNode node = new BitSetNode(1000, false);
+    assertTrue(node.canMerge(new BitSetNode(1200, false)));
+    assertFalse(node.canMerge(new BitSetNode(10000, false)));
+    BitSetNode rightNode = new BitSetNode(1200, false);
+    node.merge(rightNode);
+    assertTrue(node.isModified(1000));
+    assertTrue(node.isModified(1200));
+    for (long i = node.getStart(); i <= node.getEnd(); i++) {
+      if (i != 1000 && i != 1200) {
+        assertEquals(DeleteState.YES, node.isDeleted(i));
+      } else {
+        assertEquals(DeleteState.NO, node.isDeleted(i));
+      }
+    }
   }
 }
