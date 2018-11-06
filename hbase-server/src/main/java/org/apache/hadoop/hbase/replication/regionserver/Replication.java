@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -137,6 +138,16 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
         SyncReplicationWALProvider syncWALProvider = (SyncReplicationWALProvider) walProvider;
         peerActionListener = syncWALProvider;
         syncWALProvider.setPeerInfoProvider(syncReplicationPeerInfoProvider);
+        // for sync replication state change, we need to reload the state twice, you can see the
+        // code in PeerProcedureHandlerImpl, so here we need to go over the sync replication peers
+        // to see if any of them are in the middle of the two refreshes, if so, we need to manually
+        // repeat the action we have done in the first refresh, otherwise when the second refresh
+        // comes we will be in trouble, such as NPE.
+        replicationPeers.getAllPeerIds().stream().map(replicationPeers::getPeer)
+            .filter(p -> p.getPeerConfig().isSyncReplication())
+            .filter(p -> p.getNewSyncReplicationState() != SyncReplicationState.NONE)
+            .forEach(p -> syncWALProvider.peerSyncReplicationStateChange(p.getId(),
+              p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
       }
     }
     this.statsThreadPeriod =
