@@ -253,8 +253,18 @@ public class WALFactory {
       if (provider != null) {
         return provider;
       }
-      provider = getProvider(META_WAL_PROVIDER, conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER),
-          AbstractFSWALProvider.META_WAL_PROVIDER_ID);
+      Class<? extends WALProvider> clz = null;
+      if (conf.get(META_WAL_PROVIDER) == null) {
+        try {
+          clz = conf.getClass(WAL_PROVIDER, Providers.defaultProvider.clazz, WALProvider.class);
+        } catch (Throwable t) {
+          // the WAL provider should be an enum. Proceed
+        }
+      }
+      if (clz == null){
+        clz = getProviderClass(META_WAL_PROVIDER, conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
+      }
+      provider = createProvider(clz, AbstractFSWALProvider.META_WAL_PROVIDER_ID);
       if (metaProvider.compareAndSet(null, provider)) {
         return provider;
       } else {
