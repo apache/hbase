@@ -86,11 +86,9 @@
     <module>hbase-checkstyle</module>
     <module>hbase-external-blockcache</module>
     <module>hbase-shaded</module>
-    <module>hbase-spark</module>
     <module>hbase-archetypes</module>
     <module>hbase-metrics-api</module>
     <module>hbase-metrics</module>
-    <module>hbase-spark-it</module>
     <module>hbase-backup</module>
     <module>hbase-zookeeper</module>
   </modules>
@@ -1145,23 +1143,7 @@
                   <excludes>
                     <exclude>org.scala-lang:scala-library</exclude>
                   </excludes>
-                  <message>We don't allow Scala outside of the hbase-spark module, see HBASE-13992.</message>
-                </bannedDependencies>
-              </rules>
-            </configuration>
-          </execution>
-          <execution>
-            <id>banned-hbase-spark</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <bannedDependencies>
-                  <excludes>
-                    <exclude>org.apache.hbase:hbase-spark</exclude>
-                  </excludes>
-                  <message>We don't allow other modules to depend on hbase-spark, see HBASE-13992.</message>
+                  <message>We don't allow Scala, see HBASE-13992.</message>
                 </bannedDependencies>
               </rules>
             </configuration>
@@ -1432,9 +1414,13 @@
         <extensions>true</extensions>
       </plugin>
       <plugin>
+        <!--TODO: Remove after figure how the scala:doc
+             target is being passed up on jenkins precommit.
+             Otherrwise, w/o this, we fail scaladoc.
+          -->
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
-        <version>${maven.scala.version}</version>
+        <version>2.15.2</version>
       </plugin>
     </plugins>
   </build>
@@ -1549,15 +1535,12 @@
     <maven.jar.version>3.0.2</maven.jar.version>
     <maven.javadoc.version>3.0.0</maven.javadoc.version>
     <maven.patch.version>1.2</maven.patch.version>
-    <maven.scala.version>2.15.2</maven.scala.version>
     <maven.shade.version>3.0.0</maven.shade.version>
     <maven.site.version>3.4</maven.site.version>
     <maven.source.version>3.0.1</maven.source.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <plexus.errorprone.javac.version>2.8.2</plexus.errorprone.javac.version>
-    <scala.maven.version>3.2.2</scala.maven.version>
-    <scalatest.maven.version>1.0</scalatest.maven.version>
     <spotbugs.version>3.1.0-RC3</spotbugs.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
@@ -1853,18 +1836,6 @@
         <artifactId>hbase-resource-bundle</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <artifactId>hbase-spark</artifactId>
-        <groupId>org.apache.hbase</groupId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <artifactId>hbase-spark-it</artifactId>
-        <groupId>org.apache.hbase</groupId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <artifactId>hbase-zookeeper</artifactId>
@@ -3552,13 +3523,6 @@
         <warbucks.skip>true</warbucks.skip>
         <protoc.skip>true</protoc.skip>
         <remoteresources.skip>true</remoteresources.skip>
-        <!-- Because the scala-maven-plugin has no skip configuration option
-             this configuration setting here won't actually do anything.
-
-             However, if you pass it on the command line it'll activate
-             a profile in hbase-spark/pom.xml that will skip things.
-        -->
-        <scala.skip>true</scala.skip>
       </properties>
     </profile>
   </profiles>
@@ -3614,7 +3578,7 @@
                 <exclude>**/protobuf/*</exclude>
                 <exclude>**/*.scala</exclude>
               </sourceFileExcludes>
-              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark:org.apache.hadoop.hbase.generated*</excludePackageNames>
+              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.generated*</excludePackageNames>
               <show>private</show> <!-- (shows all classes and members) -->
               <quiet>true</quiet>
               <linksource>true</linksource>
@@ -3657,7 +3621,7 @@
                 <exclude>**/protobuf/*</exclude>
                 <exclude>**/*.scala</exclude>
               </sourceFileExcludes>
-              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark:org.apache.hadoop.hbase.generated*</excludePackageNames>
+              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.generated*</excludePackageNames>
               <show>private</show> <!-- (shows all classes and members) -->
               <quiet>true</quiet>
               <linksource>true</linksource>
@@ -3805,11 +3769,6 @@
         </configuration>
       </plugin>
 
-      <plugin>
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
-      </plugin>
     </plugins>
   </reporting>
   <distributionManagement>
