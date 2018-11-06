@@ -18,7 +18,7 @@
 # limitations under the License.
 -->
 
-## Release 2.1.1 - Unreleased (as of 2018-10-26)
+## Release 2.1.1 - Released 2018-10-31
 
 ### INCOMPATIBLE CHANGES:
 
