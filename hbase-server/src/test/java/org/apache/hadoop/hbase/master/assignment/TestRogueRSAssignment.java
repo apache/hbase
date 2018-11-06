@@ -45,6 +45,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -137,7 +138,11 @@ public class TestRogueRSAssignment {
     admin.setBalancerRunning(true, false);
   }
 
+  /**
+   * Ignore this test, see HBASE-21421
+   */
   @Test
+  @Ignore
   public void testReportRSWithWrongRegion() throws Exception {
     final TableName tableName = TableName.valueOf(this.name.getMethodName());
 
