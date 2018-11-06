@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 @InterfaceAudience.Private
-class FailedProcedure<TEnvironment> extends Procedure<TEnvironment> {
+public class FailedProcedure<TEnvironment> extends Procedure<TEnvironment> {
 
   private String procName;
 
