@@ -990,8 +990,7 @@ public class AssignmentManager implements ServerListener {
     }
   }
 
-  void checkOnlineRegionsReport(final ServerStateNode serverNode, final Set<byte[]> regionNames)
-      throws YouAreDeadException {
+  void checkOnlineRegionsReport(final ServerStateNode serverNode, final Set<byte[]> regionNames) {
     final ServerName serverName = serverNode.getServerName();
     try {
       for (byte[] regionName: regionNames) {
@@ -1030,9 +1029,10 @@ public class AssignmentManager implements ServerListener {
         }
       }
     } catch (UnexpectedStateException e) {
-      LOG.warn("Killing " + serverName + ": " + e.getMessage());
-      killRegionServer(serverName);
-      throw (YouAreDeadException)new YouAreDeadException(e.getMessage()).initCause(e);
+      //See HBASE-21421, we can count on reportRegionStateTransition calls
+      //We only log a warming here. It could be a network lag.
+      LOG.warn("Failed to checkOnlineRegionsReport, maybe due to network lag, "
+          + "if this message continues, be careful of double assign", e);
     }
   }
 
