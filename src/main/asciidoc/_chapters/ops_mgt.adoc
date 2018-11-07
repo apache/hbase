@@ -531,6 +531,124 @@ By default, CopyTable utility only copies the latest version of row cells unless
 See Jonathan Hsieh's link:https://blog.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/[Online
           HBase Backups with CopyTable] blog post for more on `CopyTable`.
 
+[[hashtable.synctable]]
+=== HashTable/SyncTable
+
+HashTable/SyncTable is a two steps tool for synchronizing table data, where each of the steps are implemented as MapReduce jobs.
+Similarly to CopyTable, it can be used for partial or entire table data syncing, under same or remote cluster.
+However, it performs the sync in a more efficient way than CopyTable. Instead of copying all cells
+in specified row key/time period range, HashTable (the first step) creates hashed indexes for batch of cells on source table and output those as results.
+On the next stage, SyncTable scans the source table and now calculates hash indexes for table cells,
+compares these hashes with the outputs of HashTable, then it just scans (and compares) cells for diverging hashes, only updating
+mismatching cells. This results in less network traffic/data transfers, which can be impacting when syncing large tables on remote clusters.
+
+==== Step 1, HashTable
+
+First, run HashTable on the source table cluster (this is the table whose state will be copied to its counterpart).
+
+Usage:
+
+----
+$ ./bin/hbase org.apache.hadoop.hbase.mapreduce.HashTable --help
+Usage: HashTable [options] <tablename> <outputpath>
+
+Options:
+ batchsize     the target amount of bytes to hash in each batch
+               rows are added to the batch until this size is reached
+               (defaults to 8000 bytes)
+ numhashfiles  the number of hash files to create
+               if set to fewer than number of regions then
+               the job will create this number of reducers
+               (defaults to 1/100 of regions -- at least 1)
+ startrow      the start row
+ stoprow       the stop row
+ starttime     beginning of the time range (unixtime in millis)
+               without endtime means from starttime to forever
+ endtime       end of the time range.  Ignored if no starttime specified.
+ scanbatch     scanner batch size to support intra row scans
+ versions      number of cell versions to include
+ families      comma-separated list of families to include
+
+Args:
+ tablename     Name of the table to hash
+ outputpath    Filesystem path to put the output data
+
+Examples:
+ To hash 'TestTable' in 32kB batches for a 1 hour window into 50 files:
+ $ bin/hbase org.apache.hadoop.hbase.mapreduce.HashTable --batchsize=32000 --numhashfiles=50 --starttime=1265875194289 --endtime=1265878794289 --families=cf2,cf3 TestTable /hashes/testTable
+----
+
+The *batchsize* property defines how much cell data for a given region will be hashed together in a single hash value.
+Sizing this properly has a direct impact on the sync efficiency, as it may lead to less scans executed by mapper tasks
+of SyncTable (the next step in the process). The rule of thumb is that, the smaller the number of cells out of sync
+(lower probability of finding a diff), larger batch size values can be determined.
+
+==== Step 2, SyncTable
+
+Once HashTable has completed on source cluster, SyncTable can be ran on target cluster.
+Just like replication and other synchronization jobs, it requires that all RegionServers/DataNodes
+on source cluster be accessible by NodeManagers on the target cluster (where SyncTable job tasks will be running).
+
+Usage:
+
+----
+$ ./bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --help
+Usage: SyncTable [options] <sourcehashdir> <sourcetable> <targettable>
+
+Options:
+ sourcezkcluster  ZK cluster key of the source table
+                  (defaults to cluster in classpath's config)
+ targetzkcluster  ZK cluster key of the target table
+                  (defaults to cluster in classpath's config)
+ dryrun           if true, output counters but no writes
+                  (defaults to false)
+ doDeletes        if false, does not perform deletes
+                  (defaults to true)
+ doPuts           if false, does not perform puts
+                  (defaults to true)
+
+Args:
+ sourcehashdir    path to HashTable output dir for source table
+                  (see org.apache.hadoop.hbase.mapreduce.HashTable)
+ sourcetable      Name of the source table to sync from
+ targettable      Name of the target table to sync to
+
+Examples:
+ For a dry run SyncTable of tableA from a remote source cluster
+ to a local target cluster:
+ $ bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --dryrun=true --sourcezkcluster=zk1.example.com,zk2.example.com,zk3.example.com:2181:/hbase hdfs://nn:9000/hashes/tableA tableA tableA
+----
+
+The *dryrun* option is useful when a read only, diff report is wanted, as it will produce only COUNTERS indicating the differences, but will not perform
+any actual changes. It can be used as an alternative to VerifyReplication tool.
+
+By default, SyncTable will cause target table to become an exact copy of source table (at least, for the specified startrow/stoprow or/and starttime/endtime).
+
+Setting doDeletes to false modifies default behaviour to not delete target cells that are missing on source.
+Similarly, setting doPuts to false modifies default behaviour to not add missing cells on target. Setting both doDeletes
+and doPuts to false would give same effect as setting dryrun to true.
+
+.Set doDeletes to false on Two-Way Replication scenarios
+[NOTE]
+====
+On Two-Way Replication or other scenarios where both source and target clusters can have data ingested, it's advisable to always set doDeletes option to false,
+as any additional cell inserted on SyncTable target cluster and not yet replicated to source would be deleted, and potentially lost permanently.
+====
+
+.Set sourcezkcluster to the actual source cluster ZK quorum
+[NOTE]
+====
+Although not required, if sourcezkcluster is not set, SyncTable will connect to local HBase cluster for both source and target,
+which does not give any meaningful result.
+====
+
+.Remote Clusters on different Kerberos Realms
+[NOTE]
+====
+Currently, SyncTable can't be ran for remote clusters on different Kerberos realms.
+There's some work in progress to resolve this on link:https://jira.apache.org/jira/browse/HBASE-20586[HBASE-20586]
+====
+
 [[export]]
 === Export
 
