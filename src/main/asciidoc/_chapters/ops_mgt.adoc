@@ -1742,6 +1742,28 @@ image::bc_l1.png[]
 This is not an exhaustive list of all the screens and reports available.
 Have a look in the Web UI.
 
+=== Snapshot Space Usage Monitoring
+
+Starting with HBase 0.95, Snapshot usage information on individual snapshots was shown in the HBase Master Web UI. This was further enhanced starting with HBase 1.3 to show the total Storefile size of the Snapshot Set. The following metrics are shown in the Master Web UI with HBase 1.3 and later.
+
+* Shared Storefile Size is the Storefile size shared between snapshots and active tables.
+* Mob Storefile Size is the Mob Storefile size shared between snapshots and active tables.
+* Archived Storefile Size is the Storefile size in Archive.
+
+The format of Archived Storefile Size is NNN(MMM). NNN is the total Storefile size in Archive, MMM is the total Storefile size in Archive that is specific to the snapshot (not shared with other snapshots and tables).
+
+.Master Snapshot Overview
+image::master-snapshot.png[]
+
+.Snapshot Storefile Stats Example 1
+image::1-snapshot.png[]
+
+.Snapshot Storefile Stats Example 2
+image::2-snapshots.png[]
+
+.Empty Snapshot Storfile Stats Example
+image::empty-snapshots.png[]
+
 == Cluster Replication
 
 NOTE: This information was previously available at
