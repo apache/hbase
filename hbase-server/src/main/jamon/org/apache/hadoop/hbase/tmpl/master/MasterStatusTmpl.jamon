@@ -625,6 +625,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th>Cluster Key</th>
         <th>State</th>
         <th>IsSerial</th>
+        <th>Remote WAL</th>
+        <th>Sync Replication State</th>
         <th>Bandwidth</th>
         <th>ReplicateAll</th>
         <th>Namespaces</th>
@@ -643,6 +645,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <td><% peerConfig.getClusterKey() %></td>
         <td><% peer.isEnabled() ? "ENABLED" : "DISABLED" %></td>
         <td><% peerConfig.isSerial() %></td>
+        <td><% peerConfig.getRemoteWALDir() == null ? "" : peerConfig.getRemoteWALDir() %>
+        <td><% peer.getSyncReplicationState() %>
         <td><% peerConfig.getBandwidth() == 0? "UNLIMITED" : StringUtils.humanReadableInt(peerConfig.getBandwidth()) %></td>
         <td><% peerConfig.replicateAllUserTables() %></td>
         <td>
