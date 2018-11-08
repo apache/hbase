@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -148,7 +148,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Configuration conf;
   private final FileSystem fs;
   // The paths to the latest log of each wal group, for new coming peers
-  private final Set<Path> latestPaths;
+  private final Map<String, Path> latestPaths;
   // Path to the wals directories
   private final Path logDir;
   // Path to the wal archive
@@ -216,7 +216,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     tfb.setNameFormat("ReplicationExecutor-%d");
     tfb.setDaemon(true);
     this.executor.setThreadFactory(tfb.build());
-    this.latestPaths = new HashSet<Path>();
+    this.latestPaths = new HashMap<>();
     this.replicationForBulkLoadDataEnabled = conf.getBoolean(
       HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
     this.sleepForRetries = this.conf.getLong("replication.source.sync.sleepforretries", 1000);
@@ -371,17 +371,16 @@ public class ReplicationSourceManager implements ReplicationListener {
       Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
       this.walsById.put(peerId, walsByGroup);
       // Add the latest wal to that source's queue
-      if (this.latestPaths.size() > 0) {
-        for (Path logPath : latestPaths) {
-          String name = logPath.getName();
-          String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(name);
-          NavigableSet<String> logs = new TreeSet<>();
-          logs.add(name);
-          walsByGroup.put(walPrefix, logs);
+      if (!latestPaths.isEmpty()) {
+        for (Map.Entry<String, Path> walPrefixAndPath : latestPaths.entrySet()) {
+          Path walPath = walPrefixAndPath.getValue();
+          NavigableSet<String> wals = new TreeSet<>();
+          wals.add(walPath.getName());
+          walsByGroup.put(walPrefixAndPath.getKey(), wals);
           // Abort RS and throw exception to make add peer failed
           abortAndThrowIOExceptionWhenFail(
-            () -> this.queueStorage.addWAL(server.getServerName(), peerId, name));
-          src.enqueueLog(logPath);
+            () -> this.queueStorage.addWAL(server.getServerName(), peerId, walPath.getName()));
+          src.enqueueLog(walPath);
         }
       }
     }
@@ -780,15 +779,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       }
 
       // Add to latestPaths
-      Iterator<Path> iterator = latestPaths.iterator();
-      while (iterator.hasNext()) {
-        Path path = iterator.next();
-        if (path.getName().contains(logPrefix)) {
-          iterator.remove();
-          break;
-        }
-      }
-      this.latestPaths.add(newLog);
+      latestPaths.put(logPrefix, newLog);
     }
   }
 
@@ -1050,6 +1041,13 @@ public class ReplicationSourceManager implements ReplicationListener {
   int getSizeOfLatestPath() {
     synchronized (latestPaths) {
       return latestPaths.size();
+    }
+  }
+
+  @VisibleForTesting
+  Set<Path> getLastestPath() {
+    synchronized (latestPaths) {
+      return Sets.newHashSet(latestPaths.values());
     }
   }
 
