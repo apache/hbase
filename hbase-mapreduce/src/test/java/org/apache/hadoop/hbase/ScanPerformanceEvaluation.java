@@ -56,7 +56,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ScanPerformanceEvaluation extends AbstractHBaseTool {
 
-  private static final String HBASE_COUNTER_GROUP_NAME = "HBase Counters";
+  private static final String HBASE_COUNTER_GROUP_NAME = "HBaseCounters";
 
   private String type;
   private String file;
