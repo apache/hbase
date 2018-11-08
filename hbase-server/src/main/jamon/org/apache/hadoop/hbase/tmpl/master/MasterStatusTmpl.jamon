@@ -215,6 +215,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             or re-run HBCK in repair mode.
           </div>
         </%if>
+        <%if master.getAssignmentManager() != null %>
+          <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
+        </%if>
         <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null %>
           <section>
             <h2><a name="rsgroup">RSGroup</a></h2>
@@ -267,9 +270,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             <h2><a name="peers">Peers</a></h2>
             <& peerConfigs &>
         </section>
-        <%if master.getAssignmentManager() != null %>
-        <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
-        </%if>
 	<%else>
         <section>
             <& BackupMasterStatusTmpl; master = master &>
@@ -534,9 +534,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         </%if>
         <td><% tableState.getState() %></td>
         <td><% openRegionsCount %></td>
-        <td><% openingRegionsCount %></td>
+        <%if (openingRegionsCount > 0) %> <td><a href="/rits.jsp?table=<% tableName.getNameAsString() %>&state=OPENING"><% openingRegionsCount %></td> <%else><td><% openingRegionsCount %></td> </%if>
         <td><% closedRegionsCount %></td>
-        <td><% closingRegionsCount %></td>
+        <%if (closingRegionsCount > 0) %> <td><a href="/rits.jsp?table=<% tableName.getNameAsString() %>&state=CLOSING"><% closingRegionsCount %></td> <%else><td><% closingRegionsCount %></td> </%if>
         <td><% offlineRegionsCount %></td>
         <td><% failedRegionsCount %></td>
         <td><% splitRegionsCount %></td>
