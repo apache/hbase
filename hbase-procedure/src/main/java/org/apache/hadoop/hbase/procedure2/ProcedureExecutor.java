@@ -1033,15 +1033,22 @@ public class ProcedureExecutor<TEnvironment> {
         store.update(procedure);
       }
 
-      // If we don't have the lock, we can't re-submit the queue,
-      // since it is already executing. To get rid of the stuck situation, we
-      // need to restart the master. With the procedure set to bypass, the procedureExecutor
-      // will bypass it and won't get stuck again.
-      if (lockEntry != null) {
-        // add the procedure to run queue,
+      // If state of procedure is WAITING_TIMEOUT, we can directly submit it to the scheduler.
+      // Instead we should remove it from timeout Executor queue and tranfer its state to RUNNABLE
+      if (procedure.getState() == ProcedureState.WAITING_TIMEOUT) {
+        LOG.debug("transform procedure {} from WAITING_TIMEOUT to RUNNABLE", procedure);
+        if (timeoutExecutor.remove(procedure)) {
+          LOG.debug("removed procedure {} from timeoutExecutor", procedure);
+          timeoutExecutor.executeTimedoutProcedure(procedure);
+        }
+      } else if (lockEntry != null) {
         scheduler.addFront(procedure);
         LOG.info("Bypassing {} and its ancestors successfully, adding to queue", procedure);
       } else {
+        // If we don't have the lock, we can't re-submit the queue,
+        // since it is already executing. To get rid of the stuck situation, we
+        // need to restart the master. With the procedure set to bypass, the procedureExecutor
+        // will bypass it and won't get stuck again.
         LOG.info("Bypassing {} and its ancestors successfully, but since it is already running, "
             + "skipping add to queue", procedure);
       }
