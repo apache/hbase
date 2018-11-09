@@ -126,7 +126,7 @@ class TimeoutExecutorThread<TEnvironment> extends StoppableThread {
     }
   }
 
-  private void executeTimedoutProcedure(Procedure<TEnvironment> proc) {
+  protected void executeTimedoutProcedure(Procedure<TEnvironment> proc) {
     // The procedure received a timeout. if the procedure itself does not handle it,
     // call abort() and add the procedure back in the queue for rollback.
     if (proc.setTimeoutFailure(executor.getEnvironment())) {

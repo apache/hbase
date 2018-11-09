@@ -38,6 +38,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 
 @Category({MasterTests.class, SmallTests.class})
@@ -149,6 +150,18 @@ public class TestProcedureBypass {
     LOG.info("{} finished", proc);
   }
 
+  @Test
+  public void testBypassingWaitingTimeoutProcedures() throws Exception {
+    final WaitingTimeoutProcedure proc = new WaitingTimeoutProcedure();
+    long id = procExecutor.submitProcedure(proc);
+    Thread.sleep(500);
+    // bypass the procedure
+    assertTrue(procExecutor.bypassProcedure(id, 1000, true, false));
+
+    htu.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
+    LOG.info("{} finished", proc);
+  }
+
   @AfterClass
   public static void tearDown() throws Exception {
     procExecutor.stop();
@@ -208,6 +221,29 @@ public class TestProcedureBypass {
     }
   }
 
+  public static class WaitingTimeoutProcedure
+      extends ProcedureTestingUtility.NoopProcedure<TestProcEnv> {
+    public WaitingTimeoutProcedure() {
+      super();
+    }
+
+    @Override
+    protected Procedure[] execute(final TestProcEnv env)
+        throws ProcedureSuspendedException {
+      // Always suspend the procedure
+      setTimeout(50000);
+      setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+      skipPersistence();
+      throw new ProcedureSuspendedException();
+    }
+
+    @Override
+    protected synchronized boolean setTimeoutFailure(TestProcEnv env) {
+      setState(ProcedureProtos.ProcedureState.RUNNABLE);
+      procExecutor.getScheduler().addFront(this);
+      return false; // 'false' means that this procedure handled the timeout
+    }
+  }
 
   public enum StuckStateMachineState {
     START, THEN, END
