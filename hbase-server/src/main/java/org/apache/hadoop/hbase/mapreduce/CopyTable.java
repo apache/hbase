@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -144,7 +145,7 @@ public class CopyTable extends Configured implements Tool {
       // We need to split the inputs by destination tables so that output of Map can be bulk-loaded.
       TableInputFormat.configureSplitTable(job, TableName.valueOf(dstTableName));
 
-      FileSystem fs = FileSystem.get(getConf());
+      FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
       Random rand = new Random();
       Path root = new Path(fs.getWorkingDirectory(), "copytable");
       fs.mkdirs(root);
@@ -361,7 +362,7 @@ public class CopyTable extends Configured implements Tool {
       if (code == 0) {
         // bulkloadDir is deleted only LoadIncrementalHFiles was successful so that one can rerun
         // LoadIncrementalHFiles.
-        FileSystem fs = FileSystem.get(this.getConf());
+        FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
         if (!fs.delete(this.bulkloadDir, true)) {
           LOG.error("Deleting folder " + bulkloadDir + " failed!");
           code = 1;
