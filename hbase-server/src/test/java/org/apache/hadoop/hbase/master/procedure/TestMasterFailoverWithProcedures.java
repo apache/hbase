@@ -289,7 +289,7 @@ public class TestMasterFailoverWithProcedures {
 
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
+        new EnableTableProcedure(procExec.getEnvironment(), tableName));
     testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableIsEnabled(

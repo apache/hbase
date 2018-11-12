@@ -2570,7 +2570,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         // Note: if the procedure throws exception, we will catch it and rethrow.
         final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
         submitProcedure(new EnableTableProcedure(procedureExecutor.getEnvironment(),
-            tableName, false, prepareLatch));
+            tableName, prepareLatch));
         prepareLatch.await();
 
         getMaster().getMasterCoprocessorHost().postEnableTable(tableName);

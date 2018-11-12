@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -162,7 +161,8 @@ public class AssignmentManager implements ServerListener {
     this(master, new RegionStateStore(master));
   }
 
-  public AssignmentManager(final MasterServices master, final RegionStateStore stateStore) {
+  @VisibleForTesting
+  AssignmentManager(final MasterServices master, final RegionStateStore stateStore) {
     this.master = master;
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
@@ -979,23 +979,26 @@ public class AssignmentManager implements ServerListener {
   //  RS Status update (report online regions) helpers
   // ============================================================================================
   /**
-   * the master will call this method when the RS send the regionServerReport().
-   * the report will contains the "online regions".
-   * this method will check the the online regions against the in-memory state of the AM,
-   * if there is a mismatch we will try to fence out the RS with the assumption
-   * that something went wrong on the RS side.
+   * The master will call this method when the RS send the regionServerReport(). The report will
+   * contains the "online regions". This method will check the the online regions against the
+   * in-memory state of the AM, and we will log a warn message if there is a mismatch. This is
+   * because that there is no fencing between the reportRegionStateTransition method and
+   * regionServerReport method, so there could be race and introduce inconsistency here, but
+   * actually there is no problem.
+   * <p/>
+   * Please see HBASE-21421 and HBASE-21463 for more details.
    */
-  public void reportOnlineRegions(final ServerName serverName, final Set<byte[]> regionNames)
-      throws YouAreDeadException {
-    if (!isRunning()) return;
+  public void reportOnlineRegions(ServerName serverName, Set<byte[]> regionNames) {
+    if (!isRunning()) {
+      return;
+    }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("ReportOnlineRegions " + serverName + " regionCount=" + regionNames.size() +
-        ", metaLoaded=" + isMetaLoaded() + " " +
-          regionNames.stream().map(element -> Bytes.toStringBinary(element)).
-            collect(Collectors.toList()));
+      LOG.trace("ReportOnlineRegions {} regionCount={}, metaLoaded={} {}", serverName,
+        regionNames.size(), isMetaLoaded(),
+        regionNames.stream().map(Bytes::toStringBinary).collect(Collectors.toList()));
     }
 
-    final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
+    ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
 
     synchronized (serverNode) {
       if (!serverNode.isInState(ServerState.ONLINE)) {
@@ -1003,103 +1006,58 @@ public class AssignmentManager implements ServerListener {
         return;
       }
     }
-
     if (regionNames.isEmpty()) {
       // nothing to do if we don't have regions
-      LOG.trace("no online region found on " + serverName);
-    } else if (!isMetaLoaded()) {
-      // if we are still on startup, discard the report unless is from someone holding meta
-      checkOnlineRegionsReportForMeta(serverNode, regionNames);
-    } else {
-      // The Heartbeat updates us of what regions are only. check and verify the state.
-      checkOnlineRegionsReport(serverNode, regionNames);
+      LOG.trace("no online region found on {}", serverName);
+      return;
     }
+    if (!isMetaLoaded()) {
+      // we are still on startup, skip checking
+      return;
+    }
+    // The Heartbeat tells us of what regions are on the region serve, check the state.
+    checkOnlineRegionsReport(serverNode, regionNames);
 
     // wake report event
     wakeServerReportEvent(serverNode);
   }
 
-  void checkOnlineRegionsReportForMeta(ServerStateNode serverNode, Set<byte[]> regionNames) {
-    try {
-      for (byte[] regionName : regionNames) {
-        final RegionInfo hri = getMetaRegionFromName(regionName);
-        if (hri == null) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Skip online report for region=" + Bytes.toStringBinary(regionName) +
-              " while meta is loading");
-          }
-          continue;
-        }
-
-        RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(hri);
-        LOG.info("META REPORTED: " + regionNode);
-        regionNode.lock();
-        try {
-          if (!reportTransition(regionNode, serverNode, TransitionCode.OPENED, 0)) {
-            LOG.warn("META REPORTED but no procedure found (complete?); set location=" +
-              serverNode.getServerName());
-            regionNode.setRegionLocation(serverNode.getServerName());
-          } else if (LOG.isTraceEnabled()) {
-            LOG.trace("META REPORTED: " + regionNode);
-          }
-        } finally {
-          regionNode.unlock();
-        }
+  // just check and output possible inconsistency, without actually doing anything
+  private void checkOnlineRegionsReport(ServerStateNode serverNode, Set<byte[]> regionNames) {
+    ServerName serverName = serverNode.getServerName();
+    for (byte[] regionName : regionNames) {
+      if (!isRunning()) {
+        return;
       }
-    } catch (IOException e) {
-      ServerName serverName = serverNode.getServerName();
-      LOG.warn("KILLING " + serverName + ": " + e.getMessage());
-      killRegionServer(serverNode);
-    }
-  }
-
-  void checkOnlineRegionsReport(final ServerStateNode serverNode, final Set<byte[]> regionNames) {
-    final ServerName serverName = serverNode.getServerName();
-    try {
-      for (byte[] regionName: regionNames) {
-        if (!isRunning()) {
-          return;
-        }
-        final RegionStateNode regionNode = regionStates.getRegionStateNodeFromName(regionName);
-        if (regionNode == null) {
-          throw new UnexpectedStateException("Not online: " + Bytes.toStringBinary(regionName));
-        }
-        regionNode.lock();
-        try {
-          if (regionNode.isInState(State.OPENING, State.OPEN)) {
-            if (!regionNode.getRegionLocation().equals(serverName)) {
-              throw new UnexpectedStateException(regionNode.toString() +
-                " reported OPEN on server=" + serverName +
-                " but state has otherwise.");
-            } else if (regionNode.isInState(State.OPENING)) {
-              try {
-                if (!reportTransition(regionNode, serverNode, TransitionCode.OPENED, 0)) {
-                  LOG.warn(regionNode.toString() + " reported OPEN on server=" + serverName +
-                    " but state has otherwise AND NO procedure is running");
-                }
-              } catch (UnexpectedStateException e) {
-                LOG.warn(regionNode.toString() + " reported unexpteced OPEN: " + e.getMessage(), e);
-              }
-            }
-          } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
-            long diff = regionNode.getLastUpdate() - EnvironmentEdgeManager.currentTime();
-            if (diff > 1000/*One Second... make configurable if an issue*/) {
-              // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
-              // came in at about same time as a region transition. Make sure there is some
-              // elapsed time between killing remote server.
-              throw new UnexpectedStateException(regionNode.toString() +
-                " reported an unexpected OPEN; time since last update=" + diff);
-            }
-          }
-        } finally {
-          regionNode.unlock();
-        }
+      RegionStateNode regionNode = regionStates.getRegionStateNodeFromName(regionName);
+      if (regionNode == null) {
+        LOG.warn("No region state node for {}, it should already be on {}",
+          Bytes.toStringBinary(regionName), serverName);
+        continue;
       }
-    } catch (IOException e) {
-      //See HBASE-21421, we can count on reportRegionStateTransition calls
-      //We only log a warming here. It could be a network lag.
-      LOG.warn("Failed to checkOnlineRegionsReport, maybe due to network lag, "
-          + "if this message continues, be careful of double assign", e);
+      regionNode.lock();
+      try {
+        long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
+        if (regionNode.isInState(State.OPENING, State.OPEN)) {
+          // This is possible as a region server has just closed a region but the region server
+          // report is generated before the closing, but arrive after the closing. Make sure there
+          // is some elapsed time so less false alarms.
+          if (!regionNode.getRegionLocation().equals(serverName) && diff > 1000) {
+            LOG.warn("{} reported OPEN on server={} but state has otherwise", regionNode,
+              serverName);
+          }
+        } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
+          // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
+          // came in at about same time as a region transition. Make sure there is some
+          // elapsed time so less false alarms.
+          if (diff > 1000) {
+            LOG.warn("{} reported an unexpected OPEN on {}; time since last update={}ms",
+              regionNode, serverName, diff);
+          }
+        }
+      } finally {
+        regionNode.unlock();
+      }
     }
   }
 
@@ -1903,10 +1861,6 @@ public class AssignmentManager implements ServerListener {
 
     // just in case, wake procedures waiting for this server report
     wakeServerReportEvent(serverNode);
-  }
-
-  private void killRegionServer(final ServerStateNode serverNode) {
-    master.getServerManager().expireServer(serverNode.getServerName());
   }
 
   @VisibleForTesting
