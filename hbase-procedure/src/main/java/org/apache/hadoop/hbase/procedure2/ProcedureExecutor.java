@@ -1916,6 +1916,11 @@ public class ProcedureExecutor<TEnvironment> {
     return completed.size();
   }
 
+  @VisibleForTesting
+  public IdLock getProcExecutionLock() {
+    return procExecutionLock;
+  }
+
   // ==========================================================================
   //  Worker Thread
   // ==========================================================================

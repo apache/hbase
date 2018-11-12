@@ -161,7 +161,8 @@ enum EnableTableState {
 message EnableTableStateData {
   required UserInformation user_info = 1;
   required TableName table_name = 2;
-  required bool skip_table_state_check = 3;
+  // not used any more, always false
+  required bool skip_table_state_check = 3[deprecated=true];
 }
 
 enum DisableTableState {

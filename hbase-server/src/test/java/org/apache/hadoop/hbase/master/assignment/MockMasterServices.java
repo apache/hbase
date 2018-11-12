@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -77,7 +76,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrException;
-
 
 /**
  * A mocked master services.
@@ -126,13 +124,9 @@ public class MockMasterServices extends MockNoopMasterServices {
       @Override
       protected boolean waitServerReportEvent(ServerName serverName, Procedure proc) {
         // Make a report with current state of the server 'serverName' before we call wait..
-        SortedSet<byte []> regions = regionsToRegionServers.get(serverName);
-        try {
-          getAssignmentManager().reportOnlineRegions(serverName,
-              regions == null? new HashSet<byte []>(): regions);
-        } catch (YouAreDeadException e) {
-          throw new RuntimeException(e);
-        }
+        SortedSet<byte[]> regions = regionsToRegionServers.get(serverName);
+        getAssignmentManager().reportOnlineRegions(serverName,
+          regions == null ? new HashSet<byte[]>() : regions);
         return super.waitServerReportEvent(serverName, proc);
       }
     };
