@@ -3407,6 +3407,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             for (int j = 0; j < cpMutations.length; j++) {
               Mutation cpMutation = cpMutations[j];
               Map<byte[], List<Cell>> cpFamilyMap = cpMutation.getFamilyCellMap();
+              rewriteCellTags(cpFamilyMap, mutation);
               checkAndPrepareMutation(cpMutation, isInReplay, cpFamilyMap, now);
 
               // Acquire row locks. If not, the whole batch will fail.
