@@ -3748,6 +3748,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // Returned mutations from coprocessor correspond to the Mutation at index i. We can
           // directly add the cells from those mutations to the familyMaps of this mutation.
           Map<byte[], List<Cell>> cpFamilyMap = cpMutation.getFamilyCellMap();
+          region.rewriteCellTags(cpFamilyMap, mutation);
           // will get added to the memStore later
           mergeFamilyMaps(familyCellMaps[i], cpFamilyMap);
 
