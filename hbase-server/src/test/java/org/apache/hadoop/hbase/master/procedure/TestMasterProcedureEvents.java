@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -36,6 +39,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -61,14 +65,17 @@ public class TestMasterProcedureEvents {
   @Rule
   public TestName name = new TestName();
 
-  private static void setupConf(Configuration conf) {
+  private static void setupConf(Configuration conf) throws IOException {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
   }
 
   @BeforeClass
   public static void setupCluster() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
     setupConf(UTIL.getConfiguration());
+    UTIL.startMiniDFSCluster(3);
+    CommonFSUtils.setWALRootDir(conf, new Path(conf.get("fs.defaultFS"), "/tmp/wal"));
     UTIL.startMiniCluster(2);
     UTIL.waitUntilNoRegionsInTransition();
   }
