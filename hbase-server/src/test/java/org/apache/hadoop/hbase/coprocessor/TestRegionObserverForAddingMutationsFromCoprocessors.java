@@ -200,6 +200,39 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
   }
 
+  @Test
+  public void testPutWithTTL() throws Exception {
+    createTable(TestPutWithTTLCoprocessor.class.getName());
+
+    try (Table t = util.getConnection().getTable(tableName)) {
+      t.put(new Put(row1).addColumn(test, dummy, dummy).setTTL(3000));
+      assertRowCount(t, 2);
+      // wait long enough for the TTL to expire
+      Thread.sleep(5000);
+      assertRowCount(t, 0);
+    }
+  }
+
+  public static class TestPutWithTTLCoprocessor implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
+    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+        MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
+      Mutation mut = miniBatchOp.getOperation(0);
+      List<Cell> cells = mut.getFamilyCellMap().get(test);
+      Put[] puts = new Put[] {
+          new Put(Bytes.toBytes("cpPut")).addColumn(test, dummy, cells.get(0).getTimestamp(),
+            Bytes.toBytes("cpdummy")).setTTL(mut.getTTL())
+          };
+      LOG.info("Putting:" + Arrays.toString(puts));
+      miniBatchOp.addOperationsFromCP(0, puts);
+    }
+  }
+
   public static class TestMultiMutationCoprocessor implements RegionCoprocessor, RegionObserver {
     @Override
     public Optional<RegionObserver> getRegionObserver() {
