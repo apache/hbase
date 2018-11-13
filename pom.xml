@@ -552,6 +552,11 @@
       <email>yuzhihong@gmail.com</email>
       <timezone>-8</timezone>
     </developer>
+	<developer>
+	  <id>tianjy</id>
+	  <email>tianjy@apache.org</email>
+	  <timezone>+8</timezone>
+    </developer>
     <developer>
       <id>todd</id>
       <name>Todd Lipcon</name>
