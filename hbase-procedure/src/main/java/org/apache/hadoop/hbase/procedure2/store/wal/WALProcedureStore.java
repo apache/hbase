@@ -248,8 +248,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
     this.leaseRecovery = leaseRecovery;
     this.walDir = walDir;
     this.walArchiveDir = walArchiveDir;
-    this.fs = walDir.getFileSystem(conf);
-    this.enforceStreamCapability = conf.getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true);
+    this.fs = CommonFSUtils.getWALFileSystem(conf);
+    this.enforceStreamCapability = conf.getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE,
+        true);
 
     // Create the log directory for the procedure store
     if (!fs.exists(walDir)) {
