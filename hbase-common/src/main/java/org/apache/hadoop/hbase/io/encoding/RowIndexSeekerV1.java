@@ -387,7 +387,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
     protected int getCellBufSize() {
       int kvBufSize = KEY_VALUE_LEN_SIZE + keyLength + valueLength;
-      if (includesTags()) {
+      if (includesTags() && tagsLength > 0) {
         kvBufSize += Bytes.SIZEOF_SHORT + tagsLength;
       }
       return kvBufSize;
