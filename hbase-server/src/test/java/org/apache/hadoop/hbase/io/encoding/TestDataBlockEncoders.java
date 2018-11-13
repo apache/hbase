@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -321,6 +323,29 @@ public class TestDataBlockEncoders {
         fail(String.format("Bug in '%s' commonPrefix %d", encoder.toString(), commonPrefix));
       }
     }
+  }
+
+  @Test
+  public void testRowIndexWithTagsButNoTagsInCell() throws IOException {
+    List<KeyValue> kvList = new ArrayList<>();
+    byte[] row = new byte[0];
+    byte[] family = new byte[0];
+    byte[] qualifier = new byte[0];
+    byte[] value = new byte[0];
+    KeyValue expectedKV = new KeyValue(row, family, qualifier, -1L, Type.Put, value);
+    kvList.add(expectedKV);
+    DataBlockEncoding encoding = DataBlockEncoding.ROW_INDEX_V1;
+    DataBlockEncoder encoder = encoding.getEncoder();
+    ByteBuffer encodedBuffer =
+        encodeKeyValues(encoding, kvList, getEncodingContext(Algorithm.NONE, encoding), false);
+    HFileContext meta =
+        new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(includesMemstoreTS)
+            .withIncludesTags(includesTags).withCompression(Compression.Algorithm.NONE).build();
+    DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparatorImpl.COMPARATOR,
+      encoder.newDataBlockDecodingContext(meta));
+    seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
+    Cell cell = seeker.getCell();
+    Assert.assertEquals(expectedKV.getLength(), ((KeyValue) cell).getLength());
   }
 
   private void checkSeekingConsistency(List<DataBlockEncoder.EncodedSeeker> encodedSeekers,
