@@ -3300,14 +3300,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             }
             // Else Coprocessor added more Mutations corresponding to the Mutation at this index.
             for (int j = 0; j < cpMutations.length; j++) {
-              Mutation cpMutation = cpMutations[j];
-              Map<byte[], List<Cell>> cpFamilyMap = cpMutation.getFamilyCellMap();
-              checkAndPrepareMutation(cpMutation, isInReplay, cpFamilyMap, now);
+              Mutation mutation = cpMutations[j];
+              Map<byte[], List<Cell>> cpFamilyMap = mutation.getFamilyCellMap();
+              rewriteCellTags(cpFamilyMap, mutation);
+              checkAndPrepareMutation(mutation, isInReplay, cpFamilyMap, now);
 
               // Acquire row locks. If not, the whole batch will fail.
-              acquiredRowLocks.add(getRowLockInternal(cpMutation.getRow(), true, true, null));
+              acquiredRowLocks.add(getRowLockInternal(mutation.getRow(), true, true, null));
 
-              if (cpMutation.getDurability() == Durability.SKIP_WAL) {
+              if (mutation.getDurability() == Durability.SKIP_WAL) {
                 recordMutationWithoutWal(cpFamilyMap);
               }
 
