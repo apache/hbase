@@ -32,6 +32,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -40,11 +41,13 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -430,4 +433,28 @@ public class TestDataBlockEncoders {
     assertEquals("Encoding -> decoding gives different results for " + encoder,
         Bytes.toStringBinary(unencodedDataBuf), Bytes.toStringBinary(actualDataset));
   }
+
+  @Test
+  public void testRowIndexWithTagsButNoTagsInCell() throws IOException {
+    List<KeyValue> kvList = new ArrayList<>();
+    byte[] row = new byte[0];
+    byte[] family = new byte[0];
+    byte[] qualifier = new byte[0];
+    byte[] value = new byte[0];
+    KeyValue expectedKV = new KeyValue(row, family, qualifier, -1L, Type.Put, value);
+    kvList.add(expectedKV);
+    DataBlockEncoding encoding = DataBlockEncoding.ROW_INDEX_V1;
+    DataBlockEncoder encoder = encoding.getEncoder();
+    ByteBuffer encodedBuffer =
+        encodeKeyValues(encoding, kvList, getEncodingContext(Algorithm.NONE, encoding));
+    HFileContext meta =
+        new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(includesMemstoreTS)
+            .withIncludesTags(includesTags).withCompression(Compression.Algorithm.NONE).build();
+    DataBlockEncoder.EncodedSeeker seeker =
+        encoder.createSeeker(KeyValue.COMPARATOR, encoder.newDataBlockDecodingContext(meta));
+    seeker.setCurrentBuffer(encodedBuffer);
+    Cell cell = seeker.getKeyValue();
+    Assert.assertEquals(expectedKV.getLength(), ((KeyValue) cell).getLength());
+  }
+
 }
