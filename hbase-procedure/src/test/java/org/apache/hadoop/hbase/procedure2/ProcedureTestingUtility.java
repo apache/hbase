@@ -87,7 +87,7 @@ public class ProcedureTestingUtility {
 
   public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
       boolean abortOnCorruption, boolean startWorkers) throws IOException {
-    initAndStartWorkers(procExecutor, numThreads, 1, abortOnCorruption, startWorkers);
+    initAndStartWorkers(procExecutor, numThreads, 0, abortOnCorruption, startWorkers);
   }
 
   public static void initAndStartWorkers(ProcedureExecutor<?> procExecutor, int numThreads,
