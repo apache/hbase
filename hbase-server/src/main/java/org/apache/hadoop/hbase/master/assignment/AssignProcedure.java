@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionOpenOperation;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashException;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -388,6 +389,17 @@ public class AssignProcedure extends RegionTransitionProcedure {
   @Override
   protected boolean remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,
       final IOException exception) {
+    RegionTransitionState tState = getTransitionState();
+    if (tState == RegionTransitionState.REGION_TRANSITION_FINISH
+        && exception instanceof ServerCrashException) {
+      // if we found that AssignProcedure is at this stage, then ServerCerash handling may/may not
+      // have any effect
+      // depending upon the race between handling of the failure and execution at
+      // REGION_TRANSITION_FINISH state
+      LOG.warn("Assign Procedure is at state:" + tState
+          + ", so Handling of Server Crash may not have any affect");
+      return false;
+    }
     handleFailure(env, regionNode);
     return true;
   }

@@ -233,7 +233,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   public interface RemoteProcedure<TEnv, TRemote> {
     RemoteOperation remoteCallBuild(TEnv env, TRemote remote);
     void remoteCallCompleted(TEnv env, TRemote remote, RemoteOperation response);
-    void remoteCallFailed(TEnv env, TRemote remote, IOException exception);
+    boolean remoteCallFailed(TEnv env, TRemote remote, IOException exception);
   }
 
   /**
