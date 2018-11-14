@@ -108,6 +108,17 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   }
 
   @Override
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+    if (TableName.isMetaTableName(getTableName())) {
+      return false;
+    }
+    // First we need meta to be loaded, and second, if meta is not online then we will likely to
+    // fail when updating meta so we wait until it is assigned.
+    AssignmentManager am = env.getAssignmentManager();
+    return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, region);
+  }
+
+  @Override
   protected void rollback(MasterProcedureEnv env) throws IOException, InterruptedException {
     throw new UnsupportedOperationException();
   }
@@ -120,11 +131,13 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   /**
    * Check whether we still need to make the call to RS.
    * <p/>
-   * Usually this will not happen if we do not allow assigning a already onlined region. But if we
-   * have something wrong in the RSProcedureDispatcher, where we have already sent the request to
-   * RS, but then we tell the upper layer the remote call is failed due to rpc timeout or connection
-   * closed or anything else, then this issue can still happen. So here we add a check to make it
-   * more robust.
+   * This could happen when master restarts. Since we do not know whether a request has already been
+   * sent to the region server after we add a remote operation to the dispatcher, so the safe way is
+   * to not persist the dispatched field and try to add the remote operation again. But it is
+   * possible that we do have already sent the request to region server and it has also sent back
+   * the response, so here we need to check the region state, if it is not in the expecting state,
+   * we should give up, otherwise we may hang for ever, as the region server will just ignore
+   * redundant calls.
    */
   protected abstract boolean shouldDispatch(RegionStateNode regionNode);
 
@@ -165,7 +178,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     serializer.serialize(RegionRemoteProcedureBaseStateData.newBuilder()
       .setRegion(ProtobufUtil.toRegionInfo(region))
-      .setTargetServer(ProtobufUtil.toServerName(targetServer)).setDispatched(dispatched).build());
+      .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
   }
 
   @Override
@@ -174,6 +187,5 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       serializer.deserialize(RegionRemoteProcedureBaseStateData.class);
     region = ProtobufUtil.toRegionInfo(data.getRegion());
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
-    dispatched = data.getDispatched();
   }
 }

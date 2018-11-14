@@ -68,6 +68,6 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   protected boolean shouldDispatch(RegionStateNode regionNode) {
-    return !regionNode.isInState(RegionState.State.OPEN);
+    return regionNode.isInState(RegionState.State.OPENING);
   }
 }
