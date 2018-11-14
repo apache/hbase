@@ -57,7 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Performs checks for reference counting w.r.t. TableAuthManager which is used by
+ * Performs checks for reference counting w.r.t. AuthManager which is used by
  * AccessController.
  *
  * NOTE: Only one test in  here. In AMv2, there is problem deleting because

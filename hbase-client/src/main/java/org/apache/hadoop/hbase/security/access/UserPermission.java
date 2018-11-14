@@ -18,144 +18,135 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Represents an authorization for access over the given table, column family
- * plus qualifier, for the given user.
+ * UserPermission consists of a user name and a permission.
+ * Permission can be one of [Global, Namespace, Table] permission.
  */
 @InterfaceAudience.Private
-public class UserPermission extends TablePermission {
-  private static final Logger LOG = LoggerFactory.getLogger(UserPermission.class);
+public class UserPermission {
 
-  private byte[] user;
+  private String user;
+  private Permission permission;
 
-  /** Nullary constructor for Writable, do not use */
-  public UserPermission() {
-    super();
+  /**
+   * Construct a global user permission.
+   * @param user user name
+   * @param assigned assigned actions
+   */
+  public UserPermission(String user, Permission.Action... assigned) {
+    this.user = user;
+    this.permission = new GlobalPermission(assigned);
   }
 
   /**
-   * Creates a new instance for the given user.
-   * @param user the user
-   * @param assigned the list of allowed actions
+   * Construct a global user permission.
+   * @param user user name
+   * @param actionCode action codes
    */
-  public UserPermission(byte[] user, Action... assigned) {
-    super(null, null, null, assigned);
+  public UserPermission(String user, byte[] actionCode) {
     this.user = user;
+    this.permission = new GlobalPermission(actionCode);
   }
 
   /**
-   * Creates a new instance for the given user,
-   * matching the actions with the given codes.
-   * @param user the user
-   * @param actionCodes the list of allowed action codes
+   * Construct a namespace user permission.
+   * @param user user name
+   * @param namespace namespace
+   * @param assigned assigned actions
    */
-  public UserPermission(byte[] user, byte[] actionCodes) {
-    super(null, null, null, actionCodes);
+  public UserPermission(String user, String namespace, Permission.Action... assigned) {
     this.user = user;
+    this.permission = new NamespacePermission(namespace, assigned);
   }
 
   /**
-   * Creates a new instance for the given user.
-   * @param user the user
-   * @param namespace
-   * @param assigned the list of allowed actions
+   * Construct a table user permission.
+   * @param user user name
+   * @param tableName table name
+   * @param assigned assigned actions
    */
-  public UserPermission(byte[] user, String namespace, Action... assigned) {
-    super(namespace, assigned);
+  public UserPermission(String user, TableName tableName, Permission.Action... assigned) {
     this.user = user;
+    this.permission = new TablePermission(tableName, assigned);
   }
 
   /**
-   * Creates a new instance for the given user,
-   * matching the actions with the given codes.
-   * @param user the user
-   * @param namespace
-   * @param actionCodes the list of allowed action codes
+   * Construct a table:family user permission.
+   * @param user user name
+   * @param tableName table name
+   * @param family family name of table
+   * @param assigned assigned actions
    */
-  public UserPermission(byte[] user, String namespace, byte[] actionCodes) {
-    super(namespace, actionCodes);
-    this.user = user;
+  public UserPermission(String user, TableName tableName, byte[] family,
+    Permission.Action... assigned) {
+    this(user, tableName, family, null, assigned);
   }
 
   /**
-   * Creates a new instance for the given user, table and column family.
-   * @param user the user
-   * @param table the table
-   * @param family the family, can be null if action is allowed over the entire
-   *   table
-   * @param assigned the list of allowed actions
+   * Construct a table:family:qualifier user permission.
+   * @param user user name
+   * @param tableName table name
+   * @param family family name of table
+   * @param qualifier qualifier name of table
+   * @param assigned assigned actions
    */
-  public UserPermission(byte[] user, TableName table, byte[] family,
-                        Action... assigned) {
-    super(table, family, assigned);
+  public UserPermission(String user, TableName tableName, byte[] family, byte[] qualifier,
+      Permission.Action... assigned) {
     this.user = user;
+    this.permission = new TablePermission(tableName, family, qualifier, assigned);
   }
 
   /**
-   * Creates a new permission for the given user, table, column family and
-   * column qualifier.
-   * @param user the user
-   * @param table the table
-   * @param family the family, can be null if action is allowed over the entire
-   *   table
-   * @param qualifier the column qualifier, can be null if action is allowed
-   *   over the entire column family
-   * @param assigned the list of allowed actions
+   * Construct a table:family:qualifier user permission.
+   * @param user user name
+   * @param tableName table name
+   * @param family family name of table
+   * @param qualifier qualifier name of table
+   * @param actionCodes assigned actions
    */
-  public UserPermission(byte[] user, TableName table, byte[] family,
-                        byte[] qualifier, Action... assigned) {
-    super(table, family, qualifier, assigned);
+  public UserPermission(String user, TableName tableName, byte[] family, byte[] qualifier,
+      byte[] actionCodes) {
     this.user = user;
+    this.permission = new TablePermission(tableName, family, qualifier, actionCodes);
   }
 
   /**
-   * Creates a new instance for the given user, table, column family and
-   * qualifier, matching the actions with the given codes.
-   * @param user the user
-   * @param table the table
-   * @param family the family, can be null if action is allowed over the entire
-   *   table
-   * @param qualifier the column qualifier, can be null if action is allowed
-   *   over the entire column family
-   * @param actionCodes the list of allowed action codes
+   * Construct a user permission given permission.
+   * @param user user name
+   * @param permission one of [Global, Namespace, Table] permission
    */
-  public UserPermission(byte[] user, TableName table, byte[] family,
-                        byte[] qualifier, byte[] actionCodes) {
-    super(table, family, qualifier, actionCodes);
+  public UserPermission(String user, Permission permission) {
     this.user = user;
+    this.permission = permission;
   }
 
   /**
-   * Creates a new instance for the given user, table, column family and
-   * qualifier, matching the actions with the given codes.
-   * @param user the user
-   * @param perm a TablePermission
+   * Get this permission access scope.
+   * @return access scope
    */
-  public UserPermission(byte[] user, TablePermission perm) {
-    super(perm.getNamespace(), perm.getTableName(), perm.getFamily(), perm.getQualifier(),
-        perm.actions);
-    this.user = user;
+  public Permission.Scope getAccessScope() {
+    return permission.getAccessScope();
   }
 
-  public byte[] getUser() {
+  public String getUser() {
     return user;
   }
 
-  /**
-   * Returns true if this permission describes a global user permission.
-   */
-  public boolean isGlobal() {
-    return(!hasTable() && !hasNamespace());
+  public Permission getPermission() {
+    return permission;
+  }
+
+  public boolean equalsExceptActions(Object obj) {
+    if (!(obj instanceof UserPermission)) {
+      return false;
+    }
+    UserPermission other = (UserPermission) obj;
+    return user.equals(other.user) && permission.equalsExceptActions(other.permission);
   }
 
   @Override
@@ -163,22 +154,16 @@ public class UserPermission extends TablePermission {
     if (!(obj instanceof UserPermission)) {
       return false;
     }
-    UserPermission other = (UserPermission)obj;
-
-    if ((Bytes.equals(user, other.getUser()) &&
-        super.equals(obj))) {
-      return true;
-    } else {
-      return false;
-    }
+    UserPermission other = (UserPermission) obj;
+    return user.equals(other.user) && permission.equals(other.permission);
   }
 
   @Override
   public int hashCode() {
     final int prime = 37;
-    int result = super.hashCode();
+    int result = permission.hashCode();
     if (user != null) {
-      result = prime * result + Bytes.hashCode(user);
+      result = prime * result + Objects.hashCode(user);
     }
     return result;
   }
@@ -186,20 +171,8 @@ public class UserPermission extends TablePermission {
   @Override
   public String toString() {
     StringBuilder str = new StringBuilder("UserPermission: ")
-        .append("user=").append(Bytes.toString(user))
-        .append(", ").append(super.toString());
+        .append("user=").append(user)
+        .append(", ").append(permission.toString());
     return str.toString();
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    user = Bytes.readByteArray(in);
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    Bytes.writeByteArray(out, user);
   }
 }

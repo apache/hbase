@@ -50,7 +50,7 @@ public final class AccessChecker {
   // TODO: we should move to a design where we don't even instantiate an AccessChecker if
   // authorization is not enabled (like in RSRpcServices), instead of always instantiating one and
   // calling requireXXX() only to do nothing (since authorizationEnabled will be false).
-  private TableAuthManager authManager;
+  private AuthManager authManager;
 
   /** Group service to retrieve the user group information */
   private static Groups groupService;
@@ -75,7 +75,7 @@ public final class AccessChecker {
       throws RuntimeException {
     if (zkw != null) {
       try {
-        this.authManager = TableAuthManager.getOrCreate(zkw, conf);
+        this.authManager = AuthManager.getOrCreate(zkw, conf);
       } catch (IOException ioe) {
         throw new RuntimeException("Error obtaining AccessChecker", ioe);
       }
@@ -87,13 +87,13 @@ public final class AccessChecker {
   }
 
   /**
-   * Releases {@link TableAuthManager}'s reference.
+   * Releases {@link AuthManager}'s reference.
    */
   public void stop() {
-    TableAuthManager.release(authManager);
+    AuthManager.release(authManager);
   }
 
-  public TableAuthManager getAuthManager() {
+  public AuthManager getAuthManager() {
     return authManager;
   }
 
@@ -115,7 +115,7 @@ public final class AccessChecker {
     AuthResult result = null;
 
     for (Action permission : permissions) {
-      if (authManager.hasAccess(user, tableName, permission)) {
+      if (authManager.accessUserTable(user, tableName, permission)) {
         result = AuthResult.allow(request, "Table permission granted",
             user, permission, tableName, null, null);
         break;
@@ -164,7 +164,7 @@ public final class AccessChecker {
       return;
     }
     AuthResult result;
-    if (authManager.authorize(user, perm)) {
+    if (authManager.authorizeUserGlobal(user, perm)) {
       result = AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap);
     } else {
       result = AuthResult.deny(request, "Global check failed", user, perm, tableName, familyMap);
@@ -195,7 +195,7 @@ public final class AccessChecker {
       return;
     }
     AuthResult authResult;
-    if (authManager.authorize(user, perm)) {
+    if (authManager.authorizeUserGlobal(user, perm)) {
       authResult = AuthResult.allow(request, "Global check allowed", user, perm, null);
       authResult.getParams().setNamespace(namespace);
       logResult(authResult);
@@ -225,7 +225,7 @@ public final class AccessChecker {
     AuthResult result = null;
 
     for (Action permission : permissions) {
-      if (authManager.authorize(user, namespace, permission)) {
+      if (authManager.authorizeUserNamespace(user, namespace, permission)) {
         result =
             AuthResult.allow(request, "Namespace permission granted", user, permission, namespace);
         break;
@@ -260,7 +260,7 @@ public final class AccessChecker {
     AuthResult result = null;
 
     for (Action permission : permissions) {
-      if (authManager.authorize(user, namespace, permission)) {
+      if (authManager.authorizeUserNamespace(user, namespace, permission)) {
         result =
             AuthResult.allow(request, "Namespace permission granted", user, permission, namespace);
         result.getParams().setTableName(tableName).setFamilies(familyMap);
@@ -299,7 +299,7 @@ public final class AccessChecker {
     AuthResult result = null;
 
     for (Action permission : permissions) {
-      if (authManager.authorize(user, tableName, family, qualifier, permission)) {
+      if (authManager.authorizeUserTable(user, tableName, family, qualifier, permission)) {
         result = AuthResult.allow(request, "Table permission granted",
             user, permission, tableName, family, qualifier);
         break;
@@ -337,7 +337,7 @@ public final class AccessChecker {
     AuthResult result = null;
 
     for (Action permission : permissions) {
-      if (authManager.authorize(user, tableName, null, null, permission)) {
+      if (authManager.authorizeUserTable(user, tableName, permission)) {
         result = AuthResult.allow(request, "Table permission granted",
             user, permission, tableName, null, null);
         result.getParams().setFamily(family).setQualifier(qualifier);

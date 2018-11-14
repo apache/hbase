@@ -119,14 +119,13 @@ public class ShadedAccessControlUtil {
    * @param proto the protobuf Permission
    * @return the converted TablePermission
    */
-  public static TablePermission toTablePermission(AccessControlProtos.Permission proto) {
+  public static Permission toPermission(AccessControlProtos.Permission proto) {
 
     if (proto.getType() == AccessControlProtos.Permission.Type.Global) {
       AccessControlProtos.GlobalPermission perm = proto.getGlobalPermission();
       List<Action> actions = toPermissionActions(perm.getActionList());
 
-      return new TablePermission(null, null, null,
-          actions.toArray(new Permission.Action[actions.size()]));
+      return new GlobalPermission(actions.toArray(new Permission.Action[actions.size()]));
     }
     if (proto.getType() == AccessControlProtos.Permission.Type.Namespace) {
       AccessControlProtos.NamespacePermission perm = proto.getNamespacePermission();
@@ -135,8 +134,8 @@ public class ShadedAccessControlUtil {
       if (!proto.hasNamespacePermission()) {
         throw new IllegalStateException("Namespace must not be empty in NamespacePermission");
       }
-      String namespace = perm.getNamespaceName().toStringUtf8();
-      return new TablePermission(namespace, actions.toArray(new Permission.Action[actions.size()]));
+      String ns = perm.getNamespaceName().toStringUtf8();
+      return new NamespacePermission(ns, actions.toArray(new Permission.Action[actions.size()]));
     }
     if (proto.getType() == AccessControlProtos.Permission.Type.Table) {
       AccessControlProtos.TablePermission perm = proto.getTablePermission();
@@ -144,12 +143,11 @@ public class ShadedAccessControlUtil {
 
       byte[] qualifier = null;
       byte[] family = null;
-      TableName table = null;
 
       if (!perm.hasTableName()) {
         throw new IllegalStateException("TableName cannot be empty");
       }
-      table = toTableName(perm.getTableName());
+      TableName table = toTableName(perm.getTableName());
 
       if (perm.hasFamily()) family = perm.getFamily().toByteArray();
       if (perm.hasQualifier()) qualifier = perm.getQualifier().toByteArray();
@@ -170,63 +168,58 @@ public class ShadedAccessControlUtil {
     org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Builder ret =
         org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission
             .newBuilder();
-    if (perm instanceof TablePermission) {
+    if (perm instanceof NamespacePermission) {
+      NamespacePermission nsPerm = (NamespacePermission) perm;
+      ret.setType(
+        org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type.Namespace);
+      org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission.Builder builder =
+        org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission
+          .newBuilder();
+      builder.setNamespaceName(org.apache.hbase.thirdparty.com.google.protobuf.ByteString
+        .copyFromUtf8(nsPerm.getNamespace()));
+      Permission.Action[] actions = perm.getActions();
+      if (actions != null) {
+        for (Permission.Action a : actions) {
+          builder.addAction(toPermissionAction(a));
+        }
+      }
+      ret.setNamespacePermission(builder);
+    } else if (perm instanceof TablePermission) {
       TablePermission tablePerm = (TablePermission) perm;
-      if (tablePerm.hasNamespace()) {
-        ret.setType(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type.Namespace);
-
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission.Builder builder =
-            org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.NamespacePermission
-                .newBuilder();
-        builder.setNamespaceName(org.apache.hbase.thirdparty.com.google.protobuf.ByteString
-            .copyFromUtf8(tablePerm.getNamespace()));
-        Permission.Action[] actions = perm.getActions();
-        if (actions != null) {
-          for (Permission.Action a : actions) {
-            builder.addAction(toPermissionAction(a));
-          }
-        }
-        ret.setNamespacePermission(builder);
-        return ret.build();
-      } else if (tablePerm.hasTable()) {
-        ret.setType(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type.Table);
-
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermission.Builder builder =
-            org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermission
-                .newBuilder();
-        builder.setTableName(toProtoTableName(tablePerm.getTableName()));
-        if (tablePerm.hasFamily()) {
-          builder.setFamily(ByteString.copyFrom(tablePerm.getFamily()));
-        }
-        if (tablePerm.hasQualifier()) {
-          builder.setQualifier(ByteString.copyFrom(tablePerm.getQualifier()));
-        }
-        Permission.Action actions[] = perm.getActions();
-        if (actions != null) {
-          for (Permission.Action a : actions) {
-            builder.addAction(toPermissionAction(a));
-          }
-        }
-        ret.setTablePermission(builder);
-        return ret.build();
+      ret.setType(
+        org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type.Table);
+      org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermission.Builder builder =
+        org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.TablePermission
+          .newBuilder();
+      builder.setTableName(toProtoTableName(tablePerm.getTableName()));
+      if (tablePerm.hasFamily()) {
+        builder.setFamily(ByteString.copyFrom(tablePerm.getFamily()));
       }
-    }
-
-    ret.setType(
-      org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type.Global);
-
-    org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermission.Builder builder =
+      if (tablePerm.hasQualifier()) {
+        builder.setQualifier(ByteString.copyFrom(tablePerm.getQualifier()));
+      }
+      Permission.Action[] actions = perm.getActions();
+      if (actions != null) {
+        for (Permission.Action a : actions) {
+          builder.addAction(toPermissionAction(a));
+        }
+      }
+      ret.setTablePermission(builder);
+    } else {
+      // perm.getAccessScope() == Permission.Scope.GLOBAL
+      ret.setType(
+        org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type.Global);
+      org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermission.Builder builder =
         org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GlobalPermission
-            .newBuilder();
-    Permission.Action actions[] = perm.getActions();
-    if (actions != null) {
-      for (Permission.Action a : actions) {
-        builder.addAction(toPermissionAction(a));
+          .newBuilder();
+      Permission.Action[] actions = perm.getActions();
+      if (actions != null) {
+        for (Permission.Action a : actions) {
+          builder.addAction(toPermissionAction(a));
+        }
       }
+      ret.setGlobalPermission(builder);
     }
-    ret.setGlobalPermission(builder);
     return ret.build();
   }
 
@@ -236,15 +229,15 @@ public class ShadedAccessControlUtil {
    * @param proto the protobuf UserPermission
    * @return the converted UserPermission
    */
-  public static ListMultimap<String, TablePermission> toUserTablePermissions(
+  public static ListMultimap<String, Permission> toUserTablePermissions(
       org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions proto) {
-    ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
+    ListMultimap<String, Permission> perms = ArrayListMultimap.create();
     org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions userPerm;
     for (int i = 0; i < proto.getUserPermissionsCount(); i++) {
       userPerm = proto.getUserPermissions(i);
       for (int j = 0; j < userPerm.getPermissionsCount(); j++) {
-        TablePermission tablePerm = toTablePermission(userPerm.getPermissions(j));
-        perms.put(userPerm.getUser().toStringUtf8(), tablePerm);
+        Permission perm = toPermission(userPerm.getPermissions(j));
+        perms.put(userPerm.getUser().toStringUtf8(), perm);
       }
     }
     return perms;
@@ -258,31 +251,20 @@ public class ShadedAccessControlUtil {
    */
   public static
       org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions
-      toUserTablePermissions(ListMultimap<String, TablePermission> perm) {
+      toUserTablePermissions(ListMultimap<String, UserPermission> perm) {
     org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder builder =
         org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions
             .newBuilder();
-    for (Map.Entry<String, Collection<TablePermission>> entry : perm.asMap().entrySet()) {
+    for (Map.Entry<String, Collection<UserPermission>> entry : perm.asMap().entrySet()) {
       org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
           org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions
               .newBuilder();
       userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
-      for (TablePermission tablePerm : entry.getValue()) {
-        userPermBuilder.addPermissions(toPermission(tablePerm));
+      for (UserPermission userPerm : entry.getValue()) {
+        userPermBuilder.addPermissions(toPermission(userPerm.getPermission()));
       }
       builder.addUserPermissions(userPermBuilder.build());
     }
     return builder.build();
-  }
-
-  /**
-   * Converts a user permission proto to a client user permission object.
-   *
-   * @param proto the protobuf UserPermission
-   * @return the converted UserPermission
-   */
-  public static UserPermission toUserPermission(org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.UserPermission proto) {
-    return new UserPermission(proto.getUser().toByteArray(),
-        toTablePermission(proto.getPermission()));
   }
 }

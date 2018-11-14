@@ -49,21 +49,21 @@ import java.util.concurrent.RejectedExecutionException;
  * {@code /hbase/acl/tablename}, with the znode data containing a serialized
  * list of the permissions granted for the table.  The {@code AccessController}
  * instances on all other cluster hosts watch the znodes for updates, which
- * trigger updates in the {@link TableAuthManager} permission cache.
+ * trigger updates in the {@link AuthManager} permission cache.
  */
 @InterfaceAudience.Private
 public class ZKPermissionWatcher extends ZKListener implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(ZKPermissionWatcher.class);
   // parent node for permissions lists
   static final String ACL_NODE = "acl";
-  private final TableAuthManager authManager;
+  private final AuthManager authManager;
   private final String aclZNode;
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final ExecutorService executor;
   private Future<?> childrenChangedFuture;
 
   public ZKPermissionWatcher(ZKWatcher watcher,
-      TableAuthManager authManager, Configuration conf) {
+      AuthManager authManager, Configuration conf) {
     super(watcher);
     this.authManager = authManager;
     String aclZnodeParent = conf.get("zookeeper.znode.acl.parent", ACL_NODE);
