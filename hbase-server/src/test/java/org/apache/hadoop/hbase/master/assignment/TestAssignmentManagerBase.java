@@ -261,12 +261,12 @@ public abstract class TestAssignmentManagerBase {
 
   protected void sendTransitionReport(final ServerName serverName,
       final org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo regionInfo,
-      final TransitionCode state) throws IOException {
+      final TransitionCode state, long seqId) throws IOException {
     ReportRegionStateTransitionRequest.Builder req =
       ReportRegionStateTransitionRequest.newBuilder();
     req.setServer(ProtobufUtil.toServerName(serverName));
     req.addTransition(RegionStateTransition.newBuilder().addRegionInfo(regionInfo)
-      .setTransitionCode(state).setOpenSeqNum(1).build());
+      .setTransitionCode(state).setOpenSeqNum(seqId).build());
     am.reportRegionStateTransition(req.build());
   }
 
@@ -286,7 +286,11 @@ public abstract class TestAssignmentManagerBase {
     @Override
     protected RegionOpeningState execOpenRegion(ServerName server, RegionOpenInfo openReq)
         throws IOException {
-      sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED);
+      RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
+      long previousOpenSeqNum =
+        am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
+      sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED,
+        previousOpenSeqNum + 2);
       // Concurrency?
       // Now update the state of our cluster in regionsToRegionServers.
       SortedSet<byte[]> regions = regionsToRegionServers.get(server);
@@ -294,7 +298,6 @@ public abstract class TestAssignmentManagerBase {
         regions = new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
         regionsToRegionServers.put(server, regions);
       }
-      RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
       if (regions.contains(hri.getRegionName())) {
         throw new UnsupportedOperationException(hri.getRegionNameAsString());
       }
@@ -306,7 +309,7 @@ public abstract class TestAssignmentManagerBase {
     protected CloseRegionResponse execCloseRegion(ServerName server, byte[] regionName)
         throws IOException {
       RegionInfo hri = am.getRegionInfo(regionName);
-      sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED);
+      sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED, -1);
       return CloseRegionResponse.newBuilder().setClosed(true).build();
     }
   }
@@ -497,18 +500,18 @@ public abstract class TestAssignmentManagerBase {
     @Override
     protected RegionOpeningState execOpenRegion(final ServerName server, RegionOpenInfo openReq)
         throws IOException {
-      switch (rand.nextInt(6)) {
+      RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
+      long previousOpenSeqNum =
+        am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
+      switch (rand.nextInt(3)) {
         case 0:
           LOG.info("Return OPENED response");
-          sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED);
+          sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED,
+            previousOpenSeqNum + 2);
           return OpenRegionResponse.RegionOpeningState.OPENED;
         case 1:
-          LOG.info("Return transition report that OPENED/ALREADY_OPENED response");
-          sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED);
-          return OpenRegionResponse.RegionOpeningState.ALREADY_OPENED;
-        case 2:
           LOG.info("Return transition report that FAILED_OPEN/FAILED_OPENING response");
-          sendTransitionReport(server, openReq.getRegion(), TransitionCode.FAILED_OPEN);
+          sendTransitionReport(server, openReq.getRegion(), TransitionCode.FAILED_OPEN, -1);
           return OpenRegionResponse.RegionOpeningState.FAILED_OPENING;
         default:
           // fall out
@@ -534,7 +537,7 @@ public abstract class TestAssignmentManagerBase {
       boolean closed = rand.nextBoolean();
       if (closed) {
         RegionInfo hri = am.getRegionInfo(regionName);
-        sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED);
+        sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED, -1);
       }
       resp.setClosed(closed);
       return resp.build();
