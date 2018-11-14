@@ -83,6 +83,6 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   protected boolean shouldDispatch(RegionStateNode regionNode) {
-    return !regionNode.isInState(RegionState.State.CLOSED, RegionState.State.ABNORMALLY_CLOSED);
+    return regionNode.isInState(RegionState.State.CLOSING);
   }
 }

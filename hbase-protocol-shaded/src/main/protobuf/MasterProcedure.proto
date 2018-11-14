@@ -541,7 +541,6 @@ message RegionStateTransitionStateData {
 message RegionRemoteProcedureBaseStateData {
   required RegionInfo region = 1;
   required ServerName target_server = 2;
-  required bool dispatched = 3;
 }
 
 message OpenRegionProcedureStateData {
