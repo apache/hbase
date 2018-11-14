@@ -380,7 +380,6 @@ public class TestYieldProcedures {
 
     @Override
     public Procedure poll() {
-      LOG.error("polled()");
       pollCalls++;
       return super.poll();
     }
@@ -388,8 +387,13 @@ public class TestYieldProcedures {
     @Override
     public Procedure poll(long timeout, TimeUnit unit) {
       pollCalls++;
-      LOG.error("polled(long timeout, TimeUnit unit)");
       return super.poll(timeout, unit);
+    }
+
+    @Override
+    public Procedure poll(boolean onlyUrgent, long timeout, TimeUnit unit) {
+      pollCalls++;
+      return super.poll(onlyUrgent, timeout, unit);
     }
 
     @Override

@@ -124,7 +124,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
     try {
       enqueue(procedure, addFront);
       if (notify) {
-        schedWaitCond.signal();
+        schedWaitCond.signalAll();
       }
     } finally {
       schedUnlock();
@@ -311,10 +311,6 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
     if (waitingCount <= 0) {
       return;
     }
-    if (waitingCount == 1) {
-      schedWaitCond.signal();
-    } else {
-      schedWaitCond.signalAll();
-    }
+    schedWaitCond.signalAll();
   }
 }

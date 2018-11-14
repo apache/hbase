@@ -211,7 +211,7 @@ public class ProcedureExecutor<TEnvironment> {
   /**
    * Worker thread only for urgent tasks.
    */
-  private List<WorkerThread> urgentWorkerThreads;
+  private CopyOnWriteArrayList<WorkerThread> urgentWorkerThreads;
 
   /**
    * Created in the {@link #init(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
@@ -564,7 +564,7 @@ public class ProcedureExecutor<TEnvironment> {
    *          is found on replay. otherwise false.
    */
   public void init(int numThreads, boolean abortOnCorruption) throws IOException {
-    init(numThreads, 1, abortOnCorruption);
+    init(numThreads, 0, abortOnCorruption);
   }
 
   /**
@@ -595,7 +595,7 @@ public class ProcedureExecutor<TEnvironment> {
     // Create the workers
     workerId.set(0);
     workerThreads = new CopyOnWriteArrayList<>();
-    urgentWorkerThreads = new ArrayList<>();
+    urgentWorkerThreads = new CopyOnWriteArrayList<>();
     for (int i = 0; i < corePoolSize; ++i) {
       workerThreads.add(new WorkerThread(threadGroup));
     }
@@ -637,7 +637,7 @@ public class ProcedureExecutor<TEnvironment> {
       return;
     }
     // Start the executors. Here we must have the lastProcId set.
-    LOG.debug("Start workers {}, urgent workers", workerThreads.size(),
+    LOG.debug("Start workers {}, urgent workers {}", workerThreads.size(),
         urgentWorkerThreads.size());
     timeoutExecutor.start();
     for (WorkerThread worker: workerThreads) {
@@ -2023,7 +2023,8 @@ public class ProcedureExecutor<TEnvironment> {
       long lastUpdate = EnvironmentEdgeManager.currentTime();
       try {
         while (isRunning() && keepAlive(lastUpdate)) {
-          Procedure<TEnvironment> proc = scheduler.poll(keepAliveTime, TimeUnit.MILLISECONDS);
+          Procedure<TEnvironment> proc = scheduler
+              .poll(onlyPollUrgent, keepAliveTime, TimeUnit.MILLISECONDS);
           if (proc == null) {
             continue;
           }
