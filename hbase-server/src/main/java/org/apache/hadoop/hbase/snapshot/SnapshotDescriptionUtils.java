@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
-import org.apache.hadoop.hbase.security.access.TablePermission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -435,10 +435,10 @@ public final class SnapshotDescriptionUtils {
 
   private static SnapshotDescription writeAclToSnapshotDescription(SnapshotDescription snapshot,
       Configuration conf) throws IOException {
-    ListMultimap<String, TablePermission> perms =
-        User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, TablePermission>>() {
+    ListMultimap<String, UserPermission> perms =
+        User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, UserPermission>>() {
           @Override
-          public ListMultimap<String, TablePermission> run() throws Exception {
+          public ListMultimap<String, UserPermission> run() throws Exception {
             return AccessControlLists.getTablePermissions(conf,
               TableName.valueOf(snapshot.getTable()));
           }

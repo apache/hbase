@@ -147,8 +147,10 @@ public class TestRpcAccessChecks {
         User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
 
     // Assign permissions to users and groups
-    SecureTestUtil.grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(), Permission.Action.ADMIN);
-    SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN), Permission.Action.ADMIN);
+    SecureTestUtil.grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(),
+      Permission.Action.ADMIN, Permission.Action.CREATE);
+    SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN),
+      Permission.Action.ADMIN, Permission.Action.CREATE);
     // No permissions to USER_NON_ADMIN
   }
 
