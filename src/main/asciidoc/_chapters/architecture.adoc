@@ -950,14 +950,14 @@ In the above, we set the BucketCache to be 4G.
 We configured the on-heap LruBlockCache have 20% (0.2) of the RegionServer's heap size (0.2 * 5G = 1G). In other words, you configure the L1 LruBlockCache as you would normally (as if there were no L2 cache present).
 
 link:https://issues.apache.org/jira/browse/HBASE-10641[HBASE-10641] introduced the ability to configure multiple sizes for the buckets of the BucketCache, in HBase 0.98 and newer.
-To configurable multiple bucket sizes, configure the new property `hfile.block.cache.sizes` (instead of `hfile.block.cache.size`) to a comma-separated list of block sizes, ordered from smallest to largest, with no spaces.
+To configurable multiple bucket sizes, configure the new property `hbase.bucketcache.bucket.sizes` to a comma-separated list of block sizes, ordered from smallest to largest, with no spaces.
 The goal is to optimize the bucket sizes based on your data access patterns.
 The following example configures buckets of size 4096 and 8192.
 
 [source,xml]
 ----
 <property>
-  <name>hfile.block.cache.sizes</name>
+  <name>hbase.bucketcache.bucket.sizes</name>
   <value>4096,8192</value>
 </property>
 ----
