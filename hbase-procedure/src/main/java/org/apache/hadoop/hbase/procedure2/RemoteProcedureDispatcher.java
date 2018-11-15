@@ -237,7 +237,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     /**
      * Called when the executeProcedure call is failed.
      */
-    void remoteCallFailed(TEnv env, TRemote remote, IOException exception);
+    boolean remoteCallFailed(TEnv env, TRemote remote, IOException exception);
 
     /**
      * Called when RS tells the remote procedure is succeeded through the

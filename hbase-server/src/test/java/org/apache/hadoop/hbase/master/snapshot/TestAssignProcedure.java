@@ -108,11 +108,12 @@ public class TestAssignProcedure {
     }
 
     @Override
-    public void remoteCallFailed(final MasterProcedureEnv env,
+    public boolean remoteCallFailed(final MasterProcedureEnv env,
         final ServerName serverName, final IOException exception) {
       // Just skip this remoteCallFailed. Its too hard to mock. Assert it is called though.
       // Happens after the code we are testing has been called.
       this.remoteCallFailedWasCalled.set(true);
+      return true;
     }
   };
 

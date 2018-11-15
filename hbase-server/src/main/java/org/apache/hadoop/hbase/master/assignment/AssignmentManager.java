@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -64,7 +63,6 @@ import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
-import org.apache.hadoop.hbase.master.procedure.ServerCrashException;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
@@ -88,7 +86,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
@@ -1871,42 +1868,6 @@ public class AssignmentManager implements ServerListener {
         : new ServerState[] { ServerState.OFFLINE };
     synchronized (ssn) {
       return ssn.isInState(inState);
-    }
-  }
-
-  /**
-   * Handle RIT of meta region against crashed server.
-   * Only used when ServerCrashProcedure is not enabled.
-   * See handleRIT in ServerCrashProcedure for similar function.
-   *
-   * @param serverName Server that has already crashed
-   */
-  public void handleMetaRITOnCrashedServer(ServerName serverName) {
-    RegionInfo hri = RegionReplicaUtil
-        .getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO,
-            RegionInfo.DEFAULT_REPLICA_ID);
-    RegionState regionStateNode = getRegionStates().getRegionState(hri);
-    if (regionStateNode == null) {
-      LOG.warn("RegionStateNode is null for " + hri);
-      return;
-    }
-    ServerName rsnServerName = regionStateNode.getServerName();
-    if (rsnServerName != null && !rsnServerName.equals(serverName)) {
-      return;
-    } else if (rsnServerName == null) {
-      LOG.warn("Empty ServerName in RegionStateNode; proceeding anyways in case latched " +
-          "RecoverMetaProcedure so meta latch gets cleaned up.");
-    }
-    // meta has been assigned to crashed server.
-    LOG.info("Meta assigned to crashed " + serverName + "; reassigning...");
-    // Handle failure and wake event
-    RegionTransitionProcedure rtp = getRegionStates().getRegionTransitionProcedure(hri);
-    // Do not need to consider for REGION_TRANSITION_QUEUE step
-    if (rtp != null && rtp.isMeta() &&
-        rtp.getTransitionState() == RegionTransitionState.REGION_TRANSITION_DISPATCH) {
-      LOG.debug("Failing " + rtp.toString());
-      rtp.remoteCallFailed(master.getMasterProcedureExecutor().getEnvironment(), serverName,
-          new ServerCrashException(rtp.getProcId(), serverName));
     }
   }
 

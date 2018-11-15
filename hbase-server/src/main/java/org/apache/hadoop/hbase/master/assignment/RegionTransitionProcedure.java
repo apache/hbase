@@ -204,7 +204,7 @@ public abstract class RegionTransitionProcedure
     this.transitionState = state;
   }
 
-  RegionTransitionState getTransitionState() {
+  protected RegionTransitionState getTransitionState() {
     return transitionState;
   }
 
@@ -238,7 +238,7 @@ public abstract class RegionTransitionProcedure
       RegionStateNode regionNode, IOException exception);
 
   @Override
-  public synchronized void remoteCallFailed(final MasterProcedureEnv env,
+  public synchronized boolean remoteCallFailed(final MasterProcedureEnv env,
       final ServerName serverName, final IOException exception) {
     final RegionStateNode regionNode = getRegionState(env);
     LOG.warn("Remote call failed {} {}", this, regionNode.toShortString(), exception);
@@ -247,8 +247,10 @@ public abstract class RegionTransitionProcedure
       // Thereafter, another Worker can be in here so DO NOT MESS WITH STATE beyond
       // this method. Just get out of this current processing quickly.
       regionNode.getProcedureEvent().wake(env.getProcedureScheduler());
+      return true;
     }
     // else leave the procedure in suspended state; it is waiting on another call to this callback
+    return false;
   }
 
   /**

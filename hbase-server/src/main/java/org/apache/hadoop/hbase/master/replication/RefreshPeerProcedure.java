@@ -141,9 +141,10 @@ public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  public synchronized void remoteCallFailed(MasterProcedureEnv env, ServerName remote,
+  public synchronized boolean remoteCallFailed(MasterProcedureEnv env, ServerName remote,
       IOException exception) {
     complete(env, exception);
+    return true;
   }
 
   @Override
