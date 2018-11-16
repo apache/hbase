@@ -57,9 +57,11 @@ class RemoteProcedureResultReporter extends Thread {
   public void complete(long procId, Throwable error) {
     RemoteProcedureResult.Builder builder = RemoteProcedureResult.newBuilder().setProcId(procId);
     if (error != null) {
+      LOG.debug("Failed to complete execution of proc pid={}", procId, error);
       builder.setStatus(RemoteProcedureResult.Status.ERROR).setError(
         ForeignExceptionUtil.toProtoForeignException(server.getServerName().toString(), error));
     } else {
+      LOG.debug("Successfully complete execution of proc pid={}", procId);
       builder.setStatus(RemoteProcedureResult.Status.SUCCESS);
     }
     results.add(builder.build());
