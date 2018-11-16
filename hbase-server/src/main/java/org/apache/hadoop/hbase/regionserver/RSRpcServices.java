@@ -3640,10 +3640,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       callable = Class.forName(request.getProcClass()).asSubclass(RSProcedureCallable.class)
         .getDeclaredConstructor().newInstance();
     } catch (Exception e) {
+      LOG.warn("Failed to instantiating remote procedure {}, pid={}", request.getProcClass(),
+        request.getProcId(), e);
       regionServer.remoteProcedureComplete(request.getProcId(), e);
       return;
     }
     callable.init(request.getProcData().toByteArray(), regionServer);
+    LOG.debug("Executing remote procedure {}, pid={}", callable.getClass(), request.getProcId());
     regionServer.executeProcedure(request.getProcId(), callable);
   }
 
