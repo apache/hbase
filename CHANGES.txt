@@ -1,6 +1,25 @@
 HBase Change Log
 
 
+Release Notes - HBase - Version 1.2.9
+
+** Sub-task
+    * [HBASE-21347] - Backport HBASE-21200 "Memstore flush doesn't finish because of seekToPreviousRow() in memstore scanner." to branch-1
+
+** Bug
+    * [HBASE-20604] - ProtobufLogReader#readNext can incorrectly loop to the same position in the stream until the the WAL is rolled
+    * [HBASE-21357] - RS should abort if OOM in Reader thread
+    * [HBASE-21417] - Pre commit build is broken due to surefire plugin crashes
+    * [HBASE-21424] - Change flakies and nightlies so scheduled less often
+    * [HBASE-21445] - CopyTable by bulkload will write hfile into yarn's HDFS
+
+** Improvement
+    * [HBASE-21263] - Mention compression algorithm along with other storefile details
+
+** Task
+    * [HBASE-21493] - Release 1.2.9
+
+
 Release Notes - HBase - Version 1.2.8 2018/10/20
 
 ** Sub-task
