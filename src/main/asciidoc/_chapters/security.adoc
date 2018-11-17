@@ -30,7 +30,7 @@
 [IMPORTANT]
 .Reporting Security Bugs
 ====
-NOTE: To protect existing HBase installations from exploitation, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
+NOTE: To protect existing HBase installations from exploitation, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@hbase.apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
 
 HBase adheres to the Apache Software Foundation's policy on reported vulnerabilities, available at http://apache.org/security/.
 
