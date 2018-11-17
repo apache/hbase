@@ -119,4 +119,11 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
           + " as finished.");
     }
   }
+
+  @Override
+  protected boolean downgradeToSharedTableLock() {
+    // for taking snapshot on disabled table, it is OK to always hold the exclusive lock, as we do
+    // not need to assign the regions when there are region server crashes.
+    return false;
+  }
 }
