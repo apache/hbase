@@ -494,6 +494,13 @@ public class MergeTableRegionsProcedure
    * @throws IOException
    */
   private boolean prepareMergeRegion(final MasterProcedureEnv env) throws IOException {
+    // Fail if we are taking snapshot for the given table
+    if (env.getMasterServices().getSnapshotManager()
+      .isTakingSnapshot(regionsToMerge[0].getTable())) {
+      throw new MergeRegionException(
+        "Skip merging regions " + RegionInfo.getShortNameToLog(regionsToMerge) +
+          ", because we are taking snapshot for the table " + regionsToMerge[0].getTable());
+    }
     // Note: the following logic assumes that we only have 2 regions to merge.  In the future,
     // if we want to extend to more than 2 regions, the code needs to be modified a little bit.
     CatalogJanitor catalogJanitor = env.getMasterServices().getCatalogJanitor();
