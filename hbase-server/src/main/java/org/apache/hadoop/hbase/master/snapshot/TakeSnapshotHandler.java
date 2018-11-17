@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.locking.LockManager;
+import org.apache.hadoop.hbase.master.locking.LockManager.MasterLock;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.LockType;
@@ -88,7 +89,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   protected final Path workingDir;
   private final MasterSnapshotVerifier verifier;
   protected final ForeignExceptionDispatcher monitor;
-  protected final LockManager.MasterLock tableLock;
+  private final LockManager.MasterLock tableLock;
   protected final MonitoredTask status;
   protected final TableName snapshotTable;
   protected final SnapshotManifest snapshotManifest;
@@ -174,8 +175,16 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
         + eventType + " on table " + snapshotTable;
     LOG.info(msg);
     ReentrantLock lock = snapshotManager.getLocks().acquireLock(snapshot.getName());
+    MasterLock tableLockToRelease = this.tableLock;
     status.setStatus(msg);
     try {
+      if (downgradeToSharedTableLock()) {
+        // release the exclusive lock and hold the shared lock instead
+        tableLockToRelease = master.getLockManager().createMasterLock(snapshotTable,
+          LockType.SHARED, this.getClass().getName() + ": take snapshot " + snapshot.getName());
+        tableLock.release();
+        tableLockToRelease.acquire();
+      }
       // If regions move after this meta scan, the region specific snapshot should fail, triggering
       // an external exception that gets captured here.
 
@@ -243,7 +252,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
         LOG.error("Couldn't delete snapshot working directory:" + workingDir);
       }
       lock.unlock();
-      tableLock.release();
+      tableLockToRelease.release();
     }
   }
 
@@ -281,6 +290,16 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     }
     finished = true;
   }
+
+  /**
+   * When taking snapshot, first we must acquire the exclusive table lock to confirm that there are
+   * no ongoing merge/split procedures. But later, we should try our best to release the exclusive
+   * lock as this may hurt the availability, because we need to hold the shared lock when assigning
+   * regions.
+   * <p/>
+   * See HBASE-21480 for more details.
+   */
+  protected abstract boolean downgradeToSharedTableLock();
 
   /**
    * Snapshot the specified regions
