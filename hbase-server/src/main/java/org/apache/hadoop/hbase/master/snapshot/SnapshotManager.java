@@ -420,7 +420,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param tableName name of the table being snapshotted.
    * @return <tt>true</tt> if there is a snapshot in progress on the specified table.
    */
-  synchronized boolean isTakingSnapshot(final TableName tableName) {
+  public synchronized boolean isTakingSnapshot(final TableName tableName) {
     SnapshotSentinel handler = this.snapshotHandlers.get(tableName);
     return handler != null && !handler.isFinished();
   }

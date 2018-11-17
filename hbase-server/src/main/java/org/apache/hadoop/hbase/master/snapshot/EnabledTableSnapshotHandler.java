@@ -132,4 +132,12 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
     monitor.rethrowException();
     status.setStatus("Completed referencing HFiles for the mob region of table: " + snapshotTable);
   }
+
+  @Override
+  protected boolean downgradeToSharedTableLock() {
+    // return true here to change from exclusive lock to shared lock, so we can still assign regions
+    // while taking snapshots. This is important, as region server crash can happen at any time, if
+    // we can not assign regions then the cluster will be in trouble as the regions can not online.
+    return true;
+  }
 }
