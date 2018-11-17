@@ -142,21 +142,25 @@ module Hbase
       res = {}
       count = 0
       all_perms.each do |value|
-        user_name = String.from_java_bytes(value.getUser)
+        user_name = value.getUser
+        permission = value.getPermission
+        table = ''
+        family = ''
+        qualifier = ''
         if !table_regex.nil? && isNamespace?(table_regex)
-          namespace = value.getNamespace
+          nsPerm = permission.to_java(org.apache.hadoop.hbase.security.access.NamespacePermission)
+          namespace = nsPerm.getNamespace
         else
-          namespace = !value.getTableName.nil? ? value.getTableName.getNamespaceAsString : value.getNamespace
+          tblPerm = permission.to_java(org.apache.hadoop.hbase.security.access.TablePermission)
+          namespace = tblPerm.getNamespace
+          table = !tblPerm.getTableName.nil? ? tblPerm.getTableName.getNameAsString : ''
+          family = !tblPerm.getFamily.nil? ?
+                    org.apache.hadoop.hbase.util.Bytes.toStringBinary(tblPerm.getFamily) : ''
+          qualifier = !tblPerm.getQualifier.nil? ?
+                       org.apache.hadoop.hbase.util.Bytes.toStringBinary(tblPerm.getQualifier) : ''
         end
-        table = !value.getTableName.nil? ? value.getTableName.getNameAsString : ''
-        family = !value.getFamily.nil? ?
-          org.apache.hadoop.hbase.util.Bytes.toStringBinary(value.getFamily) :
-          ''
-        qualifier = !value.getQualifier.nil? ?
-          org.apache.hadoop.hbase.util.Bytes.toStringBinary(value.getQualifier) :
-          ''
 
-        action = org.apache.hadoop.hbase.security.access.Permission.new value.getActions
+        action = org.apache.hadoop.hbase.security.access.Permission.new permission.getActions
 
         if block_given?
           yield(user_name, "#{namespace},#{table},#{family},#{qualifier}: #{action}")
