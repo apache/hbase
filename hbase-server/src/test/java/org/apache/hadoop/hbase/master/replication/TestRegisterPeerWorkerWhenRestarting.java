@@ -17,42 +17,65 @@
  */
 package org.apache.hadoop.hbase.master.replication;
 
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverStandbyState.DISPATCH_WALS_VALUE;
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverStandbyState.UNREGISTER_PEER_FROM_WORKER_STORAGE_VALUE;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.SyncReplicationTestBase;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
+import org.apache.zookeeper.KeeperException;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+/**
+ * Testcase for HBASE-21494.
+ */
 @Category({ MasterTests.class, LargeTests.class })
-public class TestTransitPeerSyncReplicationStateProcedureRetry extends SyncReplicationTestBase {
+public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTransitPeerSyncReplicationStateProcedureRetry.class);
+    HBaseClassTestRule.forClass(TestRegisterPeerWorkerWhenRestarting.class);
+
+  private static volatile boolean FAIL = false;
+
+  public static final class HMasterForTest extends HMaster {
+
+    public HMasterForTest(Configuration conf) throws IOException, KeeperException {
+      super(conf);
+    }
+
+    @Override
+    public void remoteProcedureCompleted(long procId) {
+      if (FAIL && getMasterProcedureExecutor()
+        .getProcedure(procId) instanceof SyncReplicationReplayWALRemoteProcedure) {
+        throw new RuntimeException("Inject error");
+      }
+      super.remoteProcedureCompleted(procId);
+    }
+  }
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL2.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
+    UTIL2.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
     SyncReplicationTestBase.setUp();
   }
 
   @Test
-  public void testRecoveryAndDoubleExecution() throws Exception {
+  public void testRestart() throws Exception {
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.STANDBY);
     UTIL1.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
@@ -68,10 +91,9 @@ public class TestTransitPeerSyncReplicationStateProcedureRetry extends SyncRepli
     UTIL1.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);
     HMaster master = UTIL2.getHBaseCluster().getMaster();
+    // make sure the transiting can not succeed
+    FAIL = true;
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    // Enable test flags and then queue the procedure.
-    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     Thread t = new Thread() {
 
       @Override
@@ -85,13 +107,19 @@ public class TestTransitPeerSyncReplicationStateProcedureRetry extends SyncRepli
       }
     };
     t.start();
-    UTIL2.waitFor(30000, () -> procExec.getProcedures().stream()
-      .anyMatch(p -> p instanceof TransitPeerSyncReplicationStateProcedure && !p.isFinished()));
-    long procId = procExec.getProcedures().stream()
-      .filter(p -> p instanceof TransitPeerSyncReplicationStateProcedure && !p.isFinished())
-      .mapToLong(Procedure::getProcId).min().getAsLong();
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+    // wait until we are in the states where we need to register peer worker when restarting
+    UTIL2.waitFor(60000,
+      () -> procExec.getProcedures().stream().filter(p -> p instanceof RecoverStandbyProcedure)
+        .map(p -> (RecoverStandbyProcedure) p)
+        .anyMatch(p -> p.getCurrentStateId() == DISPATCH_WALS_VALUE ||
+          p.getCurrentStateId() == UNREGISTER_PEER_FROM_WORKER_STORAGE_VALUE));
+    // failover to another master
+    MasterThread mt = UTIL2.getMiniHBaseCluster().getMasterThread();
+    mt.getMaster().abort("for testing");
+    mt.join();
+    FAIL = false;
+    t.join();
+    // make sure the new master can finish the transiting
     assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
       UTIL2.getAdmin().getReplicationPeerSyncReplicationState(PEER_ID));
     verify(UTIL2, 0, 100);

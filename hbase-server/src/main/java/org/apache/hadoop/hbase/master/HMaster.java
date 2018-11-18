@@ -778,7 +778,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.splitOrMergeTracker.start();
 
     this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf);
-    this.syncReplicationReplayWALManager = new SyncReplicationReplayWALManager(this);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
@@ -949,7 +948,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     status.setStatus("Initialize ServerManager and schedule SCP for crash servers");
+    // The below two managers must be created before loading procedures, as they will be used during
+    // loading.
     this.serverManager = createServerManager(this);
+    this.syncReplicationReplayWALManager = new SyncReplicationReplayWALManager(this);
     createProcedureExecutor();
     @SuppressWarnings("rawtypes")
     Map<Class<? extends Procedure>, List<Procedure<MasterProcedureEnv>>> procsByType =

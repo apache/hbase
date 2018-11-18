@@ -146,12 +146,12 @@ public class SyncReplicationReplayWALManager {
     this.fs = services.getMasterFileSystem().getWALFileSystem();
     this.walRootDir = services.getMasterFileSystem().getWALRootDir();
     this.remoteWALDir = new Path(this.walRootDir, ReplicationUtils.REMOTE_WAL_DIR_NAME);
-    MasterProcedureScheduler scheduler =
-      services.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler();
     serverManager.registerListener(new ServerListener() {
 
       @Override
       public void serverAdded(ServerName serverName) {
+        MasterProcedureScheduler scheduler =
+          services.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler();
         for (UsedReplayWorkersForPeer usedWorkers : usedWorkersByPeer.values()) {
           synchronized (usedWorkers) {
             usedWorkers.wake(scheduler);
