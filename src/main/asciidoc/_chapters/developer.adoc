@@ -2040,30 +2040,97 @@ For more information on how to use ReviewBoard, see link:http://www.reviewboard.
 
 ==== Guide for HBase Committers
 
+===== Becoming a committer
+
+Committers are responsible for reviewing and integrating code changes, testing
+and voting on release candidates, weighing in on design discussions, as well as
+other types of project contributions. The PMC votes to make a contributor a
+committer based on an assessment of their contributions to the project. It is
+expected that committers demonstrate a sustained history of high-quality
+contributions to the project and community involvement.
+
+Contributions can be made in many ways. There is no single path to becoming a
+committer, nor any expected timeline. Submitting features, improvements, and bug
+fixes is the most common avenue, but other methods are both recognized and
+encouraged (and may be even more important to the health of HBase as a project and a
+community). A non-exhaustive list of potential contributions (in no particular
+order):
+
+* <<appendix_contributing_to_documentation,Update the documentation>> for new
+  changes, best practices, recipes, and other improvements.
+* Keep the website up to date.
+* Perform testing and report the results. For instance, scale testing and
+  testing non-standard configurations is always appreciated.
+* Maintain the shared Jenkins testing environment and other testing
+  infrastructure.
+* <<hbase.rc.voting,Vote on release candidates>> after performing validation, even if non-binding.
+  A non-binding vote is a vote by a non-committer.
+* Provide input for discussion threads on the link:/mail-lists.html[mailing lists] (which usually have
+  `[DISCUSS]` in the subject line).
+* Answer questions questions on the user or developer mailing lists and on
+  Slack.
+* Make sure the HBase community is a welcoming one and that we adhere to our
+  link:/coc.html[Code of conduct]. Alert the PMC if you
+  have concerns.
+* Review other people's work (both code and non-code) and provide public
+  feedback.
+* Report bugs that are found, or file new feature requests.
+* Triage issues and keep JIRA organized. This includes closing stale issues,
+  labeling new issues, updating metadata, and other tasks as needed.
+* Mentor new contributors of all sorts.
+* Give talks and write blogs about HBase. Add these to the link:/[News] section
+  of the website.
+* Provide UX feedback about HBase, the web UI, the CLI, APIs, and the website.
+* Write demo applications and scripts.
+* Help attract and retain a diverse community.
+* Interact with other projects in ways that benefit HBase and those other
+  projects.
+
+Not every individual is able to do all (or even any) of the items on this list.
+If you think of other ways to contribute, go for it (and add them to the list).
+A pleasant demeanor and willingness to contribute are all you need to make a
+positive impact on the HBase project. Invitations to become a committer are the
+result of steady interaction with the community over the long term, which builds
+trust and recognition.
+
 ===== New committers
 
-New committers are encouraged to first read Apache's generic committer documentation:
+New committers are encouraged to first read Apache's generic committer
+documentation:
 
 * link:https://www.apache.org/dev/new-committers-guide.html[Apache New Committer Guide]
 * link:https://www.apache.org/dev/committers.html[Apache Committer FAQ]
 
 ===== Review
 
-HBase committers should, as often as possible, attempt to review patches submitted by others.
-Ideally every submitted patch will get reviewed by a committer _within a few days_.
-If a committer reviews a patch they have not authored, and believe it to be of sufficient quality, then they can commit the patch, otherwise the patch should be cancelled with a clear explanation for why it was rejected.
+HBase committers should, as often as possible, attempt to review patches
+submitted by others. Ideally every submitted patch will get reviewed by a
+committer _within a few days_. If a committer reviews a patch they have not
+authored, and believe it to be of sufficient quality, then they can commit the
+patch. Otherwise the patch should be cancelled with a clear explanation for why
+it was rejected.
 
-The list of submitted patches is in the link:https://issues.apache.org/jira/secure/IssueNavigator.jspa?mode=hide&requestId=12312392[HBase Review Queue], which is ordered by time of last modification.
-Committers should scan the list from top to bottom, looking for patches that they feel qualified to review and possibly commit.
+The list of submitted patches is in the
+link:https://issues.apache.org/jira/secure/IssueNavigator.jspa?mode=hide&requestId=12312392[HBase Review Queue],
+which is ordered by time of last modification. Committers should scan the list
+from top to bottom, looking for patches that they feel qualified to review and
+possibly commit. If you see a patch you think someone else is better qualified
+to review, you can mention them by username in the JIRA.
 
-For non-trivial changes, it is required to get another committer to review your own patches before commit.
-Use the btn:[Submit Patch]                        button in JIRA, just like other contributors, and then wait for a `+1` response from another committer before committing.
+For non-trivial changes, it is required that another committer review your
+patches before commit. **Self-commits of non-trivial patches are not allowed.**
+Use the btn:[Submit Patch] button in JIRA, just like other contributors, and
+then wait for a `+1` response from another committer before committing.
 
 ===== Reject
 
-Patches which do not adhere to the guidelines in link:https://hbase.apache.org/book.html#developer[HowToContribute] and to the link:https://wiki.apache.org/hadoop/CodeReviewChecklist[code review checklist] should be rejected.
-Committers should always be polite to contributors and try to instruct and encourage them to contribute better patches.
-If a committer wishes to improve an unacceptable patch, then it should first be rejected, and a new patch should be attached by the committer for review.
+Patches which do not adhere to the guidelines in
+link:https://hbase.apache.org/book.html#developer[HowToContribute] and to the
+link:https://wiki.apache.org/hadoop/CodeReviewChecklist[code review checklist]
+should be rejected. Committers should always be polite to contributors and try
+to instruct and encourage them to contribute better patches. If a committer
+wishes to improve an unacceptable patch, then it should first be rejected, and a
+new patch should be attached by the committer for further review.
 
 [[committing.patches]]
 ===== Commit
@@ -2074,29 +2141,34 @@ Committers commit patches to the Apache HBase GIT repository.
 [NOTE]
 ====
 Make sure your local configuration is correct, especially your identity and email.
-Examine the output of the +$ git config
-                                --list+ command and be sure it is correct.
-See this GitHub article, link:https://help.github.com/articles/set-up-git[Set Up Git] if you need pointers.
+Examine the output of the +$ git config --list+ command and be sure it is correct.
+See link:https://help.github.com/articles/set-up-git[Set Up Git] if you need
+pointers.
 ====
 
-When you commit a patch, please:
+When you commit a patch:
 
-. Include the Jira issue id in the commit message along with a short description of the change. Try
-  to add something more than just the Jira title so that someone looking at git log doesn't
-  have to go to Jira to discern what the change is about.
-  Be sure to get the issue ID right, as this causes Jira to link to the change in Git (use the
-  issue's "All" tab to see these).
-. Commit the patch to a new branch based off master or other intended branch.
-  It's a good idea to call this branch by the JIRA ID.
-  Then check out the relevant target branch where you want to commit, make sure your local branch has all remote changes, by doing a +git pull --rebase+ or another similar command, cherry-pick the change into each relevant branch (such as master), and do +git push <remote-server>
-  <remote-branch>+.
+. Include the Jira issue ID in the commit message along with a short description
+  of the change. Try to add something more than just the Jira title so that
+  someone looking at `git log` output doesn't have to go to Jira to discern what
+  the change is about. Be sure to get the issue ID right, because this causes
+  Jira to link to the change in Git (use the issue's "All" tab to see these
+  automatic links).
+. Commit the patch to a new branch based off `master` or the other intended
+  branch. It's a good idea to include the JIRA ID in the name of this branch.
+  Check out the relevant target branch where you want to commit, and make sure
+  your local branch has all remote changes, by doing a +git pull --rebase+ or
+  another similar command. Next, cherry-pick the change into each relevant
+  branch (such as master), and push the changes to the remote branch using
+  a command such as +git push <remote-server> <remote-branch>+.
 +
 WARNING: If you do not have all remote changes, the push will fail.
 If the push fails for any reason, fix the problem or ask for help.
 Do not do a +git push --force+.
 +
 Before you can commit a patch, you need to determine how the patch was created.
-The instructions and preferences around the way to create patches have changed, and there will be a transition period.
+The instructions and preferences around the way to create patches have changed,
+and there will be a transition period.
 +
 .Determine How a Patch Was Created
 * If the first few lines of the patch look like the headers of an email, with a From, Date, and
@@ -2123,16 +2195,18 @@ diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapter
 +
 .Example of committing a Patch
 ====
-One thing you will notice with these examples is that there are a lot of +git pull+ commands.
-The only command that actually writes anything to the remote repository is +git push+, and you need to make absolutely sure you have the correct versions of everything and don't have any conflicts before pushing.
-The extra +git
-                                        pull+ commands are usually redundant, but better safe than sorry.
+One thing you will notice with these examples is that there are a lot of
++git pull+ commands. The only command that actually writes anything to the
+remote repository is +git push+, and you need to make absolutely sure you have
+the correct versions of everything and don't have any conflicts before pushing.
+The extra +git pull+ commands are usually redundant, but better safe than sorry.
 
-The first example shows how to apply a patch that was generated with +git format-patch+ and apply it to the `master` and `branch-1` branches.
+The first example shows how to apply a patch that was generated with +git
+format-patch+ and apply it to the `master` and `branch-1` branches.
 
-The directive to use +git format-patch+                                    rather than +git diff+, and not to use `--no-prefix`, is a new one.
-See the second example for how to apply a patch created with +git
-                                        diff+, and educate the person who created the patch.
+The directive to use +git format-patch+ rather than +git diff+, and not to use
+`--no-prefix`, is a new one. See the second example for how to apply a patch
+created with +git diff+, and educate the person who created the patch.
 
 ----
 $ git checkout -b HBASE-XXXX
@@ -2154,13 +2228,13 @@ $ git push origin branch-1
 $ git branch -D HBASE-XXXX
 ----
 
-This example shows how to commit a patch that was created using +git diff+ without `--no-prefix`.
-If the patch was created with `--no-prefix`, add `-p0` to the +git apply+ command.
+This example shows how to commit a patch that was created using +git diff+
+without `--no-prefix`. If the patch was created with `--no-prefix`, add `-p0` to
+the +git apply+ command.
 
 ----
 $ git apply ~/Downloads/HBASE-XXXX-v2.patch
-$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This
-and next command is needed for patches created with 'git diff'
+$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This and next command is needed for patches created with 'git diff'
 $ git commit --amend --signoff
 $ git checkout master
 $ git pull --rebase
@@ -2181,7 +2255,9 @@ $ git branch -D HBASE-XXXX
 ====
 
 . Resolve the issue as fixed, thanking the contributor.
-  Always set the "Fix Version" at this point, but please only set a single fix version for each branch where the change was committed, the earliest release in that branch in which the change will appear.
+  Always set the "Fix Version" at this point, but only set a single fix version
+  for each branch where the change was committed, the earliest release in that
+  branch in which the change will appear.
 
 ====== Commit Message Format
 
@@ -2196,7 +2272,9 @@ The preferred commit message format is:
 HBASE-12345 Fix All The Things (jane@example.com)
 ----
 
-If the contributor used +git format-patch+ to generate the patch, their commit message is in their patch and you can use that, but be sure the JIRA ID is at the front of the commit message, even if the contributor left it out.
+If the contributor used +git format-patch+ to generate the patch, their commit
+message is in their patch and you can use that, but be sure the JIRA ID is at
+the front of the commit message, even if the contributor left it out.
 
 [[committer.amending.author]]
 ====== Add Amending-Author when a conflict cherrypick backporting

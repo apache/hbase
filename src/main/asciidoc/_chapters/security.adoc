@@ -1739,7 +1739,7 @@ All options have been discussed separately in the sections above.
 <!-- HBase Superuser -->
 <property>
   <name>hbase.superuser</name>
-  <value>hbase, admin</value>
+  <value>hbase,admin</value>
 </property>
 <!-- Coprocessors for ACLs and Visibility Tags -->
 <property>
@@ -1759,8 +1759,7 @@ All options have been discussed separately in the sections above.
 </property>
 <property>
   <name>hbase.coprocessor.regionserver.classes</name>
-  <value>org.apache.hadoop/hbase.security.access.AccessController,
-  org.apache.hadoop.hbase.security.access.VisibilityController</value>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
 </property>
 <!-- Executable ACL for Coprocessor Endpoints -->
 <property>
