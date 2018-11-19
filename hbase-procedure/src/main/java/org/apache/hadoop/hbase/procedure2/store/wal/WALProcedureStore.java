@@ -445,13 +445,14 @@ public class WALProcedureStore extends ProcedureStoreBase {
     lock.lock();
     try {
       if (logs.isEmpty()) {
-        throw new RuntimeException("recoverLease() must be called before loading data");
+        throw new IllegalStateException("recoverLease() must be called before loading data");
       }
 
       // Nothing to do, If we have only the current log.
       if (logs.size() == 1) {
         LOG.debug("No state logs to replay.");
         loader.setMaxProcId(0);
+        loading.set(false);
         return;
       }
 
@@ -484,15 +485,20 @@ public class WALProcedureStore extends ProcedureStoreBase {
           // TODO: sideline corrupted log
         }
       });
+      // if we fail when loading, we should prevent persisting the storeTracker later in the stop
+      // method. As it may happen that, we have finished constructing the modified and deleted bits,
+      // but before we call resetModified, we fail, then if we persist the storeTracker then when
+      // restarting, we will consider that all procedures have been included in this file and delete
+      // all the previous files. Obviously this not correct. So here we will only set loading to
+      // false when we successfully loaded all the procedures, and when closing we will skip
+      // persisting the store tracker. And also, this will prevent the sync thread to do
+      // periodicRoll, where we may also clean old logs.
+      loading.set(false);
+      // try to cleanup inactive wals and complete the operation
+      buildHoldingCleanupTracker();
+      tryCleanupLogsOnLoad();
     } finally {
-      try {
-        // try to cleanup inactive wals and complete the operation
-        buildHoldingCleanupTracker();
-        tryCleanupLogsOnLoad();
-        loading.set(false);
-      } finally {
-        lock.unlock();
-      }
+      lock.unlock();
     }
   }
 
@@ -1129,11 +1135,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
     try {
       ProcedureWALFile log = logs.getLast();
-      log.setProcIds(storeTracker.getModifiedMinProcId(), storeTracker.getModifiedMaxProcId());
-      log.updateLocalTracker(storeTracker);
-      if (!abort) {
-        long trailerSize = ProcedureWALFormat.writeTrailer(stream, storeTracker);
-        log.addToSize(trailerSize);
+      // If the loading flag is true, it usually means that we fail when loading procedures, so we
+      // should not persist the store tracker, as its state may not be correct.
+      if (!loading.get()) {
+        log.setProcIds(storeTracker.getModifiedMinProcId(), storeTracker.getModifiedMaxProcId());
+        log.updateLocalTracker(storeTracker);
+        if (!abort) {
+          long trailerSize = ProcedureWALFormat.writeTrailer(stream, storeTracker);
+          log.addToSize(trailerSize);
+        }
       }
     } catch (IOException e) {
       LOG.warn("Unable to write the trailer", e);
@@ -1189,7 +1199,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       if (holdingCleanupTracker.isEmpty()) {
         break;
       }
-      iter.next();
+      tracker = iter.next().getTracker();
     }
   }
 
