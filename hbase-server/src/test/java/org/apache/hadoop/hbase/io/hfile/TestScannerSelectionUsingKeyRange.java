@@ -124,6 +124,7 @@ public class TestScannerSelectionUsingKeyRange {
 
     Scan scan = new Scan(Bytes.toBytes("aaa"), Bytes.toBytes("aaz"));
     CacheConfig.blockCacheDisabled = false;
+    CacheConfig.instantiateBlockCache(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
     LruBlockCache cache = (LruBlockCache) cacheConf.getBlockCache();
     cache.clearCache();

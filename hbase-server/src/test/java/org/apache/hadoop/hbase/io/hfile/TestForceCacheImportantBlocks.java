@@ -106,6 +106,7 @@ public class TestForceCacheImportantBlocks {
     // Make sure we make a new one each time.
     CacheConfig.clearGlobalInstances();
     HFile.DATABLOCK_READ_COUNT.reset();
+    CacheConfig.instantiateBlockCache(TEST_UTIL.getConfiguration());
   }
 
   @Test

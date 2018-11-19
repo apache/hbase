@@ -61,8 +61,8 @@ public class TestBlocksScanned extends HBaseTestCase {
   @Before
   public void setUp() throws Exception {
     super.setUp();
-
     TEST_UTIL = new HBaseTestingUtility();
+    CacheConfig.instantiateBlockCache(TEST_UTIL.getConfiguration());
   }
 
   @Test

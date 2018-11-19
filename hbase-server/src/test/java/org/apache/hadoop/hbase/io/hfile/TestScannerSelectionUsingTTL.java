@@ -104,6 +104,7 @@ public class TestScannerSelectionUsingTTL {
   @Test
   public void testScannerSelection() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
+    CacheConfig.instantiateBlockCache(conf);
     conf.setBoolean("hbase.store.delete.expired.storefile", false);
     HColumnDescriptor hcd =
       new HColumnDescriptor(FAMILY_BYTES)
