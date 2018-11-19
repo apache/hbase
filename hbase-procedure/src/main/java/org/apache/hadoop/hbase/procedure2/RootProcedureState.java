@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Set;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
@@ -43,8 +41,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class RootProcedureState<TEnvironment> {
-
-  private static final Logger LOG = LoggerFactory.getLogger(RootProcedureState.class);
 
   private enum State {
     RUNNING,         // The Procedure is running or ready to run
@@ -150,7 +146,6 @@ class RootProcedureState<TEnvironment> {
       subprocStack = new ArrayList<>();
     }
     proc.addStackIndex(subprocStack.size());
-    LOG.debug("Add procedure {} as the {}th rollback step", proc, subprocStack.size());
     subprocStack.add(proc);
   }
 

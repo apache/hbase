@@ -145,9 +145,6 @@ public final class WALProcedureTree {
 
   private void collectStackId(Entry entry, Map<Integer, List<Entry>> stackId2Proc,
       MutableInt maxStackId) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Procedure {} stack ids={}", entry, entry.proc.getStackIdList());
-    }
     for (int i = 0, n = entry.proc.getStackIdCount(); i < n; i++) {
       int stackId = entry.proc.getStackId(i);
       if (stackId > maxStackId.intValue()) {
