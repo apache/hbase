@@ -86,7 +86,6 @@ public class TestSnapshotHFileCleaner {
 
     // write an hfile to the snapshot directory
     String snapshotName = "snapshot";
-    byte[] snapshot = Bytes.toBytes(snapshotName);
     TableName tableName = TableName.valueOf("table");
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     HRegionInfo mockRegion = new HRegionInfo(tableName);
@@ -132,7 +131,7 @@ public class TestSnapshotHFileCleaner {
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
         "test-snapshot-file-cache-refresh", new SnapshotFiles());
     try {
-      cache.getSnapshotsInProgress(null);
+      cache.getSnapshotsInProgress();
     } catch (CorruptedSnapshotException cse) {
       LOG.info("Expected exception " + cse);
     } finally {
@@ -160,7 +159,7 @@ public class TestSnapshotHFileCleaner {
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
         "test-snapshot-file-cache-refresh", new SnapshotFiles());
     try {
-      cache.getSnapshotsInProgress(null);
+      cache.getSnapshotsInProgress();
     } catch (CorruptedSnapshotException cse) {
       LOG.info("Expected exception " + cse);
     } finally {
@@ -185,7 +184,7 @@ public class TestSnapshotHFileCleaner {
     long period = Long.MAX_VALUE;
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
         "test-snapshot-file-cache-refresh", new SnapshotFiles());
-    cache.getSnapshotsInProgress(null);
+    cache.getSnapshotsInProgress();
     assertFalse(fs.exists(builder.getSnapshotsDir()));
   }
 }
