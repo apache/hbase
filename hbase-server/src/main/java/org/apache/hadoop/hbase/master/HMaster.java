@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -1150,8 +1151,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
+    Map<String, Object> params = new HashMap<String, Object>();
+    params.put(MASTER, this);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
-        .getFileSystem(), archiveDir);
+        .getFileSystem(), archiveDir, params);
     getChoreService().scheduleChore(hfileCleaner);
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
@@ -2540,7 +2543,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * Exposed for TESTING!
    * @return the underlying snapshot manager
    */
-  public SnapshotManager getSnapshotManagerForTesting() {
+  public SnapshotManager getSnapshotManager() {
     return this.snapshotManager;
   }
 

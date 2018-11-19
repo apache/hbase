@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.snapshot;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -55,13 +57,22 @@ public class SnapshotLogCleaner extends BaseLogCleanerDelegate {
 
   private SnapshotFileCache cache;
 
+  private HMaster master;
+
   @Override
   public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     try {
-      return cache.getUnreferencedFiles(files);
+      return cache.getUnreferencedFiles(files, master.getSnapshotManager());
     } catch (IOException e) {
       LOG.error("Exception while checking if files were valid, keeping them just in case.", e);
       return Collections.emptyList();
+    }
+  }
+
+  @Override
+  public void init(Map<String, Object> params) {
+    if (params.containsKey(HMaster.MASTER)) {
+      this.master = (HMaster) params.get(HMaster.MASTER);
     }
   }
 
