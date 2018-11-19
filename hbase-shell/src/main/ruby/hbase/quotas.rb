@@ -259,11 +259,14 @@ module Hbase
 
     def _parse_limit(str_limit, type_cls, type)
       str_limit = str_limit.downcase
-      match = /(\d+)(req|[bkmgtp])\/(sec|min|hour|day)/.match(str_limit)
+      match = /(\d+)(req|cu|[bkmgtp])\/(sec|min|hour|day)/.match(str_limit)
       if match
         if match[2] == 'req'
           limit = match[1].to_i
           type = type_cls.valueOf(type + '_NUMBER')
+        elsif match[2] == 'cu'
+          limit = match[1].to_i
+          type = type_cls.valueOf(type + '_CAPACITY_UNIT')
         else
           limit = _size_from_str(match[1].to_i, match[2])
           type = type_cls.valueOf(type + '_SIZE')

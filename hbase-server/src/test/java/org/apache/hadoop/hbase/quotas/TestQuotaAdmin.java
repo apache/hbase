@@ -455,17 +455,22 @@ public class TestQuotaAdmin {
 
   @Test
   public void testSetGetRemoveRPCQuota() throws Exception {
+    testSetGetRemoveRPCQuota(ThrottleType.REQUEST_SIZE);
+    testSetGetRemoveRPCQuota(ThrottleType.REQUEST_CAPACITY_UNIT);
+  }
+
+  private void testSetGetRemoveRPCQuota(ThrottleType throttleType) throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final TableName tn = TableName.valueOf("sq_table1");
     QuotaSettings settings =
-        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+        QuotaSettingsFactory.throttleTable(tn, throttleType, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
 
     // Verify the Quota in the table
-    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    verifyRecordPresentInQuotaTable(throttleType, 2L, TimeUnit.HOURS);
 
     // Verify we can retrieve it via the QuotaRetriever API
-    verifyFetchableViaAPI(admin, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    verifyFetchableViaAPI(admin, throttleType, 2L, TimeUnit.HOURS);
 
     // Now, remove the quota
     QuotaSettings removeQuota = QuotaSettingsFactory.unthrottleTable(tn);
@@ -584,6 +589,19 @@ public class TestQuotaAdmin {
         assertTrue(rpcQuota.hasWriteSize());
         t = rpcQuota.getWriteSize();
         break;
+      case REQUEST_CAPACITY_UNIT:
+        assertTrue(rpcQuota.hasReqCapacityUnit());
+        t = rpcQuota.getReqCapacityUnit();
+        break;
+      case READ_CAPACITY_UNIT:
+        assertTrue(rpcQuota.hasReadCapacityUnit());
+        t = rpcQuota.getReadCapacityUnit();
+        break;
+      case WRITE_CAPACITY_UNIT:
+        assertTrue(rpcQuota.hasWriteCapacityUnit());
+        t = rpcQuota.getWriteCapacityUnit();
+        break;
+      default:
     }
 
     assertEquals(t.getSoftLimit(), limit);
