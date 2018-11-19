@@ -274,7 +274,8 @@ public class ProcedureStoreTracker {
     this.keepDeletes = false;
     this.partial = false;
     this.map.clear();
-    resetModified();
+    minModifiedProcId = Long.MAX_VALUE;
+    maxModifiedProcId = Long.MIN_VALUE;
   }
 
   public boolean isModified(long procId) {
