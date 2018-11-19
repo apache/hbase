@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -184,22 +184,39 @@ public class SnapshotFileCache implements Stoppable {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
     List<String> snapshotsInProgress = null;
     boolean refreshed = false;
-    for (FileStatus file : files) {
-      String fileName = file.getPath().getName();
-      if (!refreshed && !cache.contains(fileName)) {
-        refreshCache();
-        refreshed = true;
+    Lock lock = null;
+    if (snapshotManager != null) {
+      lock = snapshotManager.getTakingSnapshotLock().writeLock();
+    }
+    if (lock == null || lock.tryLock()) {
+      try {
+        if (snapshotManager == null || snapshotManager.isTakingAnySnapshot()) {
+          LOG.warn("Not checking unreferenced files since snapshot is running, it will "
+              + "skip to clean the HFiles this time");
+          return unReferencedFiles;
+        }
+        for (FileStatus file : files) {
+          String fileName = file.getPath().getName();
+          if (!refreshed && !cache.contains(fileName)) {
+            refreshCache();
+            refreshed = true;
+          }
+          if (cache.contains(fileName)) {
+            continue;
+          }
+          if (snapshotsInProgress == null) {
+            snapshotsInProgress = getSnapshotsInProgress();
+          }
+          if (snapshotsInProgress.contains(fileName)) {
+            continue;
+          }
+          unReferencedFiles.add(file);
+        }
+      } finally {
+        if (lock != null) {
+          lock.unlock();
+        }
       }
-      if (cache.contains(fileName)) {
-        continue;
-      }
-      if (snapshotsInProgress == null) {
-        snapshotsInProgress = getSnapshotsInProgress(snapshotManager);
-      }
-      if (snapshotsInProgress.contains(fileName)) {
-        continue;
-      }
-      unReferencedFiles.add(file);
     }
     return unReferencedFiles;
   }
@@ -269,19 +286,14 @@ public class SnapshotFileCache implements Stoppable {
     this.snapshots.putAll(known);
   }
 
-  @VisibleForTesting List<String> getSnapshotsInProgress(
-    final SnapshotManager snapshotManager) throws IOException {
+  @VisibleForTesting
+  List<String> getSnapshotsInProgress() throws IOException {
     List<String> snapshotInProgress = Lists.newArrayList();
     // only add those files to the cache, but not to the known snapshots
     Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
-    // only add those files to the cache, but not to the known snapshots
     FileStatus[] running = FSUtils.listStatus(fs, snapshotTmpDir);
     if (running != null) {
       for (FileStatus run : running) {
-        ReentrantLock lock = null;
-        if (snapshotManager != null) {
-          lock = snapshotManager.getLocks().acquireLock(run.getPath().getName());
-        }
         try {
           snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(run.getPath()));
         } catch (CorruptedSnapshotException e) {
@@ -292,10 +304,6 @@ public class SnapshotFileCache implements Stoppable {
             LOG.warn("delete the " + run.getPath() + " due to exception:", e.getCause());
           } else {
             throw e;
-          }
-        } finally {
-          if (lock != null) {
-            lock.unlock();
           }
         }
       }

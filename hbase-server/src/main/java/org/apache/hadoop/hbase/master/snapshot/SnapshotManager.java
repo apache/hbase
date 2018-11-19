@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -81,7 +83,6 @@ import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -157,14 +158,12 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   private ExecutorService executorService;
 
   /**
-   *  Locks for snapshot operations
-   *  key is snapshot's filename in progress, value is the related lock
-   *    - create snapshot
-   *    - SnapshotCleaner
-   * */
-  private KeyLocker<String> locks = new KeyLocker<String>();
-
-
+   * Read write lock between taking snapshot and snapshot HFile cleaner. The cleaner should skip to
+   * check the HFiles if any snapshot is in progress, otherwise it may clean a HFile which would
+   * belongs to the newly creating snapshot. So we should grab the write lock first when cleaner
+   * start to work. (See HBASE-21387)
+   */
+  private ReentrantReadWriteLock takingSnapshotLock = new ReentrantReadWriteLock(true);
 
   public SnapshotManager() {}
 
@@ -535,12 +534,20 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
   /**
    * Take a snapshot based on the enabled/disabled state of the table.
-   *
    * @param snapshot
    * @throws HBaseSnapshotException when a snapshot specific exception occurs.
    * @throws IOException when some sort of generic IO exception occurs.
    */
   public void takeSnapshot(SnapshotDescription snapshot) throws IOException {
+    this.takingSnapshotLock.readLock().lock();
+    try {
+      takeSnapshotInternal(snapshot);
+    } finally {
+      this.takingSnapshotLock.readLock().unlock();
+    }
+  }
+
+  private void takeSnapshotInternal(SnapshotDescription snapshot) throws IOException {
     // check to see if we already completed the snapshot
     if (isSnapshotCompleted(snapshot)) {
       throw new SnapshotExistsException("Snapshot '" + snapshot.getName()
@@ -613,6 +620,22 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     if (cpHost != null) {
       cpHost.postSnapshot(snapshot, desc);
     }
+  }
+
+  public ReadWriteLock getTakingSnapshotLock() {
+    return this.takingSnapshotLock;
+  }
+
+  /**
+   * The snapshot operation processing as following: <br>
+   * 1. Create a Snapshot Handler, and do some initialization; <br>
+   * 2. Put the handler into snapshotHandlers <br>
+   * So when we consider if any snapshot is taking, we should consider both the takingSnapshotLock
+   * and snapshotHandlers;
+   * @return true to indicate that there're some running snapshots.
+   */
+  public synchronized boolean isTakingAnySnapshot() {
+    return this.takingSnapshotLock.getReadHoldCount() > 0 || this.snapshotHandlers.size() > 0;
   }
 
   /**
@@ -1193,9 +1216,4 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     builder.setType(SnapshotDescription.Type.FLUSH);
     return builder.build();
   }
-
-  public KeyLocker<String> getLocks() {
-    return locks;
-  }
-
 }

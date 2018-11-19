@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -176,7 +175,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     String msg = "Running " + snapshot.getType() + " table snapshot " + snapshot.getName() + " "
         + eventType + " on table " + snapshotTable;
     LOG.info(msg);
-    ReentrantLock lock = snapshotManager.getLocks().acquireLock(snapshot.getName());
     status.setStatus(msg);
     try {
       // If regions move after this meta scan, the region specific snapshot should fail, triggering
@@ -245,7 +243,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       } catch (IOException e) {
         LOG.error("Couldn't delete snapshot working directory:" + workingDir);
       }
-      lock.unlock();
       releaseTableLock();
     }
   }
