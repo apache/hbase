@@ -160,6 +160,7 @@ public class TestCacheOnWrite {
     Configuration conf = TEST_UTIL.getConfiguration();
     List<BlockCache> blockcaches = new ArrayList<>();
     // default
+    CacheConfig.instantiateBlockCache(conf);
     blockcaches.add(new CacheConfig(conf).getBlockCache());
 
     //set LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME to 2.0f due to HBASE-16287
@@ -228,7 +229,6 @@ public class TestCacheOnWrite {
     conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, cacheCompressedData);
     cowType.modifyConf(conf);
     fs = HFileSystem.get(conf);
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE = blockCache;
     cacheConf =
         new CacheConfig(blockCache, true, true, cowType.shouldBeCached(BlockType.DATA),
         cowType.shouldBeCached(BlockType.LEAF_INDEX),

@@ -76,6 +76,7 @@ public class TestBlocksRead  {
   public static void setUp() throws Exception {
     // disable compactions in this test.
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10000);
+    CacheConfig.instantiateBlockCache(TEST_UTIL.getConfiguration());
   }
 
   @AfterClass

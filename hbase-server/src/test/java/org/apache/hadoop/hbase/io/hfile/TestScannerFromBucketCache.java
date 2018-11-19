@@ -88,6 +88,7 @@ public class TestScannerFromBucketCache {
       conf.setFloat("hbase.regionserver.global.memstore.size", 0.1f);
     }
     tableName = TableName.valueOf(name.getMethodName());
+    CacheConfig.instantiateBlockCache(conf);
   }
 
   @After

@@ -112,6 +112,7 @@ public class TestEncodedSeekers {
     if(includeTags) {
       testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
     }
+    CacheConfig.instantiateBlockCache(testUtil.getConfiguration());
     LruBlockCache cache =
       (LruBlockCache)new CacheConfig(testUtil.getConfiguration()).getBlockCache();
     cache.clearCache();

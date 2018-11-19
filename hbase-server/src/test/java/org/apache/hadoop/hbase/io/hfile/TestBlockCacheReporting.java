@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.*;
 
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -84,9 +82,10 @@ public class TestBlockCacheReporting {
   }
 
   @Test
-  public void testBucketCache() throws JsonGenerationException, JsonMappingException, IOException {
+  public void testBucketCache() throws IOException {
     this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 100);
+    CacheConfig.instantiateBlockCache(this.conf);
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
     logPerBlock(cc.getBlockCache());
@@ -102,7 +101,8 @@ public class TestBlockCacheReporting {
   }
 
   @Test
-  public void testLruBlockCache() throws JsonGenerationException, JsonMappingException, IOException {
+  public void testLruBlockCache() throws IOException {
+    CacheConfig.instantiateBlockCache(this.conf);
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.isBlockCacheEnabled());
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
@@ -131,8 +131,7 @@ public class TestBlockCacheReporting {
     }
   }
 
-  private void logPerFile(final BlockCacheUtil.CachedBlocksByFile cbsbf)
-  throws JsonGenerationException, JsonMappingException, IOException {
+  private void logPerFile(final BlockCacheUtil.CachedBlocksByFile cbsbf) throws IOException {
     for (Map.Entry<String, NavigableSet<CachedBlock>> e:
         cbsbf.getCachedBlockStatsByFile().entrySet()) {
       int count = 0;
@@ -154,10 +153,9 @@ public class TestBlockCacheReporting {
     }
   }
 
-  private BlockCacheUtil.CachedBlocksByFile logPerBlock(final BlockCache bc)
-  throws JsonGenerationException, JsonMappingException, IOException {
+  private BlockCacheUtil.CachedBlocksByFile logPerBlock(final BlockCache bc) throws IOException {
     BlockCacheUtil.CachedBlocksByFile cbsbf = new BlockCacheUtil.CachedBlocksByFile();
-    for (CachedBlock cb: bc) {
+    for (CachedBlock cb : bc) {
       LOG.info(cb.toString());
       LOG.info(BlockCacheUtil.toJSON(bc));
       cbsbf.update(cb);
