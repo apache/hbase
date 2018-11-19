@@ -88,27 +88,24 @@ public final class ProcedureWALFormat {
       Loader loader) throws IOException {
     ProcedureWALFormatReader reader = new ProcedureWALFormatReader(tracker, loader);
     tracker.setKeepDeletes(true);
-    try {
-      // Ignore the last log which is current active log.
-      while (logs.hasNext()) {
-        ProcedureWALFile log = logs.next();
-        log.open();
-        try {
-          reader.read(log);
-        } finally {
-          log.close();
-        }
+    // Ignore the last log which is current active log.
+    while (logs.hasNext()) {
+      ProcedureWALFile log = logs.next();
+      log.open();
+      try {
+        reader.read(log);
+      } finally {
+        log.close();
       }
-      reader.finish();
-
-      // The tracker is now updated with all the procedures read from the logs
-      if (tracker.isPartial()) {
-        tracker.setPartialFlag(false);
-      }
-      tracker.resetModified();
-    } finally {
-      tracker.setKeepDeletes(false);
     }
+    reader.finish();
+
+    // The tracker is now updated with all the procedures read from the logs
+    if (tracker.isPartial()) {
+      tracker.setPartialFlag(false);
+    }
+    tracker.resetModified();
+    tracker.setKeepDeletes(false);
   }
 
   public static void writeHeader(OutputStream stream, ProcedureWALHeader header)
