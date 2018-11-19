@@ -215,7 +215,7 @@ public class CacheConfig {
    * @param family column family configuration
    */
   public CacheConfig(Configuration conf, ColumnFamilyDescriptor family) {
-    this(CacheConfig.instantiateBlockCache(conf),
+    this(GLOBAL_BLOCK_CACHE_INSTANCE,
         conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ)
            && family.isBlockCacheEnabled(),
         family.isInMemory(),
@@ -245,14 +245,10 @@ public class CacheConfig {
    * @param conf hbase configuration
    */
   public CacheConfig(Configuration conf) {
-    this(conf, true);
-  }
-
-  public CacheConfig(Configuration conf, boolean enableBlockCache) {
-    this(conf, enableBlockCache,
+    this(GLOBAL_BLOCK_CACHE_INSTANCE,
         conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ),
         DEFAULT_IN_MEMORY, // This is a family-level setting so can't be set
-                           // strictly from conf
+        // strictly from conf
         conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE),
         conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_INDEXES_ON_WRITE),
         conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_BLOOMS_ON_WRITE),
@@ -261,28 +257,6 @@ public class CacheConfig {
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
         conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT));
     LOG.info("Created cacheConfig: " + this);
-  }
-
-  private CacheConfig(Configuration conf, boolean enableBlockCache,
-      final boolean cacheDataOnRead, final boolean inMemory,
-      final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
-      final boolean cacheBloomsOnWrite, final boolean evictOnClose,
-      final boolean cacheDataCompressed, final boolean prefetchOnOpen,
-      final boolean dropBehindCompaction) {
-    if (enableBlockCache) {
-      this.blockCache = CacheConfig.instantiateBlockCache(conf);
-    } else {
-      this.blockCache = null;
-    }
-    this.cacheDataOnRead = cacheDataOnRead;
-    this.inMemory = inMemory;
-    this.cacheDataOnWrite = cacheDataOnWrite;
-    this.cacheIndexesOnWrite = cacheIndexesOnWrite;
-    this.cacheBloomsOnWrite = cacheBloomsOnWrite;
-    this.evictOnClose = evictOnClose;
-    this.cacheDataCompressed = cacheDataCompressed;
-    this.prefetchOnOpen = prefetchOnOpen;
-    this.dropBehindCompaction = dropBehindCompaction;
   }
 
   /**
@@ -669,12 +643,18 @@ public class CacheConfig {
    * @return The block cache or <code>null</code>.
    */
   public static synchronized BlockCache instantiateBlockCache(Configuration conf) {
-    if (GLOBAL_BLOCK_CACHE_INSTANCE != null) return GLOBAL_BLOCK_CACHE_INSTANCE;
-    if (blockCacheDisabled) return null;
+    if (GLOBAL_BLOCK_CACHE_INSTANCE != null) {
+      return GLOBAL_BLOCK_CACHE_INSTANCE;
+    }
+    if (blockCacheDisabled) {
+      return null;
+    }
     LruBlockCache onHeapCache = getOnHeapCacheInternal(conf);
     // blockCacheDisabled is set as a side-effect of getL1Internal(), so check it again after the
     // call.
-    if (blockCacheDisabled) return null;
+    if (blockCacheDisabled) {
+      return null;
+    }
     boolean useExternal = conf.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
     if (useExternal) {
       L2_CACHE_INSTANCE = getExternalBlockcache(conf);

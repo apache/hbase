@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -80,6 +81,7 @@ public class TestRecoveredEdits {
   @Test
   public void testReplayWorksThoughLotsOfFlushing() throws
       IOException {
+    CacheConfig.instantiateBlockCache(TEST_UTIL.getConfiguration());
     for(MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {
       testReplayWorksWithMemoryCompactionPolicy(policy);
     }
