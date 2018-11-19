@@ -148,9 +148,9 @@ public class TestSnapshotFileCache {
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
         "test-snapshot-file-cache-refresh", new SnapshotFiles()) {
       @Override
-      List<String> getSnapshotsInProgress(final SnapshotManager snapshotManager)
+      List<String> getSnapshotsInProgress()
               throws IOException {
-        List<String> result = super.getSnapshotsInProgress(snapshotManager);
+        List<String> result = super.getSnapshotsInProgress();
         count.incrementAndGet();
         return result;
       }
