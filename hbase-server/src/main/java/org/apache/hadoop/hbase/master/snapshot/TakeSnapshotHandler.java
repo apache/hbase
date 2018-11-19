@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,6 +88,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   protected final MonitoredTask status;
   protected final TableName snapshotTable;
   protected final SnapshotManifest snapshotManifest;
+  protected final SnapshotManager snapshotManager;
 
   protected HTableDescriptor htd;
 
@@ -94,13 +96,15 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
    * @param snapshot descriptor of the snapshot to take
    * @param masterServices master services provider
    */
-  public TakeSnapshotHandler(SnapshotDescription snapshot, final MasterServices masterServices) {
+  public TakeSnapshotHandler(SnapshotDescription snapshot, final MasterServices masterServices,
+                             final SnapshotManager snapshotManager) {
     super(masterServices, EventType.C_M_SNAPSHOT_TABLE);
     assert snapshot != null : "SnapshotDescription must not be nul1";
     assert masterServices != null : "MasterServices must not be nul1";
 
     this.master = masterServices;
     this.snapshot = snapshot;
+    this.snapshotManager = snapshotManager;
     this.snapshotTable = TableName.valueOf(snapshot.getTable());
     this.conf = this.master.getConfiguration();
     this.fs = this.master.getMasterFileSystem().getFileSystem();
@@ -164,7 +168,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     try {
       // If regions move after this meta scan, the region specific snapshot should fail, triggering
       // an external exception that gets captured here.
-      SnapshotDescriptionUtils.createInProgressTag(workingDir, fs);
+
       // write down the snapshot info in the working directory
       SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, fs);
       snapshotManifest.addTableDescriptor(this.htd);

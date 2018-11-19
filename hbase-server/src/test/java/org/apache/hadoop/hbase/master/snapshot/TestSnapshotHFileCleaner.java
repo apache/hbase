@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -86,7 +85,6 @@ public class TestSnapshotHFileCleaner {
 
     // write an hfile to the snapshot directory
     String snapshotName = "snapshot";
-    byte[] snapshot = Bytes.toBytes(snapshotName);
     TableName tableName = TableName.valueOf("table");
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     HRegionInfo mockRegion = new HRegionInfo(tableName);
@@ -167,22 +165,21 @@ public class TestSnapshotHFileCleaner {
     }
   }
 
-
   /**
-   * HBASE-16464
-   */
+  * HBASE-16464
+  */
   @Test
   public void testMissedTmpSnapshot() throws IOException {
     SnapshotTestingUtils.SnapshotMock
-      snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+        snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
     SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
-      SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
     builder.addRegionV2();
     builder.missOneRegionSnapshotFile();
 
-    long period = Long.MAX_VALUE;
+      long period = Long.MAX_VALUE;
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-      "test-snapshot-file-cache-refresh", new SnapshotFiles());
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
     cache.getSnapshotsInProgress();
     assertFalse(fs.exists(builder.getSnapshotsDir()));
   }

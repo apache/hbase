@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.Stoppable;
 
+import java.util.Map;
+
 /**
  * General interface for cleaning files from a folder (generally an archive or
  * backup folder). These are chained via the {@link CleanerChore} to determine
@@ -36,4 +38,10 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
    * @return files that are ok to delete according to this cleaner
    */
   Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files);
+
+
+  /**
+   * this method is used to pass some instance into subclass
+   * */
+  void init(Map<String, Object> params);
 }
