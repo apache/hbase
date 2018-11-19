@@ -136,5 +136,32 @@ module Hbase
       assert(output.include? snapshot1)
       assert(output.include? snapshot2)
     end
+
+    define_test 'can set and remove user CU quota' do
+      command(:set_quota, TYPE => THROTTLE, USER => 'user1', LIMIT => '1CU/sec')
+      output = capture_stdout{ command(:list_quotas) }
+      assert(output.include?('USER => user1'))
+      assert(output.include?('TYPE => THROTTLE'))
+      assert(output.include?('THROTTLE_TYPE => REQUEST_CAPACITY_UNIT'))
+      assert(output.include?('LIMIT => 1CU/sec'))
+
+      command(:set_quota, TYPE => THROTTLE, USER => 'user1', LIMIT => NONE)
+      output = capture_stdout{ command(:list_quotas) }
+      assert(output.include?('0 row(s)'))
+    end
+
+    define_test 'can set and remove table CU quota' do
+      command(:set_quota, TYPE => THROTTLE, TABLE => @test_name,
+              THROTTLE_TYPE => WRITE, LIMIT => '2CU/min')
+      output = capture_stdout{ command(:list_quotas) }
+      assert(output.include?('TABLE => hbase_shell_quota_tests_table'))
+      assert(output.include?('TYPE => THROTTLE'))
+      assert(output.include?('THROTTLE_TYPE => WRITE_CAPACITY_UNIT'))
+      assert(output.include?('LIMIT => 2CU/min'))
+
+      command(:set_quota, TYPE => THROTTLE, TABLE => @test_name, LIMIT => NONE)
+      output = capture_stdout{ command(:list_quotas) }
+      assert(output.include?('0 row(s)'))
+    end
   end
 end
